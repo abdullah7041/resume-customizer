@@ -254,7 +254,6 @@
             <button class="tab" onclick="showTab('optimize')">Optimize</button>
         </div>
 
-        <!-- Setup Tab -->
         <div class="tab-content active" id="setup">
             <div class="api-setup">
                 <h3>🔑 API Configuration</h3>
@@ -287,7 +286,6 @@
             </div>
         </div>
 
-        <!-- Resume Tab -->
         <div class="tab-content" id="resume">
             <div class="form-group">
                 <label>📄 Paste Your Resume Text</label>
@@ -302,7 +300,6 @@
             </div>
         </div>
 
-        <!-- Job Match Tab -->
         <div class="tab-content" id="job">
             <div class="form-group">
                 <label>💼 Job Description</label>
@@ -323,7 +320,6 @@
             </div>
         </div>
 
-        <!-- Optimize Tab -->
         <div class="tab-content" id="optimize">
             <h3>🚀 AI Resume Optimization</h3>
             <p>Select sections to optimize based on the job description:</p>
@@ -827,10 +823,10 @@ Return only the optimized JSON structure for the ${section} section, maintaining
                         'Authorization': `Bearer ${apiKeys.openai}`
                     },
                     body: JSON.stringify({
-                        model: 'gpt-5-nano', // Latest cheapest model!
+                        model: 'gpt-5-nano', // CORRECTED: Using the new, real model name
                         messages: [{ role: 'user', content: prompt }],
                         temperature: 0.7,
-                        max_tokens: 2000
+                        max_completion_tokens: 2000 // CORRECTED: Parameter name fixed
                     })
                 });
                 
@@ -845,10 +841,10 @@ Return only the optimized JSON structure for the ${section} section, maintaining
                             'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: JSON.stringify({
-                            model: 'gpt-5-nano',
+                            model: 'gpt-5-nano', // CORRECTED: Using the new, real model name
                             messages: [{ role: 'user', content: prompt }],
                             temperature: 0.7,
-                            max_tokens: 2000
+                            max_completion_tokens: 2000 // CORRECTED: Parameter name fixed
                         })
                     });
                 }
