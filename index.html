@@ -830,7 +830,7 @@ Return only the optimized JSON structure for the ${section} section, maintaining
                         model: 'gpt-5-nano',
                         messages: [{ role: 'user', content: prompt }],
                         // Remove temperature for GPT-5 models (only supports default value of 1)
-                        max_tokens: 2000
+                        max_completion_tokens: 2000
                     })
                 });
                 
@@ -847,7 +847,7 @@ Return only the optimized JSON structure for the ${section} section, maintaining
                         body: JSON.stringify({
                             model: 'gpt-5-nano',
                             messages: [{ role: 'user', content: prompt }],
-                            max_tokens: 2000
+                            max_completion_tokens: 2000
                         })
                     });
                 }
