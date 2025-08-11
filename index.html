@@ -486,6 +486,23 @@ Return only valid JSON with this structure:
             document.getElementById('resume-json').style.display = 'block';
         }
 
+        // Edit JSON structure
+        function editJson() {
+            const currentJson = JSON.stringify(resumeData, null, 2);
+            const newJson = prompt("Edit your resume JSON:", currentJson);
+            
+            if (newJson) {
+                try {
+                    resumeData = JSON.parse(newJson);
+                    displayResumeJson();
+                    saveData();
+                    alert('Resume JSON updated successfully!');
+                } catch (error) {
+                    alert('Invalid JSON format. Please check your syntax.');
+                }
+            }
+        }
+
         // Create mock resume data for demo
         function createMockResumeData(text) {
             // Extract basic info using regex patterns
