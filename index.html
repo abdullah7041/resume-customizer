@@ -478,7 +478,7 @@
     <div class="container">
         <div class="header">
             <h1>🚀 AI Resume Optimizer</h1>
-            <p>Powered by GPT-5 Nano • Smart • Fast • Affordable</p>
+            <p>Powered by GPT-5-nano • Smart • Fast • Affordable</p>
             <div class="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
             </div>
@@ -500,7 +500,7 @@
                     <label>OpenAI API Key</label>
                     <input type="password" id="openai-key" placeholder="sk-..." />
                     <small style="color: #64748b; margin-top: 8px; display: block;">
-                        Get your key from <strong>platform.openai.com</strong> • Uses GPT-5 Nano (cheapest model)
+                        Get your key from <strong>platform.openai.com</strong> • Uses GPT-5-nano (most capable model)
                     </small>
                 </div>
                 <button class="btn" onclick="saveApiKeys()">💾 Save API Key</button>
@@ -509,7 +509,7 @@
             <div class="suggestions">
                 <h3>🚀 How It Works</h3>
                 <div class="suggestion-item">
-                    <strong>Step 1:</strong> Add your OpenAI API key above (GPT-5 Nano costs ~$0.0005 per resume)
+                    <strong>Step 1:</strong> Add your OpenAI API key above
                 </div>
                 <div class="suggestion-item">
                     <strong>Step 2:</strong> Paste your resume text to parse into structured data
@@ -614,51 +614,36 @@
         let matchAnalysis = null;
         let optimizations = {};
         let apiKeys = {
-            openai: '',
-            anthropic: ''
+            openai: ''
         };
 
-        // Load saved data
-        function loadData() {
-            const saved = localStorage.getItem('resumeCustomizer');
-            if (saved) {
-                const data = JSON.parse(saved);
-                resumeData = data.resumeData;
-                jobDescription = data.jobDescription;
-                matchAnalysis = data.matchAnalysis;
-                optimizations = data.optimizations || {};
-                apiKeys = data.apiKeys || { openai: '', anthropic: '' };
-                
-                if (resumeData) {
-                    document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
-                    document.getElementById('resume-json').style.display = 'block';
-                    updateProgress(25);
-                }
-                
-                if (jobDescription) {
-                    document.getElementById('job-input').value = jobDescription;
-                    updateProgress(50);
-                }
-                
-                if (matchAnalysis) {
-                    displayMatchResult(matchAnalysis);
-                    updateProgress(75);
-                }
-                
-                document.getElementById('openai-key').value = apiKeys.openai;
-               
-            }
-        }
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
 
-        // Save data
-        function saveData() {
-            localStorage.setItem('resumeCustomizer', JSON.stringify({
-                resumeData,
-                jobDescription,
-                matchAnalysis,
-                optimizations,
-                apiKeys
-            }));
+        // Load saved data from memory (not localStorage)
+        function loadData() {
+            // Data will persist during the session but reset on page refresh
+            if (resumeData) {
+                document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
+                document.getElementById('resume-json').style.display = 'block';
+                updateProgress(25);
+            }
+            
+            if (jobDescription) {
+                document.getElementById('job-input').value = jobDescription;
+                updateProgress(50);
+            }
+            
+            if (matchAnalysis) {
+                displayMatchResult(matchAnalysis);
+                updateProgress(75);
+            }
+            
+            if (apiKeys.openai) {
+                document.getElementById('openai-key').value = apiKeys.openai;
+            }
         }
 
         // Update progress bar
@@ -688,15 +673,22 @@
 
         // Save API keys
         function saveApiKeys() {
-            apiKeys.openai = document.getElementById('openai-key').value;
-            saveData();
+            const openaiKey = document.getElementById('openai-key').value.trim();
             
-            if (apiKeys.openai) {
-                showNotification('✅ OpenAI API key saved! Ready to use GPT-5 Nano.', 'success');
-                updateProgress(10);
-            } else {
-                showNotification('⚠️ Please add a valid OpenAI API key to unlock AI features.', 'warning');
+            if (!openaiKey) {
+                showNotification('⚠️ Please enter your OpenAI API key', 'warning');
+                return;
             }
+            
+            if (!openaiKey.startsWith('sk-')) {
+                showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
+                return;
+            }
+            
+            apiKeys.openai = openaiKey;
+            
+            showNotification('✅ OpenAI API key saved! Ready to use GPT-5-nano.', 'success');
+            updateProgress(10);
         }
 
         // Show notification
@@ -716,19 +708,112 @@
                 z-index: 1000;
                 max-width: 300px;
                 font-weight: 600;
+                animation: slideIn 0.3s ease;
             `;
+            
+            // Add slide in animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
             notification.textContent = message;
             document.body.appendChild(notification);
             
             setTimeout(() => {
-                notification.remove();
+                notification.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => {
+                    notification.remove();
+                    style.remove();
+                }, 300);
             }, 4000);
+        }
+
+        // Show loading state
+        function showLoading(message) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading-overlay';
+            loadingDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+            loadingDiv.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 2000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            document.body.appendChild(loadingDiv);
+        }
+
+        // Hide loading state
+        function hideLoading() {
+            const loading = document.getElementById('loading-overlay');
+            if (loading) {
+                loading.remove();
+            }
+        }
+
+        // Call OpenAI API
+        async function callAI(prompt) {
+            if (!apiKeys.openai) {
+                throw new Error('No API key provided');
+            }
+
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKeys.openai}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'gpt-5-nano',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a professional resume optimization assistant. Provide accurate, helpful responses in the requested format.'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    max_completion_tokens: 2000,
+                    temperature: 0.3
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || `API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content;
         }
 
         // Parse resume to JSON
         async function parseResume() {
-            const resumeText = document.getElementById('resume-input').value;
-            if (!resumeText.trim()) {
+            const resumeText = document.getElementById('resume-input').value.trim();
+            if (!resumeText) {
                 showNotification('⚠️ Please paste your resume text first', 'warning');
                 return;
             }
@@ -737,18 +822,12 @@
             
             // Check if API key exists and is valid format
             if (!apiKeys.openai) {
-                console.log('No API keys found, using demo mode');
+                console.log('No API key found, using demo mode');
                 resumeData = createMockResumeData(resumeText);
                 displayResumeJson();
-                saveData();
                 hideLoading();
                 showNotification('📄 Resume parsed in demo mode. Add API key for AI parsing.', 'warning');
-                return;
-            }
-
-            if (!apiKeys.openai.startsWith('sk-')) {
-                showNotification('❌ Invalid OpenAI API key format. Key should start with "sk-"', 'warning');
-                hideLoading();
+                updateProgress(25);
                 return;
             }
             
@@ -810,7 +889,6 @@ Return ONLY valid JSON with this exact structure:
                 
                 resumeData = JSON.parse(jsonText);
                 displayResumeJson();
-                saveData();
                 hideLoading();
                 showNotification('✅ Resume successfully parsed by AI!', 'success');
                 updateProgress(25);
@@ -818,12 +896,19 @@ Return ONLY valid JSON with this exact structure:
             } catch (error) {
                 console.error('Error parsing resume:', error);
                 hideLoading();
-                showNotification('❌ AI parsing failed. Trying fallback...', 'warning');
                 
-                // Fallback to demo mode
-                resumeData = createMockResumeData(resumeText);
-                displayResumeJson();
-                saveData();
+                if (error.message.includes('API Error: 401')) {
+                    showNotification('❌ Invalid API key. Please check your OpenAI API key.', 'warning');
+                } else if (error.message.includes('API Error: 429')) {
+                    showNotification('⏳ Rate limit exceeded. Please try again in a moment.', 'warning');
+                } else {
+                    showNotification('⚠️ AI parsing failed. Using fallback mode...', 'warning');
+                    
+                    // Fallback to demo mode
+                    resumeData = createMockResumeData(resumeText);
+                    displayResumeJson();
+                    updateProgress(25);
+                }
             }
         }
 
@@ -842,7 +927,6 @@ Return ONLY valid JSON with this exact structure:
                 try {
                     resumeData = JSON.parse(newJson);
                     displayResumeJson();
-                    saveData();
                     showNotification('✅ Resume JSON updated successfully!', 'success');
                 } catch (error) {
                     showNotification('❌ Invalid JSON format. Please check your syntax.', 'warning');
@@ -862,4 +946,584 @@ Return ONLY valid JSON with this exact structure:
                     phone: phoneMatch ? phoneMatch[0] : "+1-555-123-4567",
                     location: "San Francisco, CA",
                     linkedin: "linkedin.com/in/johndoe",
-                    github: "github.com/johndoe
+                    github: "github.com/johndoe"
+                },
+                summary: "Experienced professional with strong background in technology and innovation. Passionate about creating impactful solutions and driving business growth through strategic thinking and technical expertise.",
+                experience: [
+                    {
+                        company: "Tech Company Inc.",
+                        position: "Senior Software Engineer",
+                        duration: "2020 - Present",
+                        responsibilities: [
+                            "Lead development of web applications using modern frameworks",
+                            "Collaborate with cross-functional teams to deliver high-quality products",
+                            "Mentor junior developers and establish coding best practices"
+                        ],
+                        achievements: [
+                            "Increased application performance by 40% through optimization",
+                            "Successfully delivered 12+ major features ahead of schedule"
+                        ]
+                    }
+                ],
+                skills: {
+                    technical: ["JavaScript", "Python", "React", "Node.js", "AWS", "Docker"],
+                    soft: ["Leadership", "Communication", "Problem Solving", "Team Collaboration"]
+                },
+                education: [
+                    {
+                        degree: "Bachelor of Science in Computer Science",
+                        institution: "University of Technology",
+                        year: "2018",
+                        gpa: "3.8/4.0"
+                    }
+                ],
+                projects: [
+                    {
+                        name: "E-commerce Platform",
+                        description: "Full-stack web application for online retail with payment integration",
+                        technologies: ["React", "Node.js", "MongoDB", "Stripe API"]
+                    }
+                ]
+            };
+        }
+
+        // Analyze job match
+        async function analyzeMatch() {
+            jobDescription = document.getElementById('job-input').value.trim();
+            
+            if (!resumeData) {
+                showNotification('⚠️ Please parse your resume first', 'warning');
+                showTab('resume');
+                return;
+            }
+            
+            if (!jobDescription) {
+                showNotification('⚠️ Please enter a job description', 'warning');
+                return;
+            }
+
+            showLoading('🎯 AI is analyzing job compatibility...');
+            
+            if (!apiKeys.openai) {
+                // Demo mode
+                matchAnalysis = createMockMatchAnalysis();
+                displayMatchResult(matchAnalysis);
+                hideLoading();
+                showNotification('🎯 Match analysis complete (demo mode)', 'warning');
+                updateProgress(75);
+                return;
+            }
+            
+            try {
+                const prompt = `Analyze the compatibility between this resume and job description. Provide a match score and detailed feedback.
+
+RESUME:
+${JSON.stringify(resumeData, null, 2)}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+Return ONLY valid JSON with this structure:
+{
+  "score": 85,
+  "level": "good",
+  "strengths": ["Strong technical skills match", "Relevant experience"],
+  "weaknesses": ["Missing specific certification", "Limited industry experience"],
+  "recommendations": ["Add project management experience", "Highlight leadership skills"],
+  "keywordsMissing": ["agile", "scrum", "cloud architecture"],
+  "sections": {
+    "summary": { "score": 70, "feedback": "Good but could be more targeted" },
+    "experience": { "score": 85, "feedback": "Strong match with job requirements" },
+    "skills": { "score": 90, "feedback": "Excellent technical skill alignment" },
+    "education": { "score": 75, "feedback": "Meets minimum requirements" }
+  }
+}`;
+
+                const response = await callAI(prompt);
+                
+                let jsonText = response;
+                if (response.includes('```json')) {
+                    jsonText = response.split('```json')[1].split('```')[0].trim();
+                } else if (response.includes('```')) {
+                    jsonText = response.split('```')[1].split('```')[0].trim();
+                }
+                
+                matchAnalysis = JSON.parse(jsonText);
+                displayMatchResult(matchAnalysis);
+                hideLoading();
+                showNotification('✅ Job match analysis complete!', 'success');
+                updateProgress(75);
+                
+            } catch (error) {
+                console.error('Error analyzing match:', error);
+                hideLoading();
+                showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
+                
+                matchAnalysis = createMockMatchAnalysis();
+                displayMatchResult(matchAnalysis);
+                updateProgress(75);
+            }
+        }
+
+        // Create mock match analysis
+        function createMockMatchAnalysis() {
+            return {
+                score: 78,
+                level: "good",
+                strengths: [
+                    "Strong technical skills alignment with job requirements",
+                    "Relevant work experience in similar industry",
+                    "Good educational background"
+                ],
+                weaknesses: [
+                    "Missing specific cloud platform experience",
+                    "Could benefit from more leadership examples",
+                    "Project management experience not highlighted"
+                ],
+                recommendations: [
+                    "Add specific examples of cloud technology usage",
+                    "Highlight any team leadership or mentoring experience",
+                    "Include metrics and quantifiable achievements"
+                ],
+                keywordsMissing: ["AWS", "Kubernetes", "Microservices", "Agile", "CI/CD"],
+                sections: {
+                    summary: { score: 72, feedback: "Good foundation but could be more job-specific" },
+                    experience: { score: 85, feedback: "Strong experience match with clear achievements" },
+                    skills: { score: 75, feedback: "Good technical skills but missing some key technologies" },
+                    education: { score: 80, feedback: "Solid educational background meets requirements" }
+                }
+            };
+        }
+
+        // Display match results
+        function displayMatchResult(analysis) {
+            const scoreDisplay = document.getElementById('score-display');
+            const scoreValue = document.getElementById('score-value');
+            const scoreDescription = document.getElementById('score-description');
+            const suggestionsContent = document.getElementById('suggestions-content');
+            
+            scoreValue.textContent = analysis.score;
+            
+            // Set score color and description
+            if (analysis.score >= 85) {
+                scoreDisplay.className = 'score-display excellent';
+                scoreDescription.textContent = 'Excellent Match! 🎉';
+            } else if (analysis.score >= 70) {
+                scoreDisplay.className = 'score-display good';
+                scoreDescription.textContent = 'Good Match! 👍';
+            } else {
+                scoreDisplay.className = 'score-display';
+                scoreDescription.textContent = 'Needs Improvement 📈';
+            }
+            
+            // Build suggestions content
+            let suggestionsHtml = '';
+            
+            suggestionsHtml += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>';
+            analysis.strengths.forEach(strength => {
+                suggestionsHtml += `<li>${strength}</li>`;
+            });
+            suggestionsHtml += '</ul></div>';
+            
+            suggestionsHtml += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>';
+            analysis.weaknesses.forEach(weakness => {
+                suggestionsHtml += `<li>${weakness}</li>`;
+            });
+            suggestionsHtml += '</ul></div>';
+            
+            suggestionsHtml += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>';
+            analysis.recommendations.forEach(rec => {
+                suggestionsHtml += `<li>${rec}</li>`;
+            });
+            suggestionsHtml += '</ul></div>';
+            
+            if (analysis.keywordsMissing && analysis.keywordsMissing.length > 0) {
+                suggestionsHtml += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>';
+                suggestionsHtml += analysis.keywordsMissing.map(keyword => `<span style="background: #e2e8f0; padding: 4px 8px; border-radius: 6px; margin: 2px; display: inline-block;">${keyword}</span>`).join('');
+                suggestionsHtml += '</div>';
+            }
+            
+            suggestionsContent.innerHTML = suggestionsHtml;
+            document.getElementById('match-result').style.display = 'block';
+        }
+
+        // Start optimization
+        async function startOptimization() {
+            if (!resumeData) {
+                showNotification('⚠️ Please parse your resume first', 'warning');
+                return;
+            }
+            
+            if (!matchAnalysis) {
+                showNotification('⚠️ Please analyze job match first', 'warning');
+                return;
+            }
+
+            const mode = document.getElementById('optimization-mode').value;
+            const selectedSection = document.getElementById('section-select').value;
+            
+            showLoading('✨ AI is optimizing your resume...');
+            
+            if (!apiKeys.openai) {
+                // Demo mode
+                const mockOptimizations = createMockOptimizations(mode, selectedSection);
+                displayOptimizationResults(mockOptimizations);
+                hideLoading();
+                showNotification('✨ Optimization complete (demo mode)', 'warning');
+                return;
+            }
+            
+            try {
+                let prompt;
+                if (mode === 'auto') {
+                    prompt = `Based on the resume analysis, automatically optimize the weakest sections of this resume for the job description.
+
+CURRENT RESUME:
+${JSON.stringify(resumeData, null, 2)}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+ANALYSIS RESULTS:
+${JSON.stringify(matchAnalysis, null, 2)}
+
+Focus on sections with lowest scores and missing keywords. Return optimized content in this JSON format:
+{
+  "optimizations": [
+    {
+      "section": "summary",
+      "original": "original text...",
+      "optimized": "improved text...",
+      "explanation": "Why this change helps match the job"
+    }
+  ]
+}`;
+                } else {
+                    prompt = `Optimize the ${selectedSection} section of this resume for the job description.
+
+CURRENT SECTION CONTENT:
+${JSON.stringify(resumeData[selectedSection], null, 2)}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+Return optimized content in this JSON format:
+{
+  "optimizations": [
+    {
+      "section": "${selectedSection}",
+      "original": "original content...",
+      "optimized": "improved content...",
+      "explanation": "Detailed explanation of improvements"
+    }
+  ]
+}`;
+                }
+
+                const response = await callAI(prompt);
+                
+                let jsonText = response;
+                if (response.includes('```json')) {
+                    jsonText = response.split('```json')[1].split('```')[0].trim();
+                } else if (response.includes('```')) {
+                    jsonText = response.split('```')[1].split('```')[0].trim();
+                }
+                
+                const result = JSON.parse(jsonText);
+                displayOptimizationResults(result.optimizations);
+                hideLoading();
+                showNotification('✅ Resume optimization complete!', 'success');
+                updateProgress(100);
+                
+            } catch (error) {
+                console.error('Error optimizing resume:', error);
+                hideLoading();
+                showNotification('⚠️ Optimization failed. Showing demo results...', 'warning');
+                
+                const mockOptimizations = createMockOptimizations(mode, selectedSection);
+                displayOptimizationResults(mockOptimizations);
+                updateProgress(100);
+            }
+        }
+
+        // Create mock optimizations
+        function createMockOptimizations(mode, selectedSection) {
+            const sections = mode === 'auto' ? ['summary', 'skills'] : [selectedSection];
+            const optimizations = [];
+            
+            sections.forEach(section => {
+                switch(section) {
+                    case 'summary':
+                        optimizations.push({
+                            section: 'summary',
+                            original: resumeData.summary,
+                            optimized: "Results-driven Software Engineer with 5+ years of experience in cloud-native application development and microservices architecture. Proven track record of delivering scalable solutions using AWS, Kubernetes, and modern DevOps practices. Expert in agile methodologies with strong leadership skills in cross-functional team environments.",
+                            explanation: "Enhanced with job-specific keywords like 'cloud-native', 'microservices', 'AWS', and 'Kubernetes' while maintaining authenticity. Added quantifiable experience and emphasized leadership skills mentioned in job requirements."
+                        });
+                        break;
+                    case 'skills':
+                        optimizations.push({
+                            section: 'skills',
+                            original: JSON.stringify(resumeData.skills, null, 2),
+                            optimized: JSON.stringify({
+                                technical: [...resumeData.skills.technical, "AWS", "Kubernetes", "Microservices", "CI/CD", "Docker Compose"],
+                                soft: [...resumeData.skills.soft, "Agile Methodology", "Cross-functional Collaboration", "Technical Leadership"]
+                            }, null, 2),
+                            explanation: "Added missing keywords identified in the job match analysis. Included cloud technologies and agile methodologies that are crucial for this role."
+                        });
+                        break;
+                    case 'experience':
+                        optimizations.push({
+                            section: 'experience',
+                            original: JSON.stringify(resumeData.experience[0], null, 2),
+                            optimized: JSON.stringify({
+                                ...resumeData.experience[0],
+                                responsibilities: [
+                                    "Lead development of cloud-native web applications using microservices architecture",
+                                    "Collaborate with cross-functional agile teams to deliver high-quality products",
+                                    "Implement CI/CD pipelines and mentor junior developers on best practices"
+                                ],
+                                achievements: [
+                                    "Migrated monolithic application to microservices, reducing deployment time by 60%",
+                                    "Led team of 5 developers in delivering 12+ major features using agile methodology"
+                                ]
+                            }, null, 2),
+                            explanation: "Refined job descriptions to include cloud-native and microservices keywords. Quantified achievements with specific metrics and highlighted leadership experience."
+                        });
+                        break;
+                    case 'education':
+                        optimizations.push({
+                            section: 'education',
+                            original: JSON.stringify(resumeData.education, null, 2),
+                            optimized: JSON.stringify([
+                                {
+                                    ...resumeData.education[0],
+                                    relevantCoursework: "Cloud Computing, Distributed Systems, Software Engineering, Database Management"
+                                }
+                            ], null, 2),
+                            explanation: "Added relevant coursework that aligns with job requirements, particularly emphasizing cloud computing and distributed systems knowledge."
+                        });
+                        break;
+                }
+            });
+            
+            return optimizations;
+        }
+
+        // Display optimization results
+        function displayOptimizationResults(optimizationList) {
+            const container = document.getElementById('optimizations-container');
+            
+            let html = '';
+            optimizationList.forEach((opt, index) => {
+                html += `
+                    <div class="optimization-card">
+                        <div class="optimization-header">
+                            <h4>📝 ${opt.section.charAt(0).toUpperCase() + opt.section.slice(1)} Section</h4>
+                            <span class="optimization-badge">Optimized</span>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <strong>🎯 Explanation:</strong>
+                            <p style="margin-top: 8px; color: #64748b;">${opt.explanation}</p>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div>
+                                <strong>📄 Original:</strong>
+                                <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 14px; max-height: 150px; overflow-y: auto;">
+                                    ${typeof opt.original === 'string' ? opt.original : JSON.stringify(opt.original, null, 2)}
+                                </div>
+                            </div>
+                            <div>
+                                <strong>✨ Optimized:</strong>
+                                <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 14px; max-height: 150px; overflow-y: auto;">
+                                    ${typeof opt.optimized === 'string' ? opt.optimized : JSON.stringify(opt.optimized, null, 2)}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <button class="btn secondary" style="width: auto; padding: 10px 20px; margin: 0 5px;" onclick="acceptOptimization(${index})">✅ Accept</button>
+                            <button class="btn secondary" style="width: auto; padding: 10px 20px; margin: 0;" onclick="rejectOptimization(${index})">❌ Reject</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            optimizations = optimizationList;
+            document.getElementById('optimization-results').style.display = 'block';
+        }
+
+        // Accept single optimization
+        function acceptOptimization(index) {
+            const opt = optimizations[index];
+            
+            try {
+                if (typeof opt.optimized === 'string') {
+                    resumeData[opt.section] = opt.optimized;
+                } else {
+                    resumeData[opt.section] = JSON.parse(opt.optimized);
+                }
+                
+                displayResumeJson();
+                showNotification(`✅ ${opt.section} section updated!`, 'success');
+                
+                // Remove the accepted optimization from display
+                optimizations[index].accepted = true;
+                document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+                
+            } catch (error) {
+                showNotification('❌ Error applying optimization', 'warning');
+            }
+        }
+
+        // Reject single optimization
+        function rejectOptimization(index) {
+            optimizations[index].rejected = true;
+            document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+            showNotification('❌ Optimization rejected', 'info');
+        }
+
+        // Accept all optimizations
+        function acceptAllOptimizations() {
+            let acceptedCount = 0;
+            
+            optimizations.forEach((opt, index) => {
+                if (!opt.accepted && !opt.rejected) {
+                    try {
+                        if (typeof opt.optimized === 'string') {
+                            resumeData[opt.section] = opt.optimized;
+                        } else {
+                            resumeData[opt.section] = JSON.parse(opt.optimized);
+                        }
+                        acceptedCount++;
+                    } catch (error) {
+                        console.error('Error applying optimization:', error);
+                    }
+                }
+            });
+            
+            if (acceptedCount > 0) {
+                displayResumeJson();
+                showNotification(`✅ Applied ${acceptedCount} optimizations!`, 'success');
+                updateProgress(100);
+            }
+        }
+
+        // Auto-optimize all weak sections (from job match tab)
+        async function autoOptimizeAll() {
+            document.getElementById('optimization-mode').value = 'auto';
+            showTab('optimize');
+            
+            // Small delay to ensure tab is shown
+            setTimeout(() => {
+                startOptimization();
+            }, 300);
+        }
+
+        // Export optimized resume
+        function exportResume() {
+            if (!resumeData) {
+                showNotification('⚠️ No resume data to export', 'warning');
+                return;
+            }
+            
+            const resumeText = formatResumeForExport(resumeData);
+            
+            const blob = new Blob([resumeText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'optimized-resume.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('📥 Resume exported successfully!', 'success');
+        }
+
+        // Format resume for export
+        function formatResumeForExport(data) {
+            let text = '';
+            
+            // Personal Information
+            text += `${data.personal.name}\n`;
+            text += `${data.personal.email} | ${data.personal.phone}\n`;
+            text += `${data.personal.location}\n`;
+            if (data.personal.linkedin) text += `LinkedIn: ${data.personal.linkedin}\n`;
+            if (data.personal.github) text += `GitHub: ${data.personal.github}\n`;
+            text += '\n';
+            
+            // Professional Summary
+            if (data.summary) {
+                text += 'PROFESSIONAL SUMMARY\n';
+                text += '━━━━━━━━━━━━━━━━━━━━\n';
+                text += `${data.summary}\n\n`;
+            }
+            
+            // Experience
+            if (data.experience && data.experience.length > 0) {
+                text += 'PROFESSIONAL EXPERIENCE\n';
+                text += '━━━━━━━━━━━━━━━━━━━━━━━━\n';
+                data.experience.forEach(exp => {
+                    text += `${exp.position} | ${exp.company}\n`;
+                    text += `${exp.duration}\n`;
+                    if (exp.responsibilities) {
+                        exp.responsibilities.forEach(resp => {
+                            text += `• ${resp}\n`;
+                        });
+                    }
+                    if (exp.achievements) {
+                        exp.achievements.forEach(ach => {
+                            text += `• ${ach}\n`;
+                        });
+                    }
+                    text += '\n';
+                });
+            }
+            
+            // Skills
+            if (data.skills) {
+                text += 'TECHNICAL SKILLS\n';
+                text += '━━━━━━━━━━━━━━━━\n';
+                if (data.skills.technical) {
+                    text += `Technical: ${data.skills.technical.join(', ')}\n`;
+                }
+                if (data.skills.soft) {
+                    text += `Soft Skills: ${data.skills.soft.join(', ')}\n`;
+                }
+                text += '\n';
+            }
+            
+            // Education
+            if (data.education && data.education.length > 0) {
+                text += 'EDUCATION\n';
+                text += '━━━━━━━━━\n';
+                data.education.forEach(edu => {
+                    text += `${edu.degree}\n`;
+                    text += `${edu.institution} | ${edu.year}\n`;
+                    if (edu.gpa) text += `GPA: ${edu.gpa}\n`;
+                    if (edu.relevantCoursework) text += `Relevant Coursework: ${edu.relevantCoursework}\n`;
+                    text += '\n';
+                });
+            }
+            
+            // Projects
+            if (data.projects && data.projects.length > 0) {
+                text += 'PROJECTS\n';
+                text += '━━━━━━━━\n';
+                data.projects.forEach(proj => {
+                    text += `${proj.name}\n`;
+                    text += `${proj.description}\n`;
+                    if (proj.technologies) {
+                        text += `Technologies: ${proj.technologies.join(', ')}\n`;
+                    }
+                    text += '\n';
+                });
+            }
+            
+            return text;
+        }
+    </script>
+</body>
+</html>
