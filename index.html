@@ -965,44 +965,6 @@ document.getElementById('resume-json').style.display = 'block';
             }
         });
 
-        // Save API keys
-       // Save API keys
-function saveApiKeys() {
-    const openaiKey = document.getElementById('openai-key').value.trim();
-    
-    if (!openaiKey) {
-        showNotification('⚠️ Please enter your OpenAI API key', 'warning');
-        return;
-    }
-    
-    if (!openaiKey.startsWith('sk-')) {
-        showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
-        return;
-    }
-    
-    // Save the key without validation to avoid blocking progress
-    apiKeys.openai = openaiKey;
-    
-    showNotification('✅ OpenAI API key saved! Ready to use AI features.', 'success');
-    updateProgress(10);
-    
-    console.log('API key saved successfully'); // Debug log
-}
-        
-        // Success path
-        apiKeys.openai = openaiKey;
-        showNotification('✅ OpenAI API key validated and saved!', 'success');
-        updateProgress(10);
-        
-    } catch (error) {
-        console.error('Network error during validation:', error);
-        // Still save the key
-        apiKeys.openai = openaiKey;
-        showNotification('⚠️ Key saved. Network error during validation - will test during usage.', 'warning');
-        updateProgress(10);
-    }
-}
-
         // Show notification
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
