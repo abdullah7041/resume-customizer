@@ -824,26 +824,29 @@ Example formats:
             }
         }
 
-        function normalizeResumeData(data) {
-            return {
-                personal: data.personal || {
-                    name: data.name || "",
-                    email: data.email || "",
-                    phone: data.phone || "",
-                    location: data.location || "",
-                    linkedin: data.linkedin || "",
-                    github: data.github || ""
-                },
-                summary: data.summary || data.objective || "",
-                experience: Array.isArray(data.experience) ? data.experience : (data.work ? data.work : []),
-                skills: data.skills || {
-                    technical: data.technical_skills || [],
-                    soft: data.soft_skills || []
-                },
-                education: Array.isArray(data.education) ? data.education : [],
-                projects: Array.isArray(data.projects) ? data.projects : []
-            };
-        }
+        // REPLACE this entire function
+function normalizeResumeData(data) {
+    const personalData = data.personal || {};
+    return {
+        personal: {
+            name: personalData.name || data.name || "",
+            email: personalData.email || data.email || "",
+            phone: personalData.phone || data.phone || "",
+            location: personalData.location || data.location || "",
+            linkedin: personalData.linkedin || data.linkedin || "",
+            github: personalData.github || data.github || ""
+        },
+        summary: data.summary || data.objective || "",
+        experience: Array.isArray(data.experience) ? data.experience : (data.work ? data.work : []),
+        skills: data.skills || {
+            technical: data.technical_skills || [],
+            soft: data.soft_skills || []
+        },
+        education: Array.isArray(data.education) ? data.education : [],
+        projects: Array.isArray(data.projects) ? data.projects : []
+    };
+}
+
 
         async function parseResumeText(resumeText) {
             showLoading('🤖 AI is parsing your resume...');
@@ -929,7 +932,7 @@ Return ONLY valid JSON with this exact structure:
                             content: prompt
                         }
                     ],
-                    max_tokens: 2000, // Correct parameter is max_tokens
+                    max_completion_tokens: 2000, // Correct parameter is max_tokens
                     temperature: 0.3
                 })
             });
