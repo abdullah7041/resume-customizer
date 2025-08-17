@@ -908,34 +908,43 @@ Return ONLY valid JSON with this exact structure:
             }
         }
 
-        // FIX: Corrected API call parameter from max_completion_tokens to max_tokens
-        async function callAI(prompt) {
-            if (!apiKeys.openai) {
-                throw new Error('No API key provided');
-            }
+        // REPLACE this entire function
+async function callAI(prompt) {
+    if (!apiKeys.openai) {
+        throw new Error('No API key provided');
+    }
 
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKeys.openai}`,
-                    'Content-Type': 'application/json',
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKeys.openai}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini', // Use the faster and more affordable model
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a professional resume optimization assistant. Provide accurate, helpful responses in the requested format.'
                 },
-                body: JSON.stringify({
-                    model: 'gpt-5-nano', // Using model as requested. NOTE: This model may not exist and could cause API errors.
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a professional resume optimization assistant. Provide accurate, helpful responses in the requested format.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    max_completion_tokens: 2000, // Correct parameter is max_tokens
-                    temperature: 0.3
-                })
-            });
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            max_tokens: 2000,
+            temperature: 0.3
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || `API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
 
             if (!response.ok) {
                 const error = await response.json();
