@@ -696,4 +696,277 @@ The system will analyze:
             <button class="btn" onclick="startOptimization()">🚀 Start Optimization</button>
             
             <div id="optimization-results" style="display: none;">
-                <h3 style="margin-bottom:
+                <h3 style="margin-bottom: 20px; color: #1e293b;">✨ Optimization Results</h3>
+                <div id="optimizations-container"></div>
+                
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
+                    <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let resumeData = null;
+        let jobDescription = '';
+        let matchAnalysis = null;
+        let optimizations = {};
+        let apiKeys = { openai: '' };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            setupInputDetection();
+        });
+
+        // Improved persistent storage
+        function saveData() {
+            try {
+                // Save API key to sessionStorage for security
+                if (apiKeys.openai) {
+                    sessionStorage.setItem('resumeOptimizer_apiKey', apiKeys.openai);
+                }
+                // Save other data to localStorage
+                const dataToSave = {
+                    resumeData,
+                    jobDescription,
+                    matchAnalysis,
+                    optimizations,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('resumeOptimizer_data', JSON.stringify(dataToSave));
+            } catch (error) {
+                console.error('Error saving data:', error);
+            }
+        }
+
+        // Load saved data with better error handling
+        function loadData() {
+            try {
+                // Load API key from sessionStorage
+                const savedApiKey = sessionStorage.getItem('resumeOptimizer_apiKey');
+                if (savedApiKey) {
+                    apiKeys.openai = savedApiKey;
+                    document.getElementById('openai-key').value = savedApiKey;
+                }
+
+                // Load other data from localStorage
+                const savedData = localStorage.getItem('resumeOptimizer_data');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    resumeData = data.resumeData;
+                    jobDescription = data.jobDescription;
+                    matchAnalysis = data.matchAnalysis;
+                    optimizations = data.optimizations || {};
+
+                    // Restore UI state
+                    if (resumeData) {
+                        displayResumeJson();
+                        updateProgress(25);
+                    }
+                    if (jobDescription) {
+                        document.getElementById('job-input').value = jobDescription;
+                        updateProgress(50);
+                    }
+                    if (matchAnalysis) {
+                        displayMatchResult(matchAnalysis);
+                        updateProgress(75);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Fix the saveApiKeys function
+        function saveApiKeys() {
+            const openaiKey = document.getElementById('openai-key').value.trim();
+            
+            if (!openaiKey) {
+                showNotification('⚠️ Please enter your OpenAI API key', 'warning');
+                return;
+            }
+            
+            if (!openaiKey.startsWith('sk-')) {
+                showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
+                return;
+            }
+            
+            apiKeys.openai = openaiKey;
+            saveData(); // Save immediately
+            
+            showNotification('✅ API key saved! You can now proceed to parse your resume.', 'success');
+            updateProgress(10);
+            
+            // Auto-navigate to resume tab if this is first setup
+            setTimeout(() => {
+                showTab('resume');
+                document.getElementById('resume-input').focus();
+            }, 1500);
+        }
+
+        // Enhanced notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : 
+                              type === 'warning' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 
+                              'linear-gradient(135deg, #667eea, #764ba2)'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 12px;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+                z-index: 1000;
+                max-width: 350px;
+                font-weight: 600;
+                animation: slideIn 0.3s ease;
+                cursor: pointer;
+            `;
+            
+            // Add slide in animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            notification.textContent = message;
+            notification.onclick = () => notification.remove();
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideIn 0.3s ease reverse';
+                    setTimeout(() => {
+                        notification.remove();
+                        style.remove();
+                    }, 300);
+                }
+            }, 4000);
+        }
+
+        // Fix tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Find and activate the correct tab
+            const tabButtons = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach((tab, index) => {
+                if (tab.onclick.toString().includes(`'${tabName}'`)) {
+                    tab.classList.add('active');
+                    tabContents[index].classList.add('active');
+                }
+            });
+            
+            // Alternative method using direct ID matching
+            document.getElementById(tabName)?.classList.add('active');
+        }
+
+        // Update progress bar
+        function updateProgress(percentage) {
+            const fill = document.getElementById('progress-fill');
+            if (fill) {
+                fill.style.width = percentage + '%';
+            }
+        }
+
+        // Show/hide loading overlay
+        function showLoading(message) {
+            hideLoading(); // Remove any existing loading
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading-overlay';
+            loadingDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+            loadingDiv.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 2000; display: flex;
+                align-items: center; justify-content: center;
+            `;
+            document.body.appendChild(loadingDiv);
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('loading-overlay');
+            if (loading) loading.remove();
+        }
+
+        // Placeholder functions for missing functionality
+        function setupInputDetection() {
+            // Input detection logic will be implemented
+            console.log('Input detection setup');
+        }
+
+        function processResumeInput() {
+            showNotification('🚧 Resume processing functionality coming next!', 'info');
+        }
+
+        function displayResumeJson() {
+            if (resumeData) {
+                document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
+                document.getElementById('resume-json').style.display = 'block';
+            }
+        }
+
+        function analyzeMatch() {
+            showNotification('🚧 Job matching functionality coming next!', 'info');
+        }
+
+        function displayMatchResult() {
+            console.log('Match result display');
+        }
+
+        function startOptimization() {
+            showNotification('🚧 Optimization functionality coming next!', 'info');
+        }
+
+        function acceptAllOptimizations() {
+            showNotification('🚧 Optimization acceptance coming next!', 'info');
+        }
+
+        function exportResume() {
+            showNotification('🚧 PDF export functionality coming next!', 'info');
+        }
+
+        function editJson() {
+            showNotification('🚧 JSON editor coming next!', 'info');
+        }
+
+        function validateResume() {
+            showNotification('🚧 Resume validation coming next!', 'info');
+        }
+
+        function autoOptimizeAll() {
+            showTab('optimize');
+            showNotification('🚧 Auto-optimization coming next!', 'info');
+        }
+
+        // Optimization mode toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const modeSelect = document.getElementById('optimization-mode');
+            if (modeSelect) {
+                modeSelect.addEventListener('change', function() {
+                    const manualSection = document.getElementById('manual-section');
+                    if (manualSection) {
+                        manualSection.style.display = this.value === 'manual' ? 'block' : 'none';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
