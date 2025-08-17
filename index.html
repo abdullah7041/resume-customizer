@@ -914,27 +914,14 @@ Return ONLY valid JSON with this exact structure:
 
         // Load saved data from memory (not localStorage)
         function loadData() {
-            // Data will persist during the session but reset on page refresh
-            if (resumeData) {
-                document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
-                document.getElementById('resume-json').style.display = 'block';
-                updateProgress(25);
-            }
-            
-            if (jobDescription) {
-                document.getElementById('job-input').value = jobDescription;
-                updateProgress(50);
-            }
-            
-            if (matchAnalysis) {
-                displayMatchResult(matchAnalysis);
-                updateProgress(75);
-            }
-            
-            if (apiKeys.openai) {
-                document.getElementById('openai-key').value = apiKeys.openai;
-            }
-        }
+    // Load API key from localStorage if present
+    const savedKey = localStorage.getItem('openaiKey');
+    if (savedKey) {
+        apiKeys.openai = savedKey;
+        document.getElementById('openai-key').value = savedKey;
+    }
+    // ...rest of your loadData code
+}
 
         // Update progress bar
         function updateProgress(percentage) {
