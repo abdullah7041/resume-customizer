@@ -509,7 +509,7 @@
             <div class="suggestions">
                 <h3>🚀 How It Works</h3>
                 <div class="suggestion-item">
-                    <strong>Step 1:</strong> Add your OpenAI API key above
+                    <strong>Step 1:</strong> Add your OpenAI API key above (GPT-5-nano costs ~$0.02 per resume)
                 </div>
                 <div class="suggestion-item">
                     <strong>Step 2:</strong> Paste your resume text to parse into structured data
@@ -526,10 +526,21 @@
         <!-- Resume Tab -->
         <div class="tab-content" id="resume">
             <div class="form-group">
-                <label>📄 Paste Your Resume Text</label>
-                <textarea id="resume-input" rows="12" placeholder="Paste your complete resume text here... Include all sections: contact info, summary, experience, skills, education, etc."></textarea>
+                <label>📄 Paste Your Resume Data</label>
+                <textarea id="resume-input" rows="12" placeholder="Paste your resume here - accepts both formats:
+✅ Plain resume text (will be parsed by AI)
+✅ Structured JSON data (will be loaded directly)
+
+Example formats:
+• Copy-paste from your current resume
+• Structured JSON from previous sessions
+• Any resume text format"></textarea>
+                <div id="input-status" style="margin-top: 10px; padding: 10px; border-radius: 8px; display: none;">
+                    <span id="status-icon">🔍</span>
+                    <span id="status-text">Analyzing input format...</span>
+                </div>
             </div>
-            <button class="btn" onclick="parseResume()">🤖 Parse Resume with AI</button>
+            <button class="btn" id="parse-btn" onclick="processResumeInput()">🤖 Process Resume Data</button>
             
             <div id="resume-json" style="display: none;">
                 <h3>📊 Structured Resume Data</h3>
@@ -601,12 +612,13 @@
                 
                 <div style="margin-top: 30px; text-align: center;">
                     <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
-                    <button class="btn secondary" onclick="exportResume()">📥 Export Optimized Resume</button>
+                    <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         // Global state
         let resumeData = null;
@@ -620,7 +632,227 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
+            setupInputDetection();
         });
+
+        // Setup input detection
+        function setupInputDetection() {
+            const textarea = document.getElementById('resume-input');
+            const statusDiv = document.getElementById('input-status');
+            const statusIcon = document.getElementById('status-icon');
+            const statusText = document.getElementById('status-text');
+            const parseBtn = document.getElementById('parse-btn');
+            
+            textarea.addEventListener('input', function() {
+                const content = this.value.trim();
+                
+                if (!content) {
+                    statusDiv.style.display = 'none';
+                    parseBtn.textContent = '🤖 Process Resume Data';
+                    return;
+                }
+                
+                const inputType = detectInputType(content);
+                statusDiv.style.display = 'block';
+                
+                if (inputType === 'json') {
+                    statusDiv.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
+                    statusDiv.style.border = '2px solid #16a34a';
+                    statusDiv.style.color = '#15803d';
+                    statusIcon.textContent = '📋';
+                    statusText.textContent = 'JSON format detected! Ready to load directly.';
+                    parseBtn.textContent = '📋 Load JSON Data';
+                } else if (inputType === 'text') {
+                    statusDiv.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+                    statusDiv.style.border = '2px solid #2563eb';
+                    statusDiv.style.color = '#1d4ed8';
+                    statusIcon.textContent = '📄';
+                    statusText.textContent = 'Resume text detected! Will be parsed with AI.';
+                    parseBtn.textContent = '🤖 Parse Resume with AI';
+                } else {
+                    statusDiv.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+                    statusDiv.style.border = '2px solid #f59e0b';
+                    statusDiv.style.color = '#92400e';
+                    statusIcon.textContent = '⚠️';
+                    statusText.textContent = 'Invalid JSON format. Will try parsing as text.';
+                    parseBtn.textContent = '🤖 Parse Resume with AI';
+                }
+            });
+        }
+
+        // Detect input type
+        function detectInputType(input) {
+            // Check if it looks like JSON
+            if (input.startsWith('{') && input.endsWith('}')) {
+                try {
+                    const parsed = JSON.parse(input);
+                    // Validate it has resume-like structure
+                    if (parsed.personal || parsed.experience || parsed.skills || parsed.summary) {
+                        return 'json';
+                    }
+                } catch (e) {
+                    return 'invalid-json';
+                }
+            }
+            return 'text';
+        }
+
+        // Process resume input (replaces parseResume)
+        async function processResumeInput() {
+            const resumeContent = document.getElementById('resume-input').value.trim();
+            if (!resumeContent) {
+                showNotification('⚠️ Please paste your resume data first', 'warning');
+                return;
+            }
+
+            const inputType = detectInputType(resumeContent);
+            
+            if (inputType === 'json') {
+                await loadJsonData(resumeContent);
+            } else {
+                await parseResumeText(resumeContent);
+            }
+        }
+
+        // Load JSON data directly
+        async function loadJsonData(jsonContent) {
+            showLoading('📋 Loading JSON resume data...');
+            
+            try {
+                const parsed = JSON.parse(jsonContent);
+                
+                // Validate and normalize the JSON structure
+                resumeData = normalizeResumeData(parsed);
+                displayResumeJson();
+                hideLoading();
+                showNotification('✅ JSON resume data loaded successfully!', 'success');
+                updateProgress(25);
+                
+            } catch (error) {
+                console.error('Error loading JSON:', error);
+                hideLoading();
+                showNotification('❌ Invalid JSON format. Trying to parse as text...', 'warning');
+                await parseResumeText(jsonContent);
+            }
+        }
+
+        // Normalize resume data to ensure consistent structure
+        function normalizeResumeData(data) {
+            return {
+                personal: data.personal || {
+                    name: data.name || "",
+                    email: data.email || "",
+                    phone: data.phone || "",
+                    location: data.location || "",
+                    linkedin: data.linkedin || "",
+                    github: data.github || ""
+                },
+                summary: data.summary || data.objective || "",
+                experience: Array.isArray(data.experience) ? data.experience : (data.work ? data.work : []),
+                skills: data.skills || {
+                    technical: data.technical_skills || [],
+                    soft: data.soft_skills || []
+                },
+                education: Array.isArray(data.education) ? data.education : [],
+                projects: Array.isArray(data.projects) ? data.projects : []
+            };
+        }
+
+        // Parse resume text with AI (renamed from parseResume)
+        async function parseResumeText(resumeText) {
+            showLoading('🤖 AI is parsing your resume...');
+            
+            // Check if API key exists and is valid format
+            if (!apiKeys.openai) {
+                console.log('No API key found, using demo mode');
+                resumeData = createMockResumeData(resumeText);
+                displayResumeJson();
+                hideLoading();
+                showNotification('📄 Resume parsed in demo mode. Add API key for AI parsing.', 'warning');
+                updateProgress(25);
+                return;
+            }
+            
+            try {
+                const prompt = `Parse this resume into a structured JSON format. Extract all information accurately:
+
+${resumeText}
+
+Return ONLY valid JSON with this exact structure:
+{
+  "personal": {
+    "name": "",
+    "email": "",
+    "phone": "",
+    "location": "",
+    "linkedin": "",
+    "github": ""
+  },
+  "summary": "",
+  "experience": [
+    {
+      "company": "",
+      "position": "",
+      "duration": "",
+      "responsibilities": [""],
+      "achievements": [""]
+    }
+  ],
+  "skills": {
+    "technical": [""],
+    "soft": [""]
+  },
+  "education": [
+    {
+      "degree": "",
+      "institution": "",
+      "year": "",
+      "gpa": ""
+    }
+  ],
+  "projects": [
+    {
+      "name": "",
+      "description": "",
+      "technologies": [""]
+    }
+  ]
+}`;
+
+                const response = await callAI(prompt);
+                
+                // Extract JSON from response
+                let jsonText = response;
+                if (response.includes('```json')) {
+                    jsonText = response.split('```json')[1].split('```')[0].trim();
+                } else if (response.includes('```')) {
+                    jsonText = response.split('```')[1].split('```')[0].trim();
+                }
+                
+                resumeData = JSON.parse(jsonText);
+                displayResumeJson();
+                hideLoading();
+                showNotification('✅ Resume successfully parsed by AI!', 'success');
+                updateProgress(25);
+                
+            } catch (error) {
+                console.error('Error parsing resume:', error);
+                hideLoading();
+                
+                if (error.message.includes('API Error: 401')) {
+                    showNotification('❌ Invalid API key. Please check your OpenAI API key.', 'warning');
+                } else if (error.message.includes('API Error: 429')) {
+                    showNotification('⏳ Rate limit exceeded. Please try again in a moment.', 'warning');
+                } else {
+                    showNotification('⚠️ AI parsing failed. Using fallback mode...', 'warning');
+                    
+                    // Fallback to demo mode
+                    resumeData = createMockResumeData(resumeText);
+                    displayResumeJson();
+                    updateProgress(25);
+                }
+            }
+        }
 
         // Load saved data from memory (not localStorage)
         function loadData() {
@@ -785,7 +1017,7 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    model: 'gpt-5-nano',
+                    model: 'GPT-5-nano',
                     messages: [
                         {
                             role: 'system',
@@ -1420,109 +1652,258 @@ Return optimized content in this JSON format:
             }, 300);
         }
 
-        // Export optimized resume
+        // Export optimized resume as professional PDF
         function exportResume() {
             if (!resumeData) {
                 showNotification('⚠️ No resume data to export', 'warning');
                 return;
             }
             
-            const resumeText = formatResumeForExport(resumeData);
+            showLoading('📄 Generating professional PDF...');
             
-            const blob = new Blob([resumeText], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'optimized-resume.txt';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            showNotification('📥 Resume exported successfully!', 'success');
+            try {
+                generateProfessionalPDF(resumeData);
+                hideLoading();
+                showNotification('📥 Professional PDF exported successfully!', 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                hideLoading();
+                showNotification('❌ PDF export failed. Please try again.', 'warning');
+            }
         }
 
-        // Format resume for export
-        function formatResumeForExport(data) {
-            let text = '';
+        // Generate professional PDF
+        function generateProfessionalPDF(data) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
             
-            // Personal Information
-            text += `${data.personal.name}\n`;
-            text += `${data.personal.email} | ${data.personal.phone}\n`;
-            text += `${data.personal.location}\n`;
-            if (data.personal.linkedin) text += `LinkedIn: ${data.personal.linkedin}\n`;
-            if (data.personal.github) text += `GitHub: ${data.personal.github}\n`;
-            text += '\n';
+            let yPos = 20;
+            const pageHeight = doc.internal.pageSize.height;
+            const margin = 20;
+            const lineHeight = 6;
+            
+            // Helper function to add new page if needed
+            function checkPageSpace(needed = 20) {
+                if (yPos + needed > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            }
+            
+            // Helper function to wrap text
+            function addWrappedText(text, x, maxWidth, fontSize = 10) {
+                doc.setFontSize(fontSize);
+                const lines = doc.splitTextToSize(text, maxWidth);
+                lines.forEach(line => {
+                    checkPageSpace();
+                    doc.text(line, x, yPos);
+                    yPos += lineHeight;
+                });
+                return lines.length;
+            }
+            
+            // Header Section
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text(data.personal.name || 'Professional Resume', margin, yPos);
+            yPos += 10;
+            
+            // Contact Information
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            const contactInfo = [
+                data.personal.email,
+                data.personal.phone,
+                data.personal.location
+            ].filter(info => info).join(' • ');
+            
+            if (contactInfo) {
+                doc.text(contactInfo, margin, yPos);
+                yPos += 8;
+            }
+            
+            // LinkedIn and GitHub
+            const links = [
+                data.personal.linkedin,
+                data.personal.github
+            ].filter(link => link).join(' • ');
+            
+            if (links) {
+                doc.setTextColor(0, 0, 255);
+                doc.text(links, margin, yPos);
+                doc.setTextColor(0, 0, 0);
+                yPos += 10;
+            }
             
             // Professional Summary
             if (data.summary) {
-                text += 'PROFESSIONAL SUMMARY\n';
-                text += '━━━━━━━━━━━━━━━━━━━━\n';
-                text += `${data.summary}\n\n`;
+                checkPageSpace(30);
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('PROFESSIONAL SUMMARY', margin, yPos);
+                yPos += 8;
+                
+                // Add line under header
+                doc.setLineWidth(0.5);
+                doc.line(margin, yPos - 2, 190, yPos - 2);
+                yPos += 5;
+                
+                addWrappedText(data.summary, margin, 170, 10);
+                yPos += 5;
             }
             
-            // Experience
+            // Professional Experience
             if (data.experience && data.experience.length > 0) {
-                text += 'PROFESSIONAL EXPERIENCE\n';
-                text += '━━━━━━━━━━━━━━━━━━━━━━━━\n';
+                checkPageSpace(30);
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('PROFESSIONAL EXPERIENCE', margin, yPos);
+                yPos += 8;
+                
+                doc.setLineWidth(0.5);
+                doc.line(margin, yPos - 2, 190, yPos - 2);
+                yPos += 5;
+                
                 data.experience.forEach(exp => {
-                    text += `${exp.position} | ${exp.company}\n`;
-                    text += `${exp.duration}\n`;
-                    if (exp.responsibilities) {
+                    checkPageSpace(25);
+                    
+                    // Position and Company
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`${exp.position}`, margin, yPos);
+                    
+                    // Company and Duration on same line
+                    doc.setFont(undefined, 'normal');
+                    const companyText = `${exp.company} | ${exp.duration}`;
+                    doc.text(companyText, margin, yPos + 6);
+                    yPos += 15;
+                    
+                    // Responsibilities
+                    if (exp.responsibilities && exp.responsibilities.length > 0) {
                         exp.responsibilities.forEach(resp => {
-                            text += `• ${resp}\n`;
+                            checkPageSpace();
+                            addWrappedText(`• ${resp}`, margin + 5, 165, 10);
                         });
                     }
-                    if (exp.achievements) {
+                    
+                    // Achievements
+                    if (exp.achievements && exp.achievements.length > 0) {
                         exp.achievements.forEach(ach => {
-                            text += `• ${ach}\n`;
+                            checkPageSpace();
+                            doc.setFont(undefined, 'bold');
+                            addWrappedText(`• ${ach}`, margin + 5, 165, 10);
+                            doc.setFont(undefined, 'normal');
                         });
                     }
-                    text += '\n';
+                    
+                    yPos += 8;
                 });
             }
             
-            // Skills
+            // Technical Skills
             if (data.skills) {
-                text += 'TECHNICAL SKILLS\n';
-                text += '━━━━━━━━━━━━━━━━\n';
-                if (data.skills.technical) {
-                    text += `Technical: ${data.skills.technical.join(', ')}\n`;
+                checkPageSpace(25);
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('TECHNICAL SKILLS', margin, yPos);
+                yPos += 8;
+                
+                doc.setLineWidth(0.5);
+                doc.line(margin, yPos - 2, 190, yPos - 2);
+                yPos += 5;
+                
+                if (data.skills.technical && data.skills.technical.length > 0) {
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Technical:', margin, yPos);
+                    doc.setFont(undefined, 'normal');
+                    addWrappedText(data.skills.technical.join(', '), margin + 25, 145, 10);
+                    yPos += 3;
                 }
-                if (data.skills.soft) {
-                    text += `Soft Skills: ${data.skills.soft.join(', ')}\n`;
+                
+                if (data.skills.soft && data.skills.soft.length > 0) {
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Soft Skills:', margin, yPos);
+                    doc.setFont(undefined, 'normal');
+                    addWrappedText(data.skills.soft.join(', '), margin + 25, 145, 10);
+                    yPos += 3;
                 }
-                text += '\n';
+                
+                yPos += 5;
             }
             
             // Education
             if (data.education && data.education.length > 0) {
-                text += 'EDUCATION\n';
-                text += '━━━━━━━━━\n';
+                checkPageSpace(25);
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('EDUCATION', margin, yPos);
+                yPos += 8;
+                
+                doc.setLineWidth(0.5);
+                doc.line(margin, yPos - 2, 190, yPos - 2);
+                yPos += 5;
+                
                 data.education.forEach(edu => {
-                    text += `${edu.degree}\n`;
-                    text += `${edu.institution} | ${edu.year}\n`;
-                    if (edu.gpa) text += `GPA: ${edu.gpa}\n`;
-                    if (edu.relevantCoursework) text += `Relevant Coursework: ${edu.relevantCoursework}\n`;
-                    text += '\n';
+                    checkPageSpace();
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(edu.degree, margin, yPos);
+                    yPos += 6;
+                    
+                    doc.setFont(undefined, 'normal');
+                    const eduInfo = `${edu.institution} | ${edu.year}`;
+                    doc.text(eduInfo, margin, yPos);
+                    yPos += 6;
+                    
+                    if (edu.gpa) {
+                        doc.text(`GPA: ${edu.gpa}`, margin, yPos);
+                        yPos += 6;
+                    }
+                    
+                    if (edu.relevantCoursework) {
+                        addWrappedText(`Relevant Coursework: ${edu.relevantCoursework}`, margin, 165, 10);
+                    }
+                    
+                    yPos += 5;
                 });
             }
             
             // Projects
             if (data.projects && data.projects.length > 0) {
-                text += 'PROJECTS\n';
-                text += '━━━━━━━━\n';
+                checkPageSpace(25);
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('PROJECTS', margin, yPos);
+                yPos += 8;
+                
+                doc.setLineWidth(0.5);
+                doc.line(margin, yPos - 2, 190, yPos - 2);
+                yPos += 5;
+                
                 data.projects.forEach(proj => {
-                    text += `${proj.name}\n`;
-                    text += `${proj.description}\n`;
-                    if (proj.technologies) {
-                        text += `Technologies: ${proj.technologies.join(', ')}\n`;
+                    checkPageSpace(15);
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(proj.name, margin, yPos);
+                    yPos += 6;
+                    
+                    doc.setFont(undefined, 'normal');
+                    addWrappedText(proj.description, margin, 165, 10);
+                    
+                    if (proj.technologies && proj.technologies.length > 0) {
+                        doc.setFont(undefined, 'italic');
+                        addWrappedText(`Technologies: ${proj.technologies.join(', ')}`, margin, 165, 10);
+                        doc.setFont(undefined, 'normal');
                     }
-                    text += '\n';
+                    
+                    yPos += 5;
                 });
             }
             
-            return text;
+            // Save the PDF
+            const fileName = `${data.personal.name || 'Resume'}_Professional.pdf`;
+            doc.save(fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
         }
     </script>
 </body>
