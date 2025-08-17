@@ -640,35 +640,19 @@ Example formats:
 // Save API keys
 function saveApiKeys() {
     const openaiKey = document.getElementById('openai-key').value.trim();
-    
     if (!openaiKey) {
         showNotification('⚠️ Please enter your OpenAI API key', 'warning');
         return;
     }
-    
     if (!openaiKey.startsWith('sk-')) {
         showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
         return;
     }
-    
-    // Option 3 approach - save first, validate during usage
-    showLoading('🔑 Saving API key...');
-    
-    try {
-        // Just save it without blocking validation
-        apiKeys.openai = openaiKey;
-        hideLoading();
-        showNotification('✅ OpenAI API key saved! We\'ll validate it when you use AI features.', 'success');
-        updateProgress(10);
-        
-        // Optional: Try validation in background without blocking
-        validateKeyInBackground(openaiKey);
-        
-    } catch (error) {
-        console.error('Error saving key:', error);
-        hideLoading();
-        showNotification('❌ Error saving API key. Please try again.', 'warning');
-    }
+    // Save to localStorage
+    apiKeys.openai = openaiKey;
+    localStorage.setItem('openaiKey', openaiKey);
+    showNotification('✅ OpenAI API key saved! Ready to use AI features.', 'success');
+    updateProgress(10);
 }
 
 // Optional background validation (non-blocking)
