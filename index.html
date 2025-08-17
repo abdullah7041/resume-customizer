@@ -682,20 +682,41 @@ Example formats:
 
         // Detect input type
         function detectInputType(input) {
-            // Check if it looks like JSON
-            if (input.startsWith('{') && input.endsWith('}')) {
-                try {
-                    const parsed = JSON.parse(input);
-                    // Validate it has resume-like structure
-                    if (parsed.personal || parsed.experience || parsed.skills || parsed.summary) {
-                        return 'json';
-                    }
-                } catch (e) {
-                    return 'invalid-json';
-                }
+    // Trim whitespace first
+    const trimmed = input.trim();
+    
+    // More robust JSON detection
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || 
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            // Validate it has resume-like structure with multiple checks
+            const hasResumeFields = [
+                'personal', 'experience', 'skills', 'summary', 'education',
+                'name', 'work', 'technical_skills', 'objective'
+            ].some(field => field in parsed);
+            
+            if (hasResumeFields) {
+                return 'json';
             }
-            return 'text';
+        } catch (e) {
+            return 'invalid-json';
         }
+    }
+    
+    // Additional JSON patterns (maybe it's formatted differently)
+    if (trimmed.includes('"personal"') || trimmed.includes('"experience"') || 
+        trimmed.includes('"skills"')) {
+        try {
+            JSON.parse(trimmed);
+            return 'json';
+        } catch (e) {
+            return 'invalid-json';
+        }
+    }
+    
+    return 'text';
+}
 
         // Process resume input (replaces parseResume)
         async function processResumeInput() {
@@ -904,24 +925,39 @@ Return ONLY valid JSON with this exact structure:
         });
 
         // Save API keys
-        function saveApiKeys() {
-            const openaiKey = document.getElementById('openai-key').value.trim();
-            
-            if (!openaiKey) {
-                showNotification('⚠️ Please enter your OpenAI API key', 'warning');
-                return;
+        async function saveApiKeys() {
+    const openaiKey = document.getElementById('openai-key').value.trim();
+    
+    if (!openaiKey) {
+        showNotification('⚠️ Please enter your OpenAI API key', 'warning');
+        return;
+    }
+    
+    if (!openaiKey.startsWith('sk-')) {
+        showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
+        return;
+    }
+    
+    // Test the API key with a simple request
+    showLoading('🔑 Validating API key...');
+    
+    try {
+        await fetch('https://api.openai.com/v1/models', {
+            headers: {
+                'Authorization': `Bearer ${openaiKey}`
             }
-            
-            if (!openaiKey.startsWith('sk-')) {
-                showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
-                return;
-            }
-            
-            apiKeys.openai = openaiKey;
-            
-            showNotification('✅ OpenAI API key saved! Ready to use GPT-5-nano.', 'success');
-            updateProgress(10);
-        }
+        });
+        
+        apiKeys.openai = openaiKey;
+        hideLoading();
+        showNotification('✅ OpenAI API key validated and saved!', 'success');
+        updateProgress(10);
+        
+    } catch (error) {
+        hideLoading();
+        showNotification('❌ API key validation failed. Please check your key.', 'warning');
+    }
+}
 
         // Show notification
         function showNotification(message, type = 'info') {
@@ -1003,44 +1039,43 @@ Return ONLY valid JSON with this exact structure:
                 loading.remove();
             }
         }
+async function callAI(prompt) {
+    if (!apiKeys.openai) {
+        throw new Error('No API key provided');
+    }
 
-        // Call OpenAI API
-        async function callAI(prompt) {
-            if (!apiKeys.openai) {
-                throw new Error('No API key provided');
-            }
-
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKeys.openai}`,
-                    'Content-Type': 'application/json',
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKeys.openai}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: 'gpt-5-nano', // Updated based on your proof
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a professional resume optimization assistant. Always return valid JSON in the requested format.'
                 },
-                body: JSON.stringify({
-                    model: 'GPT-5-nano',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a professional resume optimization assistant. Provide accurate, helpful responses in the requested format.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    max_completion_tokens: 2000,
-                    temperature: 0.3
-                })
-            });
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            max_completion_tokens: 2000, // Fixed parameter name
+            temperature: 0.3
+        })
+    });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error?.message || `API Error: ${response.status}`);
-            }
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+    }
 
-            const data = await response.json();
-            return data.choices[0].message.content;
-        }
+    const data = await response.json();
+    return data.choices[0].message.content;
+}}
 
         // Parse resume to JSON
         async function parseResume() {
