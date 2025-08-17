@@ -920,7 +920,24 @@ Return ONLY valid JSON with this exact structure:
         apiKeys.openai = savedKey;
         document.getElementById('openai-key').value = savedKey;
     }
-    // ...rest of your loadData code
+document.getElementById('resume-json').style.display = 'block';
+                updateProgress(25);
+            }
+            
+            if (jobDescription) {
+                document.getElementById('job-input').value = jobDescription;
+                updateProgress(50);
+            }
+            
+            if (matchAnalysis) {
+                displayMatchResult(matchAnalysis);
+                updateProgress(75);
+            }
+            
+            if (apiKeys.openai) {
+                document.getElementById('openai-key').value = apiKeys.openai;
+            }
+        }
 }
 
         // Update progress bar
