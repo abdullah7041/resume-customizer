@@ -925,37 +925,38 @@ Return ONLY valid JSON with this exact structure:
         });
 
         // Save API keys
-        async function saveApiKeys() {
-    const openaiKey = document.getElementById('openai-key').value.trim();
-    
-    if (!openaiKey) {
-        showNotification('⚠️ Please enter your OpenAI API key', 'warning');
-        return;
-    }
-    
-    if (!openaiKey.startsWith('sk-')) {
-        showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
-        return;
-    }
-    
-    // Test the API key with a simple request
-    showLoading('🔑 Validating API key...');
+       async function saveApiKeys() {
+    // ... existing code ...
     
     try {
-        await fetch('https://api.openai.com/v1/models', {
+        const testResponse = await fetch('https://api.openai.com/v1/models', {
             headers: {
                 'Authorization': `Bearer ${openaiKey}`
             }
         });
         
+        if (!testResponse.ok) {
+            const errorText = await testResponse.text();
+            console.error('Validation failed:', testResponse.status, errorText);
+            
+            // Still save the key but warn user
+            apiKeys.openai = openaiKey;
+            showNotification(`⚠️ Key saved but validation failed (${testResponse.status}). Will try during usage.`, 'warning');
+            updateProgress(10);
+            return;
+        }
+        
+        // Success path
         apiKeys.openai = openaiKey;
-        hideLoading();
         showNotification('✅ OpenAI API key validated and saved!', 'success');
         updateProgress(10);
         
     } catch (error) {
-        hideLoading();
-        showNotification('❌ API key validation failed. Please check your key.', 'warning');
+        console.error('Network error during validation:', error);
+        // Still save the key
+        apiKeys.openai = openaiKey;
+        showNotification('⚠️ Key saved. Network error during validation - will test during usage.', 'warning');
+        updateProgress(10);
     }
 }
 
