@@ -349,20 +349,20 @@
             margin-bottom: 15px;
             font-weight: 700;
         }
-        
+
         .api-status {
             padding: 15px;
             border-radius: 12px;
             margin-top: 15px;
             font-weight: 600;
-            display: none; /* Hidden by default */
+            display: none;
         }
 
         .api-status.connected {
             background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
             border: 2px solid #16a34a;
             color: #15803d;
-            display: block; /* Becomes visible when connected */
+            display: block;
         }
 
         .suggestions {
@@ -506,6 +506,7 @@
             <button class="tab" onclick="showTab('optimize')">✨ Auto-Optimize</button>
         </div>
 
+        <!-- Setup Tab -->
         <div class="tab-content active" id="setup">
             <div class="api-setup">
                 <h3>🔑 API Configuration</h3>
@@ -514,10 +515,11 @@
                     <label>OpenAI API Key</label>
                     <input type="password" id="openai-key" placeholder="sk-..." />
                     <small style="color: #64748b; margin-top: 8px; display: block;">
-                        Get your key from <strong>platform.openai.com</strong> • Uses GPT-5-nano
+                        Get your key from <strong>platform.openai.com</strong> • Uses GPT-5-nano (~$0.002 per resume)
                     </small>
                 </div>
                 <button class="btn" onclick="saveApiKeys()">💾 Save API Key</button>
+                
                 <div class="api-status" id="api-status">
                     ✅ API Key Connected! Ready to use AI features.
                 </div>
@@ -526,20 +528,21 @@
             <div class="suggestions">
                 <h3>🚀 How It Works</h3>
                 <div class="suggestion-item">
-                    <strong>Step 1:</strong> Add your OpenAI API key above. Your key is saved securely in your browser.
+                    <strong>Step 1:</strong> Add your OpenAI API key above (GPT-5-nano costs ~$0.002 per resume)
                 </div>
                 <div class="suggestion-item">
-                    <strong>Step 2:</strong> Paste your resume text to parse into structured data.
+                    <strong>Step 2:</strong> Paste your resume text to parse into structured data
                 </div>
                 <div class="suggestion-item">
-                    <strong>Step 3:</strong> Add a job description to get an instant compatibility score.
+                    <strong>Step 3:</strong> Add job description and get instant compatibility score
                 </div>
                 <div class="suggestion-item">
-                    <strong>Step 4:</strong> Let the AI automatically optimize the weak sections for you!
+                    <strong>Step 4:</strong> AI automatically optimizes weak sections for you!
                 </div>
             </div>
         </div>
 
+        <!-- Resume Tab -->
         <div class="tab-content" id="resume">
             <div class="form-group">
                 <label>📄 Paste Your Resume Data</label>
@@ -565,6 +568,7 @@ Example formats:
             </div>
         </div>
 
+        <!-- Job Match Tab -->
         <div class="tab-content" id="job">
             <div class="form-group">
                 <label>💼 Job Description</label>
@@ -589,6 +593,7 @@ Example formats:
             </div>
         </div>
 
+        <!-- Auto-Optimize Tab -->
         <div class="tab-content" id="optimize">
             <div class="auto-optimize-panel">
                 <h3>
@@ -634,7 +639,7 @@ Example formats:
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-        // Global state
+        // Global state - persistent during session
         let resumeData = null;
         let jobDescription = '';
         let matchAnalysis = null;
@@ -645,24 +650,21 @@ Example formats:
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadApiKey(); // FIX: Load the API key first
             loadData();
             setupInputDetection();
+            checkApiKeyStatus();
         });
-        
-        // FIX: New function to load API key from localStorage and update UI
-        function loadApiKey() {
-            const savedKey = localStorage.getItem('aiResumeOptimizerApiKey');
-            if (savedKey) {
-                apiKeys.openai = savedKey;
-                document.getElementById('openai-key').value = savedKey;
+
+        // Check API key status on load
+        function checkApiKeyStatus() {
+            const savedKey = document.getElementById('openai-key').value;
+            if (savedKey && apiKeys.openai) {
                 document.getElementById('api-status').classList.add('connected');
                 updateProgress(10);
-                console.log('API Key loaded from localStorage.');
             }
         }
 
-        // Setup input detection
+        // Enhanced input detection
         function setupInputDetection() {
             const textarea = document.getElementById('resume-input');
             const statusDiv = document.getElementById('input-status');
@@ -687,7 +689,7 @@ Example formats:
                     statusDiv.style.border = '2px solid #16a34a';
                     statusDiv.style.color = '#15803d';
                     statusIcon.textContent = '📋';
-                    statusText.textContent = 'JSON format detected! Ready to load directly.';
+                    statusText.textContent = 'Valid JSON resume format detected! Ready to load directly.';
                     parseBtn.textContent = '📋 Load JSON Data';
                 } else if (inputType === 'text') {
                     statusDiv.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
@@ -701,29 +703,74 @@ Example formats:
                     statusDiv.style.border = '2px solid #f59e0b';
                     statusDiv.style.color = '#92400e';
                     statusIcon.textContent = '⚠️';
-                    statusText.textContent = 'Invalid JSON format. Will try parsing as text.';
+                    statusText.textContent = 'Invalid JSON detected. Will attempt to parse as text.';
                     parseBtn.textContent = '🤖 Parse Resume with AI';
                 }
             });
         }
 
-        // Detect input type
+        // Enhanced JSON detection
         function detectInputType(input) {
-            if (input.startsWith('{') && input.endsWith('}')) {
+            const trimmed = input.trim();
+            
+            // Check for JSON format
+            if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || 
+                (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
                 try {
-                    const parsed = JSON.parse(input);
-                    const resumeKeys = ['personal', 'summary', 'experience', 'work', 'skills', 'education', 'projects', 'objective', 'name', 'email'];
-                    if (Object.keys(parsed).some(key => resumeKeys.includes(key.toLowerCase()))) {
+                    const parsed = JSON.parse(trimmed);
+                    
+                    // Enhanced validation for resume structure
+                    const resumeFields = [
+                        'personal', 'experience', 'skills', 'summary', 'education',
+                        'name', 'work', 'technical_skills', 'objective', 'contact'
+                    ];
+                    
+                    const hasResumeFields = resumeFields.some(field => {
+                        return field in parsed || 
+                               (typeof parsed === 'object' && 
+                                Object.keys(parsed).some(key => 
+                                    key.toLowerCase().includes(field.toLowerCase())
+                                )
+                               );
+                    });
+                    
+                    if (hasResumeFields) {
                         return 'json';
                     }
+                    
+                    // Check if it's an array of resume objects
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        const firstItem = parsed[0];
+                        if (typeof firstItem === 'object' && 
+                            resumeFields.some(field => field in firstItem)) {
+                            return 'json';
+                        }
+                    }
+                    
                 } catch (e) {
                     return 'invalid-json';
                 }
             }
+            
+            // Check for JSON-like content patterns
+            const jsonPatterns = [
+                /"personal"/, /"experience"/, /"skills"/, /"summary"/,
+                /"education"/, /"name"/, /"email"/, /"phone"/
+            ];
+            
+            if (jsonPatterns.some(pattern => pattern.test(trimmed))) {
+                try {
+                    JSON.parse(trimmed);
+                    return 'json';
+                } catch (e) {
+                    return 'invalid-json';
+                }
+            }
+            
             return 'text';
         }
 
-        // FIX: Correctly save the API key to localStorage for persistence
+        // Fixed API key saving with better persistence
         function saveApiKeys() {
             const openaiKey = document.getElementById('openai-key').value.trim();
             
@@ -737,16 +784,35 @@ Example formats:
                 return;
             }
             
+            // Store the key in our global object
             apiKeys.openai = openaiKey;
-            localStorage.setItem('aiResumeOptimizerApiKey', openaiKey); // Save to localStorage
             
+            // Also store in a backup location for session persistence
+            window.tempApiKey = openaiKey;
+            
+            // Show success status
             document.getElementById('api-status').classList.add('connected');
-            showNotification('✅ OpenAI API key saved!', 'success');
-            updateProgress(10);
+            showNotification('✅ OpenAI API key saved successfully! Ready to use AI features.', 'success');
+            updateProgress(15);
+            
+            // Debug logging
+            console.log('API Key Status:', {
+                saved: !!apiKeys.openai,
+                length: apiKeys.openai ? apiKeys.openai.length : 0,
+                startsWithSk: apiKeys.openai ? apiKeys.openai.startsWith('sk-') : false
+            });
         }
 
-        // Load saved data from memory (not localStorage)
+        // Enhanced load data function with better key persistence
         function loadData() {
+            // Restore API key if it exists
+            const keyInput = document.getElementById('openai-key');
+            if (window.tempApiKey && !apiKeys.openai) {
+                apiKeys.openai = window.tempApiKey;
+                keyInput.value = window.tempApiKey;
+                document.getElementById('api-status').classList.add('connected');
+            }
+            
             if (resumeData) {
                 document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
                 document.getElementById('resume-json').style.display = 'block';
@@ -788,7 +854,8 @@ Example formats:
                 manualSection.style.display = 'none';
             }
         });
-        
+
+        // Process resume input (handles both JSON and text)
         async function processResumeInput() {
             const resumeContent = document.getElementById('resume-input').value.trim();
             if (!resumeContent) {
@@ -804,17 +871,20 @@ Example formats:
                 await parseResumeText(resumeContent);
             }
         }
-        
+
+        // Load JSON data directly
         async function loadJsonData(jsonContent) {
             showLoading('📋 Loading JSON resume data...');
             
             try {
                 const parsed = JSON.parse(jsonContent);
+                
+                // Validate and normalize the JSON structure
                 resumeData = normalizeResumeData(parsed);
                 displayResumeJson();
                 hideLoading();
                 showNotification('✅ JSON resume data loaded successfully!', 'success');
-                updateProgress(25);
+                updateProgress(35);
                 
             } catch (error) {
                 console.error('Error loading JSON:', error);
@@ -824,142 +894,176 @@ Example formats:
             }
         }
 
-        // REPLACE this entire function
-function normalizeResumeData(data) {
-    const personalData = data.personal || {};
-    return {
-        personal: {
-            name: personalData.name || data.name || "",
-            email: personalData.email || data.email || "",
-            phone: personalData.phone || data.phone || "",
-            location: personalData.location || data.location || "",
-            linkedin: personalData.linkedin || data.linkedin || "",
-            github: personalData.github || data.github || ""
-        },
-        summary: data.summary || data.objective || "",
-        experience: Array.isArray(data.experience) ? data.experience : (data.work ? data.work : []),
-        skills: data.skills || {
-            technical: data.technical_skills || [],
-            soft: data.soft_skills || []
-        },
-        education: Array.isArray(data.education) ? data.education : [],
-        projects: Array.isArray(data.projects) ? data.projects : []
-    };
-}
+        // Normalize resume data to ensure consistent structure
+        function normalizeResumeData(data) {
+            return {
+                personal: data.personal || {
+                    name: data.name || "",
+                    email: data.email || "",
+                    phone: data.phone || "",
+                    location: data.location || "",
+                    linkedin: data.linkedin || "",
+                    github: data.github || ""
+                },
+                summary: data.summary || data.objective || "",
+                experience: Array.isArray(data.experience) ? data.experience : (data.work ? data.work : []),
+                skills: data.skills || {
+                    technical: data.technical_skills || [],
+                    soft: data.soft_skills || []
+                },
+                education: Array.isArray(data.education) ? data.education : [],
+                projects: Array.isArray(data.projects) ? data.projects : []
+            };
+        }
 
-
+        // Parse resume text with AI
         async function parseResumeText(resumeText) {
             showLoading('🤖 AI is parsing your resume...');
             
+            // Check if API key exists
             if (!apiKeys.openai) {
                 console.log('No API key found, using demo mode');
                 resumeData = createMockResumeData(resumeText);
                 displayResumeJson();
                 hideLoading();
                 showNotification('📄 Resume parsed in demo mode. Add API key for AI parsing.', 'warning');
-                updateProgress(25);
+                updateProgress(35);
                 return;
             }
             
             try {
-                const prompt = `Parse this resume into a structured JSON format. Extract all information accurately:
+                const prompt = `Parse this resume into a structured JSON format. Extract all information accurately and return ONLY valid JSON:
 
 ${resumeText}
 
-Return ONLY valid JSON with this exact structure:
+Return this exact structure:
 {
-  "personal": {"name": "","email": "","phone": "","location": "","linkedin": "","github": ""},
+  "personal": {
+    "name": "",
+    "email": "",
+    "phone": "",
+    "location": "",
+    "linkedin": "",
+    "github": ""
+  },
   "summary": "",
-  "experience": [{"company": "","position": "","duration": "","responsibilities": [""]_,"achievements": [""]_}],
-  "skills": {"technical": [""]_,"soft": [""]_},
-  "education": [{"degree": "","institution": "","year": "","gpa": ""}],
-  "projects": [{"name": "","description": "","technologies": [""]_}]
+  "experience": [
+    {
+      "company": "",
+      "position": "",
+      "duration": "",
+      "responsibilities": [""],
+      "achievements": [""]
+    }
+  ],
+  "skills": {
+    "technical": [""],
+    "soft": [""]
+  },
+  "education": [
+    {
+      "degree": "",
+      "institution": "",
+      "year": "",
+      "gpa": ""
+    }
+  ],
+  "projects": [
+    {
+      "name": "",
+      "description": "",
+      "technologies": [""]
+    }
+  ]
 }`;
 
                 const response = await callAI(prompt);
                 
-                let jsonText = response;
-                if (response.includes('```json')) {
-                    jsonText = response.split('```json')[1].split('```')[0].trim();
-                } else if (response.includes('```')) {
-                    jsonText = response.split('```')[1].split('```')[0].trim();
+                // Extract JSON from response
+                let jsonText = response.trim();
+                if (jsonText.includes('```json')) {
+                    jsonText = jsonText.split('```json')[1].split('```')[0].trim();
+                } else if (jsonText.includes('```')) {
+                    jsonText = jsonText.split('```')[1].split('```')[0].trim();
                 }
                 
                 resumeData = JSON.parse(jsonText);
                 displayResumeJson();
                 hideLoading();
                 showNotification('✅ Resume successfully parsed by AI!', 'success');
-                updateProgress(25);
+                updateProgress(35);
                 
             } catch (error) {
                 console.error('Error parsing resume:', error);
                 hideLoading();
                 
+                // Provide specific error messages
                 if (error.message.includes('401')) {
                     showNotification('❌ Invalid API key. Please check your OpenAI API key.', 'warning');
                 } else if (error.message.includes('429')) {
                     showNotification('⏳ Rate limit exceeded. Please try again in a moment.', 'warning');
+                } else if (error.message.includes('model')) {
+                    showNotification('⚠️ Model not available. Using fallback parsing...', 'warning');
                 } else {
                     showNotification('⚠️ AI parsing failed. Using fallback mode...', 'warning');
-                    resumeData = createMockResumeData(resumeText);
-                    displayResumeJson();
-                    updateProgress(25);
                 }
+                
+                // Fallback to demo mode
+                resumeData = createMockResumeData(resumeText);
+                displayResumeJson();
+                updateProgress(35);
             }
         }
 
-        // REPLACE this entire function
-async function callAI(prompt) {
-    if (!apiKeys.openai) {
-        throw new Error('No API key provided');
-    }
+        // Fixed OpenAI API call with GPT-5-nano
+        async function callAI(prompt) {
+            if (!apiKeys.openai) {
+                throw new Error('No API key provided');
+            }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKeys.openai}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            model: 'gpt-5-nano', // Use the faster and more affordable model
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a professional resume optimization assistant. Provide accurate, helpful responses in the requested format.'
+            console.log('Making API call with key:', apiKeys.openai ? 'Present' : 'Missing');
+
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKeys.openai}`,
+                    'Content-Type': 'application/json',
                 },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            max_tokens: 2000,
-            temperature: 0.3
-        })
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || `API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
-}
+                body: JSON.stringify({
+                    model: 'gpt-5-nano', // Using cost-efficient GPT-5-nano
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a professional resume optimization assistant. Always return valid JSON in the exact format requested. Do not include any explanations or additional text.'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    max_completion_tokens: 2000, // Correct parameter for GPT-5-nano
+                    temperature: 0.3
+                })
+            });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error?.message || `API Error: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+                console.error('API Error:', response.status, errorMessage);
+                throw new Error(`API Error (${response.status}): ${errorMessage}`);
             }
 
             const data = await response.json();
             return data.choices[0].message.content;
         }
 
+        // Display parsed JSON
         function displayResumeJson() {
             document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
             document.getElementById('resume-json').style.display = 'block';
         }
 
+        // Edit JSON structure
         function editJson() {
             const currentJson = JSON.stringify(resumeData, null, 2);
             const newJson = prompt("Edit your resume JSON:", currentJson);
@@ -975,6 +1079,7 @@ async function callAI(prompt) {
             }
         }
 
+        // Create mock resume data for demo
         function createMockResumeData(text) {
             const emailMatch = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
             const phoneMatch = text.match(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/);
@@ -1027,6 +1132,7 @@ async function callAI(prompt) {
             };
         }
 
+        // Analyze job match
         async function analyzeMatch() {
             jobDescription = document.getElementById('job-input').value.trim();
             
@@ -1044,6 +1150,7 @@ async function callAI(prompt) {
             showLoading('🎯 AI is analyzing job compatibility...');
             
             if (!apiKeys.openai) {
+                // Demo mode
                 matchAnalysis = createMockMatchAnalysis();
                 displayMatchResult(matchAnalysis);
                 hideLoading();
@@ -1053,7 +1160,7 @@ async function callAI(prompt) {
             }
             
             try {
-                const prompt = `Analyze the compatibility between this resume and job description. Provide a match score and detailed feedback.
+                const prompt = `Analyze the compatibility between this resume and job description. Return ONLY valid JSON with the exact structure shown:
 
 RESUME:
 ${JSON.stringify(resumeData, null, 2)}
@@ -1061,7 +1168,7 @@ ${JSON.stringify(resumeData, null, 2)}
 JOB DESCRIPTION:
 ${jobDescription}
 
-Return ONLY valid JSON with this structure:
+Return this exact JSON structure:
 {
   "score": 85,
   "level": "good",
@@ -1079,11 +1186,11 @@ Return ONLY valid JSON with this structure:
 
                 const response = await callAI(prompt);
                 
-                let jsonText = response;
-                if (response.includes('```json')) {
-                    jsonText = response.split('```json')[1].split('```')[0].trim();
-                } else if (response.includes('```')) {
-                    jsonText = response.split('```')[1].split('```')[0].trim();
+                let jsonText = response.trim();
+                if (jsonText.includes('```json')) {
+                    jsonText = jsonText.split('```json')[1].split('```')[0].trim();
+                } else if (jsonText.includes('```')) {
+                    jsonText = jsonText.split('```')[1].split('```')[0].trim();
                 }
                 
                 matchAnalysis = JSON.parse(jsonText);
@@ -1095,7 +1202,15 @@ Return ONLY valid JSON with this structure:
             } catch (error) {
                 console.error('Error analyzing match:', error);
                 hideLoading();
-                showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
+                
+                // Provide specific error feedback
+                if (error.message.includes('401')) {
+                    showNotification('❌ Invalid API key. Please check your OpenAI API key.', 'warning');
+                } else if (error.message.includes('429')) {
+                    showNotification('⏳ Rate limit exceeded. Please try again later.', 'warning');
+                } else {
+                    showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
+                }
                 
                 matchAnalysis = createMockMatchAnalysis();
                 displayMatchResult(matchAnalysis);
@@ -1103,6 +1218,7 @@ Return ONLY valid JSON with this structure:
             }
         }
 
+        // Create mock match analysis
         function createMockMatchAnalysis() {
             return {
                 score: 78,
@@ -1132,6 +1248,7 @@ Return ONLY valid JSON with this structure:
             };
         }
 
+        // Display match results
         function displayMatchResult(analysis) {
             const scoreDisplay = document.getElementById('score-display');
             const scoreValue = document.getElementById('score-value');
@@ -1140,6 +1257,7 @@ Return ONLY valid JSON with this structure:
             
             scoreValue.textContent = analysis.score;
             
+            // Set score color and description
             if (analysis.score >= 85) {
                 scoreDisplay.className = 'score-display excellent';
                 scoreDescription.textContent = 'Excellent Match! 🎉';
@@ -1151,6 +1269,7 @@ Return ONLY valid JSON with this structure:
                 scoreDescription.textContent = 'Needs Improvement 📈';
             }
             
+            // Build suggestions content
             let suggestionsHtml = '';
             
             suggestionsHtml += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>';
@@ -1181,6 +1300,88 @@ Return ONLY valid JSON with this structure:
             document.getElementById('match-result').style.display = 'block';
         }
 
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : 
+                              type === 'warning' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 
+                              'linear-gradient(135deg, #667eea, #764ba2)'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 12px;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+                z-index: 1000;
+                max-width: 300px;
+                font-weight: 600;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            // Add slide in animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => {
+                    notification.remove();
+                    style.remove();
+                }, 300);
+            }, 4000);
+        }
+
+        // Show loading state
+        function showLoading(message) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading-overlay';
+            loadingDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+            loadingDiv.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 2000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            document.body.appendChild(loadingDiv);
+        }
+
+        // Hide loading state
+        function hideLoading() {
+            const loading = document.getElementById('loading-overlay');
+            if (loading) {
+                loading.remove();
+            }
+        }
+
+        // Start optimization
         async function startOptimization() {
             if (!resumeData) {
                 showNotification('⚠️ Please parse your resume first', 'warning');
@@ -1198,6 +1399,7 @@ Return ONLY valid JSON with this structure:
             showLoading('✨ AI is optimizing your resume...');
             
             if (!apiKeys.openai) {
+                // Demo mode
                 const mockOptimizations = createMockOptimizations(mode, selectedSection);
                 displayOptimizationResults(mockOptimizations);
                 hideLoading();
@@ -1208,7 +1410,7 @@ Return ONLY valid JSON with this structure:
             try {
                 let prompt;
                 if (mode === 'auto') {
-                    prompt = `Based on the resume analysis, automatically optimize the weakest sections of this resume for the job description.
+                    prompt = `Based on the resume analysis, optimize the weakest sections. Return ONLY valid JSON:
 
 CURRENT RESUME:
 ${JSON.stringify(resumeData, null, 2)}
@@ -1219,7 +1421,7 @@ ${jobDescription}
 ANALYSIS RESULTS:
 ${JSON.stringify(matchAnalysis, null, 2)}
 
-Focus on sections with lowest scores and missing keywords. Return optimized content in this JSON format:
+Return this exact JSON structure:
 {
   "optimizations": [
     {
@@ -1231,15 +1433,15 @@ Focus on sections with lowest scores and missing keywords. Return optimized cont
   ]
 }`;
                 } else {
-                    prompt = `Optimize the ${selectedSection} section of this resume for the job description.
+                    prompt = `Optimize the ${selectedSection} section for the job. Return ONLY valid JSON:
 
-CURRENT SECTION CONTENT:
+CURRENT SECTION:
 ${JSON.stringify(resumeData[selectedSection], null, 2)}
 
 JOB DESCRIPTION:
 ${jobDescription}
 
-Return optimized content in this JSON format:
+Return this exact JSON structure:
 {
   "optimizations": [
     {
@@ -1254,11 +1456,11 @@ Return optimized content in this JSON format:
 
                 const response = await callAI(prompt);
                 
-                let jsonText = response;
-                if (response.includes('```json')) {
-                    jsonText = response.split('```json')[1].split('```')[0].trim();
-                } else if (response.includes('```')) {
-                    jsonText = response.split('```')[1].split('```')[0].trim();
+                let jsonText = response.trim();
+                if (jsonText.includes('```json')) {
+                    jsonText = jsonText.split('```json')[1].split('```')[0].trim();
+                } else if (jsonText.includes('```')) {
+                    jsonText = jsonText.split('```')[1].split('```')[0].trim();
                 }
                 
                 const result = JSON.parse(jsonText);
@@ -1278,6 +1480,7 @@ Return optimized content in this JSON format:
             }
         }
 
+        // Create mock optimizations
         function createMockOptimizations(mode, selectedSection) {
             const sections = mode === 'auto' ? ['summary', 'skills'] : [selectedSection];
             const optimizations = [];
@@ -1297,8 +1500,8 @@ Return optimized content in this JSON format:
                             section: 'skills',
                             original: JSON.stringify(resumeData.skills, null, 2),
                             optimized: JSON.stringify({
-                                technical: [...resumeData.skills.technical, "AWS", "Kubernetes", "Microservices", "CI/CD", "Docker Compose"],
-                                soft: [...resumeData.skills.soft, "Agile Methodology", "Cross-functional Collaboration", "Technical Leadership"]
+                                technical: [...(resumeData.skills.technical || []), "AWS", "Kubernetes", "Microservices", "CI/CD", "Docker Compose"],
+                                soft: [...(resumeData.skills.soft || []), "Agile Methodology", "Cross-functional Collaboration", "Technical Leadership"]
                             }, null, 2),
                             explanation: "Added missing keywords identified in the job match analysis. Included cloud technologies and agile methodologies that are crucial for this role."
                         });
@@ -1341,6 +1544,7 @@ Return optimized content in this JSON format:
             return optimizations;
         }
 
+        // Display optimization results
         function displayOptimizationResults(optimizationList) {
             const container = document.getElementById('optimizations-container');
             
@@ -1383,6 +1587,7 @@ Return optimized content in this JSON format:
             document.getElementById('optimization-results').style.display = 'block';
         }
 
+        // Accept single optimization
         function acceptOptimization(index) {
             const opt = optimizations[index];
             
@@ -1396,6 +1601,7 @@ Return optimized content in this JSON format:
                 displayResumeJson();
                 showNotification(`✅ ${opt.section} section updated!`, 'success');
                 
+                // Remove the accepted optimization from display
                 optimizations[index].accepted = true;
                 document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
                 
@@ -1404,12 +1610,14 @@ Return optimized content in this JSON format:
             }
         }
 
+        // Reject single optimization
         function rejectOptimization(index) {
             optimizations[index].rejected = true;
             document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
             showNotification('❌ Optimization rejected', 'info');
         }
 
+        // Accept all optimizations
         function acceptAllOptimizations() {
             let acceptedCount = 0;
             
@@ -1435,15 +1643,18 @@ Return optimized content in this JSON format:
             }
         }
 
+        // Auto-optimize all weak sections (from job match tab)
         async function autoOptimizeAll() {
             document.getElementById('optimization-mode').value = 'auto';
             showTab('optimize');
             
+            // Small delay to ensure tab is shown
             setTimeout(() => {
                 startOptimization();
             }, 300);
         }
 
+        // Export optimized resume as professional PDF
         function exportResume() {
             if (!resumeData) {
                 showNotification('⚠️ No resume data to export', 'warning');
@@ -1462,80 +1673,8 @@ Return optimized content in this JSON format:
                 showNotification('❌ PDF export failed. Please try again.', 'warning');
             }
         }
-        
-        // Show/Hide Helpers
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : 
-                              type === 'warning' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 
-                              'linear-gradient(135deg, #667eea, #764ba2)'};
-                color: white;
-                padding: 15px 20px;
-                border-radius: 12px;
-                box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-                z-index: 1000;
-                max-width: 300px;
-                font-weight: 600;
-                animation: slideIn 0.3s ease;
-            `;
-            
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes slideIn {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-            `;
-            document.head.appendChild(style);
-            
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => {
-                    notification.remove();
-                    style.remove();
-                }, 300);
-            }, 4000);
-        }
 
-        function showLoading(message) {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = 'loading-overlay';
-            loadingDiv.innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>${message}</p>
-                </div>
-            `;
-            loadingDiv.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                z-index: 2000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            `;
-            document.body.appendChild(loadingDiv);
-        }
-
-        function hideLoading() {
-            const loading = document.getElementById('loading-overlay');
-            if (loading) {
-                loading.remove();
-            }
-        }
-        
-        // PDF Generation
+        // Generate professional PDF
         function generateProfessionalPDF(data) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -1545,6 +1684,7 @@ Return optimized content in this JSON format:
             const margin = 20;
             const lineHeight = 6;
             
+            // Helper function to add new page if needed
             function checkPageSpace(needed = 20) {
                 if (yPos + needed > pageHeight - margin) {
                     doc.addPage();
@@ -1552,6 +1692,7 @@ Return optimized content in this JSON format:
                 }
             }
             
+            // Helper function to wrap text
             function addWrappedText(text, x, maxWidth, fontSize = 10) {
                 doc.setFontSize(fontSize);
                 const lines = doc.splitTextToSize(text, maxWidth);
@@ -1569,6 +1710,7 @@ Return optimized content in this JSON format:
             doc.text(data.personal.name || 'Professional Resume', margin, yPos);
             yPos += 10;
             
+            // Contact Information
             doc.setFontSize(11);
             doc.setFont(undefined, 'normal');
             const contactInfo = [
@@ -1582,6 +1724,7 @@ Return optimized content in this JSON format:
                 yPos += 8;
             }
             
+            // LinkedIn and GitHub
             const links = [
                 data.personal.linkedin,
                 data.personal.github
@@ -1601,9 +1744,12 @@ Return optimized content in this JSON format:
                 doc.setFont(undefined, 'bold');
                 doc.text('PROFESSIONAL SUMMARY', margin, yPos);
                 yPos += 8;
+                
+                // Add line under header
                 doc.setLineWidth(0.5);
                 doc.line(margin, yPos - 2, 190, yPos - 2);
                 yPos += 5;
+                
                 addWrappedText(data.summary, margin, 170, 10);
                 yPos += 5;
             }
@@ -1615,20 +1761,26 @@ Return optimized content in this JSON format:
                 doc.setFont(undefined, 'bold');
                 doc.text('PROFESSIONAL EXPERIENCE', margin, yPos);
                 yPos += 8;
+                
                 doc.setLineWidth(0.5);
                 doc.line(margin, yPos - 2, 190, yPos - 2);
                 yPos += 5;
                 
                 data.experience.forEach(exp => {
                     checkPageSpace(25);
+                    
+                    // Position and Company
                     doc.setFontSize(12);
                     doc.setFont(undefined, 'bold');
                     doc.text(`${exp.position}`, margin, yPos);
+                    
+                    // Company and Duration on same line
                     doc.setFont(undefined, 'normal');
                     const companyText = `${exp.company} | ${exp.duration}`;
                     doc.text(companyText, margin, yPos + 6);
                     yPos += 15;
                     
+                    // Responsibilities
                     if (exp.responsibilities && exp.responsibilities.length > 0) {
                         exp.responsibilities.forEach(resp => {
                             checkPageSpace();
@@ -1636,6 +1788,7 @@ Return optimized content in this JSON format:
                         });
                     }
                     
+                    // Achievements
                     if (exp.achievements && exp.achievements.length > 0) {
                         exp.achievements.forEach(ach => {
                             checkPageSpace();
@@ -1644,6 +1797,7 @@ Return optimized content in this JSON format:
                             doc.setFont(undefined, 'normal');
                         });
                     }
+                    
                     yPos += 8;
                 });
             }
@@ -1655,6 +1809,7 @@ Return optimized content in this JSON format:
                 doc.setFont(undefined, 'bold');
                 doc.text('TECHNICAL SKILLS', margin, yPos);
                 yPos += 8;
+                
                 doc.setLineWidth(0.5);
                 doc.line(margin, yPos - 2, 190, yPos - 2);
                 yPos += 5;
@@ -1675,6 +1830,7 @@ Return optimized content in this JSON format:
                     addWrappedText(data.skills.soft.join(', '), margin + 25, 145, 10);
                     yPos += 3;
                 }
+                
                 yPos += 5;
             }
             
@@ -1685,6 +1841,7 @@ Return optimized content in this JSON format:
                 doc.setFont(undefined, 'bold');
                 doc.text('EDUCATION', margin, yPos);
                 yPos += 8;
+                
                 doc.setLineWidth(0.5);
                 doc.line(margin, yPos - 2, 190, yPos - 2);
                 yPos += 5;
@@ -1709,6 +1866,7 @@ Return optimized content in this JSON format:
                     if (edu.relevantCoursework) {
                         addWrappedText(`Relevant Coursework: ${edu.relevantCoursework}`, margin, 165, 10);
                     }
+                    
                     yPos += 5;
                 });
             }
@@ -1720,6 +1878,7 @@ Return optimized content in this JSON format:
                 doc.setFont(undefined, 'bold');
                 doc.text('PROJECTS', margin, yPos);
                 yPos += 8;
+                
                 doc.setLineWidth(0.5);
                 doc.line(margin, yPos - 2, 190, yPos - 2);
                 yPos += 5;
@@ -1739,10 +1898,12 @@ Return optimized content in this JSON format:
                         addWrappedText(`Technologies: ${proj.technologies.join(', ')}`, margin, 165, 10);
                         doc.setFont(undefined, 'normal');
                     }
+                    
                     yPos += 5;
                 });
             }
             
+            // Save the PDF
             const fileName = `${data.personal.name || 'Resume'}_Professional.pdf`;
             doc.save(fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
         }
