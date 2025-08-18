@@ -1013,6 +1013,35 @@ Return this exact JSON structure:
                 updateProgress(75);
             }
         }
+
+        function createMockOptimizations(mode, section) {
+    const mockData = {
+        summary: {
+            section: "summary",
+            original: "Experienced professional with strong background in technology...",
+            optimized: "Results-driven Senior Software Engineer with over 5 years of experience in developing, testing, and maintaining web applications. Expert in JavaScript and cloud technologies, with a proven ability to lead projects and enhance application performance, directly aligning with the requirements for a cloud-focused role.",
+            explanation: "The summary was rewritten to be more dynamic, incorporating keywords from the job description like 'cloud technologies' and focusing on measurable results."
+        },
+        skills: {
+            section: "skills",
+            original: {
+                technical: ["JavaScript", "Python", "React", "Node.js"],
+                soft: ["Leadership", "Communication"]
+            },
+            optimized: {
+                technical: ["JavaScript", "Python", "React", "Node.js", "AWS", "Docker", "Kubernetes", "Terraform"],
+                soft: ["Agile Methodology", "Leadership", "Cross-functional Communication", "Problem-solving"]
+            },
+            explanation: "Added critical keywords like AWS, Kubernetes, and Terraform that were identified in the skill gap analysis to improve ATS matching. Soft skills were also tailored."
+        }
+    };
+
+    if (mode === 'manual') {
+        return [mockData[section] || mockData.summary];
+    }
+    // 'auto' mode
+    return [mockData.summary, mockData.skills];
+}
         
         // Start optimization with improved multi-section prompt
         async function startOptimization() {
