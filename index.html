@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resume Customizer</title>
+    <title>AI Resume Optimizer</title>
     <style>
         * {
             margin: 0;
@@ -458,6 +458,51 @@
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
+        
+        /* NEW STYLES for ATS and Skill Gap */
+        .analysis-section {
+            background: rgba(248, 250, 252, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 25px;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .analysis-section h3 {
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ats-score-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(#4ade80 var(--progress), #e2e8f0 0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0 auto 20px;
+            transition: background 0.5s;
+        }
+
+        .skill-tag {
+            background: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            margin: 4px;
+            display: inline-block;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
 
         @media (max-width: 768px) {
             .container {
@@ -493,7 +538,7 @@
     <div class="container">
         <div class="header">
             <h1>🚀 AI Resume Optimizer</h1>
-            <p>Powered by AI • Smart • Fast • Affordable</p>
+            <p>Powered by GPT-5-nano • Smart • Fast • Affordable</p>
             <div class="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
             </div>
@@ -585,6 +630,18 @@ Example formats:
                 <div class="suggestions" id="match-suggestions">
                     <h3>📋 Detailed Analysis</h3>
                     <div id="suggestions-content"></div>
+                </div>
+                
+                <!-- NEW: ATS Compliance Score Section -->
+                <div class="analysis-section" id="ats-compliance-result" style="display: none;">
+                     <h3>🛡️ ATS Compliance Score</h3>
+                     <div id="ats-score-content"></div>
+                </div>
+
+                <!-- NEW: Skill Gap Analysis Section -->
+                <div class="analysis-section" id="skill-gap-result" style="display: none;">
+                    <h3>🌱 Skill Gap Analysis</h3>
+                    <div id="skill-gap-content"></div>
                 </div>
 
                 <button class="btn" onclick="autoOptimizeAll()" style="margin-top: 20px;">
@@ -864,7 +921,7 @@ Return this exact structure:
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini',
+                    model: 'gpt-5-nano',
                     messages: [{
                         role: 'system',
                         content: 'You are a professional resume optimization assistant. Always return valid JSON in the exact format requested. Do not include any explanations or additional text outside the JSON.'
@@ -872,7 +929,7 @@ Return this exact structure:
                         role: 'user',
                         content: prompt
                     }],
-                    max_tokens: 2000,
+                    max_completion_tokens: 4000,
                     temperature: 0.2
                 })
             });
@@ -888,7 +945,7 @@ Return this exact structure:
             return data.choices[0].message.content;
         }
 
-        // Analyze job match
+        // Analyze job match with new features
         async function analyzeMatch() {
             jobDescription = document.getElementById('job-input').value.trim();
             if (!resumeData) {
@@ -904,17 +961,34 @@ Return this exact structure:
             if (!apiKeys.openai) {
                 matchAnalysis = createMockMatchAnalysis();
                 displayMatchResult(matchAnalysis);
+                displayAtsScore(matchAnalysis.atsCompliance);
+                displaySkillGap(matchAnalysis.skillGap);
                 hideLoading();
                 showNotification('🎯 Match analysis complete (demo mode)', 'warning');
                 updateProgress(75);
                 return;
             }
             try {
-                const prompt = `Analyze the compatibility between this resume and job description. Return ONLY valid JSON with the exact structure shown:
+                const prompt = `Analyze the compatibility between this resume and job description. Provide a match score, detailed feedback, an ATS compliance score, and a skill gap analysis. Return ONLY valid JSON with the exact structure shown:
 RESUME: ${JSON.stringify(resumeData, null, 2)}
 JOB DESCRIPTION: ${jobDescription}
 Return this exact JSON structure:
-{"score": 85,"level": "good","strengths": ["..."],"weaknesses": ["..."],"recommendations": ["..."],"keywordsMissing": ["..."],"sections": {"summary": { "score": 70, "feedback": "..." },"experience": { "score": 85, "feedback": "..." },"skills": { "score": 90, "feedback": "..." },"education": { "score": 75, "feedback": "..." }}}`;
+{
+  "score": 85,
+  "level": "good",
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "recommendations": ["..."],
+  "keywordsMissing": ["..."],
+  "atsCompliance": {
+    "score": 95,
+    "feedback": ["Standard section headers used.", "Single-column format is ATS-friendly."]
+  },
+  "skillGap": {
+    "hardSkills": ["Skill 1", "Skill 2"],
+    "softSkills": ["Skill 3"]
+  }
+}`;
                 const response = await callAI(prompt);
                 let jsonText = response.trim();
                 const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
@@ -923,6 +997,8 @@ Return this exact JSON structure:
                 }
                 matchAnalysis = JSON.parse(jsonText);
                 displayMatchResult(matchAnalysis);
+                displayAtsScore(matchAnalysis.atsCompliance);
+                displaySkillGap(matchAnalysis.skillGap);
                 hideLoading();
                 showNotification('✅ Job match analysis complete!', 'success');
                 updateProgress(75);
@@ -932,6 +1008,8 @@ Return this exact JSON structure:
                 showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
                 matchAnalysis = createMockMatchAnalysis();
                 displayMatchResult(matchAnalysis);
+                displayAtsScore(matchAnalysis.atsCompliance);
+                displaySkillGap(matchAnalysis.skillGap);
                 updateProgress(75);
             }
         }
@@ -1175,8 +1253,10 @@ Return this exact JSON structure:
         function displayResumeJson() { document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2); document.getElementById('resume-json').style.display = 'block'; }
         function editJson() { const newJson = prompt("Edit your resume JSON:", JSON.stringify(resumeData, null, 2)); if (newJson) { try { resumeData = JSON.parse(newJson); displayResumeJson(); showNotification('✅ Resume JSON updated successfully!', 'success'); } catch (e) { showNotification('❌ Invalid JSON format.', 'warning'); } } }
         function createMockResumeData(text) { return { personal: { name: "John Doe", email: "john.doe@email.com", phone: "+1-555-123-4567", location: "San Francisco, CA", linkedin: "linkedin.com/in/johndoe", github: "github.com/johndoe" }, summary: "Experienced professional with strong background in technology...", experience: [{ company: "Tech Company Inc.", position: "Senior Software Engineer", duration: "2020 - Present", responsibilities: ["..."], achievements: ["..."] }], skills: { technical: ["JavaScript", "Python", "React", "Node.js"], soft: ["Leadership", "Communication"] }, education: [{ degree: "B.S. in Computer Science", institution: "University of Technology", year: "2018" }], projects: [{ name: "E-commerce Platform", description: "...", technologies: ["React", "Node.js"] }]}; }
-        function createMockMatchAnalysis() { return { score: 78, level: "good", strengths: ["Strong technical skills alignment"], weaknesses: ["Missing cloud platform experience"], recommendations: ["Add examples of cloud technology usage"], keywordsMissing: ["AWS", "Kubernetes"], sections: { summary: { score: 72, feedback: "Good but could be more job-specific" }, experience: { score: 85, feedback: "Strong match" }, skills: { score: 75, feedback: "Missing some key technologies" }, education: { score: 80, feedback: "Meets requirements" } } }; }
-        function displayMatchResult(analysis) { document.getElementById('score-value').textContent = analysis.score; const scoreDisplay = document.getElementById('score-display'); if (analysis.score >= 85) { scoreDisplay.className = 'score-display excellent'; document.getElementById('score-description').textContent = 'Excellent Match! 🎉'; } else if (analysis.score >= 70) { scoreDisplay.className = 'score-display good'; document.getElementById('score-description').textContent = 'Good Match! 👍'; } else { scoreDisplay.className = 'score-display'; document.getElementById('score-description').textContent = 'Needs Improvement 📈'; } let html = ''; html += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>' + analysis.strengths.map(s => `<li>${s}</li>`).join('') + '</ul></div>'; html += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>' + analysis.weaknesses.map(w => `<li>${w}</li>`).join('') + '</ul></div>'; html += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>' + analysis.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul></div>'; if (analysis.keywordsMissing && analysis.keywordsMissing.length > 0) { html += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>' + analysis.keywordsMissing.map(k => `<span style="background:#e2e8f0;padding:4px 8px;border-radius:6px;margin:2px;display:inline-block;">${k}</span>`).join('') + '</div>'; } document.getElementById('suggestions-content').innerHTML = html; document.getElementById('match-result').style.display = 'block'; }
+        function createMockMatchAnalysis() { return { score: 78, level: "good", strengths: ["Strong technical skills alignment"], weaknesses: ["Missing cloud platform experience"], recommendations: ["Add examples of cloud technology usage"], keywordsMissing: ["AWS", "Kubernetes"], atsCompliance: { score: 88, feedback: ["Uses standard section headers.", "Avoid using tables or columns for better parsing."] }, skillGap: { hardSkills: ["Terraform", "CI/CD"], softSkills: ["Agile Methodology"] } }; }
+        function displayMatchResult(analysis) { document.getElementById('score-value').textContent = analysis.score; const scoreDisplay = document.getElementById('score-display'); if (analysis.score >= 85) { scoreDisplay.className = 'score-display excellent'; document.getElementById('score-description').textContent = 'Excellent Match! 🎉'; } else if (analysis.score >= 70) { scoreDisplay.className = 'score-display good'; document.getElementById('score-description').textContent = 'Good Match! 👍'; } else { scoreDisplay.className = 'score-display'; document.getElementById('score-description').textContent = 'Needs Improvement 📈'; } let html = ''; html += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>' + analysis.strengths.map(s => `<li>${s}</li>`).join('') + '</ul></div>'; html += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>' + analysis.weaknesses.map(w => `<li>${w}</li>`).join('') + '</ul></div>'; html += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>' + analysis.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul></div>'; if (analysis.keywordsMissing && analysis.keywordsMissing.length > 0) { html += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>' + analysis.keywordsMissing.map(k => `<span class="skill-tag">${k}</span>`).join('') + '</div>'; } document.getElementById('suggestions-content').innerHTML = html; document.getElementById('match-result').style.display = 'block'; }
+        function displayAtsScore(ats) { if (!ats) return; const container = document.getElementById('ats-compliance-result'); const content = document.getElementById('ats-score-content'); let html = `<div class="ats-score-circle" style="--progress: ${ats.score}deg">${ats.score}</div>`; html += '<ul>' + ats.feedback.map(f => `<li style="margin-bottom: 10px;">${f}</li>`).join('') + '</ul>'; content.innerHTML = html; container.style.display = 'block'; }
+        function displaySkillGap(gap) { if (!gap) return; const container = document.getElementById('skill-gap-result'); const content = document.getElementById('skill-gap-content'); let html = ''; if (gap.hardSkills && gap.hardSkills.length > 0) { html += '<strong>Hard Skills to Add:</strong><div>' + gap.hardSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div><br/>'; } if (gap.softSkills && gap.softSkills.length > 0) { html += '<strong>Soft Skills to Emphasize:</strong><div>' + gap.softSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div>'; } content.innerHTML = html; container.style.display = 'block'; }
         function displayOptimizationResults(optimizationList) { const container = document.getElementById('optimizations-container'); let html = ''; optimizationList.forEach((opt, index) => { html += `<div class="optimization-card"><div class="optimization-header"><h4>📝 ${opt.section.charAt(0).toUpperCase() + opt.section.slice(1)}</h4><span class="optimization-badge">Optimized</span></div><p><strong>🎯 Explanation:</strong> ${opt.explanation}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:15px 0;"><pre style="background:#fef2f2;border:1px solid #fca5a5;padding:10px;border-radius:8px;max-height:150px;overflow:auto;">${typeof opt.original === 'string' ? opt.original : JSON.stringify(opt.original, null, 2)}</pre><pre style="background:#f0fdf4;border:1px solid #86efac;padding:10px;border-radius:8px;max-height:150px;overflow:auto;">${typeof opt.optimized === 'string' ? opt.optimized : JSON.stringify(opt.optimized, null, 2)}</pre></div><div style="text-align:right;"><button class="btn secondary" onclick="acceptOptimization(${index})">✅ Accept</button><button class="btn secondary" onclick="rejectOptimization(${index})">❌ Reject</button></div></div>`; }); container.innerHTML = html; optimizations = optimizationList; document.getElementById('optimization-results').style.display = 'block'; }
         function acceptOptimization(index) { const opt = optimizations[index]; try { resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized; displayResumeJson(); showNotification(`✅ ${opt.section} updated!`, 'success'); optimizations[index].accepted = true; document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5'; } catch (e) { showNotification('❌ Error applying optimization', 'warning'); } }
         function rejectOptimization(index) { optimizations[index].rejected = true; document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5'; showNotification('❌ Optimization rejected', 'info'); }
