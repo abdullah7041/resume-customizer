@@ -1298,25 +1298,232 @@ function generateProfessionalPDF(data) {
 }
         
         // --- UTILITY AND MOCK FUNCTIONS ---
-        function updateProgress(percentage) { const fill = document.getElementById('progress-fill'); fill.style.width = percentage + '%'; }
-        function showTab(tabName) { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); event.target.classList.add('active'); document.getElementById(tabName).classList.add('active'); }
-        document.getElementById('optimization-mode').addEventListener('change', function() { document.getElementById('manual-section').style.display = this.value === 'manual' ? 'block' : 'none'; });
-        function displayResumeJson() { document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2); document.getElementById('resume-json').style.display = 'block'; }
-        function editJson() { const newJson = prompt("Edit your resume JSON:", JSON.stringify(resumeData, null, 2)); if (newJson) { try { resumeData = JSON.parse(newJson); displayResumeJson(); showNotification('✅ Resume JSON updated successfully!', 'success'); } catch (e) { showNotification('❌ Invalid JSON format.', 'warning'); } } }
-        function createMockResumeData(text) { return { personal: { name: "John Doe", email: "john.doe@email.com", phone: "+1-555-123-4567", location: "San Francisco, CA", linkedin: "linkedin.com/in/johndoe", github: "github.com/johndoe" }, summary: "Experienced professional with strong background in technology...", experience: [{ company: "Tech Company Inc.", position: "Senior Software Engineer", duration: "2020 - Present", responsibilities: ["..."], achievements: ["..."] }], skills: { technical: ["JavaScript", "Python", "React", "Node.js"], soft: ["Leadership", "Communication"] }, education: [{ degree: "B.S. in Computer Science", institution: "University of Technology", year: "2018" }], projects: [{ name: "E-commerce Platform", description: "...", technologies: ["React", "Node.js"] }]}; }
-        function createMockMatchAnalysis() { return { score: 78, level: "good", strengths: ["Strong technical skills alignment"], weaknesses: ["Missing cloud platform experience"], recommendations: ["Add examples of cloud technology usage"], keywordsMissing: ["AWS", "Kubernetes"], atsCompliance: { score: 88, feedback: ["Uses standard section headers.", "Avoid using tables or columns for better parsing."] }, skillGap: { hardSkills: ["Terraform", "CI/CD"], softSkills: ["Agile Methodology"] } }; }
-        function displayMatchResult(analysis) { document.getElementById('score-value').textContent = analysis.score; const scoreDisplay = document.getElementById('score-display'); if (analysis.score >= 85) { scoreDisplay.className = 'score-display excellent'; document.getElementById('score-description').textContent = 'Excellent Match! 🎉'; } else if (analysis.score >= 70) { scoreDisplay.className = 'score-display good'; document.getElementById('score-description').textContent = 'Good Match! 👍'; } else { scoreDisplay.className = 'score-display'; document.getElementById('score-description').textContent = 'Needs Improvement 📈'; } let html = ''; html += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>' + analysis.strengths.map(s => `<li>${s}</li>`).join('') + '</ul></div>'; html += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>' + analysis.weaknesses.map(w => `<li>${w}</li>`).join('') + '</ul></div>'; html += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>' + analysis.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul></div>'; if (analysis.keywordsMissing && analysis.keywordsMissing.length > 0) { html += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>' + analysis.keywordsMissing.map(k => `<span class="skill-tag">${k}</span>`).join('') + '</div>'; } document.getElementById('suggestions-content').innerHTML = html; document.getElementById('match-result').style.display = 'block'; }
-        function displayAtsScore(ats) { if (!ats) return; const container = document.getElementById('ats-compliance-result'); const content = document.getElementById('ats-score-content'); let html = `<div class="ats-score-circle" style="--progress: ${ats.score}deg">${ats.score}</div>`; html += '<ul>' + ats.feedback.map(f => `<li style="margin-bottom: 10px;">${f}</li>`).join('') + '</ul>'; content.innerHTML = html; container.style.display = 'block'; }
-        function displaySkillGap(gap) { if (!gap) return; const container = document.getElementById('skill-gap-result'); const content = document.getElementById('skill-gap-content'); let html = ''; if (gap.hardSkills && gap.hardSkills.length > 0) { html += '<strong>Hard Skills to Add:</strong><div>' + gap.hardSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div><br/>'; } if (gap.softSkills && gap.softSkills.length > 0) { html += '<strong>Soft Skills to Emphasize:</strong><div>' + gap.softSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div>'; } content.innerHTML = html; container.style.display = 'block'; }
-        function displayOptimizationResults(optimizationList) { const container = document.getElementById('optimizations-container'); let html = ''; optimizationList.forEach((opt, index) => { html += `<div class="optimization-card"><div class="optimization-header"><h4>📝 ${opt.section.charAt(0).toUpperCase() + opt.section.slice(1)}</h4><span class="optimization-badge">Optimized</span></div><p><strong>🎯 Explanation:</strong> ${opt.explanation}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:15px 0;"><pre style="background:#fef2f2;border:1px solid #fca5a5;padding:10px;border-radius:8px;max-height:150px;overflow:auto;">${typeof opt.original === 'string' ? opt.original : JSON.stringify(opt.original, null, 2)}</pre><pre style="background:#f0fdf4;border:1px solid #86efac;padding:10px;border-radius:8px;max-height:150px;overflow:auto;">${typeof opt.optimized === 'string' ? opt.optimized : JSON.stringify(opt.optimized, null, 2)}</pre></div><div style="text-align:right;"><button class="btn secondary" onclick="acceptOptimization(${index})">✅ Accept</button><button class="btn secondary" onclick="rejectOptimization(${index})">❌ Reject</button></div></div>`; }); container.innerHTML = html; optimizations = optimizationList; document.getElementById('optimization-results').style.display = 'block'; }
-        function acceptOptimization(index) { const opt = optimizations[index]; try { resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized; displayResumeJson(); showNotification(`✅ ${opt.section} updated!`, 'success'); optimizations[index].accepted = true; document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5'; } catch (e) { showNotification('❌ Error applying optimization', 'warning'); } }
-        function rejectOptimization(index) { optimizations[index].rejected = true; document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5'; showNotification('❌ Optimization rejected', 'info'); }
-        function acceptAllOptimizations() { let count = 0; optimizations.forEach(opt => { if (!opt.accepted && !opt.rejected) { try { resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized; count++; } catch (e) { console.error(e); } } }); if (count > 0) { displayResumeJson(); showNotification(`✅ Applied ${count} optimizations!`, 'success'); } }
-        async function autoOptimizeAll() { document.getElementById('optimization-mode').value = 'auto'; showTab('optimize'); setTimeout(() => startOptimization(), 300); }
-        function exportResume() { if (!resumeData) { showNotification('⚠️ No resume data to export', 'warning'); return; } showLoading('📄 Generating professional PDF...'); try { generateProfessionalPDF(resumeData); hideLoading(); showNotification('📥 PDF exported successfully!', 'success'); } catch (e) { console.error('Export error:', e); hideLoading(); showNotification('❌ PDF export failed.', 'warning'); } }
-        function showNotification(message, type = 'info') { const n = document.createElement('div'); n.style.cssText = `position:fixed;top:20px;right:20px;background:${type==='success'?'linear-gradient(135deg,#10b981,#059669)':type==='warning'?'linear-gradient(135deg,#f59e0b,#d97706)':'linear-gradient(135deg,#667eea,#764ba2)'};color:white;padding:15px 20px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.2);z-index:1000;max-width:300px;font-weight:600;animation:slideIn 0.3s ease;`; const s = document.createElement('style'); s.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`; document.head.appendChild(s); n.textContent = message; document.body.appendChild(n); setTimeout(() => { n.style.animation = 'slideIn 0.3s ease reverse'; setTimeout(() => { n.remove(); s.remove(); }, 300); }, 4000); }
-        function showLoading(message) { const l = document.createElement('div'); l.id = 'loading-overlay'; l.innerHTML = `<div class="loading"><div class="spinner"></div><p>${message}</p></div>`; l.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;`; document.body.appendChild(l); }
-        function hideLoading() { const l = document.getElementById('loading-overlay'); if (l) l.remove(); }
+        // --- UTILITY AND MOCK FUNCTIONS ---
+
+function updateProgress(percentage) {
+    const fill = document.getElementById('progress-fill');
+    fill.style.width = percentage + '%';
+}
+
+function showTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+}
+
+document.getElementById('optimization-mode').addEventListener('change', function() {
+    document.getElementById('manual-section').style.display = this.value === 'manual' ? 'block' : 'none';
+});
+
+function displayResumeJson() {
+    document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
+    document.getElementById('resume-json').style.display = 'block';
+}
+
+function editJson() {
+    const newJson = prompt("Edit your resume JSON:", JSON.stringify(resumeData, null, 2));
+    if (newJson) {
+        try {
+            resumeData = JSON.parse(newJson);
+            displayResumeJson();
+            showNotification('✅ Resume JSON updated successfully!', 'success');
+        } catch (e) {
+            showNotification('❌ Invalid JSON format.', 'warning');
+        }
+    }
+}
+
+function createMockResumeData(text) {
+    return {
+        personal: { name: "John Doe", email: "john.doe@email.com", phone: "+1-555-123-4567", location: "San Francisco, CA", linkedin: "linkedin.com/in/johndoe", github: "github.com/johndoe" },
+        summary: "Experienced professional with strong background in technology...",
+        experience: [{ company: "Tech Company Inc.", position: "Senior Software Engineer", duration: "2020 - Present", responsibilities: ["..."], achievements: ["..."] }],
+        skills: { technical: ["JavaScript", "Python", "React", "Node.js"], soft: ["Leadership", "Communication"] },
+        education: [{ degree: "B.S. in Computer Science", institution: "University of Technology", year: "2018" }],
+        projects: [{ name: "E-commerce Platform", description: "...", technologies: ["React", "Node.js"] }]
+    };
+}
+
+function createMockMatchAnalysis() {
+    return {
+        score: 78,
+        level: "good",
+        strengths: ["Strong technical skills alignment"],
+        weaknesses: ["Missing cloud platform experience"],
+        recommendations: ["Add examples of cloud technology usage"],
+        keywordsMissing: ["AWS", "Kubernetes"],
+        atsCompliance: { score: 88, feedback: ["Uses standard section headers.", "Avoid using tables or columns for better parsing."] },
+        skillGap: { hardSkills: ["Terraform", "CI/CD"], softSkills: ["Agile Methodology"] }
+    };
+}
+
+function displayMatchResult(analysis) {
+    document.getElementById('score-value').textContent = analysis.score;
+    const scoreDisplay = document.getElementById('score-display');
+    if (analysis.score >= 85) {
+        scoreDisplay.className = 'score-display excellent';
+        document.getElementById('score-description').textContent = 'Excellent Match! 🎉';
+    } else if (analysis.score >= 70) {
+        scoreDisplay.className = 'score-display good';
+        document.getElementById('score-description').textContent = 'Good Match! 👍';
+    } else {
+        scoreDisplay.className = 'score-display';
+        document.getElementById('score-description').textContent = 'Needs Improvement 📈';
+    }
+    let html = '';
+    html += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>' + analysis.strengths.map(s => `<li>${s}</li>`).join('') + '</ul></div>';
+    html += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>' + analysis.weaknesses.map(w => `<li>${w}</li>`).join('') + '</ul></div>';
+    html += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>' + analysis.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
+    if (analysis.keywordsMissing && analysis.keywordsMissing.length > 0) {
+        html += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>' + analysis.keywordsMissing.map(k => `<span class="skill-tag">${k}</span>`).join('') + '</div>';
+    }
+    document.getElementById('suggestions-content').innerHTML = html;
+    document.getElementById('match-result').style.display = 'block';
+}
+
+function displayAtsScore(ats) {
+    if (!ats) return;
+    const container = document.getElementById('ats-compliance-result');
+    const content = document.getElementById('ats-score-content');
+    let html = `<div class="ats-score-circle" style="--progress: ${ats.score * 3.6}deg">${ats.score}</div>`;
+    html += '<ul>' + ats.feedback.map(f => `<li style="margin-bottom: 10px;">${f}</li>`).join('') + '</ul>';
+    content.innerHTML = html;
+    container.style.display = 'block';
+}
+
+function displaySkillGap(gap) {
+    if (!gap) return;
+    const container = document.getElementById('skill-gap-result');
+    const content = document.getElementById('skill-gap-content');
+    let html = '';
+    if (gap.hardSkills && gap.hardSkills.length > 0) {
+        html += '<strong>Hard Skills to Add:</strong><div>' + gap.hardSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div><br/>';
+    }
+    if (gap.softSkills && gap.softSkills.length > 0) {
+        html += '<strong>Soft Skills to Emphasize:</strong><div>' + gap.softSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div>';
+    }
+    content.innerHTML = html;
+    container.style.display = 'block';
+}
+
+function displayOptimizationResults(optimizationList) {
+    const container = document.getElementById('optimizations-container');
+    let html = '';
+    optimizationList.forEach((opt, index) => {
+        const originalContent = typeof opt.original === 'string' ? opt.original : JSON.stringify(opt.original, null, 2);
+        const optimizedContent = typeof opt.optimized === 'string' ? opt.optimized : JSON.stringify(opt.optimized, null, 2);
+
+        html += `<div class="optimization-card">
+            <div class="optimization-header">
+                <h4>📝 ${opt.section.charAt(0).toUpperCase() + opt.section.slice(1)}</h4>
+                <span class="optimization-badge">Optimized</span>
+            </div>
+            <p style="margin-top:10px;"><strong>🎯 Explanation:</strong> ${opt.explanation}</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:15px 0;">
+                <div><strong>Original:</strong><pre style="background:#fef2f2;border:1px solid #fca5a5;padding:10px;border-radius:8px;max-height:150px;overflow:auto;white-space:pre-wrap;">${originalContent}</pre></div>
+                <div><strong>Optimized:</strong><pre style="background:#f0fdf4;border:1px solid #86efac;padding:10px;border-radius:8px;max-height:150px;overflow:auto;white-space:pre-wrap;">${optimizedContent}</pre></div>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn secondary" style="width:auto;padding:8px 16px;" onclick="acceptOptimization(${index})">✅ Accept</button>
+                <button class="btn secondary" style="width:auto;padding:8px 16px;" onclick="rejectOptimization(${index})">❌ Reject</button>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+    optimizations = optimizationList;
+    document.getElementById('optimization-results').style.display = 'block';
+}
+
+function acceptOptimization(index) {
+    const opt = optimizations[index];
+    try {
+        resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized;
+        displayResumeJson();
+        showNotification(`✅ ${opt.section} updated!`, 'success');
+        optimizations[index].accepted = true;
+        document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+    } catch (e) {
+        showNotification('❌ Error applying optimization', 'warning');
+    }
+}
+
+function rejectOptimization(index) {
+    optimizations[index].rejected = true;
+    document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+    showNotification('❌ Optimization rejected', 'info');
+}
+
+function acceptAllOptimizations() {
+    let count = 0;
+    optimizations.forEach(opt => {
+        if (!opt.accepted && !opt.rejected) {
+            try {
+                resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized;
+                count++;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    });
+    if (count > 0) {
+        displayResumeJson();
+        showNotification(`✅ Applied ${count} optimizations!`, 'success');
+    }
+}
+
+async function autoOptimizeAll() {
+    document.getElementById('optimization-mode').value = 'auto';
+    showTab('optimize');
+    setTimeout(() => startOptimization(), 300);
+}
+
+function exportResume() {
+    if (!resumeData) {
+        showNotification('⚠️ No resume data to export', 'warning');
+        return;
+    }
+    showLoading('📄 Generating professional PDF...');
+    try {
+        generateProfessionalPDF(resumeData);
+        hideLoading();
+        showNotification('📥 PDF exported successfully!', 'success');
+    } catch (e) {
+        console.error('Export error:', e);
+        hideLoading();
+        showNotification('❌ PDF export failed.', 'warning');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const n = document.createElement('div');
+    n.style.cssText = `position:fixed;top:20px;right:20px;background:${type==='success'?'linear-gradient(135deg,#10b981,#059669)':type==='warning'?'linear-gradient(135deg,#f59e0b,#d97706)':'linear-gradient(135deg,#667eea,#764ba2)'};color:white;padding:15px 20px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.2);z-index:1000;max-width:300px;font-weight:600;animation:slideIn 0.3s ease;`;
+    const s = document.createElement('style');
+    s.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`;
+    document.head.appendChild(s);
+    n.textContent = message;
+    document.body.appendChild(n);
+    setTimeout(() => {
+        n.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => {
+            n.remove();
+            s.remove();
+        }, 300);
+    }, 4000);
+}
+
+function showLoading(message) {
+    const l = document.createElement('div');
+    l.id = 'loading-overlay';
+    l.innerHTML = `<div class="loading"><div class="spinner"></div><p>${message}</p></div>`;
+    l.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;`;
+    document.body.appendChild(l);
+}
+
+function hideLoading() {
+    const l = document.getElementById('loading-overlay');
+    if (l) l.remove();
+}
     </script>
 </body>
 </html>
