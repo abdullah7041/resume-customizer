@@ -1110,170 +1110,178 @@ Return this exact JSON structure:
         }
         
         // Robust PDF generation function
-        function generateProfessionalPDF(data) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const personal = data.personal || {};
-            const skills = data.skills || {};
-            let yPos = 20;
-            const pageHeight = doc.internal.pageSize.height;
-            const margin = 20;
-            const lineHeight = 6;
+        // REPLACE this entire function
+function generateProfessionalPDF(data) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'letter'); // Using points for better control
+    const margin = 72; // 1-inch margin
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = margin;
 
-            function checkPageSpace(needed = 20) {
-                if (yPos + needed > pageHeight - margin) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-            }
+    // --- FONT & COLOR DEFINITIONS ---
+    const FONT_HELVETICA = 'Helvetica';
+    const COLOR_PRIMARY = '#000000';
+    const COLOR_GRAY = '#4d4d4d';
+    doc.setTextColor(COLOR_PRIMARY);
 
-            function addWrappedText(text, x, maxWidth, fontSize = 10) {
-                if (!text) return;
-                doc.setFontSize(fontSize);
-                const lines = doc.splitTextToSize(text, maxWidth);
-                lines.forEach(line => {
-                    checkPageSpace();
-                    doc.text(line, x, yPos);
-                    yPos += lineHeight;
-                });
-            }
+    // --- HELPER FUNCTIONS ---
+    // Helper to add wrapped text and manage Y position
+    function addWrappedText(text, options) {
+        if (!text) return;
+        const { x = margin, maxWidth = pageWidth - margin * 2, fontSize = 10, fontStyle = 'normal', color = COLOR_GRAY, lineHeightFactor = 1.5 } = options;
+        
+        doc.setFont(FONT_HELVETICA, fontStyle);
+        doc.setFontSize(fontSize);
+        doc.setTextColor(color);
 
-            doc.setFontSize(24);
-            doc.setFont(undefined, 'bold');
-            doc.text(personal.name || 'Professional Resume', margin, yPos);
-            yPos += 10;
-            doc.setFontSize(11);
-            doc.setFont(undefined, 'normal');
-            const contactInfo = [personal.email, personal.phone, personal.location].filter(Boolean).join(' • ');
-            if (contactInfo) {
-                doc.text(contactInfo, margin, yPos);
-                yPos += 8;
-            }
-            const links = [personal.linkedin, personal.github].filter(Boolean).join(' • ');
-            if (links) {
-                doc.setTextColor(0, 0, 255);
-                doc.text(links, margin, yPos);
-                doc.setTextColor(0, 0, 0);
-                yPos += 10;
-            }
-            if (data.summary) {
-                checkPageSpace(30);
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'bold');
-                doc.text('PROFESSIONAL SUMMARY', margin, yPos);
-                yPos += 8;
-                doc.setLineWidth(0.5);
-                doc.line(margin, yPos - 2, 190, yPos - 2);
-                yPos += 5;
-                addWrappedText(data.summary, margin, 170, 10);
-                yPos += 5;
-            }
-            if (data.experience && data.experience.length > 0) {
-                checkPageSpace(30);
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'bold');
-                doc.text('PROFESSIONAL EXPERIENCE', margin, yPos);
-                yPos += 8;
-                doc.setLineWidth(0.5);
-                doc.line(margin, yPos - 2, 190, yPos - 2);
-                yPos += 5;
-                data.experience.forEach(exp => {
-                    checkPageSpace(25);
-                    doc.setFontSize(12);
-                    doc.setFont(undefined, 'bold');
-                    doc.text(exp.position || '', margin, yPos);
-                    doc.setFont(undefined, 'normal');
-                    doc.text(`${exp.company || ''} | ${exp.duration || ''}`, margin, yPos + 6);
-                    yPos += 15;
-                    if (exp.responsibilities) exp.responsibilities.forEach(r => addWrappedText(`• ${r}`, margin + 5, 165, 10));
-                    if (exp.achievements) exp.achievements.forEach(a => {
-                        doc.setFont(undefined, 'bold');
-                        addWrappedText(`• ${a}`, margin + 5, 165, 10);
-                        doc.setFont(undefined, 'normal');
-                    });
-                    yPos += 8;
-                });
-            }
-            if (skills.technical || skills.soft) {
-                checkPageSpace(25);
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'bold');
-                doc.text('TECHNICAL SKILLS', margin, yPos);
-                yPos += 8;
-                doc.setLineWidth(0.5);
-                doc.line(margin, yPos - 2, 190, yPos - 2);
-                yPos += 5;
-                if (skills.technical && skills.technical.length > 0) {
-                    doc.setFontSize(11);
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Technical:', margin, yPos);
-                    doc.setFont(undefined, 'normal');
-                    addWrappedText(skills.technical.join(', '), margin + 25, 145, 10);
-                }
-                if (skills.soft && skills.soft.length > 0) {
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Soft Skills:', margin, yPos);
-                    doc.setFont(undefined, 'normal');
-                    addWrappedText(skills.soft.join(', '), margin + 25, 145, 10);
-                }
-                yPos += 5;
-            }
-            if (data.education && data.education.length > 0) {
-                checkPageSpace(25);
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'bold');
-                doc.text('EDUCATION', margin, yPos);
-                yPos += 8;
-                doc.setLineWidth(0.5);
-                doc.line(margin, yPos - 2, 190, yPos - 2);
-                yPos += 5;
-                data.education.forEach(edu => {
-                    checkPageSpace();
-                    doc.setFontSize(11);
-                    doc.setFont(undefined, 'bold');
-                    doc.text(edu.degree || '', margin, yPos);
-                    yPos += 6;
-                    doc.setFont(undefined, 'normal');
-                    doc.text(`${edu.institution || ''} | ${edu.year || ''}`, margin, yPos);
-                    yPos += 6;
-                    if (edu.gpa) {
-                        doc.text(`GPA: ${edu.gpa}`, margin, yPos);
-                        yPos += 6;
-                    }
-                    if (edu.relevantCoursework) {
-                        addWrappedText(`Relevant Coursework: ${edu.relevantCoursework}`, margin, 165, 10);
-                    }
-                    yPos += 5;
-                });
-            }
-            if (data.projects && data.projects.length > 0) {
-                checkPageSpace(25);
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'bold');
-                doc.text('PROJECTS', margin, yPos);
-                yPos += 8;
-                doc.setLineWidth(0.5);
-                doc.line(margin, yPos - 2, 190, yPos - 2);
-                yPos += 5;
-                data.projects.forEach(proj => {
-                    checkPageSpace(15);
-                    doc.setFontSize(12);
-                    doc.setFont(undefined, 'bold');
-                    doc.text(proj.name || '', margin, yPos);
-                    yPos += 6;
-                    doc.setFont(undefined, 'normal');
-                    addWrappedText(proj.description, margin, 165, 10);
-                    if (proj.technologies && proj.technologies.length > 0) {
-                        doc.setFont(undefined, 'italic');
-                        addWrappedText(`Technologies: ${proj.technologies.join(', ')}`, margin, 165, 10);
-                        doc.setFont(undefined, 'normal');
-                    }
-                    yPos += 5;
-                });
-            }
-            const fileName = `${personal.name || 'Resume'}_Professional.pdf`;
-            doc.save(fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
+        const lines = doc.splitTextToSize(text, maxWidth);
+        const blockHeight = lines.length * fontSize * lineHeightFactor;
+
+        // Check for page break before drawing
+        if (yPos + blockHeight > doc.internal.pageSize.getHeight() - margin) {
+            doc.addPage();
+            yPos = margin;
         }
+        
+        doc.text(lines, x, yPos);
+        yPos += blockHeight;
+    }
+
+    // Helper for section titles with lines
+    function addSectionHeader(title) {
+        yPos += 15; // Space before the section
+        doc.setFont(FONT_HELVETICA, 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(COLOR_PRIMARY);
+        doc.text(title.toUpperCase(), margin, yPos);
+        yPos += 12;
+        doc.setDrawColor(COLOR_PRIMARY);
+        doc.setLineWidth(1);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 20;
+    }
+    
+    // --- 1. HEADER SECTION ---
+    const personal = data.personal || {};
+    const professionalTitle = data.experience?.[0]?.position || 'PROFESSIONAL TITLE';
+
+    // Name
+    doc.setFont(FONT_HELVETICA, 'bold');
+    doc.setFontSize(32);
+    doc.text(personal.name || 'Your Name', margin, yPos);
+    yPos += 30;
+
+    // Professional Title
+    doc.setFont(FONT_HELVETICA, 'bold');
+    doc.setFontSize(10);
+    doc.text(professionalTitle.toUpperCase(), margin, yPos);
+    yPos += 15;
+
+    // Contact Info
+    const contactInfo = [personal.location, personal.phone, personal.email].filter(Boolean).join(' | ');
+    doc.setFont(FONT_HELVETICA, 'normal');
+    doc.setFontSize(10);
+    doc.text(contactInfo, margin, yPos);
+    yPos += 15;
+
+
+    // --- 2. OBJECTIVE / SUMMARY ---
+    if (data.summary) {
+        addSectionHeader('Objective');
+        addWrappedText(data.summary, {});
+    }
+
+    // --- 3. EXPERIENCE ---
+    if (data.experience && data.experience.length > 0) {
+        addSectionHeader('Experience');
+        data.experience.forEach(exp => {
+            doc.setFont(FONT_HELVETICA, 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(COLOR_PRIMARY);
+
+            // Title and Company on the left
+            const titleCompany = `${exp.company || 'Company'} | ${exp.position || 'Position'}`;
+            doc.text(titleCompany, margin, yPos);
+
+            // Dates on the right
+            doc.setFont(FONT_HELVETICA, 'normal');
+            const dateText = exp.duration || '';
+            const dateWidth = doc.getTextWidth(dateText);
+            doc.text(dateText, pageWidth - margin - dateWidth, yPos);
+
+            yPos += 20;
+
+            // Responsibilities and Achievements
+            const points = [...(exp.responsibilities || []), ...(exp.achievements || [])];
+            points.forEach(point => {
+                addWrappedText(`•   ${point}`, { x: margin + 10, maxWidth: pageWidth - margin * 2 - 10 });
+                yPos += 5; // Extra space between bullet points
+            });
+            yPos += 15; // Space after the job entry
+        });
+    }
+
+    // --- 4. EDUCATION ---
+    if (data.education && data.education.length > 0) {
+        addSectionHeader('Education');
+        data.education.forEach(edu => {
+            doc.setFont(FONT_HELVETICA, 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(COLOR_PRIMARY);
+            
+            // Institution and Degree on the left
+            const institutionDegree = `${edu.institution || 'University'}, ${edu.degree || 'Degree'}`;
+            doc.text(institutionDegree, margin, yPos);
+            
+            // Year on the right
+            doc.setFont(FONT_HELVETICA, 'normal');
+            const yearText = edu.year || '';
+            const yearWidth = doc.getTextWidth(yearText);
+            doc.text(yearText, pageWidth - margin - yearWidth, yPos);
+            yPos += 15;
+
+            // Major/Minor
+            const majorMinorText = [
+                edu.major ? `Major: ${edu.major}` : '',
+                edu.minor ? `Minor: ${edu.minor}` : ''
+            ].filter(Boolean).join(' | ');
+
+            if (majorMinorText) {
+                addWrappedText(majorMinorText, { fontSize: 10 });
+            }
+            yPos += 15;
+        });
+    }
+
+    // --- 5. SKILLS ---
+    const skills = data.skills || {};
+    const allSkills = [...(skills.technical || []), ...(skills.soft || [])];
+    if (allSkills.length > 0) {
+        addSectionHeader('Skills & abilities');
+        const skillColumns = { col1: [], col2: [], col3: [] };
+        allSkills.forEach((skill, i) => {
+            if (i % 3 === 0) skillColumns.col1.push(`•   ${skill}`);
+            else if (i % 3 === 1) skillColumns.col2.push(`•   ${skill}`);
+            else skillColumns.col3.push(`•   ${skill}`);
+        });
+
+        const col1Text = skillColumns.col1.join('\n');
+        const col2Text = skillColumns.col2.join('\n');
+        const col3Text = skillColumns.col3.join('\n');
+        
+        const colWidth = (pageWidth - margin * 2) / 3;
+        addWrappedText(col1Text, { maxWidth: colWidth });
+        // Reset Y position to draw columns side-by-side
+        yPos -= (skillColumns.col1.length * 10 * 1.5);
+        addWrappedText(col2Text, { x: margin + colWidth, maxWidth: colWidth });
+        yPos -= (skillColumns.col2.length * 10 * 1.5);
+        addWrappedText(col3Text, { x: margin + colWidth * 2, maxWidth: colWidth });
+    }
+
+    // --- SAVE THE PDF ---
+    const fileName = `${personal.name || 'Resume'}_Optimized.pdf`;
+    doc.save(fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
+}
         
         // --- UTILITY AND MOCK FUNCTIONS ---
         function updateProgress(percentage) { const fill = document.getElementById('progress-fill'); fill.style.width = percentage + '%'; }
