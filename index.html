@@ -871,11 +871,14 @@ Example formats:
                 return;
             }
             try {
-                const prompt = `Parse this resume into a structured JSON format. Extract all information accurately and return ONLY valid JSON:
+                const prompt = `You are a meticulous data extraction bot. Your task is to parse the following resume text into a structured JSON format. Be extremely thorough and do not skip any details, especially bullet points under job experiences, education details, or entire sections.
 
+RESUME TEXT:
+---
 ${resumeText}
+---
 
-Return this exact structure:
+Return ONLY the valid JSON object with this exact structure. Every bullet point must be captured as a separate string in the "responsibilities" or "achievements" arrays.
 {
   "personal": {"name":"","email":"","phone":"","location":"","linkedin":"","github":""},
   "summary": "",
@@ -884,66 +887,75 @@ Return this exact structure:
   "education": [{"degree":"","institution":"","year":"","gpa":""}],
   "projects": [{"name":"","description":"","technologies":[]}]
 }`;
-                const response = await callAI(prompt);
-                let jsonText = response.trim();
-                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) {
-                    jsonText = jsonMatch[1];
-                }
-                resumeData = JSON.parse(jsonText);
-                displayResumeJson();
-                hideLoading();
-                showNotification('✅ Resume successfully parsed by AI!', 'success');
-                updateProgress(35);
-            } catch (error) {
-                console.error('Error parsing resume:', error);
-                hideLoading();
-                if (error.message.includes('401')) {
-                    showNotification('❌ Invalid API key. Please check your OpenAI API key.', 'warning');
-                } else {
-                    showNotification('⚠️ AI parsing failed. Using fallback mode...', 'warning');
-                }
-                resumeData = createMockResumeData(resumeText);
-                displayResumeJson();
-                updateProgress(35);
-            }
+        const response = await callAI(prompt);
+        let jsonText = response.trim();
+        const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+        if (jsonMatch) {
+            jsonText = jsonMatch[1];
         }
-
+        resumeData = JSON.parse(jsonText);
+        displayResumeJson();
+        hideLoading();
+        showNotification('✅ Resume successfully parsed by AI!', 'success');
+        updateProgress(35);
+    } catch (error) {
+        console.error('Error parsing resume:', error);
+        hideLoading();
+        if (error.message.includes('401')) {
+            showNotification('❌ Invalid API key. Please check your OpenAI API key.', 'warning');
+        } else {
+            showNotification('⚠️ AI parsing failed. Using fallback mode...', 'warning');
+        }
+        resumeData = createMockResumeData(resumeText);
+        displayResumeJson();
+        updateProgress(35);
+    }
+}
         // Corrected and simplified API call function
-        async function callAI(prompt) {
-            if (!apiKeys.openai) {
-                throw new Error('No API key provided');
-            }
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKeys.openai}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: 'gpt-5-nano',
-                    messages: [{
-                        role: 'system',
-                        content: 'You are a professional resume optimization assistant. Always return valid JSON in the exact format requested. Do not include any explanations or additional text outside the JSON.'
-                    }, {
-                        role: 'user',
-                        content: prompt
-                    }],
-                    max_completion_tokens: 4000,
-                    temperature: 1
-                })
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
-                throw new Error(`API Error (${response.status}): ${errorMessage}`);
-            }
-            const data = await response.json();
-            if (!data.choices?.[0]?.message?.content) {
-                throw new Error('Empty response from API');
-            }
-            return data.choices[0].message.content;
+        // REPLACE this entire function
+async function callAI(prompt, retries = 1) {
+    if (!apiKeys.openai) {
+        throw new Error('No API key provided');
+    }
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKeys.openai}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'gpt-5-nano',
+                messages: [{
+                    role: 'system',
+                    content: 'You are a professional resume optimization assistant. Always return valid JSON in the exact format requested. Do not include any explanations or additional text outside the JSON.'
+                }, {
+                    role: 'user',
+                    content: prompt
+                }],
+                max_completion_tokens: 4000,
+                temperature: 0.2
+            })
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+            throw new Error(`API Error (${response.status}): ${errorMessage}`);
         }
+        const data = await response.json();
+        if (!data.choices?.[0]?.message?.content) {
+            throw new Error('Empty response from API');
+        }
+        return data.choices[0].message.content;
+    } catch (error) {
+        if (retries > 0 && error.message.includes('Empty response')) {
+            console.warn('Empty response from API, retrying...');
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 0.5s before retrying
+            return callAI(prompt, retries - 1);
+        }
+        throw error;
+    }
+}
 
         // Analyze job match with new features
         async function analyzeMatch() {
@@ -1066,11 +1078,11 @@ Return this exact JSON structure:
             try {
                 let prompt;
                 if (mode === 'auto') {
-                    prompt = `Based on the resume analysis, optimize the 2-3 weakest sections of the resume to better match the job description. Focus on summary and skills first. Return ONLY valid JSON.
-CURRENT RESUME: ${JSON.stringify(resumeData, null, 2)}
+                    prompt = `Based on the resume provided analysis, optimize the 2-3 weakest sections of the resume to better match the job description. Focus on summary and skills. Return ONLY valid JSON.
+RESUME: ${JSON.stringify(resumeData)}
 JOB DESCRIPTION: ${jobDescription}
-ANALYSIS RESULTS (focus on weaknesses and missing keywords): ${JSON.stringify(matchAnalysis, null, 2)}
-Return this exact JSON structure, including optimizations for multiple sections:
+ANALYSIS: ${JSON.stringify(matchAnalysis)}
+Return this JSON structure with multiple optimizations:
 {
   "optimizations": [
     {"section": "summary", "original": "...", "optimized": "...", "explanation": "..."},
@@ -1079,9 +1091,9 @@ Return this exact JSON structure, including optimizations for multiple sections:
 }`;
                 } else {
                     prompt = `Optimize the ${selectedSection} section for the job. Return ONLY valid JSON:
-CURRENT SECTION: ${JSON.stringify(resumeData[selectedSection], null, 2)}
+CURRENT SECTION: ${JSON.stringify(resumeData[selectedSection])}
 JOB DESCRIPTION: ${jobDescription}
-Return this exact JSON structure:
+Return this JSON structure:
 {
   "optimizations": [
     {"section": "${selectedSection}", "original": "...", "optimized": "...", "explanation": "..."}
@@ -1102,7 +1114,7 @@ Return this exact JSON structure:
             } catch (error) {
                 console.error('Error optimizing resume:', error);
                 hideLoading();
-                showNotification('⚠️ Optimization failed. Showing demo results...', 'warning');
+                showNotification('⚠️ Optimization failed: ${error.message}`, 'warning');
                 const mockOptimizations = createMockOptimizations(mode, selectedSection);
                 displayOptimizationResults(mockOptimizations);
                 updateProgress(100);
