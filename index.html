@@ -563,7 +563,7 @@
                         Get your key from <strong>platform.openai.com</strong>.
                     </small>
                 </div>
-                <button class="btn" onclick="saveApiKeys()">💾 Save API Key</button>
+                <button id="save-key-btn" class="btn">💾 Save API Key</button>
                 
                 <div class="api-status" id="api-status">
                     ✅ API Key Connected! Ready to use AI features.
@@ -709,6 +709,8 @@ Example formats:
         document.addEventListener('DOMContentLoaded', function() {
             loadApiKey();
             setupInputDetection();
+            // Add this line
+            document.getElementById('save-key-btn').addEventListener('click', saveApiKeys);
         });
 
         // Load API key from persistent browser storage
