@@ -545,10 +545,10 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="showTab('setup')">🔑 Setup</button>
-            <button class="tab" onclick="showTab('resume')">📄 Resume</button>
-            <button class="tab" onclick="showTab('job')">🎯 Match</button>
-            <button class="tab" onclick="showTab('optimize')">✨ Auto-Optimize</button>
+               <button class="tab" onclick="showTab('setup', event)">...</button>
+               <button class="tab" onclick="showTab('resume', event)">...</button>
+               <button class="tab" onclick="showTab('job', event)">...</button>
+               <button class="tab" onclick="showTab('optimize', event)">...</button>
         </div>
 
         <!-- Setup Tab -->
@@ -1116,7 +1116,7 @@ Return this JSON structure:
             } catch (error) {
                 console.error('Error optimizing resume:', error);
                 hideLoading();
-                showNotification('⚠️ Optimization failed: ${error.message}`, 'warning');
+                showNotification(`⚠️ Optimization failed: ${error.message}`, 'warning');
                 const mockOptimizations = createMockOptimizations(mode, selectedSection);
                 displayOptimizationResults(mockOptimizations);
                 updateProgress(100);
@@ -1298,17 +1298,15 @@ function generateProfessionalPDF(data) {
 }
         
         // --- UTILITY AND MOCK FUNCTIONS ---
-        // --- UTILITY AND MOCK FUNCTIONS ---
-
 function updateProgress(percentage) {
     const fill = document.getElementById('progress-fill');
     fill.style.width = percentage + '%';
 }
 
-function showTab(tabName) {
+function showTab(tabName, event) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    event.target.classList.add('active');
+    if (event) event.target.classList.add('active');
     document.getElementById(tabName).classList.add('active');
 }
 
@@ -1444,6 +1442,7 @@ function acceptOptimization(index) {
         optimizations[index].accepted = true;
         document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
     } catch (e) {
+        console.error(e);
         showNotification('❌ Error applying optimization', 'warning');
     }
 }
