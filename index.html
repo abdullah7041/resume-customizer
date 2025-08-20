@@ -545,10 +545,10 @@
         </div>
 
         <div class="tabs">
-               <button class="tab" onclick="showTab('setup', event)">...</button>
-               <button class="tab" onclick="showTab('resume', event)">...</button>
-               <button class="tab" onclick="showTab('job', event)">...</button>
-               <button class="tab" onclick="showTab('optimize', event)">...</button>
+               <button class="tab" onclick="showTab('setup', event)">🔑</button>
+               <button class="tab" onclick="showTab('resume', event)">📄</button>
+               <button class="tab" onclick="showTab('job', event)">🎯</button>
+               <button class="tab" onclick="showTab('optimize', event)">✨</button>
         </div>
 
         <!-- Setup Tab -->
@@ -936,7 +936,7 @@ async function callAI(prompt, retries = 1) {
                     content: prompt
                 }],
                 max_completion_tokens: 4000,
-                temperature: 0.2
+                temperature: 1
             })
         });
         if (!response.ok) {
