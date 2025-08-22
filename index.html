@@ -860,57 +860,27 @@ Example formats:
             };
         }
 
-        // Parse resume text with AI
-        // REPLACE this entire function
+        // Parse resume text with AI through Worker
 async function parseResumeText(resumeText) {
-    showLoading('🤖 AI is meticulously parsing your resume...');
-    if (!apiKeys.openai) {
-        console.log('No API key found, using demo mode');
-        resumeData = createMockResumeData(resumeText);
-        displayResumeJson();
-        hideLoading();
-        showNotification('📄 Resume parsed in demo mode. Add API key for AI parsing.', 'warning');
-        updateProgress(35);
-        return;
-    }
+    showLoading('🤖 AI is parsing your resume...');
     try {
-        const prompt = `You are a meticulous data extraction bot. Your task is to parse the following resume text into a structured JSON format. Be extremely thorough and do not skip any details, especially bullet points under job experiences, education details, or entire sections.
+        const prompt = `Parse this resume text into structured JSON: ${resumeText}`;
+        const response = await fetch("https://resume-api.yourname.workers.dev/parse", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt })
+        });
 
-RESUME TEXT:
----
-${resumeText}
----
+        if (!response.ok) throw new Error(await response.text());
 
-Return ONLY the valid JSON object with this exact structure. Every bullet point must be captured as a separate string in the "responsibilities" or "achievements" arrays. In addition, include a "parsingStatus" object to report on your work.
-{
-  "personal": {"name":"","email":"","phone":"","location":"","linkedin":"","github":""},
-  "summary": "",
-  "experience": [{"company":"","position":"","duration":"","responsibilities":[],"achievements":[]}],
-  "skills": {"technical":[],"soft":[]},
-  "education": [{"degree":"","institution":"","year":"","gpa":""}],
-  "projects": [{"name":"","description":"","technologies":[]}],
-  "parsingStatus": {
-      "isComplete": true,
-      "issues": []
-  }
-}`;
-        const response = await callAI(prompt);
-        let jsonText = response.trim();
+        const data = await response.json();
+        let jsonText = data.choices[0].message.content.trim();
+
+        // Handle markdown fenced code
         const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-        if (jsonMatch) {
-            jsonText = jsonMatch[1];
-        }
-        
-        const parsedData = JSON.parse(jsonText);
-        
-        // Check the AI's self-reported status
-        if (parsedData.parsingStatus && !parsedData.parsingStatus.isComplete) {
-             showNotification('⚠️ AI parsing may be incomplete. Please review the generated JSON.', 'warning');
-        }
+        if (jsonMatch) jsonText = jsonMatch[1];
 
-        delete parsedData.parsingStatus; // Remove status object before saving
-        resumeData = parsedData;
-
+        resumeData = JSON.parse(jsonText);
         displayResumeJson();
         hideLoading();
         showNotification('✅ Resume successfully parsed by AI!', 'success');
@@ -918,18 +888,13 @@ Return ONLY the valid JSON object with this exact structure. Every bullet point 
     } catch (error) {
         console.error('Error parsing resume:', error);
         hideLoading();
-        if (error.message.includes('401')) {
-            showNotification('❌ Invalid API key. Please check your OpenAI API key.', 'warning');
-        } else {
-            showNotification('⚠️ AI parsing failed. Using fallback mode...', 'warning');
-        }
+        showNotification('⚠️ Parsing failed. Using fallback mode...', 'warning');
         resumeData = createMockResumeData(resumeText);
         displayResumeJson();
         updateProgress(35);
     }
 }
-        // Corrected and simplified API call function
-        // REPLACE this entire function
+
 // New callAI function using Cloudflare Worker proxy
 async function callAI(prompt, retries = 1) {
     try {
@@ -965,74 +930,58 @@ async function callAI(prompt, retries = 1) {
     }
 }
 
-        // Analyze job match with new features
-        async function analyzeMatch() {
-            jobDescription = document.getElementById('job-input').value.trim();
-            if (!resumeData) {
-                showNotification('⚠️ Please parse your resume first', 'warning');
-                showTab('resume');
-                return;
-            }
-            if (!jobDescription) {
-                showNotification('⚠️ Please enter a job description', 'warning');
-                return;
-            }
-            showLoading('🎯 AI is analyzing job compatibility...');
-            if (!apiKeys.openai) {
-                matchAnalysis = createMockMatchAnalysis();
-                displayMatchResult(matchAnalysis);
-                displayAtsScore(matchAnalysis.atsCompliance);
-                displaySkillGap(matchAnalysis.skillGap);
-                hideLoading();
-                showNotification('🎯 Match analysis complete (demo mode)', 'warning');
-                updateProgress(75);
-                return;
-            }
-            try {
-                const prompt = `Analyze the compatibility between this resume and job description. Provide a match score, detailed feedback, an ATS compliance score, and a skill gap analysis. Return ONLY valid JSON with the exact structure shown:
-RESUME: ${JSON.stringify(resumeData, null, 2)}
-JOB DESCRIPTION: ${jobDescription}
-Return this exact JSON structure:
-{
-  "score": 85,
-  "level": "good",
-  "strengths": ["..."],
-  "weaknesses": ["..."],
-  "recommendations": ["..."],
-  "keywordsMissing": ["..."],
-  "atsCompliance": {
-    "score": 95,
-    "feedback": ["Standard section headers used.", "Single-column format is ATS-friendly."]
-  },
-  "skillGap": {
-    "hardSkills": ["Skill 1", "Skill 2"],
-    "softSkills": ["Skill 3"]
-  }
-}`;
-                const response = await callAI(prompt);
-                let jsonText = response.trim();
-                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) {
-                    jsonText = jsonMatch[1];
-                }
-                matchAnalysis = JSON.parse(jsonText);
-                displayMatchResult(matchAnalysis);
-                displayAtsScore(matchAnalysis.atsCompliance);
-                displaySkillGap(matchAnalysis.skillGap);
-                hideLoading();
-                showNotification('✅ Job match analysis complete!', 'success');
-                updateProgress(75);
-            } catch (error) {
-                console.error('Error analyzing match:', error);
-                hideLoading();
-                showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
-                matchAnalysis = createMockMatchAnalysis();
-                displayMatchResult(matchAnalysis);
-                displayAtsScore(matchAnalysis.atsCompliance);
-                displaySkillGap(matchAnalysis.skillGap);
-                updateProgress(75);
-            }
-        }
+        // Analyze job match with ATS & skill gap
+async function analyzeMatch() {
+    jobDescription = document.getElementById('job-input').value.trim();
+    if (!resumeData) {
+        showNotification('⚠️ Please parse your resume first', 'warning');
+        showTab('resume');
+        return;
+    }
+    if (!jobDescription) {
+        showNotification('⚠️ Please enter a job description', 'warning');
+        return;
+    }
+
+    showLoading('🎯 AI is analyzing job compatibility...');
+    try {
+        const prompt = `Analyze compatibility between resume and job description. 
+Return JSON with score, strengths, weaknesses, recommendations, keywordsMissing, atsCompliance, skillGap.
+RESUME: ${JSON.stringify(resumeData)}
+JOB: ${jobDescription}`;
+
+        const response = await fetch("https://resume-api.yourname.workers.dev/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt })
+        });
+
+        if (!response.ok) throw new Error(await response.text());
+
+        const data = await response.json();
+        let jsonText = data.choices[0].message.content.trim();
+        const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+        if (jsonMatch) jsonText = jsonMatch[1];
+
+        matchAnalysis = JSON.parse(jsonText);
+        displayMatchResult(matchAnalysis);
+        displayAtsScore(matchAnalysis.atsCompliance);
+        displaySkillGap(matchAnalysis.skillGap);
+        hideLoading();
+        showNotification('✅ Job match analysis complete!', 'success');
+        updateProgress(75);
+    } catch (error) {
+        console.error('Error analyzing match:', error);
+        hideLoading();
+        showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
+        matchAnalysis = createMockMatchAnalysis();
+        displayMatchResult(matchAnalysis);
+        displayAtsScore(matchAnalysis.atsCompliance);
+        displaySkillGap(matchAnalysis.skillGap);
+        updateProgress(75);
+    }
+}
+
 
         function createMockOptimizations(mode, section) {
     const mockData = {
@@ -1064,70 +1013,65 @@ Return this exact JSON structure:
 }
         
         // Start optimization with improved multi-section prompt
-        async function startOptimization() {
-            if (!resumeData) {
-                showNotification('⚠️ Please parse your resume first', 'warning');
-                return;
-            }
-            if (!matchAnalysis) {
-                showNotification('⚠️ Please analyze job match first', 'warning');
-                return;
-            }
-            const mode = document.getElementById('optimization-mode').value;
-            const selectedSection = document.getElementById('section-select').value;
-            showLoading('✨ AI is optimizing your resume...');
-            if (!apiKeys.openai) {
-                const mockOptimizations = createMockOptimizations(mode, selectedSection);
-                displayOptimizationResults(mockOptimizations);
-                hideLoading();
-                showNotification('✨ Optimization complete (demo mode)', 'warning');
-                return;
-            }
-            try {
-                let prompt;
-                if (mode === 'auto') {
-                    prompt = `Based on the resume provided analysis, optimize the 2-3 weakest sections of the resume to better match the job description. Focus on summary and skills. Return ONLY valid JSON.
+        // Optimize resume sections with AI
+async function startOptimization() {
+    if (!resumeData) {
+        showNotification('⚠️ Please parse your resume first', 'warning');
+        return;
+    }
+    if (!matchAnalysis) {
+        showNotification('⚠️ Please analyze job match first', 'warning');
+        return;
+    }
+
+    const mode = document.getElementById('optimization-mode').value;
+    const selectedSection = document.getElementById('section-select').value;
+    showLoading('✨ AI is optimizing your resume...');
+
+    try {
+        let prompt;
+        if (mode === 'auto') {
+            prompt = `Optimize the weakest resume sections for this job.
+Focus on summary and skills. 
+Return JSON with original, optimized, and explanation.
 RESUME: ${JSON.stringify(resumeData)}
-JOB DESCRIPTION: ${jobDescription}
-ANALYSIS: ${JSON.stringify(matchAnalysis)}
-Return this JSON structure with multiple optimizations:
-{
-  "optimizations": [
-    {"section": "summary", "original": "...", "optimized": "...", "explanation": "..."},
-    {"section": "skills", "original": {"technical": [], "soft": []}, "optimized": {"technical": [], "soft": []}, "explanation": "..."}
-  ]
-}`;
-                } else {
-                    prompt = `Optimize the ${selectedSection} section for the job. Return ONLY valid JSON:
-CURRENT SECTION: ${JSON.stringify(resumeData[selectedSection])}
-JOB DESCRIPTION: ${jobDescription}
-Return this JSON structure:
-{
-  "optimizations": [
-    {"section": "${selectedSection}", "original": "...", "optimized": "...", "explanation": "..."}
-  ]
-}`;
-                }
-                const response = await callAI(prompt);
-                let jsonText = response.trim();
-                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) {
-                    jsonText = jsonMatch[1];
-                }
-                const result = JSON.parse(jsonText);
-                displayOptimizationResults(result.optimizations);
-                hideLoading();
-                showNotification('✅ Resume optimization complete!', 'success');
-                updateProgress(100);
-            } catch (error) {
-                console.error('Error optimizing resume:', error);
-                hideLoading();
-                showNotification(`⚠️ Optimization failed: ${error.message}`, 'warning');
-                const mockOptimizations = createMockOptimizations(mode, selectedSection);
-                displayOptimizationResults(mockOptimizations);
-                updateProgress(100);
-            }
+JOB: ${jobDescription}
+ANALYSIS: ${JSON.stringify(matchAnalysis)}`;
+        } else {
+            prompt = `Optimize the ${selectedSection} section only. 
+Return JSON with original, optimized, and explanation.
+SECTION: ${JSON.stringify(resumeData[selectedSection])}
+JOB: ${jobDescription}`;
         }
+
+        const response = await fetch("https://resume-api.yourname.workers.dev/optimize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt })
+        });
+
+        if (!response.ok) throw new Error(await response.text());
+
+        const data = await response.json();
+        let jsonText = data.choices[0].message.content.trim();
+        const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+        if (jsonMatch) jsonText = jsonMatch[1];
+
+        const result = JSON.parse(jsonText);
+        displayOptimizationResults(result.optimizations);
+        hideLoading();
+        showNotification('✅ Resume optimization complete!', 'success');
+        updateProgress(100);
+    } catch (error) {
+        console.error('Error optimizing resume:', error);
+        hideLoading();
+        showNotification(`⚠️ Optimization failed: ${error.message}`, 'warning');
+        const mockOptimizations = createMockOptimizations(mode, selectedSection);
+        displayOptimizationResults(mockOptimizations);
+        updateProgress(100);
+    }
+}
+
         
         // Robust PDF generation function
         // REPLACE this entire function
