@@ -861,33 +861,38 @@ Example formats:
         }
 
         // Parse resume text with AI
-        async function parseResumeText(resumeText) {
-            showLoading('🤖 AI is parsing your resume...');
-            if (!apiKeys.openai) {
-                console.log('No API key found, using demo mode');
-                resumeData = createMockResumeData(resumeText);
-                displayResumeJson();
-                hideLoading();
-                showNotification('📄 Resume parsed in demo mode. Add API key for AI parsing.', 'warning');
-                updateProgress(35);
-                return;
-            }
-            try {
-                const prompt = `You are a meticulous data extraction bot. Your task is to parse the following resume text into a structured JSON format. Be extremely thorough and do not skip any details, especially bullet points under job experiences, education details, or entire sections.
+        // REPLACE this entire function
+async function parseResumeText(resumeText) {
+    showLoading('🤖 AI is meticulously parsing your resume...');
+    if (!apiKeys.openai) {
+        console.log('No API key found, using demo mode');
+        resumeData = createMockResumeData(resumeText);
+        displayResumeJson();
+        hideLoading();
+        showNotification('📄 Resume parsed in demo mode. Add API key for AI parsing.', 'warning');
+        updateProgress(35);
+        return;
+    }
+    try {
+        const prompt = `You are a meticulous data extraction bot. Your task is to parse the following resume text into a structured JSON format. Be extremely thorough and do not skip any details, especially bullet points under job experiences, education details, or entire sections.
 
 RESUME TEXT:
 ---
 ${resumeText}
 ---
 
-Return ONLY the valid JSON object with this exact structure. Every bullet point must be captured as a separate string in the "responsibilities" or "achievements" arrays.
+Return ONLY the valid JSON object with this exact structure. Every bullet point must be captured as a separate string in the "responsibilities" or "achievements" arrays. In addition, include a "parsingStatus" object to report on your work.
 {
   "personal": {"name":"","email":"","phone":"","location":"","linkedin":"","github":""},
   "summary": "",
   "experience": [{"company":"","position":"","duration":"","responsibilities":[],"achievements":[]}],
   "skills": {"technical":[],"soft":[]},
   "education": [{"degree":"","institution":"","year":"","gpa":""}],
-  "projects": [{"name":"","description":"","technologies":[]}]
+  "projects": [{"name":"","description":"","technologies":[]}],
+  "parsingStatus": {
+      "isComplete": true,
+      "issues": []
+  }
 }`;
         const response = await callAI(prompt);
         let jsonText = response.trim();
@@ -895,7 +900,17 @@ Return ONLY the valid JSON object with this exact structure. Every bullet point 
         if (jsonMatch) {
             jsonText = jsonMatch[1];
         }
-        resumeData = JSON.parse(jsonText);
+        
+        const parsedData = JSON.parse(jsonText);
+        
+        // Check the AI's self-reported status
+        if (parsedData.parsingStatus && !parsedData.parsingStatus.isComplete) {
+             showNotification('⚠️ AI parsing may be incomplete. Please review the generated JSON.', 'warning');
+        }
+
+        delete parsedData.parsingStatus; // Remove status object before saving
+        resumeData = parsedData;
+
         displayResumeJson();
         hideLoading();
         showNotification('✅ Resume successfully parsed by AI!', 'success');
@@ -915,44 +930,35 @@ Return ONLY the valid JSON object with this exact structure. Every bullet point 
 }
         // Corrected and simplified API call function
         // REPLACE this entire function
+// New callAI function using Cloudflare Worker proxy
 async function callAI(prompt, retries = 1) {
-    if (!apiKeys.openai) {
-        throw new Error('No API key provided');
-    }
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
+        const response = await fetch("https://resume-customizing.ronaldinho1415.workers.dev", {
+            method: "POST",
             headers: {
-                'Authorization': `Bearer ${apiKeys.openai}`,
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                model: 'gpt-5-nano',
-                messages: [{
-                    role: 'system',
-                    content: 'You are a professional resume optimization assistant. Always return valid JSON in the exact format requested. Do not include any explanations or additional text outside the JSON.'
-                }, {
-                    role: 'user',
-                    content: prompt
-                }],
-                max_completion_tokens: 4000,
-                temperature: 1
-            })
+            body: JSON.stringify({ prompt })
         });
+
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
-            throw new Error(`API Error (${response.status}): ${errorMessage}`);
+            const errorData = await response.text();
+            throw new Error(`API Error (${response.status}): ${errorData}`);
         }
+
         const data = await response.json();
-        if (!data.choices?.[0]?.message?.content) {
-            throw new Error('Empty response from API');
+
+        // Extract content depending on Worker response structure
+        if (!data.choices || !data.choices[0]?.message?.content) {
+            throw new Error("Empty or invalid response from API");
         }
+
         return data.choices[0].message.content;
+
     } catch (error) {
-        if (retries > 0 && error.message.includes('Empty response')) {
-            console.warn('Empty response from API, retrying...');
-            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 0.5s before retrying
+        if (retries > 0 && error.message.includes("Empty")) {
+            console.warn("Empty response, retrying...");
+            await new Promise(resolve => setTimeout(resolve, 500));
             return callAI(prompt, retries - 1);
         }
         throw error;
@@ -1433,17 +1439,25 @@ function displayOptimizationResults(optimizationList) {
     document.getElementById('optimization-results').style.display = 'block';
 }
 
+// REPLACE this entire function
 function acceptOptimization(index) {
     const opt = optimizations[index];
     try {
-        resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized;
+        let optimizedContent = opt.optimized;
+        // If the optimized content is a string that looks like an object/array, parse it.
+        if (typeof optimizedContent === 'string' && (optimizedContent.trim().startsWith('{') || optimizedContent.trim().startsWith('['))) {
+            optimizedContent = JSON.parse(optimizedContent);
+        }
+        
+        resumeData[opt.section] = optimizedContent;
+        
         displayResumeJson();
-        showNotification(`✅ ${opt.section} updated!`, 'success');
+        showNotification(`✅ ${opt.section} section updated!`, 'success');
         optimizations[index].accepted = true;
         document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
     } catch (e) {
         console.error(e);
-        showNotification('❌ Error applying optimization', 'warning');
+        showNotification('❌ Error applying optimization. Please check JSON format.', 'warning');
     }
 }
 
