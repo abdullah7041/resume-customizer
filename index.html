@@ -545,15 +545,13 @@
         </div>
 
         <div class="tabs">
-               <button class="tab" onclick="showTab('setup', event)">🔑</button>
                <button class="tab" onclick="showTab('resume', event)">📄</button>
                <button class="tab" onclick="showTab('job', event)">🎯</button>
                <button class="tab" onclick="showTab('optimize', event)">✨</button>
         </div>
 
         <!-- Setup Tab -->
-        <div class="tab-content active" id="setup">
-            <div class="api-setup">
+        <div class="tab-content active" id="resume">
                 <h3>🔑 API Configuration</h3>
                 <p>Connect your OpenAI account to unlock AI-powered features:</p>
                 <div class="form-group">
@@ -701,48 +699,16 @@ Example formats:
         let jobDescription = '';
         let matchAnalysis = null;
         let optimizations = {};
-        let apiKeys = {
-            openai: ''
-        };
+        
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadApiKey();
-            setupInputDetection();
+                     setupInputDetection();
             // Add this line
             document.getElementById('save-key-btn').addEventListener('click', saveApiKeys);
         });
 
-        // Load API key from persistent browser storage
-        function loadApiKey() {
-            const savedKey = localStorage.getItem('aiResumeOptimizerApiKey');
-            if (savedKey) {
-                apiKeys.openai = savedKey;
-                document.getElementById('openai-key').value = savedKey;
-                document.getElementById('api-status').classList.add('connected');
-                updateProgress(10);
-                console.log('API Key loaded from localStorage.');
-            }
-        }
-
-        // Save API key to persistent browser storage
-        function saveApiKeys() {
-            const openaiKey = document.getElementById('openai-key').value.trim();
-            if (!openaiKey) {
-                showNotification('⚠️ Please enter your OpenAI API key', 'warning');
-                return;
-            }
-            if (!openaiKey.startsWith('sk-')) {
-                showNotification('❌ Invalid API key format. Must start with "sk-"', 'warning');
-                return;
-            }
-            apiKeys.openai = openaiKey;
-            localStorage.setItem('aiResumeOptimizerApiKey', openaiKey);
-            document.getElementById('api-status').classList.add('connected');
-            showNotification('✅ OpenAI API key saved successfully!', 'success');
-            updateProgress(15);
-        }
-
+        
         // Enhanced input detection
         function setupInputDetection() {
             const textarea = document.getElementById('resume-input');
