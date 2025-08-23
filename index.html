@@ -92,7 +92,7 @@
 
         .tabs {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             background: rgba(248, 250, 252, 0.9);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(226, 232, 240, 0.5);
@@ -552,42 +552,6 @@
 
         <!-- Setup Tab -->
         <div class="tab-content active" id="resume">
-                <h3>🔑 API Configuration</h3>
-                <p>Connect your OpenAI account to unlock AI-powered features:</p>
-                <div class="form-group">
-                    <label>OpenAI API Key</label>
-                    <input type="password" id="openai-key" placeholder="sk-..." />
-                    <small style="color: #64748b; margin-top: 8px; display: block;">
-                        Get your key from <strong>platform.openai.com</strong>.
-                    </small>
-                </div>
-                <button id="save-key-btn" class="btn">💾 Save API Key</button>
-                
-                <div class="api-status" id="api-status">
-                    ✅ API Key Connected! Ready to use AI features.
-                </div>
-            </div>
-            
-            <div class="suggestions">
-                <h3>🚀 How It Works</h3>
-                <div class="suggestion-item">
-                    <strong>Step 1:</strong> Add your OpenAI API key above. Your key is saved in your browser.
-                </div>
-                <div class="suggestion-item">
-                    <strong>Step 2:</strong> Paste your resume text to parse into structured data.
-                </div>
-                <div class="suggestion-item">
-                    <strong>Step 3:</strong> Add a job description to get an instant compatibility score.
-                </div>
-                <div class="suggestion-item">
-                    <strong>Step 4:</strong> The AI automatically optimizes weak sections for you!
-                </div>
-            </div>
-        </div>
-
-        <!-- Resume Tab -->
-        <div class="tab-content" id="resume">
-            <div class="form-group">
                 <label>📄 Paste Your Resume Data</label>
                 <textarea id="resume-input" rows="12" placeholder="Paste your resume here - accepts both formats:
 ✅ Plain resume text (will be parsed by AI)
@@ -705,7 +669,6 @@ Example formats:
         document.addEventListener('DOMContentLoaded', function() {
                      setupInputDetection();
             // Add this line
-            document.getElementById('save-key-btn').addEventListener('click', saveApiKeys);
         });
 
         
@@ -1050,9 +1013,9 @@ function generateProfessionalPDF(data) {
 
     // --- FONT & COLOR DEFINITIONS ---
     const FONT_HELVETICA = 'Helvetica';
-    const COLOR_PRIMARY = '#000000';
-    const COLOR_GRAY = '#4d4d4d';
-    doc.setTextColor(COLOR_PRIMARY);
+    const COLOR_PRIMARY = { r: 0, g: 0, b: 0 };
+    const COLOR_GRAY = { r: 77, g: 77, b: 77 };
+    doc.setTextColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
 
     // --- HELPER FUNCTIONS ---
     // Helper to add wrapped text and manage Y position
@@ -1085,7 +1048,7 @@ function generateProfessionalPDF(data) {
         doc.setTextColor(COLOR_PRIMARY);
         doc.text(title.toUpperCase(), margin, yPos);
         yPos += 12;
-        doc.setDrawColor(COLOR_PRIMARY);
+        doc.setDrawColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
         doc.setLineWidth(1);
         doc.line(margin, yPos, pageWidth - margin, yPos);
         yPos += 20;
@@ -1117,7 +1080,7 @@ function generateProfessionalPDF(data) {
 
     // --- 2. OBJECTIVE / SUMMARY ---
     if (data.summary) {
-        addSectionHeader('Objective');
+        addSectionHeader('Summary');
         addWrappedText(data.summary, {});
     }
 
