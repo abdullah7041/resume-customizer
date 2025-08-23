@@ -576,117 +576,116 @@
         </div>
 
         <div class="tabs">
-            <button class="tab" onclick="showTab('resume', event)">📄</button>
-            <button class="tab" onclick="showTab('job', event)">🎯</button>
-            <button class="tab" onclick="showTab('optimize', event)">✨</button>
+            <button class="tab active" onclick="showTab('resume', event)">📄 Resume</button>
+            <button class="tab" onclick="showTab('job', event)">🎯 Match</button>
+            <button class="tab" onclick="showTab('optimize', event)">✨ Optimize</button>
         </div>
 
-        <!-- Setup Tab -->
         <div class="tab-content active" id="resume">
-            <label>📄 Paste Your Resume Data</label>
-            <textarea id="resume-input" rows="12" placeholder="Paste your resume here - accepts both formats:
-✅ Plain resume text (will be parsed by AI)
-✅ Structured JSON data (will be loaded directly)
+            <div class="form-group"> <label>📄 Paste Your Resume Data</label>
+                <textarea id="resume-input" rows="12" placeholder="..."></textarea>
+                <div id="input-status" style="display: none;">
+                    <span id="status-icon">🔍</span>
+                    <span id="status-text">Analyzing...</span>
+                </div>
+            </div>
+            <button class="btn" id="parse-btn" onclick="processResumeInput()">🤖 Process Resume Data</button>
 
-Example formats:
-• Copy-paste from your current resume
-• Structured JSON from previous sessions
-• Any resume text format"></textarea>
-            <div id="input-status" style="margin-top: 10px; padding: 10px; border-radius: 8px; display: none;">
-                <span id="status-icon">🔍</span>
-                <span id="status-text">Analyzing input format...</span>
+            <div id="resume-json" style="display: none;">
+                <h3>📊 Structured Resume Data</h3>
+                <div class="json-preview" id="json-output"></div>
+                <button class="btn secondary" onclick="editJson()">✏️ Edit JSON Structure</button>
             </div>
         </div>
-        <button class="btn" id="parse-btn" onclick="processResumeInput()">🤖 Process Resume Data</button>
 
-        <div id="resume-json" style="display: none;">
-            <h3>📊 Structured Resume Data</h3>
-            <div class="json-preview" id="json-output"></div>
-            <button class="btn secondary" onclick="editJson()">✏️ Edit JSON Structure</button>
-        </div>
-    </div>
-
-    <!-- Job Match Tab -->
-    <div class="tab-content" id="job">
-        <div class="form-group">
-            <label>💼 Job Description</label>
-            <textarea id="job-input" rows="8"
-                placeholder="Paste the complete job description here... Include requirements, responsibilities, skills needed, etc."></textarea>
-        </div>
-        <button class="btn" onclick="analyzeMatch()">🎯 Analyze Match Score</button>
-
-        <div id="match-result" style="display: none;">
-            <div class="score-display" id="score-display">
-                <div class="score-number" id="score-value">0</div>
-                <div class="score-text" id="score-description">Analyzing compatibility...</div>
-            </div>
-
-            <div class="suggestions" id="match-suggestions">
-                <h3>📋 Detailed Analysis</h3>
-                <div id="suggestions-content"></div>
-            </div>
-
-            <!-- NEW: ATS Compliance Score Section -->
-            <div class="analysis-section" id="ats-compliance-result" style="display: none;">
-                <h3>🛡️ ATS Compliance Score</h3>
-                <div id="ats-score-content"></div>
-            </div>
-
-            <!-- NEW: Skill Gap Analysis Section -->
-            <div class="analysis-section" id="skill-gap-result" style="display: none;">
-                <h3>🌱 Skill Gap Analysis</h3>
-                <div id="skill-gap-content"></div>
-            </div>
-
-            <button class="btn" onclick="autoOptimizeAll()" style="margin-top: 20px;">
-                ✨ Auto-Optimize All Weak Sections
-            </button>
-        </div>
-    </div>
-
-    <!-- Auto-Optimize Tab -->
-    <div class="tab-content" id="optimize">
-        <div class="auto-optimize-panel">
-            <h3>
-                <span class="status-indicator"></span>
-                🤖 AI Auto-Optimization Engine
-            </h3>
-            <p>AI will automatically identify and improve weak sections of your resume based on the job match analysis.
-            </p>
+        <div class="tab-content" id="job">
         </div>
 
-        <div class="form-group">
-            <label>🎯 Optimization Mode</label>
-            <select id="optimization-mode">
-                <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
-                <option value="manual">✋ Manual (Choose specific section)</option>
-            </select>
+        <div class="tab-content" id="optimize">
         </div>
 
-        <div id="manual-section" style="display: none;">
+        <!-- Job Match Tab -->
+        <div class="tab-content" id="job">
             <div class="form-group">
-                <label>Section to Optimize</label>
-                <select id="section-select">
-                    <option value="summary">📝 Professional Summary</option>
-                    <option value="experience">💼 Work Experience</option>
-                    <option value="skills">🛠️ Skills</option>
-                    <option value="education">🎓 Education</option>
+                <label>💼 Job Description</label>
+                <textarea id="job-input" rows="8"
+                    placeholder="Paste the complete job description here... Include requirements, responsibilities, skills needed, etc."></textarea>
+            </div>
+            <button class="btn" onclick="analyzeMatch()">🎯 Analyze Match Score</button>
+
+            <div id="match-result" style="display: none;">
+                <div class="score-display" id="score-display">
+                    <div class="score-number" id="score-value">0</div>
+                    <div class="score-text" id="score-description">Analyzing compatibility...</div>
+                </div>
+
+                <div class="suggestions" id="match-suggestions">
+                    <h3>📋 Detailed Analysis</h3>
+                    <div id="suggestions-content"></div>
+                </div>
+
+                <!-- NEW: ATS Compliance Score Section -->
+                <div class="analysis-section" id="ats-compliance-result" style="display: none;">
+                    <h3>🛡️ ATS Compliance Score</h3>
+                    <div id="ats-score-content"></div>
+                </div>
+
+                <!-- NEW: Skill Gap Analysis Section -->
+                <div class="analysis-section" id="skill-gap-result" style="display: none;">
+                    <h3>🌱 Skill Gap Analysis</h3>
+                    <div id="skill-gap-content"></div>
+                </div>
+
+                <button class="btn" onclick="autoOptimizeAll()" style="margin-top: 20px;">
+                    ✨ Auto-Optimize All Weak Sections
+                </button>
+            </div>
+        </div>
+
+        <!-- Auto-Optimize Tab -->
+        <div class="tab-content" id="optimize">
+            <div class="auto-optimize-panel">
+                <h3>
+                    <span class="status-indicator"></span>
+                    🤖 AI Auto-Optimization Engine
+                </h3>
+                <p>AI will automatically identify and improve weak sections of your resume based on the job match
+                    analysis.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label>🎯 Optimization Mode</label>
+                <select id="optimization-mode">
+                    <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
+                    <option value="manual">✋ Manual (Choose specific section)</option>
                 </select>
             </div>
-        </div>
 
-        <button class="btn" onclick="startOptimization()">🚀 Start AI Optimization</button>
+            <div id="manual-section" style="display: none;">
+                <div class="form-group">
+                    <label>Section to Optimize</label>
+                    <select id="section-select">
+                        <option value="summary">📝 Professional Summary</option>
+                        <option value="experience">💼 Work Experience</option>
+                        <option value="skills">🛠️ Skills</option>
+                        <option value="education">🎓 Education</option>
+                    </select>
+                </div>
+            </div>
 
-        <div id="optimization-results" style="display: none;">
-            <h3 style="margin-bottom: 20px; color: #1e293b;">✨ Optimization Results</h3>
-            <div id="optimizations-container"></div>
+            <button class="btn" onclick="startOptimization()">🚀 Start AI Optimization</button>
 
-            <div style="margin-top: 30px; text-align: center;">
-                <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
-                <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
+            <div id="optimization-results" style="display: none;">
+                <h3 style="margin-bottom: 20px; color: #1e293b;">✨ Optimization Results</h3>
+                <div id="optimizations-container"></div>
+
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
+                    <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
+                </div>
             </div>
         </div>
-    </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -848,27 +847,14 @@ Example formats:
             }
         }
 
-        // Parse resume text with AI through Worker
+        // REPLACE this entire function
         async function parseResumeText(resumeText) {
             showLoading('🤖 AI is parsing your resume...');
             try {
                 const prompt = `Parse this resume text into structured JSON: ${resumeText}`;
-                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev/parse", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt })
-                });
+                const parsedData = await callWorker("parse", prompt);
 
-                if (!response.ok) throw new Error(await response.text());
-
-                const data = await response.json();
-                let jsonText = data.choices[0].message.content.trim();
-
-                // Handle markdown fenced code
-                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) jsonText = jsonMatch[1];
-
-                resumeData = JSON.parse(jsonText);
+                resumeData = parsedData;
                 displayResumeJson();
                 hideLoading();
                 showNotification('✅ Resume successfully parsed by AI!', 'success');
@@ -876,82 +862,70 @@ Example formats:
             } catch (error) {
                 console.error('Error parsing resume:', error);
                 hideLoading();
-                showNotification('⚠️ Parsing failed. Using fallback mode...', 'warning');
+                showNotification(`⚠️ Parsing failed: ${error.message}`, 'warning');
                 resumeData = createMockResumeData(resumeText);
                 displayResumeJson();
                 updateProgress(35);
             }
         }
 
-        // New callAI function using Cloudflare Worker proxy
-        async function callAI(prompt, retries = 1) {
+        // Add this new function near the top of your script
+        async function callWorker(endpoint, prompt, retries = 3, delay = 500) {
+            const url = `https://resume-customizing.ronaldinho1415.workers.dev/${endpoint}`;
             try {
-                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ prompt })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.text();
-                    throw new Error(`API Error (${response.status}): ${errorData}`);
-                }
-
-                const data = await response.json();
-
-                // Extract content depending on Worker response structure
-                if (!data.choices || !data.choices[0]?.message?.content) {
-                    throw new Error("Empty or invalid response from API");
-                }
-
-                return data.choices[0].message.content;
-
-            } catch (error) {
-                if (retries > 0 && error.message.includes("Empty")) {
-                    console.warn("Empty response, retrying...");
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    return callAI(prompt, retries - 1);
-                }
-                throw error;
-            }
-        }
-
-        // Analyze job match with ATS & skill gap
-        async function analyzeMatch() {
-            jobDescription = document.getElementById('job-input').value.trim();
-            if (!resumeData) {
-                showNotification('⚠️ Please parse your resume first', 'warning');
-                showTab('resume');
-                return;
-            }
-            if (!jobDescription) {
-                showNotification('⚠️ Please enter a job description', 'warning');
-                return;
-            }
-
-            showLoading('🎯 AI is analyzing job compatibility...');
-            try {
-                const prompt = `Analyze compatibility between resume and job description. 
-Return JSON with score, strengths, weaknesses, recommendations, keywordsMissing, atsCompliance, skillGap.
-RESUME: ${JSON.stringify(resumeData)}
-JOB: ${jobDescription}`;
-
-                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev/analyze", {
+                const response = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt })
                 });
 
-                if (!response.ok) throw new Error(await response.text());
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Worker Error (${response.status}): ${errorText}`);
+                }
 
                 const data = await response.json();
+
+                if (!data.choices || !data.choices[0]?.message?.content) {
+                    throw new Error("Empty or invalid response from AI model");
+                }
+
                 let jsonText = data.choices[0].message.content.trim();
                 const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) jsonText = jsonMatch[1];
+                if (jsonMatch) {
+                    jsonText = jsonMatch[1];
+                }
 
-                matchAnalysis = JSON.parse(jsonText);
+                return JSON.parse(jsonText);
+
+            } catch (error) {
+                if (retries > 0) {
+                    console.warn(`Request failed, retrying... (${3 - retries + 1})`, error);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return callWorker(endpoint, prompt, retries - 1, delay * 2);
+                }
+                console.error("Failed after multiple retries:", error);
+                throw error;
+            }
+        }
+
+        // REPLACE this entire function
+        async function analyzeMatch() {
+            jobDescription = document.getElementById('job-input').value.trim();
+            if (!resumeData || !jobDescription) {
+                showNotification('⚠️ Please provide both resume and job description', 'warning');
+                return;
+            }
+
+            showLoading('🎯 AI is analyzing job compatibility...');
+            try {
+                const prompt = `Analyze compatibility between this resume and job description. 
+Return JSON with score, strengths, weaknesses, recommendations, keywordsMissing, atsCompliance, and skillGap.
+RESUME: ${JSON.stringify(resumeData)}
+JOB: ${jobDescription}`;
+
+                matchAnalysis = await callWorker("analyze", prompt);
+
                 displayMatchResult(matchAnalysis);
                 displayAtsScore(matchAnalysis.atsCompliance);
                 displaySkillGap(matchAnalysis.skillGap);
@@ -1000,15 +974,10 @@ JOB: ${jobDescription}`;
             return [mockData.summary, mockData.skills];
         }
 
-        // Start optimization with improved multi-section prompt
-        // Optimize resume sections with AI
+        // REPLACE this entire function
         async function startOptimization() {
-            if (!resumeData) {
-                showNotification('⚠️ Please parse your resume first', 'warning');
-                return;
-            }
-            if (!matchAnalysis) {
-                showNotification('⚠️ Please analyze job match first', 'warning');
+            if (!resumeData || !matchAnalysis) {
+                showNotification('⚠️ Please parse a resume and run an analysis first.', 'warning');
                 return;
             }
 
@@ -1019,33 +988,18 @@ JOB: ${jobDescription}`;
             try {
                 let prompt;
                 if (mode === 'auto') {
-                    prompt = `Optimize the weakest resume sections for this job.
-Focus on summary and skills. 
-Return JSON with original, optimized, and explanation.
+                    prompt = `Optimize the weakest resume sections for this job. Focus on summary and skills. Return JSON with original, optimized, and explanation.
 RESUME: ${JSON.stringify(resumeData)}
 JOB: ${jobDescription}
 ANALYSIS: ${JSON.stringify(matchAnalysis)}`;
                 } else {
-                    prompt = `Optimize the ${selectedSection} section only. 
-Return JSON with original, optimized, and explanation.
+                    prompt = `Optimize the ${selectedSection} section only. Return JSON with original, optimized, and explanation.
 SECTION: ${JSON.stringify(resumeData[selectedSection])}
 JOB: ${jobDescription}`;
                 }
 
-                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev/optimize", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt })
-                });
+                const result = await callWorker("optimize", prompt);
 
-                if (!response.ok) throw new Error(await response.text());
-
-                const data = await response.json();
-                let jsonText = data.choices[0].message.content.trim();
-                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) jsonText = jsonMatch[1];
-
-                const result = JSON.parse(jsonText);
                 displayOptimizationResults(result.optimizations);
                 hideLoading();
                 showNotification('✅ Resume optimization complete!', 'success');
