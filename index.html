@@ -667,9 +667,10 @@ Example formats:
 
         // Initialize on page load
         document.addEventListener("DOMContentLoaded", () => {
-           setupInputDetection();   // your existing setup function
-           checkWorkerHealth();     // run the worker health ping
-       });
+    setupInputDetection();
+    checkWorkerHealth();
+});
+
 async function checkWorkerHealth() {
     try {
         const res = await fetch("https://resume-customizing.ronaldinho1415.workers.dev", { method: "GET" });
@@ -683,52 +684,49 @@ async function checkWorkerHealth() {
     }
 }
 
-});
-
-        // Enhanced input detection
-        function setupInputDetection() {
-            const textarea = document.getElementById('resume-input');
-            const statusDiv = document.getElementById('input-status');
-            const statusIcon = document.getElementById('status-icon');
-            const statusText = document.getElementById('status-text');
-            const parseBtn = document.getElementById('parse-btn');
-            
-            textarea.addEventListener('input', function() {
-                const content = this.value.trim();
-                
-                if (!content) {
-                    statusDiv.style.display = 'none';
-                    parseBtn.textContent = '🤖 Process Resume Data';
-                    return;
-                }
-                
-                const inputType = detectInputType(content);
-                statusDiv.style.display = 'block';
-                
-                if (inputType === 'json') {
-                    statusDiv.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
-                    statusDiv.style.border = '2px solid #16a34a';
-                    statusDiv.style.color = '#15803d';
-                    statusIcon.textContent = '📋';
-                    statusText.textContent = 'Valid JSON resume format detected! Ready to load directly.';
-                    parseBtn.textContent = '📋 Load JSON Data';
-                } else if (inputType === 'text') {
-                    statusDiv.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
-                    statusDiv.style.border = '2px solid #2563eb';
-                    statusDiv.style.color = '#1d4ed8';
-                    statusIcon.textContent = '📄';
-                    statusText.textContent = 'Resume text detected! Will be parsed with AI.';
-                    parseBtn.textContent = '🤖 Parse Resume with AI';
-                } else {
-                    statusDiv.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
-                    statusDiv.style.border = '2px solid #f59e0b';
-                    statusDiv.style.color = '#92400e';
-                    statusIcon.textContent = '⚠️';
-                    statusText.textContent = 'Invalid JSON detected. Will attempt to parse as text.';
-                    parseBtn.textContent = '🤖 Parse Resume with AI';
-                }
-            });
+function setupInputDetection() {
+    const textarea = document.getElementById('resume-input');
+    const statusDiv = document.getElementById('input-status');
+    const statusIcon = document.getElementById('status-icon');
+    const statusText = document.getElementById('status-text');
+    const parseBtn = document.getElementById('parse-btn');
+    
+    textarea.addEventListener('input', function() {
+        const content = this.value.trim();
+        
+        if (!content) {
+            statusDiv.style.display = 'none';
+            parseBtn.textContent = '🤖 Process Resume Data';
+            return;
         }
+        
+        const inputType = detectInputType(content);
+        statusDiv.style.display = 'block';
+        
+        if (inputType === 'json') {
+            statusDiv.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
+            statusDiv.style.border = '2px solid #16a34a';
+            statusDiv.style.color = '#15803d';
+            statusIcon.textContent = '📋';
+            statusText.textContent = 'Valid JSON resume format detected! Ready to load directly.';
+            parseBtn.textContent = '📋 Load JSON Data';
+        } else if (inputType === 'text') {
+            statusDiv.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+            statusDiv.style.border = '2px solid #2563eb';
+            statusDiv.style.color = '#1d4ed8';
+            statusIcon.textContent = '📄';
+            statusText.textContent = 'Resume text detected! Will be parsed with AI.';
+            parseBtn.textContent = '🤖 Parse Resume with AI';
+        } else {
+            statusDiv.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+            statusDiv.style.border = '2px solid #f59e0b';
+            statusDiv.style.color = '#92400e';
+            statusIcon.textContent = '⚠️';
+            statusText.textContent = 'Invalid JSON detected. Will attempt to parse as text.';
+            parseBtn.textContent = '🤖 Parse Resume with AI';
+        }
+    });
+}
 
         // Enhanced JSON detection
         function detectInputType(input) {
