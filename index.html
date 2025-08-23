@@ -582,8 +582,15 @@
         </div>
 
         <div class="tab-content active" id="resume">
-            <div class="form-group"> <label>📄 Paste Your Resume Data</label>
+            <div class="form-group">
+                <label>📄 Paste Your Resume Data or Upload a File</label>
+
+                <input type="file" id="resume-upload" accept=".pdf,.doc,.docx" style="display: none;">
+                <button class="btn secondary" onclick="document.getElementById('resume-upload').click();">📂 Upload
+                    Resume File</button>
+
                 <textarea id="resume-input" rows="12" placeholder="..."></textarea>
+
                 <div id="input-status" style="display: none;">
                     <span id="status-icon">🔍</span>
                     <span id="status-text">Analyzing...</span>
@@ -593,169 +600,76 @@
 
             <div id="resume-json" style="display: none;">
                 <h3>📊 Structured Resume Data</h3>
-                <div class="json-preview" id="json-output"></div>
-                <button class="btn secondary" onclick="editJson()">✏️ Edit JSON Structure</button>
+                <pre id="json-output" class="json-preview"></pre>
             </div>
-        </div>
-
-        <div class="tab-content" id="job">
-        </div>
-
-        <div class="tab-content" id="optimize">
-        </div>
-
-        <!-- Job Match Tab -->
-        <div class="tab-content" id="job">
-            <div class="form-group">
-                <label>💼 Job Description</label>
-                <textarea id="job-input" rows="8"
-                    placeholder="Paste the complete job description here... Include requirements, responsibilities, skills needed, etc."></textarea>
-            </div>
-            <button class="btn" onclick="analyzeMatch()">🎯 Analyze Match Score</button>
-
-            <div id="match-result" style="display: none;">
-                <div class="score-display" id="score-display">
-                    <div class="score-number" id="score-value">0</div>
-                    <div class="score-text" id="score-description">Analyzing compatibility...</div>
-                </div>
-
-                <div class="suggestions" id="match-suggestions">
-                    <h3>📋 Detailed Analysis</h3>
-                    <div id="suggestions-content"></div>
-                </div>
-
-                <!-- NEW: ATS Compliance Score Section -->
-                <div class="analysis-section" id="ats-compliance-result" style="display: none;">
-                    <h3>🛡️ ATS Compliance Score</h3>
-                    <div id="ats-score-content"></div>
-                </div>
-
-                <!-- NEW: Skill Gap Analysis Section -->
-                <div class="analysis-section" id="skill-gap-result" style="display: none;">
-                    <h3>🌱 Skill Gap Analysis</h3>
-                    <div id="skill-gap-content"></div>
-                </div>
-
-                <button class="btn" onclick="autoOptimizeAll()" style="margin-top: 20px;">
-                    ✨ Auto-Optimize All Weak Sections
-                </button>
-            </div>
-        </div>
-
-        <!-- Auto-Optimize Tab -->
-        <div class="tab-content" id="optimize">
-            <div class="auto-optimize-panel">
-                <h3>
-                    <span class="status-indicator"></span>
-                    🤖 AI Auto-Optimization Engine
-                </h3>
-                <p>AI will automatically identify and improve weak sections of your resume based on the job match
-                    analysis.
-                </p>
-            </div>
-
-            <div class="form-group">
-                <label>🎯 Optimization Mode</label>
-                <select id="optimization-mode">
-                    <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
-                    <option value="manual">✋ Manual (Choose specific section)</option>
-                </select>
-            </div>
-
-            <div id="manual-section" style="display: none;">
-                <div class="form-group">
-                    <label>Section to Optimize</label>
-                    <select id="section-select">
-                        <option value="summary">📝 Professional Summary</option>
-                        <option value="experience">💼 Work Experience</option>
-                        <option value="skills">🛠️ Skills</option>
-                        <option value="education">🎓 Education</option>
-                    </select>
-                </div>
-            </div>
-
-            <button class="btn" onclick="startOptimization()">🚀 Start AI Optimization</button>
-
-            <div id="optimization-results" style="display: none;">
-                <h3 style="margin-bottom: 20px; color: #1e293b;">✨ Optimization Results</h3>
-                <div id="optimizations-container"></div>
-
-                <div style="margin-top: 30px; text-align: center;">
-                    <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
-                    <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+            <script>
         // Global state
         let resumeData = null;
         let jobDescription = '';
         let matchAnalysis = null;
-        let optimizations = {};
+        let optimizations = { };
 
 
         // Initialize on page load
         document.addEventListener("DOMContentLoaded", () => {
             setupInputDetection();
-            checkWorkerHealth();
+        checkWorkerHealth();
         });
 
         async function checkWorkerHealth() {
             try {
-                const res = await fetch("https://resume-customizing.ronaldinho1415.workers.dev", { method: "GET" });
-                if (res.ok) {
-                    showNotification("✅ Connected to AI service", "success");
+                const res = await fetch("https://resume-customizing.ronaldinho1415.workers.dev", {method: "GET" });
+        if (res.ok) {
+            showNotification("✅ Connected to AI service", "success");
                 } else {
-                    showNotification("⚠️ Worker online but returned error", "warning");
+            showNotification("⚠️ Worker online but returned error", "warning");
                 }
             } catch (err) {
-                showNotification("❌ Unable to reach AI service", "error");
+            showNotification("❌ Unable to reach AI service", "error");
             }
         }
 
         function setupInputDetection() {
             const textarea = document.getElementById('resume-input');
-            const statusDiv = document.getElementById('input-status');
-            const statusIcon = document.getElementById('status-icon');
-            const statusText = document.getElementById('status-text');
-            const parseBtn = document.getElementById('parse-btn');
+        const statusDiv = document.getElementById('input-status');
+        const statusIcon = document.getElementById('status-icon');
+        const statusText = document.getElementById('status-text');
+        const parseBtn = document.getElementById('parse-btn');
 
-            textarea.addEventListener('input', function () {
+        textarea.addEventListener('input', function () {
                 const content = this.value.trim();
 
-                if (!content) {
-                    statusDiv.style.display = 'none';
-                    parseBtn.textContent = '🤖 Process Resume Data';
-                    return;
+        if (!content) {
+            statusDiv.style.display = 'none';
+        parseBtn.textContent = '🤖 Process Resume Data';
+        return;
                 }
 
-                const inputType = detectInputType(content);
-                statusDiv.style.display = 'block';
+        const inputType = detectInputType(content);
+        statusDiv.style.display = 'block';
 
-                if (inputType === 'json') {
-                    statusDiv.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
-                    statusDiv.style.border = '2px solid #16a34a';
-                    statusDiv.style.color = '#15803d';
-                    statusIcon.textContent = '📋';
-                    statusText.textContent = 'Valid JSON resume format detected! Ready to load directly.';
-                    parseBtn.textContent = '📋 Load JSON Data';
+        if (inputType === 'json') {
+            statusDiv.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
+        statusDiv.style.border = '2px solid #16a34a';
+        statusDiv.style.color = '#15803d';
+        statusIcon.textContent = '📋';
+        statusText.textContent = 'Valid JSON resume format detected! Ready to load directly.';
+        parseBtn.textContent = '📋 Load JSON Data';
                 } else if (inputType === 'text') {
-                    statusDiv.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
-                    statusDiv.style.border = '2px solid #2563eb';
-                    statusDiv.style.color = '#1d4ed8';
-                    statusIcon.textContent = '📄';
-                    statusText.textContent = 'Resume text detected! Will be parsed with AI.';
-                    parseBtn.textContent = '🤖 Parse Resume with AI';
+            statusDiv.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+        statusDiv.style.border = '2px solid #2563eb';
+        statusDiv.style.color = '#1d4ed8';
+        statusIcon.textContent = '📄';
+        statusText.textContent = 'Resume text detected! Will be parsed with AI.';
+        parseBtn.textContent = '🤖 Parse Resume with AI';
                 } else {
-                    statusDiv.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
-                    statusDiv.style.border = '2px solid #f59e0b';
-                    statusDiv.style.color = '#92400e';
-                    statusIcon.textContent = '⚠️';
-                    statusText.textContent = 'Invalid JSON detected. Will attempt to parse as text.';
-                    parseBtn.textContent = '🤖 Parse Resume with AI';
+            statusDiv.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+        statusDiv.style.border = '2px solid #f59e0b';
+        statusDiv.style.color = '#92400e';
+        statusIcon.textContent = '⚠️';
+        statusText.textContent = 'Invalid JSON detected. Will attempt to parse as text.';
+        parseBtn.textContent = '🤖 Parse Resume with AI';
                 }
             });
         }
@@ -763,254 +677,305 @@
         // Enhanced JSON detection
         function detectInputType(input) {
             const trimmed = input.trim();
-            if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
                 try {
                     const parsed = JSON.parse(trimmed);
-                    const resumeFields = ['personal', 'experience', 'skills', 'summary', 'education', 'name', 'work', 'objective', 'contact'];
+        const resumeFields = ['personal', 'experience', 'skills', 'summary', 'education', 'name', 'work', 'objective', 'contact'];
                     const hasResumeFields = Object.keys(parsed).some(key => resumeFields.includes(key.toLowerCase()));
-                    if (hasResumeFields) return 'json';
+        if (hasResumeFields) return 'json';
                 } catch (e) {
                     return 'invalid-json';
                 }
             }
-            return 'text';
+        return 'text';
         }
 
         // Process resume input (handles both JSON and text)
         async function processResumeInput() {
             const resumeContent = document.getElementById('resume-input').value.trim();
-            if (!resumeContent) {
-                showNotification('⚠️ Please paste your resume data first', 'warning');
-                return;
+        if (!resumeContent) {
+            showNotification('⚠️ Please paste your resume data first', 'warning');
+        return;
             }
-            const inputType = detectInputType(resumeContent);
-            if (inputType === 'json') {
-                await loadJsonData(resumeContent);
+        const inputType = detectInputType(resumeContent);
+        if (inputType === 'json') {
+            await loadJsonData(resumeContent);
             } else {
-                await parseResumeText(resumeContent);
+            await parseResumeText(resumeContent);
             }
         }
 
         // Load JSON data directly
         async function loadJsonData(jsonContent) {
             showLoading('📋 Loading JSON resume data...');
-            try {
+        try {
                 const parsed = JSON.parse(jsonContent);
-                resumeData = normalizeResumeData(parsed);
-                displayResumeJson();
-                hideLoading();
-                showNotification('✅ JSON resume data loaded successfully!', 'success');
-                updateProgress(35);
+        resumeData = normalizeResumeData(parsed);
+        displayResumeJson();
+        hideLoading();
+        showNotification('✅ JSON resume data loaded successfully!', 'success');
+        updateProgress(35);
             } catch (error) {
-                console.error('Error loading JSON:', error);
-                hideLoading();
-                showNotification('❌ Invalid JSON format. Trying to parse as text...', 'warning');
-                await parseResumeText(jsonContent);
+            console.error('Error loading JSON:', error);
+        hideLoading();
+        showNotification('❌ Invalid JSON format. Trying to parse as text...', 'warning');
+        await parseResumeText(jsonContent);
             }
         }
 
+        // Add this new function to your script
+        function setupFileUpload() {
+    const fileInput = document.getElementById('resume-upload');
+    fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        showLoading(`📄 Uploading and parsing ${file.name}...`);
+
+        const formData = new FormData();
+        formData.append('resume', file);
+
+        try {
+            // You will need to create this endpoint on your Cloudflare Worker
+            const response = await fetch("https://resume-customizing.ronaldinho1415.workers.dev/upload-and-parse", {
+            method: "POST",
+        body: formData 
+            });
+
+        if (!response.ok) {
+                throw new Error(await response.text());
+            }
+
+        const parsedData = await response.json();
+
+        // Now, handle the parsed data just like the other functions
+        let jsonText = parsedData.choices[0].message.content.trim();
+        const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+        if (jsonMatch) jsonText = jsonMatch[1];
+
+        resumeData = JSON.parse(jsonText);
+        displayResumeJson();
+        hideLoading();
+        showNotification('✅ Resume successfully parsed from file!', 'success');
+        updateProgress(35);
+
+        } catch (error) {
+            console.error('Error uploading or parsing file:', error);
+        hideLoading();
+        showNotification(`⚠️ File processing failed: ${error.message}`, 'warning');
+        }
+    });
+}
+
+// Call this new setup function when the page loads
+document.addEventListener("DOMContentLoaded", () => {
+            setupInputDetection();
+        setupFileUpload(); // Add this line
+        checkWorkerHealth();
+});
+
         // Robustly normalize resume data to ensure consistent structure
         function normalizeResumeData(data) {
-            const personalData = data.personal || {};
-            return {
-                personal: {
-                    name: personalData.name || data.name || "",
-                    email: personalData.email || data.email || "",
-                    phone: personalData.phone || data.phone || "",
-                    location: personalData.location || data.location || "",
-                    linkedin: personalData.linkedin || data.linkedin || "",
-                    github: personalData.github || data.github || ""
+            const personalData = data.personal || { };
+        return {
+            personal: {
+            name: personalData.name || data.name || "",
+        email: personalData.email || data.email || "",
+        phone: personalData.phone || data.phone || "",
+        location: personalData.location || data.location || "",
+        linkedin: personalData.linkedin || data.linkedin || "",
+        github: personalData.github || data.github || ""
                 },
-                summary: data.summary || data.objective || "",
-                experience: Array.isArray(data.experience) ? data.experience : (data.work || []),
-                skills: data.skills || {
-                    technical: data.technical_skills || [],
-                    soft: data.soft_skills || []
+        summary: data.summary || data.objective || "",
+        experience: Array.isArray(data.experience) ? data.experience : (data.work || []),
+        skills: data.skills || {
+            technical: data.technical_skills || [],
+        soft: data.soft_skills || []
                 },
-                education: Array.isArray(data.education) ? data.education : [],
-                projects: Array.isArray(data.projects) ? data.projects : []
+        education: Array.isArray(data.education) ? data.education : [],
+        projects: Array.isArray(data.projects) ? data.projects : []
             };
         }
         // Exponential backoff retry wrapper
         async function fetchWithRetry(url, options, retries = 3, delay = 500) {
             try {
                 const response = await fetch(url, options);
-                if (!response.ok) throw new Error(await response.text());
-                return response;
+        if (!response.ok) throw new Error(await response.text());
+        return response;
             } catch (error) {
                 if (retries > 0) {
-                    console.warn(`Retrying... (${3 - retries + 1})`);
+            console.warn(`Retrying... (${3 - retries + 1})`);
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    return fetchWithRetry(url, options, retries - 1, delay * 2); // double delay
+        return fetchWithRetry(url, options, retries - 1, delay * 2); // double delay
                 }
-                throw error;
+        throw error;
             }
         }
 
         // REPLACE this entire function
         async function parseResumeText(resumeText) {
             showLoading('🤖 AI is parsing your resume...');
-            try {
+        try {
                 const prompt = `Parse this resume text into structured JSON: ${resumeText}`;
-                const parsedData = await callWorker("parse", prompt);
+        const parsedData = await callWorker("parse", prompt);
 
-                resumeData = parsedData;
-                displayResumeJson();
-                hideLoading();
-                showNotification('✅ Resume successfully parsed by AI!', 'success');
-                updateProgress(35);
+        resumeData = parsedData;
+        displayResumeJson();
+        hideLoading();
+        showNotification('✅ Resume successfully parsed by AI!', 'success');
+        updateProgress(35);
             } catch (error) {
-                console.error('Error parsing resume:', error);
-                hideLoading();
-                showNotification(`⚠️ Parsing failed: ${error.message}`, 'warning');
-                resumeData = createMockResumeData(resumeText);
-                displayResumeJson();
-                updateProgress(35);
+            console.error('Error parsing resume:', error);
+        hideLoading();
+        showNotification(`⚠️ Parsing failed: ${error.message}`, 'warning');
+        resumeData = createMockResumeData(resumeText);
+        displayResumeJson();
+        updateProgress(35);
             }
         }
 
         // Add this new function near the top of your script
         async function callWorker(endpoint, prompt, retries = 3, delay = 500) {
             const url = `https://resume-customizing.ronaldinho1415.workers.dev/${endpoint}`;
-            try {
+        try {
                 const response = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt })
+            method: "POST",
+        headers: {"Content-Type": "application/json" },
+        body: JSON.stringify({prompt})
                 });
 
-                if (!response.ok) {
+        if (!response.ok) {
                     const errorText = await response.text();
-                    throw new Error(`Worker Error (${response.status}): ${errorText}`);
+        throw new Error(`Worker Error (${response.status}): ${errorText}`);
                 }
 
-                const data = await response.json();
+        const data = await response.json();
 
-                if (!data.choices || !data.choices[0]?.message?.content) {
+        if (!data.choices || !data.choices[0]?.message?.content) {
                     throw new Error("Empty or invalid response from AI model");
                 }
 
-                let jsonText = data.choices[0].message.content.trim();
-                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) {
-                    jsonText = jsonMatch[1];
+        let jsonText = data.choices[0].message.content.trim();
+        const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+        if (jsonMatch) {
+            jsonText = jsonMatch[1];
                 }
 
-                return JSON.parse(jsonText);
+        return JSON.parse(jsonText);
 
             } catch (error) {
                 if (retries > 0) {
-                    console.warn(`Request failed, retrying... (${3 - retries + 1})`, error);
+            console.warn(`Request failed, retrying... (${3 - retries + 1})`, error);
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    return callWorker(endpoint, prompt, retries - 1, delay * 2);
+        return callWorker(endpoint, prompt, retries - 1, delay * 2);
                 }
-                console.error("Failed after multiple retries:", error);
-                throw error;
+        console.error("Failed after multiple retries:", error);
+        throw error;
             }
         }
 
         // REPLACE this entire function
         async function analyzeMatch() {
             jobDescription = document.getElementById('job-input').value.trim();
-            if (!resumeData || !jobDescription) {
-                showNotification('⚠️ Please provide both resume and job description', 'warning');
-                return;
+        if (!resumeData || !jobDescription) {
+            showNotification('⚠️ Please provide both resume and job description', 'warning');
+        return;
             }
 
-            showLoading('🎯 AI is analyzing job compatibility...');
-            try {
-                const prompt = `Analyze compatibility between this resume and job description. 
-Return JSON with score, strengths, weaknesses, recommendations, keywordsMissing, atsCompliance, and skillGap.
-RESUME: ${JSON.stringify(resumeData)}
-JOB: ${jobDescription}`;
+        showLoading('🎯 AI is analyzing job compatibility...');
+        try {
+                const prompt = `Analyze compatibility between this resume and job description.
+        Return JSON with score, strengths, weaknesses, recommendations, keywordsMissing, atsCompliance, and skillGap.
+        RESUME: ${JSON.stringify(resumeData)}
+        JOB: ${jobDescription}`;
 
-                matchAnalysis = await callWorker("analyze", prompt);
+        matchAnalysis = await callWorker("analyze", prompt);
 
-                displayMatchResult(matchAnalysis);
-                displayAtsScore(matchAnalysis.atsCompliance);
-                displaySkillGap(matchAnalysis.skillGap);
-                hideLoading();
-                showNotification('✅ Job match analysis complete!', 'success');
-                updateProgress(75);
+        displayMatchResult(matchAnalysis);
+        displayAtsScore(matchAnalysis.atsCompliance);
+        displaySkillGap(matchAnalysis.skillGap);
+        hideLoading();
+        showNotification('✅ Job match analysis complete!', 'success');
+        updateProgress(75);
             } catch (error) {
-                console.error('Error analyzing match:', error);
-                hideLoading();
-                showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
-                matchAnalysis = createMockMatchAnalysis();
-                displayMatchResult(matchAnalysis);
-                displayAtsScore(matchAnalysis.atsCompliance);
-                displaySkillGap(matchAnalysis.skillGap);
-                updateProgress(75);
+            console.error('Error analyzing match:', error);
+        hideLoading();
+        showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
+        matchAnalysis = createMockMatchAnalysis();
+        displayMatchResult(matchAnalysis);
+        displayAtsScore(matchAnalysis.atsCompliance);
+        displaySkillGap(matchAnalysis.skillGap);
+        updateProgress(75);
             }
         }
 
 
         function createMockOptimizations(mode, section) {
             const mockData = {
-                summary: {
-                    section: "summary",
-                    original: "Experienced professional with strong background in technology...",
-                    optimized: "Results-driven Senior Software Engineer with over 5 years of experience in developing, testing, and maintaining web applications. Expert in JavaScript and cloud technologies, with a proven ability to lead projects and enhance application performance, directly aligning with the requirements for a cloud-focused role.",
-                    explanation: "The summary was rewritten to be more dynamic, incorporating keywords from the job description like 'cloud technologies' and focusing on measurable results."
+            summary: {
+            section: "summary",
+        original: "Experienced professional with strong background in technology...",
+        optimized: "Results-driven Senior Software Engineer with over 5 years of experience in developing, testing, and maintaining web applications. Expert in JavaScript and cloud technologies, with a proven ability to lead projects and enhance application performance, directly aligning with the requirements for a cloud-focused role.",
+        explanation: "The summary was rewritten to be more dynamic, incorporating keywords from the job description like 'cloud technologies' and focusing on measurable results."
                 },
-                skills: {
-                    section: "skills",
-                    original: {
-                        technical: ["JavaScript", "Python", "React", "Node.js"],
-                        soft: ["Leadership", "Communication"]
+        skills: {
+            section: "skills",
+        original: {
+            technical: ["JavaScript", "Python", "React", "Node.js"],
+        soft: ["Leadership", "Communication"]
                     },
-                    optimized: {
-                        technical: ["JavaScript", "Python", "React", "Node.js", "AWS", "Docker", "Kubernetes", "Terraform"],
-                        soft: ["Agile Methodology", "Leadership", "Cross-functional Communication", "Problem-solving"]
+        optimized: {
+            technical: ["JavaScript", "Python", "React", "Node.js", "AWS", "Docker", "Kubernetes", "Terraform"],
+        soft: ["Agile Methodology", "Leadership", "Cross-functional Communication", "Problem-solving"]
                     },
-                    explanation: "Added critical keywords like AWS, Kubernetes, and Terraform that were identified in the skill gap analysis to improve ATS matching. Soft skills were also tailored."
+        explanation: "Added critical keywords like AWS, Kubernetes, and Terraform that were identified in the skill gap analysis to improve ATS matching. Soft skills were also tailored."
                 }
             };
 
-            if (mode === 'manual') {
+        if (mode === 'manual') {
                 return [mockData[section] || mockData.summary];
             }
-            // 'auto' mode
-            return [mockData.summary, mockData.skills];
+        // 'auto' mode
+        return [mockData.summary, mockData.skills];
         }
 
         // REPLACE this entire function
         async function startOptimization() {
             if (!resumeData || !matchAnalysis) {
-                showNotification('⚠️ Please parse a resume and run an analysis first.', 'warning');
-                return;
+            showNotification('⚠️ Please parse a resume and run an analysis first.', 'warning');
+        return;
             }
 
-            const mode = document.getElementById('optimization-mode').value;
-            const selectedSection = document.getElementById('section-select').value;
-            showLoading('✨ AI is optimizing your resume...');
+        const mode = document.getElementById('optimization-mode').value;
+        const selectedSection = document.getElementById('section-select').value;
+        showLoading('✨ AI is optimizing your resume...');
 
-            try {
-                let prompt;
-                if (mode === 'auto') {
-                    prompt = `Optimize the weakest resume sections for this job. Focus on summary and skills. Return JSON with original, optimized, and explanation.
+        try {
+            let prompt;
+        if (mode === 'auto') {
+            prompt = `Optimize the weakest resume sections for this job. Focus on summary and skills. Return JSON with original, optimized, and explanation.
 RESUME: ${JSON.stringify(resumeData)}
 JOB: ${jobDescription}
 ANALYSIS: ${JSON.stringify(matchAnalysis)}`;
                 } else {
-                    prompt = `Optimize the ${selectedSection} section only. Return JSON with original, optimized, and explanation.
+            prompt = `Optimize the ${selectedSection} section only. Return JSON with original, optimized, and explanation.
 SECTION: ${JSON.stringify(resumeData[selectedSection])}
 JOB: ${jobDescription}`;
                 }
 
-                const result = await callWorker("optimize", prompt);
+        const result = await callWorker("optimize", prompt);
 
-                displayOptimizationResults(result.optimizations);
-                hideLoading();
-                showNotification('✅ Resume optimization complete!', 'success');
-                updateProgress(100);
+        displayOptimizationResults(result.optimizations);
+        hideLoading();
+        showNotification('✅ Resume optimization complete!', 'success');
+        updateProgress(100);
             } catch (error) {
-                console.error('Error optimizing resume:', error);
-                hideLoading();
-                showNotification(`⚠️ Optimization failed: ${error.message}`, 'warning');
-                const mockOptimizations = createMockOptimizations(mode, selectedSection);
-                displayOptimizationResults(mockOptimizations);
-                updateProgress(100);
+            console.error('Error optimizing resume:', error);
+        hideLoading();
+        showNotification(`⚠️ Optimization failed: ${error.message}`, 'warning');
+        const mockOptimizations = createMockOptimizations(mode, selectedSection);
+        displayOptimizationResults(mockOptimizations);
+        updateProgress(100);
             }
         }
 
@@ -1018,188 +983,188 @@ JOB: ${jobDescription}`;
         // Robust PDF generation function
         // REPLACE this entire function
         function generateProfessionalPDF(data) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'pt', 'letter'); // Using points for better control
-            const margin = 72; // 1-inch margin
-            const pageWidth = doc.internal.pageSize.getWidth();
-            let yPos = margin;
+            const {jsPDF} = window.jspdf;
+        const doc = new jsPDF('p', 'pt', 'letter'); // Using points for better control
+        const margin = 72; // 1-inch margin
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let yPos = margin;
 
-            // --- FONT & COLOR DEFINITIONS ---
-            const FONT_HELVETICA = 'Helvetica';
-            const COLOR_PRIMARY = { r: 0, g: 0, b: 0 };
-            const COLOR_GRAY = { r: 77, g: 77, b: 77 };
-            doc.setTextColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
+        // --- FONT & COLOR DEFINITIONS ---
+        const FONT_HELVETICA = 'Helvetica';
+        const COLOR_PRIMARY = {r: 0, g: 0, b: 0 };
+        const COLOR_GRAY = {r: 77, g: 77, b: 77 };
+        doc.setTextColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
 
-            // --- HELPER FUNCTIONS ---
-            // Helper to add wrapped text and manage Y position
-            function addWrappedText(text, options) {
+        // --- HELPER FUNCTIONS ---
+        // Helper to add wrapped text and manage Y position
+        function addWrappedText(text, options) {
                 if (!text) return;
-                const { x = margin, maxWidth = pageWidth - margin * 2, fontSize = 10, fontStyle = 'normal', color = COLOR_GRAY, lineHeightFactor = 1.5 } = options;
+        const {x = margin, maxWidth = pageWidth - margin * 2, fontSize = 10, fontStyle = 'normal', color = COLOR_GRAY, lineHeightFactor = 1.5} = options;
 
-                doc.setFont(FONT_HELVETICA, fontStyle);
-                doc.setFontSize(fontSize);
-                doc.setTextColor(color);
+        doc.setFont(FONT_HELVETICA, fontStyle);
+        doc.setFontSize(fontSize);
+        doc.setTextColor(color);
 
-                const lines = doc.splitTextToSize(text, maxWidth);
-                const blockHeight = lines.length * fontSize * lineHeightFactor;
+        const lines = doc.splitTextToSize(text, maxWidth);
+        const blockHeight = lines.length * fontSize * lineHeightFactor;
 
                 // Check for page break before drawing
                 if (yPos + blockHeight > doc.internal.pageSize.getHeight() - margin) {
-                    doc.addPage();
-                    yPos = margin;
+            doc.addPage();
+        yPos = margin;
                 }
 
-                doc.text(lines, x, yPos);
-                yPos += blockHeight;
+        doc.text(lines, x, yPos);
+        yPos += blockHeight;
             }
 
-            // Helper for section titles with lines
-            function addSectionHeader(title) {
-                yPos += 15; // Space before the section
-                doc.setFont(FONT_HELVETICA, 'bold');
-                doc.setFontSize(11);
-                doc.setTextColor(COLOR_PRIMARY);
-                doc.text(title.toUpperCase(), margin, yPos);
-                yPos += 12;
-                doc.setDrawColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
-                doc.setLineWidth(1);
-                doc.line(margin, yPos, pageWidth - margin, yPos);
-                yPos += 20;
+        // Helper for section titles with lines
+        function addSectionHeader(title) {
+            yPos += 15; // Space before the section
+        doc.setFont(FONT_HELVETICA, 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(COLOR_PRIMARY);
+        doc.text(title.toUpperCase(), margin, yPos);
+        yPos += 12;
+        doc.setDrawColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
+        doc.setLineWidth(1);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 20;
             }
 
-            // --- 1. HEADER SECTION ---
-            const personal = data.personal || {};
-            const professionalTitle = data.experience?.[0]?.position || 'PROFESSIONAL TITLE';
+        // --- 1. HEADER SECTION ---
+        const personal = data.personal || { };
+        const professionalTitle = data.experience?.[0]?.position || 'PROFESSIONAL TITLE';
 
-            // Name
-            doc.setFont(FONT_HELVETICA, 'bold');
-            doc.setFontSize(32);
-            doc.text(personal.name || 'Your Name', margin, yPos);
-            yPos += 30;
+        // Name
+        doc.setFont(FONT_HELVETICA, 'bold');
+        doc.setFontSize(32);
+        doc.text(personal.name || 'Your Name', margin, yPos);
+        yPos += 30;
 
-            // Professional Title
-            doc.setFont(FONT_HELVETICA, 'bold');
-            doc.setFontSize(10);
-            doc.text(professionalTitle.toUpperCase(), margin, yPos);
-            yPos += 15;
+        // Professional Title
+        doc.setFont(FONT_HELVETICA, 'bold');
+        doc.setFontSize(10);
+        doc.text(professionalTitle.toUpperCase(), margin, yPos);
+        yPos += 15;
 
-            // Contact Info
-            const contactInfo = [personal.location, personal.phone, personal.email].filter(Boolean).join(' | ');
-            doc.setFont(FONT_HELVETICA, 'normal');
-            doc.setFontSize(10);
-            doc.text(contactInfo, margin, yPos);
-            yPos += 15;
+        // Contact Info
+        const contactInfo = [personal.location, personal.phone, personal.email].filter(Boolean).join(' | ');
+        doc.setFont(FONT_HELVETICA, 'normal');
+        doc.setFontSize(10);
+        doc.text(contactInfo, margin, yPos);
+        yPos += 15;
 
 
-            // --- 2. OBJECTIVE / SUMMARY ---
-            if (data.summary) {
-                addSectionHeader('Summary');
-                addWrappedText(data.summary, {});
+        // --- 2. OBJECTIVE / SUMMARY ---
+        if (data.summary) {
+            addSectionHeader('Summary');
+        addWrappedText(data.summary, { });
             }
 
             // --- 3. EXPERIENCE ---
             if (data.experience && data.experience.length > 0) {
-                addSectionHeader('Experience');
+            addSectionHeader('Experience');
                 data.experience.forEach(exp => {
-                    doc.setFont(FONT_HELVETICA, 'bold');
-                    doc.setFontSize(11);
-                    doc.setTextColor(COLOR_PRIMARY);
+            doc.setFont(FONT_HELVETICA, 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(COLOR_PRIMARY);
 
-                    // Title and Company on the left
-                    const titleCompany = `${exp.company || 'Company'} | ${exp.position || 'Position'}`;
-                    doc.text(titleCompany, margin, yPos);
+        // Title and Company on the left
+        const titleCompany = `${exp.company || 'Company'} | ${exp.position || 'Position'}`;
+        doc.text(titleCompany, margin, yPos);
 
-                    // Dates on the right
-                    doc.setFont(FONT_HELVETICA, 'normal');
-                    const dateText = exp.duration || '';
-                    const dateWidth = doc.getTextWidth(dateText);
-                    doc.text(dateText, pageWidth - margin - dateWidth, yPos);
+        // Dates on the right
+        doc.setFont(FONT_HELVETICA, 'normal');
+        const dateText = exp.duration || '';
+        const dateWidth = doc.getTextWidth(dateText);
+        doc.text(dateText, pageWidth - margin - dateWidth, yPos);
 
-                    yPos += 20;
+        yPos += 20;
 
-                    // Responsibilities and Achievements
-                    const points = [...(exp.responsibilities || []), ...(exp.achievements || [])];
+        // Responsibilities and Achievements
+        const points = [...(exp.responsibilities || []), ...(exp.achievements || [])];
                     points.forEach(point => {
-                        addWrappedText(`•   ${point}`, { x: margin + 10, maxWidth: pageWidth - margin * 2 - 10 });
-                        yPos += 5; // Extra space between bullet points
+            addWrappedText(`•   ${point}`, { x: margin + 10, maxWidth: pageWidth - margin * 2 - 10 });
+        yPos += 5; // Extra space between bullet points
                     });
-                    yPos += 15; // Space after the job entry
+        yPos += 15; // Space after the job entry
                 });
             }
 
             // --- 4. EDUCATION ---
             if (data.education && data.education.length > 0) {
-                addSectionHeader('Education');
+            addSectionHeader('Education');
                 data.education.forEach(edu => {
-                    doc.setFont(FONT_HELVETICA, 'bold');
-                    doc.setFontSize(11);
-                    doc.setTextColor(COLOR_PRIMARY);
+            doc.setFont(FONT_HELVETICA, 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(COLOR_PRIMARY);
 
-                    // Institution and Degree on the left
-                    const institutionDegree = `${edu.institution || 'University'}, ${edu.degree || 'Degree'}`;
-                    doc.text(institutionDegree, margin, yPos);
+        // Institution and Degree on the left
+        const institutionDegree = `${edu.institution || 'University'}, ${edu.degree || 'Degree'}`;
+        doc.text(institutionDegree, margin, yPos);
 
-                    // Year on the right
-                    doc.setFont(FONT_HELVETICA, 'normal');
-                    const yearText = edu.year || '';
-                    const yearWidth = doc.getTextWidth(yearText);
-                    doc.text(yearText, pageWidth - margin - yearWidth, yPos);
-                    yPos += 15;
+        // Year on the right
+        doc.setFont(FONT_HELVETICA, 'normal');
+        const yearText = edu.year || '';
+        const yearWidth = doc.getTextWidth(yearText);
+        doc.text(yearText, pageWidth - margin - yearWidth, yPos);
+        yPos += 15;
 
-                    // Major/Minor
-                    const majorMinorText = [
-                        edu.major ? `Major: ${edu.major}` : '',
-                        edu.minor ? `Minor: ${edu.minor}` : ''
-                    ].filter(Boolean).join(' | ');
+        // Major/Minor
+        const majorMinorText = [
+        edu.major ? `Major: ${edu.major}` : '',
+        edu.minor ? `Minor: ${edu.minor}` : ''
+        ].filter(Boolean).join(' | ');
 
-                    if (majorMinorText) {
-                        addWrappedText(majorMinorText, { fontSize: 10 });
+        if (majorMinorText) {
+            addWrappedText(majorMinorText, { fontSize: 10 });
                     }
-                    yPos += 15;
+        yPos += 15;
                 });
             }
 
-            // --- 5. SKILLS ---
-            const skills = data.skills || {};
-            const allSkills = [...(skills.technical || []), ...(skills.soft || [])];
+        // --- 5. SKILLS ---
+        const skills = data.skills || { };
+        const allSkills = [...(skills.technical || []), ...(skills.soft || [])];
             if (allSkills.length > 0) {
-                addSectionHeader('Skills & abilities');
-                const skillColumns = { col1: [], col2: [], col3: [] };
+            addSectionHeader('Skills & abilities');
+        const skillColumns = {col1: [], col2: [], col3: [] };
                 allSkills.forEach((skill, i) => {
                     if (i % 3 === 0) skillColumns.col1.push(`•   ${skill}`);
-                    else if (i % 3 === 1) skillColumns.col2.push(`•   ${skill}`);
-                    else skillColumns.col3.push(`•   ${skill}`);
+        else if (i % 3 === 1) skillColumns.col2.push(`•   ${skill}`);
+        else skillColumns.col3.push(`•   ${skill}`);
                 });
 
-                const col1Text = skillColumns.col1.join('\n');
-                const col2Text = skillColumns.col2.join('\n');
-                const col3Text = skillColumns.col3.join('\n');
+        const col1Text = skillColumns.col1.join('\n');
+        const col2Text = skillColumns.col2.join('\n');
+        const col3Text = skillColumns.col3.join('\n');
 
-                const colWidth = (pageWidth - margin * 2) / 3;
-                addWrappedText(col1Text, { maxWidth: colWidth });
-                // Reset Y position to draw columns side-by-side
-                yPos -= (skillColumns.col1.length * 10 * 1.5);
-                addWrappedText(col2Text, { x: margin + colWidth, maxWidth: colWidth });
-                yPos -= (skillColumns.col2.length * 10 * 1.5);
-                addWrappedText(col3Text, { x: margin + colWidth * 2, maxWidth: colWidth });
+        const colWidth = (pageWidth - margin * 2) / 3;
+        addWrappedText(col1Text, {maxWidth: colWidth });
+        // Reset Y position to draw columns side-by-side
+        yPos -= (skillColumns.col1.length * 10 * 1.5);
+        addWrappedText(col2Text, {x: margin + colWidth, maxWidth: colWidth });
+        yPos -= (skillColumns.col2.length * 10 * 1.5);
+        addWrappedText(col3Text, {x: margin + colWidth * 2, maxWidth: colWidth });
             }
 
-            // --- SAVE THE PDF ---
-            const fileName = `${personal.name || 'Resume'}_Optimized.pdf`;
-            doc.save(fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
+        // --- SAVE THE PDF ---
+        const fileName = `${personal.name || 'Resume'}_Optimized.pdf`;
+        doc.save(fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
         }
 
         // --- UTILITY AND MOCK FUNCTIONS ---
         function updateProgress(percentage) {
             const fill = document.getElementById('progress-fill');
-            fill.style.width = percentage + '%';
+        fill.style.width = percentage + '%';
         }
 
         function showTab(tabName, event) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            if (event) event.target.classList.add('active');
-            document.getElementById(tabName).classList.add('active');
+        if (event) event.target.classList.add('active');
+        document.getElementById(tabName).classList.add('active');
         }
 
         document.getElementById('optimization-mode').addEventListener('change', function () {
@@ -1208,103 +1173,103 @@ JOB: ${jobDescription}`;
 
         function displayResumeJson() {
             document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
-            document.getElementById('resume-json').style.display = 'block';
+        document.getElementById('resume-json').style.display = 'block';
         }
 
         function editJson() {
             const newJson = prompt("Edit your resume JSON:", JSON.stringify(resumeData, null, 2));
-            if (newJson) {
+        if (newJson) {
                 try {
-                    resumeData = JSON.parse(newJson);
-                    displayResumeJson();
-                    showNotification('✅ Resume JSON updated successfully!', 'success');
+            resumeData = JSON.parse(newJson);
+        displayResumeJson();
+        showNotification('✅ Resume JSON updated successfully!', 'success');
                 } catch (e) {
-                    showNotification('❌ Invalid JSON format.', 'warning');
+            showNotification('❌ Invalid JSON format.', 'warning');
                 }
             }
         }
 
         function createMockResumeData(text) {
             return {
-                personal: { name: "John Doe", email: "john.doe@email.com", phone: "+1-555-123-4567", location: "San Francisco, CA", linkedin: "linkedin.com/in/johndoe", github: "github.com/johndoe" },
-                summary: "Experienced professional with strong background in technology...",
-                experience: [{ company: "Tech Company Inc.", position: "Senior Software Engineer", duration: "2020 - Present", responsibilities: ["..."], achievements: ["..."] }],
-                skills: { technical: ["JavaScript", "Python", "React", "Node.js"], soft: ["Leadership", "Communication"] },
-                education: [{ degree: "B.S. in Computer Science", institution: "University of Technology", year: "2018" }],
-                projects: [{ name: "E-commerce Platform", description: "...", technologies: ["React", "Node.js"] }]
+            personal: {name: "John Doe", email: "john.doe@email.com", phone: "+1-555-123-4567", location: "San Francisco, CA", linkedin: "linkedin.com/in/johndoe", github: "github.com/johndoe" },
+        summary: "Experienced professional with strong background in technology...",
+        experience: [{company: "Tech Company Inc.", position: "Senior Software Engineer", duration: "2020 - Present", responsibilities: ["..."], achievements: ["..."] }],
+        skills: {technical: ["JavaScript", "Python", "React", "Node.js"], soft: ["Leadership", "Communication"] },
+        education: [{degree: "B.S. in Computer Science", institution: "University of Technology", year: "2018" }],
+        projects: [{name: "E-commerce Platform", description: "...", technologies: ["React", "Node.js"] }]
             };
         }
 
         function createMockMatchAnalysis() {
             return {
-                score: 78,
-                level: "good",
-                strengths: ["Strong technical skills alignment"],
-                weaknesses: ["Missing cloud platform experience"],
-                recommendations: ["Add examples of cloud technology usage"],
-                keywordsMissing: ["AWS", "Kubernetes"],
-                atsCompliance: { score: 88, feedback: ["Uses standard section headers.", "Avoid using tables or columns for better parsing."] },
-                skillGap: { hardSkills: ["Terraform", "CI/CD"], softSkills: ["Agile Methodology"] }
+            score: 78,
+        level: "good",
+        strengths: ["Strong technical skills alignment"],
+        weaknesses: ["Missing cloud platform experience"],
+        recommendations: ["Add examples of cloud technology usage"],
+        keywordsMissing: ["AWS", "Kubernetes"],
+        atsCompliance: {score: 88, feedback: ["Uses standard section headers.", "Avoid using tables or columns for better parsing."] },
+        skillGap: {hardSkills: ["Terraform", "CI/CD"], softSkills: ["Agile Methodology"] }
             };
         }
 
         function displayMatchResult(analysis) {
             document.getElementById('score-value').textContent = analysis.score;
-            const scoreDisplay = document.getElementById('score-display');
+        const scoreDisplay = document.getElementById('score-display');
             if (analysis.score >= 85) {
-                scoreDisplay.className = 'score-display excellent';
-                document.getElementById('score-description').textContent = 'Excellent Match! 🎉';
+            scoreDisplay.className = 'score-display excellent';
+        document.getElementById('score-description').textContent = 'Excellent Match! 🎉';
             } else if (analysis.score >= 70) {
-                scoreDisplay.className = 'score-display good';
-                document.getElementById('score-description').textContent = 'Good Match! 👍';
+            scoreDisplay.className = 'score-display good';
+        document.getElementById('score-description').textContent = 'Good Match! 👍';
             } else {
-                scoreDisplay.className = 'score-display';
-                document.getElementById('score-description').textContent = 'Needs Improvement 📈';
+            scoreDisplay.className = 'score-display';
+        document.getElementById('score-description').textContent = 'Needs Improvement 📈';
             }
-            let html = '';
-            html += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>' + analysis.strengths.map(s => `<li>${s}</li>`).join('') + '</ul></div>';
-            html += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>' + analysis.weaknesses.map(w => `<li>${w}</li>`).join('') + '</ul></div>';
-            html += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>' + analysis.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
+        let html = '';
+        html += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>' + analysis.strengths.map(s => `<li>${s}</li>`).join('') + '</ul></div>';
+        html += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>' + analysis.weaknesses.map(w => `<li>${w}</li>`).join('') + '</ul></div>';
+        html += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>' + analysis.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
             if (analysis.keywordsMissing && analysis.keywordsMissing.length > 0) {
-                html += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>' + analysis.keywordsMissing.map(k => `<span class="skill-tag">${k}</span>`).join('') + '</div>';
+            html += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>' + analysis.keywordsMissing.map(k => `<span class="skill-tag">${k}</span>`).join('') + '</div>';
             }
-            document.getElementById('suggestions-content').innerHTML = html;
-            document.getElementById('match-result').style.display = 'block';
+        document.getElementById('suggestions-content').innerHTML = html;
+        document.getElementById('match-result').style.display = 'block';
         }
 
         function displayAtsScore(ats) {
             if (!ats) return;
-            const container = document.getElementById('ats-compliance-result');
-            const content = document.getElementById('ats-score-content');
-            let html = `<div class="ats-score-circle" style="--progress: ${ats.score * 3.6}deg">${ats.score}</div>`;
-            html += '<ul>' + ats.feedback.map(f => `<li style="margin-bottom: 10px;">${f}</li>`).join('') + '</ul>';
-            content.innerHTML = html;
-            container.style.display = 'block';
+        const container = document.getElementById('ats-compliance-result');
+        const content = document.getElementById('ats-score-content');
+        let html = `<div class="ats-score-circle" style="--progress: ${ats.score * 3.6}deg">${ats.score}</div>`;
+        html += '<ul>' + ats.feedback.map(f => `<li style="margin-bottom: 10px;">${f}</li>`).join('') + '</ul>';
+        content.innerHTML = html;
+        container.style.display = 'block';
         }
 
         function displaySkillGap(gap) {
             if (!gap) return;
-            const container = document.getElementById('skill-gap-result');
-            const content = document.getElementById('skill-gap-content');
-            let html = '';
+        const container = document.getElementById('skill-gap-result');
+        const content = document.getElementById('skill-gap-content');
+        let html = '';
             if (gap.hardSkills && gap.hardSkills.length > 0) {
-                html += '<strong>Hard Skills to Add:</strong><div>' + gap.hardSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div><br/>';
+            html += '<strong>Hard Skills to Add:</strong><div>' + gap.hardSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div><br/>';
             }
             if (gap.softSkills && gap.softSkills.length > 0) {
-                html += '<strong>Soft Skills to Emphasize:</strong><div>' + gap.softSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div>';
+            html += '<strong>Soft Skills to Emphasize:</strong><div>' + gap.softSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div>';
             }
-            content.innerHTML = html;
-            container.style.display = 'block';
+        content.innerHTML = html;
+        container.style.display = 'block';
         }
 
         function displayOptimizationResults(optimizationList) {
             const container = document.getElementById('optimizations-container');
-            let html = '';
+        let html = '';
             optimizationList.forEach((opt, index) => {
                 const originalContent = typeof opt.original === 'string' ? opt.original : JSON.stringify(opt.original, null, 2);
-                const optimizedContent = typeof opt.optimized === 'string' ? opt.optimized : JSON.stringify(opt.optimized, null, 2);
+        const optimizedContent = typeof opt.optimized === 'string' ? opt.optimized : JSON.stringify(opt.optimized, null, 2);
 
-                html += `<div class="optimization-card">
+        html += `<div class="optimization-card">
             <div class="optimization-header">
                 <h4>📝 ${opt.section.charAt(0).toUpperCase() + opt.section.slice(1)}</h4>
                 <span class="optimization-badge">Optimized</span>
@@ -1320,37 +1285,37 @@ JOB: ${jobDescription}`;
             </div>
         </div>`;
             });
-            container.innerHTML = html;
-            optimizations = optimizationList;
-            document.getElementById('optimization-results').style.display = 'block';
+        container.innerHTML = html;
+        optimizations = optimizationList;
+        document.getElementById('optimization-results').style.display = 'block';
         }
 
         // REPLACE this entire function
         function acceptOptimization(index) {
             const opt = optimizations[index];
-            try {
-                let optimizedContent = opt.optimized;
-                // If the optimized content is a string that looks like an object/array, parse it.
-                if (typeof optimizedContent === 'string' && (optimizedContent.trim().startsWith('{') || optimizedContent.trim().startsWith('['))) {
+        try {
+            let optimizedContent = opt.optimized;
+        // If the optimized content is a string that looks like an object/array, parse it.
+        if (typeof optimizedContent === 'string' && (optimizedContent.trim().startsWith('{') || optimizedContent.trim().startsWith('['))) {
                     optimizedContent = JSON.parse(optimizedContent);
                 }
 
-                resumeData[opt.section] = optimizedContent;
+        resumeData[opt.section] = optimizedContent;
 
-                displayResumeJson();
-                showNotification(`✅ ${opt.section} section updated!`, 'success');
-                optimizations[index].accepted = true;
-                document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+        displayResumeJson();
+        showNotification(`✅ ${opt.section} section updated!`, 'success');
+        optimizations[index].accepted = true;
+        document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
             } catch (e) {
-                console.error(e);
-                showNotification('❌ Error applying optimization. Please check JSON format.', 'warning');
+            console.error(e);
+        showNotification('❌ Error applying optimization. Please check JSON format.', 'warning');
             }
         }
 
         function rejectOptimization(index) {
             optimizations[index].rejected = true;
-            document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
-            showNotification('❌ Optimization rejected', 'info');
+        document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+        showNotification('❌ Optimization rejected', 'info');
         }
 
         function acceptAllOptimizations() {
@@ -1358,72 +1323,72 @@ JOB: ${jobDescription}`;
             optimizations.forEach(opt => {
                 if (!opt.accepted && !opt.rejected) {
                     try {
-                        resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized;
-                        count++;
+            resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized;
+        count++;
                     } catch (e) {
-                        console.error(e);
+            console.error(e);
                     }
                 }
             });
             if (count > 0) {
-                displayResumeJson();
-                showNotification(`✅ Applied ${count} optimizations!`, 'success');
+            displayResumeJson();
+        showNotification(`✅ Applied ${count} optimizations!`, 'success');
             }
         }
 
         async function autoOptimizeAll() {
             document.getElementById('optimization-mode').value = 'auto';
-            showTab('optimize');
+        showTab('optimize');
             setTimeout(() => startOptimization(), 300);
         }
 
         function exportResume() {
             if (!resumeData) {
-                showNotification('⚠️ No resume data to export', 'warning');
-                return;
+            showNotification('⚠️ No resume data to export', 'warning');
+        return;
             }
-            showLoading('📄 Generating professional PDF...');
-            try {
-                generateProfessionalPDF(resumeData);
-                hideLoading();
-                showNotification('📥 PDF exported successfully!', 'success');
+        showLoading('📄 Generating professional PDF...');
+        try {
+            generateProfessionalPDF(resumeData);
+        hideLoading();
+        showNotification('📥 PDF exported successfully!', 'success');
             } catch (e) {
-                console.error('Export error:', e);
-                hideLoading();
-                showNotification('❌ PDF export failed.', 'warning');
+            console.error('Export error:', e);
+        hideLoading();
+        showNotification('❌ PDF export failed.', 'warning');
             }
         }
 
         function showNotification(message, type = 'info') {
             const n = document.createElement('div');
-            n.style.cssText = `position:fixed;top:20px;right:20px;background:${type === 'success' ? 'linear-gradient(135deg,#10b981,#059669)' : type === 'warning' ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#667eea,#764ba2)'};color:white;padding:15px 20px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.2);z-index:1000;max-width:300px;font-weight:600;animation:slideIn 0.3s ease;`;
-            const s = document.createElement('style');
-            s.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`;
-            document.head.appendChild(s);
-            n.textContent = message;
-            document.body.appendChild(n);
+        n.style.cssText = `position:fixed;top:20px;right:20px;background:${type === 'success' ? 'linear-gradient(135deg,#10b981,#059669)' : type === 'warning' ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#667eea,#764ba2)'};color:white;padding:15px 20px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.2);z-index:1000;max-width:300px;font-weight:600;animation:slideIn 0.3s ease;`;
+        const s = document.createElement('style');
+        s.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`;
+        document.head.appendChild(s);
+        n.textContent = message;
+        document.body.appendChild(n);
             setTimeout(() => {
-                n.style.animation = 'slideIn 0.3s ease reverse';
+            n.style.animation = 'slideIn 0.3s ease reverse';
                 setTimeout(() => {
-                    n.remove();
-                    s.remove();
+            n.remove();
+        s.remove();
                 }, 300);
             }, 4000);
         }
 
         function showLoading(message) {
             const l = document.createElement('div');
-            l.id = 'loading-overlay';
-            l.innerHTML = `<div class="loading"><div class="spinner"></div><p>${message}</p></div>`;
-            l.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;`;
-            document.body.appendChild(l);
+        l.id = 'loading-overlay';
+        l.innerHTML = `<div class="loading"><div class="spinner"></div><p>${message}</p></div>`;
+        l.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;`;
+        document.body.appendChild(l);
         }
 
         function hideLoading() {
             const l = document.getElementById('loading-overlay');
-            if (l) l.remove();
+        if (l) l.remove();
         }
-    </script>
+                </script>
 </body>
 
 </html>
