@@ -666,10 +666,10 @@ Example formats:
         
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            setupInputDetection();
-            checkWorkerHealth();     // run the worker health ping
-        });
+        document.addEventListener("DOMContentLoaded", () => {
+           setupInputDetection();   // your existing setup function
+           checkWorkerHealth();     // run the worker health ping
+       });
 async function checkWorkerHealth() {
     try {
         const res = await fetch("https://resume-customizing.ronaldinho1415.workers.dev", { method: "GET" });
