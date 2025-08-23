@@ -667,8 +667,8 @@ Example formats:
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-                     setupInputDetection();
-            // Add this line
+            setupInputDetection();
+            checkWorkerHealth();     // run the worker health ping
         });
 async function checkWorkerHealth() {
     try {
@@ -683,12 +683,8 @@ async function checkWorkerHealth() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    checkWorkerHealth();  // Run once on startup
 });
 
-
-        
         // Enhanced input detection
         function setupInputDetection() {
             const textarea = document.getElementById('resume-input');
