@@ -576,117 +576,116 @@
         </div>
 
         <div class="tabs">
-            <button class="tab" onclick="showTab('resume', event)">📄 Resume </button>
+            <button class="tab active" onclick="showTab('resume', event)">📄 Resume</button>
             <button class="tab" onclick="showTab('job', event)">🎯 Match</button>
             <button class="tab" onclick="showTab('optimize', event)">✨ Optimize</button>
         </div>
 
-        <!-- Setup Tab -->
         <div class="tab-content active" id="resume">
-            <label>📄 Paste Your Resume Data</label>
-            <textarea id="resume-input" rows="12" placeholder="Paste your resume here - accepts both formats:
-✅ Plain resume text (will be parsed by AI)
-✅ Structured JSON data (will be loaded directly)
+            <div class="form-group"> <label>📄 Paste Your Resume Data</label>
+                <textarea id="resume-input" rows="12" placeholder="..."></textarea>
+                <div id="input-status" style="display: none;">
+                    <span id="status-icon">🔍</span>
+                    <span id="status-text">Analyzing...</span>
+                </div>
+            </div>
+            <button class="btn" id="parse-btn" onclick="processResumeInput()">🤖 Process Resume Data</button>
 
-Example formats:
-• Copy-paste from your current resume
-• Structured JSON from previous sessions
-• Any resume text format"></textarea>
-            <div id="input-status" style="margin-top: 10px; padding: 10px; border-radius: 8px; display: none;">
-                <span id="status-icon">🔍</span>
-                <span id="status-text">Analyzing input format...</span>
+            <div id="resume-json" style="display: none;">
+                <h3>📊 Structured Resume Data</h3>
+                <div class="json-preview" id="json-output"></div>
+                <button class="btn secondary" onclick="editJson()">✏️ Edit JSON Structure</button>
             </div>
         </div>
-        <button class="btn" id="parse-btn" onclick="processResumeInput()">🤖 Process Resume Data</button>
 
-        <div id="resume-json" style="display: none;">
-            <h3>📊 Structured Resume Data</h3>
-            <div class="json-preview" id="json-output"></div>
-            <button class="btn secondary" onclick="editJson()">✏️ Edit JSON Structure</button>
-        </div>
-    </div>
-
-    <!-- Job Match Tab -->
-    <div class="tab-content" id="job">
-        <div class="form-group">
-            <label>💼 Job Description</label>
-            <textarea id="job-input" rows="8"
-                placeholder="Paste the complete job description here... Include requirements, responsibilities, skills needed, etc."></textarea>
-        </div>
-        <button class="btn" onclick="analyzeMatch()">🎯 Analyze Match Score</button>
-
-        <div id="match-result" style="display: none;">
-            <div class="score-display" id="score-display">
-                <div class="score-number" id="score-value">0</div>
-                <div class="score-text" id="score-description">Analyzing compatibility...</div>
-            </div>
-
-            <div class="suggestions" id="match-suggestions">
-                <h3>📋 Detailed Analysis</h3>
-                <div id="suggestions-content"></div>
-            </div>
-
-            <!-- NEW: ATS Compliance Score Section -->
-            <div class="analysis-section" id="ats-compliance-result" style="display: none;">
-                <h3>🛡️ ATS Compliance Score</h3>
-                <div id="ats-score-content"></div>
-            </div>
-
-            <!-- NEW: Skill Gap Analysis Section -->
-            <div class="analysis-section" id="skill-gap-result" style="display: none;">
-                <h3>🌱 Skill Gap Analysis</h3>
-                <div id="skill-gap-content"></div>
-            </div>
-
-            <button class="btn" onclick="autoOptimizeAll()" style="margin-top: 20px;">
-                ✨ Auto-Optimize All Weak Sections
-            </button>
-        </div>
-    </div>
-
-    <!-- Auto-Optimize Tab -->
-    <div class="tab-content" id="optimize">
-        <div class="auto-optimize-panel">
-            <h3>
-                <span class="status-indicator"></span>
-                🤖 AI Auto-Optimization Engine
-            </h3>
-            <p>AI will automatically identify and improve weak sections of your resume based on the job match analysis.
-            </p>
+        <div class="tab-content" id="job">
         </div>
 
-        <div class="form-group">
-            <label>🎯 Optimization Mode</label>
-            <select id="optimization-mode">
-                <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
-                <option value="manual">✋ Manual (Choose specific section)</option>
-            </select>
+        <div class="tab-content" id="optimize">
         </div>
 
-        <div id="manual-section" style="display: none;">
+        <!-- Job Match Tab -->
+        <div class="tab-content" id="job">
             <div class="form-group">
-                <label>Section to Optimize</label>
-                <select id="section-select">
-                    <option value="summary">📝 Professional Summary</option>
-                    <option value="experience">💼 Work Experience</option>
-                    <option value="skills">🛠️ Skills</option>
-                    <option value="education">🎓 Education</option>
+                <label>💼 Job Description</label>
+                <textarea id="job-input" rows="8"
+                    placeholder="Paste the complete job description here... Include requirements, responsibilities, skills needed, etc."></textarea>
+            </div>
+            <button class="btn" onclick="analyzeMatch()">🎯 Analyze Match Score</button>
+
+            <div id="match-result" style="display: none;">
+                <div class="score-display" id="score-display">
+                    <div class="score-number" id="score-value">0</div>
+                    <div class="score-text" id="score-description">Analyzing compatibility...</div>
+                </div>
+
+                <div class="suggestions" id="match-suggestions">
+                    <h3>📋 Detailed Analysis</h3>
+                    <div id="suggestions-content"></div>
+                </div>
+
+                <!-- NEW: ATS Compliance Score Section -->
+                <div class="analysis-section" id="ats-compliance-result" style="display: none;">
+                    <h3>🛡️ ATS Compliance Score</h3>
+                    <div id="ats-score-content"></div>
+                </div>
+
+                <!-- NEW: Skill Gap Analysis Section -->
+                <div class="analysis-section" id="skill-gap-result" style="display: none;">
+                    <h3>🌱 Skill Gap Analysis</h3>
+                    <div id="skill-gap-content"></div>
+                </div>
+
+                <button class="btn" onclick="autoOptimizeAll()" style="margin-top: 20px;">
+                    ✨ Auto-Optimize All Weak Sections
+                </button>
+            </div>
+        </div>
+
+        <!-- Auto-Optimize Tab -->
+        <div class="tab-content" id="optimize">
+            <div class="auto-optimize-panel">
+                <h3>
+                    <span class="status-indicator"></span>
+                    🤖 AI Auto-Optimization Engine
+                </h3>
+                <p>AI will automatically identify and improve weak sections of your resume based on the job match
+                    analysis.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label>🎯 Optimization Mode</label>
+                <select id="optimization-mode">
+                    <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
+                    <option value="manual">✋ Manual (Choose specific section)</option>
                 </select>
             </div>
-        </div>
 
-        <button class="btn" onclick="startOptimization()">🚀 Start AI Optimization</button>
+            <div id="manual-section" style="display: none;">
+                <div class="form-group">
+                    <label>Section to Optimize</label>
+                    <select id="section-select">
+                        <option value="summary">📝 Professional Summary</option>
+                        <option value="experience">💼 Work Experience</option>
+                        <option value="skills">🛠️ Skills</option>
+                        <option value="education">🎓 Education</option>
+                    </select>
+                </div>
+            </div>
 
-        <div id="optimization-results" style="display: none;">
-            <h3 style="margin-bottom: 20px; color: #1e293b;">✨ Optimization Results</h3>
-            <div id="optimizations-container"></div>
+            <button class="btn" onclick="startOptimization()">🚀 Start AI Optimization</button>
 
-            <div style="margin-top: 30px; text-align: center;">
-                <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
-                <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
+            <div id="optimization-results" style="display: none;">
+                <h3 style="margin-bottom: 20px; color: #1e293b;">✨ Optimization Results</h3>
+                <div id="optimizations-container"></div>
+
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
+                    <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
+                </div>
             </div>
         </div>
-    </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
