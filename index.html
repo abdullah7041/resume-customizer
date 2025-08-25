@@ -1,969 +1,1475 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, FileText, Target, Sparkles, Check, X, AlertCircle, Loader2, Download, Share2, Lock, ChevronRight, Shield, TrendingUp } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
 
-// API Configuration
-const API_BASE_URL = 'https://resume-customizing.ronaldinho1415.workers.dev';
-
-// Utility Functions
-const callAPI = async (endpoint, data, sessionToken = null) => {
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-  
-  if (sessionToken) {
-    headers['Authorization'] = `Bearer ${sessionToken}`;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API Error (${response.status}): ${errorText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`API call failed for ${endpoint}:`, error);
-    throw error;
-  }
-};
-
-// Components
-const ProgressBar = ({ progress }) => (
-  <div className="h-1 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full overflow-hidden">
-    <div 
-      className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-500 shadow-lg shadow-purple-600/20"
-      style={{ width: `${progress}%` }}
-    />
-  </div>
-);
-
-const LoadingOverlay = ({ message }) => (
-  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-    <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4">
-      <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
-      <p className="text-gray-700 font-medium">{message}</p>
-    </div>
-  </div>
-);
-
-const Notification = ({ message, type, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 4000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
-  const icon = type === 'success' ? <Check /> : type === 'error' ? <X /> : <AlertCircle />;
-
-  return (
-    <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-xl shadow-xl z-50 flex items-center space-x-3 animate-slide-in`}>
-      {icon}
-      <span className="font-medium">{message}</span>
-    </div>
-  );
-};
-
-const TabButton = ({ active, onClick, children, icon }) => (
-  <button
-    onClick={onClick}
-    className={`
-      relative px-6 py-4 font-semibold transition-all duration-300
-      ${active 
-        ? 'text-purple-700 bg-white/90 shadow-lg transform -translate-y-0.5' 
-        : 'text-gray-600 hover:text-gray-800 hover:bg-white/50'
-      }
-    `}
-  >
-    <div className="flex items-center justify-center space-x-2">
-      {icon}
-      <span>{children}</span>
-    </div>
-    {active && (
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-pink-600" />
-    )}
-  </button>
-);
-
-const ScoreDisplay = ({ score, level }) => {
-  const getColorClass = () => {
-    if (score >= 85) return 'from-green-500 to-emerald-600';
-    if (score >= 70) return 'from-yellow-500 to-orange-600';
-    return 'from-red-500 to-rose-600';
-  };
-
-  const getDescription = () => {
-    if (score >= 85) return 'Excellent Match! 🎉';
-    if (score >= 70) return 'Good Match! 👍';
-    return 'Needs Improvement 📈';
-  };
-
-  return (
-    <div className={`bg-gradient-to-br ${getColorClass()} text-white p-8 rounded-2xl shadow-2xl text-center relative overflow-hidden`}>
-      <div className="absolute inset-0 bg-white/10 animate-pulse" />
-      <div className="relative z-10">
-        <div className="text-6xl font-bold mb-2">{score}</div>
-        <div className="text-xl opacity-95">{getDescription()}</div>
-      </div>
-    </div>
-  );
-};
-
-const SkillTag = ({ skill, matched = false }) => (
-  <span className={`
-    inline-block px-3 py-1 rounded-lg text-sm font-medium m-1
-    ${matched 
-      ? 'bg-green-100 text-green-800 border border-green-300' 
-      : 'bg-gray-100 text-gray-700 border border-gray-300'
-    }
-  `}>
-    {skill}
-  </span>
-);
-
-const OptimizationCard = ({ optimization, onAccept, onReject, index }) => (
-  <div className="bg-white/90 backdrop-blur rounded-xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
-    <div className="flex justify-between items-center mb-4">
-      <h4 className="text-lg font-bold text-gray-800 flex items-center space-x-2">
-        <FileText className="w-5 h-5 text-purple-600" />
-        <span>{optimization.section.charAt(0).toUpperCase() + optimization.section.slice(1)}</span>
-      </h4>
-      <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-        OPTIMIZED
-      </span>
-    </div>
-    
-    <p className="text-gray-600 mb-4">
-      <strong className="text-purple-600">Improvement:</strong> {optimization.explanation}
-    </p>
-    
-    <div className="grid md:grid-cols-2 gap-4 mb-4">
-      <div>
-        <label className="text-sm font-semibold text-gray-700">Original:</label>
-        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-            {typeof optimization.original === 'string' 
-              ? optimization.original 
-              : JSON.stringify(optimization.original, null, 2)}
-          </pre>
-        </div>
-      </div>
-      <div>
-        <label className="text-sm font-semibold text-gray-700">Optimized:</label>
-        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-            {typeof optimization.optimized === 'string' 
-              ? optimization.optimized 
-              : JSON.stringify(optimization.optimized, null, 2)}
-          </pre>
-        </div>
-      </div>
-    </div>
-    
-    <div className="flex justify-end space-x-3">
-      <button
-        onClick={() => onReject(index)}
-        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors duration-200"
-      >
-        <X className="w-4 h-4 inline mr-1" /> Reject
-      </button>
-      <button
-        onClick={() => onAccept(index)}
-        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-      >
-        <Check className="w-4 h-4 inline mr-1" /> Accept
-      </button>
-    </div>
-  </div>
-);
-
-const PremiumFeature = ({ title, description, icon }) => (
-  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 relative overflow-hidden">
-    <div className="absolute top-2 right-2">
-      <Lock className="w-5 h-5 text-purple-600" />
-    </div>
-    <div className="flex items-start space-x-4">
-      <div className="text-purple-600">{icon}</div>
-      <div className="flex-1">
-        <h4 className="font-bold text-gray-800 mb-1">{title}</h4>
-        <p className="text-gray-600 text-sm">{description}</p>
-      </div>
-    </div>
-  </div>
-);
-
-// Main App Component
-export default function ResumeOptimizer() {
-  // State Management
-  const [activeTab, setActiveTab] = useState('resume');
-  const [progress, setProgress] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
-  const [notification, setNotification] = useState(null);
-  
-  // User & Session State
-  const [user, setUser] = useState(null);
-  const [sessionToken, setSessionToken] = useState(null);
-  const [isPremium, setIsPremium] = useState(false);
-  
-  // Resume Data State
-  const [resumeText, setResumeText] = useState('');
-  const [resumeData, setResumeData] = useState(null);
-  const [jobDescription, setJobDescription] = useState('');
-  const [matchAnalysis, setMatchAnalysis] = useState(null);
-  const [optimizations, setOptimizations] = useState([]);
-  const [savedResumes, setSavedResumes] = useState([]);
-  
-  // Settings State
-  const [optimizationMode, setOptimizationMode] = useState('auto');
-  const [selectedSection, setSelectedSection] = useState('summary');
-
-  // Notification Handler
-  const showNotification = useCallback((message, type = 'info') => {
-    setNotification({ message, type });
-  }, []);
-
-  // File Upload Handler
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setLoading(true);
-    setLoadingMessage(`Uploading and parsing ${file.name}...`);
-
-    const formData = new FormData();
-    formData.append('resume', file);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/upload-and-parse`, {
-        method: 'POST',
-        body: formData,
-        headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {},
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setResumeData(data.resume_data || data);
-      setProgress(35);
-      showNotification('Resume uploaded and parsed successfully!', 'success');
-    } catch (error) {
-      showNotification(`Upload failed: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Parse Resume Text
-  const parseResume = async () => {
-    if (!resumeText.trim()) {
-      showNotification('Please enter your resume text', 'error');
-      return;
-    }
-
-    setLoading(true);
-    setLoadingMessage('AI is parsing your resume...');
-
-    try {
-      const requestData = {
-        resume_input: {
-          type: 'text',
-          content: resumeText
-        },
-        user_id: user?.id,
-        session_token: sessionToken
-      };
-
-      const response = await callAPI('parse', requestData, sessionToken);
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      setResumeData(response.resume_data || response);
-      setProgress(35);
-      showNotification('Resume parsed successfully!', 'success');
-      
-      // Save to profile if logged in
-      if (user && sessionToken) {
-        await saveResume(response.resume_data || response);
-      }
-    } catch (error) {
-      showNotification(`Parsing failed: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Analyze Job Match
-  const analyzeMatch = async () => {
-    if (!resumeData || !jobDescription) {
-      showNotification('Please provide both resume and job description', 'error');
-      return;
-    }
-
-    setLoading(true);
-    setLoadingMessage('Analyzing job compatibility...');
-
-    try {
-      const requestData = {
-        resume_data: resumeData,
-        job_description: jobDescription,
-        user_id: user?.id,
-        session_token: sessionToken
-      };
-
-      const response = await callAPI('analyze', requestData, sessionToken);
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      setMatchAnalysis(response);
-      setProgress(70);
-      showNotification('Analysis complete!', 'success');
-      setActiveTab('job');
-    } catch (error) {
-      showNotification(`Analysis failed: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Optimize Resume
-  const optimizeResume = async () => {
-    if (!resumeData || !matchAnalysis) {
-      showNotification('Please complete analysis first', 'error');
-      return;
-    }
-
-    if (!isPremium) {
-      showNotification('Premium feature - Please upgrade to continue', 'info');
-      return;
-    }
-
-    setLoading(true);
-    setLoadingMessage('AI is optimizing your resume...');
-
-    try {
-      const requestData = {
-        resume_data: resumeData,
-        job_description: jobDescription,
-        analysis: matchAnalysis,
-        mode: optimizationMode,
-        section: optimizationMode === 'manual' ? selectedSection : null,
-        user_id: user?.id,
-        session_token: sessionToken
-      };
-
-      const response = await callAPI('optimize', requestData, sessionToken);
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      setOptimizations(response.optimized_sections || []);
-      setProgress(100);
-      showNotification('Optimization complete!', 'success');
-    } catch (error) {
-      showNotification(`Optimization failed: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Accept Optimization
-  const acceptOptimization = (index) => {
-    const opt = optimizations[index];
-    const updatedResumeData = { ...resumeData };
-    updatedResumeData[opt.section] = opt.after || opt.optimized;
-    setResumeData(updatedResumeData);
-    
-    const updatedOptimizations = [...optimizations];
-    updatedOptimizations[index].accepted = true;
-    setOptimizations(updatedOptimizations);
-    
-    showNotification(`${opt.section} section updated!`, 'success');
-  };
-
-  // Reject Optimization
-  const rejectOptimization = (index) => {
-    const updatedOptimizations = [...optimizations];
-    updatedOptimizations[index].rejected = true;
-    setOptimizations(updatedOptimizations);
-    showNotification('Optimization rejected', 'info');
-  };
-
-  // Accept All Optimizations
-  const acceptAllOptimizations = () => {
-    const updatedResumeData = { ...resumeData };
-    optimizations.forEach(opt => {
-      if (!opt.accepted && !opt.rejected) {
-        updatedResumeData[opt.section] = opt.after || opt.optimized;
-      }
-    });
-    setResumeData(updatedResumeData);
-    showNotification('All optimizations applied!', 'success');
-  };
-
-  // Export Resume
-  const exportResume = async () => {
-    if (!resumeData) {
-      showNotification('No resume data to export', 'error');
-      return;
-    }
-
-    if (!isPremium) {
-      showNotification('Premium feature - Please upgrade to export', 'info');
-      return;
-    }
-
-    setLoading(true);
-    setLoadingMessage('Generating PDF...');
-
-    try {
-      const requestData = {
-        resume_data: resumeData,
-        format: 'pdf',
-        user_id: user?.id,
-        session_token: sessionToken
-      };
-
-      const response = await callAPI('export', requestData, sessionToken);
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      // Handle PDF download
-      if (response.export_pdf_url) {
-        window.open(response.export_pdf_url, '_blank');
-      }
-      
-      showNotification('Resume exported successfully!', 'success');
-    } catch (error) {
-      showNotification(`Export failed: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Save Resume to Profile
-  const saveResume = async (data) => {
-    if (!user || !sessionToken) return;
-
-    try {
-      const requestData = {
-        resume_data: data,
-        user_id: user.id,
-        session_token: sessionToken
-      };
-
-      await callAPI('save-resume', requestData, sessionToken);
-      await loadSavedResumes();
-    } catch (error) {
-      console.error('Failed to save resume:', error);
-    }
-  };
-
-  // Load Saved Resumes
-  const loadSavedResumes = async () => {
-    if (!user || !sessionToken) return;
-
-    try {
-      const response = await callAPI('get-saved-resumes', {
-        user_id: user.id,
-        session_token: sessionToken
-      }, sessionToken);
-
-      if (response.profile?.saved_resumes) {
-        setSavedResumes(response.profile.saved_resumes);
-      }
-    } catch (error) {
-      console.error('Failed to load saved resumes:', error);
-    }
-  };
-
-  // Share Resume
-  const shareResume = async () => {
-    if (!resumeData || !isPremium) {
-      showNotification('Premium feature required', 'info');
-      return;
-    }
-
-    try {
-      const requestData = {
-        resume_data: resumeData,
-        user_id: user?.id,
-        session_token: sessionToken
-      };
-
-      const response = await callAPI('share', requestData, sessionToken);
-      
-      if (response.share_link) {
-        navigator.clipboard.writeText(response.share_link);
-        showNotification('Share link copied to clipboard!', 'success');
-      }
-    } catch (error) {
-      showNotification(`Sharing failed: ${error.message}`, 'error');
-    }
-  };
-
-  // Mock Login (for demo)
-  const mockLogin = () => {
-    setUser({ id: 'demo-user-123', name: 'John Doe', email: 'john@example.com' });
-    setSessionToken('demo-session-token');
-    setIsPremium(false);
-    showNotification('Logged in successfully!', 'success');
-  };
-
-  const upgradeToPremium = () => {
-    setIsPremium(true);
-    showNotification('Upgraded to Premium! All features unlocked.', 'success');
-  };
-
-  // Check API Health on Mount
-  useEffect(() => {
-    const checkAPI = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/health`);
-        if (response.ok) {
-          console.log('API service connected');
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      } catch (error) {
-        console.error('API service unavailable:', error);
-      }
-    };
-    checkAPI();
-  }, []);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 p-4">
-      {loading && <LoadingOverlay message={loadingMessage} />}
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 10px;
+            color: #1a202c;
+        }
 
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-t-3xl shadow-2xl overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-8 relative overflow-hidden">
-            <div className="absolute inset-0 bg-white/10 animate-pulse" />
-            <div className="relative z-10">
-              <h1 className="text-4xl font-bold mb-3 flex items-center justify-center">
-                <Sparkles className="mr-3" />
-                AI Resume Optimizer
-              </h1>
-              <p className="text-center text-lg opacity-95">Transform your resume with AI-powered insights</p>
-              
-              {/* User Info Bar */}
-              <div className="mt-6 flex justify-between items-center">
-                <div className="flex items-center space-x-4">
-                  {user ? (
-                    <div className="flex items-center space-x-2 bg-white/20 px-4 py-2 rounded-lg">
-                      <span className="text-sm">Welcome, {user.name}</span>
-                      {isPremium && (
-                        <span className="bg-yellow-400 text-purple-900 px-2 py-1 rounded text-xs font-bold">
-                          PREMIUM
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={mockLogin}
-                      className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors duration-200"
-                    >
-                      Sign In
-                    </button>
-                  )}
-                </div>
-                {user && !isPremium && (
-                  <button
-                    onClick={upgradeToPremium}
-                    className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    Upgrade to Premium
-                  </button>
-                )}
-              </div>
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 1.2rem;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            border-radius: 2px;
+            margin: 20px 30px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            width: 0%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            background: rgba(248, 250, 252, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .tab {
+            padding: 20px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            border: none;
+            background: none;
+            color: #64748b;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .tab.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e293b;
+            transform: translateY(-2px);
+        }
+
+        .tab.active::before {
+            transform: translateY(0);
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.6);
+            color: #334155;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+            min-height: 500px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 16px;
+        }
+
+        textarea,
+        input,
+        select {
+            width: 100%;
+            padding: 18px;
+            border: 2px solid rgba(226, 232, 240, 0.8);
+            border-radius: 16px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            resize: vertical;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        textarea:focus,
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 32px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn.secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e293b;
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn.secondary:hover {
+            background: rgba(255, 255, 255, 1);
+            border-color: #667eea;
+        }
+
+        .score-display {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 12px 25px rgba(239, 68, 68, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-display::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 6s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .score-display.good {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 12px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .score-display.excellent {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 12px 25px rgba(245, 158, 11, 0.3);
+        }
+
+        .score-number {
+            font-size: 3rem;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+
+        .score-text {
+            font-size: 1.1rem;
+            margin-top: 10px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .spinner {
+            border: 4px solid rgba(102, 126, 234, 0.1);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .json-preview {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 25px;
+            border-radius: 16px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(226, 232, 240, 0.2);
+        }
+
+        .api-setup {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+        }
+
+        .api-setup h3 {
+            color: #92400e;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .api-status {
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .api-status.connected {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 2px solid #16a34a;
+            color: #15803d;
+            display: block;
+        }
+
+        .suggestions {
+            background: rgba(248, 250, 252, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 25px;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .suggestions h3 {
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .suggestion-item {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .optimization-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .optimization-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .optimization-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .optimization-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .auto-optimize-panel {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #0ea5e9;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .auto-optimize-panel h3 {
+            color: #0c4a6e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* NEW STYLES for ATS and Skill Gap */
+        .analysis-section {
+            background: rgba(248, 250, 252, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 25px;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .analysis-section h3 {
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ats-score-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(#4ade80 var(--progress), #e2e8f0 0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0 auto 20px;
+            transition: background 0.5s;
+        }
+
+        .skill-tag {
+            background: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            margin: 4px;
+            display: inline-block;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+                min-height: 100vh;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .tabs {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .tab {
+                padding: 15px 10px;
+                font-size: 13px;
+            }
+
+            .tab-content {
+                padding: 25px;
+            }
+
+            .score-number {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 AI Resume Optimizer</h1>
+            <p>By Abdullah bin ahmed</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
             </div>
-          </div>
-          
-          <div className="px-8 py-4">
-            <ProgressBar progress={progress} />
-          </div>
-
-          {/* Tabs */}
-          <div className="grid grid-cols-3 bg-gray-50/90 backdrop-blur border-b border-gray-200">
-            <TabButton
-              active={activeTab === 'resume'}
-              onClick={() => setActiveTab('resume')}
-              icon={<FileText className="w-5 h-5" />}
-            >
-              Resume
-            </TabButton>
-            <TabButton
-              active={activeTab === 'job'}
-              onClick={() => setActiveTab('job')}
-              icon={<Target className="w-5 h-5" />}
-            >
-              Match
-            </TabButton>
-            <TabButton
-              active={activeTab === 'optimize'}
-              onClick={() => setActiveTab('optimize')}
-              icon={<Sparkles className="w-5 h-5" />}
-            >
-              Optimize
-            </TabButton>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-8 bg-white/70 backdrop-blur min-h-[600px]">
-            {/* Resume Tab */}
-            {activeTab === 'resume' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-lg font-semibold text-gray-800 mb-4">
-                    📄 Upload or Paste Your Resume
-                  </label>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.txt"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                        id="file-upload"
-                      />
-                      <label
-                        htmlFor="file-upload"
-                        className="flex items-center justify-center space-x-2 w-full px-6 py-4 bg-white border-2 border-dashed border-purple-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 cursor-pointer"
-                      >
-                        <Upload className="w-5 h-5 text-purple-600" />
-                        <span className="font-medium text-gray-700">Upload Resume File</span>
-                      </label>
-                    </div>
-                    
-                    <textarea
-                      value={resumeText}
-                      onChange={(e) => setResumeText(e.target.value)}
-                      className="w-full h-64 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 resize-none"
-                      placeholder="Or paste your resume text here..."
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={parseResume}
-                  className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <FileText className="inline mr-2" />
-                  Process Resume
-                </button>
-
-                {resumeData && (
-                  <div className="bg-gray-900 text-gray-100 p-6 rounded-xl">
-                    <h3 className="text-lg font-semibold mb-3 text-purple-400">Structured Resume Data</h3>
-                    <pre className="text-sm overflow-auto max-h-96">
-                      {JSON.stringify(resumeData, null, 2)}
-                    </pre>
-                  </div>
-                )}
-
-                {/* Saved Resumes Section */}
-                {user && savedResumes.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">📚 Saved Resumes</h3>
-                    <div className="space-y-3">
-                      {savedResumes.map((resume) => (
-                        <div key={resume.resume_id} className="bg-white p-4 rounded-lg border border-gray-200 hover:border-purple-300 transition-colors duration-200">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium text-gray-800">{resume.resume_data.name || 'Untitled Resume'}</p>
-                              <p className="text-sm text-gray-500">Saved on {new Date(resume.date_saved).toLocaleDateString()}</p>
-                            </div>
-                            <button
-                              onClick={() => setResumeData(resume.resume_data)}
-                              className="text-purple-600 hover:text-purple-700 font-medium"
-                            >
-                              Load
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Job Match Tab */}
-            {activeTab === 'job' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-lg font-semibold text-gray-800 mb-4">
-                    💼 Job Description
-                  </label>
-                  <textarea
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 resize-none"
-                    placeholder="Paste the complete job description here..."
-                  />
-                </div>
-
-                <button
-                  onClick={analyzeMatch}
-                  className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <Target className="inline mr-2" />
-                  Analyze Match Score
-                </button>
-
-                {matchAnalysis && (
-                  <div className="space-y-6">
-                    <ScoreDisplay score={matchAnalysis.compliance_score || 0} />
-
-                    {/* Skills Match */}
-                    <div className="bg-white/80 backdrop-blur rounded-xl p-6 shadow-lg">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                        <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
-                        Skills Analysis
-                      </h3>
-                      <div className="space-y-4">
-                        {matchAnalysis.skills_match?.map((skill, idx) => (
-                          <div key={idx} className="flex items-center justify-between">
-                            <SkillTag skill={skill.skill} matched={skill.matched} />
-                            {!skill.matched && skill.gap_reason && (
-                              <span className="text-sm text-gray-500">{skill.gap_reason}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Phrasing Tips */}
-                    <div className="bg-white/80 backdrop-blur rounded-xl p-6 shadow-lg">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                        <AlertCircle className="w-5 h-5 mr-2 text-purple-600" />
-                        Improvement Suggestions
-                      </h3>
-                      <div className="space-y-3">
-                        {matchAnalysis.phrasing_tips?.map((tip, idx) => (
-                          <div key={idx} className="flex items-start space-x-3">
-                            <ChevronRight className="w-5 h-5 text-purple-600 mt-0.5" />
-                            <p className="text-gray-700">{tip}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Premium Features Preview */}
-                    {!isPremium && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4">🔒 Premium Features</h3>
-                        <PremiumFeature
-                          icon={<Sparkles className="w-6 h-6" />}
-                          title="Auto-Optimize All Sections"
-                          description="AI automatically rewrites weak sections for maximum impact"
-                        />
-                        <PremiumFeature
-                          icon={<Download className="w-6 h-6" />}
-                          title="Professional PDF Export"
-                          description="Generate ATS-friendly PDFs with optimized formatting"
-                        />
-                        <PremiumFeature
-                          icon={<Share2 className="w-6 h-6" />}
-                          title="Share & Collaborate"
-                          description="Get shareable links and collaborate with mentors"
-                        />
-                      </div>
-                    )}
-
-                    {isPremium && (
-                      <button
-                        onClick={() => {
-                          setActiveTab('optimize');
-                          setOptimizationMode('auto');
-                        }}
-                        className="w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                      >
-                        <Sparkles className="inline mr-2" />
-                        Auto-Optimize All Weak Sections
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Optimize Tab */}
-            {activeTab === 'optimize' && (
-              <div className="space-y-6">
-                {!isPremium ? (
-                  <div className="text-center py-12">
-                    <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold text-gray-800 mb-2">Premium Feature</h3>
-                    <p className="text-gray-600 mb-6">Unlock AI-powered optimization to transform your resume</p>
-                    <button
-                      onClick={upgradeToPremium}
-                      className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      Upgrade to Premium
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-xl p-6">
-                      <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
-                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-3" />
-                        AI Auto-Optimization Engine
-                      </h3>
-                      <p className="text-gray-600">
-                        AI will automatically identify and improve weak sections of your resume based on the job match analysis.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-lg font-semibold text-gray-800 mb-4">
-                        🎯 Optimization Mode
-                      </label>
-                      <select
-                        value={optimizationMode}
-                        onChange={(e) => setOptimizationMode(e.target.value)}
-                        className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
-                      >
-                        <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
-                        <option value="manual">✋ Manual (Choose specific section)</option>
-                      </select>
-                    </div>
-
-                    {optimizationMode === 'manual' && (
-                      <div>
-                        <label className="block text-lg font-semibold text-gray-800 mb-4">
-                          Section to Optimize
-                        </label>
-                        <select
-                          value={selectedSection}
-                          onChange={(e) => setSelectedSection(e.target.value)}
-                          className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
-                        >
-                          <option value="summary">📝 Professional Summary</option>
-                          <option value="experience">💼 Work Experience</option>
-                          <option value="skills">🛠️ Skills</option>
-                          <option value="education">🎓 Education</option>
-                        </select>
-                      </div>
-                    )}
-
-                    <button
-                      onClick={optimizeResume}
-                      className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      <Sparkles className="inline mr-2" />
-                      Start AI Optimization
-                    </button>
-
-                    {optimizations.length > 0 && (
-                      <div className="space-y-6">
-                        <h3 className="text-xl font-bold text-gray-800">✨ Optimization Results</h3>
-                        
-                        <div className="space-y-4">
-                          {optimizations.map((opt, idx) => (
-                            <OptimizationCard
-                              key={idx}
-                              optimization={opt}
-                              onAccept={acceptOptimization}
-                              onReject={rejectOptimization}
-                              index={idx}
-                            />
-                          ))}
-                        </div>
-
-                        <div className="flex space-x-4">
-                          <button
-                            onClick={acceptAllOptimizations}
-                            className="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                          >
-                            <Check className="inline mr-2" />
-                            Accept All Changes
-                          </button>
-                          <button
-                            onClick={exportResume}
-                            className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                          >
-                            <Download className="inline mr-2" />
-                            Export Professional PDF
-                          </button>
-                        </div>
-
-                        <button
-                          onClick={shareResume}
-                          className="w-full py-4 bg-white border-2 border-purple-300 hover:border-purple-500 text-purple-700 font-semibold rounded-xl transition-all duration-200"
-                        >
-                          <Share2 className="inline mr-2" />
-                          Share Resume Link
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Footer */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-b-3xl shadow-2xl p-6 mt-1">
-          <div className="flex flex-wrap justify-between items-center text-sm text-gray-600">
-            <div className="flex items-center space-x-4">
-              <a href="#" className="hover:text-purple-600 transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-purple-600 transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-purple-600 transition-colors">Support</a>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Shield className="w-4 h-4 text-green-600" />
-              <span>Your data is encrypted and secure</span>
-            </div>
-          </div>
+        <div class="tabs">
+            <button class="tab" onclick="showTab('resume', event)">📄</button>
+            <button class="tab" onclick="showTab('job', event)">🎯</button>
+            <button class="tab" onclick="showTab('optimize', event)">✨</button>
         </div>
-      </div>
 
-      {/* Add custom styles for animations */}
-      <style jsx>{`
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
-        }
-      `}</style>
+        <!-- Setup Tab -->
+        <div class="tab-content active" id="resume">
+            <label>📄 Paste Your Resume Data</label>
+            <textarea id="resume-input" rows="12" placeholder="Paste your resume here - accepts both formats:
+✅ Plain resume text (will be parsed by AI)
+✅ Structured JSON data (will be loaded directly)
+
+Example formats:
+• Copy-paste from your current resume
+• Structured JSON from previous sessions
+• Any resume text format"></textarea>
+            <div id="input-status" style="margin-top: 10px; padding: 10px; border-radius: 8px; display: none;">
+                <span id="status-icon">🔍</span>
+                <span id="status-text">Analyzing input format...</span>
+            </div>
+        </div>
+        <button class="btn" id="parse-btn" onclick="processResumeInput()">🤖 Process Resume Data</button>
+
+        <div id="resume-json" style="display: none;">
+            <h3>📊 Structured Resume Data</h3>
+            <div class="json-preview" id="json-output"></div>
+            <button class="btn secondary" onclick="editJson()">✏️ Edit JSON Structure</button>
+        </div>
     </div>
-  );
-}
+
+    <!-- Job Match Tab -->
+    <div class="tab-content" id="job">
+        <div class="form-group">
+            <label>💼 Job Description</label>
+            <textarea id="job-input" rows="8"
+                placeholder="Paste the complete job description here... Include requirements, responsibilities, skills needed, etc."></textarea>
+        </div>
+        <button class="btn" onclick="analyzeMatch()">🎯 Analyze Match Score</button>
+
+        <div id="match-result" style="display: none;">
+            <div class="score-display" id="score-display">
+                <div class="score-number" id="score-value">0</div>
+                <div class="score-text" id="score-description">Analyzing compatibility...</div>
+            </div>
+
+            <div class="suggestions" id="match-suggestions">
+                <h3>📋 Detailed Analysis</h3>
+                <div id="suggestions-content"></div>
+            </div>
+
+            <!-- NEW: ATS Compliance Score Section -->
+            <div class="analysis-section" id="ats-compliance-result" style="display: none;">
+                <h3>🛡️ ATS Compliance Score</h3>
+                <div id="ats-score-content"></div>
+            </div>
+
+            <!-- NEW: Skill Gap Analysis Section -->
+            <div class="analysis-section" id="skill-gap-result" style="display: none;">
+                <h3>🌱 Skill Gap Analysis</h3>
+                <div id="skill-gap-content"></div>
+            </div>
+
+            <button class="btn" onclick="autoOptimizeAll()" style="margin-top: 20px;">
+                ✨ Auto-Optimize All Weak Sections
+            </button>
+        </div>
+    </div>
+
+    <!-- Auto-Optimize Tab -->
+    <div class="tab-content" id="optimize">
+        <div class="auto-optimize-panel">
+            <h3>
+                <span class="status-indicator"></span>
+                🤖 AI Auto-Optimization Engine
+            </h3>
+            <p>AI will automatically identify and improve weak sections of your resume based on the job match analysis.
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label>🎯 Optimization Mode</label>
+            <select id="optimization-mode">
+                <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
+                <option value="manual">✋ Manual (Choose specific section)</option>
+            </select>
+        </div>
+
+        <div id="manual-section" style="display: none;">
+            <div class="form-group">
+                <label>Section to Optimize</label>
+                <select id="section-select">
+                    <option value="summary">📝 Professional Summary</option>
+                    <option value="experience">💼 Work Experience</option>
+                    <option value="skills">🛠️ Skills</option>
+                    <option value="education">🎓 Education</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn" onclick="startOptimization()">🚀 Start AI Optimization</button>
+
+        <div id="optimization-results" style="display: none;">
+            <h3 style="margin-bottom: 20px; color: #1e293b;">✨ Optimization Results</h3>
+            <div id="optimizations-container"></div>
+
+            <div style="margin-top: 30px; text-align: center;">
+                <button class="btn" onclick="acceptAllOptimizations()">✅ Accept All Changes</button>
+                <button class="btn secondary" onclick="exportResume()">📥 Export Professional PDF</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // Global state
+        let resumeData = null;
+        let jobDescription = '';
+        let matchAnalysis = null;
+        let optimizations = {};
+
+
+        // Initialize on page load
+        document.addEventListener("DOMContentLoaded", () => {
+            setupInputDetection();
+            checkWorkerHealth();
+        });
+
+        async function checkWorkerHealth() {
+            try {
+                const res = await fetch("https://resume-customizing.ronaldinho1415.workers.dev", { method: "GET" });
+                if (res.ok) {
+                    showNotification("✅ Connected to AI service", "success");
+                } else {
+                    showNotification("⚠️ Worker online but returned error", "warning");
+                }
+            } catch (err) {
+                showNotification("❌ Unable to reach AI service", "error");
+            }
+        }
+
+        function setupInputDetection() {
+            const textarea = document.getElementById('resume-input');
+            const statusDiv = document.getElementById('input-status');
+            const statusIcon = document.getElementById('status-icon');
+            const statusText = document.getElementById('status-text');
+            const parseBtn = document.getElementById('parse-btn');
+
+            textarea.addEventListener('input', function () {
+                const content = this.value.trim();
+
+                if (!content) {
+                    statusDiv.style.display = 'none';
+                    parseBtn.textContent = '🤖 Process Resume Data';
+                    return;
+                }
+
+                const inputType = detectInputType(content);
+                statusDiv.style.display = 'block';
+
+                if (inputType === 'json') {
+                    statusDiv.style.background = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
+                    statusDiv.style.border = '2px solid #16a34a';
+                    statusDiv.style.color = '#15803d';
+                    statusIcon.textContent = '📋';
+                    statusText.textContent = 'Valid JSON resume format detected! Ready to load directly.';
+                    parseBtn.textContent = '📋 Load JSON Data';
+                } else if (inputType === 'text') {
+                    statusDiv.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+                    statusDiv.style.border = '2px solid #2563eb';
+                    statusDiv.style.color = '#1d4ed8';
+                    statusIcon.textContent = '📄';
+                    statusText.textContent = 'Resume text detected! Will be parsed with AI.';
+                    parseBtn.textContent = '🤖 Parse Resume with AI';
+                } else {
+                    statusDiv.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+                    statusDiv.style.border = '2px solid #f59e0b';
+                    statusDiv.style.color = '#92400e';
+                    statusIcon.textContent = '⚠️';
+                    statusText.textContent = 'Invalid JSON detected. Will attempt to parse as text.';
+                    parseBtn.textContent = '🤖 Parse Resume with AI';
+                }
+            });
+        }
+
+        // Enhanced JSON detection
+        function detectInputType(input) {
+            const trimmed = input.trim();
+            if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    const resumeFields = ['personal', 'experience', 'skills', 'summary', 'education', 'name', 'work', 'objective', 'contact'];
+                    const hasResumeFields = Object.keys(parsed).some(key => resumeFields.includes(key.toLowerCase()));
+                    if (hasResumeFields) return 'json';
+                } catch (e) {
+                    return 'invalid-json';
+                }
+            }
+            return 'text';
+        }
+
+        // Process resume input (handles both JSON and text)
+        async function processResumeInput() {
+            const resumeContent = document.getElementById('resume-input').value.trim();
+            if (!resumeContent) {
+                showNotification('⚠️ Please paste your resume data first', 'warning');
+                return;
+            }
+            const inputType = detectInputType(resumeContent);
+            if (inputType === 'json') {
+                await loadJsonData(resumeContent);
+            } else {
+                await parseResumeText(resumeContent);
+            }
+        }
+
+        // Load JSON data directly
+        async function loadJsonData(jsonContent) {
+            showLoading('📋 Loading JSON resume data...');
+            try {
+                const parsed = JSON.parse(jsonContent);
+                resumeData = normalizeResumeData(parsed);
+                displayResumeJson();
+                hideLoading();
+                showNotification('✅ JSON resume data loaded successfully!', 'success');
+                updateProgress(35);
+            } catch (error) {
+                console.error('Error loading JSON:', error);
+                hideLoading();
+                showNotification('❌ Invalid JSON format. Trying to parse as text...', 'warning');
+                await parseResumeText(jsonContent);
+            }
+        }
+
+        // Robustly normalize resume data to ensure consistent structure
+        function normalizeResumeData(data) {
+            const personalData = data.personal || {};
+            return {
+                personal: {
+                    name: personalData.name || data.name || "",
+                    email: personalData.email || data.email || "",
+                    phone: personalData.phone || data.phone || "",
+                    location: personalData.location || data.location || "",
+                    linkedin: personalData.linkedin || data.linkedin || "",
+                    github: personalData.github || data.github || ""
+                },
+                summary: data.summary || data.objective || "",
+                experience: Array.isArray(data.experience) ? data.experience : (data.work || []),
+                skills: data.skills || {
+                    technical: data.technical_skills || [],
+                    soft: data.soft_skills || []
+                },
+                education: Array.isArray(data.education) ? data.education : [],
+                projects: Array.isArray(data.projects) ? data.projects : []
+            };
+        }
+        // Exponential backoff retry wrapper
+        async function fetchWithRetry(url, options, retries = 3, delay = 500) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) throw new Error(await response.text());
+                return response;
+            } catch (error) {
+                if (retries > 0) {
+                    console.warn(`Retrying... (${3 - retries + 1})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2); // double delay
+                }
+                throw error;
+            }
+        }
+
+        // Parse resume text with AI through Worker
+        async function parseResumeText(resumeText) {
+            showLoading('🤖 AI is parsing your resume...');
+            try {
+                const prompt = `Parse this resume text into structured JSON: ${resumeText}`;
+                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev/parse", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+
+                const data = await response.json();
+                let jsonText = data.choices[0].message.content.trim();
+
+                // Handle markdown fenced code
+                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+                if (jsonMatch) jsonText = jsonMatch[1];
+
+                resumeData = JSON.parse(jsonText);
+                displayResumeJson();
+                hideLoading();
+                showNotification('✅ Resume successfully parsed by AI!', 'success');
+                updateProgress(35);
+            } catch (error) {
+                console.error('Error parsing resume:', error);
+                hideLoading();
+                showNotification('⚠️ Parsing failed. Using fallback mode...', 'warning');
+                resumeData = createMockResumeData(resumeText);
+                displayResumeJson();
+                updateProgress(35);
+            }
+        }
+
+        // New callAI function using Cloudflare Worker proxy
+        async function callAI(prompt, retries = 1) {
+            try {
+                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`API Error (${response.status}): ${errorData}`);
+                }
+
+                const data = await response.json();
+
+                // Extract content depending on Worker response structure
+                if (!data.choices || !data.choices[0]?.message?.content) {
+                    throw new Error("Empty or invalid response from API");
+                }
+
+                return data.choices[0].message.content;
+
+            } catch (error) {
+                if (retries > 0 && error.message.includes("Empty")) {
+                    console.warn("Empty response, retrying...");
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    return callAI(prompt, retries - 1);
+                }
+                throw error;
+            }
+        }
+
+        // Analyze job match with ATS & skill gap
+        async function analyzeMatch() {
+            jobDescription = document.getElementById('job-input').value.trim();
+            if (!resumeData) {
+                showNotification('⚠️ Please parse your resume first', 'warning');
+                showTab('resume');
+                return;
+            }
+            if (!jobDescription) {
+                showNotification('⚠️ Please enter a job description', 'warning');
+                return;
+            }
+
+            showLoading('🎯 AI is analyzing job compatibility...');
+            try {
+                const prompt = `Analyze compatibility between resume and job description. 
+Return JSON with score, strengths, weaknesses, recommendations, keywordsMissing, atsCompliance, skillGap.
+RESUME: ${JSON.stringify(resumeData)}
+JOB: ${jobDescription}`;
+
+                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+
+                const data = await response.json();
+                let jsonText = data.choices[0].message.content.trim();
+                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+                if (jsonMatch) jsonText = jsonMatch[1];
+
+                matchAnalysis = JSON.parse(jsonText);
+                displayMatchResult(matchAnalysis);
+                displayAtsScore(matchAnalysis.atsCompliance);
+                displaySkillGap(matchAnalysis.skillGap);
+                hideLoading();
+                showNotification('✅ Job match analysis complete!', 'success');
+                updateProgress(75);
+            } catch (error) {
+                console.error('Error analyzing match:', error);
+                hideLoading();
+                showNotification('⚠️ Analysis failed. Using demo results...', 'warning');
+                matchAnalysis = createMockMatchAnalysis();
+                displayMatchResult(matchAnalysis);
+                displayAtsScore(matchAnalysis.atsCompliance);
+                displaySkillGap(matchAnalysis.skillGap);
+                updateProgress(75);
+            }
+        }
+
+
+        function createMockOptimizations(mode, section) {
+            const mockData = {
+                summary: {
+                    section: "summary",
+                    original: "Experienced professional with strong background in technology...",
+                    optimized: "Results-driven Senior Software Engineer with over 5 years of experience in developing, testing, and maintaining web applications. Expert in JavaScript and cloud technologies, with a proven ability to lead projects and enhance application performance, directly aligning with the requirements for a cloud-focused role.",
+                    explanation: "The summary was rewritten to be more dynamic, incorporating keywords from the job description like 'cloud technologies' and focusing on measurable results."
+                },
+                skills: {
+                    section: "skills",
+                    original: {
+                        technical: ["JavaScript", "Python", "React", "Node.js"],
+                        soft: ["Leadership", "Communication"]
+                    },
+                    optimized: {
+                        technical: ["JavaScript", "Python", "React", "Node.js", "AWS", "Docker", "Kubernetes", "Terraform"],
+                        soft: ["Agile Methodology", "Leadership", "Cross-functional Communication", "Problem-solving"]
+                    },
+                    explanation: "Added critical keywords like AWS, Kubernetes, and Terraform that were identified in the skill gap analysis to improve ATS matching. Soft skills were also tailored."
+                }
+            };
+
+            if (mode === 'manual') {
+                return [mockData[section] || mockData.summary];
+            }
+            // 'auto' mode
+            return [mockData.summary, mockData.skills];
+        }
+
+        // Start optimization with improved multi-section prompt
+        // Optimize resume sections with AI
+        async function startOptimization() {
+            if (!resumeData) {
+                showNotification('⚠️ Please parse your resume first', 'warning');
+                return;
+            }
+            if (!matchAnalysis) {
+                showNotification('⚠️ Please analyze job match first', 'warning');
+                return;
+            }
+
+            const mode = document.getElementById('optimization-mode').value;
+            const selectedSection = document.getElementById('section-select').value;
+            showLoading('✨ AI is optimizing your resume...');
+
+            try {
+                let prompt;
+                if (mode === 'auto') {
+                    prompt = `Optimize the weakest resume sections for this job.
+Focus on summary and skills. 
+Return JSON with original, optimized, and explanation.
+RESUME: ${JSON.stringify(resumeData)}
+JOB: ${jobDescription}
+ANALYSIS: ${JSON.stringify(matchAnalysis)}`;
+                } else {
+                    prompt = `Optimize the ${selectedSection} section only. 
+Return JSON with original, optimized, and explanation.
+SECTION: ${JSON.stringify(resumeData[selectedSection])}
+JOB: ${jobDescription}`;
+                }
+
+                const response = await fetchWithRetry("https://resume-customizing.ronaldinho1415.workers.dev/optimize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+
+                const data = await response.json();
+                let jsonText = data.choices[0].message.content.trim();
+                const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
+                if (jsonMatch) jsonText = jsonMatch[1];
+
+                const result = JSON.parse(jsonText);
+                displayOptimizationResults(result.optimizations);
+                hideLoading();
+                showNotification('✅ Resume optimization complete!', 'success');
+                updateProgress(100);
+            } catch (error) {
+                console.error('Error optimizing resume:', error);
+                hideLoading();
+                showNotification(`⚠️ Optimization failed: ${error.message}`, 'warning');
+                const mockOptimizations = createMockOptimizations(mode, selectedSection);
+                displayOptimizationResults(mockOptimizations);
+                updateProgress(100);
+            }
+        }
+
+
+        // Robust PDF generation function
+        // REPLACE this entire function
+        function generateProfessionalPDF(data) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'pt', 'letter'); // Using points for better control
+            const margin = 72; // 1-inch margin
+            const pageWidth = doc.internal.pageSize.getWidth();
+            let yPos = margin;
+
+            // --- FONT & COLOR DEFINITIONS ---
+            const FONT_HELVETICA = 'Helvetica';
+            const COLOR_PRIMARY = { r: 0, g: 0, b: 0 };
+            const COLOR_GRAY = { r: 77, g: 77, b: 77 };
+            doc.setTextColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
+
+            // --- HELPER FUNCTIONS ---
+            // Helper to add wrapped text and manage Y position
+            function addWrappedText(text, options) {
+                if (!text) return;
+                const { x = margin, maxWidth = pageWidth - margin * 2, fontSize = 10, fontStyle = 'normal', color = COLOR_GRAY, lineHeightFactor = 1.5 } = options;
+
+                doc.setFont(FONT_HELVETICA, fontStyle);
+                doc.setFontSize(fontSize);
+                doc.setTextColor(color);
+
+                const lines = doc.splitTextToSize(text, maxWidth);
+                const blockHeight = lines.length * fontSize * lineHeightFactor;
+
+                // Check for page break before drawing
+                if (yPos + blockHeight > doc.internal.pageSize.getHeight() - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                }
+
+                doc.text(lines, x, yPos);
+                yPos += blockHeight;
+            }
+
+            // Helper for section titles with lines
+            function addSectionHeader(title) {
+                yPos += 15; // Space before the section
+                doc.setFont(FONT_HELVETICA, 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(COLOR_PRIMARY);
+                doc.text(title.toUpperCase(), margin, yPos);
+                yPos += 12;
+                doc.setDrawColor(COLOR_PRIMARY.r, COLOR_PRIMARY.g, COLOR_PRIMARY.b);
+                doc.setLineWidth(1);
+                doc.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 20;
+            }
+
+            // --- 1. HEADER SECTION ---
+            const personal = data.personal || {};
+            const professionalTitle = data.experience?.[0]?.position || 'PROFESSIONAL TITLE';
+
+            // Name
+            doc.setFont(FONT_HELVETICA, 'bold');
+            doc.setFontSize(32);
+            doc.text(personal.name || 'Your Name', margin, yPos);
+            yPos += 30;
+
+            // Professional Title
+            doc.setFont(FONT_HELVETICA, 'bold');
+            doc.setFontSize(10);
+            doc.text(professionalTitle.toUpperCase(), margin, yPos);
+            yPos += 15;
+
+            // Contact Info
+            const contactInfo = [personal.location, personal.phone, personal.email].filter(Boolean).join(' | ');
+            doc.setFont(FONT_HELVETICA, 'normal');
+            doc.setFontSize(10);
+            doc.text(contactInfo, margin, yPos);
+            yPos += 15;
+
+
+            // --- 2. OBJECTIVE / SUMMARY ---
+            if (data.summary) {
+                addSectionHeader('Summary');
+                addWrappedText(data.summary, {});
+            }
+
+            // --- 3. EXPERIENCE ---
+            if (data.experience && data.experience.length > 0) {
+                addSectionHeader('Experience');
+                data.experience.forEach(exp => {
+                    doc.setFont(FONT_HELVETICA, 'bold');
+                    doc.setFontSize(11);
+                    doc.setTextColor(COLOR_PRIMARY);
+
+                    // Title and Company on the left
+                    const titleCompany = `${exp.company || 'Company'} | ${exp.position || 'Position'}`;
+                    doc.text(titleCompany, margin, yPos);
+
+                    // Dates on the right
+                    doc.setFont(FONT_HELVETICA, 'normal');
+                    const dateText = exp.duration || '';
+                    const dateWidth = doc.getTextWidth(dateText);
+                    doc.text(dateText, pageWidth - margin - dateWidth, yPos);
+
+                    yPos += 20;
+
+                    // Responsibilities and Achievements
+                    const points = [...(exp.responsibilities || []), ...(exp.achievements || [])];
+                    points.forEach(point => {
+                        addWrappedText(`•   ${point}`, { x: margin + 10, maxWidth: pageWidth - margin * 2 - 10 });
+                        yPos += 5; // Extra space between bullet points
+                    });
+                    yPos += 15; // Space after the job entry
+                });
+            }
+
+            // --- 4. EDUCATION ---
+            if (data.education && data.education.length > 0) {
+                addSectionHeader('Education');
+                data.education.forEach(edu => {
+                    doc.setFont(FONT_HELVETICA, 'bold');
+                    doc.setFontSize(11);
+                    doc.setTextColor(COLOR_PRIMARY);
+
+                    // Institution and Degree on the left
+                    const institutionDegree = `${edu.institution || 'University'}, ${edu.degree || 'Degree'}`;
+                    doc.text(institutionDegree, margin, yPos);
+
+                    // Year on the right
+                    doc.setFont(FONT_HELVETICA, 'normal');
+                    const yearText = edu.year || '';
+                    const yearWidth = doc.getTextWidth(yearText);
+                    doc.text(yearText, pageWidth - margin - yearWidth, yPos);
+                    yPos += 15;
+
+                    // Major/Minor
+                    const majorMinorText = [
+                        edu.major ? `Major: ${edu.major}` : '',
+                        edu.minor ? `Minor: ${edu.minor}` : ''
+                    ].filter(Boolean).join(' | ');
+
+                    if (majorMinorText) {
+                        addWrappedText(majorMinorText, { fontSize: 10 });
+                    }
+                    yPos += 15;
+                });
+            }
+
+            // --- 5. SKILLS ---
+            const skills = data.skills || {};
+            const allSkills = [...(skills.technical || []), ...(skills.soft || [])];
+            if (allSkills.length > 0) {
+                addSectionHeader('Skills & abilities');
+                const skillColumns = { col1: [], col2: [], col3: [] };
+                allSkills.forEach((skill, i) => {
+                    if (i % 3 === 0) skillColumns.col1.push(`•   ${skill}`);
+                    else if (i % 3 === 1) skillColumns.col2.push(`•   ${skill}`);
+                    else skillColumns.col3.push(`•   ${skill}`);
+                });
+
+                const col1Text = skillColumns.col1.join('\n');
+                const col2Text = skillColumns.col2.join('\n');
+                const col3Text = skillColumns.col3.join('\n');
+
+                const colWidth = (pageWidth - margin * 2) / 3;
+                addWrappedText(col1Text, { maxWidth: colWidth });
+                // Reset Y position to draw columns side-by-side
+                yPos -= (skillColumns.col1.length * 10 * 1.5);
+                addWrappedText(col2Text, { x: margin + colWidth, maxWidth: colWidth });
+                yPos -= (skillColumns.col2.length * 10 * 1.5);
+                addWrappedText(col3Text, { x: margin + colWidth * 2, maxWidth: colWidth });
+            }
+
+            // --- SAVE THE PDF ---
+            const fileName = `${personal.name || 'Resume'}_Optimized.pdf`;
+            doc.save(fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
+        }
+
+        // --- UTILITY AND MOCK FUNCTIONS ---
+        function updateProgress(percentage) {
+            const fill = document.getElementById('progress-fill');
+            fill.style.width = percentage + '%';
+        }
+
+        function showTab(tabName, event) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            if (event) event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        document.getElementById('optimization-mode').addEventListener('change', function () {
+            document.getElementById('manual-section').style.display = this.value === 'manual' ? 'block' : 'none';
+        });
+
+        function displayResumeJson() {
+            document.getElementById('json-output').textContent = JSON.stringify(resumeData, null, 2);
+            document.getElementById('resume-json').style.display = 'block';
+        }
+
+        function editJson() {
+            const newJson = prompt("Edit your resume JSON:", JSON.stringify(resumeData, null, 2));
+            if (newJson) {
+                try {
+                    resumeData = JSON.parse(newJson);
+                    displayResumeJson();
+                    showNotification('✅ Resume JSON updated successfully!', 'success');
+                } catch (e) {
+                    showNotification('❌ Invalid JSON format.', 'warning');
+                }
+            }
+        }
+
+        function createMockResumeData(text) {
+            return {
+                personal: { name: "John Doe", email: "john.doe@email.com", phone: "+1-555-123-4567", location: "San Francisco, CA", linkedin: "linkedin.com/in/johndoe", github: "github.com/johndoe" },
+                summary: "Experienced professional with strong background in technology...",
+                experience: [{ company: "Tech Company Inc.", position: "Senior Software Engineer", duration: "2020 - Present", responsibilities: ["..."], achievements: ["..."] }],
+                skills: { technical: ["JavaScript", "Python", "React", "Node.js"], soft: ["Leadership", "Communication"] },
+                education: [{ degree: "B.S. in Computer Science", institution: "University of Technology", year: "2018" }],
+                projects: [{ name: "E-commerce Platform", description: "...", technologies: ["React", "Node.js"] }]
+            };
+        }
+
+        function createMockMatchAnalysis() {
+            return {
+                score: 78,
+                level: "good",
+                strengths: ["Strong technical skills alignment"],
+                weaknesses: ["Missing cloud platform experience"],
+                recommendations: ["Add examples of cloud technology usage"],
+                keywordsMissing: ["AWS", "Kubernetes"],
+                atsCompliance: { score: 88, feedback: ["Uses standard section headers.", "Avoid using tables or columns for better parsing."] },
+                skillGap: { hardSkills: ["Terraform", "CI/CD"], softSkills: ["Agile Methodology"] }
+            };
+        }
+
+        function displayMatchResult(analysis) {
+            document.getElementById('score-value').textContent = analysis.score;
+            const scoreDisplay = document.getElementById('score-display');
+            if (analysis.score >= 85) {
+                scoreDisplay.className = 'score-display excellent';
+                document.getElementById('score-description').textContent = 'Excellent Match! 🎉';
+            } else if (analysis.score >= 70) {
+                scoreDisplay.className = 'score-display good';
+                document.getElementById('score-description').textContent = 'Good Match! 👍';
+            } else {
+                scoreDisplay.className = 'score-display';
+                document.getElementById('score-description').textContent = 'Needs Improvement 📈';
+            }
+            let html = '';
+            html += '<div class="suggestion-item"><strong>💪 Strengths:</strong><ul>' + analysis.strengths.map(s => `<li>${s}</li>`).join('') + '</ul></div>';
+            html += '<div class="suggestion-item"><strong>⚠️ Areas for Improvement:</strong><ul>' + analysis.weaknesses.map(w => `<li>${w}</li>`).join('') + '</ul></div>';
+            html += '<div class="suggestion-item"><strong>💡 Recommendations:</strong><ul>' + analysis.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
+            if (analysis.keywordsMissing && analysis.keywordsMissing.length > 0) {
+                html += '<div class="suggestion-item"><strong>🔍 Missing Keywords:</strong><br>' + analysis.keywordsMissing.map(k => `<span class="skill-tag">${k}</span>`).join('') + '</div>';
+            }
+            document.getElementById('suggestions-content').innerHTML = html;
+            document.getElementById('match-result').style.display = 'block';
+        }
+
+        function displayAtsScore(ats) {
+            if (!ats) return;
+            const container = document.getElementById('ats-compliance-result');
+            const content = document.getElementById('ats-score-content');
+            let html = `<div class="ats-score-circle" style="--progress: ${ats.score * 3.6}deg">${ats.score}</div>`;
+            html += '<ul>' + ats.feedback.map(f => `<li style="margin-bottom: 10px;">${f}</li>`).join('') + '</ul>';
+            content.innerHTML = html;
+            container.style.display = 'block';
+        }
+
+        function displaySkillGap(gap) {
+            if (!gap) return;
+            const container = document.getElementById('skill-gap-result');
+            const content = document.getElementById('skill-gap-content');
+            let html = '';
+            if (gap.hardSkills && gap.hardSkills.length > 0) {
+                html += '<strong>Hard Skills to Add:</strong><div>' + gap.hardSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div><br/>';
+            }
+            if (gap.softSkills && gap.softSkills.length > 0) {
+                html += '<strong>Soft Skills to Emphasize:</strong><div>' + gap.softSkills.map(s => `<span class="skill-tag">${s}</span>`).join('') + '</div>';
+            }
+            content.innerHTML = html;
+            container.style.display = 'block';
+        }
+
+        function displayOptimizationResults(optimizationList) {
+            const container = document.getElementById('optimizations-container');
+            let html = '';
+            optimizationList.forEach((opt, index) => {
+                const originalContent = typeof opt.original === 'string' ? opt.original : JSON.stringify(opt.original, null, 2);
+                const optimizedContent = typeof opt.optimized === 'string' ? opt.optimized : JSON.stringify(opt.optimized, null, 2);
+
+                html += `<div class="optimization-card">
+            <div class="optimization-header">
+                <h4>📝 ${opt.section.charAt(0).toUpperCase() + opt.section.slice(1)}</h4>
+                <span class="optimization-badge">Optimized</span>
+            </div>
+            <p style="margin-top:10px;"><strong>🎯 Explanation:</strong> ${opt.explanation}</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:15px 0;">
+                <div><strong>Original:</strong><pre style="background:#fef2f2;border:1px solid #fca5a5;padding:10px;border-radius:8px;max-height:150px;overflow:auto;white-space:pre-wrap;">${originalContent}</pre></div>
+                <div><strong>Optimized:</strong><pre style="background:#f0fdf4;border:1px solid #86efac;padding:10px;border-radius:8px;max-height:150px;overflow:auto;white-space:pre-wrap;">${optimizedContent}</pre></div>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn secondary" style="width:auto;padding:8px 16px;" onclick="acceptOptimization(${index})">✅ Accept</button>
+                <button class="btn secondary" style="width:auto;padding:8px 16px;" onclick="rejectOptimization(${index})">❌ Reject</button>
+            </div>
+        </div>`;
+            });
+            container.innerHTML = html;
+            optimizations = optimizationList;
+            document.getElementById('optimization-results').style.display = 'block';
+        }
+
+        // REPLACE this entire function
+        function acceptOptimization(index) {
+            const opt = optimizations[index];
+            try {
+                let optimizedContent = opt.optimized;
+                // If the optimized content is a string that looks like an object/array, parse it.
+                if (typeof optimizedContent === 'string' && (optimizedContent.trim().startsWith('{') || optimizedContent.trim().startsWith('['))) {
+                    optimizedContent = JSON.parse(optimizedContent);
+                }
+
+                resumeData[opt.section] = optimizedContent;
+
+                displayResumeJson();
+                showNotification(`✅ ${opt.section} section updated!`, 'success');
+                optimizations[index].accepted = true;
+                document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+            } catch (e) {
+                console.error(e);
+                showNotification('❌ Error applying optimization. Please check JSON format.', 'warning');
+            }
+        }
+
+        function rejectOptimization(index) {
+            optimizations[index].rejected = true;
+            document.querySelector(`#optimizations-container .optimization-card:nth-child(${index + 1})`).style.opacity = '0.5';
+            showNotification('❌ Optimization rejected', 'info');
+        }
+
+        function acceptAllOptimizations() {
+            let count = 0;
+            optimizations.forEach(opt => {
+                if (!opt.accepted && !opt.rejected) {
+                    try {
+                        resumeData[opt.section] = typeof opt.optimized === 'string' ? opt.optimized : opt.optimized;
+                        count++;
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+            });
+            if (count > 0) {
+                displayResumeJson();
+                showNotification(`✅ Applied ${count} optimizations!`, 'success');
+            }
+        }
+
+        async function autoOptimizeAll() {
+            document.getElementById('optimization-mode').value = 'auto';
+            showTab('optimize');
+            setTimeout(() => startOptimization(), 300);
+        }
+
+        function exportResume() {
+            if (!resumeData) {
+                showNotification('⚠️ No resume data to export', 'warning');
+                return;
+            }
+            showLoading('📄 Generating professional PDF...');
+            try {
+                generateProfessionalPDF(resumeData);
+                hideLoading();
+                showNotification('📥 PDF exported successfully!', 'success');
+            } catch (e) {
+                console.error('Export error:', e);
+                hideLoading();
+                showNotification('❌ PDF export failed.', 'warning');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const n = document.createElement('div');
+            n.style.cssText = `position:fixed;top:20px;right:20px;background:${type === 'success' ? 'linear-gradient(135deg,#10b981,#059669)' : type === 'warning' ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#667eea,#764ba2)'};color:white;padding:15px 20px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.2);z-index:1000;max-width:300px;font-weight:600;animation:slideIn 0.3s ease;`;
+            const s = document.createElement('style');
+            s.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`;
+            document.head.appendChild(s);
+            n.textContent = message;
+            document.body.appendChild(n);
+            setTimeout(() => {
+                n.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => {
+                    n.remove();
+                    s.remove();
+                }, 300);
+            }, 4000);
+        }
+
+        function showLoading(message) {
+            const l = document.createElement('div');
+            l.id = 'loading-overlay';
+            l.innerHTML = `<div class="loading"><div class="spinner"></div><p>${message}</p></div>`;
+            l.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;`;
+            document.body.appendChild(l);
+        }
+
+        function hideLoading() {
+            const l = document.getElementById('loading-overlay');
+            if (l) l.remove();
+        }
+    </script>
+</body>
+
+</html>
