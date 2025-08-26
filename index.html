@@ -894,9 +894,7 @@
             const parsed = JSON.parse(jsonContent);
             resumeData = normalizeResumeData(parsed);
             
-            // Force update the textarea to show the normalized data
-            document.getElementById('resume-input').value = JSON.stringify(resumeData, null, 2);
-            
+                      
             displayResumeJson();
             hideLoading();
             showNotification('✅ JSON resume data loaded and normalized successfully!', 'success');
@@ -1471,6 +1469,9 @@ Return JSON with optimization details for this section only.`;
                     // Keep as string if JSON parsing fails
                 }
             }
+            if ((opt.section === 'experience' || opt.section === 'education' || opt.section === 'projects') && !Array.isArray(optimizedContent)) { //
+                optimizedContent = [optimizedContent]; // Wrap the single object in an array
+            }
 
             resumeData[opt.section] = optimizedContent;
             displayResumeJson();
@@ -1766,11 +1767,18 @@ Return JSON with optimization details for this section only.`;
         }
 
         // === EXPERIENCE SECTION ===
-        if (data.experience && data.experience.length > 0) {
+        if (data.experience && data.experience.length > 0) { //
             addSectionHeader('Experience');
-            data.experience.forEach(job => {
-                addJobEntry(job);
-            });
+    
+    // THE FIX: Check if data.experience is actually an array before looping
+            if (Array.isArray(data.experience)) { //
+                data.experience.forEach(job => { //
+                    addJobEntry(job);
+                });
+            } else if (typeof data.experience === 'object' && data.experience !== null) {
+        // If it's a single object, treat it as an array with one item
+                addJobEntry(data.experience);
+            }
         }
 
         // === EDUCATION SECTION ===
