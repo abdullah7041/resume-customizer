@@ -1,0 +1,969 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Upload, FileText, Target, Sparkles, Check, X, AlertCircle, Loader2, Download, Share2, Lock, ChevronRight, Shield, TrendingUp } from 'lucide-react';
+
+// API Configuration
+const API_BASE_URL = 'https://resume-customizing.ronaldinho1415.workers.dev';
+
+// Utility Functions
+const callAPI = async (endpoint, data, sessionToken = null) => {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (sessionToken) {
+    headers['Authorization'] = `Bearer ${sessionToken}`;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error (${response.status}): ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`API call failed for ${endpoint}:`, error);
+    throw error;
+  }
+};
+
+// Components
+const ProgressBar = ({ progress }) => (
+  <div className="h-1 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full overflow-hidden">
+    <div 
+      className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-500 shadow-lg shadow-purple-600/20"
+      style={{ width: `${progress}%` }}
+    />
+  </div>
+);
+
+const LoadingOverlay = ({ message }) => (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4">
+      <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
+      <p className="text-gray-700 font-medium">{message}</p>
+    </div>
+  </div>
+);
+
+const Notification = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+  const icon = type === 'success' ? <Check /> : type === 'error' ? <X /> : <AlertCircle />;
+
+  return (
+    <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-xl shadow-xl z-50 flex items-center space-x-3 animate-slide-in`}>
+      {icon}
+      <span className="font-medium">{message}</span>
+    </div>
+  );
+};
+
+const TabButton = ({ active, onClick, children, icon }) => (
+  <button
+    onClick={onClick}
+    className={`
+      relative px-6 py-4 font-semibold transition-all duration-300
+      ${active 
+        ? 'text-purple-700 bg-white/90 shadow-lg transform -translate-y-0.5' 
+        : 'text-gray-600 hover:text-gray-800 hover:bg-white/50'
+      }
+    `}
+  >
+    <div className="flex items-center justify-center space-x-2">
+      {icon}
+      <span>{children}</span>
+    </div>
+    {active && (
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-pink-600" />
+    )}
+  </button>
+);
+
+const ScoreDisplay = ({ score, level }) => {
+  const getColorClass = () => {
+    if (score >= 85) return 'from-green-500 to-emerald-600';
+    if (score >= 70) return 'from-yellow-500 to-orange-600';
+    return 'from-red-500 to-rose-600';
+  };
+
+  const getDescription = () => {
+    if (score >= 85) return 'Excellent Match! 🎉';
+    if (score >= 70) return 'Good Match! 👍';
+    return 'Needs Improvement 📈';
+  };
+
+  return (
+    <div className={`bg-gradient-to-br ${getColorClass()} text-white p-8 rounded-2xl shadow-2xl text-center relative overflow-hidden`}>
+      <div className="absolute inset-0 bg-white/10 animate-pulse" />
+      <div className="relative z-10">
+        <div className="text-6xl font-bold mb-2">{score}</div>
+        <div className="text-xl opacity-95">{getDescription()}</div>
+      </div>
+    </div>
+  );
+};
+
+const SkillTag = ({ skill, matched = false }) => (
+  <span className={`
+    inline-block px-3 py-1 rounded-lg text-sm font-medium m-1
+    ${matched 
+      ? 'bg-green-100 text-green-800 border border-green-300' 
+      : 'bg-gray-100 text-gray-700 border border-gray-300'
+    }
+  `}>
+    {skill}
+  </span>
+);
+
+const OptimizationCard = ({ optimization, onAccept, onReject, index }) => (
+  <div className="bg-white/90 backdrop-blur rounded-xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
+    <div className="flex justify-between items-center mb-4">
+      <h4 className="text-lg font-bold text-gray-800 flex items-center space-x-2">
+        <FileText className="w-5 h-5 text-purple-600" />
+        <span>{optimization.section.charAt(0).toUpperCase() + optimization.section.slice(1)}</span>
+      </h4>
+      <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+        OPTIMIZED
+      </span>
+    </div>
+    
+    <p className="text-gray-600 mb-4">
+      <strong className="text-purple-600">Improvement:</strong> {optimization.explanation}
+    </p>
+    
+    <div className="grid md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label className="text-sm font-semibold text-gray-700">Original:</label>
+        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+            {typeof optimization.original === 'string' 
+              ? optimization.original 
+              : JSON.stringify(optimization.original, null, 2)}
+          </pre>
+        </div>
+      </div>
+      <div>
+        <label className="text-sm font-semibold text-gray-700">Optimized:</label>
+        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+            {typeof optimization.optimized === 'string' 
+              ? optimization.optimized 
+              : JSON.stringify(optimization.optimized, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </div>
+    
+    <div className="flex justify-end space-x-3">
+      <button
+        onClick={() => onReject(index)}
+        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors duration-200"
+      >
+        <X className="w-4 h-4 inline mr-1" /> Reject
+      </button>
+      <button
+        onClick={() => onAccept(index)}
+        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+      >
+        <Check className="w-4 h-4 inline mr-1" /> Accept
+      </button>
+    </div>
+  </div>
+);
+
+const PremiumFeature = ({ title, description, icon }) => (
+  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 relative overflow-hidden">
+    <div className="absolute top-2 right-2">
+      <Lock className="w-5 h-5 text-purple-600" />
+    </div>
+    <div className="flex items-start space-x-4">
+      <div className="text-purple-600">{icon}</div>
+      <div className="flex-1">
+        <h4 className="font-bold text-gray-800 mb-1">{title}</h4>
+        <p className="text-gray-600 text-sm">{description}</p>
+      </div>
+    </div>
+  </div>
+);
+
+// Main App Component
+export default function ResumeOptimizer() {
+  // State Management
+  const [activeTab, setActiveTab] = useState('resume');
+  const [progress, setProgress] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [notification, setNotification] = useState(null);
+  
+  // User & Session State
+  const [user, setUser] = useState(null);
+  const [sessionToken, setSessionToken] = useState(null);
+  const [isPremium, setIsPremium] = useState(false);
+  
+  // Resume Data State
+  const [resumeText, setResumeText] = useState('');
+  const [resumeData, setResumeData] = useState(null);
+  const [jobDescription, setJobDescription] = useState('');
+  const [matchAnalysis, setMatchAnalysis] = useState(null);
+  const [optimizations, setOptimizations] = useState([]);
+  const [savedResumes, setSavedResumes] = useState([]);
+  
+  // Settings State
+  const [optimizationMode, setOptimizationMode] = useState('auto');
+  const [selectedSection, setSelectedSection] = useState('summary');
+
+  // Notification Handler
+  const showNotification = useCallback((message, type = 'info') => {
+    setNotification({ message, type });
+  }, []);
+
+  // File Upload Handler
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+    setLoadingMessage(`Uploading and parsing ${file.name}...`);
+
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload-and-parse`, {
+        method: 'POST',
+        body: formData,
+        headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setResumeData(data.resume_data || data);
+      setProgress(35);
+      showNotification('Resume uploaded and parsed successfully!', 'success');
+    } catch (error) {
+      showNotification(`Upload failed: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Parse Resume Text
+  const parseResume = async () => {
+    if (!resumeText.trim()) {
+      showNotification('Please enter your resume text', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setLoadingMessage('AI is parsing your resume...');
+
+    try {
+      const requestData = {
+        resume_input: {
+          type: 'text',
+          content: resumeText
+        },
+        user_id: user?.id,
+        session_token: sessionToken
+      };
+
+      const response = await callAPI('parse', requestData, sessionToken);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      setResumeData(response.resume_data || response);
+      setProgress(35);
+      showNotification('Resume parsed successfully!', 'success');
+      
+      // Save to profile if logged in
+      if (user && sessionToken) {
+        await saveResume(response.resume_data || response);
+      }
+    } catch (error) {
+      showNotification(`Parsing failed: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Analyze Job Match
+  const analyzeMatch = async () => {
+    if (!resumeData || !jobDescription) {
+      showNotification('Please provide both resume and job description', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setLoadingMessage('Analyzing job compatibility...');
+
+    try {
+      const requestData = {
+        resume_data: resumeData,
+        job_description: jobDescription,
+        user_id: user?.id,
+        session_token: sessionToken
+      };
+
+      const response = await callAPI('analyze', requestData, sessionToken);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      setMatchAnalysis(response);
+      setProgress(70);
+      showNotification('Analysis complete!', 'success');
+      setActiveTab('job');
+    } catch (error) {
+      showNotification(`Analysis failed: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Optimize Resume
+  const optimizeResume = async () => {
+    if (!resumeData || !matchAnalysis) {
+      showNotification('Please complete analysis first', 'error');
+      return;
+    }
+
+    if (!isPremium) {
+      showNotification('Premium feature - Please upgrade to continue', 'info');
+      return;
+    }
+
+    setLoading(true);
+    setLoadingMessage('AI is optimizing your resume...');
+
+    try {
+      const requestData = {
+        resume_data: resumeData,
+        job_description: jobDescription,
+        analysis: matchAnalysis,
+        mode: optimizationMode,
+        section: optimizationMode === 'manual' ? selectedSection : null,
+        user_id: user?.id,
+        session_token: sessionToken
+      };
+
+      const response = await callAPI('optimize', requestData, sessionToken);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      setOptimizations(response.optimized_sections || []);
+      setProgress(100);
+      showNotification('Optimization complete!', 'success');
+    } catch (error) {
+      showNotification(`Optimization failed: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Accept Optimization
+  const acceptOptimization = (index) => {
+    const opt = optimizations[index];
+    const updatedResumeData = { ...resumeData };
+    updatedResumeData[opt.section] = opt.after || opt.optimized;
+    setResumeData(updatedResumeData);
+    
+    const updatedOptimizations = [...optimizations];
+    updatedOptimizations[index].accepted = true;
+    setOptimizations(updatedOptimizations);
+    
+    showNotification(`${opt.section} section updated!`, 'success');
+  };
+
+  // Reject Optimization
+  const rejectOptimization = (index) => {
+    const updatedOptimizations = [...optimizations];
+    updatedOptimizations[index].rejected = true;
+    setOptimizations(updatedOptimizations);
+    showNotification('Optimization rejected', 'info');
+  };
+
+  // Accept All Optimizations
+  const acceptAllOptimizations = () => {
+    const updatedResumeData = { ...resumeData };
+    optimizations.forEach(opt => {
+      if (!opt.accepted && !opt.rejected) {
+        updatedResumeData[opt.section] = opt.after || opt.optimized;
+      }
+    });
+    setResumeData(updatedResumeData);
+    showNotification('All optimizations applied!', 'success');
+  };
+
+  // Export Resume
+  const exportResume = async () => {
+    if (!resumeData) {
+      showNotification('No resume data to export', 'error');
+      return;
+    }
+
+    if (!isPremium) {
+      showNotification('Premium feature - Please upgrade to export', 'info');
+      return;
+    }
+
+    setLoading(true);
+    setLoadingMessage('Generating PDF...');
+
+    try {
+      const requestData = {
+        resume_data: resumeData,
+        format: 'pdf',
+        user_id: user?.id,
+        session_token: sessionToken
+      };
+
+      const response = await callAPI('export', requestData, sessionToken);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Handle PDF download
+      if (response.export_pdf_url) {
+        window.open(response.export_pdf_url, '_blank');
+      }
+      
+      showNotification('Resume exported successfully!', 'success');
+    } catch (error) {
+      showNotification(`Export failed: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save Resume to Profile
+  const saveResume = async (data) => {
+    if (!user || !sessionToken) return;
+
+    try {
+      const requestData = {
+        resume_data: data,
+        user_id: user.id,
+        session_token: sessionToken
+      };
+
+      await callAPI('save-resume', requestData, sessionToken);
+      await loadSavedResumes();
+    } catch (error) {
+      console.error('Failed to save resume:', error);
+    }
+  };
+
+  // Load Saved Resumes
+  const loadSavedResumes = async () => {
+    if (!user || !sessionToken) return;
+
+    try {
+      const response = await callAPI('get-saved-resumes', {
+        user_id: user.id,
+        session_token: sessionToken
+      }, sessionToken);
+
+      if (response.profile?.saved_resumes) {
+        setSavedResumes(response.profile.saved_resumes);
+      }
+    } catch (error) {
+      console.error('Failed to load saved resumes:', error);
+    }
+  };
+
+  // Share Resume
+  const shareResume = async () => {
+    if (!resumeData || !isPremium) {
+      showNotification('Premium feature required', 'info');
+      return;
+    }
+
+    try {
+      const requestData = {
+        resume_data: resumeData,
+        user_id: user?.id,
+        session_token: sessionToken
+      };
+
+      const response = await callAPI('share', requestData, sessionToken);
+      
+      if (response.share_link) {
+        navigator.clipboard.writeText(response.share_link);
+        showNotification('Share link copied to clipboard!', 'success');
+      }
+    } catch (error) {
+      showNotification(`Sharing failed: ${error.message}`, 'error');
+    }
+  };
+
+  // Mock Login (for demo)
+  const mockLogin = () => {
+    setUser({ id: 'demo-user-123', name: 'John Doe', email: 'john@example.com' });
+    setSessionToken('demo-session-token');
+    setIsPremium(false);
+    showNotification('Logged in successfully!', 'success');
+  };
+
+  const upgradeToPremium = () => {
+    setIsPremium(true);
+    showNotification('Upgraded to Premium! All features unlocked.', 'success');
+  };
+
+  // Check API Health on Mount
+  useEffect(() => {
+    const checkAPI = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        if (response.ok) {
+          console.log('API service connected');
+        }
+      } catch (error) {
+        console.error('API service unavailable:', error);
+      }
+    };
+    checkAPI();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 p-4">
+      {loading && <LoadingOverlay message={loadingMessage} />}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="bg-white/95 backdrop-blur-xl rounded-t-3xl shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-white/10 animate-pulse" />
+            <div className="relative z-10">
+              <h1 className="text-4xl font-bold mb-3 flex items-center justify-center">
+                <Sparkles className="mr-3" />
+                AI Resume Optimizer
+              </h1>
+              <p className="text-center text-lg opacity-95">Transform your resume with AI-powered insights</p>
+              
+              {/* User Info Bar */}
+              <div className="mt-6 flex justify-between items-center">
+                <div className="flex items-center space-x-4">
+                  {user ? (
+                    <div className="flex items-center space-x-2 bg-white/20 px-4 py-2 rounded-lg">
+                      <span className="text-sm">Welcome, {user.name}</span>
+                      {isPremium && (
+                        <span className="bg-yellow-400 text-purple-900 px-2 py-1 rounded text-xs font-bold">
+                          PREMIUM
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={mockLogin}
+                      className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors duration-200"
+                    >
+                      Sign In
+                    </button>
+                  )}
+                </div>
+                {user && !isPremium && (
+                  <button
+                    onClick={upgradeToPremium}
+                    className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    Upgrade to Premium
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="px-8 py-4">
+            <ProgressBar progress={progress} />
+          </div>
+
+          {/* Tabs */}
+          <div className="grid grid-cols-3 bg-gray-50/90 backdrop-blur border-b border-gray-200">
+            <TabButton
+              active={activeTab === 'resume'}
+              onClick={() => setActiveTab('resume')}
+              icon={<FileText className="w-5 h-5" />}
+            >
+              Resume
+            </TabButton>
+            <TabButton
+              active={activeTab === 'job'}
+              onClick={() => setActiveTab('job')}
+              icon={<Target className="w-5 h-5" />}
+            >
+              Match
+            </TabButton>
+            <TabButton
+              active={activeTab === 'optimize'}
+              onClick={() => setActiveTab('optimize')}
+              icon={<Sparkles className="w-5 h-5" />}
+            >
+              Optimize
+            </TabButton>
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-8 bg-white/70 backdrop-blur min-h-[600px]">
+            {/* Resume Tab */}
+            {activeTab === 'resume' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-lg font-semibold text-gray-800 mb-4">
+                    📄 Upload or Paste Your Resume
+                  </label>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="flex items-center justify-center space-x-2 w-full px-6 py-4 bg-white border-2 border-dashed border-purple-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 cursor-pointer"
+                      >
+                        <Upload className="w-5 h-5 text-purple-600" />
+                        <span className="font-medium text-gray-700">Upload Resume File</span>
+                      </label>
+                    </div>
+                    
+                    <textarea
+                      value={resumeText}
+                      onChange={(e) => setResumeText(e.target.value)}
+                      className="w-full h-64 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 resize-none"
+                      placeholder="Or paste your resume text here..."
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={parseResume}
+                  className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <FileText className="inline mr-2" />
+                  Process Resume
+                </button>
+
+                {resumeData && (
+                  <div className="bg-gray-900 text-gray-100 p-6 rounded-xl">
+                    <h3 className="text-lg font-semibold mb-3 text-purple-400">Structured Resume Data</h3>
+                    <pre className="text-sm overflow-auto max-h-96">
+                      {JSON.stringify(resumeData, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Saved Resumes Section */}
+                {user && savedResumes.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">📚 Saved Resumes</h3>
+                    <div className="space-y-3">
+                      {savedResumes.map((resume) => (
+                        <div key={resume.resume_id} className="bg-white p-4 rounded-lg border border-gray-200 hover:border-purple-300 transition-colors duration-200">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-gray-800">{resume.resume_data.name || 'Untitled Resume'}</p>
+                              <p className="text-sm text-gray-500">Saved on {new Date(resume.date_saved).toLocaleDateString()}</p>
+                            </div>
+                            <button
+                              onClick={() => setResumeData(resume.resume_data)}
+                              className="text-purple-600 hover:text-purple-700 font-medium"
+                            >
+                              Load
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Job Match Tab */}
+            {activeTab === 'job' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-lg font-semibold text-gray-800 mb-4">
+                    💼 Job Description
+                  </label>
+                  <textarea
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 resize-none"
+                    placeholder="Paste the complete job description here..."
+                  />
+                </div>
+
+                <button
+                  onClick={analyzeMatch}
+                  className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Target className="inline mr-2" />
+                  Analyze Match Score
+                </button>
+
+                {matchAnalysis && (
+                  <div className="space-y-6">
+                    <ScoreDisplay score={matchAnalysis.compliance_score || 0} />
+
+                    {/* Skills Match */}
+                    <div className="bg-white/80 backdrop-blur rounded-xl p-6 shadow-lg">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
+                        Skills Analysis
+                      </h3>
+                      <div className="space-y-4">
+                        {matchAnalysis.skills_match?.map((skill, idx) => (
+                          <div key={idx} className="flex items-center justify-between">
+                            <SkillTag skill={skill.skill} matched={skill.matched} />
+                            {!skill.matched && skill.gap_reason && (
+                              <span className="text-sm text-gray-500">{skill.gap_reason}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Phrasing Tips */}
+                    <div className="bg-white/80 backdrop-blur rounded-xl p-6 shadow-lg">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <AlertCircle className="w-5 h-5 mr-2 text-purple-600" />
+                        Improvement Suggestions
+                      </h3>
+                      <div className="space-y-3">
+                        {matchAnalysis.phrasing_tips?.map((tip, idx) => (
+                          <div key={idx} className="flex items-start space-x-3">
+                            <ChevronRight className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <p className="text-gray-700">{tip}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Premium Features Preview */}
+                    {!isPremium && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">🔒 Premium Features</h3>
+                        <PremiumFeature
+                          icon={<Sparkles className="w-6 h-6" />}
+                          title="Auto-Optimize All Sections"
+                          description="AI automatically rewrites weak sections for maximum impact"
+                        />
+                        <PremiumFeature
+                          icon={<Download className="w-6 h-6" />}
+                          title="Professional PDF Export"
+                          description="Generate ATS-friendly PDFs with optimized formatting"
+                        />
+                        <PremiumFeature
+                          icon={<Share2 className="w-6 h-6" />}
+                          title="Share & Collaborate"
+                          description="Get shareable links and collaborate with mentors"
+                        />
+                      </div>
+                    )}
+
+                    {isPremium && (
+                      <button
+                        onClick={() => {
+                          setActiveTab('optimize');
+                          setOptimizationMode('auto');
+                        }}
+                        className="w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Sparkles className="inline mr-2" />
+                        Auto-Optimize All Weak Sections
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Optimize Tab */}
+            {activeTab === 'optimize' && (
+              <div className="space-y-6">
+                {!isPremium ? (
+                  <div className="text-center py-12">
+                    <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">Premium Feature</h3>
+                    <p className="text-gray-600 mb-6">Unlock AI-powered optimization to transform your resume</p>
+                    <button
+                      onClick={upgradeToPremium}
+                      className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      Upgrade to Premium
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-xl p-6">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-3" />
+                        AI Auto-Optimization Engine
+                      </h3>
+                      <p className="text-gray-600">
+                        AI will automatically identify and improve weak sections of your resume based on the job match analysis.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-lg font-semibold text-gray-800 mb-4">
+                        🎯 Optimization Mode
+                      </label>
+                      <select
+                        value={optimizationMode}
+                        onChange={(e) => setOptimizationMode(e.target.value)}
+                        className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
+                        <option value="manual">✋ Manual (Choose specific section)</option>
+                      </select>
+                    </div>
+
+                    {optimizationMode === 'manual' && (
+                      <div>
+                        <label className="block text-lg font-semibold text-gray-800 mb-4">
+                          Section to Optimize
+                        </label>
+                        <select
+                          value={selectedSection}
+                          onChange={(e) => setSelectedSection(e.target.value)}
+                          className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
+                        >
+                          <option value="summary">📝 Professional Summary</option>
+                          <option value="experience">💼 Work Experience</option>
+                          <option value="skills">🛠️ Skills</option>
+                          <option value="education">🎓 Education</option>
+                        </select>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={optimizeResume}
+                      className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Sparkles className="inline mr-2" />
+                      Start AI Optimization
+                    </button>
+
+                    {optimizations.length > 0 && (
+                      <div className="space-y-6">
+                        <h3 className="text-xl font-bold text-gray-800">✨ Optimization Results</h3>
+                        
+                        <div className="space-y-4">
+                          {optimizations.map((opt, idx) => (
+                            <OptimizationCard
+                              key={idx}
+                              optimization={opt}
+                              onAccept={acceptOptimization}
+                              onReject={rejectOptimization}
+                              index={idx}
+                            />
+                          ))}
+                        </div>
+
+                        <div className="flex space-x-4">
+                          <button
+                            onClick={acceptAllOptimizations}
+                            className="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                          >
+                            <Check className="inline mr-2" />
+                            Accept All Changes
+                          </button>
+                          <button
+                            onClick={exportResume}
+                            className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                          >
+                            <Download className="inline mr-2" />
+                            Export Professional PDF
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={shareResume}
+                          className="w-full py-4 bg-white border-2 border-purple-300 hover:border-purple-500 text-purple-700 font-semibold rounded-xl transition-all duration-200"
+                        >
+                          <Share2 className="inline mr-2" />
+                          Share Resume Link
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-white/95 backdrop-blur-xl rounded-b-3xl shadow-2xl p-6 mt-1">
+          <div className="flex flex-wrap justify-between items-center text-sm text-gray-600">
+            <div className="flex items-center space-x-4">
+              <a href="#" className="hover:text-purple-600 transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-purple-600 transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-purple-600 transition-colors">Support</a>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Shield className="w-4 h-4 text-green-600" />
+              <span>Your data is encrypted and secure</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Add custom styles for animations */}
+      <style jsx>{`
+        @keyframes slide-in {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `}</style>
+    </div>
+  );
+}
