@@ -198,7 +198,7 @@ const PremiumFeature = ({ title, description, icon }) => (
 );
 
 // Main App Component
-export default function ResumeOptimizer() {
+export default function App() {
   // State Management
   const [activeTab, setActiveTab] = useState('resume');
   const [progress, setProgress] = useState(0);
