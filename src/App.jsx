@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, FileText, Target, Sparkles, Check, X, AlertCircle, Loader2, Download, Share2, Lock, ChevronRight, Shield, TrendingUp } from 'lucide-react';
 
 // API Configuration
-const API_BASE_URL = 'https://resume-customizing.ronaldinho1415.workers.dev';
+const API_BASE_URL = import.meta.env.VITE_WORKER_URL;
 
 // Utility Functions
 const callAPI = async (endpoint, data, sessionToken = null) => {
