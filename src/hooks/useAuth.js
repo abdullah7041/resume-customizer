@@ -1,48 +1,64 @@
 // src/hooks/useAuth.js
-import { useState, useEffect } from 'react';
-// Note: We will set up the supabase client in a separate file later.
-// For now, this hook prepares the structure for authentication.
+import { useState, useEffect, createContext, useContext } from 'react';
+import { supabase } from '../services/supabase.js';
 
-/**
- * A custom React hook to manage user authentication state.
- * This will be responsible for tracking the current user, session,
- * and whether they are a premium member.
- *
- * @returns {object} - An object containing user, session, isPremium, and loading status.
- */
-export const useAuth = () => {
+// Create a context to hold the authentication data.
+// This allows any component in the app to access the user's auth state.
+const AuthContext = createContext();
+
+// The AuthProvider component wraps your application and provides the auth context.
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [isPremium, setIsPremium] = useState(false);
-  const [loading, setLoading] = useState(true); // Start as true to check auth state on load
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a future step, we will add the Supabase listener here
-    // to automatically update the auth state when the user logs in or out.
-    // For example: const { data: { subscription } } = supabase.auth.onAuthStateChange(...)
+    // Check for an active session when the component mounts.
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      setLoading(false);
+    };
     
-    // For now, we just simulate the loading process finishing.
-    setLoading(false);
+    getSession();
 
-    // Mock functions for demonstration until Supabase is fully wired up.
-    const mockLogin = () => {
-      setUser({ id: 'demo-user-123', name: 'John Doe', email: 'john@example.com' });
-      setSession('demo-session-token');
-      setIsPremium(false); // Default to non-premium on login
-    };
-
-    const upgradeToPremium = () => {
-      if (user) {
-        setIsPremium(true);
+    // Set up a listener for authentication state changes (login, logout).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        // We will add logic here later to check the user_profiles table for premium status.
       }
+    );
+
+    // Clean up the listener when the component unmounts.
+    return () => {
+      subscription?.unsubscribe();
     };
-
-    // We will replace these mocks with real Supabase calls.
-    // window.mockLogin = mockLogin;
-    // window.upgradeToPremium = upgradeToPremium;
-
   }, []);
 
-  // The hook returns the current authentication state, which can be used by any component.
-  return { user, session, isPremium, loading };
+  // The value provided to the context includes the auth state and helper functions.
+  const value = {
+    user,
+    session,
+    isPremium,
+    loading,
+    signInWithGoogle: () => supabase.auth.signInWithOAuth({ provider: 'google' }),
+    signOut: () => supabase.auth.signOut(),
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
+
+// The useAuth hook is a simple wrapper to consume the AuthContext.
+// This is the hook that components will use to get auth data.
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
