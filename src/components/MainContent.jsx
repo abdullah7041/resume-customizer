@@ -2,9 +2,9 @@
 import React, { useState, useCallback } from 'react';
 import { FileText, Target, Sparkles, Loader2, Check, X, AlertCircle, LogIn } from 'lucide-react';
 
-// FIXED: Switched to relative paths to resolve compilation errors.
-import { callApi } from '../../services/api.js';
-import { useAuth } from '../../hooks/useAuth.js';
+// CORRECTED: These relative paths assume MainContent.jsx is inside 'src/components/'
+import { callApi } from '../services/api.js';
+import { useAuth } from '../hooks/useAuth.js';
 import ResumeUpload from './Features/ResumeUpload.jsx';
 import JobMatch from './Features/JobMatch.jsx';
 import Optimization from './Features/Optimization.jsx';
