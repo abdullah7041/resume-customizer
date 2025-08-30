@@ -1,4 +1,7 @@
-import { createClient } from '../services/supabase.js';
+// src/services/supabase.js
+
+// FIXED: Import `createClient` from the official Supabase library, not from itself.
+import { createClient } from '@supabase/supabase-js';
 
 // Get Supabase credentials from environment variables.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -12,3 +15,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Create and export the Supabase client instance.
 // This single instance will be used throughout the application.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
