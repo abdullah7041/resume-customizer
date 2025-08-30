@@ -4,10 +4,10 @@ import { FileText, Target, Sparkles, Loader2, Check, X, AlertCircle, LogIn } fro
 
 // CORRECTED: These relative paths assume MainContent.jsx is inside 'src/components/'
 import { callApi } from '../services/api.js';
-import { useAuth } from '../hooks/useAuth.js';
-import ResumeUpload from './Features/ResumeUpload.jsx';
-import JobMatch from './Features/JobMatch.jsx';
-import Optimization from './Features/Optimization.jsx';
+import { useAuth } from '../hooks/useAuth.jsx';
+import ResumeUpload from '../features/ResumeUpload.jsx';
+import JobMatch from '../features/JobMatch.jsx';
+import Optimization from '../features/Optimization.jsx';
 
 
 // --- Reusable UI Components ---

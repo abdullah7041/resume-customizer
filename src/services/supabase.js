@@ -1,5 +1,4 @@
-// src/services/supabase.js
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '../services/supabase.js';
 
 // Get Supabase credentials from environment variables.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
