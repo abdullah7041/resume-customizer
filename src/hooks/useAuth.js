@@ -1,9 +1,9 @@
 // src/hooks/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
-import { supabase } from '../services/supabase.js';
+// FIXED: Updated import to use the '@' alias.
+import { supabase } from '@/services/supabase.js';
 
 // Create a context to hold the authentication data.
-// This allows any component in the app to access the user's auth state.
 const AuthContext = createContext();
 
 // The AuthProvider component wraps your application and provides the auth context.
@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }) => {
       (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        // We will add logic here later to check the user_profiles table for premium status.
       }
     );
 
@@ -39,7 +38,6 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // The value provided to the context includes the auth state and helper functions.
   const value = {
     user,
     session,
@@ -57,7 +55,6 @@ export const AuthProvider = ({ children }) => {
 };
 
 // The useAuth hook is a simple wrapper to consume the AuthContext.
-// This is the hook that components will use to get auth data.
 export const useAuth = () => {
   return useContext(AuthContext);
 };
