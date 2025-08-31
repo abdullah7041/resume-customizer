@@ -1,4 +1,5 @@
 import './App.css';
+import React from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import Header from './components/Layout/Header.jsx';
 import Footer from './components/Layout/Footer.jsx';
@@ -17,20 +18,20 @@ const App = () => {
       </div>
     );
   }
-
+  
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Header />
-      {/* The main content area grows to fill available space */}
-      <main className="p-4 flex-grow">
-        <MainContent />
-      </main>
-      <Footer />
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 p-4">
+      <div className="flex flex-col min-h-[calc(100vh-2rem)]">
+        <Header />
+        <main className="flex-grow my-4">
+          <MainContent />
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 };
 
-// The wrapper provides the auth context to the entire app.
 export default function AppWrapper() {
   return (
     <AuthProvider>
