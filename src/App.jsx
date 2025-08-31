@@ -1,6 +1,4 @@
-// src/App.jsx
-import React from 'react';
-// Updated imports to use relative paths
+import './App.css';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import Header from './components/Layout/Header.jsx';
 import Footer from './components/Layout/Footer.jsx';
@@ -40,4 +38,5 @@ export default function AppWrapper() {
     </AuthProvider>
   );
 }
+
 
