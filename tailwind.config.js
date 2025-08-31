@@ -6,9 +6,12 @@ module.exports = {
     "./src/components/**/*.{js,jsx,ts,tsx}",
     "./src/features/**/*.{js,jsx,ts,tsx}",
     "./src/services/**/*.{js,jsx,ts,tsx}",
+    "./index.html"
   ],
   theme: {
     extend: {},
   },
   plugins: [],
+  
+  corePlugins: { preflight: true }
 }
