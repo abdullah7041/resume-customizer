@@ -1,7 +1,7 @@
 // src/components/Layout/Header.jsx
 import React from 'react';
-// FIXED: The import path now uses the '@' alias for a direct, stable path.
-import { useAuth } from '@/hooks/useAuth.jsx';
+// FIXED: Changed the broken '@/' alias to the correct relative path.
+import { useAuth } from '../../hooks/useAuth.jsx';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -30,4 +30,3 @@ const Header = () => {
 };
 
 export default Header;
-

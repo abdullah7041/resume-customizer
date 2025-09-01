@@ -1,15 +1,15 @@
-import './App.css';
+// FIXED: Removed the import for the conflicting App.css file.
+// import './App.css'; 
 import React from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import Header from './components/Layout/Header.jsx';
 import Footer from './components/Layout/Footer.jsx';
 import MainContent from './components/MainContent.jsx';
-import { Loader2 } from 'lucide-react'; // Import loader icon
+import { Loader2 } from 'lucide-react';
 
 const App = () => {
   const { loading } = useAuth();
 
-  // Show a global spinner while Supabase is checking the session on initial load.
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
@@ -39,5 +39,3 @@ export default function AppWrapper() {
     </AuthProvider>
   );
 }
-
-
