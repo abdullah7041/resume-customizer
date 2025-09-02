@@ -7,11 +7,11 @@ const Header = () => {
   const { user, signOut } = useAuth();
 
   return (
-    <header className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 shadow-md">
+    <header className="bg-gradient-to-r from-primary to-secondary text-white p-6">
       <div className="max-w-6xl mx-auto flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">AI Resume Optimizer</h1>
-          <p className="text-md opacity-90 mt-1">Your career co-pilot.</p>
+          <p className="text-md opacity-90 mt-1">By Abdullah bin ahmed.</p>
         </div>
         {user && (
           <div className="flex items-center space-x-4">
