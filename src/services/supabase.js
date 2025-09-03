@@ -1,18 +1,15 @@
-// src/services/supabase.js
+// src/services/auth.ts
+import { supabase } from "./supabaseClient"
 
-// FIXED: Import `createClient` from the official Supabase library, not from itself.
-import { createClient } from '@supabase/supabase-js';
-
-// Get Supabase credentials from environment variables.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Check if the environment variables are set.
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase URL and Anon Key must be provided in your .env file.");
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: import.meta.env.DEV
+        ? "http://localhost:5173/"
+        : "https://resume-optimizing.netlify.app/"
+    }
+  })
+  if (error) throw error
+  return data
 }
-
-// Create and export the Supabase client instance.
-// This single instance will be used throughout the application.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
