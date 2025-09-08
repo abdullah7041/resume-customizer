@@ -1,15 +1,7 @@
-// src/services/auth.ts
-import { supabase } from "./supabaseClient"
+// src/services/supabase.js
+import { createClient } from "@supabase/supabase-js";
 
-export const signInWithGoogle = async () => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: import.meta.env.DEV
-        ? "http://localhost:5173/"
-        : "https://resume-optimizing.netlify.app/"
-    }
-  })
-  if (error) throw error
-  return data
-}
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
