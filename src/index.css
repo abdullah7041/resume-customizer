@@ -1,11 +1,19 @@
 @import "tailwindcss";
 
+/* Saudi green + gold */
+@theme {
+  --color-primary: #006C35; /* Saudi green */
+  --color-secondary: #F5A623; /* gold */
+}
+
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-xl font-medium transition;
+    @apply px-4 py-2 rounded-lg font-medium shadow-sm transition
+           text-white bg-[#006C35] hover:bg-[#00522A];
   }
 
-  .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary/90;
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium shadow-sm transition
+           text-white bg-[#F5A623] hover:bg-[#D4881F];
   }
 }

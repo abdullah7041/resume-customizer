@@ -1,54 +1,45 @@
-// src/hooks/useAuth.jsx
-import { useState, useEffect, createContext, useContext } from 'react';
-// FIXED: Changed the broken '@/' alias to the correct relative path.
-import { supabase } from '../services/supabase.js';
+import { useEffect, useState, createContext, useContext } from "react";
+import { supabase } from "../services/supabase";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
-  const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
       setLoading(false);
-    };
-    
-    getSession();
+    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-    );
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      setLoading(false);
+    });
 
     return () => {
-      subscription?.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
-  const value = {
-    user,
-    session,
-    isPremium,
-    loading,
-    signInWithGoogle: () => supabase.auth.signInWithOAuth({ provider: 'google' }),
-    signOut: () => supabase.auth.signOut(),
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+    if (error) console.error("Google login error:", error.message);
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+      {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
