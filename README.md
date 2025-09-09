@@ -43,6 +43,18 @@ src/
 │   └── useAuth.js           # Custom Supabase auth hook
 ```
 
+### analyzeResume(resumeText, jobText)
+
+Analyzes a resume against a job description and returns:
+
+```js
+{
+  score: 0-100,
+  missingKeywords: string[],
+  suggestions: string[]
+}
+```
+
 ---
 
 ## ⚙️ Installation

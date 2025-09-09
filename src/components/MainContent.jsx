@@ -3,10 +3,10 @@ import React, { useState, useCallback } from 'react';
 import { FileText, Target, Sparkles, Loader2, Check, X, AlertCircle, LogIn, ChevronRight } from 'lucide-react';
 
 // FIXED: All paths are now corrected to match your file structure.
-import { callApi } from '../services/api.js';
+import { callApi, analyzeResume } from '../services/api.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 import ResumeUpload from '../features/ResumeUpload.jsx';
-import JobMatch from '../features/JobMatch.jsx';
+import JobMatch from './Features/JobMatch.jsx';
 import Optimization from '../features/Optimization.jsx';
 
 // --- Reusable UI Components ---
@@ -43,7 +43,7 @@ export default function MainContent() {
   const [optimizations, setOptimizations] = useState([]);
   const showNotification = useCallback((message, type = 'info') => { setNotification({ message, type }); }, []);
   const handleParseResume = useCallback(async (resumeInput) => { setLoading(true); setLoadingMessage('AI is parsing your resume...'); setProgress(15); try { const content = typeof resumeInput === 'string' ? resumeInput : await resumeInput.text(); const payload = { resume_input: { type: 'text', content }, user_id: user?.id }; const response = await callApi('parse', payload, session?.access_token); if (response.error) throw new Error(response.error); setResumeData(response.resume_data || response); setProgress(35); showNotification('Resume parsed successfully!', 'success'); setActiveTab('job'); } catch (error) { showNotification(`Parsing failed: ${error.message}`, 'error'); } finally { setLoading(false); } }, [user, session, showNotification]);
-  const handleAnalyzeMatch = useCallback(async (jobDescription) => { if (!resumeData) { showNotification('Please parse a resume first.', 'error'); return; } setLoading(true); setLoadingMessage('Analyzing job compatibility...'); setProgress(50); try { const payload = { resume_data: resumeData, job_description: jobDescription }; const response = await callApi('analyze', payload, session?.access_token); if (response.error) throw new Error(response.error); setMatchAnalysis(response); setProgress(70); showNotification('Analysis complete!', 'success'); } catch (error) { showNotification(`Analysis failed: ${error.message}`, 'error'); } finally { setLoading(false); } }, [resumeData, session, showNotification]);
+  const handleAnalyzeMatch = useCallback(async (jobDescription) => { if (!resumeData) { throw new Error('Please parse a resume first.'); } const result = await analyzeResume(resumeData, jobDescription); setMatchAnalysis(result); return result; }, [resumeData]);
 
   return (
     <div className="max-w-6xl mx-auto bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
@@ -59,7 +59,7 @@ export default function MainContent() {
           </div>
           <div className="p-8 min-h-[500px]">
             {activeTab === 'resume' && <ResumeUpload onParseResume={handleParseResume} resumeData={resumeData} />}
-            {activeTab === 'job' && <JobMatch onAnalyzeMatch={handleAnalyzeMatch} matchAnalysis={matchAnalysis} isPremium={isPremium} onSwitchTab={setActiveTab}/>}
+            {activeTab === 'job' && <JobMatch onAnalyzeMatch={handleAnalyzeMatch} matchAnalysis={matchAnalysis} />}
             {activeTab === 'optimize' && <Optimization isPremium={isPremium} optimizations={optimizations} />}
           </div>
         </>
