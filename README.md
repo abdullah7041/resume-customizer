@@ -21,6 +21,18 @@ Make your resume match the job—fast. Compare a resume to a job description and
 - Sends minimal text to the AI matcher (server function / API adapter)
 - Returns `{ score 0–100, missingKeywords[], suggestions[] }` to the UI
 
+### analyzeResume(resumeText, jobText)
+
+Analyzes a resume against a job description and returns:
+
+```js
+{
+  score: 0-100,
+  missingKeywords: string[],
+  suggestions: string[]
+}
+```
+
 ---
 
 ## 🖼️ Screenshots
