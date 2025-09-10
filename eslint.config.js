@@ -1,24 +1,11 @@
-<<<<<<< ours
 import js from '@eslint/js';
 import globals from 'globals';
-
-export default [
-  js.configs.recommended,
-  {
-    files: ['**/*.{js,jsx}'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      parserOptions: { ecmaFeatures: { jsx: true } },
-=======
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
   {
-    ignores: ['node_modules'],
+    ignores: ['dist', 'node_modules'],
   },
   js.configs.recommended,
   {
@@ -26,22 +13,10 @@ export default [
     languageOptions: {
       ecmaVersion: 2020,
       sourceType: 'module',
->>>>>>> theirs
       globals: {
         ...globals.browser,
         ...globals.node,
       },
-<<<<<<< ours
-    },
-    rules: {
-      'no-unused-vars': 'off',
-    },
-  },
-  {
-    ignores: ['dist', 'node_modules'],
-  },
-];
-=======
       parserOptions: {
         ecmaFeatures: { jsx: true },
       },
@@ -55,5 +30,4 @@ export default [
       'react-refresh/only-export-components': 'warn',
     },
   },
-]
->>>>>>> theirs
+];
