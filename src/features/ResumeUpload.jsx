@@ -36,7 +36,7 @@ export default function ResumeUpload() {
     <div className="p-6 max-w-md mx-auto bg-white shadow rounded">
       <h2 className="text-xl font-semibold mb-4">Step 1: Upload Resume</h2>
       <input type="file" onChange={handleFileChange} className="mb-4" />
-      <button onClick={handleUpload} disabled={uploading} className="btn">
+      <button onClick={handleUpload} disabled={uploading} className="btn btn-primary">
         {uploading ? "Uploading..." : "Upload"}
       </button>
 
