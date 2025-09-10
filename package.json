@@ -6,19 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-<<<<<<< ours
-<<<<<<< HEAD
+    "preview": "vite preview",
     "lint": "eslint .",
-    "test": "vitest run --reporter=verbose"
-=======
-    "preview": "vite preview",
-    "lint": "eslint src/services/api.js src/components/MainContent.jsx src/components/Features/JobMatch.jsx src/services/api.test.js",
     "test": "vitest run"
->>>>>>> 7ba4af30aa9cc4773527324cfea98d50f9548f00
-=======
-    "preview": "vite preview",
-    "lint": "eslint src/features/JobMatch.jsx"
->>>>>>> theirs
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.2",
@@ -45,10 +35,6 @@
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.4",
-<<<<<<< HEAD
     "vitest": "^3.2.4"
-=======
-    "vitest": "^1.6.1"
->>>>>>> 7ba4af30aa9cc4773527324cfea98d50f9548f00
   }
 }
