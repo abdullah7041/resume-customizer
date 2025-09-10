@@ -17,7 +17,7 @@ export default function JobMatch() {
         />
         <button
           onClick={() => navigate("/results")}
-          className="btn-primary w-full"
+          className="btn btn-primary w-full"
         >
           Next
         </button>
