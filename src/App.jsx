@@ -6,28 +6,29 @@ function Welcome() {
   const navigate = useNavigate();
 
   return (
-    <div className="h-screen flex flex-col justify-center items-center bg-white">
-      <h1 className="text-3xl font-bold mb-6 text-[#006C35]">
-        Welcome to Resume Optimizer
-      </h1>
-      <p className="mb-6 text-gray-600">by Abdullah bin Ahmed</p>
+    <section className="min-h-screen flex flex-col items-center justify-center text-center gap-6">
+      <h1 className="text-4xl font-bold text-primary">AI Resume Optimizer</h1>
+      <p className="text-secondary">by Abdullah bin Ahmed</p>
 
       {user ? (
         <>
-          <p className="mb-4">Signed in as {user.email}</p>
-          <button onClick={() => navigate("/resume")} className="px-6 py-2 rounded bg-[#006C35] text-white">
+          <p>Signed in as {user.email}</p>
+          <button
+            onClick={() => navigate("/resume")}
+            className="btn-primary mt-2"
+          >
             Get Started
           </button>
-          <button onClick={signOut} className="mt-2 text-red-500">
+          <button onClick={signOut} className="btn-secondary mt-2">
             Sign Out
           </button>
         </>
       ) : (
-        <button onClick={signInWithGoogle} className="px-6 py-2 rounded bg-[#006C35] text-white">
+        <button onClick={signInWithGoogle} className="btn-primary">
           Sign in with Google
         </button>
       )}
-    </div>
+    </section>
   );
 }
 

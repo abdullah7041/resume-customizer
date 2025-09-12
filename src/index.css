@@ -6,6 +6,13 @@
   --color-secondary: #F5A623; /* gold */
 }
 
+@layer base {
+  body {
+    font-family: 'Tajawal', sans-serif;
+    @apply font-medium text-accent bg-gradient-to-b from-primary/5 to-secondary/5;
+  }
+}
+
 @utility btn {
   @apply px-4 py-2 rounded-lg font-medium shadow-sm transition text-white;
 }
