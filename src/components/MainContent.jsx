@@ -10,10 +10,60 @@ import JobMatch from './Features/JobMatch.jsx';
 import Optimization from '../features/Optimization.jsx';
 
 // --- Reusable UI Components ---
-const ProgressBar = ({ progress }) => ( <div className="h-1 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full overflow-hidden"> <div className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} /> </div> );
-const LoadingOverlay = ({ message }) => ( <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"> <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4"> <Loader2 className="w-12 h-12 text-purple-600 animate-spin" /> <p className="text-gray-700 font-medium">{message}</p> </div> </div> );
-const Notification = ({ message, type, onClose }) => { React.useEffect(() => { const timer = setTimeout(onClose, 4000); return () => clearTimeout(timer); }, [onClose]); const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' }; const icon = { success: <Check />, error: <X />, info: <AlertCircle /> }; return ( <div className={`fixed top-20 right-4 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-xl z-50 flex items-center space-x-3`}> {icon[type]} <span>{message}</span> </div> ); };
-const TabButton = ({ active, onClick, children, icon }) => ( <button onClick={onClick} className={`relative px-6 py-4 font-semibold transition-all duration-300 w-full ${active ? 'text-purple-700 bg-white/90 shadow-lg' : 'text-gray-600 hover:bg-white/50'}`}> <div className="flex items-center justify-center space-x-2">{icon}<span>{children}</span></div> {active && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-pink-600" />} </button> );
+const ProgressBar = ({ progress }) => (
+  <div
+    className="h-1 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full overflow-hidden"
+    role="progressbar"
+    aria-valuenow={progress}
+    aria-valuemin="0"
+    aria-valuemax="100"
+  >
+    <div
+      className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-500"
+      style={{ width: `${progress}%` }}
+    />
+  </div>
+);
+
+const LoadingOverlay = ({ message }) => (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4">
+      <Loader2 className="w-12 h-12 text-purple-600 animate-spin motion-reduce:animate-none" />
+      <p className="text-gray-700 font-medium">{message}</p>
+    </div>
+  </div>
+);
+
+const Notification = ({ message, type, onClose }) => {
+  React.useEffect(() => {
+    const timer = setTimeout(onClose, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+  const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
+  const icon = { success: <Check />, error: <X />, info: <AlertCircle /> };
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={`fixed top-20 right-4 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-xl z-50 flex items-center space-x-3`}
+    >
+      {icon[type]} <span>{message}</span>
+    </div>
+  );
+};
+
+const TabButton = ({ active, onClick, children, icon }) => (
+  <button
+    onClick={onClick}
+    className={`relative px-6 py-4 font-semibold transition-all duration-300 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${active ? 'text-purple-700 bg-white/90 shadow-lg' : 'text-gray-600 hover:bg-white/50'}`}
+  >
+    <div className="flex items-center justify-center space-x-2">
+      {icon}
+      <span>{children}</span>
+    </div>
+    {active && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-pink-600" />}
+  </button>
+);
 
 const AuthScreen = ({ onLogin }) => (
     <div className="text-center p-8 md:p-12">
