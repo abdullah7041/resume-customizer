@@ -37,3 +37,8 @@ Analyzes a resume against a job description and returns:
 
 ## 🖼️ Screenshots
 <!-- Add 2–3 images here: upload to /public and link them -->
+
+## 🎨 Design tokens
+- Neutral palette and soft shadows via Tailwind utilities
+- Reusable `btn`, `input-base`, and `card` classes with visible focus rings
+
