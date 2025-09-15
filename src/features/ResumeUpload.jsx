@@ -70,6 +70,10 @@ export default function ResumeUpload() {
     setUploading(false);
   };
 
+  const handleFileChange = (e) => {
+  handleFiles(e.target.files);
+};
+
   return (
     <section className="card max-w-md mx-auto text-neutral-700" dir="auto">
       <h2 className="text-lg font-semibold mb-2">
