@@ -120,11 +120,23 @@ export default function ResumeUpload() {
         </p>
       )}
 
+    <div className="card max-w-md mx-auto text-neutral-700" dir="auto">
+      <h2 className="text-xl font-semibold mb-4">Step 1: Upload Resume</h2>
+      <label htmlFor="resume-file" className="block mb-2 font-medium">
+        Select file
+      </label>
+      <input
+        id="resume-file"
+        type="file"
+        onChange={handleFileChange}
+        className="input-base mb-4"
+      />
       <button
         type="button"
         onClick={handleUpload}
         disabled={uploading}
         className="btn-primary w-full mt-4"
+        className="btn-primary w-full"
       >
         {uploading ? "جاري الرفع..." : "رفع السيرة الذاتية"}
       </button>
@@ -141,6 +153,7 @@ export default function ResumeUpload() {
       {url && !uploading && (
         <p className="mt-4 text-sm">
           ✅ تم الرفع: <a href={url} target="_blank" rel="noopener" className="text-primary underline">عرض السيرة</a>
+          ✅ File uploaded: <a href={url} target="_blank" rel="noopener" className="text-primary underline">View resume</a>
         </p>
       )}
     </section>
