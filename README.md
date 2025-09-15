@@ -33,6 +33,14 @@ Analyzes a resume against a job description and returns:
 }
 ```
 
+## 🔐 Environment Variables
+
+Set these variables in your Netlify project:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_OPENAI_KEY`
+
 ---
 
 ## 🖼️ Screenshots
