@@ -107,8 +107,8 @@ export default function MainContent() {
             <TabButton active={activeTab === 'optimize'} onClick={() => setActiveTab('optimize')} icon={<Sparkles />}>Optimize</TabButton>
           </div>
           <div className="p-8 min-h-[500px]">
-            {activeTab === 'resume' && <ResumeUpload onParseResume={handleParseResume} resumeData={resumeData} />}
-            {activeTab === 'job' && <JobMatch onAnalyzeMatch={handleAnalyzeMatch} matchAnalysis={matchAnalysis} />}
+            {activeTab === 'resume' && <ResumeUpload onParseResume={handleParseResume} resumeData={resumeData} />} 
+            {activeTab === 'job' && <JobMatch onAnalyzeMatch={handleAnalyzeMatch} matchAnalysis={matchAnalysis} />} 
             {activeTab === 'optimize' && <Optimization isPremium={isPremium} optimizations={optimizations} />}
           </div>
         </>
