@@ -21,7 +21,7 @@ describe("ResumeUpload", () => {
       screen.getByRole("heading", { name: /upload your resume/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /upload resume/i })
+      screen.getByRole("button", { name: /upload resume/i }),
       screen.getByRole("heading", { name: /تحميل السيرة الذاتية/i })
     ).toBeInTheDocument();
     expect(

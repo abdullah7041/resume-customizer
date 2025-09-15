@@ -76,10 +76,10 @@ export default function ResumeUpload() {
         Upload your resume
       </h2>
       <p className="text-sm mb-4">PDF or DOCX up to 5MB</p>
+      <h2 className="text-lg font-semibold mb-2">
         تحميل السيرة الذاتية
       </h2>
       <p className="text-sm mb-4">PDF أو DOCX حتى 5MB</p>
-
       <input
         id="resume-input"
         ref={inputRef}
@@ -88,14 +88,11 @@ export default function ResumeUpload() {
         className="sr-only"
         onChange={(e) => handleFiles(e.target.files)}
       />
-
       <div
         role="button"
         tabIndex={0}
         onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) =>
-          (e.key === "Enter" || e.key === " ") && inputRef.current?.click()
-        }
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && inputRef.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -110,6 +107,7 @@ export default function ResumeUpload() {
         <p className="text-sm">Drag file here</p>
         <button type="button" className="btn-secondary mt-2">
           Choose file
+        </button>
         <p className="text-sm">اسحب الملف هنا</p>
         <button type="button" className="btn-secondary mt-2">
           اختر ملف
@@ -145,7 +143,7 @@ export default function ResumeUpload() {
       >
         {uploading ? "Uploading..." : "Upload resume"}
         className="btn-primary w-full"
-      >
+      {">"}
         {uploading ? "جاري الرفع..." : "رفع السيرة الذاتية"}
       </button>
 
@@ -165,6 +163,7 @@ export default function ResumeUpload() {
           ✅ File uploaded: <a href={url} target="_blank" rel="noopener" className="text-primary underline">View resume</a>
         </p>
       )}
+    </div>
     </section>
   );
 }
