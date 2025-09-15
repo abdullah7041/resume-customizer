@@ -46,7 +46,17 @@ Set these variables in your Netlify project:
 ## 🖼️ Screenshots
 <!-- Add 2–3 images here: upload to /public and link them -->
 
-## 🎨 Design tokens
-- Neutral palette and soft shadows via Tailwind utilities
-- Reusable `btn`, `input-base`, and `card` classes with visible focus rings
+## 🎨 Saudi Edition design system
+- Theme tokens live in [`src/styles/theme.css`](src/styles/theme.css) and drive Tailwind v4 utilities.
+- Primary gradient flows from royal purple `#7C3AED` to magenta `#EC4899`, with Saudi emerald (`#0B6B3A`) for accents.
+- Surface neutrals: sand (`#F7F2E7`), dune (`#E7DFCF`), smoke (`#F3F4F6`), and ink (`#1F2937`). Dark mode targets `#0F0F12`.
+- State colors: success `#12B981`, warning `#F59E0B`, danger `#EF4444`.
+- Typography stacks `"Inter", "Geist", "Tajawal"` with generous tracking for headings.
+- Radius & elevation tokens (`--radius-card`, `--shadow-card`) create rounded, glassy surfaces.
+
+### Extending the system
+1. Add new tokens or gradients inside `src/styles/theme.css`.
+2. Reference them via Tailwind classes (e.g., `bg-surface-50`, `from-primary-500`, `shadow-card`).
+3. For bespoke components, prefer composing the shared UI primitives in `src/components/ui` (`PrimaryButton`, `SecondaryButton`, `Tabs`, `UploadCard`, `Toast`).
+4. Keep focus-visible rings on interactive elements (`focus-visible:ring-secondary-500`) to preserve accessibility.
 

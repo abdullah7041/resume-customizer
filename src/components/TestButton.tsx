@@ -1,11 +1,11 @@
-// src/components/TestButton.jsx
-import React from "react";
+import PrimaryButton from "./ui/PrimaryButton.jsx";
+import SecondaryButton from "./ui/SecondaryButton.jsx";
 
 const TestButton = () => {
   return (
-    <div className="flex gap-4 p-6 bg-gray-50 min-h-screen items-center justify-center">
-      <button className="btn btn-primary">Save</button>
-      <button className="btn btn-secondary">Cancel</button>
+    <div className="flex min-h-screen items-center justify-center gap-4 bg-sand-50 p-6">
+      <PrimaryButton>Save</PrimaryButton>
+      <SecondaryButton>Cancel</SecondaryButton>
     </div>
   );
 };
