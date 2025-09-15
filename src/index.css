@@ -1,50 +1,53 @@
+@import "./styles/theme.css";
 @import "tailwindcss";
 
-/* Saudi-inspired theme tokens */
-@theme {
-  --color-primary: #006C35; /* Saudi green */
-  --color-secondary: #F5A623; /* gold */
-  --color-neutral-50: #FAFAF9;
-  --color-neutral-100: #F5F5F4;
-  --color-neutral-200: #E7E5E4;
-  --color-neutral-300: #D6D3D1;
-  --color-neutral-400: #A8A29E;
-  --color-neutral-500: #78716C;
-  --radius-card: 1rem; /* rounded-2xl */
-  --shadow-soft: 0 2px 4px rgba(0,0,0,0.05);
-  --font-sans: "Tajawal", ui-sans-serif, system-ui, sans-serif;
-}
-
 @layer base {
-  body {
-    @apply bg-[--color-neutral-50] text-neutral-800 font-sans;
+  :root {
+    color-scheme: light dark;
   }
-}
 
-@utility btn {
-  @apply px-4 py-2 rounded-lg font-medium shadow-sm transition text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary;
-}
+  body {
+    min-height: 100vh;
+    font-family: var(--font-body);
+    background-color: var(--color-sand-50);
+    background-image: var(--gradient-muted);
+    background-attachment: fixed;
+    color: var(--color-ink-900);
+    transition: background-color var(--duration-breathe) var(--transition-snappy);
+  }
 
-@utility input-base {
-  @apply w-full border border-neutral-200 rounded-lg p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
-}
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: var(--color-surface-900);
+      color: var(--color-sand-50);
+      background-image: none;
+    }
+  }
 
-@utility card {
-  @apply bg-white rounded-2xl shadow-soft p-6;
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-secondary-500) 35%, transparent);
+    color: var(--color-surface-50);
+  }
 }
 
 @layer utilities {
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
-}
 
-@layer components {
-  .btn-primary {
-    @apply btn bg-primary hover:bg-green-700;
-  }
-
-  .btn-secondary {
-    @apply btn bg-secondary hover:bg-[#D4881F];
+  .transition-snappy {
+    transition: all var(--duration-snappy) var(--transition-snappy);
   }
 }

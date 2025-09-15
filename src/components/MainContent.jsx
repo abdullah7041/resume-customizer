@@ -1,119 +1,231 @@
-// src/components/MainContent.jsx
-import React, { useState, useCallback } from 'react';
-import { FileText, Target, Sparkles, Loader2, Check, X, AlertCircle, LogIn, ChevronRight } from 'lucide-react';
+import { useCallback, useMemo, useState } from "react";
+import { FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
+import { parseResume, analyzeResume } from "../services/api.js";
+import { useAuth } from "../hooks/useAuth.jsx";
+import ResumeUpload from "../features/ResumeUpload.jsx";
+import JobMatch from "./Features/JobMatch.jsx";
+import Optimization from "../features/Optimization.jsx";
+import Tabs from "./ui/Tabs.jsx";
+import Toast, { ToastContainer } from "./ui/Toast.jsx";
+import EmptyState from "./ui/EmptyState.jsx";
+import PrimaryButton from "./ui/PrimaryButton.jsx";
 
-// FIXED: All paths are now corrected to match your file structure.
-import { parseResume, analyzeResume } from '../services/api.js';
-import { useAuth } from '../hooks/useAuth.jsx';
-import ResumeUpload from '../features/ResumeUpload.jsx';
-import JobMatch from './Features/JobMatch.jsx';
-import Optimization from '../features/Optimization.jsx';
+const tabs = [
+  { value: "resume", label: "Resume", icon: FileText },
+  { value: "match", label: "Match", icon: Target },
+  { value: "optimize", label: "Optimize", icon: Sparkles },
+];
 
-// --- Reusable UI Components ---
-const ProgressBar = ({ progress }) => (
-  <div
-    className="h-1 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full overflow-hidden"
-    role="progressbar"
-    aria-valuenow={progress}
-    aria-valuemin="0"
-    aria-valuemax="100"
-  >
-    <div
-      className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-500"
-      style={{ width: `${progress}%` }}
-    />
-  </div>
-);
-
-const LoadingOverlay = ({ message }) => (
-  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-    <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4">
-      <Loader2 className="w-12 h-12 text-purple-600 animate-spin motion-reduce:animate-none" />
-      <p className="text-gray-700 font-medium">{message}</p>
-    </div>
-  </div>
-);
-
-const Notification = ({ message, type, onClose }) => {
-  React.useEffect(() => {
-    const timer = setTimeout(onClose, 4000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-  const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
-  const icon = { success: <Check />, error: <X />, info: <AlertCircle /> };
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={`fixed top-20 right-4 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-xl z-50 flex items-center space-x-3`}
-    >
-      {icon[type]} <span>{message}</span>
-    </div>
-  );
+const getId = () => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
 };
 
-const TabButton = ({ active, onClick, children, icon }) => (
-  <button
-    onClick={onClick}
-    className={`relative px-6 py-4 font-semibold transition-all duration-300 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${active ? 'text-purple-700 bg-white/90 shadow-lg' : 'text-gray-600 hover:bg-white/50'}`}
-  >
-    <div className="flex items-center justify-center space-x-2">
-      {icon}
-      <span>{children}</span>
-    </div>
-    {active && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-pink-600" />}
-  </button>
-);
+const scheduleTimeout = (callback, delay) => {
+  const host = typeof window !== "undefined" ? window : globalThis;
+  return host.setTimeout(callback, delay);
+};
 
-const AuthScreen = ({ onLogin }) => (
-    <div className="text-center p-8 md:p-12">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome!</h2>
-        <p className="text-gray-600 mb-8 text-lg">Sign in to begin optimizing your resume.</p>
-        <button
-            onClick={onLogin}
-            className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 inline-flex items-center space-x-3 text-lg"
-        >
-            <LogIn className="w-5 h-5" />
-            <span>Sign In with Google</span>
-            <ChevronRight className="w-5 h-5" />
-        </button>
-    </div>
-);
+export default function MainContent() {
+  const { user, loading, signInWithGoogle } = useAuth();
+  const isPremium = Boolean(
+    user?.user_metadata?.is_premium ||
+      user?.user_metadata?.tier === "premium" ||
+      user?.app_metadata?.plan === "premium"
+  );
 
+  const [activeTab, setActiveTab] = useState("resume");
+  const [flowProgress, setFlowProgress] = useState(0);
+  const [resumeData, setResumeData] = useState("");
+  const [matchAnalysis, setMatchAnalysis] = useState(null);
+  const [optimizations] = useState([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [toasts, setToasts] = useState([]);
 
-export default function MainContent() { 
-   const { user, isPremium, signInWithGoogle } = useAuth();
-   const [activeTab, setActiveTab] = useState('resume'); 
-   const [progress, setProgress] = useState(0); 
-   const [loading, setLoading] = useState(false); 
-   const [loadingMessage, setLoadingMessage] = useState(''); 
-   const [notification, setNotification] = useState(null); 
-   const [resumeData, setResumeData] = useState(null); 
-   const [matchAnalysis, setMatchAnalysis] = useState(null); 
-   const [optimizations] = useState([]);
-   const showNotification = useCallback((message, type = 'info') => { setNotification({ message, type }); }, []);
-   const handleParseResume = useCallback(async (resumeInput) => { setLoading(true); setLoadingMessage('AI is parsing your resume...'); setProgress(15); try { const content = typeof resumeInput === 'string' ? resumeInput : await resumeInput.text(); const parsed = await parseResume(content); setResumeData(parsed); setProgress(35); showNotification('Resume parsed successfully!', 'success'); setActiveTab('job'); } catch (error) { showNotification(`Parsing failed: ${error.message}`, 'error'); } finally { setLoading(false); } }, [showNotification]);
-   const handleAnalyzeMatch = useCallback(async (jobDescription) => { if (!resumeData) { throw new Error('Please parse a resume first.'); } const result = await analyzeResume(resumeData, jobDescription); setMatchAnalysis(result); return result; }, [resumeData]); 
-  return (
-    <div className="max-w-6xl mx-auto bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
-      {loading && <LoadingOverlay message={loadingMessage} />}
-      {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-      {!user ? ( <AuthScreen onLogin={signInWithGoogle} /> ) : (
-        <>
-          <div className="px-8 py-4"> <ProgressBar progress={progress} /> </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 bg-gray-50/90 border-b border-gray-200">
-            <TabButton active={activeTab === 'resume'} onClick={() => setActiveTab('resume')} icon={<FileText />}>Resume</TabButton>
-            <TabButton active={activeTab === 'job'} onClick={() => setActiveTab('job')} icon={<Target />}>Match</TabButton>
-            <TabButton active={activeTab === 'optimize'} onClick={() => setActiveTab('optimize')} icon={<Sparkles />}>Optimize</TabButton>
-          </div>
-          <div className="p-8 min-h-[500px]">
-            {activeTab === 'resume' && <ResumeUpload onParseResume={handleParseResume} resumeData={resumeData} />} 
-            {activeTab === 'job' && <JobMatch onAnalyzeMatch={handleAnalyzeMatch} matchAnalysis={matchAnalysis} />} 
-            {activeTab === 'optimize' && <Optimization isPremium={isPremium} optimizations={optimizations} />}
-          </div>
-        </>
-      )}
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  const pushToast = useCallback(
+    (toast) => {
+      const id = getId();
+      setToasts((prev) => [...prev, { id, ...toast }]);
+      const lifetime = toast?.type === "danger" ? 6000 : 4200;
+      scheduleTimeout(() => dismissToast(id), lifetime);
+    },
+    [dismissToast]
+  );
+
+  const handleParseResume = useCallback(
+    async (resumeInput) => {
+      try {
+        setFlowProgress(18);
+        pushToast({
+          type: "info",
+          title: "Parsing resume",
+          description: "AI is structuring your experience for analysis.",
+        });
+
+        const content =
+          typeof resumeInput === "string"
+            ? resumeInput
+            : await resumeInput.text();
+
+        setFlowProgress(48);
+        const parsed = await parseResume(content);
+        setFlowProgress(88);
+        setResumeData(parsed);
+        setMatchAnalysis(null);
+        pushToast({
+          type: "success",
+          title: "Resume parsed",
+          description: "Move to Match to compare with a job description.",
+        });
+        setActiveTab("match");
+        setFlowProgress(100);
+        scheduleTimeout(() => setFlowProgress(0), 800);
+        return parsed;
+      } catch (error) {
+        setFlowProgress(0);
+        pushToast({
+          type: "danger",
+          title: "Parsing failed",
+          description: error?.message || "Please try again with a different file.",
+        });
+        throw error;
+      }
+    },
+    [pushToast]
+  );
+
+  const handleAnalyzeMatch = useCallback(
+    async (jobDescription) => {
+      if (!resumeData) {
+        const error = new Error("Please upload or paste a resume first.");
+        pushToast({
+          type: "warning",
+          title: "Resume required",
+          description: "Upload your resume before running a job match.",
+        });
+        throw error;
+      }
+
+      try {
+        setIsAnalyzing(true);
+        setFlowProgress(22);
+        pushToast({
+          type: "info",
+          title: "Analyzing match",
+          description: "Comparing your resume to the Saudi job description…",
+        });
+        const result = await analyzeResume(resumeData, jobDescription);
+        setMatchAnalysis(result);
+        pushToast({
+          type: "success",
+          title: "Match insights ready",
+          description: "Review keywords and suggestions tailored for Riyadh.",
+        });
+        setActiveTab("optimize");
+        setFlowProgress(100);
+        scheduleTimeout(() => setFlowProgress(0), 800);
+        return result;
+      } catch (error) {
+        setFlowProgress(0);
+        pushToast({
+          type: "danger",
+          title: "Match analysis failed",
+          description: error?.message || "Please try again in a moment.",
+        });
+        throw error;
+      } finally {
+        setIsAnalyzing(false);
+      }
+    },
+    [pushToast, resumeData]
+  );
+
+  const renderedToasts = useMemo(
+    () =>
+      toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          title={toast.title}
+          description={toast.description}
+          type={toast.type}
+          onDismiss={() => dismissToast(toast.id)}
+        />
+      )),
+    [dismissToast, toasts]
+  );
+
+  const workspace = (
+    <div className="space-y-8">
+      <Tabs tabs={tabs} activeValue={activeTab} onTabChange={setActiveTab} />
+      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-6 shadow-card backdrop-blur-xl dark:border-white/5 dark:bg-surface-900/80">
+        {activeTab === "resume" && (
+          <ResumeUpload
+            onParseResume={handleParseResume}
+            resumeData={resumeData}
+            onToast={pushToast}
+          />
+        )}
+        {activeTab === "match" && (
+          <JobMatch
+            onAnalyzeMatch={handleAnalyzeMatch}
+            matchAnalysis={matchAnalysis}
+            isAnalyzing={isAnalyzing}
+          />
+        )}
+        {activeTab === "optimize" && (
+          <Optimization
+            isPremium={isPremium}
+            optimizations={optimizations}
+          />
+        )}
+      </div>
     </div>
   );
-}
 
+  return (
+    <main data-app-main className="relative -mt-16 px-4 pb-24">
+      <ToastContainer>{renderedToasts}</ToastContainer>
+      <div className="mx-auto max-w-6xl">
+        <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-8 shadow-card backdrop-blur-xl dark:border-white/5 dark:bg-surface-900/80">
+          {flowProgress > 0 && (
+            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-all duration-300"
+                style={{ width: `${flowProgress}%` }}
+                aria-hidden="true"
+              />
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-6">
+              <div className="h-8 w-40 rounded-full bg-smoke-50/70" />
+              <div className="h-96 w-full overflow-hidden rounded-[var(--radius-card)] bg-smoke-50/60">
+                <div className="h-full w-1/2 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+              </div>
+            </div>
+          ) : user ? (
+            workspace
+          ) : (
+            <EmptyState
+              icon={UserPlus}
+              title="Sign in to unlock Saudi-ready insights"
+              description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
+              actions={
+                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
+                  Sign in with Google
+                </PrimaryButton>
+              }
+            />
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
