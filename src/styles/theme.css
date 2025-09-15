@@ -1,0 +1,45 @@
+@theme {
+  --color-primary-400: #8B5CF6;
+  --color-primary-500: #7C3AED;
+  --color-primary-600: #9333EA;
+  --color-primary-700: #EC4899;
+
+  --color-secondary-400: #0F8B4B;
+  --color-secondary-500: #0B6B3A;
+  --color-secondary-600: #0A5A31;
+
+  --color-accent-400: #D8B980;
+  --color-accent-500: #C5A66A;
+  --color-accent-600: #B18F53;
+
+  --color-surface-50: #FFFFFF;
+  --color-surface-900: #0F0F12;
+
+  --color-sand-50: #F7F2E7;
+  --color-dune-100: #E7DFCF;
+  --color-smoke-50: #F3F4F6;
+  --color-ink-500: #334155;
+  --color-ink-700: #1F2937;
+  --color-ink-900: #111827;
+
+  --color-success-500: #12B981;
+  --color-warning-500: #F59E0B;
+  --color-danger-500: #EF4444;
+
+  --font-display: "Inter", "Geist", "Tajawal", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Tajawal", "Segoe UI", system-ui, sans-serif;
+
+  --radius-card: 1.5rem;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 30px 80px -45px rgba(15, 15, 18, 0.55);
+  --shadow-soft: 0 18px 45px -32px rgba(11, 107, 58, 0.35);
+
+  --duration-snappy: 180ms;
+  --duration-breathe: 280ms;
+  --transition-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --gradient-primary: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+  --gradient-muted: linear-gradient(135deg, rgba(11, 107, 58, 0.12) 0%, rgba(197, 166, 106, 0.12) 100%);
+  --gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
