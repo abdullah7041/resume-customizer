@@ -90,7 +90,7 @@ export default function MainContent() {
    const [notification, setNotification] = useState(null); 
    const [resumeData, setResumeData] = useState(null); 
    const [matchAnalysis, setMatchAnalysis] = useState(null); 
-   const [optimizations, setOptimizations] = useState([]);
+   const [optimizations] = useState([]);
    const showNotification = useCallback((message, type = 'info') => { setNotification({ message, type }); }, []);
    const handleParseResume = useCallback(async (resumeInput) => { setLoading(true); setLoadingMessage('AI is parsing your resume...'); setProgress(15); try { const content = typeof resumeInput === 'string' ? resumeInput : await resumeInput.text(); const parsed = await parseResume(content); setResumeData(parsed); setProgress(35); showNotification('Resume parsed successfully!', 'success'); setActiveTab('job'); } catch (error) { showNotification(`Parsing failed: ${error.message}`, 'error'); } finally { setLoading(false); } }, [showNotification]);
    const handleAnalyzeMatch = useCallback(async (jobDescription) => { if (!resumeData) { throw new Error('Please parse a resume first.'); } const result = await analyzeResume(resumeData, jobDescription); setMatchAnalysis(result); return result; }, [resumeData]); 

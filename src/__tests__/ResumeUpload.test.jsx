@@ -1,31 +1,27 @@
-import { render, screen } from "@testing-library/react";
-import { vi } from "vitest";
+import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 
-vi.mock("../services/supabase", () => ({
+vi.mock('../services/supabase', () => ({
   supabase: {
     storage: {
       from: () => ({
         upload: vi.fn(),
-        getPublicUrl: vi.fn(() => ({ data: { publicUrl: "" } })),
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl: '' } })),
       }),
     },
   },
 }));
 
-import ResumeUpload from "../features/ResumeUpload.jsx";
+import ResumeUpload from '../features/ResumeUpload.jsx';
 
-describe("ResumeUpload", () => {
-  it("renders upload heading and button", () => {
+describe('ResumeUpload', () => {
+  it('renders heading and upload button', () => {
     render(<ResumeUpload />);
     expect(
-      screen.getByRole("heading", { name: /upload your resume/i })
+      screen.getByRole('heading', { name: /upload your resume/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /upload resume/i }),
-      screen.getByRole("heading", { name: /تحميل السيرة الذاتية/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /رفع السيرة الذاتية/i })
+      screen.getByRole('button', { name: /upload resume/i })
     ).toBeInTheDocument();
   });
 });

@@ -20,7 +20,6 @@ vi.mock("@supabase/supabase-js", () => ({
 }));
 
 import { AuthProvider, useAuth } from '../hooks/useAuth';
-import { supabase } from '../services/supabase';
 
 describe('useAuth', () => {
   it('redirects to /resume on Google sign in', async () => {
