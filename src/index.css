@@ -1,13 +1,42 @@
 @import "tailwindcss";
 
-/* Saudi green + gold */
+/* Saudi-inspired theme tokens */
 @theme {
   --color-primary: #006C35; /* Saudi green */
   --color-secondary: #F5A623; /* gold */
+  --color-neutral-50: #FAFAF9;
+  --color-neutral-100: #F5F5F4;
+  --color-neutral-200: #E7E5E4;
+  --color-neutral-300: #D6D3D1;
+  --color-neutral-400: #A8A29E;
+  --color-neutral-500: #78716C;
+  --radius-card: 1rem; /* rounded-2xl */
+  --shadow-soft: 0 2px 4px rgba(0,0,0,0.05);
+  --font-sans: "Tajawal", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-[--color-neutral-50] text-neutral-800 font-sans;
+  }
 }
 
 @utility btn {
-  @apply px-4 py-2 rounded-lg font-medium shadow-sm transition text-white;
+  @apply px-4 py-2 rounded-lg font-medium shadow-sm transition text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary;
+}
+
+@utility input-base {
+  @apply w-full border border-neutral-200 rounded-lg p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+}
+
+@utility card {
+  @apply bg-white rounded-2xl shadow-soft p-6;
+}
+
+@layer utilities {
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
 }
 
 @layer components {

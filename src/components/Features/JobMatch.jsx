@@ -23,7 +23,7 @@ export default function JobMatch({ onAnalyzeMatch, matchAnalysis }) {
       <div className="card w-full max-w-lg">
         <h2 className="text-2xl font-semibold mb-4 text-primary">Step 2: Paste Job Description</h2>
         <textarea
-          className="mb-6 w-full border rounded p-2"
+          className="input-base mb-6 resize-none"
           rows="6"
           placeholder="Paste the job description here..."
           value={jobText}
