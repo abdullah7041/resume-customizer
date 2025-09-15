@@ -73,6 +73,9 @@ export default function ResumeUpload() {
   return (
     <section className="card max-w-md mx-auto text-neutral-700" dir="auto">
       <h2 className="text-lg font-semibold mb-2">
+        Upload your resume
+      </h2>
+      <p className="text-sm mb-4">PDF or DOCX up to 5MB</p>
         تحميل السيرة الذاتية
       </h2>
       <p className="text-sm mb-4">PDF أو DOCX حتى 5MB</p>
@@ -104,6 +107,9 @@ export default function ResumeUpload() {
         onDrop={handleDrop}
         className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-2xl cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${dragging ? "bg-neutral-50" : "bg-neutral-100"}`}
       >
+        <p className="text-sm">Drag file here</p>
+        <button type="button" className="btn-secondary mt-2">
+          Choose file
         <p className="text-sm">اسحب الملف هنا</p>
         <button type="button" className="btn-secondary mt-2">
           اختر ملف
@@ -136,6 +142,8 @@ export default function ResumeUpload() {
         onClick={handleUpload}
         disabled={uploading}
         className="btn-primary w-full mt-4"
+      >
+        {uploading ? "Uploading..." : "Upload resume"}
         className="btn-primary w-full"
       >
         {uploading ? "جاري الرفع..." : "رفع السيرة الذاتية"}
@@ -152,6 +160,7 @@ export default function ResumeUpload() {
 
       {url && !uploading && (
         <p className="mt-4 text-sm">
+          ✅ Upload complete: <a href={url} target="_blank" rel="noopener" className="text-primary underline">View resume</a>
           ✅ تم الرفع: <a href={url} target="_blank" rel="noopener" className="text-primary underline">عرض السيرة</a>
           ✅ File uploaded: <a href={url} target="_blank" rel="noopener" className="text-primary underline">View resume</a>
         </p>
