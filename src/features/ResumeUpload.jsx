@@ -76,6 +76,9 @@ export default function ResumeUpload() {
         Upload your resume
       </h2>
       <p className="text-sm mb-4">PDF or DOCX up to 5MB</p>
+        تحميل السيرة الذاتية
+      </h2>
+      <p className="text-sm mb-4">PDF أو DOCX حتى 5MB</p>
 
       <input
         id="resume-input"
@@ -107,6 +110,9 @@ export default function ResumeUpload() {
         <p className="text-sm">Drag file here</p>
         <button type="button" className="btn-secondary mt-2">
           Choose file
+        <p className="text-sm">اسحب الملف هنا</p>
+        <button type="button" className="btn-secondary mt-2">
+          اختر ملف
         </button>
       </div>
 
@@ -120,6 +126,17 @@ export default function ResumeUpload() {
         </p>
       )}
 
+    <div className="card max-w-md mx-auto text-neutral-700" dir="auto">
+      <h2 className="text-xl font-semibold mb-4">Step 1: Upload Resume</h2>
+      <label htmlFor="resume-file" className="block mb-2 font-medium">
+        Select file
+      </label>
+      <input
+        id="resume-file"
+        type="file"
+        onChange={handleFileChange}
+        className="input-base mb-4"
+      />
       <button
         type="button"
         onClick={handleUpload}
@@ -127,6 +144,9 @@ export default function ResumeUpload() {
         className="btn-primary w-full mt-4"
       >
         {uploading ? "Uploading..." : "Upload resume"}
+        className="btn-primary w-full"
+      >
+        {uploading ? "جاري الرفع..." : "رفع السيرة الذاتية"}
       </button>
 
       {uploading && (
@@ -141,6 +161,8 @@ export default function ResumeUpload() {
       {url && !uploading && (
         <p className="mt-4 text-sm">
           ✅ Upload complete: <a href={url} target="_blank" rel="noopener" className="text-primary underline">View resume</a>
+          ✅ تم الرفع: <a href={url} target="_blank" rel="noopener" className="text-primary underline">عرض السيرة</a>
+          ✅ File uploaded: <a href={url} target="_blank" rel="noopener" className="text-primary underline">View resume</a>
         </p>
       )}
     </section>

@@ -81,20 +81,19 @@ const AuthScreen = ({ onLogin }) => (
 );
 
 
-export default function MainContent() {
-  const { user, session, isPremium, signInWithGoogle } = useAuth();
-  const [activeTab, setActiveTab] = useState('resume');
-  const [progress, setProgress] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
-  const [notification, setNotification] = useState(null);
-  const [resumeData, setResumeData] = useState(null);
-  const [matchAnalysis, setMatchAnalysis] = useState(null);
-  const [optimizations, setOptimizations] = useState([]);
-  const showNotification = useCallback((message, type = 'info') => { setNotification({ message, type }); }, []);
-  const handleParseResume = useCallback(async (resumeInput) => { setLoading(true); setLoadingMessage('AI is parsing your resume...'); setProgress(15); try { const content = typeof resumeInput === 'string' ? resumeInput : await resumeInput.text(); const payload = { resume_input: { type: 'text', content }, user_id: user?.id }; const response = await callApi('parse', payload, session?.access_token); if (response.error) throw new Error(response.error); setResumeData(response.resume_data || response); setProgress(35); showNotification('Resume parsed successfully!', 'success'); setActiveTab('job'); } catch (error) { showNotification(`Parsing failed: ${error.message}`, 'error'); } finally { setLoading(false); } }, [user, session, showNotification]);
-  const handleAnalyzeMatch = useCallback(async (jobDescription) => { if (!resumeData) { throw new Error('Please parse a resume first.'); } const result = await analyzeResume(resumeData, jobDescription); setMatchAnalysis(result); return result; }, [resumeData]);
-
+export default function MainContent() { 
+   const { user, session, isPremium, signInWithGoogle } = useAuth(); 
+   const [activeTab, setActiveTab] = useState('resume'); 
+   const [progress, setProgress] = useState(0); 
+   const [loading, setLoading] = useState(false); 
+   const [loadingMessage, setLoadingMessage] = useState(''); 
+   const [notification, setNotification] = useState(null); 
+   const [resumeData, setResumeData] = useState(null); 
+   const [matchAnalysis, setMatchAnalysis] = useState(null); 
+   const [optimizations, setOptimizations] = useState([]); 
+   const showNotification = useCallback((message, type = 'info') => { setNotification({ message, type }); }, []); 
+   const handleParseResume = useCallback(async (resumeInput) => { setLoading(true); setLoadingMessage('AI is parsing your resume...'); setProgress(15); try { const content = typeof resumeInput === 'string' ? resumeInput : await resumeInput.text(); const payload = { resume_input: { type: 'text', content }, user_id: user?.id }; const response = await callApi('parse', payload, session?.access_token); if (response.error) throw new Error(response.error); setResumeData(response.resume_data || response); setProgress(35); showNotification('Resume parsed successfully!', 'success'); setActiveTab('job'); } catch (error) { showNotification(`Parsing failed: ${error.message}`, 'error'); } finally { setLoading(false); } }, [user, session, showNotification]); 
+   const handleAnalyzeMatch = useCallback(async (jobDescription) => { if (!resumeData) { throw new Error('Please parse a resume first.'); } const result = await analyzeResume(resumeData, jobDescription); setMatchAnalysis(result); return result; }, [resumeData]); 
   return (
     <div className="max-w-6xl mx-auto bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
       {loading && <LoadingOverlay message={loadingMessage} />}
@@ -108,8 +107,8 @@ export default function MainContent() {
             <TabButton active={activeTab === 'optimize'} onClick={() => setActiveTab('optimize')} icon={<Sparkles />}>Optimize</TabButton>
           </div>
           <div className="p-8 min-h-[500px]">
-            {activeTab === 'resume' && <ResumeUpload onParseResume={handleParseResume} resumeData={resumeData} />}
-            {activeTab === 'job' && <JobMatch onAnalyzeMatch={handleAnalyzeMatch} matchAnalysis={matchAnalysis} />}
+            {activeTab === 'resume' && <ResumeUpload onParseResume={handleParseResume} resumeData={resumeData} />} 
+            {activeTab === 'job' && <JobMatch onAnalyzeMatch={handleAnalyzeMatch} matchAnalysis={matchAnalysis} />} 
             {activeTab === 'optimize' && <Optimization isPremium={isPremium} optimizations={optimizations} />}
           </div>
         </>
