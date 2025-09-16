@@ -215,11 +215,11 @@ export default function MainContent() {
           ) : (
             <EmptyState
               icon={UserPlus}
-              title="Sign in to unlock Saudi-ready insights"
+              title="Sign in to unlock insights"
               description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
               actions={
                 <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
-                  Sign in with Google
+                  Sign in via Google
                 </PrimaryButton>
               }
             />
