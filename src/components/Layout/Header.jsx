@@ -44,7 +44,7 @@ export default function Header() {
                   AI Resume Optimizer
                 </p>
                 <p className="text-sm font-semibold uppercase tracking-[0.32em] text-surface-50/90">
-                  Saudi Edition
+                  By Abdullah bin ahmed
                 </p>
               </div>
             </div>
@@ -65,7 +65,7 @@ export default function Header() {
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div className="space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50/85">
-              Designed for Riyadh ambition
+              Designed for saudis ambition
             </span>
             <div className="relative">
               <span
@@ -79,7 +79,7 @@ export default function Header() {
               </h1>
             </div>
             <p className="max-w-xl text-base leading-relaxed text-surface-50/85">
-              Transform your experience into a Riyadh-ready story. Our AI analyzes, matches, and optimizes your resume with a Saudi financial-tech lens—without sacrificing authenticity.
+              Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume with job descriptions.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {user ? (
@@ -112,7 +112,7 @@ export default function Header() {
           </div>
 
           <div className="rounded-[var(--radius-card)] border border-white/15 bg-white/10 p-6 backdrop-blur-2xl">
-            <h2 className="text-lg font-semibold tracking-wide text-surface-50">Your Saudi-ready workflow</h2>
+            <h2 className="text-lg font-semibold tracking-wide text-surface-50">Your workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-surface-50/85">
               <li className="flex gap-3">
                 <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-surface-50">
