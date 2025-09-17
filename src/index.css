@@ -1,6 +1,7 @@
 @import "./styles/theme.css";
 @import "tailwindcss";
 
+
 @layer base {
   :root {
     color-scheme: light dark;
@@ -15,6 +16,7 @@
     color: var(--color-ink-900);
     transition: background-color var(--duration-breathe) var(--transition-snappy);
   }
+}
 
   @media (prefers-color-scheme: dark) {
     body {
@@ -32,6 +34,8 @@
     letter-spacing: 0.02em;
   }
 
+@utility card {
+  @apply bg-white rounded-2xl shadow-soft p-6;
   ::selection {
     background-color: color-mix(in srgb, var(--color-secondary-500) 35%, transparent);
     color: var(--color-surface-50);
@@ -46,8 +50,33 @@
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
+}
 
   .transition-snappy {
     transition: all var(--duration-snappy) var(--transition-snappy);
   }
-}
+
+  @keyframes hero-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(1.01);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .hero-fade {
+    opacity: 0;
+    animation: hero-fade-in 560ms var(--transition-snappy) forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-fade {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }

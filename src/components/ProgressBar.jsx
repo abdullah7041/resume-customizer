@@ -26,9 +26,9 @@ export default function ProgressBar() {
           <div key={step.path} className="flex items-center">
             <div
               className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold
-                ${isActive ? "bg-primary text-white" : ""}
-                ${isCompleted ? "bg-secondary text-white" : ""}
-                ${!isActive && !isCompleted ? "bg-gray-200 text-gray-600" : ""}
+                ${isActive ? "bg-primary-500 text-surface-50" : ""}
+                ${isCompleted ? "bg-secondary-500 text-surface-50" : ""}
+                ${!isActive && !isCompleted ? "bg-smoke-50 text-ink-500" : ""}
               `}
             >
               {idx + 1}
@@ -37,7 +37,7 @@ export default function ProgressBar() {
 
             {/* Separator */}
             {idx < steps.length - 1 && (
-              <div className="w-8 h-0.5 mx-2 bg-gray-300"></div>
+              <div className="w-8 h-0.5 mx-2 bg-dune-100"></div>
             )}
           </div>
         );
