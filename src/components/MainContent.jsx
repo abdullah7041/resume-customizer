@@ -163,7 +163,7 @@ export default function MainContent() {
   const workspace = (
     <div className="space-y-8">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={setActiveTab} />
-      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-6 shadow-card backdrop-blur-xl dark:border-white/5 dark:bg-surface-900/80">
+      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-6 shadow-card backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/80">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
@@ -189,10 +189,11 @@ export default function MainContent() {
   );
 
   return (
+    
     <main data-app-main className="relative -mt-16 px-4 pb-24">
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className="mx-auto max-w-6xl">
-        <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-8 shadow-card backdrop-blur-xl dark:border-white/5 dark:bg-surface-900/80">
+        <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-8 shadow-card backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/80">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
               <div
@@ -207,7 +208,7 @@ export default function MainContent() {
             <div className="space-y-6">
               <div className="h-8 w-40 rounded-full bg-smoke-50/70" />
               <div className="h-96 w-full overflow-hidden rounded-[var(--radius-card)] bg-smoke-50/60">
-                <div className="h-full w-1/2 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                <div className="h-full w-1/2 animate-shimmer bg-gradient-to-r from-transparent via-surface-50/40 to-transparent" />
               </div>
             </div>
           ) : user ? (
@@ -215,11 +216,11 @@ export default function MainContent() {
           ) : (
             <EmptyState
               icon={UserPlus}
-              title="Sign in to unlock insights"
+              title="Sign in to unlock Saudi-ready insights"
               description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
               actions={
                 <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
-                  Sign in via Google
+                  Sign in with Google
                 </PrimaryButton>
               }
             />
