@@ -1,17 +1,16 @@
-export function PrimaryButton({ children, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-6 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition"
-    >
-      {children}
-    </button>
-  );
-}
+import PrimaryButton from "../ui/PrimaryButton.jsx";
+import { cn } from "../../lib/cn";
 
-export function Card({ children }) {
+export { PrimaryButton };
+
+export function Card({ children, className }) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+    <div
+      className={cn(
+        "rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/90 p-6 shadow-soft backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/70",
+        className
+      )}
+    >
       {children}
     </div>
   );

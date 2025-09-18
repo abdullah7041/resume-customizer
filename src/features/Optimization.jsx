@@ -1,101 +1,117 @@
-// src/components/Features/Optimization.jsx
-import React, { useState } from 'react';
-import { Sparkles, Lock, Check, Download, Share2 } from 'lucide-react';
-// We'll need to import OptimizationCard later
-// import OptimizationCard from '../shared/OptimizationCard';
+import { useState } from "react";
+import { Check, Download, Info, Lock, Share2, Sparkles } from "lucide-react";
+import PrimaryButton from "../components/ui/PrimaryButton.jsx";
+import SecondaryButton from "../components/ui/SecondaryButton.jsx";
+import SectionTitle from "../components/ui/SectionTitle.jsx";
+import OptimizationCard from "../components/shared/OptimizationCard.jsx";
 
-/**
- * A component for the "Optimize" tab.
- * It displays premium upsells and optimization results.
- *
- * @param {object} props
- * @param {boolean} props.isPremium - User's premium status.
- * @param {Function} props.onUpgrade - Function to handle the upgrade action.
- * @param {Function} props.onOptimize - Function from parent to trigger optimization.
- * @param {Array} props.optimizations - List of optimization suggestions.
- */
-const Optimization = ({ isPremium, onUpgrade, onOptimize, optimizations }) => {
-  const [optimizationMode, setOptimizationMode] = useState('auto');
-  const [selectedSection, setSelectedSection] = useState('summary');
+const sections = [
+  { value: "summary", label: "Professional summary" },
+  { value: "experience", label: "Work experience" },
+  { value: "skills", label: "Skills" },
+  { value: "education", label: "Education" },
+];
 
-  if (!isPremium) {
-    return (
-      <div className="text-center py-12">
-        <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-gray-800 mb-2">Premium Feature</h3>
-        <p className="text-gray-600 mb-6">Unlock AI-powered optimization to transform your resume</p>
-        <button
-          onClick={onUpgrade}
-          className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-        >
-          Upgrade to Premium
-        </button>
-      </div>
-    );
-  }
+export default function Optimization({ isPremium, onUpgrade, onOptimize, optimizations = [] }) {
+  const [mode, setMode] = useState("auto");
+  const [selectedSection, setSelectedSection] = useState(sections[0].value);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-xl p-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-2">
-          🎯 AI Auto-Optimization Engine
-        </h3>
-        <p className="text-gray-600">
-          The AI will identify and improve weak sections of your resume based on the job match analysis. Choose a mode below to begin.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <SectionTitle
+        eyebrow="Step 3"
+        title="Polish every section"
+        description="Fine-tune your resume with recommendations that resonate in Saudi financial-tech circles."
+      />
 
-      <select
-        value={optimizationMode}
-        onChange={(e) => setOptimizationMode(e.target.value)}
-        className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
-      >
-        <option value="auto">🤖 Automatic (AI decides what to optimize)</option>
-        <option value="manual">✋ Manual (Choose a specific section)</option>
-      </select>
-
-      {optimizationMode === 'manual' && (
-        <select
-          value={selectedSection}
-          onChange={(e) => setSelectedSection(e.target.value)}
-          className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
-        >
-          <option value="summary">📝 Professional Summary</option>
-          <option value="experience">💼 Work Experience</option>
-          <option value="skills">🛠️ Skills</option>
-          <option value="education">🎓 Education</option>
-        </select>
+      {!isPremium && (
+        <div className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-secondary-500/15 bg-secondary-500/5 p-6 text-left shadow-soft backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/60">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary-500/15 text-secondary-500">
+              <Lock className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-secondary-500">Preview mode</p>
+              <p className="text-sm text-ink-500 dark:text-sand-50/80">
+                Preview the optimizer workflow with your data before you upgrade.
+              </p>
+              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs text-secondary-600 shadow-soft dark:border-surface-50/20 dark:bg-surface-900/60 dark:text-sand-50/70">
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="leading-none">Try the workflow for free—upgrade to save results.</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <PrimaryButton onClick={onUpgrade} className="w-full justify-center sm:w-auto">
+              Unlock premium insights
+            </PrimaryButton>
+          </div>
+        </div>
       )}
 
-      <button
-        onClick={() => onOptimize(optimizationMode, selectedSection)}
-        className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-      >
-        <Sparkles className="inline mr-2" />
-        Start AI Optimization
-      </button>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Optimization mode</span>
+          <select
+            value={mode}
+            onChange={(event) => setMode(event.target.value)}
+            className="w-full rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/80 px-4 py-3 text-sm font-medium text-ink-700 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/12 dark:bg-surface-900/70 dark:text-sand-50 dark:focus-visible:ring-offset-surface-900"
+          >
+            <option value="auto">AI automatic — let the system choose what to improve</option>
+            <option value="manual">Manual — focus on a specific section</option>
+          </select>
+        </label>
 
-      {optimizations.length > 0 && (
-        <div className="space-y-6">
-          <h3 className="text-xl font-bold text-gray-800">✨ Optimization Results</h3>
-          {/* We will map over OptimizationCard components here */}
-          <p className="text-center text-gray-500">[Optimization cards will be displayed here]</p>
-          
-          <div className="flex space-x-4">
-            <button className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl">
-              <Check className="inline mr-2" /> Accept All
-            </button>
-            <button className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl">
-              <Download className="inline mr-2" /> Export PDF
-            </button>
+        {mode === "manual" && (
+          <label className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Section</span>
+            <select
+              value={selectedSection}
+              onChange={(event) => setSelectedSection(event.target.value)}
+              className="w-full rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/80 px-4 py-3 text-sm font-medium text-ink-700 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/12 dark:bg-surface-900/70 dark:text-sand-50 dark:focus-visible:ring-offset-surface-900"
+            >
+              {sections.map((section) => (
+                <option key={section.value} value={section.value}>
+                  {section.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <PrimaryButton
+        icon={Sparkles}
+        onClick={() => onOptimize?.(mode, selectedSection)}
+        className="w-full justify-center"
+      >
+        Run AI optimization
+      </PrimaryButton>
+
+      {optimizations.length > 0 ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <SecondaryButton icon={Check}>Accept all</SecondaryButton>
+            <SecondaryButton icon={Download}>Export PDF</SecondaryButton>
+            <SecondaryButton icon={Share2}>Share link</SecondaryButton>
           </div>
-           <button className="w-full py-3 bg-white border-2 border-purple-300 text-purple-700 font-semibold rounded-xl">
-              <Share2 className="inline mr-2" /> Share Link
-            </button>
+          <div className="space-y-4">
+            {optimizations.map((optimization, index) => (
+              <OptimizationCard
+                key={index}
+                optimization={optimization}
+                index={index}
+                onAccept={() => {}}
+                onReject={() => {}}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/80 p-8 text-center text-sm text-ink-500/80 shadow-soft dark:border-surface-50/10 dark:bg-surface-900/60 dark:text-sand-50/70">
+          Run an analysis to see AI-generated optimization cards appear here.
         </div>
       )}
     </div>
   );
-};
-
-export default Optimization;
+}

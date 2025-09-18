@@ -15,14 +15,16 @@ vi.mock('../services/supabase', () => ({
 import ResumeUpload from '../features/ResumeUpload.jsx';
 
 describe('ResumeUpload', () => {
-  it('renders heading and upload button', () => {
-    render(<ResumeUpload />);
+  it('renders the Saudi-inspired upload card', () => {
+    render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
     expect(
-      screen.getByRole('heading', { name: /upload your resume/i })
+      screen.getByRole('heading', { name: /upload or paste your resume/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /upload resume/i })
+      screen.getByRole('button', { name: /prepare resume/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/drop your resume here/i)
     ).toBeInTheDocument();
   });
 });
-
