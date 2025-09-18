@@ -34,7 +34,7 @@ export default function JobMatch({ onAnalyzeMatch, matchAnalysis, isAnalyzing = 
         />
         <textarea
           className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/70 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-white/10 dark:bg-surface-900/70 dark:text-sand-50 dark:focus-visible:ring-offset-surface-900"
-          placeholder="Paste the job description for your next Riyadh role…"
+          placeholder="Paste the job description for your next role…"
           value={jobText}
           onChange={(event) => setJobText(event.target.value)}
         />
@@ -112,7 +112,7 @@ export default function JobMatch({ onAnalyzeMatch, matchAnalysis, isAnalyzing = 
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-sm text-ink-500/80 dark:text-sand-50/70">
             <Sparkles className="h-6 w-6 text-secondary-500" aria-hidden="true" />
-            <p>Paste a job description to see Saudi-specific recommendations here.</p>
+            <p>Paste a job description to see recommendations here.</p>
           </div>
         )}
       </aside>
