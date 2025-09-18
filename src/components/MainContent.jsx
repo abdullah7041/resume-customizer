@@ -118,14 +118,14 @@ export default function MainContent() {
         pushToast({
           type: "info",
           title: "Analyzing match",
-          description: "Comparing your resume to the Saudi job description…",
+          description: "Comparing your resume to the description…",
         });
         const result = await analyzeResume(resumeData, jobDescription);
         setMatchAnalysis(result);
         pushToast({
           type: "success",
           title: "Match insights ready",
-          description: "Review keywords and suggestions tailored for Riyadh.",
+          description: "Review keywords and suggestions.",
         });
         setActiveTab("optimize");
         setFlowProgress(100);
@@ -216,11 +216,11 @@ export default function MainContent() {
           ) : (
             <EmptyState
               icon={UserPlus}
-              title="Sign in to unlock Saudi-ready insights"
+              title="Sign in to unlock insights"
               description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
               actions={
                 <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
-                  Sign in with Google
+                  Sign in via Google
                 </PrimaryButton>
               }
             />
