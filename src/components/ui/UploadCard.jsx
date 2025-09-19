@@ -53,7 +53,7 @@ export default function UploadCard({
 
   return (
     <section
-      className="space-y-6 rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-8 shadow-card backdrop-blur-xl dark:border-white/5 dark:bg-surface-900/80"
+      className="space-y-6 rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-8 shadow-card backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/80"
       aria-live="polite"
     >
       <div className="space-y-2 text-left">
@@ -129,7 +129,7 @@ export default function UploadCard({
           Paste resume text instead
         </span>
         <textarea
-          className="min-h-[160px] w-full resize-y rounded-2xl border border-secondary-500/20 bg-surface-50/70 px-4 py-3 text-sm leading-relaxed text-ink-700 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-white/10 dark:bg-surface-900/70 dark:text-sand-50 dark:focus-visible:ring-offset-surface-900"
+          className="min-h-[160px] w-full resize-y rounded-2xl border border-secondary-500/20 bg-surface-50/70 px-4 py-3 text-sm leading-relaxed text-ink-700 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/12 dark:bg-surface-900/70 dark:text-sand-50 dark:focus-visible:ring-offset-surface-900"
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}

@@ -7,7 +7,7 @@ const prettyLabel = (value) =>
 
 export default function OptimizationCard({ optimization, onAccept, onReject, index }) {
   return (
-    <article className="space-y-4 rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/80 p-6 shadow-soft backdrop-blur-xl dark:border-white/5 dark:bg-surface-900/70">
+    <article className="space-y-4 rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/80 p-6 shadow-soft backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/70">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary-500/10 text-secondary-500">

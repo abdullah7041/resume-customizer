@@ -16,7 +16,6 @@
     color: var(--color-ink-900);
     transition: background-color var(--duration-breathe) var(--transition-snappy);
   }
-}
 
   @media (prefers-color-scheme: dark) {
     body {
@@ -50,7 +49,6 @@
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
-}
 
   .transition-snappy {
     transition: all var(--duration-snappy) var(--transition-snappy);
@@ -59,7 +57,7 @@
   @keyframes hero-fade-in {
     from {
       opacity: 0;
-      transform: translateY(12px) scale(1.01);
+      transform: translateY(14px) scale(1.01);
     }
 
     to {
@@ -70,7 +68,87 @@
 
   .hero-fade {
     opacity: 0;
-    animation: hero-fade-in 560ms var(--transition-snappy) forwards;
+    animation: hero-fade-in 520ms ease-out forwards;
+  }
+
+  @keyframes gold-shimmer {
+    0% {
+      transform: translate3d(-120%, 0, 0);
+    }
+
+    100% {
+      transform: translate3d(120%, 0, 0);
+    }
+  }
+
+  .badge-gold-shimmer {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-image: linear-gradient(120deg, rgba(197, 166, 106, 0.22), rgba(253, 230, 138, 0.12));
+    background-size: 140% 140%;
+    transition: background-position var(--duration-breathe) ease-out,
+      box-shadow var(--duration-snappy) var(--transition-snappy);
+  }
+
+  .badge-gold-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: -20% -35%;
+    background-image: linear-gradient(
+      128deg,
+      transparent 10%,
+      rgba(253, 230, 138, 0.05) 35%,
+      rgba(253, 230, 138, 0.45) 50%,
+      rgba(197, 166, 106, 0.4) 60%,
+      transparent 85%
+    );
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(-120%, 0, 0);
+  }
+
+  .badge-gold-shimmer:hover,
+  .badge-gold-shimmer:focus-visible {
+    background-position: 100% 0;
+  }
+
+  .badge-gold-shimmer:hover::after,
+  .badge-gold-shimmer:focus-visible::after {
+    opacity: 1;
+    animation: gold-shimmer 2.8s linear infinite;
+  }
+
+  .tab-pattern-hover {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tab-pattern-hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--tab-pattern);
+    background-size: 120px;
+    background-repeat: repeat;
+    opacity: 0;
+    transition: opacity var(--duration-breathe) ease-out;
+    pointer-events: none;
+  }
+
+  .tab-pattern-hover:hover::after,
+  .tab-pattern-hover:focus-visible::after {
+    opacity: 0.18;
+  }
+
+  .accent-divider {
+    background: linear-gradient(
+      90deg,
+      rgba(197, 166, 106, 0),
+      rgba(197, 166, 106, 0.75),
+      rgba(197, 166, 106, 0)
+    );
+    box-shadow: 0 0 24px rgba(197, 166, 106, 0.45);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -78,5 +156,11 @@
       animation: none;
       opacity: 1;
       transform: none;
+    }
+
+    .badge-gold-shimmer:hover::after,
+    .badge-gold-shimmer:focus-visible::after {
+      animation: none;
+      transform: translate3d(0, 0, 0);
     }
   }

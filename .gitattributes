@@ -3,3 +3,4 @@
 *.png filter=lfs diff=lfs merge=lfs -text
 *.webp filter=lfs diff=lfs merge=lfs -text
 # keep SVG and config files as normal text
+

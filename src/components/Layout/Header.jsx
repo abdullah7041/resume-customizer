@@ -9,16 +9,31 @@ const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
+const getIsNightSkyline = () => {
+  const now = new Date();
+  const hour = now.getHours();
+  return hour >= 18 || hour < 6;
+};
+
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const heroParallaxRef = useRef(null);
   const heroImageRef = useRef(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isNightSkyline, setIsNightSkyline] = useState(() => getIsNightSkyline());
 
   useEffect(() => {
     if (heroImageRef.current?.complete) {
       setImageLoaded(true);
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const update = () => setIsNightSkyline(getIsNightSkyline());
+    update();
+    const id = window.setInterval(update, 5 * 60 * 1000);
+    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -132,14 +147,33 @@ export default function Header() {
             loading="eager"
             fetchpriority="high"
             className={cn(
-              "h-full w-full object-cover object-center",
+              "h-full w-full object-cover object-center transition-[filter] duration-[var(--duration-breathe)] ease-[var(--transition-snappy)]",
               imageLoaded ? "hero-fade" : "opacity-0"
             )}
+            style={{
+              filter: isNightSkyline
+                ? "brightness(0.82) saturate(0.95)"
+                : "brightness(1.05) saturate(1.08)",
+            }}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageLoaded(true)}
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-500/60 via-surface-900/55 to-primary-700/60" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(197,166,106,0.18),transparent_55%)]" />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: isNightSkyline
+                ? "linear-gradient(135deg, rgba(55, 18, 92, 0.75) 0%, rgba(15, 15, 18, 0.78) 52%, rgba(108, 20, 80, 0.72) 100%)"
+                : "linear-gradient(135deg, rgba(124, 58, 237, 0.7) 0%, rgba(236, 72, 153, 0.66) 100%)",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: isNightSkyline
+                ? "radial-gradient(circle at top, rgba(197, 166, 106, 0.25), transparent 58%)"
+                : "radial-gradient(circle at top, rgba(255, 228, 185, 0.28), transparent 58%)",
+            }}
+          />
         </div>
       </div>
       <div
@@ -147,7 +181,7 @@ export default function Header() {
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
         aria-hidden="true"
       />
-      <div className="absolute inset-x-0 bottom-0 -z-10 h-px bg-gradient-to-r from-transparent via-accent-500/60 to-transparent" />
+      <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
 
       <div className="relative z-10">
         <div className="border-b border-surface-50/10">
@@ -179,9 +213,12 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div className="space-y-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-surface-50/30 bg-surface-50/15 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 backdrop-blur-sm">
+            <span
+              tabIndex={0}
+              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/30 bg-surface-50/20 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-900"
+            >
               Designed for Saudis ambition
             </span>
             <div className="relative">

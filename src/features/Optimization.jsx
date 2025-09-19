@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Download, Lock, Share2, Sparkles } from "lucide-react";
+import { Check, Download, Info, Lock, Share2, Sparkles } from "lucide-react";
 import PrimaryButton from "../components/ui/PrimaryButton.jsx";
 import SecondaryButton from "../components/ui/SecondaryButton.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -33,8 +33,12 @@ export default function Optimization({ isPremium, onUpgrade, onOptimize, optimiz
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-secondary-500">Preview mode</p>
               <p className="text-sm text-ink-500 dark:text-sand-50/80">
-                Try the optimizer workflow. Upgrade to save revisions, export PDFs, and share secure links.
+                Preview the optimizer workflow with your data before you upgrade.
               </p>
+              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs text-secondary-600 shadow-soft dark:border-surface-50/20 dark:bg-surface-900/60 dark:text-sand-50/70">
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="leading-none">Try the workflow for free—upgrade to save results.</span>
+              </div>
             </div>
           </div>
           <div>
@@ -110,4 +114,4 @@ export default function Optimization({ isPremium, onUpgrade, onOptimize, optimiz
       )}
     </div>
   );
-  }
+}

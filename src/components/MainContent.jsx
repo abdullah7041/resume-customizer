@@ -163,7 +163,8 @@ export default function MainContent() {
   const workspace = (
     <div className="space-y-8">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={setActiveTab} />
-      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-6 shadow-card backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/80">
+      <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
+      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-6 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-surface-900/80">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
@@ -189,11 +190,10 @@ export default function MainContent() {
   );
 
   return (
-    
     <main data-app-main className="relative -mt-16 px-4 pb-24">
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className="mx-auto max-w-6xl">
-        <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/95 p-8 shadow-card backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/80">
+        <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/80">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
               <div
@@ -216,7 +216,7 @@ export default function MainContent() {
           ) : (
             <EmptyState
               icon={UserPlus}
-              title="Sign in to unlock insights"
+              title="Sign in to unlock Saudi-ready insights"
               description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
               actions={
                 <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
