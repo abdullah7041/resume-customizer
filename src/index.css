@@ -1,6 +1,7 @@
 @import "./styles/theme.css";
 @import "tailwindcss";
 
+
 @layer base {
   :root {
     color-scheme: light dark;
@@ -32,6 +33,8 @@
     letter-spacing: 0.02em;
   }
 
+@utility card {
+  @apply bg-white rounded-2xl shadow-soft p-6;
   ::selection {
     background-color: color-mix(in srgb, var(--color-secondary-500) 35%, transparent);
     color: var(--color-surface-50);
@@ -161,4 +164,3 @@
       transform: translate3d(0, 0, 0);
     }
   }
-}

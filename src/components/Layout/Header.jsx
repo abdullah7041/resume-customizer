@@ -195,7 +195,7 @@ export default function Header() {
                   AI Resume Optimizer
                 </p>
                 <p className="text-sm font-semibold uppercase tracking-[0.32em] text-surface-50/90">
-                  Saudi Edition
+                  By Abdullah bin Ahmed
                 </p>
               </div>
             </div>
@@ -233,7 +233,7 @@ export default function Header() {
               </h1>
             </div>
             <p className="max-w-xl text-base leading-relaxed text-surface-50/85">
-              Transform your experience into a Riyadh-ready story. Our AI analyzes, matches, and optimizes your resume with a Saudi financial-tech lens—without sacrificing authenticity.
+              Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {user ? (

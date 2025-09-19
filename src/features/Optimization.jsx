@@ -109,7 +109,7 @@ export default function Optimization({ isPremium, onUpgrade, onOptimize, optimiz
         </div>
       ) : (
         <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/80 p-8 text-center text-sm text-ink-500/80 shadow-soft dark:border-surface-50/10 dark:bg-surface-900/60 dark:text-sand-50/70">
-          Run an analysis to see AI-generated optimization cards appear here.
+          Run an analysis to see AI optimization cards appear here.
         </div>
       )}
     </div>

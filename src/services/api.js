@@ -17,7 +17,7 @@ export const parseResume = async (resumeText) => {
       Authorization: `Bearer ${process.env.VITE_OPENAI_KEY}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-nano',
       input: prompt,
       response_format: { type: 'json_object' },
     }),
@@ -47,7 +47,7 @@ export const analyzeResume = async (resumeText, jobText) => {
       Authorization: `Bearer ${process.env.VITE_OPENAI_KEY}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-nano',
       input: prompt,
       response_format: { type: 'json_object' },
     }),

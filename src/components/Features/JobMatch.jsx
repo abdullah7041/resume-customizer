@@ -112,7 +112,7 @@ export default function JobMatch({ onAnalyzeMatch, matchAnalysis, isAnalyzing = 
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-sm text-ink-500/80 dark:text-sand-50/70">
             <Sparkles className="h-6 w-6 text-secondary-500" aria-hidden="true" />
-            <p>Paste a job description to see Saudi-specific recommendations here.</p>
+            <p>Paste a job description to see recommendations here.</p>
           </div>
         )}
       </aside>
