@@ -32,6 +32,8 @@
     font-family: var(--font-display);
     letter-spacing: 0.02em;
   }
+}
+/* <-- This closes the @layer base block */
 
 @utility card {
   @apply bg-white rounded-2xl shadow-soft p-6;
@@ -164,3 +166,4 @@
       transform: translate3d(0, 0, 0);
     }
   }
+}
