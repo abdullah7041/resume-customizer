@@ -127,20 +127,20 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="relative isolate overflow-hidden text-surface-50">
+    <header className="relative isolate overflow-hidden text-surface-50 min-h-[100svh]">
       <div
         className="absolute inset-0 -z-40"
         style={{ backgroundImage: "var(--gradient-primary)" }}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 -z-30 overflow-hidden" aria-hidden="true">
+      <div className="absolute inset-0 -z-30 overflow-hidden min-h-[100svh]" aria-hidden="true">
         <div
           ref={heroParallaxRef}
-          className="relative h-full w-full will-change-transform"
+          className="relative h-full min-h-[100svh] w-full will-change-transform"
         >
-          <img
-            ref={heroImageRef}
-            src="/images/KAFD.jpg"
+          import { skyline } from "@/lib/assets";
+          
+          <img ref={heroImageRef} src={skyline()}
             alt=""
             width="1600"
             height="900"
@@ -161,9 +161,7 @@ export default function Header() {
           <div
             className="pointer-events-none absolute inset-0"
             style={{
-              background: isNightSkyline
-                ? "linear-gradient(135deg, rgba(55, 18, 92, 0.75) 0%, rgba(15, 15, 18, 0.78) 52%, rgba(108, 20, 80, 0.72) 100%)"
-                : "linear-gradient(135deg, rgba(124, 58, 237, 0.7) 0%, rgba(236, 72, 153, 0.66) 100%)",
+              background: "linear-gradient(135deg, rgba(11,107,58,0.78) 0%, rgba(17,94,89,0.74) 55%, rgba(12,83,53,0.78) 100%)",
             }}
           />
           <div
@@ -213,7 +211,7 @@ export default function Header() {
           </div>
         </div>
 
-          <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] min-h-[70vh]">
           <div className="space-y-6">
             <span
               tabIndex={0}
