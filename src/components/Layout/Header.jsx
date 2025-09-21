@@ -141,8 +141,6 @@ export default function Header() {
           ref={heroParallaxRef}
           className="relative h-full min-h-[100svh] w-full will-change-transform"
         >
-          import { skyline } from "@/lib/assets";
-          
           <img ref={heroImageRef} src={skyline()}
             alt=""
             width="1600"
@@ -218,9 +216,9 @@ export default function Header() {
           <div className="space-y-6">
             <span
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/30 bg-surface-50/20 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-900"
+              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/30 bg-surface-50/20 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-900"
             >
-              Designed for Saudis ambition
+              Designed for Saudi ambition
             </span>
             <div className="relative">
               <span
