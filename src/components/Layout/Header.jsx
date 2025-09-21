@@ -36,7 +36,7 @@ export default function Header() {
 
   return (
     <header
-      className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-[#0B6B3A] text-surface-50"
+      className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-[#0B6B3A] text-surface-50 min-h-[100svh]"
       style={{
         backgroundImage: backgroundLayers.join(", "),
         backgroundSize,

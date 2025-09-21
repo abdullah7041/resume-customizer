@@ -81,9 +81,16 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
         const sanitizedBase = baseName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
         const fileName = `${Date.now()}-${sanitizedBase}.${extension}`;
 
+        const { data: { user } } = await supabase.auth.getUser();
+if (!user) {
+  throw new Error("You must be signed in to upload a resume.");
+}
+
+const filePath = `${user.id}/${fileName}`;
+
         const { error: uploadError } = await supabase.storage
           .from("resumes")
-          .upload(fileName, file, {
+          .upload(filePath, file, {
             cacheControl: "3600",
             upsert: false,
             onUploadProgress: ({ loaded, total }) => {
@@ -96,6 +103,15 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
         if (uploadError) {
           throw uploadError;
         }
+        // private bucket => signed URL
+        const { data: signed, error: signedErr } = await supabase.storage
+          .from("resumes")
+          .createSignedUrl(filePath, 60 * 60);
+
+        if (signedErr) throw signedErr;
+
+// optional: keep the link
+setUrl(signed.signedUrl);
 
         setProgress(70);
         onToast?.({
