@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { FileText, LogIn, LogOut, Sparkles, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import { useAuth } from "../../hooks/useAuth";
-import { cn } from "../../lib/cn";
 import { skyline } from "../../lib/assets";
 
 
@@ -12,116 +11,22 @@ const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
-const getIsNightSkyline = () => {
-  const now = new Date();
-  const hour = now.getHours();
-  return hour >= 18 || hour < 6;
-};
-
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
-  const heroParallaxRef = useRef(null);
-  const heroImageRef = useRef(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [isNightSkyline, setIsNightSkyline] = useState(() => getIsNightSkyline());
-
-  useEffect(() => {
-    if (heroImageRef.current?.complete) {
-      setImageLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const update = () => setIsNightSkyline(getIsNightSkyline());
-    update();
-    const id = window.setInterval(update, 5 * 60 * 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const element = heroParallaxRef.current;
-    if (!element) return;
-
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const desktopQuery = window.matchMedia("(min-width: 1024px)");
-    let rafId = null;
-    let isActive = false;
-
-    const applyParallax = () => {
-      if (!element) return;
-      const maxOffset = 14;
-      const maxScroll = 520;
-      const progress = Math.min(window.scrollY, maxScroll) / maxScroll;
-      const offset = progress * maxOffset;
-      element.style.transform = `translateY(${offset}px)`;
-    };
-
-    const resetParallax = () => {
-      element.style.transform = "";
-    };
-
-    const onScroll = () => {
-      if (rafId !== null) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        applyParallax();
-      });
-    };
-
-    const update = () => {
-      const shouldEnable = !motionQuery.matches && desktopQuery.matches;
-      if (shouldEnable) {
-        if (!isActive) {
-          isActive = true;
-          applyParallax();
-          window.addEventListener("scroll", onScroll, { passive: true });
-        }
-      } else {
-        if (isActive) {
-          window.removeEventListener("scroll", onScroll);
-          isActive = false;
-        }
-        resetParallax();
-      }
-    };
-
-    update();
-
-    const handleMotionChange = () => update();
-    const handleDesktopChange = () => update();
-
-    const motionAdd =
-      typeof motionQuery.addEventListener === "function"
-        ? motionQuery.addEventListener.bind(motionQuery)
-        : motionQuery.addListener.bind(motionQuery);
-    const motionRemove =
-      typeof motionQuery.removeEventListener === "function"
-        ? motionQuery.removeEventListener.bind(motionQuery)
-        : motionQuery.removeListener.bind(motionQuery);
-    const desktopAdd =
-      typeof desktopQuery.addEventListener === "function"
-        ? desktopQuery.addEventListener.bind(desktopQuery)
-        : desktopQuery.addListener.bind(desktopQuery);
-    const desktopRemove =
-      typeof desktopQuery.removeEventListener === "function"
-        ? desktopQuery.removeEventListener.bind(desktopQuery)
-        : desktopQuery.removeListener.bind(desktopQuery);
-
-    motionAdd("change", handleMotionChange);
-    desktopAdd("change", handleDesktopChange);
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (rafId !== null) {
-        window.cancelAnimationFrame(rafId);
-      }
-      motionRemove("change", handleMotionChange);
-      desktopRemove("change", handleDesktopChange);
-      resetParallax();
-    };
-  }, []);
+  const skylineUrl = skyline();
+  const hasSkyline = typeof skylineUrl === "string" && skylineUrl.trim().length > 0 && !skylineUrl.includes("undefined");
+  const backgroundLayers = hasSkyline
+    ? [
+        "radial-gradient(circle at 50% -10%, rgba(197,166,106,0.12), transparent 62%)",
+        "linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%)",
+        `url(${skylineUrl})`,
+      ]
+    : [
+        "radial-gradient(circle at 50% -10%, rgba(197,166,106,0.12), transparent 62%)",
+        "linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%)",
+      ];
+  const backgroundSize = hasSkyline ? "160% 140%, cover, cover" : "160% 140%, cover";
+  const backgroundPosition = hasSkyline ? "50% -20%, center, center" : "50% -20%, center";
 
   const scrollToMain = useCallback(() => {
     if (typeof document === "undefined") return;
@@ -130,51 +35,15 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="relative isolate overflow-hidden text-surface-50 min-h-[100svh]">
-      <div
-        className="absolute inset-0 -z-40"
-        style={{ backgroundImage: "var(--gradient-primary)" }}
-        aria-hidden="true"
-      />
-      <div className="absolute inset-0 -z-30 overflow-hidden min-h-[100svh]" aria-hidden="true">
-        <div
-          ref={heroParallaxRef}
-          className="relative h-full min-h-[100svh] w-full will-change-transform"
-        >
-          <img ref={heroImageRef} src={skyline()}
-            alt=""
-            width="1600"
-            height="900"
-            loading="eager"
-            fetchpriority="high"
-            className={cn(
-              "h-full w-full object-cover object-center transition-[filter] duration-[var(--duration-breathe)] ease-[var(--transition-snappy)]",
-              imageLoaded ? "hero-fade" : "opacity-0"
-            )}
-            style={{
-              filter: isNightSkyline
-                ? "brightness(0.82) saturate(0.95)"
-                : "brightness(1.05) saturate(1.08)",
-            }}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
-          />
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background: "linear-gradient(135deg, rgba(11,107,58,0.78) 0%, rgba(17,94,89,0.74) 55%, rgba(12,83,53,0.78) 100%)",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background: isNightSkyline
-                ? "radial-gradient(circle at top, rgba(197, 166, 106, 0.25), transparent 58%)"
-                : "radial-gradient(circle at top, rgba(255, 228, 185, 0.28), transparent 58%)",
-            }}
-          />
-        </div>
-      </div>
+    <header
+      className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-[#0B6B3A] text-surface-50"
+      style={{
+        backgroundImage: backgroundLayers.join(", "),
+        backgroundSize,
+        backgroundPosition,
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <div
         className="absolute inset-0 -z-20 opacity-[0.05]"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
@@ -182,9 +51,9 @@ export default function Header() {
       />
       <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-1 flex-col">
         <div className="border-b border-surface-50/10">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-50/10 text-accent-500 shadow-soft">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
@@ -212,7 +81,7 @@ export default function Header() {
           </div>
         </div>
 
-          <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] min-h-[70vh]">
+        <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-16 pt-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div className="space-y-6">
             <span
               tabIndex={0}
@@ -234,19 +103,22 @@ export default function Header() {
             <p className="max-w-xl text-base leading-relaxed text-surface-50/85">
               Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
             </p>
-            <div className="flex flex-wrap items-center gap-3">
-              {user ? (
-                <PrimaryButton onClick={scrollToMain}>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <PrimaryButton
+                  onClick={user ? scrollToMain : signInWithGoogle}
+                  icon={user ? undefined : LogIn}
+                >
                   Continue optimizing
                 </PrimaryButton>
-              ) : (
-                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
-                  Sign in to start
-                </PrimaryButton>
-              )}
-              <SecondaryButton onClick={scrollToMain}>
-                See the workflow
-              </SecondaryButton>
+              </div>
+              <button
+                type="button"
+                onClick={scrollToMain}
+                className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-accent-400 transition-colors hover:text-accent-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B6B3A]"
+              >
+                <span>See the workflow</span>
+              </button>
             </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
               <div className="group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
@@ -282,7 +154,7 @@ export default function Header() {
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Match against Saudi job roles</p>
-                  <p className="text-xs text-ink-500 dark:text-surface-50/70">Get a confidence score, missing keywords, and Riyadh-specific guidance.</p>
+                  <p className="text-xs text-ink-500 dark:text-surface-50/70">Get a confidence score, missing keywords, and guidance.</p>
                 </div>
               </li>
               <li className="flex gap-3">
