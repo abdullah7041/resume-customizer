@@ -154,7 +154,7 @@ export default function Header() {
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Match against Saudi job roles</p>
-                  <p className="text-xs text-ink-500 dark:text-surface-50/70">Get a confidence score, missing keywords, and Riyadh-specific guidance.</p>
+                  <p className="text-xs text-ink-500 dark:text-surface-50/70">Get a confidence score, missing keywords, and guidance.</p>
                 </div>
               </li>
               <li className="flex gap-3">
