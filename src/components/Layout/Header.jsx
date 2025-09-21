@@ -35,15 +35,19 @@ export default function Header() {
   }, []);
 
   return (
-    <header
-      className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-[#0B6B3A] text-surface-50 min-h-[100svh]"
-      style={{
-        backgroundImage: backgroundLayers.join(", "),
-        backgroundSize,
-        backgroundPosition,
-        backgroundRepeat: "no-repeat",
-      }}
-    >
+    
+<header
+  className="relative isolate overflow-hidden text-surface-50 min-h-[100svh]"
+  style={{
+    backgroundImage: `
+      linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%),
+      url('${skyline()}')
+    `,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+  }}
+>
       <div
         className="absolute inset-0 -z-20 opacity-[0.05]"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
