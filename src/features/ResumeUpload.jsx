@@ -10,6 +10,7 @@ const ACCEPTED_TYPES = [
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
+  const [url, setUrl] = useState("");
   const [file, setFile] = useState(null);
   const [textValue, setTextValue] = useState("");
   const [status, setStatus] = useState("idle");
