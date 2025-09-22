@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FileText, LogIn, LogOut, Sparkles, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
@@ -15,18 +15,12 @@ export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const skylineUrl = skyline();
   const hasSkyline = typeof skylineUrl === "string" && skylineUrl.trim().length > 0 && !skylineUrl.includes("undefined");
-  const backgroundLayers = hasSkyline
-    ? [
-        "radial-gradient(circle at 50% -10%, rgba(197,166,106,0.12), transparent 62%)",
-        "linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%)",
-        `url(${skylineUrl})`,
-      ]
-    : [
-        "radial-gradient(circle at 50% -10%, rgba(197,166,106,0.12), transparent 62%)",
-        "linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%)",
-      ];
-  const backgroundSize = hasSkyline ? "160% 140%, cover, cover" : "160% 140%, cover";
-  const backgroundPosition = hasSkyline ? "50% -20%, center, center" : "50% -20%, center";
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
 
   const scrollToMain = useCallback(() => {
     if (typeof document === "undefined") return;
@@ -34,20 +28,27 @@ export default function Header() {
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
+  const toggleTheme = useCallback(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const nextIsDark = root.classList.toggle("dark");
+    setIsDark(nextIsDark);
+  }, []);
+
+  const backgroundImage = hasSkyline
+    ? `linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%), url('${skylineUrl}')`
+    : "linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%)";
+
   return (
-    
-<header
-  className="relative isolate overflow-hidden text-surface-50 min-h-[100svh]"
-  style={{
-    backgroundImage: `
-      linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%),
-      url('${skyline()}')
-    `,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-  }}
->
+    <header
+      className="hero-bg-animate relative isolate min-h-[100svh] overflow-hidden text-surface-50"
+      style={{
+        backgroundImage,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <div
         className="absolute inset-0 -z-20 opacity-[0.05]"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
@@ -72,14 +73,23 @@ export default function Header() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-pressed={isDark}
+                className="inline-flex items-center gap-2 rounded-full border border-surface-50/40 bg-surface-50/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 transition-colors hover:bg-surface-50/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:border-surface-50/15 dark:bg-surface-900/50 dark:text-surface-50 dark:hover:bg-surface-900/60 dark:focus-visible:ring-accent-400/70"
+              >
+                <span>Toggle Theme</span>
+                <span className="sr-only">{isDark ? "Dark mode enabled" : "Light mode enabled"}</span>
+              </button>
               {user ? (
                 <SecondaryButton icon={LogOut} onClick={signOut}>
                   Sign Out
                 </SecondaryButton>
               ) : (
-                <SecondaryButton icon={LogIn} onClick={signInWithGoogle}>
+                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
                   Sign In
-                </SecondaryButton>
+                </PrimaryButton>
               )}
             </div>
           </div>
@@ -119,7 +129,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={scrollToMain}
-                className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-accent-400 transition-colors hover:text-accent-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B6B3A]"
+                className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-accent-400 transition-colors hover:text-accent-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B6B3A] dark:focus-visible:ring-offset-[#0a3f26]"
               >
                 <span>See the workflow</span>
               </button>

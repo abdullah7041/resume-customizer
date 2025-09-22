@@ -10,19 +10,15 @@
   body {
     min-height: 100vh;
     font-family: var(--font-body);
-    background-color: var(--color-sand-50);
-    background-image: var(--gradient-muted);
+    background: linear-gradient(135deg, #0B6B3A 0%, #146356 55%, #0C5335 100%);
     background-attachment: fixed;
     color: var(--color-ink-900);
     transition: background-color var(--duration-breathe) var(--transition-snappy);
   }
 
-  @media (prefers-color-scheme: dark) {
-    body {
-      background-color: var(--color-surface-900);
-      color: var(--color-sand-50);
-      background-image: none;
-    }
+  .dark body {
+    background: linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
+    color: var(--color-sand-50);
   }
 
   h1,
@@ -71,6 +67,20 @@
   .hero-fade {
     opacity: 0;
     animation: hero-fade-in 520ms ease-out forwards;
+  }
+
+  @keyframes hero-fade {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  .hero-bg-animate {
+    animation: hero-fade 1.2s ease-out forwards;
   }
 
   .badge-gold-shimmer {
@@ -146,6 +156,10 @@
       animation: none;
       opacity: 1;
       transform: none;
+    }
+
+    .hero-bg-animate {
+      animation: none;
     }
 
     .badge-gold-shimmer {
