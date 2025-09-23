@@ -81,12 +81,20 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
         const sanitizedBase = baseName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
         const fileName = `${Date.now()}-${sanitizedBase}.${extension}`;
 
-        const { data: { user } } = await supabase.auth.getUser();
-if (!user) {
-  throw new Error("You must be signed in to upload a resume.");
-}
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-const filePath = `${user.id}/${fileName}`;
+        if (userError) {
+          throw userError;
+        }
+
+        if (!user) {
+          throw new Error("You must be signed in to upload a resume.");
+        }
+
+        const filePath = `${user.id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from("resumes")
