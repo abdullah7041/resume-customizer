@@ -33,7 +33,7 @@ export default function Header() {
   );
   const [isDark, setIsDark] = useState(() => resolvePreferredTheme() === "dark");
 
-  useEffect(() => {
+  const applyTheme = useCallback((nextIsDark) => {
     if (typeof document === "undefined") return;
     document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);

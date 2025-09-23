@@ -239,7 +239,7 @@ const postToOpenAI = async (body: Record<string, unknown>, apiKey: string) => {
 const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<OptimizationPayload> => {
   const { resumeText = "", jobDesc = "", mode = "auto" } = payload;
   const prompt = buildPrompt(resumeText, jobDesc, mode);
-  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const model = process.env.OPENAI_MODEL || "gpt-5-nano";
   const messages = [
     {
       role: "system",
@@ -308,7 +308,7 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
           },
         },
         max_output_tokens: 900,
-        temperature: 0.4,
+        temperature: 1,
       },
       apiKey,
     );
@@ -326,7 +326,7 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
           input: messages,
           text: { format: "plain" },
           max_output_tokens: 900,
-          temperature: 0.5,
+          temperature: 1,
         },
         apiKey,
       );
@@ -387,4 +387,4 @@ const handler: Handler = async (event) => {
   }
 };
 
-export { handler };
+export { handler }
