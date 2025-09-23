@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
 import { parseResume, analyzeResume, optimizeResume } from "../services/api.js";
 import { useAuth } from "../hooks/useAuth.jsx";
@@ -18,7 +18,13 @@ const tabs = [
   { value: "optimize", label: "Optimize", icon: Sparkles },
 ];
 
-const SKYLINE_SESSION_KEY = "airo:skyline:first";
+const API_TEMPERATURE = 1;
+const TOAST_IDS = {
+  upload: "toast:upload",
+  match: "toast:match",
+  optimize: "toast:optimize",
+};
+const withTemperature = (message) => `${message} • Temp ${API_TEMPERATURE}`;
 
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -53,20 +59,51 @@ export default function MainContent() {
   const [toasts, setToasts] = useState([]);
   const skylineUrl = useMemo(() => skyline(), []);
   const [animateSkyline, setAnimateSkyline] = useState(false);
+  const toastTimers = useRef(new Map());
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    const timer = toastTimers.current.get(id);
+    if (timer) {
+      const host = typeof window !== "undefined" ? window : globalThis;
+      host.clearTimeout?.(timer);
+      toastTimers.current.delete(id);
+    }
   }, []);
 
   const pushToast = useCallback(
-    (toast) => {
-      const id = getId();
-      setToasts([{ id, ...toast }]);
+    (toast, options = {}) => {
+      const { toastId, ...toastPayload } = toast ?? {};
+      const id = options.id ?? toastId ?? getId();
+      setToasts([{ id, ...toastPayload }]);
       const lifetime = toast?.type === "danger" ? 6000 : 4200;
-      scheduleTimeout(() => dismissToast(id), lifetime);
+      const host = typeof window !== "undefined" ? window : globalThis;
+      const existing = toastTimers.current.get(id);
+      if (existing) {
+        host.clearTimeout?.(existing);
+      }
+      const timer = scheduleTimeout(() => dismissToast(id), lifetime);
+      toastTimers.current.set(id, timer);
+      return id;
     },
     [dismissToast]
   );
+
+  const handleUploadToast = useCallback(
+    (toast) => pushToast(toast, { id: TOAST_IDS.upload }),
+    [pushToast]
+  );
+
+  useEffect(() => {
+    const host = typeof window !== "undefined" ? window : globalThis;
+    const timers = toastTimers.current;
+    return () => {
+      timers.forEach((timer) => {
+        host.clearTimeout?.(timer);
+      });
+      timers.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -74,11 +111,11 @@ export default function MainContent() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !skylineUrl) return undefined;
     setAnimateSkyline(true);
     const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [skylineUrl]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -90,11 +127,14 @@ export default function MainContent() {
     async (resumeInput) => {
       try {
         setFlowProgress(18);
-        pushToast({
-          type: "info",
-          title: "Parsing resume",
-          description: "AI is structuring your experience for analysis.",
-        });
+        pushToast(
+          {
+            type: "info",
+            title: "Parsing resume",
+            description: "AI is structuring your experience for analysis.",
+          },
+          { id: TOAST_IDS.upload }
+        );
 
         const content =
           typeof resumeInput === "string"
@@ -109,22 +149,29 @@ export default function MainContent() {
         setJobDescription("");
         setOptimizations([]);
         setOptimizationKeywords({ add: [], remove: [], neutral: [] });
-        pushToast({
-          type: "success",
-          title: "Resume parsed",
-          description: "Move to Match to compare with a job description.",
-        });
+        pushToast(
+          {
+            type: "success",
+            title: "Resume parsed",
+            description: "Move to Match to compare with a job description.",
+          },
+          { id: TOAST_IDS.upload }
+        );
         setActiveTab("match");
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return parsed;
       } catch (error) {
         setFlowProgress(0);
-        pushToast({
-          type: "danger",
-          title: "Parsing failed",
-          description: error?.message || "Please try again with a different file.",
-        });
+        pushToast(
+          {
+            type: "danger",
+            title: "Parsing failed",
+            description: (error?.message || "Please try again with a different file.") +
+              " • Save your text before retrying.",
+          },
+          { id: TOAST_IDS.upload }
+        );
         throw error;
       }
     },
@@ -146,31 +193,43 @@ export default function MainContent() {
       try {
         setIsAnalyzing(true);
         setFlowProgress(22);
-        pushToast({
-          type: "info",
-          title: "Analyzing match",
-          description: "Comparing your resume to the description…",
-        });
+        pushToast(
+          {
+            type: "info",
+            title: "Analyzing match",
+            description: withTemperature("Comparing your resume to the description…"),
+          },
+          { id: TOAST_IDS.match }
+        );
         const trimmedJob = jobDescriptionInput.trim();
         const result = await analyzeResume(resumeData, trimmedJob);
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
-        pushToast({
-          type: "success",
-          title: "Match insights ready",
-          description: "Review keywords and suggestions.",
-        });
+        pushToast(
+          {
+            type: "success",
+            title: "Match insights ready",
+            description: withTemperature("Review keywords and suggestions."),
+          },
+          { id: TOAST_IDS.match }
+        );
         setActiveTab("optimize");
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return result;
       } catch (error) {
         setFlowProgress(0);
-        pushToast({
-          type: "danger",
-          title: "Match analysis failed",
-          description: error?.message || "Please try again in a moment.",
-        });
+        pushToast(
+          {
+            type: "danger",
+            title: "Match analysis failed",
+            description: withTemperature(
+              (error?.message || "Please try again in a moment.") +
+                " • Copy your inputs before retrying."
+            ),
+          },
+          { id: TOAST_IDS.match }
+        );
         throw error;
       } finally {
         setIsAnalyzing(false);
@@ -193,11 +252,14 @@ export default function MainContent() {
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
-        pushToast({
-          type: "info",
-          title: "Generating optimizations",
-          description: "Drafting tailored rewrite suggestions…",
-        });
+        pushToast(
+          {
+            type: "info",
+            title: "Generating optimizations",
+            description: withTemperature("Drafting tailored rewrite suggestions…"),
+          },
+          { id: TOAST_IDS.optimize }
+        );
 
         const result = await optimizeResume({
           resumeText: resumeData,
@@ -208,14 +270,18 @@ export default function MainContent() {
 
         setOptimizations(result.cards ?? []);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
-        pushToast({
-          type: "success",
-          title: "Optimization cards ready",
-          description:
-            result.source === "openai"
-              ? "Review AI-crafted rewrites and keywords."
-              : "Preview mode generated realistic guidance.",
-        });
+        pushToast(
+          {
+            type: "success",
+            title: "Optimization cards ready",
+            description: withTemperature(
+              result.source === "openai"
+                ? "Review AI-crafted rewrites and keywords."
+                : "Preview mode generated realistic guidance."
+            ),
+          },
+          { id: TOAST_IDS.optimize }
+        );
 
         if (!isPremium && !previewUsed) {
           persistPreviewUsage();
@@ -226,11 +292,17 @@ export default function MainContent() {
         return result;
       } catch (error) {
         setFlowProgress(0);
-        pushToast({
-          type: "danger",
-          title: "Optimization failed",
-          description: error?.message || "Please try again shortly.",
-        });
+        pushToast(
+          {
+            type: "danger",
+            title: "Optimization failed",
+            description: withTemperature(
+              (error?.message || "Please try again shortly.") +
+                " • Save your best bullets before retrying."
+            ),
+          },
+          { id: TOAST_IDS.optimize }
+        );
         throw error;
       } finally {
         setIsOptimizing(false);
@@ -324,7 +396,7 @@ export default function MainContent() {
           <ResumeUpload
             onParseResume={handleParseResume}
             resumeData={resumeData}
-            onToast={pushToast}
+            onToast={handleUploadToast}
           />
         )}
         {activeTab === "match" && (
@@ -356,30 +428,22 @@ export default function MainContent() {
   return (
     <>
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-50">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0b6b3a]/88 via-[#0b3d2b]/86 to-[#04160d]/94" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0b6b3a]/90 via-[#0b3d2b]/82 to-[#04160d]/94" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(11,107,58,0.35)_0%,rgba(3,20,13,0)_65%)]" />
         {typeof skylineUrl === "string" && skylineUrl ? (
-          <>
-            <div className="absolute inset-0 overflow-hidden">
-              <img
-                src={skylineUrl}
-                alt=""
-                loading="eager"
-                decoding="async"
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-auto min-h-full w-full object-cover"
-                style={{ objectPosition: "center calc(100% - 140px)" }}
-              />
-            </div>
-            <div
-              className={`absolute inset-x-0 bottom-0 h-full bg-cover bg-bottom bg-no-repeat opacity-[0.85] ${
-                animateSkyline ? "skyline-once" : "skyline-still"
-              }`}
-              style={{
-                backgroundImage: `url('${skylineUrl}')`,
-                backgroundPosition: "center calc(100% - 140px)",
-              }}
-            />
-          </>
+          <div
+            className={`bg-hero absolute inset-0 -z-10 overflow-visible bg-cover bg-no-repeat ${
+              animateSkyline ? "skyline-once" : "skyline-still"
+            }`}
+            style={{
+              backgroundImage: `url('${skylineUrl}')`,
+              backgroundPosition: "center calc(100% - 200px)",
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-[#02140b]/92 via-[#021f15]/60 to-transparent" />
+          </div>
         ) : null}
+        <div className="accent-divider absolute inset-x-0 bottom-0 z-0 h-px" aria-hidden="true" />
       </div>
       <main
         data-app-main

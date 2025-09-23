@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
+import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 
 const saduPattern = encodeURIComponent(
@@ -101,7 +102,12 @@ export default function Header() {
                 type="button"
                 onClick={toggleTheme}
                 aria-pressed={isDark}
-                className="inline-flex items-center gap-2 rounded-full border border-surface-50/40 bg-surface-50/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 transition-colors hover:bg-surface-50/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:border-surface-50/15 dark:bg-surface-900/50 dark:text-surface-50 dark:hover:bg-surface-900/60 dark:focus-visible:ring-accent-400/70"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                  isDark
+                    ? "border-surface-50/20 bg-surface-900/60 text-surface-50 hover:bg-surface-900/70 focus-visible:ring-accent-400/70 focus-visible:ring-offset-surface-900"
+                    : "border-surface-900/10 bg-surface-50/95 text-ink-800 shadow-[0_12px_34px_-24px_rgba(11,107,58,0.45)] hover:bg-surface-50 focus-visible:ring-accent-300/70 focus-visible:ring-offset-transparent"
+                )}
               >
                 {isDark ? (
                   <Sun className="h-4 w-4" aria-hidden="true" />
@@ -132,7 +138,7 @@ export default function Header() {
           <div className="space-y-6">
             <span
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/40 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/55 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero"
             >
               Designed for Saudi ambition
             </span>
@@ -143,10 +149,10 @@ export default function Header() {
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
+              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
                 AI Resume Optimizer
               </h1>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-surface-50/85">
+              <p className="text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
