@@ -19,6 +19,25 @@ export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const { theme, isDark, setTheme } = useTheme();
 
+  const toggleGroupClass = cn(
+    "inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md transition-colors",
+    isDark
+      ? "border-surface-50/25 bg-surface-900/70 text-surface-50/80 shadow-[0_22px_48px_-32px_rgba(2,12,8,0.65)]"
+      : "border-surface-900/10 bg-surface-50/95 text-ink-600 shadow-[0_20px_52px_-28px_rgba(11,107,58,0.45)]"
+  );
+
+  const getOptionClass = (isActive) =>
+    cn(
+      "inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/80 focus-visible:ring-offset-2",
+      isActive
+        ? isDark
+          ? "bg-surface-900 text-surface-50 shadow-[0_20px_44px_-28px_rgba(0,0,0,0.7)] focus-visible:ring-offset-surface-900"
+          : "bg-surface-50 text-ink-900 shadow-[0_18px_40px_-28px_rgba(11,107,58,0.45)] focus-visible:ring-offset-sand-50"
+        : isDark
+          ? "text-surface-50/70 hover:text-surface-50 focus-visible:ring-offset-surface-900"
+          : "text-ink-500 hover:text-ink-700 focus-visible:ring-offset-sand-50"
+    );
+
   const handleThemeKeyDown = useCallback(
     (event, index) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
@@ -62,19 +81,11 @@ export default function Header() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div
-                role="radiogroup"
-                aria-label="Color theme"
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md transition-colors",
-                  isDark
-                    ? "border-surface-50/25 bg-surface-900/70 text-surface-50/80 shadow-[0_22px_48px_-32px_rgba(2,12,8,0.65)]"
-                    : "border-surface-900/10 bg-surface-50/95 text-ink-600 shadow-[0_20px_52px_-28px_rgba(11,107,58,0.45)]"
-                  <Moon className="h-4 w-4" aria-hidden="true" />
-                )}
-              >
+              <div role="radiogroup" aria-label="Color theme" className={toggleGroupClass}>
                 {themeOptions.map(({ value, label, icon: Icon }, index) => {
                   const isActive = theme === value;
+                  const optionClass = getOptionClass(isActive);
+
                   return (
                     <button
                       key={value}
@@ -83,16 +94,7 @@ export default function Header() {
                       aria-checked={isActive}
                       onClick={() => setTheme(value)}
                       onKeyDown={(event) => handleThemeKeyDown(event, index)}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/80 focus-visible:ring-offset-2",
-                        isActive
-                          ? isDark
-                            ? "bg-surface-900 text-surface-50 shadow-[0_20px_44px_-28px_rgba(0,0,0,0.7)] focus-visible:ring-offset-surface-900"
-                            : "bg-surface-50 text-ink-900 shadow-[0_18px_40px_-28px_rgba(11,107,58,0.45)] focus-visible:ring-offset-sand-50"
-                          : isDark
-                            ? "text-surface-50/70 hover:text-surface-50 focus-visible:ring-offset-surface-900"
-                            : "text-ink-500 hover:text-ink-700 focus-visible:ring-offset-sand-50"
-                      )}
+                      className={optionClass}
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       <span>{label}</span>
