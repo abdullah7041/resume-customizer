@@ -116,7 +116,9 @@ exports[`UploadCard > matches snapshot and exposes accessible controls 1`] = `
     </div>
     <input
       accept=".pdf,.docx"
+      aria-label="Upload resume file"
       class="sr-only"
+      title="Upload resume file"
       type="file"
     />
     <label

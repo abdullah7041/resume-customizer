@@ -94,6 +94,7 @@
   }
 
   .badge-gold-shimmer {
+    position: relative;
     color: #c5a66a;
     background-image: linear-gradient(
       120deg,
@@ -101,12 +102,35 @@
       rgba(253, 230, 138, 0.55) 20%,
       rgba(197, 166, 106, 0.35) 40%
     );
-    background-size: 200% auto;
+    background-size: 220% auto;
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
-    animation: shimmer 3s linear infinite;
+    animation: shimmer 2.8s linear infinite;
     animation-play-state: paused;
+    transition: filter 180ms ease, text-shadow 180ms ease;
+  }
+
+  .badge-gold-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(197, 166, 106, 0) 25%, rgba(253, 230, 138, 0.45) 50%, rgba(197, 166, 106, 0) 75%);
+    opacity: 0;
+    transition: opacity 200ms ease;
+    pointer-events: none;
+  }
+
+  .badge-gold-shimmer:hover,
+  .badge-gold-shimmer:focus-visible {
+    animation-play-state: running;
+    filter: drop-shadow(0 0 12px rgba(197, 166, 106, 0.35));
+  }
+
+  .badge-gold-shimmer:hover::after,
+  .badge-gold-shimmer:focus-visible::after {
+    opacity: 0.25;
   }
 
   @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
@@ -239,7 +263,7 @@
     background-size: cover;
     transform: scale(1.05);
     filter: saturate(1.05) brightness(0.96);
-    opacity: 0.9;
+    opacity: 0.84;
   }
 
   .bg-hero::after {
@@ -339,6 +363,11 @@
 
     .badge-gold-shimmer {
       animation: none;
+      filter: none;
+    }
+
+    .badge-gold-shimmer::after {
+      opacity: 0;
     }
 
     .skyline-once {
