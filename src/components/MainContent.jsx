@@ -18,6 +18,8 @@ const tabs = [
   { value: "optimize", label: "Optimize", icon: Sparkles },
 ];
 
+const SKYLINE_SESSION_KEY = "airo:skyline:first";
+
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
