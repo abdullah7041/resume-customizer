@@ -132,7 +132,7 @@ export default function Header() {
           <div className="space-y-6">
             <span
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/40 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/55 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero"
             >
               Designed for Saudi ambition
             </span>
@@ -143,10 +143,10 @@ export default function Header() {
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
+              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
                 AI Resume Optimizer
               </h1>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-surface-50/85">
+              <p className="text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>

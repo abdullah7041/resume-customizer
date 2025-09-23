@@ -89,6 +89,10 @@
     animation: hero-fade 1.2s ease-out forwards;
   }
 
+  .text-shadow-hero {
+    text-shadow: 0 6px 28px rgba(2, 20, 11, 0.7);
+  }
+
   .badge-gold-shimmer {
     color: #c5a66a;
     background-image: linear-gradient(
@@ -214,6 +218,16 @@
 
   .skyline-still {
     opacity: 0.85;
+  }
+
+  .bg-hero {
+    background-attachment: fixed;
+  }
+
+  @media (max-width: 768px) {
+    .bg-hero {
+      background-attachment: scroll;
+    }
   }
 
   @keyframes keywordChipShine {
