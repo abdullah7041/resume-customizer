@@ -70,6 +70,7 @@ export default function Header() {
                   isDark
                     ? "border-surface-50/25 bg-surface-900/70 text-surface-50/80 shadow-[0_22px_48px_-32px_rgba(2,12,8,0.65)]"
                     : "border-surface-900/10 bg-surface-50/95 text-ink-600 shadow-[0_20px_52px_-28px_rgba(11,107,58,0.45)]"
+                  <Moon className="h-4 w-4" aria-hidden="true" />
                 )}
               >
                 {themeOptions.map(({ value, label, icon: Icon }, index) => {

@@ -18,6 +18,11 @@ export default function PrimaryButton({
         "focus-visible:ring-accent-200 focus-visible:ring-offset-sand-50",
         "disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-primary-500/55 disabled:bg-[linear-gradient(130deg,#118554_0%,#118554_100%)] disabled:text-surface-50/75 disabled:shadow-none",
         "dark:border-primary-400/70 dark:bg-[linear-gradient(130deg,#2beab0_0%,#11a76a_44%,#0b6b3a_100%)] dark:hover:bg-[linear-gradient(130deg,#37f7bf_0%,#16b878_44%,#0c7a45_100%)] dark:hover:shadow-[0_32px_78px_-28px_rgba(41,232,172,0.48)] dark:focus-visible:ring-accent-200 dark:focus-visible:ring-offset-surface-900",
+        "border border-primary-500/85 text-surface-50 shadow-[0_22px_55px_-32px_rgba(11,107,58,0.75)]",
+        "bg-[linear-gradient(135deg,#1abc74_0%,#0f9960_52%,#0b6b3a_100%)] hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#25d48a_0%,#11a76a_52%,#0c7643_100%)] hover:shadow-[0_30px_68px_-28px_rgba(24,188,116,0.55)]",
+        "focus-visible:ring-accent-300 focus-visible:ring-offset-sand-50",
+        "disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-primary-500/60 disabled:bg-[linear-gradient(135deg,#0f7f4a_0%,#0f7f4a_100%)] disabled:text-surface-50/80 disabled:shadow-none",
+        "dark:border-primary-400/70 dark:bg-[linear-gradient(135deg,#20ce8b_0%,#119d64_48%,#0b6b3a_100%)] dark:hover:bg-[linear-gradient(135deg,#29dfa0_0%,#16b275_48%,#0c7a45_100%)] dark:hover:shadow-[0_30px_68px_-28px_rgba(32,206,139,0.45)] dark:focus-visible:ring-accent-200 dark:focus-visible:ring-offset-surface-900",
         className
       )}
       disabled={disabled || loading}
