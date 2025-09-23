@@ -21,6 +21,10 @@ Make your resume match the job—fast. Compare a resume to a job description and
 - Sends minimal text to the AI matcher (server function / API adapter)
 - Returns `{ score 0–100, missingKeywords[], suggestions[] }` to the UI
 
+## 🤖 AI defaults
+- OpenAI defaults (model + temperature) are centralized in [`netlify/lib/ai-config.ts`](netlify/lib/ai-config.ts).
+- Requests may provide `max_output_tokens` or the compatibility alias `max_completion_tokens`; the helper maps the alias once, clamps values between 1 and 4096, and logs a deprecation warning for local devs.
+
 ### analyzeResume(resumeText, jobText)
 
 Analyzes a resume against a job description and returns:

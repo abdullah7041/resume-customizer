@@ -1,10 +1,15 @@
 import type { Handler } from "@netlify/functions";
+import { resolveOpenAIOptions } from "../lib/ai-config";
 
 type OptimizeBody = {
   resumeText?: string;
   jobDesc?: string;
   mode?: "auto" | "conservative" | "aggressive";
   preview?: boolean;
+  model?: string;
+  temperature?: number;
+  max_output_tokens?: number;
+  max_completion_tokens?: number;
 };
 
 type OptimizationCard = {
@@ -33,7 +38,6 @@ const HEADERS = {
 } as const;
 
 const REQUEST_TIMEOUT = 15_000;
-const API_TEMPERATURE = 1;
 
 const STOPWORDS = new Set([
   "a",
@@ -253,9 +257,25 @@ const postToOpenAI = async (body: Record<string, unknown>, apiKey: string, timeo
 };
 
 const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<OptimizationPayload> => {
-  const { resumeText = "", jobDesc = "", mode = "auto" } = payload;
+  const {
+    resumeText = "",
+    jobDesc = "",
+    mode = "auto",
+    model: modelOverride,
+    temperature: temperatureOverride,
+    max_output_tokens: maxOutputTokens,
+    max_completion_tokens: maxCompletionTokens,
+  } = payload;
   const prompt = buildPrompt(resumeText, jobDesc, mode);
-  const model = process.env.OPENAI_MODEL || "gpt-5-nano";
+  const requestOptions = resolveOpenAIOptions(
+    {
+      model: modelOverride,
+      temperature: temperatureOverride,
+      max_output_tokens: maxOutputTokens,
+      max_completion_tokens: maxCompletionTokens,
+    },
+    900,
+  );
   const messages = [
     {
       role: "system",
@@ -311,10 +331,8 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
   };
 
   const basePayload = {
-    model,
+    ...requestOptions,
     input: messages,
-    temperature: API_TEMPERATURE,
-    max_output_tokens: 900,
   } as const;
 
   try {

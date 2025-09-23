@@ -33,7 +33,7 @@ const PreviewBanner = ({ onUpgrade }) => (
         </p>
         <div className="inline-flex items-center gap-2 rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs text-secondary-600 shadow-soft dark:border-surface-50/20 dark:bg-surface-900/60 dark:text-sand-50/70">
           <Info className="h-3.5 w-3.5" aria-hidden="true" />
-          <span className="leading-none">Try one detailed pass, then unlock premium storage.</span>
+          <span className="leading-none">Preview lets you test the flow. Upgrade to save/export.</span>
         </div>
       </div>
     </div>

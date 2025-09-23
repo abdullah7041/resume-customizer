@@ -65,12 +65,12 @@ export default function Header() {
   );
 
   return (
-    <header className="hero-bg-animate relative isolate flex flex-col justify-between gap-12 overflow-hidden bg-[#03120b] text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
+    <header className="hero-bg-animate relative isolate flex min-h-screen flex-col justify-between gap-12 overflow-hidden bg-[#03120b] text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
           aria-hidden="true"
           className={cn(
-            "bg-hero absolute inset-0 -z-40",
+            "bg-hero absolute inset-0 -z-40 pointer-events-none",
             animateSkyline ? "skyline-once" : "skyline-still"
           )}
           style={{
@@ -79,16 +79,16 @@ export default function Header() {
           }}
         />
       ) : null}
-      <div aria-hidden="true" className="absolute inset-0 -z-50">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#031d12]/96 via-[#063321]/82 to-[#02130a]/96" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.25)_0%,rgba(3,20,13,0)_68%)]" />
+      <div aria-hidden="true" className="absolute inset-0 -z-30 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#021d12]/96 via-[#043521]/86 to-[#01150a]/95" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.32)_0%,rgba(3,20,13,0)_68%)] mix-blend-screen" />
       </div>
       <div
-        className="absolute inset-0 -z-30 opacity-[0.05]"
+        className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
         aria-hidden="true"
       />
-      <div className="accent-divider absolute inset-x-0 bottom-0 -z-20 h-px" aria-hidden="true" />
+      <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
 
       <div className="relative z-10 flex flex-1 flex-col">
         <div className="border-b border-surface-50/10">
@@ -149,41 +149,41 @@ export default function Header() {
           <div className="space-y-6">
             <span
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/55 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero"
+              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/60 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero"
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/45 p-6 backdrop-blur-lg shadow-[0_32px_90px_-40px_rgba(0,0,0,0.55)]">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/55 p-6 backdrop-blur-2xl shadow-[0_32px_90px_-40px_rgba(0,0,0,0.6)]">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_18px_rgba(197,166,106,0.45)]"
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
+              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90">
+              <p className="text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
-              <div className="card-glow group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-white/80 p-4 text-ink-700 shadow-sm backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/60 dark:text-surface-50 dark:hover:bg-surface-900/70">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Smart Parsing</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Clean resume text</dd>
               </div>
-              <div className="card-glow group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-white/80 p-4 text-ink-700 shadow-sm backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/60 dark:text-surface-50 dark:hover:bg-surface-900/70">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Match Score</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Saudi market fit</dd>
               </div>
-              <div className="card-glow group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-white/80 p-4 text-ink-700 shadow-sm backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/60 dark:text-surface-50 dark:hover:bg-surface-900/70">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Polished Output</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Optimized insights</dd>
               </div>
             </dl>
           </div>
 
-          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/25 bg-surface-50/85 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-lg dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-white/80 p-6 text-ink-700 shadow-md backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-lg dark:border-surface-50/10 dark:bg-surface-900/60 dark:text-surface-50 dark:hover:bg-surface-900/70">
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
