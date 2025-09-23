@@ -9,7 +9,6 @@ import Tabs from "./ui/Tabs.jsx";
 import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import PrimaryButton from "./ui/PrimaryButton.jsx";
-import { skyline } from "../lib/assets";
 import { exportResumeToPdf } from "../services/exportPdf.js";
 
 const tabs = [
@@ -57,8 +56,6 @@ export default function MainContent() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
-  const skylineUrl = useMemo(() => skyline(), []);
-  const [animateSkyline, setAnimateSkyline] = useState(false);
   const toastTimers = useRef(new Map());
 
   const dismissToast = useCallback((id) => {
@@ -109,13 +106,6 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
     setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !skylineUrl) return undefined;
-    setAnimateSkyline(true);
-    const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
-    return () => window.clearTimeout(timer);
-  }, [skylineUrl]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -428,21 +418,8 @@ export default function MainContent() {
   return (
     <>
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-50">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0b6b3a]/90 via-[#0b3d2b]/82 to-[#04160d]/94" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(11,107,58,0.35)_0%,rgba(3,20,13,0)_65%)]" />
-        {typeof skylineUrl === "string" && skylineUrl ? (
-          <div
-            className={`bg-hero absolute inset-0 -z-10 overflow-visible bg-cover bg-no-repeat ${
-              animateSkyline ? "skyline-once" : "skyline-still"
-            }`}
-            style={{
-              backgroundImage: `url('${skylineUrl}')`,
-              "--hero-skyline-offset": "calc(100% - clamp(200px, 30vh, 360px))",
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-[#02140b]/92 via-[#021f15]/60 to-transparent" />
-          </div>
-        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#052618]/94 via-[#04311f]/84 to-[#02130b]/96" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.22)_0%,rgba(3,20,13,0)_68%)]" />
         <div className="accent-divider absolute inset-x-0 bottom-0 z-0 h-px" aria-hidden="true" />
       </div>
       <main

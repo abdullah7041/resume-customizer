@@ -1,10 +1,11 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
+import { skyline } from "../../lib/assets";
 
 const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
@@ -18,6 +19,18 @@ const themeOptions = [
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const { theme, isDark, setTheme } = useTheme();
+  const skylineUrl = useMemo(() => skyline(), []);
+  const [animateSkyline, setAnimateSkyline] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !skylineUrl) {
+      return undefined;
+    }
+
+    setAnimateSkyline(true);
+    const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [skylineUrl]);
 
   const toggleGroupClass = cn(
     "inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md transition-colors",
@@ -52,17 +65,30 @@ export default function Header() {
   );
 
   return (
-    <header className="hero-bg-animate relative isolate flex flex-col justify-between gap-12 text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
-      <div aria-hidden="true" className="absolute inset-0 -z-40">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#04160d]/92 via-[#063220]/88 to-[#03140d]/94" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(11,107,58,0.4)_0%,rgba(3,20,13,0)_65%)]" />
+    <header className="hero-bg-animate relative isolate flex flex-col justify-between gap-12 overflow-hidden bg-[#03120b] text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
+      {typeof skylineUrl === "string" && skylineUrl ? (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "bg-hero absolute inset-0 -z-40",
+            animateSkyline ? "skyline-once" : "skyline-still"
+          )}
+          style={{
+            "--hero-skyline-image": `url('${skylineUrl}')`,
+            "--hero-skyline-offset": "calc(100% - clamp(200px, 34vh, 360px))",
+          }}
+        />
+      ) : null}
+      <div aria-hidden="true" className="absolute inset-0 -z-50">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#031d12]/96 via-[#063321]/82 to-[#02130a]/96" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.25)_0%,rgba(3,20,13,0)_68%)]" />
       </div>
       <div
         className="absolute inset-0 -z-30 opacity-[0.05]"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
         aria-hidden="true"
       />
-      <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
+      <div className="accent-divider absolute inset-x-0 bottom-0 -z-20 h-px" aria-hidden="true" />
 
       <div className="relative z-10 flex flex-1 flex-col">
         <div className="border-b border-surface-50/10">
