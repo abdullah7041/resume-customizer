@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { FileText, LogIn, LogOut, Sparkles, Target } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import { useAuth } from "../../hooks/useAuth";
@@ -11,44 +11,70 @@ const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
+const THEME_STORAGE_KEY = "airo:theme";
+
+const resolvePreferredTheme = () => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "dark" || stored === "light") {
+    return stored;
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const skylineUrl = skyline();
   const hasSkyline = typeof skylineUrl === "string" && skylineUrl.trim().length > 0 && !skylineUrl.includes("undefined");
-  const [isDark, setIsDark] = useState(false);
+  const storedPreference = useRef(
+    typeof window !== "undefined" && ["dark", "light"].includes(window.localStorage.getItem(THEME_STORAGE_KEY) ?? ""),
+  );
+  const [isDark, setIsDark] = useState(() => resolvePreferredTheme() === "dark");
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
-  const scrollToMain = useCallback(() => {
-    if (typeof document === "undefined") return;
-    const target = document.querySelector('[data-app-main]');
-    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  useEffect(() => {
+    if (typeof window === "undefined" || storedPreference.current) {
+      return undefined;
+    }
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (event) => {
+      if (storedPreference.current) return;
+      setIsDark(event.matches);
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
   const toggleTheme = useCallback(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    const nextIsDark = root.classList.toggle("dark");
-    setIsDark(nextIsDark);
+    setIsDark((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light");
+      }
+      storedPreference.current = true;
+      return next;
+    });
   }, []);
 
-  const backgroundImage = hasSkyline
-    ? `linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%), url('${skylineUrl}')`
-    : "linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%)";
-
   return (
-    <header
-      className="hero-bg-animate relative isolate min-h-[100svh] overflow-hidden text-surface-50"
-      style={{
-        backgroundImage,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
+    <header className="hero-bg-animate relative isolate min-h-[100svh] overflow-hidden text-surface-50">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-30 bg-gradient-to-b from-[#0B6B3A]/92 via-[#0b3d2b]/88 to-[#051f13]/92"
+      />
+      {hasSkyline ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-[-12%] -z-40 h-[130%] bg-cover bg-center bg-no-repeat opacity-80 skyline-float"
+          style={{ backgroundImage: `url('${skylineUrl}')` }}
+        />
+      ) : null}
       <div
         className="absolute inset-0 -z-20 opacity-[0.05]"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
@@ -79,15 +105,24 @@ export default function Header() {
                 aria-pressed={isDark}
                 className="inline-flex items-center gap-2 rounded-full border border-surface-50/40 bg-surface-50/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 transition-colors hover:bg-surface-50/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:border-surface-50/15 dark:bg-surface-900/50 dark:text-surface-50 dark:hover:bg-surface-900/60 dark:focus-visible:ring-accent-400/70"
               >
-                <span>Toggle Theme</span>
-                <span className="sr-only">{isDark ? "Dark mode enabled" : "Light mode enabled"}</span>
+                {isDark ? (
+                  <Sun className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Moon className="h-4 w-4" aria-hidden="true" />
+                )}
+                <span>{isDark ? "Light" : "Dark"}</span>
+                <span className="sr-only">Toggle color theme</span>
               </button>
               {user ? (
                 <SecondaryButton icon={LogOut} onClick={signOut}>
                   Sign Out
                 </SecondaryButton>
               ) : (
-                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
+                <PrimaryButton
+                  icon={LogIn}
+                  onClick={signInWithGoogle}
+                  className="from-primary-600 via-primary-600 to-primary-700 shadow-lg"
+                >
                   Sign In
                 </PrimaryButton>
               )}
@@ -117,40 +152,23 @@ export default function Header() {
             <p className="max-w-xl text-base leading-relaxed text-surface-50/85">
               Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
             </p>
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <PrimaryButton
-                  onClick={user ? scrollToMain : signInWithGoogle}
-                  icon={user ? undefined : LogIn}
-                >
-                  Continue optimizing
-                </PrimaryButton>
-              </div>
-              <button
-                type="button"
-                onClick={scrollToMain}
-                className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-accent-400 transition-colors hover:text-accent-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B6B3A] dark:focus-visible:ring-offset-[#0a3f26]"
-              >
-                <span>See the workflow</span>
-              </button>
-            </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
-              <div className="group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+              <div className="card-glow group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Smart Parsing</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Clean resume text</dd>
               </div>
-              <div className="group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+              <div className="card-glow group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Match Score</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Saudi market fit</dd>
               </div>
-              <div className="group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+              <div className="card-glow group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Polished Output</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Optimized insights</dd>
               </div>
             </dl>
           </div>
 
-          <div className="group rounded-[var(--radius-card)] border border-surface-50/25 bg-surface-50/85 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-lg dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
+          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/25 bg-surface-50/85 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-lg dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
