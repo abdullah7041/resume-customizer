@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText, LogIn, LogOut, Sparkles, Target } from "lucide-react";
+import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import { useAuth } from "../../hooks/useAuth";
@@ -11,16 +11,49 @@ const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
+const THEME_STORAGE_KEY = "airo:theme";
+
+const resolvePreferredTheme = () => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "dark" || stored === "light") {
+    return stored;
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const skylineUrl = skyline();
   const hasSkyline = typeof skylineUrl === "string" && skylineUrl.trim().length > 0 && !skylineUrl.includes("undefined");
   const [isDark, setIsDark] = useState(false);
 
-  useEffect(() => {
+  const applyTheme = useCallback((nextIsDark) => {
     if (typeof document === "undefined") return;
-    setIsDark(document.documentElement.classList.contains("dark"));
+    const root = document.documentElement;
+    root.classList.toggle("dark", nextIsDark);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(THEME_STORAGE_KEY, nextIsDark ? "dark" : "light");
+    }
+    setIsDark(nextIsDark);
   }, []);
+
+  useEffect(() => {
+    const preferred = resolvePreferredTheme() === "dark";
+    applyTheme(preferred);
+
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (event) => {
+      const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored === "dark" || stored === "light") return;
+      applyTheme(event.matches);
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [applyTheme]);
 
   const scrollToMain = useCallback(() => {
     if (typeof document === "undefined") return;
@@ -29,11 +62,8 @@ export default function Header() {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    const nextIsDark = root.classList.toggle("dark");
-    setIsDark(nextIsDark);
-  }, []);
+    applyTheme(!isDark);
+  }, [applyTheme, isDark]);
 
   const backgroundImage = hasSkyline
     ? `linear-gradient(135deg, rgba(11,107,58,0.86) 0%, rgba(20,99,86,0.82) 55%, rgba(12,83,53,0.86) 100%), url('${skylineUrl}')`
@@ -41,12 +71,13 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate min-h-[100svh] overflow-hidden text-surface-50"
+      className="hero-bg-animate relative isolate min-h-[100svh] text-surface-50"
       style={{
         backgroundImage,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
       }}
     >
       <div
@@ -79,15 +110,24 @@ export default function Header() {
                 aria-pressed={isDark}
                 className="inline-flex items-center gap-2 rounded-full border border-surface-50/40 bg-surface-50/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 transition-colors hover:bg-surface-50/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:border-surface-50/15 dark:bg-surface-900/50 dark:text-surface-50 dark:hover:bg-surface-900/60 dark:focus-visible:ring-accent-400/70"
               >
-                <span>Toggle Theme</span>
-                <span className="sr-only">{isDark ? "Dark mode enabled" : "Light mode enabled"}</span>
+                {isDark ? (
+                  <Sun className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Moon className="h-4 w-4" aria-hidden="true" />
+                )}
+                <span>{isDark ? "Light" : "Dark"}</span>
+                <span className="sr-only">Toggle color theme</span>
               </button>
               {user ? (
                 <SecondaryButton icon={LogOut} onClick={signOut}>
                   Sign Out
                 </SecondaryButton>
               ) : (
-                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
+                <PrimaryButton
+                  icon={LogIn}
+                  onClick={signInWithGoogle}
+                  className="from-primary-600 via-primary-600 to-primary-700 shadow-lg"
+                >
                   Sign In
                 </PrimaryButton>
               )}

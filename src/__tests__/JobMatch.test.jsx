@@ -7,21 +7,22 @@ describe('JobMatch', () => {
       score: 80,
       missingKeywords: ['React'],
       suggestions: ['Add React experience'],
+      topHits: ['Leadership'],
+      coverage: 0.52,
+      cosine: 0.71,
     };
     render(
       <JobMatch
         onAnalyzeMatch={async () => {}}
         matchAnalysis={match}
         isAnalyzing={false}
+        hasResume
       />
     );
-    expect(
-      screen.getByRole('heading', { name: /match to a saudi job role/i })
-    ).toBeInTheDocument();
-    expect(screen.getByText('80')).toBeInTheDocument();
-    expect(
-      screen.getByText(/add react experience/i)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/missing keywords/i)).toBeInTheDocument();
+
+    expect(screen.getByRole('heading', { name: /match to a saudi job role/i })).toBeInTheDocument();
+    expect(screen.getByText(/top missing keywords/i)).toBeInTheDocument();
+    expect(screen.getByText(/recognized strengths/i)).toBeInTheDocument();
+    expect(screen.getByText(/add react experience/i)).toBeInTheDocument();
   });
 });
