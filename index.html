@@ -5,13 +5,19 @@
     <script>
       (function () {
         try {
-          var storageKey = "airo:theme";
+          var legacyKey = "airo:theme";
+          var storageKey = "theme";
           var stored = localStorage.getItem(storageKey);
+          if (!stored) {
+            var legacy = localStorage.getItem(legacyKey);
+            if (legacy === "dark" || legacy === "light") {
+              stored = legacy;
+              localStorage.setItem(storageKey, legacy);
+            }
+          }
           var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
           var isDark = stored ? stored === "dark" : prefersDark;
-          if (isDark) {
-            document.documentElement.classList.add("dark");
-          }
+          document.documentElement.classList.toggle("dark", isDark);
         } catch (error) {
           /* ignore */
         }

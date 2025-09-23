@@ -23,7 +23,7 @@ const variants = {
 export function ToastContainer({ children }) {
   return (
     <div
-      className="pointer-events-none fixed top-6 right-6 z-50 flex w-full max-w-sm flex-col gap-3"
+      className="pointer-events-none fixed top-5 right-5 z-50 flex w-full max-w-xs flex-col gap-2.5"
       role="region"
       aria-live="polite"
       aria-label="Notifications"
@@ -45,9 +45,9 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
         variant.className
       )}
     >
-      <div className="flex items-start gap-3 px-5 py-4">
-        <span className="mt-1 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/20 text-surface-50">
-          <Icon className="h-4 w-4" aria-hidden="true" />
+      <div className="flex items-start gap-2.5 px-4 py-3">
+        <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/20 text-surface-50">
+          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
         <div className="flex-1 space-y-1 text-sm">
           <p className="font-semibold tracking-wide">{title}</p>

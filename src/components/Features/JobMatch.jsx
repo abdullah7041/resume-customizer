@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton.jsx";
 import SectionTitle from "../ui/SectionTitle.jsx";
@@ -33,14 +33,32 @@ const formatPercent = (value) => {
   return `${Math.round(value * 100)}%`;
 };
 
+const LAST_JOB_KEY = "airo:lastJobDescription";
+const RING_RADIUS = 56;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
 export default function JobMatch({
   onAnalyzeMatch,
   matchAnalysis,
   isAnalyzing = false,
   hasResume = false,
 }) {
-  const [jobText, setJobText] = useState("");
+  const [jobText, setJobText] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return window.localStorage.getItem(LAST_JOB_KEY) ?? "";
+  });
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (jobText && jobText.trim().length > 0) {
+      window.localStorage.setItem(LAST_JOB_KEY, jobText);
+    } else {
+      window.localStorage.removeItem(LAST_JOB_KEY);
+    }
+  }, [jobText]);
 
   const handleAnalyze = async () => {
     if (!jobText.trim()) {
@@ -59,6 +77,10 @@ export default function JobMatch({
   const score = matchAnalysis?.score ?? 0;
   const variant = resolveVariant(score);
   const progress = Math.max(0, Math.min(100, score));
+  const ringOffset = useMemo(
+    () => RING_CIRCUMFERENCE - (progress / 100) * RING_CIRCUMFERENCE,
+    [progress],
+  );
   const missing = matchAnalysis?.missingKeywords?.slice(0, 6) ?? [];
   const hits = matchAnalysis?.topHits?.slice(0, 6) ?? [];
   const coverageLabel = formatPercent(matchAnalysis?.coverage ?? 0);
@@ -119,6 +141,32 @@ export default function JobMatch({
                 <div className="grid place-items-center">
                   <div className="relative h-36 w-36">
                     <div className="absolute inset-0 rounded-full bg-surface-50/10" aria-hidden="true" />
+                    <svg
+                      className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] rotate-[-90deg]"
+                      viewBox="0 0 120 120"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r={RING_RADIUS}
+                        fill="none"
+                        stroke="rgba(255,255,255,0.12)"
+                        strokeWidth="6"
+                      />
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r={RING_RADIUS}
+                        fill="none"
+                        stroke={variant.conic}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={RING_CIRCUMFERENCE}
+                        strokeDashoffset={ringOffset}
+                        className="transition-[stroke-dashoffset] duration-700 ease-out"
+                      />
+                    </svg>
                     <div
                       className="relative grid h-full w-full place-items-center rounded-full border border-surface-50/20 bg-surface-50/10 p-4 text-ink-900 dark:bg-surface-900/40"
                       style={{
