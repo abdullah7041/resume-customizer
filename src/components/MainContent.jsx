@@ -437,7 +437,7 @@ export default function MainContent() {
             }`}
             style={{
               backgroundImage: `url('${skylineUrl}')`,
-              backgroundPosition: "center calc(100% - 200px)",
+              "--hero-skyline-offset": "calc(100% - clamp(200px, 30vh, 360px))",
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-[#02140b]/92 via-[#021f15]/60 to-transparent" />
