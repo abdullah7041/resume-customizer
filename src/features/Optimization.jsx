@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ClipboardCheck, Info, Lock, Sparkles } from "lucide-react";
+import { Check, ClipboardCheck, FileDown, Info, Lock, Sparkles } from "lucide-react";
 import PrimaryButton from "../components/ui/PrimaryButton.jsx";
 import SecondaryButton from "../components/ui/SecondaryButton.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -54,6 +54,8 @@ export default function Optimization({
   onCopy,
   previewUsed,
   onUpgrade,
+  onExport,
+  canExport = false,
 }) {
   const [mode, setMode] = useState("auto");
   const [chipsAnimated, setChipsAnimated] = useState(false);
@@ -113,6 +115,20 @@ export default function Optimization({
         <div className="space-y-2">
           <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Actions</span>
           <div className="flex flex-wrap gap-2">
+            <SecondaryButton
+              icon={FileDown}
+              onClick={() => onExport?.()}
+              disabled={!canExport || isOptimizing}
+              title={
+                !canExport
+                  ? "Upload and parse your resume before exporting."
+                  : isOptimizing
+                  ? "Please wait for the optimization run to finish."
+                  : undefined
+              }
+            >
+              Export PDF
+            </SecondaryButton>
             <SecondaryButton
               icon={Check}
               disabled={!isPremium}

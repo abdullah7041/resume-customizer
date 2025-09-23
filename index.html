@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" class="min-h-full">
   <head>
     <meta charset="UTF-8" />
     <script>
@@ -18,6 +18,8 @@
           var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
           var isDark = stored ? stored === "dark" : prefersDark;
           document.documentElement.classList.toggle("dark", isDark);
+          document.documentElement.dataset.theme = isDark ? "dark" : "light";
+          document.documentElement.style.colorScheme = isDark ? "dark" : "light";
         } catch (error) {
           /* ignore */
         }
@@ -52,7 +54,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Resume Optimizer</title>
   </head>
-  <body>
+  <body class="min-h-full antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
