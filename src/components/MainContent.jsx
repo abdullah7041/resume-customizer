@@ -17,6 +17,8 @@ const tabs = [
   { value: "optimize", label: "Optimize", icon: Sparkles },
 ];
 
+const SKYLINE_SESSION_KEY = "airo:skyline:first";
+
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -49,6 +51,7 @@ export default function MainContent() {
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const skylineUrl = useMemo(() => skyline(), []);
+  const [animateSkyline, setAnimateSkyline] = useState(false);
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -57,7 +60,7 @@ export default function MainContent() {
   const pushToast = useCallback(
     (toast) => {
       const id = getId();
-      setToasts((prev) => [...prev, { id, ...toast }]);
+      setToasts([{ id, ...toast }]);
       const lifetime = toast?.type === "danger" ? 6000 : 4200;
       scheduleTimeout(() => dismissToast(id), lifetime);
     },
@@ -67,6 +70,18 @@ export default function MainContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hasPlayed = window.sessionStorage.getItem(SKYLINE_SESSION_KEY) === "1";
+    if (!hasPlayed) {
+      setAnimateSkyline(true);
+      window.sessionStorage.setItem(SKYLINE_SESSION_KEY, "1");
+      const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
+      return () => window.clearTimeout(timer);
+    }
+    setAnimateSkyline(false);
   }, []);
 
   const persistPreviewUsage = useCallback(() => {
@@ -309,27 +324,31 @@ export default function MainContent() {
 
   return (
     <>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-40 bg-gradient-to-b from-[#0B6B3A]/88 via-[#0b3d2b]/86 to-[#04160d]/94"
-      />
-      {typeof skylineUrl === "string" && skylineUrl ? (
-        <>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-50 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url('${skylineUrl}')` }}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-x-0 bottom-[-10%] -z-30 h-[130%] bg-cover bg-bottom bg-no-repeat opacity-75 skyline-float"
-            style={{ backgroundImage: `url('${skylineUrl}')` }}
-          />
-        </>
-      ) : null}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-50">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0B6B3A]/88 via-[#0b3d2b]/86 to-[#04160d]/94" />
+        {typeof skylineUrl === "string" && skylineUrl ? (
+          <>
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src={skylineUrl}
+                alt=""
+                loading="eager"
+                decoding="async"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-auto min-h-full w-full object-cover object-[center_bottom]"
+              />
+            </div>
+            <div
+              className={`absolute inset-x-0 bottom-0 h-full bg-cover bg-bottom bg-no-repeat opacity-[0.85] ${
+                animateSkyline ? "skyline-once" : "skyline-still"
+              }`}
+              style={{ backgroundImage: `url('${skylineUrl}')` }}
+            />
+          </>
+        ) : null}
+      </div>
       <main
         data-app-main
-        className="relative z-10 -mt-20 min-h-screen px-4 pb-24 pt-24 sm:px-6"
+        className="relative z-10 -mt-16 min-h-screen px-4 pb-32 pt-20 sm:px-6 lg:pb-40"
       >
         <ToastContainer>{renderedToasts}</ToastContainer>
         <div className="mx-auto max-w-6xl">

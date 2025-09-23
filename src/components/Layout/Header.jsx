@@ -3,7 +3,6 @@ import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-rea
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import { useAuth } from "../../hooks/useAuth";
-import { skyline } from "../../lib/assets";
 
 
 
@@ -11,13 +10,21 @@ const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
-const THEME_STORAGE_KEY = "airo:theme";
+const THEME_STORAGE_KEY = "theme";
+const LEGACY_THEME_KEY = "airo:theme";
 
 const resolvePreferredTheme = () => {
   if (typeof window === "undefined") {
     return "light";
   }
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  let stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (!stored) {
+    const legacy = window.localStorage.getItem(LEGACY_THEME_KEY);
+    if (legacy === "dark" || legacy === "light") {
+      stored = legacy;
+      window.localStorage.setItem(THEME_STORAGE_KEY, legacy);
+    }
+  }
   if (stored === "dark" || stored === "light") {
     return stored;
   }
@@ -26,16 +33,15 @@ const resolvePreferredTheme = () => {
 
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
-  const skylineUrl = skyline();
-  const hasSkyline = typeof skylineUrl === "string" && skylineUrl.trim().length > 0 && !skylineUrl.includes("undefined");
   const storedPreference = useRef(
     typeof window !== "undefined" && ["dark", "light"].includes(window.localStorage.getItem(THEME_STORAGE_KEY) ?? ""),
   );
   const [isDark, setIsDark] = useState(() => resolvePreferredTheme() === "dark");
 
-  const applyTheme = useCallback((nextIsDark) => {
+  useEffect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.dataset.theme = isDark ? "dark" : "light";
   }, [isDark]);
 
   useEffect(() => {
@@ -63,18 +69,11 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="hero-bg-animate relative isolate min-h-[100svh] overflow-hidden text-surface-50">
+    <header className="hero-bg-animate relative isolate flex flex-col justify-between gap-12 text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
       <div
         aria-hidden="true"
         className="absolute inset-0 -z-30 bg-gradient-to-b from-[#0B6B3A]/92 via-[#0b3d2b]/88 to-[#051f13]/92"
       />
-      {hasSkyline ? (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-[-12%] -z-40 h-[130%] bg-cover bg-center bg-no-repeat opacity-80 skyline-float"
-          style={{ backgroundImage: `url('${skylineUrl}')` }}
-        />
-      ) : null}
       <div
         className="absolute inset-0 -z-20 opacity-[0.05]"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}

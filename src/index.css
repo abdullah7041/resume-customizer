@@ -185,6 +185,61 @@
     will-change: transform;
   }
 
+  @keyframes skylineEntrance {
+    0% {
+      opacity: 0;
+      transform: translateY(24px) scale(1.05);
+    }
+
+    60% {
+      opacity: 0.85;
+      transform: translateY(4px) scale(1.01);
+    }
+
+    100% {
+      opacity: 0.85;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .skyline-once {
+    animation: skylineEntrance 1.6s ease-out forwards;
+  }
+
+  .skyline-still {
+    opacity: 0.85;
+  }
+
+  @keyframes keywordChipShine {
+    0% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    30% {
+      opacity: 0.45;
+    }
+
+    60% {
+      opacity: 0.35;
+      transform: translateX(40%);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateX(120%);
+    }
+  }
+
+  .keyword-chip-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.4) 50%, transparent 80%);
+    animation: keywordChipShine 1.6s ease-out forwards;
+    pointer-events: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .hero-fade {
       animation: none;
@@ -198,6 +253,16 @@
 
     .badge-gold-shimmer {
       animation: none;
+    }
+
+    .skyline-once {
+      animation: none;
+      opacity: 0.85;
+    }
+
+    .keyword-chip-shimmer::after {
+      animation: none;
+      opacity: 0;
     }
 
     .card-glow,
