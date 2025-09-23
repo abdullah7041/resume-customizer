@@ -32,6 +32,9 @@ const HEADERS = {
   "Content-Type": "application/json",
 } as const;
 
+const REQUEST_TIMEOUT = 15_000;
+const API_TEMPERATURE = 1;
+
 const STOPWORDS = new Set([
   "a",
   "about",
@@ -218,22 +221,35 @@ const extractText = (data: any): string => {
   return "";
 };
 
-const postToOpenAI = async (body: Record<string, unknown>, apiKey: string) => {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+const postToOpenAI = async (body: Record<string, unknown>, apiKey: string, timeout = REQUEST_TIMEOUT) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
-  const data = await response.json();
-  if (!response.ok) {
-    const message = typeof data?.error?.message === "string" ? data.error.message : "OpenAI request failed";
-    throw new Error(message);
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      const message = typeof data?.error?.message === "string" ? data.error.message : "OpenAI request failed";
+      throw new Error(message);
+    }
+    return data;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("OpenAI request timed out");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-  return data;
 };
 
 const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<OptimizationPayload> => {
@@ -294,23 +310,24 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
     additionalProperties: false,
   };
 
+  const basePayload = {
+    model,
+    input: messages,
+    temperature: API_TEMPERATURE,
+    max_output_tokens: 900,
+  } as const;
+
   try {
     const primary = await postToOpenAI(
       {
-        model,
-        modalities: ["text"],
-        input: messages,
-        text: {
-          format: {
-            type: "json_schema",
-            json_schema: {
-              name: "OptimizationPayload",
-              schema,
-            },
+        ...basePayload,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "OptimizationPayload",
+            schema,
           },
         },
-        max_output_tokens: 900,
-        temperature: 1,
       },
       apiKey,
     );
@@ -323,12 +340,8 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
     try {
       const fallback = await postToOpenAI(
         {
-          model,
-          modalities: ["text"],
-          input: messages,
-          text: { format: "plain" },
-          max_output_tokens: 900,
-          temperature: 1,
+          ...basePayload,
+          response_format: { type: "text" },
         },
         apiKey,
       );

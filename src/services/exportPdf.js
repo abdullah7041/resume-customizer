@@ -219,14 +219,13 @@ const buildSection = (title, content) => `
 
 const buildContact = (lines) => {
   if (!lines || lines.length === 0) {
-    return { heading: "AI Resume Export", detail: "", list: "" };
+    return { name: "AI Resume Export", entries: [] };
   }
   const [primary, ...rest] = lines;
-  const list =
-    rest.length > 0
-      ? `<ul class="contact-list">${rest.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
-      : "";
-  return { heading: primary, detail: rest.join(" • "), list };
+  return {
+    name: primary,
+    entries: rest,
+  };
 };
 
 const buildExportHtml = ({ resumeText = "", jobDescription = "", matchAnalysis, optimizations, keywords }) => {
@@ -241,6 +240,11 @@ const buildExportHtml = ({ resumeText = "", jobDescription = "", matchAnalysis, 
     jobDescription.length > 240 ? "…" : ""
   }</p>` : "";
 
+  const contactContent =
+    contact.entries.length > 0
+      ? `<ul class="contact-list">${contact.entries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+      : '<p class="muted">Add an email, phone, and LinkedIn to this section.</p>';
+
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -251,10 +255,10 @@ const buildExportHtml = ({ resumeText = "", jobDescription = "", matchAnalysis, 
       html, body { margin: 0; padding: 0; font-family: 'Inter', 'Tajawal', system-ui, -apple-system, sans-serif; color: #111827; background: #ffffff; }
       body { padding: 32px; }
       @media print { body { margin: 0; padding: 24px; } }
-      .page { max-width: 210mm; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; padding: 32px 40px; box-shadow: 0 18px 48px -28px rgba(15, 23, 42, 0.28); }
-      header { border-bottom: 2px solid #0b6b3a; padding-bottom: 16px; margin-bottom: 24px; }
-      header h1 { font-size: 28px; letter-spacing: 0.02em; margin: 0 0 8px; text-transform: uppercase; }
-      .contact-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #334155; }
+      .page { max-width: 210mm; margin: 0 auto; background: #ffffff; border: 1px solid #d1d5db; padding: 32px 40px; }
+      .page-header { border-bottom: 1px solid #d1d5db; padding-bottom: 16px; margin-bottom: 24px; }
+      .page-header h1 { font-size: 28px; letter-spacing: 0.02em; margin: 0; text-transform: uppercase; }
+      .contact-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12px; color: #334155; }
       .section { margin-bottom: 20px; }
       .section h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.22em; margin-bottom: 10px; color: #0b6b3a; }
       .section p { margin: 0 0 8px; line-height: 1.6; font-size: 13px; }
@@ -267,10 +271,10 @@ const buildExportHtml = ({ resumeText = "", jobDescription = "", matchAnalysis, 
   </head>
   <body>
     <article class="page">
-      <header>
-        <h1>${escapeHtml(contact.heading)}</h1>
-        ${contact.list}
+      <header class="page-header">
+        <h1>${escapeHtml(contact.name)}</h1>
       </header>
+      ${buildSection("Contact", contactContent)}
       ${buildSection("Summary", summaryHtml + jdSnippet)}
       ${buildSection("Skills", skillsHtml)}
       ${buildSection("Experience", experienceHtml)}

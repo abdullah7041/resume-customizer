@@ -102,7 +102,7 @@ export default function JobMatch({
           description="Paste the job description to uncover keyword gaps and alignment opportunities."
         />
         <textarea
-          className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/80 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/12 dark:bg-surface-900/70 dark:text-sand-50 dark:focus-visible:ring-offset-surface-900"
+          className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-surface-50 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-surface-900/80 dark:text-sand-50 dark:focus-visible:ring-offset-surface-900"
           placeholder="Paste the job description for your next Riyadh role…"
           value={jobText}
           onChange={(event) => setJobText(event.target.value)}
