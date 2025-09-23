@@ -1,71 +1,55 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
+import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
+import { useTheme } from "../../hooks/useTheme";
 
 const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
-const THEME_STORAGE_KEY = "theme";
-const LEGACY_THEME_KEY = "airo:theme";
-
-const resolvePreferredTheme = () => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-  let stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (!stored) {
-    const legacy = window.localStorage.getItem(LEGACY_THEME_KEY);
-    if (legacy === "dark" || legacy === "light") {
-      stored = legacy;
-      window.localStorage.setItem(THEME_STORAGE_KEY, legacy);
-    }
-  }
-  if (stored === "dark" || stored === "light") {
-    return stored;
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-};
+const themeOptions = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+];
 
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
-  const storedPreference = useRef(
-    typeof window !== "undefined" && ["dark", "light"].includes(window.localStorage.getItem(THEME_STORAGE_KEY) ?? ""),
+  const { theme, isDark, setTheme } = useTheme();
+
+  const toggleGroupClass = cn(
+    "inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md transition-colors",
+    isDark
+      ? "border-surface-50/25 bg-surface-900/70 text-surface-50/80 shadow-[0_22px_48px_-32px_rgba(2,12,8,0.65)]"
+      : "border-surface-900/10 bg-surface-50/95 text-ink-600 shadow-[0_20px_52px_-28px_rgba(11,107,58,0.45)]"
   );
-  const [isDark, setIsDark] = useState(() => resolvePreferredTheme() === "dark");
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.classList.toggle("dark", isDark);
-    document.documentElement.dataset.theme = isDark ? "dark" : "light";
-    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
-  }, [isDark]);
+  const getOptionClass = (isActive) =>
+    cn(
+      "inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/80 focus-visible:ring-offset-2",
+      isActive
+        ? isDark
+          ? "bg-surface-900 text-surface-50 shadow-[0_20px_44px_-28px_rgba(0,0,0,0.7)] focus-visible:ring-offset-surface-900"
+          : "bg-surface-50 text-ink-900 shadow-[0_18px_40px_-28px_rgba(11,107,58,0.45)] focus-visible:ring-offset-sand-50"
+        : isDark
+          ? "text-surface-50/70 hover:text-surface-50 focus-visible:ring-offset-surface-900"
+          : "text-ink-500 hover:text-ink-700 focus-visible:ring-offset-sand-50"
+    );
 
-  useEffect(() => {
-    if (typeof window === "undefined" || storedPreference.current) {
-      return undefined;
-    }
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (event) => {
-      if (storedPreference.current) return;
-      setIsDark(event.matches);
-    };
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setIsDark((prev) => {
-      const next = !prev;
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light");
+  const handleThemeKeyDown = useCallback(
+    (event, index) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+        return;
       }
-      storedPreference.current = true;
-      return next;
-    });
-  }, []);
+      event.preventDefault();
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex = (index + direction + themeOptions.length) % themeOptions.length;
+      setTheme(themeOptions[nextIndex].value);
+    },
+    [setTheme]
+  );
 
   return (
     <header className="hero-bg-animate relative isolate flex flex-col justify-between gap-12 text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
@@ -97,20 +81,27 @@ export default function Header() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-pressed={isDark}
-                className="inline-flex items-center gap-2 rounded-full border border-surface-50/40 bg-surface-50/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 transition-colors hover:bg-surface-50/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:border-surface-50/15 dark:bg-surface-900/50 dark:text-surface-50 dark:hover:bg-surface-900/60 dark:focus-visible:ring-accent-400/70"
-              >
-                {isDark ? (
-                  <Sun className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <Moon className="h-4 w-4" aria-hidden="true" />
-                )}
-                <span>{isDark ? "Light" : "Dark"}</span>
-                <span className="sr-only">Toggle color theme</span>
-              </button>
+              <div role="radiogroup" aria-label="Color theme" className={toggleGroupClass}>
+                {themeOptions.map(({ value, label, icon: Icon }, index) => {
+                  const isActive = theme === value;
+                  const optionClass = getOptionClass(isActive);
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      onClick={() => setTheme(value)}
+                      onKeyDown={(event) => handleThemeKeyDown(event, index)}
+                      className={optionClass}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
               {user ? (
                 <SecondaryButton icon={LogOut} onClick={signOut}>
                   Sign Out
@@ -132,7 +123,7 @@ export default function Header() {
           <div className="space-y-6">
             <span
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/40 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/55 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero"
             >
               Designed for Saudi ambition
             </span>
@@ -143,10 +134,10 @@ export default function Header() {
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
+              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
                 AI Resume Optimizer
               </h1>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-surface-50/85">
+              <p className="text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
