@@ -180,20 +180,52 @@ const toPayload = (value: unknown): OptimizationPayload => {
   };
 };
 
-const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<OptimizationPayload> => {
-  const { resumeText = "", jobDesc = "", mode = "auto" } = payload;
+const buildPrompt = (resumeText: string, jobDesc: string, mode: OptimizeBody["mode"] = "auto") =>
+  `You rewrite resumes for the Saudi market using ATS-safe language. Return ONLY JSON with keys cards (array) and keywords (object). ` +
+  `cards[].section, cards[].issue, cards[].suggestion, cards[].exampleBefore, cards[].exampleAfter must all be non-empty strings. ` +
+  `keywords must include add, remove, neutral arrays. Keep bullets concise, metric-driven, and culturally neutral.` +
+  `\n\nMODE: ${mode}\n\nRESUME:\n${resumeText.slice(0, 4000)}\n\nJOB DESCRIPTION:\n${jobDesc.slice(0, 4000)}`;
+
+const safeJson = (value: string) => {
+  const start = value.indexOf("{");
+  const end = value.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    const segment = value.slice(start, end + 1);
+    try {
+      return JSON.parse(segment);
+    } catch {
+      throw new Error("Model did not return valid JSON");
+    }
+  }
+  throw new Error("Model did not return valid JSON");
+};
+
+const extractText = (data: any): string => {
+  if (!data) return "";
+  if (typeof data.output_text === "string") return data.output_text;
+  if (Array.isArray(data.output)) {
+    for (const item of data.output) {
+      const text = (item?.content && Array.isArray(item.content) ? item.content[0]?.text : undefined) ?? item?.text;
+      if (typeof text === "string" && text.trim().length > 0) {
+        return text;
+      }
+    }
+  }
+  if (Array.isArray(data.choices)) {
+    const text = data.choices[0]?.message?.content;
+    if (typeof text === "string") return text;
+  }
+  return "";
+};
+
+const postToOpenAI = async (body: Record<string, unknown>, apiKey: string) => {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: "gpt-4.1-mini",
-      input: `You are an assistant helping optimize resumes for Saudi Arabia job descriptions. Return strict JSON with keys cards (array) and keywords (object). Each card must include section, issue, suggestion, exampleBefore, exampleAfter. Mode is ${mode}. Resume: ${resumeText.slice(0, 4000)} Job: ${jobDesc.slice(0, 4000)}`,
-      response_format: { type: "json_object" },
-      max_output_tokens: 900,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await response.json();
@@ -201,21 +233,111 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
     const message = typeof data?.error?.message === "string" ? data.error.message : "OpenAI request failed";
     throw new Error(message);
   }
+  return data;
+};
 
-  const raw = typeof data.output_text === "string"
-    ? data.output_text
-    : data.choices?.[0]?.message?.content;
+const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<OptimizationPayload> => {
+  const { resumeText = "", jobDesc = "", mode = "auto" } = payload;
+  const prompt = buildPrompt(resumeText, jobDesc, mode);
+  const model = process.env.OPENAI_MODEL || "gpt-5-nano";
+  const messages = [
+    {
+      role: "system",
+      content: [
+        {
+          type: "text",
+          text: "You are a resume optimization assistant. Output strictly valid JSON conforming to the provided schema.",
+        },
+      ],
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: prompt,
+        },
+      ],
+    },
+  ];
 
-  if (typeof raw !== "string") {
-    return buildMockCards(resumeText, jobDesc, mode);
-  }
+  const schema = {
+    type: "object",
+    properties: {
+      cards: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            section: { type: "string" },
+            issue: { type: "string" },
+            suggestion: { type: "string" },
+            exampleBefore: { type: "string" },
+            exampleAfter: { type: "string" },
+          },
+          required: ["section", "issue", "suggestion", "exampleBefore", "exampleAfter"],
+        },
+        minItems: 1,
+        maxItems: 6,
+      },
+      keywords: {
+        type: "object",
+        properties: {
+          add: { type: "array", items: { type: "string" } },
+          remove: { type: "array", items: { type: "string" } },
+          neutral: { type: "array", items: { type: "string" } },
+        },
+        required: ["add", "remove", "neutral"],
+      },
+    },
+    required: ["cards", "keywords"],
+    additionalProperties: false,
+  };
 
   try {
-    const parsed = JSON.parse(raw);
+    const primary = await postToOpenAI(
+      {
+        model,
+        modalities: ["text"],
+        input: messages,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "OptimizationPayload",
+            schema,
+          },
+        },
+        max_output_tokens: 900,
+        temperature: 1,
+      },
+      apiKey,
+    );
+
+    const text = extractText(primary);
+    const parsed = safeJson(text);
     const payloadResult = toPayload(parsed);
     return { ...payloadResult, source: "openai" };
   } catch {
-    return buildMockCards(resumeText, jobDesc, mode);
+    try {
+      const fallback = await postToOpenAI(
+        {
+          model,
+          modalities: ["text"],
+          input: messages,
+          text: { format: "plain" },
+          max_output_tokens: 900,
+          temperature: 1,
+        },
+        apiKey,
+      );
+
+      const raw = extractText(fallback);
+      const parsed = safeJson(raw);
+      const payloadResult = toPayload(parsed);
+      return { ...payloadResult, source: "openai" };
+    } catch {
+      return buildMockCards(resumeText, jobDesc, mode);
+    }
   }
 };
 
@@ -265,4 +387,4 @@ const handler: Handler = async (event) => {
   }
 };
 
-export { handler };
+export { handler }
