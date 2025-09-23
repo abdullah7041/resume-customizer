@@ -3,21 +3,26 @@ import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-rea
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
 import { useAuth } from "../../hooks/useAuth";
-import { skyline } from "../../lib/assets";
-
-
 
 const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
-const THEME_STORAGE_KEY = "airo:theme";
+const THEME_STORAGE_KEY = "theme";
+const LEGACY_THEME_KEY = "airo:theme";
 
 const resolvePreferredTheme = () => {
   if (typeof window === "undefined") {
     return "light";
   }
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  let stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (!stored) {
+    const legacy = window.localStorage.getItem(LEGACY_THEME_KEY);
+    if (legacy === "dark" || legacy === "light") {
+      stored = legacy;
+      window.localStorage.setItem(THEME_STORAGE_KEY, legacy);
+    }
+  }
   if (stored === "dark" || stored === "light") {
     return stored;
   }
@@ -26,16 +31,16 @@ const resolvePreferredTheme = () => {
 
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
-  const skylineUrl = skyline();
-  const hasSkyline = typeof skylineUrl === "string" && skylineUrl.trim().length > 0 && !skylineUrl.includes("undefined");
   const storedPreference = useRef(
     typeof window !== "undefined" && ["dark", "light"].includes(window.localStorage.getItem(THEME_STORAGE_KEY) ?? ""),
   );
   const [isDark, setIsDark] = useState(() => resolvePreferredTheme() === "dark");
 
-  const applyTheme = useCallback((nextIsDark) => {
+  useEffect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.dataset.theme = isDark ? "dark" : "light";
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   }, [isDark]);
 
   useEffect(() => {
@@ -63,20 +68,13 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="hero-bg-animate relative isolate min-h-[100svh] overflow-hidden text-surface-50">
+    <header className="hero-bg-animate relative isolate flex flex-col justify-between gap-12 text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
+      <div aria-hidden="true" className="absolute inset-0 -z-40">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#04160d]/92 via-[#063220]/88 to-[#03140d]/94" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(11,107,58,0.4)_0%,rgba(3,20,13,0)_65%)]" />
+      </div>
       <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-30 bg-gradient-to-b from-[#0B6B3A]/92 via-[#0b3d2b]/88 to-[#051f13]/92"
-      />
-      {hasSkyline ? (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-[-12%] -z-40 h-[130%] bg-cover bg-center bg-no-repeat opacity-80 skyline-float"
-          style={{ backgroundImage: `url('${skylineUrl}')` }}
-        />
-      ) : null}
-      <div
-        className="absolute inset-0 -z-20 opacity-[0.05]"
+        className="absolute inset-0 -z-30 opacity-[0.05]"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
         aria-hidden="true"
       />
@@ -134,24 +132,24 @@ export default function Header() {
           <div className="space-y-6">
             <span
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/30 bg-surface-50/20 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-900"
+              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/40 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/45 p-6 backdrop-blur-lg shadow-[0_32px_90px_-40px_rgba(0,0,0,0.55)]">
               <span
                 aria-hidden="true"
-                className="absolute -top-7 left-0 text-accent-500 drop-shadow-[0_0_18px_rgba(197,166,106,0.45)]"
+                className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_18px_rgba(197,166,106,0.45)]"
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
+              <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_14px_32px_rgba(0,0,0,0.55)] sm:text-5xl">
                 AI Resume Optimizer
               </h1>
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-surface-50/85">
+                Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
+              </p>
             </div>
-            <p className="max-w-xl text-base leading-relaxed text-surface-50/85">
-              Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
-            </p>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
               <div className="card-glow group rounded-2xl border border-surface-50/25 bg-surface-50/85 p-4 text-ink-700 shadow-sm backdrop-blur-sm transition-all duration-200 ease-out hover:bg-surface-50/90 hover:shadow-md dark:border-surface-50/10 dark:bg-surface-900/70 dark:text-surface-50 dark:hover:bg-surface-900/75">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Smart Parsing</dt>

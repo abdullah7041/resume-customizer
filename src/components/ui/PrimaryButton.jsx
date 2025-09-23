@@ -12,7 +12,7 @@ export default function PrimaryButton({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 px-5 py-2.5 text-sm font-semibold text-surface-50 shadow-card transition-transform duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] hover:translate-y-[-1px] hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-surface-900",
+        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 px-5 py-2.5 text-sm font-semibold text-surface-50 shadow-card transition-transform duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] hover:translate-y-[-1px] hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-surface-900",
         className
       )}
       disabled={disabled || loading}

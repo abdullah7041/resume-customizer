@@ -300,11 +300,13 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
         model,
         modalities: ["text"],
         input: messages,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "OptimizationPayload",
-            schema,
+        text: {
+          format: {
+            type: "json_schema",
+            json_schema: {
+              name: "OptimizationPayload",
+              schema,
+            },
           },
         },
         max_output_tokens: 900,

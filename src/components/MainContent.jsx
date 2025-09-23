@@ -10,6 +10,7 @@ import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import PrimaryButton from "./ui/PrimaryButton.jsx";
 import { skyline } from "../lib/assets";
+import { exportResumeToPdf } from "../services/exportPdf.js";
 
 const tabs = [
   { value: "resume", label: "Resume", icon: FileText },
@@ -49,6 +50,7 @@ export default function MainContent() {
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const skylineUrl = useMemo(() => skyline(), []);
+  const [animateSkyline, setAnimateSkyline] = useState(false);
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -57,7 +59,7 @@ export default function MainContent() {
   const pushToast = useCallback(
     (toast) => {
       const id = getId();
-      setToasts((prev) => [...prev, { id, ...toast }]);
+      setToasts([{ id, ...toast }]);
       const lifetime = toast?.type === "danger" ? 6000 : 4200;
       scheduleTimeout(() => dismissToast(id), lifetime);
     },
@@ -67,6 +69,13 @@ export default function MainContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setAnimateSkyline(true);
+    const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const persistPreviewUsage = useCallback(() => {
@@ -140,9 +149,10 @@ export default function MainContent() {
           title: "Analyzing match",
           description: "Comparing your resume to the description…",
         });
-        const result = await analyzeResume(resumeData, jobDescriptionInput);
+        const trimmedJob = jobDescriptionInput.trim();
+        const result = await analyzeResume(resumeData, trimmedJob);
         setMatchAnalysis(result);
-        setJobDescription(jobDescriptionInput);
+        setJobDescription(trimmedJob);
         pushToast({
           type: "success",
           title: "Match insights ready",
@@ -257,6 +267,38 @@ export default function MainContent() {
     });
   }, [pushToast]);
 
+  const handleExportPdf = useCallback(() => {
+    if (!resumeData) {
+      pushToast({
+        type: "warning",
+        title: "Add your resume",
+        description: "Upload or paste your resume before exporting.",
+      });
+      return;
+    }
+
+    try {
+      exportResumeToPdf({
+        resumeText: resumeData,
+        jobDescription,
+        matchAnalysis,
+        optimizations,
+        keywords: optimizationKeywords,
+      });
+      pushToast({
+        type: "success",
+        title: "Export ready",
+        description: "Use your browser dialog to save the PDF preview.",
+      });
+    } catch (error) {
+      pushToast({
+        type: "danger",
+        title: "Export blocked",
+        description: error?.message || "Enable pop-ups and try again.",
+      });
+    }
+  }, [jobDescription, matchAnalysis, optimizations, optimizationKeywords, pushToast, resumeData]);
+
   const renderedToasts = useMemo(
     () =>
       toasts.map((toast) => (
@@ -275,7 +317,7 @@ export default function MainContent() {
     <div className="space-y-8">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={setActiveTab} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
-      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-6 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-surface-900/80">
+      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-6 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-surface-900/82">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
@@ -301,6 +343,8 @@ export default function MainContent() {
             onCopy={handleCopy}
             previewUsed={previewUsed}
             onUpgrade={handleUpgrade}
+            onExport={handleExportPdf}
+            canExport={Boolean(resumeData)}
           />
         )}
       </div>
@@ -309,31 +353,39 @@ export default function MainContent() {
 
   return (
     <>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-40 bg-gradient-to-b from-[#0B6B3A]/88 via-[#0b3d2b]/86 to-[#04160d]/94"
-      />
-      {typeof skylineUrl === "string" && skylineUrl ? (
-        <>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-50 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url('${skylineUrl}')` }}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-x-0 bottom-[-10%] -z-30 h-[130%] bg-cover bg-bottom bg-no-repeat opacity-75 skyline-float"
-            style={{ backgroundImage: `url('${skylineUrl}')` }}
-          />
-        </>
-      ) : null}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-50">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0b6b3a]/88 via-[#0b3d2b]/86 to-[#04160d]/94" />
+        {typeof skylineUrl === "string" && skylineUrl ? (
+          <>
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src={skylineUrl}
+                alt=""
+                loading="eager"
+                decoding="async"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-auto min-h-full w-full object-cover"
+                style={{ objectPosition: "center calc(100% - 140px)" }}
+              />
+            </div>
+            <div
+              className={`absolute inset-x-0 bottom-0 h-full bg-cover bg-bottom bg-no-repeat opacity-[0.85] ${
+                animateSkyline ? "skyline-once" : "skyline-still"
+              }`}
+              style={{
+                backgroundImage: `url('${skylineUrl}')`,
+                backgroundPosition: "center calc(100% - 140px)",
+              }}
+            />
+          </>
+        ) : null}
+      </div>
       <main
         data-app-main
-        className="relative z-10 -mt-20 min-h-screen px-4 pb-24 pt-24 sm:px-6"
+        className="relative z-10 -mt-20 min-h-screen px-4 pb-32 pt-24 sm:px-6 lg:pb-40"
       >
         <ToastContainer>{renderedToasts}</ToastContainer>
         <div className="mx-auto max-w-6xl">
-          <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/80">
+          <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/82">
             {flowProgress > 0 && (
               <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
                 <div

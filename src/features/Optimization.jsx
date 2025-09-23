@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Check, ClipboardCheck, Info, Lock, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ClipboardCheck, FileDown, Info, Lock, Sparkles } from "lucide-react";
 import PrimaryButton from "../components/ui/PrimaryButton.jsx";
 import SecondaryButton from "../components/ui/SecondaryButton.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -12,6 +12,11 @@ const modes = [
 ];
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
+const CHIP_LABELS = {
+  add: "Add",
+  neutral: "Keep",
+  remove: "De-emphasize",
+};
 
 const PreviewBanner = ({ onUpgrade }) => (
   <div className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-secondary-500/15 bg-secondary-500/5 p-6 text-left shadow-soft backdrop-blur-xl dark:border-surface-50/10 dark:bg-surface-900/60">
@@ -49,8 +54,12 @@ export default function Optimization({
   onCopy,
   previewUsed,
   onUpgrade,
+  onExport,
+  canExport = false,
 }) {
   const [mode, setMode] = useState("auto");
+  const [chipsAnimated, setChipsAnimated] = useState(false);
+  const chipsShownRef = useRef(false);
 
   const keywordBuckets = useMemo(() => ({
     add: keywords?.add ?? [],
@@ -62,6 +71,21 @@ export default function Optimization({
   const showPreviewBanner = !isPremium && !previewUsed;
 
   const handleRun = () => onOptimize?.(mode);
+
+  useEffect(() => {
+    const total =
+      (keywordBuckets.add?.length ?? 0) +
+      (keywordBuckets.neutral?.length ?? 0) +
+      (keywordBuckets.remove?.length ?? 0);
+    if (total > 0 && !chipsShownRef.current) {
+      chipsShownRef.current = true;
+      setChipsAnimated(true);
+      const host = typeof window !== "undefined" ? window : globalThis;
+      const timer = host.setTimeout(() => setChipsAnimated(false), 2200);
+      return () => host.clearTimeout?.(timer);
+    }
+    return undefined;
+  }, [keywordBuckets]);
 
   return (
     <div className="space-y-8">
@@ -91,6 +115,20 @@ export default function Optimization({
         <div className="space-y-2">
           <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Actions</span>
           <div className="flex flex-wrap gap-2">
+            <SecondaryButton
+              icon={FileDown}
+              onClick={() => onExport?.()}
+              disabled={!canExport || isOptimizing}
+              title={
+                !canExport
+                  ? "Upload and parse your resume before exporting."
+                  : isOptimizing
+                  ? "Please wait for the optimization run to finish."
+                  : undefined
+              }
+            >
+              Export PDF
+            </SecondaryButton>
             <SecondaryButton
               icon={Check}
               disabled={!isPremium}
@@ -138,14 +176,16 @@ export default function Optimization({
             {(["add", "neutral", "remove"]).map((bucket) => (
               <div key={bucket} className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-500/70 dark:text-sand-50/70">
-                  {bucket === "add" ? "Add" : bucket === "neutral" ? "Keep" : "De-emphasize"}
+                  {CHIP_LABELS[bucket]}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {(keywordBuckets[bucket] ?? []).length > 0 ? (
                     keywordBuckets[bucket].map((token) => (
                       <span
                         key={token}
-                        className="rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs font-semibold text-secondary-600 dark:border-secondary-500/30 dark:bg-secondary-500/20 dark:text-secondary-100"
+                        className={`relative overflow-hidden rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs font-semibold text-secondary-600 dark:border-secondary-500/30 dark:bg-secondary-500/20 dark:text-secondary-100 ${
+                          chipsAnimated ? "keyword-chip-shimmer" : ""
+                        }`}
                       >
                         {token}
                       </span>
