@@ -10,7 +10,6 @@ const ACCEPTED_TYPES = [
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
-  const [url, setUrl] = useState("");
   const [file, setFile] = useState(null);
   const [textValue, setTextValue] = useState("");
   const [status, setStatus] = useState("idle");
@@ -105,14 +104,11 @@ const filePath = `${user.id}/${fileName}`;
           throw uploadError;
         }
         // private bucket => signed URL
-        const { data: signed, error: signedErr } = await supabase.storage
+        const { error: signedErr } = await supabase.storage
           .from("resumes")
           .createSignedUrl(filePath, 60 * 60);
 
         if (signedErr) throw signedErr;
-
-// optional: keep the link
-setUrl(signed.signedUrl);
 
         setProgress(70);
         onToast?.({

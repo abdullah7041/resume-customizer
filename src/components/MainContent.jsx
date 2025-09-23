@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
-import { parseResume, analyzeResume } from "../services/api.js";
+import { parseResume, analyzeResume, optimizeResume } from "../services/api.js";
 import { useAuth } from "../hooks/useAuth.jsx";
 import ResumeUpload from "../features/ResumeUpload.jsx";
 import JobMatch from "./Features/JobMatch.jsx";
@@ -39,9 +39,13 @@ export default function MainContent() {
   const [activeTab, setActiveTab] = useState("resume");
   const [flowProgress, setFlowProgress] = useState(0);
   const [resumeData, setResumeData] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
   const [matchAnalysis, setMatchAnalysis] = useState(null);
-  const [optimizations] = useState([]);
+  const [optimizations, setOptimizations] = useState([]);
+  const [optimizationKeywords, setOptimizationKeywords] = useState({ add: [], remove: [], neutral: [] });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
 
   const dismissToast = useCallback((id) => {
@@ -57,6 +61,17 @@ export default function MainContent() {
     },
     [dismissToast]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
+  }, []);
+
+  const persistPreviewUsage = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("airo:previewQuotaUsed", "true");
+    setPreviewUsed(true);
+  }, []);
 
   const handleParseResume = useCallback(
     async (resumeInput) => {
@@ -78,6 +93,9 @@ export default function MainContent() {
         setFlowProgress(88);
         setResumeData(parsed);
         setMatchAnalysis(null);
+        setJobDescription("");
+        setOptimizations([]);
+        setOptimizationKeywords({ add: [], remove: [], neutral: [] });
         pushToast({
           type: "success",
           title: "Resume parsed",
@@ -101,7 +119,7 @@ export default function MainContent() {
   );
 
   const handleAnalyzeMatch = useCallback(
-    async (jobDescription) => {
+    async (jobDescriptionInput) => {
       if (!resumeData) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -120,8 +138,9 @@ export default function MainContent() {
           title: "Analyzing match",
           description: "Comparing your resume to the description…",
         });
-        const result = await analyzeResume(resumeData, jobDescription);
+        const result = await analyzeResume(resumeData, jobDescriptionInput);
         setMatchAnalysis(result);
+        setJobDescription(jobDescriptionInput);
         pushToast({
           type: "success",
           title: "Match insights ready",
@@ -145,6 +164,96 @@ export default function MainContent() {
     },
     [pushToast, resumeData]
   );
+
+  const handleOptimize = useCallback(
+    async (mode) => {
+      if (!resumeData || !jobDescription) {
+        pushToast({
+          type: "warning",
+          title: "Add job context",
+          description: "Run a match analysis before requesting optimizations.",
+        });
+        return null;
+      }
+
+      try {
+        setIsOptimizing(true);
+        setFlowProgress(32);
+        pushToast({
+          type: "info",
+          title: "Generating optimizations",
+          description: "Drafting tailored rewrite suggestions…",
+        });
+
+        const result = await optimizeResume({
+          resumeText: resumeData,
+          jobDesc: jobDescription,
+          mode,
+          preview: !isPremium,
+        });
+
+        setOptimizations(result.cards ?? []);
+        setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
+        pushToast({
+          type: "success",
+          title: "Optimization cards ready",
+          description:
+            result.source === "openai"
+              ? "Review AI-crafted rewrites and keywords."
+              : "Preview mode generated realistic guidance.",
+        });
+
+        if (!isPremium && !previewUsed) {
+          persistPreviewUsage();
+        }
+
+        setFlowProgress(100);
+        scheduleTimeout(() => setFlowProgress(0), 900);
+        return result;
+      } catch (error) {
+        setFlowProgress(0);
+        pushToast({
+          type: "danger",
+          title: "Optimization failed",
+          description: error?.message || "Please try again shortly.",
+        });
+        throw error;
+      } finally {
+        setIsOptimizing(false);
+      }
+    },
+    [isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData]
+  );
+
+  const handleCopy = useCallback(
+    async (value) => {
+      try {
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(value);
+        }
+        pushToast({
+          type: "success",
+          title: "Copied to clipboard",
+          description: "Optimized bullet ready to paste into your resume.",
+        });
+      } catch (error) {
+        pushToast({
+          type: "danger",
+          title: "Copy failed",
+          description: error?.message || "Select the text manually to copy.",
+        });
+      }
+    },
+    [pushToast]
+  );
+
+  const handleUpgrade = useCallback(() => {
+    pushToast({
+      type: "info",
+      title: "Unlock premium insights",
+      description: "Upgrade from your dashboard to save and export optimized results.",
+    });
+  }, [pushToast]);
 
   const renderedToasts = useMemo(
     () =>
@@ -177,12 +286,19 @@ export default function MainContent() {
             onAnalyzeMatch={handleAnalyzeMatch}
             matchAnalysis={matchAnalysis}
             isAnalyzing={isAnalyzing}
+            hasResume={Boolean(resumeData)}
           />
         )}
         {activeTab === "optimize" && (
           <Optimization
             isPremium={isPremium}
             optimizations={optimizations}
+            keywords={optimizationKeywords}
+            isOptimizing={isOptimizing}
+            onOptimize={handleOptimize}
+            onCopy={handleCopy}
+            previewUsed={previewUsed}
+            onUpgrade={handleUpgrade}
           />
         )}
       </div>
@@ -190,7 +306,10 @@ export default function MainContent() {
   );
 
   return (
-    <main data-app-main className="relative -mt-16 px-4 pb-24">
+    <main
+      data-app-main
+      className="relative -mt-20 min-h-screen px-4 pb-24 pt-24 sm:px-6"
+    >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className="mx-auto max-w-6xl">
         <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/80">
