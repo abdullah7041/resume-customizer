@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
+import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 
 const saduPattern = encodeURIComponent(
@@ -101,7 +102,12 @@ export default function Header() {
                 type="button"
                 onClick={toggleTheme}
                 aria-pressed={isDark}
-                className="inline-flex items-center gap-2 rounded-full border border-surface-50/40 bg-surface-50/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-surface-50 transition-colors hover:bg-surface-50/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:border-surface-50/15 dark:bg-surface-900/50 dark:text-surface-50 dark:hover:bg-surface-900/60 dark:focus-visible:ring-accent-400/70"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                  isDark
+                    ? "border-surface-50/20 bg-surface-900/60 text-surface-50 hover:bg-surface-900/70 focus-visible:ring-accent-400/70 focus-visible:ring-offset-surface-900"
+                    : "border-surface-900/10 bg-surface-50/95 text-ink-800 shadow-[0_12px_34px_-24px_rgba(11,107,58,0.45)] hover:bg-surface-50 focus-visible:ring-accent-300/70 focus-visible:ring-offset-transparent"
+                )}
               >
                 {isDark ? (
                   <Sun className="h-4 w-4" aria-hidden="true" />

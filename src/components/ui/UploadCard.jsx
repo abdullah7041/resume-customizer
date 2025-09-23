@@ -115,7 +115,7 @@ export default function UploadCard({
           <button
             type="button"
             onClick={onFileClear}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-secondary-500 transition hover:bg-secondary-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-secondary-500 transition-colors hover:bg-secondary-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:text-sand-50 dark:hover:bg-secondary-500/25 dark:focus-visible:ring-offset-surface-900"
             aria-label="Remove selected file"
           >
             <XCircle className="h-4 w-4" aria-hidden="true" />
