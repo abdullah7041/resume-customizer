@@ -269,6 +269,33 @@
     }
   }
 
+  .bg-hero {
+    --hero-skyline-offset: calc(100% - clamp(220px, 32vh, 380px));
+    background-attachment: fixed;
+    background-position: center var(--hero-skyline-offset);
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  @media (max-width: 1024px) {
+    .bg-hero {
+      --hero-skyline-offset: calc(100% - clamp(200px, 30vh, 340px));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .bg-hero {
+      background-attachment: scroll;
+      --hero-skyline-offset: calc(100% - clamp(150px, 28vh, 280px));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .bg-hero {
+      --hero-skyline-offset: calc(100% - clamp(120px, 34vh, 220px));
+    }
+  }
+
   @keyframes keywordChipShine {
     0% {
       transform: translateX(-100%);
