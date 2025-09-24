@@ -9,7 +9,7 @@ vi.mock('../lib/aiClient', () => {
 });
 
 import { runOptimization } from '../lib/aiClient';
-import { analyzeResume, optimizeResume, parseResume } from './api.js';
+import { analyzeResume, optimizeResume, parseResume, AI_DEFAULT_TEMPERATURE } from './api.js';
 
 beforeEach(() => {
   global.fetch = vi.fn();
@@ -103,6 +103,7 @@ describe('optimizeResume', () => {
         jobText: 'job',
         mode: 'auto',
         messages: expect.any(Array),
+        temperature: AI_DEFAULT_TEMPERATURE,
       }),
       expect.objectContaining({ signal: expect.any(Object) })
     );
@@ -110,6 +111,7 @@ describe('optimizeResume', () => {
     const payload = runOptimization.mock.calls[0][0];
     expect(payload.messages[0]).toMatchObject({ role: 'system' });
     expect(payload.messages[1]).toMatchObject({ role: 'user' });
+    expect(payload.temperature).toBe(AI_DEFAULT_TEMPERATURE);
     expect(result.cards).toHaveLength(1);
     expect(result.keywords.add).toContain('react');
     expect(result.source).toBe('openai');
@@ -123,5 +125,24 @@ describe('optimizeResume', () => {
     await expect(
       optimizeResume({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' })
     ).rejects.toThrow('Optimization request timed out');
+  });
+
+  it('uses an extended timeout window for optimization requests', async () => {
+    vi.useFakeTimers();
+    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+
+    try {
+      runOptimization.mockResolvedValueOnce({
+        text: JSON.stringify({ cards: [], keywords: { add: [], neutral: [], remove: [] }, source: 'openai' }),
+        raw: {},
+      });
+
+      await optimizeResume({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' });
+
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 45000);
+    } finally {
+      setTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
