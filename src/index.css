@@ -5,26 +5,8 @@
 @layer base {
   :root {
     color-scheme: light dark;
-    --page-gradient: linear-gradient(135deg, #0b6b3a 0%, #146356 55%, #0c5335 100%);
-    --page-gradient-dark: linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
-    --page-radial: radial-gradient(circle at 15% -12%, rgba(32, 201, 151, 0.24) 0%, rgba(6, 78, 59, 0) 65%);
-    --page-radial-dark: radial-gradient(circle at 18% -16%, rgba(53, 233, 184, 0.28) 0%, rgba(3, 20, 13, 0) 70%);
-    --page-gutter: 1.25rem;
-    --radius-card: 1.25rem;
-  }
-
-  @media (min-width: 768px) {
-    :root {
-      --page-gutter: 1.75rem;
-      --radius-card: 1.5rem;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    :root {
-      --page-gutter: 2.5rem;
-      --radius-card: 1.75rem;
-    }
+    --app-shell-max: 1120px;
+    --app-shell-gutter: clamp(1.25rem, 5vw, 3rem);
   }
 
   html,
@@ -36,25 +18,23 @@
 
   body {
     font-family: var(--font-body);
-    color: var(--color-ink-900);
     background-color: #0b6b3a;
-    background: var(--page-gradient);
-    transition: background var(--duration-breathe) var(--transition-snappy);
-    position: relative;
-    overflow-x: hidden;
-    isolation: isolate;
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background: var(--page-radial);
-    z-index: -1;
+    background-image:
+      radial-gradient(circle at 20% -10%, rgba(32, 201, 151, 0.28) 0%, rgba(3, 20, 13, 0) 65%),
+      linear-gradient(135deg, #0b6b3a 0%, #146356 55%, #0c5335 100%);
+    background-attachment: fixed, fixed;
+    background-repeat: no-repeat;
+    background-size: 140% 140%, cover;
+    color: var(--color-ink-900);
+    transition: background-color var(--duration-breathe) var(--transition-snappy),
+      background-image var(--duration-breathe) var(--transition-snappy);
   }
 
   .dark body {
+    background-color: #0a3f26;
+    background-image:
+      radial-gradient(circle at 22% -12%, rgba(56, 189, 148, 0.24) 0%, rgba(6, 32, 24, 0) 68%),
+      linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
     color: var(--color-sand-50);
     background-color: #0a3f26;
     background: var(--page-gradient-dark);
@@ -73,6 +53,18 @@
   }
 }
 /* <-- This closes the @layer base block */
+
+@media (max-width: 480px) {
+  :root {
+    --radius-card: 1.1rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --app-shell-gutter: 3.5rem;
+  }
+}
 
 @utility card {
   @apply bg-white rounded-2xl shadow-soft p-6;
@@ -93,6 +85,13 @@
 
   .transition-snappy {
     transition: all var(--duration-snappy) var(--transition-snappy);
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: var(--app-shell-max);
+    margin-inline: auto;
+    padding-inline: var(--app-shell-gutter);
   }
 
   @keyframes hero-fade-in {

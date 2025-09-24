@@ -36,3 +36,17 @@ describe("asset", () => {
     expect(asset("/KAFDHD.webp")).toBe("https://cdn.example.com/media/KAFDHD.webp");
   });
 });
+
+describe("skyline", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  it("applies cache-busting when build metadata is available", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com/media");
+    vi.stubEnv("VITE_BUILD_ID", "20240924");
+    const { skyline } = await loadModule();
+    expect(skyline()).toBe("https://cdn.example.com/media/KAFDH.webp?v=20240924");
+  });
+});
