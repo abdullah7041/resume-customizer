@@ -65,7 +65,7 @@ export default function Header() {
   );
 
   return (
-    <header className="hero-bg-animate relative isolate flex min-h-screen flex-col justify-between gap-12 overflow-hidden text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
+    <header className="hero-bg-animate relative isolate flex min-h-screen min-h-[100svh] flex-col justify-between gap-10 overflow-hidden pb-16 text-surface-50 sm:gap-12 sm:pb-20 lg:min-h-[100dvh]">
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
           aria-hidden="true"
@@ -99,8 +99,8 @@ export default function Header() {
 
       <div className="relative z-10 flex flex-1 flex-col">
         <div className="border-b border-surface-50/10">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-3">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-[var(--page-gutter)] py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 text-center sm:text-left">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-50/10 text-accent-500 shadow-soft">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
@@ -113,7 +113,7 @@ export default function Header() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
               <div role="radiogroup" aria-label="Color theme" className={toggleGroupClass}>
                 {themeOptions.map(({ value, label, icon: Icon }, index) => {
                   const isActive = theme === value;
@@ -152,25 +152,25 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-16 pt-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 px-[var(--page-gutter)] pb-14 pt-12 sm:gap-10 sm:pb-16 sm:pt-16 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12 lg:pb-20">
           <div className="space-y-6">
             <span
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 rounded-full border border-surface-50/35 bg-surface-900/60 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero"
+              className="badge-gold-shimmer inline-flex items-center gap-2 self-center rounded-full border border-surface-50/35 bg-surface-900/60 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero sm:self-start"
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/55 p-6 backdrop-blur-2xl shadow-[0_32px_90px_-40px_rgba(0,0,0,0.6)]">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/55 p-5 backdrop-blur-2xl shadow-[0_32px_90px_-40px_rgba(0,0,0,0.6)] sm:p-6">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_18px_rgba(197,166,106,0.45)]"
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl">
+              <h1 className="text-balance text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95">
+              <p className="text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>

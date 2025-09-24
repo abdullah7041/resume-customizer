@@ -5,26 +5,63 @@
 @layer base {
   :root {
     color-scheme: light dark;
+    --page-gradient: linear-gradient(135deg, #0b6b3a 0%, #146356 55%, #0c5335 100%);
+    --page-gradient-dark: linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
+    --page-radial: radial-gradient(circle at 15% -12%, rgba(32, 201, 151, 0.24) 0%, rgba(6, 78, 59, 0) 65%);
+    --page-radial-dark: radial-gradient(circle at 18% -16%, rgba(53, 233, 184, 0.28) 0%, rgba(3, 20, 13, 0) 70%);
+    --page-gutter: 1.25rem;
+    --radius-card: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --page-gutter: 1.75rem;
+      --radius-card: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    :root {
+      --page-gutter: 2.5rem;
+      --radius-card: 1.75rem;
+    }
   }
 
   html,
   body,
-  #root {
+  #root,
+  #app-root {
     min-height: 100%;
   }
 
   body {
     font-family: var(--font-body);
-    background-color: #0b6b3a;
-    background-image: linear-gradient(135deg, #0b6b3a 0%, #146356 55%, #0c5335 100%);
     color: var(--color-ink-900);
-    transition: background-color var(--duration-breathe) var(--transition-snappy);
+    background-color: #0b6b3a;
+    background: var(--page-gradient);
+    transition: background var(--duration-breathe) var(--transition-snappy);
+    position: relative;
+    overflow-x: hidden;
+    isolation: isolate;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: var(--page-radial);
+    z-index: -1;
   }
 
   .dark body {
-    background-color: #0a3f26;
-    background-image: linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
     color: var(--color-sand-50);
+    background-color: #0a3f26;
+    background: var(--page-gradient-dark);
+  }
+
+  .dark body::before {
+    background: var(--page-radial-dark);
   }
 
   h1,
