@@ -144,6 +144,15 @@ export async function runOptimization(
         : new Error(typeof error === "string" ? error : "Unable to reach AI service");
     const statusCode = error instanceof AiRequestError ? error.status : null;
     const errorCode = error instanceof AiRequestError ? error.code : null;
+    const finalError = (() => {
+      if (normalized.name === "AbortError") {
+        const abortError = new Error("AI request timed out");
+        abortError.name = normalized.name;
+        return abortError;
+      }
+
+      return normalized;
+    })();
 
     options.onDebug?.({
       status: "error",
@@ -155,16 +164,13 @@ export async function runOptimization(
       maxOutputTokens:
         toNumber(payload?.max_output_tokens) ?? toNumber(payload?.max_completion_tokens) ?? null,
     });
-    if (normalized.name === "AbortError") {
-      normalized.message = "AI request timed out";
-    }
-    options.onError?.(normalized);
+    options.onError?.(finalError);
 
     if (canUseMock()) {
       return { text: "", raw: null };
     }
 
-    throw normalized;
+    throw finalError;
   } finally {
     signal?.removeEventListener?.("abort", abortHandler);
   }
