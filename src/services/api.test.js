@@ -1,4 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../lib/aiClient', () => {
+  const runOptimization = vi.fn();
+  return {
+    runOptimization,
+    USE_MOCK: false,
+  };
+});
+
+import { runOptimization } from '../lib/aiClient';
 import { analyzeResume, optimizeResume, parseResume } from './api.js';
 
 beforeEach(() => {
@@ -63,23 +73,22 @@ describe('analyzeResume', () => {
 });
 
 describe('optimizeResume', () => {
-  it('returns cards from optimize function', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          cards: [
-            {
-              section: 'Summary',
-              issue: 'Issue',
-              suggestion: 'Fix it',
-              exampleBefore: 'Before',
-              exampleAfter: 'After',
-            },
-          ],
-          keywords: { add: ['react'], remove: [], neutral: [] },
-          source: 'mock',
-        }),
+  it('parses AI response into cards and keywords', async () => {
+    runOptimization.mockResolvedValueOnce({
+      text: JSON.stringify({
+        cards: [
+          {
+            section: 'Summary',
+            issue: 'Issue',
+            suggestion: 'Fix it',
+            exampleBefore: 'Before',
+            exampleAfter: 'After',
+          },
+        ],
+        keywords: { add: ['react'], remove: [], neutral: [] },
+        source: 'openai',
+      }),
+      raw: { id: 'req_123', model: 'gpt-5-nano' },
     });
 
     const result = await optimizeResume({
@@ -88,17 +97,19 @@ describe('optimizeResume', () => {
       mode: 'auto',
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('/.netlify/functions/optimize', expect.objectContaining({
-      method: 'POST',
-    }));
+    expect(runOptimization).toHaveBeenCalledWith(
+      expect.objectContaining({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' }),
+      expect.objectContaining({ signal: expect.any(Object) })
+    );
     expect(result.cards).toHaveLength(1);
     expect(result.keywords.add).toContain('react');
+    expect(result.source).toBe('openai');
   });
 
   it('throws when request aborted', async () => {
     const abortError = new Error('Aborted');
     abortError.name = 'AbortError';
-    global.fetch.mockRejectedValueOnce(abortError);
+    runOptimization.mockRejectedValueOnce(abortError);
 
     await expect(
       optimizeResume({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' })

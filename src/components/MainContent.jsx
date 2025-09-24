@@ -56,7 +56,9 @@ export default function MainContent() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [aiDebug, setAiDebug] = useState(null);
   const toastTimers = useRef(new Map());
+  const isDev = import.meta.env.MODE === "development";
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -251,12 +253,30 @@ export default function MainContent() {
           { id: TOAST_IDS.optimize }
         );
 
-        const result = await optimizeResume({
-          resumeText: resumeData,
-          jobDesc: jobDescription,
-          mode,
-          preview: !isPremium,
-        });
+        const result = await optimizeResume(
+          {
+            resumeText: resumeData,
+            jobDesc: jobDescription,
+            mode,
+            preview: !isPremium,
+          },
+          {
+            onDebug: setAiDebug,
+            onError: (error) => {
+              pushToast(
+                {
+                  type: "danger",
+                  title: "Optimization failed",
+                  description: withTemperature(
+                    (error?.message || "Please try again shortly.") +
+                      " • Save your best bullets before retrying.",
+                  ),
+                },
+                { id: TOAST_IDS.optimize }
+              );
+            },
+          }
+        );
 
         setOptimizations(result.cards ?? []);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
@@ -282,17 +302,6 @@ export default function MainContent() {
         return result;
       } catch (error) {
         setFlowProgress(0);
-        pushToast(
-          {
-            type: "danger",
-            title: "Optimization failed",
-            description: withTemperature(
-              (error?.message || "Please try again shortly.") +
-                " • Save your best bullets before retrying."
-            ),
-          },
-          { id: TOAST_IDS.optimize }
-        );
         throw error;
       } finally {
         setIsOptimizing(false);
@@ -416,53 +425,75 @@ export default function MainContent() {
   );
 
   return (
-    <>
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-50">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#052618]/94 via-[#04311f]/84 to-[#02130b]/96" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.22)_0%,rgba(3,20,13,0)_68%)]" />
-        <div className="accent-divider absolute inset-x-0 bottom-0 z-0 h-px" aria-hidden="true" />
-      </div>
-      <main
-        data-app-main
-        className="relative z-10 -mt-20 min-h-screen px-4 pb-32 pt-24 sm:px-6 lg:pb-40"
-      >
-        <ToastContainer>{renderedToasts}</ToastContainer>
-        <div className="mx-auto max-w-6xl">
-          <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/82">
-            {flowProgress > 0 && (
-              <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-all duration-300"
-                  style={{ width: `${flowProgress}%` }}
-                  aria-hidden="true"
-                />
-              </div>
-            )}
-
-            {loading ? (
-              <div className="space-y-6">
-                <div className="h-8 w-40 rounded-full bg-smoke-50/70" />
-                <div className="h-96 w-full overflow-hidden rounded-[var(--radius-card)] bg-smoke-50/60">
-                  <div className="h-full w-1/2 animate-shimmer bg-gradient-to-r from-transparent via-surface-50/40 to-transparent" />
-                </div>
-              </div>
-            ) : user ? (
-              workspace
-            ) : (
-              <EmptyState
-                icon={UserPlus}
-                title="Sign in to unlock Saudi-ready insights"
-                description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
-                actions={
-                  <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
-                    Sign in via Google
-                  </PrimaryButton>
-                }
+    <main data-app-main className="relative z-10 -mt-24 min-h-screen px-4 pb-32 pt-24 sm:px-6 lg:pb-40">
+      <ToastContainer>{renderedToasts}</ToastContainer>
+      <div className="mx-auto max-w-6xl">
+        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/82">
+          {flowProgress > 0 && (
+            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-all duration-300"
+                style={{ width: `${flowProgress}%` }}
+                aria-hidden="true"
               />
-            )}
-          </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-6">
+              <div className="h-8 w-40 rounded-full bg-smoke-50/70" />
+              <div className="h-96 w-full overflow-hidden rounded-[var(--radius-card)] bg-smoke-50/60">
+                <div className="h-full w-1/2 animate-shimmer bg-gradient-to-r from-transparent via-surface-50/40 to-transparent" />
+              </div>
+            </div>
+          ) : user ? (
+            workspace
+          ) : (
+            <EmptyState
+              icon={UserPlus}
+              title="Sign in to unlock Saudi-ready insights"
+              description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
+              actions={
+                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
+                  Sign in via Google
+                </PrimaryButton>
+              }
+            />
+          )}
         </div>
-      </main>
-    </>
+        {isDev && aiDebug && (
+          <section className="mt-6 text-xs text-ink-500 dark:text-surface-50/70">
+            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/90 p-4 shadow-soft backdrop-blur-xl dark:border-surface-50/15 dark:bg-surface-900/70">
+              <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
+              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.status}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Model</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.model ?? "–"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Tokens</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.tokens ?? "–"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Latency</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">
+                    {aiDebug.latencyMs ? `${Math.round(aiDebug.latencyMs)} ms` : "–"}
+                  </dd>
+                </div>
+              </dl>
+              {aiDebug.requestId && (
+                <p className="mt-3 break-words text-[10px] text-ink-400/80 dark:text-surface-50/50">
+                  Request ID: {aiDebug.requestId}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
   );
 }
