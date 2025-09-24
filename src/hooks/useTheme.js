@@ -41,7 +41,9 @@ const applyThemeToDocument = (theme) => {
   if (typeof document === "undefined") return;
   const isDark = theme === "dark";
   document.documentElement.classList.toggle("dark", isDark);
-  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  const nextTheme = isDark ? "dark" : "light";
+  document.documentElement.dataset.theme = nextTheme;
+  document.documentElement.setAttribute("data-theme", nextTheme);
   document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 };
 
@@ -60,6 +62,12 @@ export function useTheme() {
 
   useEffect(() => {
     applyThemeToDocument(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (hasExplicitPreference.current) {
+      persistTheme(theme);
+    }
   }, [theme]);
 
   useEffect(() => {

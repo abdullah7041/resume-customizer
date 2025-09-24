@@ -421,10 +421,10 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
-      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-6 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-zinc-900/60">
+      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-5 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-zinc-900/60 sm:p-6 sm:backdrop-blur-xl">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
@@ -456,7 +456,7 @@ export default function MainContent() {
         )}
       </div>
       {hasNextTab && (
-        <div className="flex justify-end">
+        <div className="flex justify-center sm:justify-end">
           <SecondaryButton icon={ArrowRight} onClick={handleContinue}>
             Continue
           </SecondaryButton>
@@ -466,10 +466,13 @@ export default function MainContent() {
   );
 
   return (
-    <main data-app-main className="relative z-10 -mt-24 min-h-screen px-4 pb-32 pt-24 sm:px-6 lg:pb-40">
+    <main
+      data-app-main
+      className="relative z-10 -mt-16 min-h-screen px-[var(--page-gutter)] pb-28 pt-20 sm:-mt-20 sm:pb-32 sm:pt-24 lg:-mt-24 lg:pb-40"
+    >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className="mx-auto max-w-6xl">
-        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-zinc-900/60">
+        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-zinc-900/60 sm:p-8 sm:backdrop-blur-xl">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
