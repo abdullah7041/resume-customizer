@@ -71,6 +71,12 @@ export function useTheme() {
   }, [theme]);
 
   useEffect(() => {
+    if (hasExplicitPreference.current) {
+      persistTheme(theme);
+    }
+  }, [theme]);
+
+  useEffect(() => {
     if (typeof window === "undefined" || hasExplicitPreference.current) {
       return undefined;
     }

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
-import { parseResume, analyzeResume, optimizeResume } from "../services/api.js";
+import {
+  parseResume,
+  analyzeResume,
+  optimizeResume,
+  AI_DEFAULT_TEMPERATURE,
+} from "../services/api.js";
 import { useAuth } from "../hooks/useAuth.jsx";
 import ResumeUpload from "../features/ResumeUpload.jsx";
 import JobMatch from "./Features/JobMatch.jsx";
@@ -18,14 +23,13 @@ const tabs = [
   { value: "optimize", label: "Optimize", icon: Sparkles },
 ];
 
-const API_TEMPERATURE = 1;
 const TOAST_IDS = {
   upload: "toast:upload",
   match: "toast:match",
   optimize: "toast:optimize",
 };
 const TAB_STORAGE_KEY = "airo:lastActiveTab";
-const withTemperature = (message) => `${message} • Temp ${API_TEMPERATURE}`;
+const withTemperature = (message) => `${message} • Temp ${AI_DEFAULT_TEMPERATURE}`;
 
 const containerClass = "app-shell";
 
@@ -423,7 +427,7 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
       <div className="relative min-h-[460px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] sm:min-h-[520px] sm:p-7 sm:backdrop-blur-xl lg:p-8 dark:border-surface-50/12 dark:bg-zinc-900/60">
@@ -458,7 +462,7 @@ export default function MainContent() {
         )}
       </div>
       {hasNextTab && (
-        <div className="flex justify-end">
+        <div className="flex justify-center sm:justify-end">
           <SecondaryButton icon={ArrowRight} onClick={handleContinue}>
             Continue
           </SecondaryButton>
@@ -511,7 +515,7 @@ export default function MainContent() {
           <section className="text-xs text-ink-500 dark:text-surface-50/70">
             <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/88 p-4 shadow-soft backdrop-blur-sm sm:p-5 sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
               <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
-              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-6">
+              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-7">
                 <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status</dt>
                   <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.status}</dd>
@@ -521,8 +525,23 @@ export default function MainContent() {
                   <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.model ?? "–"}</dd>
                 </div>
                 <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">
+                    Temperature
+                  </dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">
+                    {typeof aiDebug.temperature === "number"
+                      ? Number.isInteger(aiDebug.temperature)
+                        ? aiDebug.temperature
+                        : aiDebug.temperature.toFixed(2)
+                      : aiDebug.temperature ?? "–"}
+                  </dd>
+                </div>
+                <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Tokens</dt>
-                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.tokens ?? "–"}</dd>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">
+                    {aiDebug.tokens ?? "–"}
+                    {aiDebug.maxOutputTokens ? ` / ${aiDebug.maxOutputTokens}` : ""}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Latency</dt>

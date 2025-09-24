@@ -11,7 +11,8 @@
 
   html,
   body,
-  #root {
+  #root,
+  #app-root {
     min-height: 100%;
   }
 
@@ -35,6 +36,12 @@
       radial-gradient(circle at 22% -12%, rgba(56, 189, 148, 0.24) 0%, rgba(6, 32, 24, 0) 68%),
       linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
     color: var(--color-sand-50);
+    background-color: #0a3f26;
+    background: var(--page-gradient-dark);
+  }
+
+  .dark body::before {
+    background: var(--page-radial-dark);
   }
 
   h1,
