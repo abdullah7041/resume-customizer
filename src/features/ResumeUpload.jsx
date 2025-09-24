@@ -8,6 +8,7 @@ const ACCEPTED_TYPES = [
 ];
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const PDF_HELPER_MESSAGE = "This looks like a PDF. Use Upload.";
 
 export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
   const [file, setFile] = useState(null);
@@ -15,10 +16,12 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
   const [status, setStatus] = useState("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [textWarning, setTextWarning] = useState("");
 
   useEffect(() => {
     if (resumeData && !textValue) {
       setTextValue(resumeData);
+      setTextWarning("");
     }
   }, [resumeData, textValue]);
 
@@ -27,7 +30,30 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
     setStatus("idle");
     setProgress(0);
     setError("");
+    setTextWarning("");
   }, []);
+
+  const handleTextValueChange = useCallback(
+    (value) => {
+      const trimmedStart = typeof value === "string" ? value.trimStart() : "";
+      if (trimmedStart.startsWith("%PDF")) {
+        if (textWarning !== PDF_HELPER_MESSAGE) {
+          setTextWarning(PDF_HELPER_MESSAGE);
+          onToast?.({
+            type: "warning",
+            title: "Paste blocked",
+            description: PDF_HELPER_MESSAGE,
+          });
+        }
+        return;
+      }
+      if (textWarning) {
+        setTextWarning("");
+      }
+      setTextValue(value);
+    },
+    [onToast, textWarning]
+  );
 
   const handleFileSelect = useCallback(
     (selectedFile) => {
@@ -161,13 +187,14 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
           resetState();
           setTextValue("");
         }}
-        onTextChange={setTextValue}
+        onTextChange={handleTextValueChange}
         textValue={textValue}
         onSubmit={handleSubmit}
         status={status}
         progress={progress}
         error={error}
         disabled={status === "uploading" || status === "parsing"}
+        textHelper={textWarning}
       />
     </div>
   );

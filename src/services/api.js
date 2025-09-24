@@ -82,6 +82,37 @@ const buildMockCards = (resumeText, jobDesc, mode) => {
   };
 };
 
+const buildPrompt = (resumeText, jobDesc, mode = "auto") =>
+  `You rewrite resumes for the Saudi market using ATS-safe language. Return ONLY JSON with keys cards (array) and keywords (object). ` +
+  `cards[].section, cards[].issue, cards[].suggestion, cards[].exampleBefore, cards[].exampleAfter must all be non-empty strings. ` +
+  `keywords must include add, remove, neutral arrays. Keep bullets concise, metric-driven, and culturally neutral.` +
+  `\n\nMODE: ${mode}\n\nRESUME:\n${resumeText.slice(0, 4000)}\n\nJOB DESCRIPTION:\n${jobDesc.slice(0, 4000)}`;
+
+const buildMessages = (resumeText, jobDesc, mode = "auto") => {
+  const system =
+    "You are a resume optimization assistant. Output strictly valid JSON conforming to the provided schema.";
+  return [
+    {
+      role: "system",
+      content: [
+        {
+          type: "text",
+          text: system,
+        },
+      ],
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: buildPrompt(resumeText, jobDesc, mode),
+        },
+      ],
+    },
+  ];
+};
+
 const safeJson = (value) => {
   if (typeof value !== "string") return {};
   const start = value.indexOf("{");
@@ -259,13 +290,16 @@ export const optimizeResume = async (
   const canUseMock = import.meta.env.MODE === "development" && USE_MOCK;
 
   try {
+    const payload = {
+      resumeText: resume.slice(0, 4000),
+      jobText: job.slice(0, 4000),
+      mode,
+      preview,
+      messages: buildMessages(resume, job, mode),
+    };
+
     const result = await runOptimization(
-      {
-        resumeText: resume,
-        jobDesc: job,
-        mode,
-        preview,
-      },
+      payload,
       {
         signal: controller.signal,
         onError: clientOptions.onError,
@@ -283,8 +317,8 @@ export const optimizeResume = async (
     }
 
     const parsed = safeJson(result.text);
-    const payload = toPayload(parsed);
-    return { ...payload, source: "openai" };
+    const parsedPayload = toPayload(parsed);
+    return { ...parsedPayload, source: "openai" };
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error("Optimization request timed out. Try again shortly.");

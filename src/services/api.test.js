@@ -98,9 +98,18 @@ describe('optimizeResume', () => {
     });
 
     expect(runOptimization).toHaveBeenCalledWith(
-      expect.objectContaining({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' }),
+      expect.objectContaining({
+        resumeText: 'resume',
+        jobText: 'job',
+        mode: 'auto',
+        messages: expect.any(Array),
+      }),
       expect.objectContaining({ signal: expect.any(Object) })
     );
+
+    const payload = runOptimization.mock.calls[0][0];
+    expect(payload.messages[0]).toMatchObject({ role: 'system' });
+    expect(payload.messages[1]).toMatchObject({ role: 'user' });
     expect(result.cards).toHaveLength(1);
     expect(result.keywords.add).toContain('react');
     expect(result.source).toBe('openai');

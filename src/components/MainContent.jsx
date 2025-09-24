@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
 import { parseResume, analyzeResume, optimizeResume } from "../services/api.js";
 import { useAuth } from "../hooks/useAuth.jsx";
 import ResumeUpload from "../features/ResumeUpload.jsx";
@@ -9,6 +9,7 @@ import Tabs from "./ui/Tabs.jsx";
 import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import PrimaryButton from "./ui/PrimaryButton.jsx";
+import SecondaryButton from "./ui/SecondaryButton.jsx";
 import { exportResumeToPdf } from "../services/exportPdf.js";
 
 const tabs = [
@@ -23,6 +24,7 @@ const TOAST_IDS = {
   match: "toast:match",
   optimize: "toast:optimize",
 };
+const TAB_STORAGE_KEY = "airo:lastActiveTab";
 const withTemperature = (message) => `${message} • Temp ${API_TEMPERATURE}`;
 
 const getId = () => {
@@ -106,8 +108,35 @@ export default function MainContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const storedTab = window.localStorage.getItem(TAB_STORAGE_KEY);
+    if (storedTab && tabs.some((tab) => tab.value === storedTab)) {
+      setActiveTab(storedTab);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
   }, []);
+
+  const handleTabChange = useCallback((value) => {
+    setActiveTab(value);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(TAB_STORAGE_KEY, value);
+    }
+  }, []);
+
+  const hasNextTab = useMemo(() => {
+    const index = tabs.findIndex((tab) => tab.value === activeTab);
+    return index >= 0 && index < tabs.length - 1;
+  }, [activeTab]);
+
+  const handleContinue = useCallback(() => {
+    const index = tabs.findIndex((tab) => tab.value === activeTab);
+    if (index >= 0 && index < tabs.length - 1) {
+      handleTabChange(tabs[index + 1].value);
+    }
+  }, [activeTab, handleTabChange]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -145,11 +174,10 @@ export default function MainContent() {
           {
             type: "success",
             title: "Resume parsed",
-            description: "Move to Match to compare with a job description.",
+            description: "Use Continue to compare with a job description.",
           },
           { id: TOAST_IDS.upload }
         );
-        setActiveTab("match");
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return parsed;
@@ -201,11 +229,10 @@ export default function MainContent() {
           {
             type: "success",
             title: "Match insights ready",
-            description: withTemperature("Review keywords and suggestions."),
+            description: withTemperature("Use Continue to generate optimization guidance."),
           },
           { id: TOAST_IDS.match }
         );
-        setActiveTab("optimize");
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return result;
@@ -263,14 +290,22 @@ export default function MainContent() {
           {
             onDebug: setAiDebug,
             onError: (error) => {
+              const status = typeof error?.status === "number" ? error.status : null;
+              const code = typeof error?.code === "string" && error.code.trim().length > 0 ? error.code : null;
+              const details = [
+                status ? `Status ${status}` : null,
+                code ? `Code ${code}` : null,
+              ].filter(Boolean);
+              const descriptionParts = [
+                error?.message || "Please try again shortly.",
+                ...details,
+                "Save your best bullets before retrying.",
+              ];
               pushToast(
                 {
                   type: "danger",
                   title: "Optimization failed",
-                  description: withTemperature(
-                    (error?.message || "Please try again shortly.") +
-                      " • Save your best bullets before retrying.",
-                  ),
+                  description: descriptionParts.filter(Boolean).join(" • "),
                 },
                 { id: TOAST_IDS.optimize }
               );
@@ -283,12 +318,11 @@ export default function MainContent() {
         pushToast(
           {
             type: "success",
-            title: "Optimization cards ready",
-            description: withTemperature(
+            title: "Optimization ready",
+            description:
               result.source === "openai"
                 ? "Review AI-crafted rewrites and keywords."
-                : "Preview mode generated realistic guidance."
-            ),
+                : "Preview mode generated realistic guidance.",
           },
           { id: TOAST_IDS.optimize }
         );
@@ -388,9 +422,9 @@ export default function MainContent() {
 
   const workspace = (
     <div className="space-y-8">
-      <Tabs tabs={tabs} activeValue={activeTab} onTabChange={setActiveTab} />
+      <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
-      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-6 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-surface-900/82">
+      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-6 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-zinc-900/60">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
@@ -421,6 +455,13 @@ export default function MainContent() {
           />
         )}
       </div>
+      {hasNextTab && (
+        <div className="flex justify-end">
+          <SecondaryButton icon={ArrowRight} onClick={handleContinue}>
+            Continue
+          </SecondaryButton>
+        </div>
+      )}
     </div>
   );
 
@@ -428,9 +469,9 @@ export default function MainContent() {
     <main data-app-main className="relative z-10 -mt-24 min-h-screen px-4 pb-32 pt-24 sm:px-6 lg:pb-40">
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className="mx-auto max-w-6xl">
-        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/82">
+        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-zinc-900/60">
           {flowProgress > 0 && (
-            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
+            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-all duration-300"
                 style={{ width: `${flowProgress}%` }}
@@ -463,9 +504,9 @@ export default function MainContent() {
         </div>
         {isDev && aiDebug && (
           <section className="mt-6 text-xs text-ink-500 dark:text-surface-50/70">
-            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/90 p-4 shadow-soft backdrop-blur-xl dark:border-surface-50/15 dark:bg-surface-900/70">
+            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/90 p-4 shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
               <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
-              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-6">
                 <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status</dt>
                   <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.status}</dd>
@@ -483,6 +524,14 @@ export default function MainContent() {
                   <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">
                     {aiDebug.latencyMs ? `${Math.round(aiDebug.latencyMs)} ms` : "–"}
                   </dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status Code</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.statusCode ?? "–"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Error Code</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.errorCode ?? "–"}</dd>
                 </div>
               </dl>
               {aiDebug.requestId && (
