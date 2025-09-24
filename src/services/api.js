@@ -2,6 +2,8 @@
 
 import { runOptimization, USE_MOCK } from "../lib/aiClient";
 
+export const AI_DEFAULT_TEMPERATURE = 1;
+
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/match-score`;
 const REQUEST_TIMEOUT = 15000;
@@ -295,6 +297,7 @@ export const optimizeResume = async (
       jobText: job.slice(0, 4000),
       mode,
       preview,
+      temperature: AI_DEFAULT_TEMPERATURE,
       messages: buildMessages(resume, job, mode),
     };
 

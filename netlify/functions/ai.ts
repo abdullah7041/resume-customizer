@@ -18,13 +18,117 @@ const sanitize = (value: unknown): string => {
   return value.trim();
 };
 
-const buildMessages = (body: any) => {
-  if (Array.isArray(body?.messages) && body.messages.length > 0) {
-    return body.messages;
+type ResponseContentItem = { type: string; [key: string]: unknown };
+type ResponseMessage = { role: string; content: ResponseContentItem[] };
+
+const toInputText = (text: string): ResponseContentItem => ({
+  type: "input_text",
+  text,
+});
+
+const normalizeContentItem = (item: unknown): ResponseContentItem | null => {
+  if (typeof item === "string") {
+    const text = sanitize(item);
+    return text ? toInputText(text) : null;
   }
 
-  if (Array.isArray(body?.input) && body.input.length > 0) {
-    return body.input;
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const candidate = item as Record<string, unknown>;
+  if (typeof candidate.text === "string") {
+    const text = candidate.text.trim();
+    if (!text) return null;
+    const rawType = typeof candidate.type === "string" ? candidate.type.trim() : "";
+    const type = rawType === "text" || rawType.length === 0 ? "input_text" : rawType;
+    return { ...candidate, type, text } as ResponseContentItem;
+  }
+
+  return candidate as ResponseContentItem;
+};
+
+const normalizeContent = (content: unknown): ResponseContentItem[] | null => {
+  if (Array.isArray(content)) {
+    const normalized = content
+      .map((item) => normalizeContentItem(item))
+      .filter((item): item is ResponseContentItem => Boolean(item));
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  if (typeof content === "string") {
+    const text = sanitize(content);
+    return text ? [toInputText(text)] : null;
+  }
+
+  if (content && typeof content === "object") {
+    const candidate = content as Record<string, unknown>;
+    if (typeof candidate.text === "string") {
+      const text = candidate.text.trim();
+      if (!text) return null;
+      const rawType = typeof candidate.type === "string" ? candidate.type.trim() : "";
+      const type = rawType === "text" || rawType.length === 0 ? "input_text" : rawType;
+      return [{ type, text }];
+    }
+  }
+
+  return null;
+};
+
+const normalizeMessage = (value: unknown): ResponseMessage | null => {
+  if (typeof value === "string") {
+    const text = sanitize(value);
+    return text ? { role: "user", content: [toInputText(text)] } : null;
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const role = typeof candidate.role === "string" ? candidate.role.trim() : "user";
+  const content = normalizeContent(candidate.content ?? candidate.text ?? null);
+
+  if (!content) {
+    return null;
+  }
+
+  return { role: role || "user", content };
+};
+
+const createUserMessage = (text: string): ResponseMessage => ({
+  role: "user",
+  content: [toInputText(text)],
+});
+
+const normalizeInput = (value: unknown): ResponseMessage[] | null => {
+  if (!value) return null;
+
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => normalizeMessage(item))
+      .filter((item): item is ResponseMessage => Boolean(item));
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  const single = normalizeMessage(value);
+  return single ? [single] : null;
+};
+
+const buildMessages = (body: any): ResponseMessage[] | null => {
+  const fromMessages = normalizeInput(body?.messages);
+  if (fromMessages) {
+    return fromMessages;
+  }
+
+  const fromInput = normalizeInput(body?.input);
+  if (fromInput) {
+    return fromInput;
+  }
+
+  const prompt = sanitize(body?.prompt);
+  if (prompt) {
+    return [createUserMessage(prompt)];
   }
 
   const resume = sanitize(body?.resumeText ?? body?.resume);
@@ -41,61 +145,22 @@ const buildMessages = (body: any) => {
     }
 
     const compiled = segments.join("\n\n");
-    const messages: any[] = [];
+    const messages: ResponseMessage[] = [];
 
     if (systemPrompt) {
       messages.push({
         role: "system",
-        content: [
-          {
-            type: "text",
-            text: systemPrompt,
-          },
-        ],
+        content: [toInputText(systemPrompt)],
       });
     }
 
-    messages.push({
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: compiled,
-        },
-      ],
-    });
-
+    messages.push(createUserMessage(compiled));
     return messages;
-  }
-
-  const prompt = sanitize(body?.prompt);
-  if (prompt) {
-    return [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: prompt,
-          },
-        ],
-      },
-    ];
   }
 
   const text = sanitize(body?.text);
   if (text) {
-    return [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: text,
-          },
-        ],
-      },
-    ];
+    return [createUserMessage(text)];
   }
 
   return null;
@@ -152,14 +217,19 @@ const handler: Handler = async (event) => {
     const messages = buildMessages(body);
 
     const hasMessages = Array.isArray(body?.messages) && body.messages.length > 0;
-    const hasInput = Array.isArray(body?.input) && body.input.length > 0;
+    const hasInputArray = Array.isArray(body?.input) && body.input.length > 0;
+    const hasInputScalar = typeof body?.input === "string" && sanitize(body.input).length > 0;
+    const hasInputObject =
+      body?.input && typeof body.input === "object" && !Array.isArray(body.input) ? Object.keys(body.input).length > 0 : false;
+    const hasPrompt = typeof body?.prompt === "string" && sanitize(body.prompt).length > 0;
+    const hasText = typeof body?.text === "string" && sanitize(body.text).length > 0;
 
-    if (!resume && !job && !hasMessages && !hasInput) {
+    if (!resume && !job && !hasMessages && !hasInputArray && !hasInputScalar && !hasInputObject && !hasPrompt && !hasText) {
       return {
         statusCode: 400,
         headers: HEADERS,
         body: JSON.stringify({
-          error: "Request must include resumeText, jobText, or messages.",
+          error: "Request must include resumeText, jobText, messages, input, or prompt.",
         }),
       };
     }
@@ -227,6 +297,7 @@ const handler: Handler = async (event) => {
     console.info("[ai] request complete", {
       requestId,
       model: options.model,
+      temperature: options.temperature,
       max_output_tokens: options.max_output_tokens ?? null,
       latency_ms: latency,
     });
@@ -235,7 +306,6 @@ const handler: Handler = async (event) => {
       statusCode: 200,
       headers: HEADERS,
       body: JSON.stringify({
-        id: data?.id ?? null,
         model: data?.model ?? options.model,
         usage: data?.usage ?? null,
         output_text: outputText,
