@@ -65,7 +65,7 @@ export default function Header() {
   );
 
   return (
-    <header className="hero-bg-animate relative isolate flex min-h-screen flex-col justify-between gap-12 overflow-hidden bg-[#03120b] text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
+    <header className="hero-bg-animate relative isolate flex min-h-screen flex-col justify-between gap-12 overflow-hidden text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
           aria-hidden="true"
@@ -79,9 +79,16 @@ export default function Header() {
           }}
         />
       ) : null}
-      <div aria-hidden="true" className="absolute inset-0 -z-30 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#021d12]/96 via-[#043521]/86 to-[#01150a]/95" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.32)_0%,rgba(3,20,13,0)_68%)] mix-blend-screen" />
+      <div
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-700",
+          isDark
+            ? "bg-gradient-to-b from-black/50 via-emerald-900/40 to-emerald-950/60"
+            : "bg-gradient-to-b from-emerald-700/40 via-transparent to-emerald-900/35",
+        )}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.3)_0%,rgba(3,20,13,0)_70%)] mix-blend-screen" />
       </div>
       <div
         className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"

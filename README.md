@@ -23,7 +23,22 @@ Make your resume match the job—fast. Compare a resume to a job description and
 
 ## 🤖 AI defaults
 - OpenAI defaults (model + temperature) are centralized in [`netlify/lib/ai-config.ts`](netlify/lib/ai-config.ts).
+- The Netlify proxy at [`/.netlify/functions/ai`](netlify/functions/ai.ts) calls the OpenAI Responses API with `model="gpt-5-nano"` and `temperature=1` unless overridden.
 - Requests may provide `max_output_tokens` or the compatibility alias `max_completion_tokens`; the helper maps the alias once, clamps values between 1 and 4096, and logs a deprecation warning for local devs.
+
+### Local AI proxy
+
+Run the Netlify function alongside Vite when developing locally:
+
+```bash
+# Install Netlify CLI if needed
+npm install -g netlify-cli
+
+# From the project root, start the dev server + functions
+netlify dev
+```
+
+The CLI proxies `/\.netlify/functions/ai` to the local TypeScript function so the app can hit the mocked OpenAI endpoint without additional configuration.
 
 ### analyzeResume(resumeText, jobText)
 

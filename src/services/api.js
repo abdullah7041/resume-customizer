@@ -1,9 +1,165 @@
 // src/services/api.js
 
+import { runOptimization, USE_MOCK } from "../lib/aiClient";
+
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/match-score`;
-const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
 const REQUEST_TIMEOUT = 15000;
+
+const sanitize = (value) => {
+  let buffer = "";
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    buffer += code < 32 || code === 127 ? " " : char;
+  }
+  return buffer.trim();
+};
+
+const tokenize = (input) =>
+  input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .match(/[a-z0-9]+/g)
+    ?.filter((token) => !STOPWORDS.has(token) && token.length > 2) ?? [];
+
+const pickKeywords = (jobDesc, resumeText) => {
+  const jobTokens = tokenize(jobDesc);
+  const resumeTokens = new Set(tokenize(resumeText));
+  const counts = new Map();
+  for (const token of jobTokens) {
+    counts.set(token, (counts.get(token) ?? 0) + 1);
+  }
+  const ranked = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  const add = [];
+  const neutral = [];
+  for (const [token] of ranked) {
+    if (add.length < 6 && !resumeTokens.has(token)) {
+      add.push(token);
+    } else if (neutral.length < 6 && resumeTokens.has(token)) {
+      neutral.push(token);
+    }
+    if (add.length >= 6 && neutral.length >= 6) break;
+  }
+  return { add, neutral, remove: [] };
+};
+
+const buildMockCards = (resumeText, jobDesc, mode) => {
+  const keywords = pickKeywords(jobDesc, resumeText);
+  const toneMap = {
+    auto: "balanced",
+    conservative: "measured",
+    aggressive: "impactful",
+  };
+  const tone = toneMap[mode ?? "auto"] ?? "balanced";
+  const baseSections = ["Summary", "Experience", "Skills", "Achievements", "Leadership"];
+  const cards = baseSections.slice(0, 4).map((section, index) => {
+    const keyword = keywords.add[index] ?? keywords.neutral[index] ?? "impact";
+    const descriptor = tone === "impactful" ? "powerful" : tone === "measured" ? "grounded" : "clear";
+    return {
+      section,
+      issue: `${section} lacks a ${descriptor} mention of ${keyword}.`,
+      suggestion: `Integrate a ${descriptor} bullet that highlights ${keyword} with metrics tied to Saudi market outcomes.`,
+      exampleBefore: `Led initiatives without explicit ${keyword} framing.`,
+      exampleAfter: `Orchestrated ${keyword}-focused programs that delivered 18% uplift in product adoption across Riyadh.`,
+    };
+  });
+
+  if (cards.length < 3) {
+    cards.push({
+      section: "Summary",
+      issue: "Summary feels generic for Saudi employers.",
+      suggestion: "Anchor the opening statement to digital transformation outcomes and Vision 2030 alignment.",
+      exampleBefore: "Experienced professional seeking new opportunities.",
+      exampleAfter: "Saudi fintech strategist translating Vision 2030 mandates into scalable, customer-first platforms.",
+    });
+  }
+
+  return {
+    cards,
+    keywords,
+    source: "mock",
+  };
+};
+
+const safeJson = (value) => {
+  if (typeof value !== "string") return {};
+  const start = value.indexOf("{");
+  const end = value.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    const segment = value.slice(start, end + 1);
+    try {
+      return JSON.parse(segment);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+};
+
+const toPayload = (value) => {
+  const fallback = buildMockCards("", "", "auto");
+  if (!value || typeof value !== "object") return fallback;
+  const maybe = value;
+  const cards = Array.isArray(maybe.cards)
+    ? maybe.cards
+        .slice(0, 6)
+        .map((card) => ({
+          section: sanitize(String(card.section ?? "Summary")),
+          issue: sanitize(String(card.issue ?? "")),
+          suggestion: sanitize(String(card.suggestion ?? "")),
+          exampleBefore: sanitize(String(card.exampleBefore ?? "")),
+          exampleAfter: sanitize(String(card.exampleAfter ?? "")),
+        }))
+        .filter((card) => card.suggestion.length > 0)
+    : fallback.cards;
+
+  const keywords = maybe.keywords && typeof maybe.keywords === "object"
+    ? {
+        add: Array.isArray(maybe.keywords.add)
+          ? maybe.keywords.add.map((item) => sanitize(String(item))).filter(Boolean).slice(0, 10)
+          : [],
+        remove: Array.isArray(maybe.keywords.remove)
+          ? maybe.keywords.remove.map((item) => sanitize(String(item))).filter(Boolean).slice(0, 10)
+          : [],
+        neutral: Array.isArray(maybe.keywords.neutral)
+          ? maybe.keywords.neutral.map((item) => sanitize(String(item))).filter(Boolean).slice(0, 10)
+          : [],
+      }
+    : fallback.keywords;
+
+  return {
+    cards: cards.length > 0 ? cards : fallback.cards,
+    keywords,
+    source: maybe.source === "openai" ? "openai" : fallback.source,
+  };
+};
+
+const STOPWORDS = new Set([
+  "a",
+  "about",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "has",
+  "in",
+  "into",
+  "is",
+  "it",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "their",
+  "to",
+  "with",
+]);
 
 const createTimeoutController = (timeout = REQUEST_TIMEOUT) => {
   const controller = new AbortController();
@@ -88,7 +244,10 @@ export const analyzeResume = async (resumeText, jobText, options = {}) => {
   }
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode = "auto", preview = false }) => {
+export const optimizeResume = async (
+  { resumeText, jobDesc, mode = "auto", preview = false },
+  clientOptions = {},
+) => {
   const resume = sanitizeText(resumeText);
   const job = sanitizeText(jobDesc);
 
@@ -97,25 +256,43 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode = "auto", previ
   }
 
   const { controller, timer } = createTimeoutController();
+  const canUseMock = import.meta.env.MODE === "development" && USE_MOCK;
 
   try {
-    const response = await fetch(OPTIMIZE_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resumeText: resume, jobDesc: job, mode, preview }),
-      signal: controller.signal,
-    });
+    const result = await runOptimization(
+      {
+        resumeText: resume,
+        jobDesc: job,
+        mode,
+        preview,
+      },
+      {
+        signal: controller.signal,
+        onError: clientOptions.onError,
+        onDebug: clientOptions.onDebug,
+      },
+    );
 
-    const data = await handleResponse(response);
+    if (!result.text) {
+      if (canUseMock) {
+        const fallback = buildMockCards(resume, job, mode);
+        clientOptions.onDebug?.({ status: "success", model: "mock", tokens: null });
+        return fallback;
+      }
+      throw new Error("AI response was empty.");
+    }
 
-    return {
-      cards: Array.isArray(data?.cards) ? data.cards : [],
-      keywords: data?.keywords ?? { add: [], remove: [], neutral: [] },
-      source: data?.source ?? "mock",
-    };
+    const parsed = safeJson(result.text);
+    const payload = toPayload(parsed);
+    return { ...payload, source: "openai" };
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error("Optimization request timed out. Try again shortly.");
+    }
+    if (canUseMock) {
+      const fallback = buildMockCards(resume, job, mode);
+      clientOptions.onDebug?.({ status: "success", model: "mock", tokens: null });
+      return fallback;
     }
     throw error;
   } finally {
