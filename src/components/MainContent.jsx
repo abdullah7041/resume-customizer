@@ -23,6 +23,8 @@ const tabs = [
   { value: "optimize", label: "Optimize", icon: Sparkles },
 ];
 
+const containerClass = "app-shell w-full";
+
 const TOAST_IDS = {
   upload: "toast:upload",
   match: "toast:match",
