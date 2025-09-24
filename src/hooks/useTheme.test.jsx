@@ -48,6 +48,7 @@ describe("useTheme", () => {
     window.localStorage.clear();
     document.documentElement.classList.remove("dark");
     delete document.documentElement.dataset.theme;
+    document.documentElement.removeAttribute("data-theme");
     document.documentElement.style.colorScheme = "";
     window.matchMedia = vi.fn().mockImplementation((query) => ({
       matches: false,
@@ -78,6 +79,7 @@ describe("useTheme", () => {
     expect(result.current.isDark).toBe(true);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     expect(document.documentElement.style.colorScheme).toBe("dark");
   });
 
@@ -93,6 +95,7 @@ describe("useTheme", () => {
     expect(result.current.theme).toBe("dark");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
 
     act(() => {
       result.current.toggleTheme();
@@ -101,6 +104,7 @@ describe("useTheme", () => {
     expect(result.current.theme).toBe("light");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });
 
   it("responds to system preference changes when unset", () => {

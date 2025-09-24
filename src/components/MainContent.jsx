@@ -27,6 +27,8 @@ const TOAST_IDS = {
 const TAB_STORAGE_KEY = "airo:lastActiveTab";
 const withTemperature = (message) => `${message} • Temp ${API_TEMPERATURE}`;
 
+const containerClass = "app-shell";
+
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -424,7 +426,7 @@ export default function MainContent() {
     <div className="space-y-8">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
-      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-6 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-zinc-900/60">
+      <div className="relative min-h-[460px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] sm:min-h-[520px] sm:p-7 sm:backdrop-blur-xl lg:p-8 dark:border-surface-50/12 dark:bg-zinc-900/60">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
@@ -466,10 +468,13 @@ export default function MainContent() {
   );
 
   return (
-    <main data-app-main className="relative z-10 -mt-24 min-h-screen px-4 pb-32 pt-24 sm:px-6 lg:pb-40">
+    <main
+      data-app-main
+      className="relative z-10 -mt-20 min-h-screen pb-24 pt-20 sm:-mt-24 sm:pb-32 sm:pt-24 lg:pb-40"
+    >
       <ToastContainer>{renderedToasts}</ToastContainer>
-      <div className="mx-auto max-w-6xl">
-        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-zinc-900/60">
+      <div className={`${containerClass} space-y-8 sm:space-y-10 lg:space-y-12`}>
+        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] sm:p-8 sm:backdrop-blur-xl lg:p-9 dark:border-surface-50/12 dark:bg-zinc-900/60">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
@@ -503,8 +508,8 @@ export default function MainContent() {
           )}
         </div>
         {isDev && aiDebug && (
-          <section className="mt-6 text-xs text-ink-500 dark:text-surface-50/70">
-            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/90 p-4 shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
+          <section className="text-xs text-ink-500 dark:text-surface-50/70">
+            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/88 p-4 shadow-soft backdrop-blur-sm sm:p-5 sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
               <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-6">
                 <div>

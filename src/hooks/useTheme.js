@@ -41,7 +41,9 @@ const applyThemeToDocument = (theme) => {
   if (typeof document === "undefined") return;
   const isDark = theme === "dark";
   document.documentElement.classList.toggle("dark", isDark);
-  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  const value = isDark ? "dark" : "light";
+  document.documentElement.dataset.theme = value;
+  document.documentElement.setAttribute("data-theme", value);
   document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 };
 
@@ -54,8 +56,14 @@ const persistTheme = (theme) => {
   }
 };
 
+const getInitialTheme = () => {
+  const resolved = resolvePreferredTheme();
+  applyThemeToDocument(resolved);
+  return resolved;
+};
+
 export function useTheme() {
-  const [theme, setTheme] = useState(() => resolvePreferredTheme());
+  const [theme, setTheme] = useState(getInitialTheme);
   const hasExplicitPreference = useRef(readStoredTheme() !== null);
 
   useEffect(() => {

@@ -127,7 +127,7 @@ export default function JobMatch({
         </div>
       </div>
 
-      <aside className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/80 p-6 shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60">
+      <aside className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/80 p-6 shadow-soft backdrop-blur-sm transition-shadow sm:p-7 sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60">
         {isAnalyzing ? (
           <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-sm text-ink-500/80 dark:text-sand-50/70">
             <Loader2 className="h-6 w-6 animate-spin text-secondary-500" aria-hidden="true" />
@@ -135,7 +135,9 @@ export default function JobMatch({
           </div>
         ) : hasResults ? (
           <div className="space-y-5">
-            <div className="relative overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br p-6 text-surface-50 shadow-soft">
+            <div
+              className={`relative overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br ${variant.gradient} p-6 text-surface-50 shadow-soft`}
+            >
               <div className={`absolute inset-0 opacity-40 blur-3xl ${variant.glow}`} aria-hidden="true" />
               <div className="relative grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center">
                 <div className="grid place-items-center">

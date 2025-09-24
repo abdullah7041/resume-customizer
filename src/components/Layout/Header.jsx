@@ -16,6 +16,8 @@ const themeOptions = [
   { value: "dark", label: "Dark", icon: Moon },
 ];
 
+const containerClass = "app-shell w-full";
+
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const { theme, isDark, setTheme } = useTheme();
@@ -65,7 +67,7 @@ export default function Header() {
   );
 
   return (
-    <header className="hero-bg-animate relative isolate flex min-h-screen flex-col justify-between gap-12 overflow-hidden text-surface-50 min-h-[100svh] md:min-h-[100dvh] pb-16 sm:pb-24">
+    <header className="hero-bg-animate relative isolate flex min-h-screen min-h-[100svh] flex-col justify-between gap-12 overflow-hidden text-surface-50 pb-16 pt-10 sm:pb-24 sm:pt-16 md:min-h-[100dvh]">
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
           aria-hidden="true"
@@ -99,7 +101,7 @@ export default function Header() {
 
       <div className="relative z-10 flex flex-1 flex-col">
         <div className="border-b border-surface-50/10">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+          <div className={`${containerClass} flex items-center justify-between py-4`}>
             <div className="flex items-center gap-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-50/10 text-accent-500 shadow-soft">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
@@ -152,7 +154,9 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-16 pt-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div
+          className={`${containerClass} grid flex-1 items-center gap-10 pb-16 pt-12 sm:gap-12 sm:pt-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:pb-20 lg:pt-16`}
+        >
           <div className="space-y-6">
             <span
               tabIndex={0}
@@ -160,14 +164,14 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/55 p-6 backdrop-blur-2xl shadow-[0_32px_90px_-40px_rgba(0,0,0,0.6)]">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/55 p-6 backdrop-blur-2xl shadow-[0_32px_90px_-40px_rgba(0,0,0,0.6)] sm:p-7 lg:p-8">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_18px_rgba(197,166,106,0.45)]"
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl">
+              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
               </h1>
               <p className="text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95">
@@ -190,7 +194,7 @@ export default function Header() {
             </dl>
           </div>
 
-          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-white/80 p-6 text-ink-700 shadow-md backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-lg dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-white/80 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-lg sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
