@@ -81,7 +81,7 @@ const resolveSkylineAsset = () => {
   if (typeof configured === "string" && configured.trim().length > 0) {
     return configured.trim();
   }
-  return "KAEDHero.webp";
+  return "KAFDH.webp";
 };
 
 export const skyline = () => withVersion(asset(resolveSkylineAsset()));
