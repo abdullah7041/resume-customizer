@@ -126,4 +126,23 @@ describe('optimizeResume', () => {
       optimizeResume({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' })
     ).rejects.toThrow('Optimization request timed out');
   });
+
+  it('uses an extended timeout window for optimization requests', async () => {
+    vi.useFakeTimers();
+    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+
+    try {
+      runOptimization.mockResolvedValueOnce({
+        text: JSON.stringify({ cards: [], keywords: { add: [], neutral: [], remove: [] }, source: 'openai' }),
+        raw: {},
+      });
+
+      await optimizeResume({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' });
+
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 45000);
+    } finally {
+      setTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
 });

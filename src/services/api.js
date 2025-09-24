@@ -7,6 +7,7 @@ export const AI_DEFAULT_TEMPERATURE = 1;
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/match-score`;
 const REQUEST_TIMEOUT = 15000;
+const OPTIMIZATION_TIMEOUT = 45000;
 
 const sanitize = (value) => {
   let buffer = "";
@@ -288,7 +289,7 @@ export const optimizeResume = async (
     throw new Error("Provide both resume text and job description before optimizing.");
   }
 
-  const { controller, timer } = createTimeoutController();
+  const { controller, timer } = createTimeoutController(OPTIMIZATION_TIMEOUT);
   const canUseMock = import.meta.env.MODE === "development" && USE_MOCK;
 
   try {

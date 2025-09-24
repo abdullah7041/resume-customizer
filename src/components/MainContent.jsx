@@ -31,8 +31,6 @@ const TOAST_IDS = {
 const TAB_STORAGE_KEY = "airo:lastActiveTab";
 const withTemperature = (message) => `${message} • Temp ${AI_DEFAULT_TEMPERATURE}`;
 
-const containerClass = "app-shell";
-
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
