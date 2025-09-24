@@ -1,5 +1,6 @@
 const ABSOLUTE_URL_PATTERN = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
 const BUILD_VERSION_KEYS = ["VITE_BUILD_ID", "VITE_BUILD_TIMESTAMP"] as const;
+const SKYLINE_ASSET_KEY = "VITE_SKYLINE_ASSET" as const;
 
 const readBuildVersion = () => {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
@@ -58,11 +59,29 @@ const resolveAssetBase = () => {
 const ASSET_BASE = resolveAssetBase();
 
 export const asset = (p: string) => {
-  const normalizedPath = (p ?? "").replace(/^\//, "");
+  const raw = typeof p === "string" ? p.trim() : "";
+  if (!raw) {
+    return raw;
+  }
+
+  if (ABSOLUTE_URL_PATTERN.test(raw)) {
+    return raw;
+  }
+
+  const normalizedPath = raw.replace(/^\/+/, "");
   if (!ASSET_BASE) {
     return `/${normalizedPath}`;
   }
   return `${ASSET_BASE}/${normalizedPath}`;
 };
 
-export const skyline = () => withVersion(asset("KAFDH.webp"));
+const resolveSkylineAsset = () => {
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const configured = env?.[SKYLINE_ASSET_KEY];
+  if (typeof configured === "string" && configured.trim().length > 0) {
+    return configured.trim();
+  }
+  return "KAEDHero.webp";
+};
+
+export const skyline = () => withVersion(asset(resolveSkylineAsset()));
