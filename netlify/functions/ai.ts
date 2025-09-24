@@ -13,37 +13,85 @@ const HEADERS = {
 const getRequestId = (event: Parameters<Handler>[0]) =>
   event.headers?.["x-nf-request-id"] ?? crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
-const buildInput = (body: any) => {
-  if (Array.isArray(body?.input) && body.input.length > 0) {
-    return body.input;
-  }
+const sanitize = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  return value.trim();
+};
 
+const buildMessages = (body: any) => {
   if (Array.isArray(body?.messages) && body.messages.length > 0) {
     return body.messages;
   }
 
-  if (typeof body?.prompt === "string" && body.prompt.trim().length > 0) {
+  if (Array.isArray(body?.input) && body.input.length > 0) {
+    return body.input;
+  }
+
+  const resume = sanitize(body?.resumeText ?? body?.resume);
+  const job = sanitize(body?.jobText ?? body?.jobDesc ?? body?.job);
+  const systemPrompt = sanitize(body?.systemPrompt);
+
+  if (resume || job) {
+    const segments: string[] = [];
+    if (resume) {
+      segments.push(`RESUME:\n${resume}`);
+    }
+    if (job) {
+      segments.push(`JOB DESCRIPTION:\n${job}`);
+    }
+
+    const compiled = segments.join("\n\n");
+    const messages: any[] = [];
+
+    if (systemPrompt) {
+      messages.push({
+        role: "system",
+        content: [
+          {
+            type: "text",
+            text: systemPrompt,
+          },
+        ],
+      });
+    }
+
+    messages.push({
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: compiled,
+        },
+      ],
+    });
+
+    return messages;
+  }
+
+  const prompt = sanitize(body?.prompt);
+  if (prompt) {
     return [
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: body.prompt,
+            text: prompt,
           },
         ],
       },
     ];
   }
 
-  if (typeof body?.text === "string" && body.text.trim().length > 0) {
+  const text = sanitize(body?.text);
+  if (text) {
     return [
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: body.text,
+            text: text,
           },
         ],
       },
@@ -99,9 +147,24 @@ const handler: Handler = async (event) => {
 
   try {
     const body = event.body ? JSON.parse(event.body) : {};
-    const input = buildInput(body);
+    const resume = sanitize(body?.resumeText ?? body?.resume);
+    const job = sanitize(body?.jobText ?? body?.jobDesc ?? body?.job);
+    const messages = buildMessages(body);
 
-    if (!input) {
+    const hasMessages = Array.isArray(body?.messages) && body.messages.length > 0;
+    const hasInput = Array.isArray(body?.input) && body.input.length > 0;
+
+    if (!resume && !job && !hasMessages && !hasInput) {
+      return {
+        statusCode: 400,
+        headers: HEADERS,
+        body: JSON.stringify({
+          error: "Request must include resumeText, jobText, or messages.",
+        }),
+      };
+    }
+
+    if (!messages) {
       return {
         statusCode: 400,
         headers: HEADERS,
@@ -137,7 +200,7 @@ const handler: Handler = async (event) => {
       },
       body: JSON.stringify({
         ...options,
-        input,
+        input: messages,
       }),
     });
 

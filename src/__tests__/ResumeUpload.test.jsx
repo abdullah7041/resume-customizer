@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
 vi.mock('../services/supabase', () => ({
@@ -26,5 +26,17 @@ describe('ResumeUpload', () => {
     expect(
       screen.getByText(/drop your resume here/i)
     ).toBeInTheDocument();
+  });
+
+  it('prevents pasting PDF headers into the textarea', async () => {
+    const onToast = vi.fn();
+    render(<ResumeUpload onParseResume={vi.fn()} onToast={onToast} />);
+
+    const textarea = screen.getByPlaceholderText(/paste resume text/i);
+    fireEvent.change(textarea, { target: { value: '%PDF-1.5' } });
+
+    expect(textarea).toHaveValue('');
+    expect(screen.getByText(/this looks like a pdf\. use upload\./i)).toBeInTheDocument();
+    expect(onToast).toHaveBeenCalled();
   });
 });
