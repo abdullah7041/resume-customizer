@@ -7,6 +7,8 @@ export type RunOptimizationDebug = {
   status: "success" | "error";
   model?: string | null;
   tokens?: number | null;
+  temperature?: number | null;
+  maxOutputTokens?: number | null;
   latencyMs?: number;
   requestId?: string | null;
   statusCode?: number | null;
@@ -39,6 +41,9 @@ export class AiRequestError extends Error {
 }
 
 const canUseMock = () => import.meta.env.MODE === "development" && USE_MOCK;
+
+const toNumber = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
 
 const parseError = (payload: any): { message: string; code: string | null } => {
   if (!payload || typeof payload !== "object") {
@@ -87,6 +92,11 @@ export async function runOptimization(
 
     const data = await response.json().catch(() => ({}));
     const latencyMs = now() - started;
+    const requestedTemperature = toNumber(payload?.temperature) ?? 1;
+    const requestedMaxTokens =
+      toNumber(payload?.max_output_tokens) ?? toNumber(payload?.max_completion_tokens);
+    const responseRequestId =
+      typeof response.headers?.get === "function" ? response.headers.get("x-nf-request-id") : null;
 
     if (!response.ok) {
       const { message, code } = parseError(data);
@@ -97,6 +107,9 @@ export async function runOptimization(
         latencyMs,
         statusCode: response.status,
         errorCode: code ?? null,
+        temperature: requestedTemperature,
+        maxOutputTokens: requestedMaxTokens ?? null,
+        requestId: responseRequestId,
       });
       options.onError?.(error);
       throw error;
@@ -115,9 +128,11 @@ export async function runOptimization(
       model: typeof data?.model === "string" ? data.model : (payload?.model as string | undefined) ?? null,
       tokens: tokens ?? null,
       latencyMs,
-      requestId: typeof data?.id === "string" ? data.id : null,
+      requestId: responseRequestId ?? (typeof data?.id === "string" ? data.id : null),
       statusCode: 200,
       errorCode: null,
+      temperature: requestedTemperature,
+      maxOutputTokens: requestedMaxTokens ?? null,
     });
 
     return { text, raw: data };
@@ -136,6 +151,9 @@ export async function runOptimization(
       latencyMs,
       statusCode,
       errorCode,
+      temperature: toNumber(payload?.temperature) ?? 1,
+      maxOutputTokens:
+        toNumber(payload?.max_output_tokens) ?? toNumber(payload?.max_completion_tokens) ?? null,
     });
     if (normalized.name === "AbortError") {
       normalized.message = "AI request timed out";

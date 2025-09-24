@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
-import { parseResume, analyzeResume, optimizeResume } from "../services/api.js";
+import {
+  parseResume,
+  analyzeResume,
+  optimizeResume,
+  AI_DEFAULT_TEMPERATURE,
+} from "../services/api.js";
 import { useAuth } from "../hooks/useAuth.jsx";
 import ResumeUpload from "../features/ResumeUpload.jsx";
 import JobMatch from "./Features/JobMatch.jsx";
@@ -18,14 +23,13 @@ const tabs = [
   { value: "optimize", label: "Optimize", icon: Sparkles },
 ];
 
-const API_TEMPERATURE = 1;
 const TOAST_IDS = {
   upload: "toast:upload",
   match: "toast:match",
   optimize: "toast:optimize",
 };
 const TAB_STORAGE_KEY = "airo:lastActiveTab";
-const withTemperature = (message) => `${message} • Temp ${API_TEMPERATURE}`;
+const withTemperature = (message) => `${message} • Temp ${AI_DEFAULT_TEMPERATURE}`;
 
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -509,7 +513,7 @@ export default function MainContent() {
           <section className="mt-6 text-xs text-ink-500 dark:text-surface-50/70">
             <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/90 p-4 shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
               <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
-              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-6">
+              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-7">
                 <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status</dt>
                   <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.status}</dd>
@@ -519,8 +523,23 @@ export default function MainContent() {
                   <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.model ?? "–"}</dd>
                 </div>
                 <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">
+                    Temperature
+                  </dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">
+                    {typeof aiDebug.temperature === "number"
+                      ? Number.isInteger(aiDebug.temperature)
+                        ? aiDebug.temperature
+                        : aiDebug.temperature.toFixed(2)
+                      : aiDebug.temperature ?? "–"}
+                  </dd>
+                </div>
+                <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Tokens</dt>
-                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.tokens ?? "–"}</dd>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">
+                    {aiDebug.tokens ?? "–"}
+                    {aiDebug.maxOutputTokens ? ` / ${aiDebug.maxOutputTokens}` : ""}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Latency</dt>
