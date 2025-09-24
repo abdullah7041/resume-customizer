@@ -33,7 +33,14 @@ describe("asset", () => {
   it("normalizes the configured asset base", async () => {
     vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com/media/");
     const { asset } = await loadModule();
-    expect(asset("/KAFDHD.webp")).toBe("https://cdn.example.com/media/KAFDHD.webp");
+    expect(asset("/KAFDH.webp")).toBe("https://cdn.example.com/media/KAFDH.webp");
+  });
+
+  it("returns absolute urls unchanged", async () => {
+    const { asset } = await loadModule();
+    expect(asset("https://storage.supabase.co/object/public/hero.webp")).toBe(
+      "https://storage.supabase.co/object/public/hero.webp",
+    );
   });
 });
 
@@ -48,5 +55,11 @@ describe("skyline", () => {
     vi.stubEnv("VITE_BUILD_ID", "20240924");
     const { skyline } = await loadModule();
     expect(skyline()).toBe("https://cdn.example.com/media/KAFDH.webp?v=20240924");
+  });
+
+  it("prefers the configured skyline asset when provided", async () => {
+    vi.stubEnv("VITE_SKYLINE_ASSET", "hero/custom.webp");
+    const { skyline } = await loadModule();
+    expect(skyline()).toBe("/hero/custom.webp");
   });
 });
