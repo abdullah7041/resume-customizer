@@ -8,6 +8,7 @@ const ACCEPTED_TYPES = [
 ];
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const PDF_HELPER_MESSAGE = "This looks like a PDF. Use Upload.";
 
 export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
   const [file, setFile] = useState(null);
@@ -15,10 +16,12 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
   const [status, setStatus] = useState("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [textWarning, setTextWarning] = useState("");
 
   useEffect(() => {
     if (resumeData && !textValue) {
       setTextValue(resumeData);
+      setTextWarning("");
     }
   }, [resumeData, textValue]);
 
@@ -27,7 +30,30 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
     setStatus("idle");
     setProgress(0);
     setError("");
+    setTextWarning("");
   }, []);
+
+  const handleTextValueChange = useCallback(
+    (value) => {
+      const trimmedStart = typeof value === "string" ? value.trimStart() : "";
+      if (trimmedStart.startsWith("%PDF")) {
+        if (textWarning !== PDF_HELPER_MESSAGE) {
+          setTextWarning(PDF_HELPER_MESSAGE);
+          onToast?.({
+            type: "warning",
+            title: "Paste blocked",
+            description: PDF_HELPER_MESSAGE,
+          });
+        }
+        return;
+      }
+      if (textWarning) {
+        setTextWarning("");
+      }
+      setTextValue(value);
+    },
+    [onToast, textWarning]
+  );
 
   const handleFileSelect = useCallback(
     (selectedFile) => {
@@ -81,12 +107,20 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
         const sanitizedBase = baseName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
         const fileName = `${Date.now()}-${sanitizedBase}.${extension}`;
 
-        const { data: { user } } = await supabase.auth.getUser();
-if (!user) {
-  throw new Error("You must be signed in to upload a resume.");
-}
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-const filePath = `${user.id}/${fileName}`;
+        if (userError) {
+          throw userError;
+        }
+
+        if (!user) {
+          throw new Error("You must be signed in to upload a resume.");
+        }
+
+        const filePath = `${user.id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from("resumes")
@@ -104,14 +138,11 @@ const filePath = `${user.id}/${fileName}`;
           throw uploadError;
         }
         // private bucket => signed URL
-        const { data: signed, error: signedErr } = await supabase.storage
+        const { error: signedErr } = await supabase.storage
           .from("resumes")
           .createSignedUrl(filePath, 60 * 60);
 
         if (signedErr) throw signedErr;
-
-// optional: keep the link
-setUrl(signed.signedUrl);
 
         setProgress(70);
         onToast?.({
@@ -156,13 +187,14 @@ setUrl(signed.signedUrl);
           resetState();
           setTextValue("");
         }}
-        onTextChange={setTextValue}
+        onTextChange={handleTextValueChange}
         textValue={textValue}
         onSubmit={handleSubmit}
         status={status}
         progress={progress}
         error={error}
         disabled={status === "uploading" || status === "parsing"}
+        textHelper={textWarning}
       />
     </div>
   );

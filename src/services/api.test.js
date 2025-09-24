@@ -1,46 +1,127 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { analyzeResume, parseResume } from './api.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../lib/aiClient', () => {
+  const runOptimization = vi.fn();
+  return {
+    runOptimization,
+    USE_MOCK: false,
+  };
+});
+
+import { runOptimization } from '../lib/aiClient';
+import { analyzeResume, optimizeResume, parseResume } from './api.js';
 
 beforeEach(() => {
-  process.env.VITE_OPENAI_KEY = 'test-key';
   global.fetch = vi.fn();
 });
 
-vi.mock('./supabase.js', () => ({
-  supabase: {
-    from: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockResolvedValue({ data: null, error: null })
-  }
-}));
-
-describe('analyzeResume', () => {
-  it('returns analysis data', async () => {
-    global.fetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({
-        output_text: JSON.stringify({
-          score: 75,
-          missingKeywords: ['React'],
-          suggestions: ['Mention React experience'],
-        }),
-      }),
-    });
-    const result = await analyzeResume('resume', 'job');
-    expect(result).toEqual({
-      score: 75,
-      missingKeywords: ['React'],
-      suggestions: ['Mention React experience'],
-    });
-  });
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('parseResume', () => {
-  it('returns parsed text', async () => {
+  it('returns trimmed text', async () => {
+    await expect(parseResume('  Sample resume  ')).resolves.toBe('Sample resume');
+  });
+
+  it('throws when content empty', async () => {
+    await expect(parseResume('   ')).rejects.toThrow('Unable to parse resume content.');
+  });
+});
+
+describe('analyzeResume', () => {
+  it('calls match-score function and adapts the response', async () => {
     global.fetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({
-        output_text: JSON.stringify({ text: 'parsed resume' }),
-      }),
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          score: 82,
+          explanations: {
+            topMissing: ['react', 'aws'],
+            topHits: ['leadership'],
+            coverage: 0.6,
+            cosine: 0.71,
+          },
+        }),
     });
-    const result = await parseResume('resume');
-    expect(result).toBe('parsed resume');
+
+    const result = await analyzeResume('resume text', 'job text');
+
+    expect(global.fetch).toHaveBeenCalledWith('/.netlify/functions/match-score', expect.objectContaining({
+      method: 'POST',
+    }));
+    expect(result).toEqual({
+      score: 82,
+      missingKeywords: ['react', 'aws'],
+      suggestions: [
+        'Consider highlighting “react” to better reflect the role requirements.',
+        'Consider highlighting “aws” to better reflect the role requirements.',
+      ],
+      topHits: ['leadership'],
+      coverage: 0.6,
+      cosine: 0.71,
+    });
+  });
+
+  it('throws a timeout error when aborted', async () => {
+    const abortError = new Error('Aborted');
+    abortError.name = 'AbortError';
+    global.fetch.mockRejectedValueOnce(abortError);
+
+    await expect(analyzeResume('resume text', 'job text')).rejects.toThrow('Match analysis timed out');
+  });
+});
+
+describe('optimizeResume', () => {
+  it('parses AI response into cards and keywords', async () => {
+    runOptimization.mockResolvedValueOnce({
+      text: JSON.stringify({
+        cards: [
+          {
+            section: 'Summary',
+            issue: 'Issue',
+            suggestion: 'Fix it',
+            exampleBefore: 'Before',
+            exampleAfter: 'After',
+          },
+        ],
+        keywords: { add: ['react'], remove: [], neutral: [] },
+        source: 'openai',
+      }),
+      raw: { id: 'req_123', model: 'gpt-5-nano' },
+    });
+
+    const result = await optimizeResume({
+      resumeText: 'resume',
+      jobDesc: 'job',
+      mode: 'auto',
+    });
+
+    expect(runOptimization).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resumeText: 'resume',
+        jobText: 'job',
+        mode: 'auto',
+        messages: expect.any(Array),
+      }),
+      expect.objectContaining({ signal: expect.any(Object) })
+    );
+
+    const payload = runOptimization.mock.calls[0][0];
+    expect(payload.messages[0]).toMatchObject({ role: 'system' });
+    expect(payload.messages[1]).toMatchObject({ role: 'user' });
+    expect(result.cards).toHaveLength(1);
+    expect(result.keywords.add).toContain('react');
+    expect(result.source).toBe('openai');
+  });
+
+  it('throws when request aborted', async () => {
+    const abortError = new Error('Aborted');
+    abortError.name = 'AbortError';
+    runOptimization.mockRejectedValueOnce(abortError);
+
+    await expect(
+      optimizeResume({ resumeText: 'resume', jobDesc: 'job', mode: 'auto' })
+    ).rejects.toThrow('Optimization request timed out');
   });
 });

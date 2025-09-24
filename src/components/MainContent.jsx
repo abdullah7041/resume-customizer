@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
-import { FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
-import { parseResume, analyzeResume } from "../services/api.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
+import { parseResume, analyzeResume, optimizeResume } from "../services/api.js";
 import { useAuth } from "../hooks/useAuth.jsx";
 import ResumeUpload from "../features/ResumeUpload.jsx";
 import JobMatch from "./Features/JobMatch.jsx";
@@ -9,12 +9,23 @@ import Tabs from "./ui/Tabs.jsx";
 import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import PrimaryButton from "./ui/PrimaryButton.jsx";
+import SecondaryButton from "./ui/SecondaryButton.jsx";
+import { exportResumeToPdf } from "../services/exportPdf.js";
 
 const tabs = [
   { value: "resume", label: "Resume", icon: FileText },
   { value: "match", label: "Match", icon: Target },
   { value: "optimize", label: "Optimize", icon: Sparkles },
 ];
+
+const API_TEMPERATURE = 1;
+const TOAST_IDS = {
+  upload: "toast:upload",
+  match: "toast:match",
+  optimize: "toast:optimize",
+};
+const TAB_STORAGE_KEY = "airo:lastActiveTab";
+const withTemperature = (message) => `${message} • Temp ${API_TEMPERATURE}`;
 
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -39,34 +50,112 @@ export default function MainContent() {
   const [activeTab, setActiveTab] = useState("resume");
   const [flowProgress, setFlowProgress] = useState(0);
   const [resumeData, setResumeData] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
   const [matchAnalysis, setMatchAnalysis] = useState(null);
-  const [optimizations] = useState([]);
+  const [optimizations, setOptimizations] = useState([]);
+  const [optimizationKeywords, setOptimizationKeywords] = useState({ add: [], remove: [], neutral: [] });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [aiDebug, setAiDebug] = useState(null);
+  const toastTimers = useRef(new Map());
+  const isDev = import.meta.env.MODE === "development";
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    const timer = toastTimers.current.get(id);
+    if (timer) {
+      const host = typeof window !== "undefined" ? window : globalThis;
+      host.clearTimeout?.(timer);
+      toastTimers.current.delete(id);
+    }
   }, []);
 
   const pushToast = useCallback(
-    (toast) => {
-      const id = getId();
-      setToasts((prev) => [...prev, { id, ...toast }]);
+    (toast, options = {}) => {
+      const { toastId, ...toastPayload } = toast ?? {};
+      const id = options.id ?? toastId ?? getId();
+      setToasts([{ id, ...toastPayload }]);
       const lifetime = toast?.type === "danger" ? 6000 : 4200;
-      scheduleTimeout(() => dismissToast(id), lifetime);
+      const host = typeof window !== "undefined" ? window : globalThis;
+      const existing = toastTimers.current.get(id);
+      if (existing) {
+        host.clearTimeout?.(existing);
+      }
+      const timer = scheduleTimeout(() => dismissToast(id), lifetime);
+      toastTimers.current.set(id, timer);
+      return id;
     },
     [dismissToast]
   );
+
+  const handleUploadToast = useCallback(
+    (toast) => pushToast(toast, { id: TOAST_IDS.upload }),
+    [pushToast]
+  );
+
+  useEffect(() => {
+    const host = typeof window !== "undefined" ? window : globalThis;
+    const timers = toastTimers.current;
+    return () => {
+      timers.forEach((timer) => {
+        host.clearTimeout?.(timer);
+      });
+      timers.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedTab = window.localStorage.getItem(TAB_STORAGE_KEY);
+    if (storedTab && tabs.some((tab) => tab.value === storedTab)) {
+      setActiveTab(storedTab);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
+  }, []);
+
+  const handleTabChange = useCallback((value) => {
+    setActiveTab(value);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(TAB_STORAGE_KEY, value);
+    }
+  }, []);
+
+  const hasNextTab = useMemo(() => {
+    const index = tabs.findIndex((tab) => tab.value === activeTab);
+    return index >= 0 && index < tabs.length - 1;
+  }, [activeTab]);
+
+  const handleContinue = useCallback(() => {
+    const index = tabs.findIndex((tab) => tab.value === activeTab);
+    if (index >= 0 && index < tabs.length - 1) {
+      handleTabChange(tabs[index + 1].value);
+    }
+  }, [activeTab, handleTabChange]);
+
+  const persistPreviewUsage = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("airo:previewQuotaUsed", "true");
+    setPreviewUsed(true);
+  }, []);
 
   const handleParseResume = useCallback(
     async (resumeInput) => {
       try {
         setFlowProgress(18);
-        pushToast({
-          type: "info",
-          title: "Parsing resume",
-          description: "AI is structuring your experience for analysis.",
-        });
+        pushToast(
+          {
+            type: "info",
+            title: "Parsing resume",
+            description: "AI is structuring your experience for analysis.",
+          },
+          { id: TOAST_IDS.upload }
+        );
 
         const content =
           typeof resumeInput === "string"
@@ -78,22 +167,31 @@ export default function MainContent() {
         setFlowProgress(88);
         setResumeData(parsed);
         setMatchAnalysis(null);
-        pushToast({
-          type: "success",
-          title: "Resume parsed",
-          description: "Move to Match to compare with a job description.",
-        });
-        setActiveTab("match");
+        setJobDescription("");
+        setOptimizations([]);
+        setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+        pushToast(
+          {
+            type: "success",
+            title: "Resume parsed",
+            description: "Use Continue to compare with a job description.",
+          },
+          { id: TOAST_IDS.upload }
+        );
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return parsed;
       } catch (error) {
         setFlowProgress(0);
-        pushToast({
-          type: "danger",
-          title: "Parsing failed",
-          description: error?.message || "Please try again with a different file.",
-        });
+        pushToast(
+          {
+            type: "danger",
+            title: "Parsing failed",
+            description: (error?.message || "Please try again with a different file.") +
+              " • Save your text before retrying.",
+          },
+          { id: TOAST_IDS.upload }
+        );
         throw error;
       }
     },
@@ -101,7 +199,7 @@ export default function MainContent() {
   );
 
   const handleAnalyzeMatch = useCallback(
-    async (jobDescription) => {
+    async (jobDescriptionInput) => {
       if (!resumeData) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -115,29 +213,42 @@ export default function MainContent() {
       try {
         setIsAnalyzing(true);
         setFlowProgress(22);
-        pushToast({
-          type: "info",
-          title: "Analyzing match",
-          description: "Comparing your resume to the description…",
-        });
-        const result = await analyzeResume(resumeData, jobDescription);
+        pushToast(
+          {
+            type: "info",
+            title: "Analyzing match",
+            description: withTemperature("Comparing your resume to the description…"),
+          },
+          { id: TOAST_IDS.match }
+        );
+        const trimmedJob = jobDescriptionInput.trim();
+        const result = await analyzeResume(resumeData, trimmedJob);
         setMatchAnalysis(result);
-        pushToast({
-          type: "success",
-          title: "Match insights ready",
-          description: "Review keywords and suggestions.",
-        });
-        setActiveTab("optimize");
+        setJobDescription(trimmedJob);
+        pushToast(
+          {
+            type: "success",
+            title: "Match insights ready",
+            description: withTemperature("Use Continue to generate optimization guidance."),
+          },
+          { id: TOAST_IDS.match }
+        );
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return result;
       } catch (error) {
         setFlowProgress(0);
-        pushToast({
-          type: "danger",
-          title: "Match analysis failed",
-          description: error?.message || "Please try again in a moment.",
-        });
+        pushToast(
+          {
+            type: "danger",
+            title: "Match analysis failed",
+            description: withTemperature(
+              (error?.message || "Please try again in a moment.") +
+                " • Copy your inputs before retrying."
+            ),
+          },
+          { id: TOAST_IDS.match }
+        );
         throw error;
       } finally {
         setIsAnalyzing(false);
@@ -145,6 +256,155 @@ export default function MainContent() {
     },
     [pushToast, resumeData]
   );
+
+  const handleOptimize = useCallback(
+    async (mode) => {
+      if (!resumeData || !jobDescription) {
+        pushToast({
+          type: "warning",
+          title: "Add job context",
+          description: "Run a match analysis before requesting optimizations.",
+        });
+        return null;
+      }
+
+      try {
+        setIsOptimizing(true);
+        setFlowProgress(32);
+        pushToast(
+          {
+            type: "info",
+            title: "Generating optimizations",
+            description: withTemperature("Drafting tailored rewrite suggestions…"),
+          },
+          { id: TOAST_IDS.optimize }
+        );
+
+        const result = await optimizeResume(
+          {
+            resumeText: resumeData,
+            jobDesc: jobDescription,
+            mode,
+            preview: !isPremium,
+          },
+          {
+            onDebug: setAiDebug,
+            onError: (error) => {
+              const status = typeof error?.status === "number" ? error.status : null;
+              const code = typeof error?.code === "string" && error.code.trim().length > 0 ? error.code : null;
+              const details = [
+                status ? `Status ${status}` : null,
+                code ? `Code ${code}` : null,
+              ].filter(Boolean);
+              const descriptionParts = [
+                error?.message || "Please try again shortly.",
+                ...details,
+                "Save your best bullets before retrying.",
+              ];
+              pushToast(
+                {
+                  type: "danger",
+                  title: "Optimization failed",
+                  description: descriptionParts.filter(Boolean).join(" • "),
+                },
+                { id: TOAST_IDS.optimize }
+              );
+            },
+          }
+        );
+
+        setOptimizations(result.cards ?? []);
+        setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
+        pushToast(
+          {
+            type: "success",
+            title: "Optimization ready",
+            description:
+              result.source === "openai"
+                ? "Review AI-crafted rewrites and keywords."
+                : "Preview mode generated realistic guidance.",
+          },
+          { id: TOAST_IDS.optimize }
+        );
+
+        if (!isPremium && !previewUsed) {
+          persistPreviewUsage();
+        }
+
+        setFlowProgress(100);
+        scheduleTimeout(() => setFlowProgress(0), 900);
+        return result;
+      } catch (error) {
+        setFlowProgress(0);
+        throw error;
+      } finally {
+        setIsOptimizing(false);
+      }
+    },
+    [isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData]
+  );
+
+  const handleCopy = useCallback(
+    async (value) => {
+      try {
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(value);
+        }
+        pushToast({
+          type: "success",
+          title: "Copied to clipboard",
+          description: "Optimized bullet ready to paste into your resume.",
+        });
+      } catch (error) {
+        pushToast({
+          type: "danger",
+          title: "Copy failed",
+          description: error?.message || "Select the text manually to copy.",
+        });
+      }
+    },
+    [pushToast]
+  );
+
+  const handleUpgrade = useCallback(() => {
+    pushToast({
+      type: "info",
+      title: "Unlock premium insights",
+      description: "Upgrade from your dashboard to save and export optimized results.",
+    });
+  }, [pushToast]);
+
+  const handleExportPdf = useCallback(() => {
+    if (!resumeData) {
+      pushToast({
+        type: "warning",
+        title: "Add your resume",
+        description: "Upload or paste your resume before exporting.",
+      });
+      return;
+    }
+
+    try {
+      exportResumeToPdf({
+        resumeText: resumeData,
+        jobDescription,
+        matchAnalysis,
+        optimizations,
+        keywords: optimizationKeywords,
+      });
+      pushToast({
+        type: "success",
+        title: "Export ready",
+        description: "Use your browser dialog to save the PDF preview.",
+      });
+    } catch (error) {
+      pushToast({
+        type: "danger",
+        title: "Export blocked",
+        description: error?.message || "Enable pop-ups and try again.",
+      });
+    }
+  }, [jobDescription, matchAnalysis, optimizations, optimizationKeywords, pushToast, resumeData]);
 
   const renderedToasts = useMemo(
     () =>
@@ -162,14 +422,14 @@ export default function MainContent() {
 
   const workspace = (
     <div className="space-y-8">
-      <Tabs tabs={tabs} activeValue={activeTab} onTabChange={setActiveTab} />
+      <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
-      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-6 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-surface-900/80">
+      <div className="relative min-h-[520px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-6 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-zinc-900/60">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
             resumeData={resumeData}
-            onToast={pushToast}
+            onToast={handleUploadToast}
           />
         )}
         {activeTab === "match" && (
@@ -177,25 +437,41 @@ export default function MainContent() {
             onAnalyzeMatch={handleAnalyzeMatch}
             matchAnalysis={matchAnalysis}
             isAnalyzing={isAnalyzing}
+            hasResume={Boolean(resumeData)}
           />
         )}
         {activeTab === "optimize" && (
           <Optimization
             isPremium={isPremium}
             optimizations={optimizations}
+            keywords={optimizationKeywords}
+            isOptimizing={isOptimizing}
+            onOptimize={handleOptimize}
+            onCopy={handleCopy}
+            previewUsed={previewUsed}
+            onUpgrade={handleUpgrade}
+            onExport={handleExportPdf}
+            canExport={Boolean(resumeData)}
           />
         )}
       </div>
+      {hasNextTab && (
+        <div className="flex justify-end">
+          <SecondaryButton icon={ArrowRight} onClick={handleContinue}>
+            Continue
+          </SecondaryButton>
+        </div>
+      )}
     </div>
   );
 
   return (
-    <main data-app-main className="relative -mt-16 px-4 pb-24">
+    <main data-app-main className="relative z-10 -mt-24 min-h-screen px-4 pb-32 pt-24 sm:px-6 lg:pb-40">
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className="mx-auto max-w-6xl">
-        <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/92 p-8 shadow-card backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-surface-900/80">
+        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/94 p-8 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-zinc-900/60">
           {flowProgress > 0 && (
-            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-surface-900/70">
+            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-all duration-300"
                 style={{ width: `${flowProgress}%` }}
@@ -226,6 +502,46 @@ export default function MainContent() {
             />
           )}
         </div>
+        {isDev && aiDebug && (
+          <section className="mt-6 text-xs text-ink-500 dark:text-surface-50/70">
+            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-surface-50/90 p-4 shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
+              <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
+              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-6">
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.status}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Model</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.model ?? "–"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Tokens</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.tokens ?? "–"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Latency</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">
+                    {aiDebug.latencyMs ? `${Math.round(aiDebug.latencyMs)} ms` : "–"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status Code</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.statusCode ?? "–"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Error Code</dt>
+                  <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.errorCode ?? "–"}</dd>
+                </div>
+              </dl>
+              {aiDebug.requestId && (
+                <p className="mt-3 break-words text-[10px] text-ink-400/80 dark:text-surface-50/50">
+                  Request ID: {aiDebug.requestId}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
