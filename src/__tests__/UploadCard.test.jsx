@@ -1,8 +1,24 @@
-import { render, screen } from '@testing-library/react';
-import UploadCard from '../components/ui/UploadCard.jsx';
+import { render, screen } from "@testing-library/react";
+import { vi } from "vitest";
 
-describe('UploadCard', () => {
-  it('matches snapshot and exposes accessible controls', () => {
+const { MockAppError } = vi.hoisted(() => ({
+  MockAppError: class extends Error {
+    constructor({ code, message, hint }) {
+      super(message);
+      this.code = code;
+      this.hint = hint;
+    }
+  },
+}));
+
+vi.mock("../services/supabase.js", () => ({
+  AppError: MockAppError,
+}));
+
+import UploadCard from "../components/ui/UploadCard.jsx";
+
+describe("UploadCard", () => {
+  it("matches snapshot and exposes accessible controls", () => {
     const { container } = render(
       <UploadCard
         fileName=""

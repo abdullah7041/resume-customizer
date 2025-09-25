@@ -1,8 +1,17 @@
 import { useRef, useState } from "react";
 import { ClipboardPenLine, FileText, UploadCloud, XCircle } from "lucide-react";
+import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/cn";
 import PrimaryButton from "./PrimaryButton";
 import SecondaryButton from "./SecondaryButton";
+
+const ACCEPTED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+]);
+
+const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
 const statusCopy = {
   uploading: "Uploading resume…",
@@ -23,15 +32,62 @@ export default function UploadCard({
   error,
   disabled = false,
   textHelper = "",
+  onValidationError,
 }) {
   const inputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+
+    if (!ACCEPTED_MIME_TYPES.has(file.type)) {
+      onValidationError?.(
+        new AppError({
+          code: "file/unsupported-type",
+          message: "Only PDF, DOCX, or TXT resumes are supported.",
+          hint: "Upload a PDF or DOCX, or paste plain text.",
+        })
+      );
+      return;
+    }
+
+    if (file.size > MAX_SIZE_BYTES) {
+      onValidationError?.(
+        new AppError({
+          code: "file/too-large",
+          message: "File must be 5MB or smaller.",
+          hint: "Compress the resume and try again.",
+        })
+      );
+      return;
+    }
+
+    if (file.type === "text/plain") {
+      try {
+        const text = await file.text();
+        onTextChange?.(text);
+      } catch {
+        onValidationError?.(
+          new AppError({
+            code: "file/read-failed",
+            message: "We couldn't read that text file.",
+            hint: "Paste the contents manually instead.",
+          })
+        );
+      }
+      return;
+    }
+
+    onFileSelect?.(file);
+  };
 
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
     const file = event.dataTransfer.files?.[0];
-    if (file) onFileSelect?.(file);
+    if (file) {
+      void handleFile(file);
+    }
   };
 
   const handleDragOver = (event) => {
@@ -46,7 +102,12 @@ export default function UploadCard({
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
-    if (file) onFileSelect?.(file);
+    if (file) {
+      void handleFile(file);
+    }
+    if (event.target) {
+      event.target.value = "";
+    }
   };
 
   const stateMessage = statusCopy[status];
@@ -105,7 +166,7 @@ export default function UploadCard({
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.docx"
+        accept=".pdf,.docx,.txt"
         className="sr-only"
         aria-label="Upload resume file"
         title="Upload resume file"
