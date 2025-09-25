@@ -21,7 +21,27 @@ afterEach(() => {
 
 describe('parseResume', () => {
   it('returns trimmed text', async () => {
-    await expect(parseResume('  Sample resume  ')).resolves.toBe('Sample resume');
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          document: {
+            plainText: 'Sample resume',
+            bullets: [],
+            sections: [],
+          },
+        }),
+    });
+
+    await expect(parseResume('  Sample resume  ')).resolves.toEqual({
+      plainText: 'Sample resume',
+      bullets: [],
+      sections: [],
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/.netlify/functions/parse-resume',
+      expect.objectContaining({ method: 'POST' })
+    );
   });
 
   it('throws when content empty', async () => {
@@ -36,16 +56,14 @@ describe('analyzeResume', () => {
       json: () =>
         Promise.resolve({
           score: 82,
-          explanations: {
-            topMissing: ['react', 'aws'],
-            topHits: ['leadership'],
-            coverage: 0.6,
-            cosine: 0.71,
-          },
+          coverage: 0.6,
+          similarity: 0.71,
+          missing_keywords: ['react', 'aws'],
+          matched_keywords: ['leadership'],
         }),
     });
 
-    const result = await analyzeResume('resume text', 'job text');
+    const result = await analyzeResume({ plainText: 'resume text' }, 'job text');
 
     expect(global.fetch).toHaveBeenCalledWith('/.netlify/functions/match-score', expect.objectContaining({
       method: 'POST',
@@ -68,7 +86,7 @@ describe('analyzeResume', () => {
     abortError.name = 'AbortError';
     global.fetch.mockRejectedValueOnce(abortError);
 
-    await expect(analyzeResume('resume text', 'job text')).rejects.toThrow('Match analysis timed out');
+    await expect(analyzeResume({ plainText: 'resume text' }, 'job text')).rejects.toThrow('Match analysis timed out');
   });
 });
 

@@ -13,7 +13,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
   };
 
   return (
-    <article className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-white/80 p-6 shadow-soft backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg dark:border-surface-50/10 dark:bg-zinc-900/65 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+    <article className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-6 shadow-soft backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg dark:border-surface-50/10 dark:bg-zinc-900/65 dark:text-surface-50 dark:hover:bg-zinc-900/70">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary-500/10 text-secondary-500">

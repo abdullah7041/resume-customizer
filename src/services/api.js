@@ -6,6 +6,7 @@ export const AI_DEFAULT_TEMPERATURE = 1;
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/match-score`;
+const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/parse-resume`;
 const REQUEST_TIMEOUT = 15000;
 const OPTIMIZATION_TIMEOUT = 45000;
 
@@ -212,16 +213,133 @@ const handleResponse = async (response) => {
 
 const sanitizeText = (value) => (typeof value === "string" ? value.trim() : "");
 
-export const parseResume = async (resumeText) => {
-  const content = sanitizeText(resumeText);
-  if (!content) {
-    throw new Error("Unable to parse resume content.");
+const fileToBase64 = async (file) => {
+  const buffer = await file.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const slice = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...slice);
   }
-  return content.replace(/\s+/g, " ").trim();
+  if (typeof btoa === "function") {
+    return btoa(binary);
+  }
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(bytes).toString("base64");
+  }
+  throw new Error("Base64 encoding not supported in this environment.");
 };
 
-export const analyzeResume = async (resumeText, jobText, options = {}) => {
-  const resume = sanitizeText(resumeText);
+const requestMatchExplanation = async ({
+  resume,
+  job,
+  score,
+  coverage,
+  similarity,
+}) => {
+  try {
+    const system =
+      "You are a resume analyst. Respond with strict JSON {reason: string, tips: string[]} explaining the match score.";
+    const prompt =
+      `SCORE:${score}\nCOVERAGE:${coverage}\nSIMILARITY:${similarity}\n\nRESUME:\n${resume.slice(0, 2000)}\n\nJOB:\n${job.slice(0, 2000)}`;
+    const result = await runOptimization({
+      messages: [
+        {
+          role: "system",
+          content: [{ type: "text", text: system }],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: prompt }],
+        },
+      ],
+      temperature: 0.2,
+      max_output_tokens: 480,
+    });
+
+    const parsed = safeJson(result.text);
+    if (!parsed || typeof parsed !== "object") return null;
+    const reason = typeof parsed.reason === "string" ? parsed.reason.trim() : "";
+    const tips = Array.isArray(parsed.tips)
+      ? parsed.tips.map((tip) => sanitize(String(tip))).filter(Boolean).slice(0, 4)
+      : [];
+    if (!reason && tips.length === 0) {
+      return null;
+    }
+    return { reason, tips };
+  } catch {
+    return null;
+  }
+};
+
+const isFile = (value) =>
+  typeof File !== "undefined" && value instanceof File;
+
+export const parseResume = async (resumeInput) => {
+  if (!resumeInput) {
+    throw new Error("Unable to parse resume content.");
+  }
+
+  const payload = await (async () => {
+    if (isFile(resumeInput)) {
+      const encoded = await fileToBase64(resumeInput);
+      return {
+        kind: "file",
+        name: resumeInput.name,
+        mime: resumeInput.type,
+        data: encoded,
+      };
+    }
+
+    if (typeof resumeInput === "string") {
+      const trimmed = resumeInput.trim();
+      if (!trimmed) {
+        throw new Error("Unable to parse resume content.");
+      }
+      if (trimmed.startsWith("%PDF")) {
+        throw new Error("This looks like a PDF — use Upload.");
+      }
+      return { kind: "text", value: trimmed };
+    }
+
+    throw new Error("Unsupported resume input.");
+  })();
+
+  const response = await fetch(PARSE_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await handleResponse(response);
+  const document = data?.document;
+
+  if (!document || typeof document !== "object" || !document.plainText) {
+    throw new Error("Unable to parse resume content.");
+  }
+
+  return {
+    plainText: String(document.plainText),
+    bullets: Array.isArray(document.bullets) ? document.bullets.map((item) => sanitize(String(item))) : [],
+    sections: Array.isArray(document.sections)
+      ? document.sections
+          .map((section) => ({
+            id: sanitize(String(section.id ?? "")) || null,
+            title: sanitize(String(section.title ?? "")) || null,
+            content: Array.isArray(section.content)
+              ? section.content.map((item) => sanitize(String(item))).filter(Boolean)
+              : [],
+          }))
+          .filter((section) => section.title || section.content.length > 0)
+      : [],
+  };
+};
+
+export const analyzeResume = async (resumeInput, jobText, options = {}) => {
+  const resume = sanitizeText(
+    typeof resumeInput === "string" ? resumeInput : resumeInput?.plainText ?? "",
+  );
   const job = sanitizeText(jobText);
 
   if (!resume) {
@@ -247,27 +365,42 @@ export const analyzeResume = async (resumeText, jobText, options = {}) => {
     });
 
     const data = await handleResponse(response);
-    const topMissing = Array.isArray(data?.explanations?.topMissing)
-      ? data.explanations.topMissing.slice(0, 6)
+    const topMissing = Array.isArray(data?.missing_keywords)
+      ? data.missing_keywords.map((item) => sanitize(String(item))).filter(Boolean)
       : [];
-    const topHits = Array.isArray(data?.explanations?.topHits)
-      ? data.explanations.topHits.slice(0, 6)
+    const topHits = Array.isArray(data?.matched_keywords)
+      ? data.matched_keywords.map((item) => sanitize(String(item))).filter(Boolean)
       : [];
-    const coverage = Number(data?.explanations?.coverage ?? 0);
-    const cosine = Number(data?.explanations?.cosine ?? 0);
+    const coverage = Number(data?.coverage ?? 0);
+    const cosine = Number(data?.similarity ?? 0);
 
-    const suggestions = topMissing.map(
+    const suggestions = topMissing.slice(0, 6).map(
       (keyword) => `Consider highlighting “${keyword}” to better reflect the role requirements.`,
     );
 
-    return {
-      score: Number.isFinite(data?.score) ? data.score : 0,
-      missingKeywords: topMissing,
+    const baseResult = {
+      score: Number.isFinite(data?.score) ? Math.round(data.score) : 0,
+      missingKeywords: topMissing.slice(0, 12),
       suggestions,
-      topHits,
+      topHits: topHits.slice(0, 12),
       coverage,
       cosine,
     };
+
+    if (options.explain) {
+      const explanation = await requestMatchExplanation({
+        resume,
+        job,
+        score: baseResult.score,
+        coverage,
+        similarity: cosine,
+      });
+      if (explanation) {
+        return { ...baseResult, explanation };
+      }
+    }
+
+    return baseResult;
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error("Match analysis timed out. Please try again.");

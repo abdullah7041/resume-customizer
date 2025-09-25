@@ -103,7 +103,7 @@ export default function Optimization({
           <select
             value={mode}
             onChange={(event) => setMode(event.target.value)}
-            className="w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-white/80 px-4 py-3 text-sm font-medium text-ink-700 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
+            className="w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-sand-50/95 px-4 py-3 text-sm font-medium text-ink-700 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
           >
             {modes.map((option) => (
               <option key={option.value} value={option.value}>
@@ -117,7 +117,7 @@ export default function Optimization({
           <div className="flex flex-wrap gap-2">
             <SecondaryButton
               icon={FileDown}
-              onClick={() => onExport?.()}
+              onClick={() => onExport?.("styled")}
               disabled={!canExport || isOptimizing}
               title={
                 !canExport
@@ -127,7 +127,21 @@ export default function Optimization({
                   : undefined
               }
             >
-              Export PDF
+              Styled PDF
+            </SecondaryButton>
+            <SecondaryButton
+              icon={FileDown}
+              onClick={() => onExport?.("ats")}
+              disabled={!canExport || isOptimizing}
+              title={
+                !canExport
+                  ? "Upload and parse your resume before exporting."
+                  : isOptimizing
+                  ? "Please wait for the optimization run to finish."
+                  : undefined
+              }
+            >
+              ATS PDF
             </SecondaryButton>
             <SecondaryButton
               icon={Check}
@@ -168,7 +182,7 @@ export default function Optimization({
       </PrimaryButton>
 
       <section className="space-y-4">
-        <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-white/80 p-5 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60">
+        <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-5 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60">
           <h3 className="text-sm font-semibold uppercase tracking-[0.28em] text-secondary-500">
             Keyword focus
           </h3>
@@ -211,7 +225,7 @@ export default function Optimization({
               {[...Array(3)].map((_, index) => (
                 <div
                   key={index}
-                  className="h-40 animate-pulse rounded-[var(--radius-card)] border border-secondary-500/10 bg-white/75 dark:border-surface-50/10 dark:bg-zinc-900/60"
+                  className="h-40 animate-pulse rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/90 dark:border-surface-50/10 dark:bg-zinc-900/60"
                 />
               ))}
             </div>
