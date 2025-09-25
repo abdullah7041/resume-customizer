@@ -1,14 +1,44 @@
 import { useCallback, useEffect, useState } from "react";
 import UploadCard from "../components/ui/UploadCard.jsx";
-import { supabase } from "../services/supabase";
+import { AppError, uploadResumeFile } from "../services/supabase.js";
 
-const ACCEPTED_TYPES = [
+const ACCEPTED_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+]);
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const PDF_HELPER_MESSAGE = "This looks like a PDF — use Upload.";
+const ERROR_MESSAGES = {
+  "file/unsupported-type": {
+    type: "warning",
+    title: "Unsupported file",
+  },
+  "file/too-large": {
+    type: "warning",
+    title: "File too large",
+  },
+  "file/read-failed": {
+    type: "danger",
+    title: "Paste failed",
+  },
+  "auth/unauthenticated": {
+    type: "warning",
+    title: "Sign in to upload",
+  },
+  "auth/user-fetch-failed": {
+    type: "danger",
+    title: "Session check failed",
+  },
+  "upload/storage-failure": {
+    type: "danger",
+    title: "Upload failed",
+  },
+  "upload/name-conflict": {
+    type: "danger",
+    title: "Rename and retry",
+  },
+};
 
 export default function ResumeUpload({ onParseResume, resumeDocument, onToast }) {
   const [file, setFile] = useState(null);
@@ -17,6 +47,23 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [textWarning, setTextWarning] = useState("");
+
+  const showErrorToast = useCallback(
+    (appError, fallbackType = "danger") => {
+      if (!appError) return;
+      const copy = ERROR_MESSAGES[appError.code] || {
+        type: fallbackType,
+        title: "Something went wrong",
+      };
+      setError(appError.message);
+      onToast?.({
+        type: copy.type,
+        title: copy.title,
+        description: appError.hint ? `${appError.message} ${appError.hint}` : appError.message,
+      });
+    },
+    [onToast]
+  );
 
   useEffect(() => {
     if (resumeDocument?.plainText && !textValue) {
@@ -50,38 +97,53 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
       if (textWarning) {
         setTextWarning("");
       }
+      if (file) {
+        setFile(null);
+      }
       setTextValue(value);
     },
-    [onToast, textWarning]
+    [file, onToast, textWarning]
+  );
+
+  const handleValidationError = useCallback(
+    (validationError) => {
+      const appError =
+        validationError instanceof AppError
+          ? validationError
+          : new AppError(validationError);
+      showErrorToast(appError, "warning");
+    },
+    [showErrorToast]
   );
 
   const handleFileSelect = useCallback(
     (selectedFile) => {
       if (!selectedFile) return;
-      if (!ACCEPTED_TYPES.includes(selectedFile.type)) {
-        const message = "Only PDF or DOCX files are supported.";
-        setError(message);
-        onToast?.({
-          type: "warning",
-          title: "Unsupported file",
-          description: message,
-        });
+      if (!ACCEPTED_TYPES.has(selectedFile.type)) {
+        handleValidationError(
+          new AppError({
+            code: "file/unsupported-type",
+            message: "Only PDF or DOCX files are supported.",
+            hint: "Upload a PDF or DOCX resume.",
+          })
+        );
         return;
       }
       if (selectedFile.size > MAX_BYTES) {
-        const message = "File must be 5MB or smaller.";
-        setError(message);
-        onToast?.({
-          type: "warning",
-          title: "File too large",
-          description: message,
-        });
+        handleValidationError(
+          new AppError({
+            code: "file/too-large",
+            message: "File must be 5MB or smaller.",
+            hint: "Compress the resume and try again.",
+          })
+        );
         return;
       }
+      setTextWarning("");
       setError("");
       setFile(selectedFile);
     },
-    [onToast]
+    [handleValidationError]
   );
 
   const handleSubmit = useCallback(async () => {
@@ -114,49 +176,15 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
 
       if (file) {
         setStatus("uploading");
-        const extension = file.name.split(".").pop() || "pdf";
-        const baseName = file.name.replace(/\.[^.]+$/, "");
-        const sanitizedBase = baseName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
-        const fileName = `${Date.now()}-${sanitizedBase}.${extension}`;
+        await uploadResumeFile(file, {
+          onProgress: ({ loaded, total }) => {
+            if (!total) return;
+            const percent = Math.round((loaded / total) * 60);
+            setProgress(Math.max(5, percent));
+          },
+        });
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError) {
-          throw userError;
-        }
-
-        if (!user) {
-          throw new Error("You must be signed in to upload a resume.");
-        }
-
-        const filePath = `${user.id}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("resumes")
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-            onUploadProgress: ({ loaded, total }) => {
-              if (!total) return;
-              const percent = Math.round((loaded / total) * 60);
-              setProgress(percent);
-            },
-          });
-
-        if (uploadError) {
-          throw uploadError;
-        }
-        // private bucket => signed URL
-        const { error: signedErr } = await supabase.storage
-          .from("resumes")
-          .createSignedUrl(filePath, 60 * 60);
-
-        if (signedErr) throw signedErr;
-
-        setProgress(70);
+        setProgress((prev) => Math.max(prev, 70));
         onToast?.({
           type: "success",
           title: "File uploaded",
@@ -178,17 +206,18 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         setProgress(0);
       }, 900);
     } catch (submissionError) {
-      const message =
-        submissionError?.message || "We could not prepare your resume.";
       setStatus("error");
-      setError(message);
-      onToast?.({
-        type: "danger",
-        title: "Upload failed",
-        description: message,
-      });
+      const appError =
+        submissionError instanceof AppError
+          ? submissionError
+          : new AppError({
+              code: "upload/storage-failure",
+              message: submissionError?.message || "We could not prepare your resume.",
+              hint: "Try again shortly.",
+            });
+      showErrorToast(appError);
     }
-  }, [file, onParseResume, onToast, textValue]);
+  }, [file, onParseResume, onToast, showErrorToast, textValue]);
 
   return (
     <div className="space-y-6">
@@ -207,6 +236,7 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         error={error}
         disabled={status === "uploading" || status === "parsing"}
         textHelper={textWarning}
+        onValidationError={handleValidationError}
       />
     </div>
   );
