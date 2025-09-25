@@ -28,6 +28,7 @@ describe('JobMatch', () => {
     expect(screen.getByText(/top missing keywords/i)).toBeInTheDocument();
     expect(screen.getByText(/recognized strengths/i)).toBeInTheDocument();
     expect(screen.getByText(/add react experience/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /why/i })).toBeInTheDocument();
   });
 
   it('prefills saved job description text', () => {
@@ -45,5 +46,6 @@ describe('JobMatch', () => {
     expect(
       screen.getByPlaceholderText(/paste the job description/i)
     ).toHaveValue('Saved JD');
+    expect(screen.getByText(/paste a job description to see match insights here/i)).toBeInTheDocument();
   });
 });

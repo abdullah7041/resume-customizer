@@ -8,9 +8,9 @@ const ACCEPTED_TYPES = [
 ];
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const PDF_HELPER_MESSAGE = "This looks like a PDF. Use Upload instead so we can parse it.";
+const PDF_HELPER_MESSAGE = "This looks like a PDF — use Upload.";
 
-export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
+export default function ResumeUpload({ onParseResume, resumeDocument, onToast }) {
   const [file, setFile] = useState(null);
   const [textValue, setTextValue] = useState("");
   const [status, setStatus] = useState("idle");
@@ -19,11 +19,11 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
   const [textWarning, setTextWarning] = useState("");
 
   useEffect(() => {
-    if (resumeData && !textValue) {
-      setTextValue(resumeData);
+    if (resumeDocument?.plainText && !textValue) {
+      setTextValue(resumeDocument.plainText);
       setTextWarning("");
     }
-  }, [resumeData, textValue]);
+  }, [resumeDocument, textValue]);
 
   const resetState = useCallback(() => {
     setFile(null);
@@ -85,13 +85,25 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
   );
 
   const handleSubmit = useCallback(async () => {
-    if (!file && !textValue.trim()) {
+    const trimmedText = textValue.trim();
+
+    if (!file && !trimmedText) {
       const message = "Add a file or paste your resume text.";
       setError(message);
       onToast?.({
         type: "warning",
         title: "Resume missing",
         description: message,
+      });
+      return;
+    }
+
+    if (!file && trimmedText.startsWith("%PDF")) {
+      setTextWarning(PDF_HELPER_MESSAGE);
+      onToast?.({
+        type: "warning",
+        title: "Paste blocked",
+        description: PDF_HELPER_MESSAGE,
       });
       return;
     }
@@ -158,8 +170,8 @@ export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
       const parsed = await onParseResume?.(payload);
       setProgress(100);
       setStatus("success");
-      if (!file && parsed) {
-        setTextValue(parsed);
+      if (!file && parsed?.plainText) {
+        setTextValue(parsed.plainText);
       }
       setTimeout(() => {
         setStatus("idle");

@@ -11,6 +11,7 @@ Make your resume match the job—fast. Compare a resume to a job description and
 - Upload a resume (PDF/DOCX or paste text)
 - Paste a job description
 - Get a match score, missing keywords, and clear rewrite suggestions
+- Export styled or ATS-plain PDF versions of your resume
 
 > ⚠️ **Privacy:** Resumes are stored in Supabase Storage (`resumes/`) for processing. No keys are exposed client-side. You can delete your file from your account at any time.
 

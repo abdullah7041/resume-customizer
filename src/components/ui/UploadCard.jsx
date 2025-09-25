@@ -54,7 +54,7 @@ export default function UploadCard({
 
   return (
     <section
-      className="space-y-6 rounded-[var(--radius-card)] border border-secondary-500/10 bg-white/80 p-8 text-ink-700 shadow-card backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50"
+      className="space-y-6 rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/95 p-8 text-ink-700 shadow-card backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50"
       aria-live="polite"
     >
       <div className="space-y-2 text-left">
@@ -87,7 +87,7 @@ export default function UploadCard({
         <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full bg-secondary-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-secondary-500">
           Max 5MB
         </span>
-        <div className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-ink-700 shadow-soft dark:bg-zinc-900/60 dark:text-surface-50">
+        <div className="flex items-center gap-2 rounded-full bg-sand-50/90 px-4 py-2 text-xs font-semibold text-ink-700 shadow-soft dark:bg-zinc-900/60 dark:text-surface-50">
           <FileText className="h-4 w-4" aria-hidden="true" />
           <span>PDF</span>
           <span className="mx-1 text-ink-500/60">|</span>
@@ -132,7 +132,7 @@ export default function UploadCard({
           Paste resume text instead
         </span>
         <textarea
-          className="min-h-[160px] w-full resize-y rounded-2xl border border-secondary-500/25 bg-white/80 px-4 py-3 text-sm leading-relaxed text-ink-700 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
+          className="min-h-[160px] w-full resize-y rounded-2xl border border-secondary-500/25 bg-sand-50/95 px-4 py-3 text-sm leading-relaxed text-ink-700 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}

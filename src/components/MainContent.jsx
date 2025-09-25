@@ -206,7 +206,7 @@ export default function MainContent() {
 
   const handleAnalyzeMatch = useCallback(
     async (jobDescriptionInput) => {
-      if (!resumeData) {
+      if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
           type: "warning",
@@ -265,7 +265,7 @@ export default function MainContent() {
 
   const handleOptimize = useCallback(
     async (mode) => {
-      if (!resumeData || !jobDescription) {
+      if (!resumeData?.plainText || !jobDescription) {
         pushToast({
           type: "warning",
           title: "Add job context",
@@ -288,7 +288,7 @@ export default function MainContent() {
 
         const result = await optimizeResume(
           {
-            resumeText: resumeData,
+            resumeText: resumeData.plainText,
             jobDesc: jobDescription,
             mode,
             preview: !isPremium,
@@ -380,8 +380,9 @@ export default function MainContent() {
     });
   }, [pushToast]);
 
-  const handleExportPdf = useCallback(() => {
-    if (!resumeData) {
+  const handleExportPdf = useCallback(
+    (variant) => {
+      if (!resumeData?.plainText) {
       pushToast({
         type: "warning",
         title: "Add your resume",
@@ -392,11 +393,12 @@ export default function MainContent() {
 
     try {
       exportResumeToPdf({
-        resumeText: resumeData,
+        resumeDocument: resumeData,
         jobDescription,
         matchAnalysis,
         optimizations,
         keywords: optimizationKeywords,
+        variant,
       });
       pushToast({
         type: "success",
@@ -430,11 +432,11 @@ export default function MainContent() {
     <div className="space-y-6 text-ink-700 sm:space-y-8 dark:text-surface-50">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
-      <div className="relative min-h-[460px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-white/80 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] sm:min-h-[520px] sm:p-7 sm:backdrop-blur-xl lg:p-8 dark:border-surface-50/12 dark:bg-zinc-900/60">
+      <div className="relative min-h-[460px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] sm:min-h-[520px] sm:p-7 sm:backdrop-blur-xl lg:p-8 dark:border-surface-50/12 dark:bg-zinc-900/60">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
-            resumeData={resumeData}
+            resumeDocument={resumeData}
             onToast={handleUploadToast}
           />
         )}
@@ -443,7 +445,7 @@ export default function MainContent() {
             onAnalyzeMatch={handleAnalyzeMatch}
             matchAnalysis={matchAnalysis}
             isAnalyzing={isAnalyzing}
-            hasResume={Boolean(resumeData)}
+            hasResume={Boolean(resumeData?.plainText)}
           />
         )}
         {activeTab === "optimize" && (
@@ -457,7 +459,7 @@ export default function MainContent() {
             previewUsed={previewUsed}
             onUpgrade={handleUpgrade}
             onExport={handleExportPdf}
-            canExport={Boolean(resumeData)}
+            canExport={Boolean(resumeData?.plainText)}
           />
         )}
       </div>
@@ -478,7 +480,7 @@ export default function MainContent() {
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className={`${containerClass} space-y-8 text-ink-700 sm:space-y-10 lg:space-y-12 dark:text-surface-50`}>
-        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-white/80 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] sm:p-8 sm:backdrop-blur-xl lg:p-9 dark:border-surface-50/12 dark:bg-zinc-900/60">
+        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] sm:p-8 sm:backdrop-blur-xl lg:p-9 dark:border-surface-50/12 dark:bg-zinc-900/60">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
@@ -513,7 +515,7 @@ export default function MainContent() {
         </div>
         {isDev && aiDebug && (
           <section className="text-xs text-ink-500 dark:text-surface-50/70">
-            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-white/80 p-4 shadow-soft backdrop-blur-sm sm:p-5 sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
+            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-sand-50/95 p-4 shadow-soft backdrop-blur-sm sm:p-5 sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
               <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-7">
                 <div>
