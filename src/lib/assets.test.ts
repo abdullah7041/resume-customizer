@@ -40,24 +40,40 @@ describe("withVersion", () => {
   });
 });
 
-describe("skyline", () => {
+describe("getSkylineUrl", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllEnvs();
+    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co/");
   });
 
   it("always returns the Supabase skyline asset with cache busting", async () => {
     vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240924");
-    const { skyline } = await loadModule();
-    expect(skyline()).toBe(
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    expect(getSkylineUrl()).toBe(
       "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=20240924",
     );
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    consoleSpy.mockRestore();
   });
 
   it("defaults to the dev tag when build metadata is missing", async () => {
-    const { skyline } = await loadModule();
-    expect(skyline()).toBe(
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    expect(getSkylineUrl()).toBe(
       "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
     );
+    consoleSpy.mockRestore();
+  });
+
+  it("never repeats the skyline filename in the resolved URL", async () => {
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    const url = getSkylineUrl();
+    consoleSpy.mockRestore();
+
+    expect(url).not.toContain("KAFDH.webp/KAFDH.webp");
+    expect(url.split("KAFDH.webp").length - 1).toBe(1);
   });
 });
