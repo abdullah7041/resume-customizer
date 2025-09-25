@@ -47,14 +47,12 @@ export default function Header() {
   const ThemeIcon = isDark ? Sun : Moon;
 
   return (
-    <header
-      className="hero-bg-animate relative isolate flex min-h-[calc(100vh-96px)] min-h-[100svh] flex-col justify-between gap-8 overflow-hidden bg-cover bg-center bg-no-repeat text-surface-50 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 md:min-h-[100dvh] md:bg-[position:50%_35%] lg:pb-28 lg:pt-24"
-    >
+    <header className="hero-bg-animate relative isolate overflow-hidden text-surface-50">
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
           aria-hidden="true"
           className={cn(
-            "bg-hero absolute inset-0 -z-40 min-h-[calc(100vh-96px)] pointer-events-none bg-scroll bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
+            "bg-hero absolute inset-x-0 top-0 -z-40 h-[140%] pointer-events-none bg-scroll bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
             animateSkyline ? "skyline-once" : "skyline-still"
           )}
           style={{ backgroundImage: `url('${skylineUrl}')` }}
@@ -63,7 +61,7 @@ export default function Header() {
       <div
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-700",
+          "absolute inset-x-0 top-0 -z-30 h-[150%] pointer-events-none transition-colors duration-700",
           isDark
             ? "bg-gradient-to-b from-black/50 via-emerald-900/40 to-emerald-950/60"
             : "bg-gradient-to-b from-emerald-700/40 via-transparent to-emerald-900/35",
@@ -72,13 +70,13 @@ export default function Header() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.3)_0%,rgba(3,20,13,0)_70%)] mix-blend-screen" />
       </div>
       <div
-        className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
+        className="absolute inset-x-0 top-0 -z-20 h-[150%] opacity-[0.08] mix-blend-soft-light"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
         aria-hidden="true"
       />
       <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
 
-      <div className="relative z-10 flex flex-1 flex-col">
+      <div className="relative z-10 flex min-h-screen flex-col justify-between gap-8 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24">
         <div className="border-b border-surface-50/10">
           <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-6`}>
             <div className="flex items-center gap-3">

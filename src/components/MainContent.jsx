@@ -480,7 +480,7 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative z-10 -mt-12 min-h-screen pb-24 pt-16 sm:-mt-20 sm:pb-32 sm:pt-24 lg:-mt-28 lg:pb-40 lg:pt-28"
+      className="relative isolate z-20 min-h-screen pb-24 pt-20 sm:pb-32 sm:pt-28 lg:pb-40 lg:pt-32 before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-full before:bg-gradient-to-b before:from-transparent before:via-sand-50/70 before:to-sand-50/95 before:content-[''] before:pointer-events-none dark:before:via-zinc-900/50 dark:before:to-zinc-950/85"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className={`${containerClass} space-y-7 text-ink-700 sm:space-y-10 lg:space-y-12 dark:text-surface-50`}>
