@@ -61,7 +61,7 @@ export default function Tabs({ tabs, activeValue, onTabChange }) {
     <div
       role="tablist"
       aria-label="Resume workflow navigation"
-      className="relative flex flex-wrap items-center justify-between gap-2 rounded-[calc(var(--radius-card)*1.2)] border border-secondary-500/10 bg-white/75 p-1.5 text-ink-700 backdrop-blur-sm dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50"
+      className="relative flex flex-wrap items-center justify-between gap-2 rounded-[calc(var(--radius-card)*1.2)] border border-secondary-500/10 bg-sand-50/90 p-1.5 text-ink-700 backdrop-blur-sm dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50"
     >
       {tabs.map(({ value, label, icon: Icon }, index) => {
         const isActive = value === activeValue;
@@ -80,7 +80,7 @@ export default function Tabs({ tabs, activeValue, onTabChange }) {
             className={cn(
               "group tab-pattern-hover relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-[calc(var(--radius-card)*0.85)] px-4 py-3 text-sm font-semibold transition-all duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:focus-visible:ring-offset-zinc-900",
               isActive
-                ? "bg-white/90 text-ink-900 shadow-soft dark:bg-zinc-900/70 dark:text-surface-50"
+                ? "bg-sand-50 text-ink-900 shadow-soft dark:bg-zinc-900/70 dark:text-surface-50"
                 : "text-ink-500/80 hover:bg-secondary-500/10 hover:text-ink-700 dark:text-surface-50/60 dark:hover:bg-secondary-500/15"
             )}
             style={{ "--tab-pattern": `url("data:image/svg+xml,${tabPattern}")` }}

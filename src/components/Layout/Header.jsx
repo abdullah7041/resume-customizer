@@ -181,22 +181,22 @@ export default function Header() {
               </p>
             </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
-              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-white/80 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Smart Parsing</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Clean resume text</dd>
               </div>
-              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-white/80 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Match Score</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Saudi market fit</dd>
               </div>
-              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-white/80 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Polished Output</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Optimized insights</dd>
               </div>
             </dl>
           </div>
 
-          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-white/80 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-lg sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-sand-50/95 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-lg sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">

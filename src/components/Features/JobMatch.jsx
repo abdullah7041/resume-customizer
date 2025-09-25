@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Info, Loader2, Sparkles } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton.jsx";
 import SectionTitle from "../ui/SectionTitle.jsx";
 
@@ -29,7 +29,7 @@ const resolveVariant = (score) => {
 };
 
 const formatPercent = (value) => {
-  if (!Number.isFinite(value)) return "0%";
+  if (!Number.isFinite(value)) return "—";
   return `${Math.round(value * 100)}%`;
 };
 
@@ -74,17 +74,20 @@ export default function JobMatch({
   };
 
   const hasResults = Boolean(matchAnalysis);
-  const score = matchAnalysis?.score ?? 0;
-  const variant = resolveVariant(score);
-  const progress = Math.max(0, Math.min(100, score));
+  const rawScore = Number.isFinite(matchAnalysis?.score) ? matchAnalysis.score : null;
+  const score = rawScore != null ? Math.max(0, Math.min(100, Math.round(rawScore))) : null;
+  const variant = resolveVariant(score ?? 0);
+  const progress = score == null ? 0 : Math.max(0, Math.min(100, score));
   const ringOffset = useMemo(
     () => RING_CIRCUMFERENCE - (progress / 100) * RING_CIRCUMFERENCE,
     [progress],
   );
   const missing = matchAnalysis?.missingKeywords?.slice(0, 6) ?? [];
   const hits = matchAnalysis?.topHits?.slice(0, 6) ?? [];
-  const coverageLabel = formatPercent(matchAnalysis?.coverage ?? 0);
-  const cosineLabel = `${Math.round((matchAnalysis?.cosine ?? 0) * 100) / 100}`;
+  const coverageLabel = formatPercent(matchAnalysis?.coverage);
+  const cosineLabel = formatPercent(matchAnalysis?.cosine);
+  const popoverRef = useRef(null);
+  const [whyOpen, setWhyOpen] = useState(false);
 
   const buttonDisabled = !jobText.trim() || !hasResume || isAnalyzing;
   const disabledHint = !hasResume
@@ -92,6 +95,17 @@ export default function JobMatch({
     : !jobText.trim()
     ? "Paste a job description to continue."
     : "";
+
+  useEffect(() => {
+    if (!whyOpen) return undefined;
+    const handleClick = (event) => {
+      if (!popoverRef.current?.contains(event.target)) {
+        setWhyOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [whyOpen]);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -102,7 +116,7 @@ export default function JobMatch({
           description="Paste the job description to uncover keyword gaps and alignment opportunities."
         />
         <textarea
-          className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-white/80 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
+          className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-sand-50/95 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
           placeholder="Paste the job description for your next Riyadh role…"
           value={jobText}
           onChange={(event) => setJobText(event.target.value)}
@@ -127,7 +141,7 @@ export default function JobMatch({
         </div>
       </div>
 
-      <aside className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-white/80 p-6 text-ink-700 shadow-soft backdrop-blur-sm transition-shadow sm:p-7 sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50">
+      <aside className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-6 text-ink-700 shadow-soft backdrop-blur-sm transition-shadow sm:p-7 sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50">
         {isAnalyzing ? (
           <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-sm text-ink-500/80 dark:text-surface-50/70">
             <Loader2 className="h-6 w-6 animate-spin text-secondary-500" aria-hidden="true" />
@@ -170,18 +184,20 @@ export default function JobMatch({
                       />
                     </svg>
                     <div
-                      className="relative grid h-full w-full place-items-center rounded-full border border-surface-50/20 bg-white/10 p-4 text-ink-900 dark:bg-zinc-900/40"
+                      className="relative grid h-full w-full place-items-center rounded-full border border-surface-50/20 bg-sand-50/30 p-4 text-ink-900 dark:bg-zinc-900/40"
                       style={{
                         backgroundImage: `conic-gradient(${variant.conic} ${(progress / 100) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
                       }}
                     >
-                      <div className="grid place-items-center rounded-full bg-white/90 px-6 py-6 text-center text-ink-900 shadow-inner dark:bg-zinc-900/70 dark:text-surface-50">
+                      <div className="grid place-items-center rounded-full bg-sand-50 px-6 py-6 text-center text-ink-900 shadow-inner dark:bg-zinc-900/70 dark:text-surface-50">
                         <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500/80">
                           Match
                         </span>
                         <span className="mt-2 text-4xl font-bold tracking-tight">
-                          {score}
-                          <span className="text-base font-semibold text-ink-500/70 dark:text-surface-50/70">/100</span>
+                          {score == null ? "—" : score}
+                          {score != null && (
+                            <span className="text-base font-semibold text-ink-500/70 dark:text-surface-50/70">/100</span>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -195,16 +211,61 @@ export default function JobMatch({
                   <p className="text-sm text-surface-50/80">
                     Weighted by cosine similarity and keyword coverage for the pasted description.
                   </p>
-                  <dl className="grid grid-cols-2 gap-3 text-xs text-surface-50/80">
-                    <div className="space-y-1 rounded-2xl bg-surface-50/10 px-3 py-2">
-                      <dt className="font-semibold uppercase tracking-[0.3em] text-surface-50/60">Coverage</dt>
-                      <dd className="text-sm font-semibold text-surface-50">{coverageLabel}</dd>
-                    </div>
-                    <div className="space-y-1 rounded-2xl bg-surface-50/10 px-3 py-2">
-                      <dt className="font-semibold uppercase tracking-[0.3em] text-surface-50/60">Similarity</dt>
-                      <dd className="text-sm font-semibold text-surface-50">{cosineLabel}</dd>
-                    </div>
-                  </dl>
+                  <div className="relative" ref={popoverRef}>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-full border border-surface-50/30 bg-surface-50/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-surface-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary-900"
+                      onClick={() => setWhyOpen((prev) => !prev)}
+                      aria-expanded={whyOpen}
+                      aria-controls="match-why-popover"
+                    >
+                      <Info className="h-3.5 w-3.5" aria-hidden="true" /> Why
+                    </button>
+                    {whyOpen && (
+                      <div
+                        id="match-why-popover"
+                        role="dialog"
+                        className="absolute right-0 z-20 mt-3 w-72 space-y-3 rounded-2xl border border-secondary-500/20 bg-sand-50/95 p-4 text-left text-sm text-ink-700 shadow-xl dark:border-secondary-500/25 dark:bg-zinc-900/80 dark:text-surface-50"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Coverage</p>
+                          <span className="text-sm font-semibold text-ink-900 dark:text-surface-50">{coverageLabel}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Similarity</p>
+                          <span className="text-sm font-semibold text-ink-900 dark:text-surface-50">{cosineLabel}</span>
+                        </div>
+                        {missing.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Missing</p>
+                            <ul className="mt-2 space-y-1 text-xs leading-snug text-ink-600 dark:text-surface-50/80">
+                              {missing.slice(0, 4).map((keyword) => (
+                                <li key={keyword}>• {keyword}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {matchAnalysis?.explanation?.reason && (
+                          <p className="text-xs text-ink-500 dark:text-surface-50/70">
+                            {matchAnalysis.explanation.reason}
+                          </p>
+                        )}
+                        {Array.isArray(matchAnalysis?.explanation?.tips) &&
+                          matchAnalysis.explanation.tips.length > 0 && (
+                            <ul className="space-y-1 text-xs leading-snug text-ink-600 dark:text-surface-50/80">
+                              {matchAnalysis.explanation.tips.slice(0, 3).map((tip, index) => (
+                                <li key={`${tip}-${index}`}>• {tip}</li>
+                              ))}
+                            </ul>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                  {score == null && (
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-surface-50/70">
+                      — Not enough data
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -255,7 +316,7 @@ export default function JobMatch({
                   {matchAnalysis.suggestions.map((suggestion, index) => (
                     <li
                       key={index}
-                      className="rounded-2xl border border-secondary-500/12 bg-white/80 px-4 py-3 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60"
+                      className="rounded-2xl border border-secondary-500/12 bg-sand-50/95 px-4 py-3 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60"
                     >
                       {suggestion}
                     </li>

@@ -1,3 +1,5 @@
+import { buildResumeDocument } from "../../shared/normalize-resume.js";
+
 const SECTION_KEYWORDS = {
   contact: ["contact", "contact information", "personal details"],
   summary: ["summary", "professional summary", "profile", "objective", "about"],
@@ -29,6 +31,37 @@ const splitLines = (text) =>
     .split(/\r?\n/)
     .map((line) => normalize(line))
     .filter(Boolean);
+
+const sanitizeLines = (items) =>
+  Array.isArray(items)
+    ? items.map((item) => normalize(String(item ?? ""))).filter(Boolean)
+    : [];
+
+const ensureResumeDocument = (input) => {
+  if (input && typeof input === "object" && typeof input.plainText === "string") {
+    return {
+      plainText: String(input.plainText),
+      sections: Array.isArray(input.sections)
+        ? input.sections.map((section) => ({
+            id: typeof section.id === "string" ? section.id : null,
+            title: typeof section.title === "string" ? section.title : null,
+            content: sanitizeLines(section.content),
+          }))
+        : [],
+      bullets: sanitizeLines(input.bullets),
+    };
+  }
+
+  if (typeof input === "string") {
+    return buildResumeDocument(input);
+  }
+
+  if (typeof input === "object" && typeof input?.plainText === "string") {
+    return buildResumeDocument(input.plainText);
+  }
+
+  return buildResumeDocument("");
+};
 
 export const deriveResumeSections = (resumeText = "") => {
   const lines = splitLines(resumeText);
@@ -228,8 +261,9 @@ const buildContact = (lines) => {
   };
 };
 
-const buildExportHtml = ({ resumeText = "", jobDescription = "", matchAnalysis, optimizations, keywords }) => {
-  const sections = deriveResumeSections(resumeText);
+const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "", matchAnalysis, optimizations, keywords }) => {
+  const document = ensureResumeDocument(resumeDocument ?? resumeText);
+  const sections = deriveResumeSections(document.plainText);
   const contact = buildContact(sections.contactLines);
   const summaryHtml = buildSummary(sections.summary, matchAnalysis, optimizations);
   const skillsHtml = buildSkills(sections.skills, keywords);
@@ -285,20 +319,155 @@ const buildExportHtml = ({ resumeText = "", jobDescription = "", matchAnalysis, 
 </html>`;
 };
 
-export const exportResumeToPdf = ({ resumeText = "", jobDescription = "", matchAnalysis, optimizations, keywords }) => {
-  if (typeof window === "undefined" || typeof window.open !== "function") {
+const buildPlainExportHtml = ({
+  resumeDocument,
+  resumeText = "",
+  jobDescription = "",
+  matchAnalysis,
+  optimizations,
+}) => {
+  const document = ensureResumeDocument(resumeDocument ?? resumeText);
+  const sections = deriveResumeSections(document.plainText);
+  const contact = buildContact(sections.contactLines);
+  const summaryLines = sections.summary.length > 0 ? sections.summary : sections.experience.slice(0, 3);
+  const experienceLines = sections.experience;
+  const educationLines = sections.education;
+  const skillsLines = sections.skills;
+  const projectsLines = sections.projects;
+  const bulletLines = document.bullets.length > 0 ? document.bullets : experienceLines;
+  const optimizationBullets = Array.isArray(optimizations)
+    ? optimizations
+        .map((item) =>
+          item?.suggestion ? `• ${escapeHtml(item.section ? `${item.section}: ${item.suggestion}` : item.suggestion)}` : null,
+        )
+        .filter(Boolean)
+        .slice(0, 5)
+    : [];
+
+  const formatPercentValue = (value) =>
+    Number.isFinite(value) ? `${Math.round(value * 100)}%` : null;
+
+  const metrics = [
+    Number.isFinite(matchAnalysis?.score) ? `Score: ${Math.round(matchAnalysis.score)}/100` : null,
+    formatPercentValue(matchAnalysis?.coverage) ? `Coverage: ${formatPercentValue(matchAnalysis.coverage)}` : null,
+    formatPercentValue(matchAnalysis?.cosine) ? `Similarity: ${formatPercentValue(matchAnalysis.cosine)}` : null,
+  ].filter(Boolean);
+
+  const renderSection = (title, lines) => {
+    if (!lines || lines.length === 0) return "";
+    const content = lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+    return `<section><h2>${escapeHtml(title)}</h2>${content}</section>`;
+  };
+
+  const renderListSection = (title, lines) => {
+    if (!lines || lines.length === 0) return "";
+    const content = lines.map((line) => `<li>${escapeHtml(line.replace(/^•\s*/, ""))}</li>`).join("");
+    return `<section><h2>${escapeHtml(title)}</h2><ul>${content}</ul></section>`;
+  };
+
+  const contactLine = contact.entries.length > 0 ? contact.entries.join(" • ") : "Add contact information.";
+  const jdPreview = jobDescription
+    ? `<section><h2>Target Role</h2><p>${escapeHtml(jobDescription)}</p></section>`
+    : "";
+
+  const metricsLine = metrics.length > 0 ? `<p class="metrics">${metrics.map((item) => escapeHtml(item)).join(" • ")}</p>` : "";
+  const optimizationsSection =
+    optimizationBullets.length > 0
+      ? `<section><h2>AI Suggestions</h2><ul>${optimizationBullets.join("")}</ul></section>`
+      : "";
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ATS Resume Export</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; background: #ffffff; }
+      body { padding: 32px; }
+      main { max-width: 720px; margin: 0 auto; display: grid; gap: 24px; }
+      header { border-bottom: 2px solid #1f2937; padding-bottom: 16px; }
+      h1 { margin: 0; font-size: 28px; letter-spacing: 0.02em; text-transform: uppercase; }
+      h2 { margin: 24px 0 12px; font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase; }
+      p { margin: 0 0 12px; line-height: 1.6; }
+      ul { margin: 0 0 12px 18px; padding: 0; line-height: 1.6; }
+      li { margin-bottom: 6px; }
+      .contact { font-size: 13px; color: #374151; }
+      .metrics { font-size: 12px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.2em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>${escapeHtml(contact.name)}</h1>
+        <p class="contact">${escapeHtml(contactLine)}</p>
+        ${metricsLine}
+      </header>
+      ${renderSection("Summary", summaryLines)}
+      ${renderListSection("Experience Highlights", bulletLines)}
+      ${renderSection("Skills", skillsLines)}
+      ${renderSection("Education", educationLines)}
+      ${renderSection("Projects", projectsLines)}
+      ${optimizationsSection}
+      ${jdPreview}
+    </main>
+  </body>
+</html>`;
+};
+
+const triggerPrint = (html) => {
+  if (typeof document === "undefined") {
     throw new Error("Export is only available in the browser.");
   }
-  const html = buildExportHtml({ resumeText, jobDescription, matchAnalysis, optimizations, keywords });
-  const win = window.open("", "_blank", "noopener");
-  if (!win) {
-    throw new Error("Popup blocked. Allow pop-ups to export.");
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const remove = () => {
+    iframe.parentNode?.removeChild(iframe);
+  };
+
+  const frameDocument = iframe.contentWindow?.document || iframe.contentDocument;
+  if (!frameDocument) {
+    remove();
+    throw new Error("Unable to prepare export frame.");
   }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.print();
+
+  frameDocument.open();
+  frameDocument.write(html);
+  frameDocument.close();
+
+  setTimeout(() => {
+    const frameWindow = iframe.contentWindow;
+    if (!frameWindow) {
+      remove();
+      return;
+    }
+    frameWindow.focus();
+    frameWindow.print();
+    setTimeout(remove, 800);
+  }, 220);
+};
+
+export const exportResumeToPdf = ({
+  resumeDocument,
+  resumeText = "",
+  jobDescription = "",
+  matchAnalysis,
+  optimizations,
+  keywords,
+  variant = "styled",
+}) => {
+  const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
+  const html = variant === "ats" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
+  triggerPrint(html);
   return true;
 };
 
-export { buildExportHtml };
+export { buildExportHtml, buildPlainExportHtml };

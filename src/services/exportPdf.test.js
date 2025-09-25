@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { deriveResumeSections, buildExportHtml, exportResumeToPdf } from "./exportPdf";
+import { describe, expect, it, vi } from "vitest";
+import { deriveResumeSections, buildExportHtml, buildPlainExportHtml, exportResumeToPdf } from "./exportPdf";
 
 describe("exportPdf", () => {
   const sampleResume = `John Doe
@@ -32,7 +32,7 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
 
   it("builds printable html template", () => {
     const html = buildExportHtml({
-      resumeText: sampleResume,
+      resumeDocument: { plainText: sampleResume },
       jobDescription: "Lead product manager for Riyadh digital bank.",
       matchAnalysis: { score: 82, coverage: 0.74, cosine: 0.81 },
       optimizations: [
@@ -50,9 +50,36 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("Match Score");
   });
 
+  it("builds ATS-friendly export html", () => {
+    const html = buildPlainExportHtml({
+      resumeDocument: { plainText: sampleResume, bullets: ["• Launched product"], sections: [] },
+      jobDescription: "Modern banking lead.",
+      matchAnalysis: { score: 70, coverage: 0.5, cosine: 0.62 },
+      optimizations: [
+        {
+          section: "Experience",
+          suggestion: "Highlight Vision 2030 impact",
+        },
+      ],
+    });
+
+    expect(html).toContain("ATS Resume Export");
+    expect(html).toContain("Experience Highlights");
+    expect(html).toContain("AI Suggestions");
+  });
+
   it("throws in non-browser environments", () => {
-    expect(() => exportResumeToPdf({ resumeText: sampleResume })).toThrow(
-      /Export is only available in the browser|Popup blocked/,
-    );
+    const originalDocument = globalThis.document;
+    vi.stubGlobal("document", undefined);
+
+    try {
+      expect(() => exportResumeToPdf({ resumeDocument: { plainText: sampleResume } })).toThrow(
+        /Export is only available in the browser/,
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(globalThis.document).toBe(originalDocument);
   });
 });
