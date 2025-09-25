@@ -18,8 +18,11 @@
           var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
           var isDark = stored ? stored === "dark" : prefersDark;
           document.documentElement.classList.toggle("dark", isDark);
-          document.documentElement.dataset.theme = isDark ? "dark" : "light";
-          document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+          document.documentElement.classList.toggle("light", !isDark);
+          var value = isDark ? "dark" : "light";
+          document.documentElement.dataset.theme = value;
+          document.documentElement.setAttribute("data-theme", value);
+          document.documentElement.style.colorScheme = value;
         } catch (error) {
           /* ignore */
         }
