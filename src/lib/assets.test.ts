@@ -76,4 +76,16 @@ describe("getSkylineUrl", () => {
     expect(url).not.toContain("KAFDH.webp/KAFDH.webp");
     expect(url.split("KAFDH.webp").length - 1).toBe(1);
   });
+
+  it("normalizes redundant slashes between segments", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co////");
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    const url = getSkylineUrl();
+    consoleSpy.mockRestore();
+
+    expect(url).toBe(
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
+    );
+  });
 });
