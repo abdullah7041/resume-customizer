@@ -8,38 +8,26 @@ describe("withVersion", () => {
     vi.unstubAllEnvs();
   });
 
-  it("appends the build version when available", async () => {
-    vi.stubEnv("VITE_BUILD_ID", "123");
+  it("appends a build id when provided", async () => {
+    vi.stubEnv("VITE_BUILD_ID", "build-123");
     const { withVersion } = await loadModule();
     expect(withVersion("https://example.com/hero.webp")).toBe(
-      "https://example.com/hero.webp?v=123",
+      "https://example.com/hero.webp?v=build-123",
     );
   });
 
-  it("returns the original url when no build id is provided", async () => {
+  it("falls back to a dev tag when the id is missing", async () => {
     const { withVersion } = await loadModule();
     expect(withVersion("https://example.com/hero.webp")).toBe(
-      "https://example.com/hero.webp",
+      "https://example.com/hero.webp?v=__dev__",
     );
   });
-});
 
-describe("asset", () => {
-  beforeEach(() => {
-    vi.resetModules();
-    vi.unstubAllEnvs();
-  });
-
-  it("normalizes the configured asset base", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com/media/");
-    const { asset } = await loadModule();
-    expect(asset("/KAFDH.webp")).toBe("https://cdn.example.com/media/KAFDH.webp");
-  });
-
-  it("returns absolute urls unchanged", async () => {
-    const { asset } = await loadModule();
-    expect(asset("https://storage.supabase.co/object/public/hero.webp")).toBe(
-      "https://storage.supabase.co/object/public/hero.webp",
+  it("respects existing query params", async () => {
+    vi.stubEnv("VITE_BUILD_ID", "next");
+    const { withVersion } = await loadModule();
+    expect(withVersion("https://example.com/hero.webp?quality=80")).toBe(
+      "https://example.com/hero.webp?quality=80&v=next",
     );
   });
 });
@@ -50,39 +38,18 @@ describe("skyline", () => {
     vi.unstubAllEnvs();
   });
 
-  it("applies cache-busting when build metadata is available", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com/media");
+  it("always returns the Supabase skyline asset with cache busting", async () => {
     vi.stubEnv("VITE_BUILD_ID", "20240924");
     const { skyline } = await loadModule();
-    expect(skyline()).toBe("https://cdn.example.com/media/hero/KAFDH.webp?v=20240924");
-  });
-
-  it("prefers the configured skyline asset when provided", async () => {
-    vi.stubEnv("VITE_SKYLINE_ASSET", "hero/custom.webp");
-    const { skyline } = await loadModule();
-    expect(skyline()).toBe("/hero/custom.webp");
-  });
-
-  it("builds a Supabase public asset url when bucket details are set", async () => {
-    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
-    vi.stubEnv("VITE_SUPABASE_SKYLINE_BUCKET", "marketing");
-    vi.stubEnv("VITE_SUPABASE_SKYLINE_OBJECT", "hero/KAFDH.webp");
-    const { skyline } = await loadModule();
     expect(skyline()).toBe(
-      "https://project.supabase.co/storage/v1/object/public/marketing/hero/KAFDH.webp",
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=20240924",
     );
   });
 
-  it("uses the default marketing asset when bucket metadata is omitted", async () => {
-    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+  it("defaults to the dev tag when build metadata is missing", async () => {
     const { skyline } = await loadModule();
     expect(skyline()).toBe(
-      "https://project.supabase.co/storage/v1/object/public/marketing/hero/KAFDH.webp",
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
     );
-  });
-
-  it("returns the default object path when Supabase is not configured", async () => {
-    const { skyline } = await loadModule();
-    expect(skyline()).toBe("/hero/KAFDH.webp");
   });
 });

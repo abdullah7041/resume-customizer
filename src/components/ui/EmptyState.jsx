@@ -4,7 +4,7 @@ export default function EmptyState({ icon: Icon, title, description, actions, cl
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-6 rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/90 px-8 py-16 text-center shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60",
+        "flex flex-col items-center justify-center gap-6 rounded-[var(--radius-card)] border border-secondary-500/10 bg-white/80 px-8 py-16 text-center shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60",
         className
       )}
     >
@@ -14,9 +14,9 @@ export default function EmptyState({ icon: Icon, title, description, actions, cl
         </span>
       )}
       <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-ink-700 dark:text-sand-50">{title}</h2>
+        <h2 className="text-2xl font-bold text-ink-700 dark:text-surface-50">{title}</h2>
         {description && (
-          <p className="max-w-md text-sm leading-relaxed text-ink-500/80 dark:text-sand-50/70">
+          <p className="max-w-md text-sm leading-relaxed text-ink-500/80 dark:text-surface-50/70">
             {description}
           </p>
         )}

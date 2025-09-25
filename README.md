@@ -24,7 +24,7 @@ Make your resume match the job—fast. Compare a resume to a job description and
 ## 🤖 AI defaults
 - OpenAI defaults (model + temperature) are centralized in [`netlify/lib/ai-config.ts`](netlify/lib/ai-config.ts).
 - The Netlify proxy at [`/.netlify/functions/ai`](netlify/functions/ai.ts) calls the OpenAI Responses API with `model="gpt-5-nano"` and `temperature=1` unless overridden.
-- Requests may provide `max_output_tokens` or the compatibility alias `max_completion_tokens`; the helper maps the alias once, clamps values between 1 and 4096, and logs a deprecation warning for local devs.
+- Requests may provide `max_output_tokens` or the compatibility alias `max_completion_tokens`; both the client (`src/lib/aiClient.ts`) and proxy normalize the alias to `max_output_tokens` and clamp the value between 1 and 4096.
 
 ### Local AI proxy
 
@@ -59,8 +59,11 @@ Set these variables in your Netlify project:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_OPENAI_KEY`
-- `VITE_SUPABASE_SKYLINE_BUCKET` *(public bucket that stores marketing assets)*
-- `VITE_SUPABASE_SKYLINE_OBJECT` *(object path for the hero skyline, e.g. `hero/KAFDH.webp`)*
+- `VITE_BUILD_ID` *(optional for local builds; production builds inject a timestamp automatically via `scripts/build.mjs`)*
+
+### Hero skyline & cache busting
+- The hero skyline URL lives in [`src/lib/assets.ts`](src/lib/assets.ts) as a Supabase public asset.
+- `withVersion()` appends `?v=<VITE_BUILD_ID>` (or `__dev__` locally) so each deploy invalidates cached hero images.
 
 ---
 

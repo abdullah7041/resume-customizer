@@ -36,7 +36,9 @@ describe('ResumeUpload', () => {
     fireEvent.change(textarea, { target: { value: '%PDF-1.5' } });
 
     expect(textarea).toHaveValue('');
-    expect(screen.getByText(/this looks like a pdf\. use upload\./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/this looks like a pdf\. use upload instead so we can parse it\./i),
+    ).toBeInTheDocument();
     expect(onToast).toHaveBeenCalled();
   });
 });

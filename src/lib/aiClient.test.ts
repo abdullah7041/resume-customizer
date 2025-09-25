@@ -33,4 +33,26 @@ describe("runOptimization", () => {
     expect(error.message).toBe("AI request timed out");
     expect(error.name).toBe("AbortError");
   });
+
+  it("defaults the model, temperature, and max tokens", async () => {
+    const responsePayload = { output_text: "ok", usage: { output_tokens: 12 }, model: "gpt-5-nano" };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(responsePayload),
+      headers: { get: () => null },
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await runOptimization({ max_completion_tokens: 256 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, request] = fetchMock.mock.calls[0];
+    const body = JSON.parse(request?.body as string);
+    expect(body).toMatchObject({
+      model: "gpt-5-nano",
+      temperature: 1,
+      max_output_tokens: 256,
+    });
+  });
 });

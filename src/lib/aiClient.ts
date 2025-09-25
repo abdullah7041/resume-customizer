@@ -1,5 +1,7 @@
 const AI_ENDPOINT = "/.netlify/functions/ai";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_AI === "true";
+const DEFAULT_MODEL = "gpt-5-nano";
+const DEFAULT_TEMPERATURE = 1;
 
 export type RunOptimizationPayload = Record<string, unknown>;
 
@@ -82,19 +84,37 @@ export async function runOptimization(
   };
   signal?.addEventListener?.("abort", abortHandler);
 
+  const normalizedPayload = (() => {
+    const base = { ...(payload ?? {}) } as Record<string, unknown>;
+    if (base.max_output_tokens == null && typeof base.max_completion_tokens === "number") {
+      base.max_output_tokens = base.max_completion_tokens;
+    }
+    delete base.max_completion_tokens;
+
+    if (typeof base.model !== "string" || base.model.trim().length === 0) {
+      base.model = DEFAULT_MODEL;
+    }
+
+    if (typeof base.temperature !== "number" || !Number.isFinite(base.temperature)) {
+      base.temperature = DEFAULT_TEMPERATURE;
+    }
+
+    return base;
+  })();
+
   try {
     const response = await fetch(AI_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload ?? {}),
+      body: JSON.stringify(normalizedPayload),
       signal: controller.signal,
     });
 
     const data = await response.json().catch(() => ({}));
     const latencyMs = now() - started;
-    const requestedTemperature = toNumber(payload?.temperature) ?? 1;
+    const requestedTemperature = toNumber(normalizedPayload.temperature) ?? DEFAULT_TEMPERATURE;
     const requestedMaxTokens =
-      toNumber(payload?.max_output_tokens) ?? toNumber(payload?.max_completion_tokens);
+      toNumber(normalizedPayload.max_output_tokens) ?? toNumber(payload?.max_completion_tokens);
     const responseRequestId =
       typeof response.headers?.get === "function" ? response.headers.get("x-nf-request-id") : null;
 
@@ -103,7 +123,7 @@ export async function runOptimization(
       const error = new AiRequestError(message, response.status, code);
       options.onDebug?.({
         status: "error",
-        model: (payload?.model as string | undefined) ?? (typeof data?.model === "string" ? data.model : null),
+        model: (typeof data?.model === "string" ? data.model : null) ?? (normalizedPayload.model as string | undefined) ?? null,
         latencyMs,
         statusCode: response.status,
         errorCode: code ?? null,
@@ -125,7 +145,7 @@ export async function runOptimization(
 
     options.onDebug?.({
       status: "success",
-      model: typeof data?.model === "string" ? data.model : (payload?.model as string | undefined) ?? null,
+      model: typeof data?.model === "string" ? data.model : (normalizedPayload.model as string | undefined) ?? null,
       tokens: tokens ?? null,
       latencyMs,
       requestId: responseRequestId ?? (typeof data?.id === "string" ? data.id : null),
@@ -156,13 +176,13 @@ export async function runOptimization(
 
     options.onDebug?.({
       status: "error",
-      model: (payload?.model as string | undefined) ?? null,
+      model: (normalizedPayload.model as string | undefined) ?? null,
       latencyMs,
       statusCode,
       errorCode,
-      temperature: toNumber(payload?.temperature) ?? 1,
+      temperature: toNumber(normalizedPayload.temperature) ?? DEFAULT_TEMPERATURE,
       maxOutputTokens:
-        toNumber(payload?.max_output_tokens) ?? toNumber(payload?.max_completion_tokens) ?? null,
+        toNumber(normalizedPayload.max_output_tokens) ?? toNumber(payload?.max_completion_tokens) ?? null,
     });
     options.onError?.(finalError);
 
