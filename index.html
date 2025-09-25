@@ -3,29 +3,54 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      (function () {
-        try {
-          var legacyKey = "airo:theme";
-          var storageKey = "theme";
-          var stored = localStorage.getItem(storageKey);
-          if (!stored) {
-            var legacy = localStorage.getItem(legacyKey);
-            if (legacy === "dark" || legacy === "light") {
-              stored = legacy;
-              localStorage.setItem(storageKey, legacy);
-            }
+      (() => {
+        const root = document.documentElement;
+        const storageKey = "theme";
+        const legacyKey = "airo:theme";
+        const apply = (theme) => {
+          const next = theme === "dark" ? "dark" : "light";
+          const isDark = next === "dark";
+          root.classList.toggle("dark", isDark);
+          root.classList.toggle("light", !isDark);
+          root.dataset.theme = next;
+          root.setAttribute("data-theme", next);
+          root.style.colorScheme = next;
+        };
+        const read = (key) => {
+          try {
+            return window.localStorage.getItem(key);
+          } catch (error) {
+            return null;
           }
-          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          var isDark = stored ? stored === "dark" : prefersDark;
-          document.documentElement.classList.toggle("dark", isDark);
-          document.documentElement.classList.toggle("light", !isDark);
-          var value = isDark ? "dark" : "light";
-          document.documentElement.dataset.theme = value;
-          document.documentElement.setAttribute("data-theme", value);
-          document.documentElement.style.colorScheme = value;
-        } catch (error) {
-          /* ignore */
+        };
+        const write = (key, value) => {
+          try {
+            window.localStorage.setItem(key, value);
+          } catch (error) {
+            /* ignore */
+          }
+        };
+
+        let stored = read(storageKey);
+        if (stored !== "dark" && stored !== "light") {
+          const legacy = read(legacyKey);
+          if (legacy === "dark" || legacy === "light") {
+            stored = legacy;
+            write(storageKey, legacy);
+          } else {
+            stored = null;
+          }
         }
+
+        if (!stored) {
+          const prefersDark =
+            typeof window !== "undefined" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          stored = prefersDark ? "dark" : "light";
+        }
+
+        apply(stored);
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
