@@ -195,11 +195,11 @@ export default function Header() {
         className={cn(
           "absolute inset-0 -z-30 pointer-events-none transition-colors duration-700",
           isDark
-            ? "bg-gradient-to-b from-black/50 via-emerald-900/40 to-emerald-950/60"
-            : "bg-gradient-to-b from-emerald-700/40 via-transparent to-emerald-900/35",
+            ? "bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--surface-900),transparent_5%)_0%,color-mix(in_oklab,var(--emerald-900),transparent_25%)_48%,color-mix(in_oklab,var(--surface-900),transparent_38%)_100%)]"
+            : "bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--emerald-700),transparent_55%)_0%,transparent_52%,color-mix(in_oklab,var(--emerald-900),transparent_60%)_100%)]",
         )}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.3)_0%,rgba(3,20,13,0)_70%)] mix-blend-screen" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,color-mix(in_oklab,var(--emerald-700),transparent_40%)_0%,transparent_70%)] mix-blend-screen" />
       </div>
       <div
         className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
