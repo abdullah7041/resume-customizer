@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useTheme, THEME_STORAGE_KEY } from "./useTheme";
+import { useTheme, THEME_STORAGE_KEY, initializeTheme } from "./useTheme";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 const originalMatchMedia = typeof window !== "undefined" ? window.matchMedia : undefined;
@@ -76,8 +76,7 @@ describe("useTheme", () => {
 
     const { result } = renderHook(() => useTheme());
 
-    expect(result.current.theme).toBe("dark");
-    expect(result.current.isDark).toBe(true);
+    expect(result.current[0]).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("light")).toBe(false);
     expect(document.documentElement.dataset.theme).toBe("dark");
@@ -88,23 +87,23 @@ describe("useTheme", () => {
   it("can toggle themes and persist the choice", () => {
     const { result } = renderHook(() => useTheme());
 
-    expect(result.current.theme).toBe("light");
+    expect(result.current[0]).toBe("light");
 
     act(() => {
-      result.current.setTheme("dark");
+      result.current[1]();
     });
 
-    expect(result.current.theme).toBe("dark");
+    expect(result.current[0]).toBe("dark");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("light")).toBe(false);
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
 
     act(() => {
-      result.current.toggleTheme();
+      result.current[1]();
     });
 
-    expect(result.current.theme).toBe("light");
+    expect(result.current[0]).toBe("light");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
     expect(document.documentElement.classList.contains("light")).toBe(true);
@@ -115,14 +114,25 @@ describe("useTheme", () => {
     const controller = setupMatchMedia(false);
     const { result } = renderHook(() => useTheme());
 
-    expect(result.current.theme).toBe("light");
+    expect(result.current[0]).toBe("light");
 
     act(() => {
       controller.update(true);
     });
 
-    expect(result.current.theme).toBe("dark");
+    expect(result.current[0]).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("light")).toBe(false);
+  });
+
+  it("initializes document theme synchronously", () => {
+    document.documentElement.classList.remove("dark");
+    document.documentElement.classList.remove("light");
+    delete document.documentElement.dataset.theme;
+
+    const applied = initializeTheme();
+
+    expect(applied === "dark" || applied === "light").toBe(true);
+    expect(document.documentElement.dataset.theme).toBe(applied);
   });
 });

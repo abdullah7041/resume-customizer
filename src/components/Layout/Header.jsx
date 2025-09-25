@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
@@ -11,16 +11,12 @@ const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
 );
 
-const themeOptions = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-];
-
 const containerClass = "app-shell w-full";
 
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
-  const { theme, isDark, setTheme } = useTheme();
+  const [theme, toggleTheme] = useTheme();
+  const isDark = theme === "dark";
   const skylineUrl = useMemo(() => {
     try {
       return getSkylineUrl();
@@ -41,37 +37,14 @@ export default function Header() {
     return () => window.clearTimeout(timer);
   }, [skylineUrl]);
 
-  const toggleGroupClass = cn(
-    "inline-flex items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-md transition-colors",
+  const themeButtonClass = cn(
+    "inline-flex h-10 w-10 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
     isDark
-      ? "border-surface-50/25 bg-surface-900/70 text-surface-50/80 shadow-[0_22px_48px_-32px_rgba(2,12,8,0.65)]"
-      : "border-surface-900/10 bg-surface-50/95 text-ink-600 shadow-[0_20px_52px_-28px_rgba(11,107,58,0.45)]"
+      ? "border-surface-50/25 bg-surface-900/70 text-surface-50/90 shadow-[0_18px_46px_-30px_rgba(0,0,0,0.6)] hover:text-accent-200 focus-visible:ring-accent-300/70 focus-visible:ring-offset-surface-900"
+      : "border-sand-200/60 bg-surface-50/95 text-ink-600 shadow-[0_18px_48px_-28px_rgba(9,91,50,0.42)] hover:text-primary-600 focus-visible:ring-accent-300/80 focus-visible:ring-offset-sand-50"
   );
-
-  const getOptionClass = (isActive) =>
-    cn(
-      "inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-300/80 focus-visible:ring-offset-2",
-      isActive
-        ? isDark
-          ? "bg-surface-900 text-surface-50 shadow-[0_20px_44px_-28px_rgba(0,0,0,0.7)] focus-visible:ring-offset-surface-900"
-          : "bg-surface-50 text-ink-900 shadow-[0_18px_40px_-28px_rgba(11,107,58,0.45)] focus-visible:ring-offset-sand-50"
-        : isDark
-          ? "text-surface-50/70 hover:text-surface-50 focus-visible:ring-offset-surface-900"
-          : "text-ink-500 hover:text-ink-700 focus-visible:ring-offset-sand-50"
-    );
-
-  const handleThemeKeyDown = useCallback(
-    (event, index) => {
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
-        return;
-      }
-      event.preventDefault();
-      const direction = event.key === "ArrowRight" ? 1 : -1;
-      const nextIndex = (index + direction + themeOptions.length) % themeOptions.length;
-      setTheme(themeOptions[nextIndex].value);
-    },
-    [setTheme]
-  );
+  const nextThemeLabel = isDark ? "Switch to light theme" : "Switch to dark theme";
+  const ThemeIcon = isDark ? Sun : Moon;
 
   return (
     <header
@@ -122,27 +95,17 @@ export default function Header() {
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-              <div role="radiogroup" aria-label="Color theme" className={toggleGroupClass}>
-                {themeOptions.map(({ value, label, icon: Icon }, index) => {
-                  const isActive = theme === value;
-                  const optionClass = getOptionClass(isActive);
-
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      role="radio"
-                      aria-checked={isActive}
-                      onClick={() => setTheme(value)}
-                      onKeyDown={(event) => handleThemeKeyDown(event, index)}
-                      className={optionClass}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={themeButtonClass}
+                aria-pressed={isDark}
+                aria-label={nextThemeLabel}
+                title={nextThemeLabel}
+              >
+                <ThemeIcon className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">{nextThemeLabel}</span>
+              </button>
               {user ? (
                 <SecondaryButton icon={LogOut} onClick={signOut}>
                   Sign Out

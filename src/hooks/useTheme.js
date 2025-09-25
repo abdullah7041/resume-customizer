@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const THEME_STORAGE_KEY = "theme";
 const LEGACY_THEME_KEY = "airo:theme";
@@ -57,24 +57,40 @@ const persistTheme = (theme) => {
   }
 };
 
-const getInitialTheme = () => {
+const readDocumentTheme = () => {
+  if (typeof document === "undefined") return null;
+  const current = document.documentElement.dataset.theme;
+  if (current === "dark" || current === "light") {
+    return current;
+  }
+  if (document.documentElement.classList.contains("dark")) {
+    return "dark";
+  }
+  if (document.documentElement.classList.contains("light")) {
+    return "light";
+  }
+  return null;
+};
+
+const ensureDocumentTheme = () => {
+  const existing = readDocumentTheme();
+  if (existing) {
+    applyThemeToDocument(existing);
+    return existing;
+  }
   const resolved = resolvePreferredTheme();
   applyThemeToDocument(resolved);
   return resolved;
 };
 
+export const initializeTheme = () => ensureDocumentTheme();
+
 export function useTheme() {
-  const [theme, setTheme] = useState(getInitialTheme);
+  const [theme, setTheme] = useState(() => ensureDocumentTheme());
   const hasExplicitPreference = useRef(readStoredTheme() !== null);
 
   useEffect(() => {
     applyThemeToDocument(theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (hasExplicitPreference.current) {
-      persistTheme(theme);
-    }
   }, [theme]);
 
   useEffect(() => {
@@ -96,29 +112,16 @@ export function useTheme() {
     return undefined;
   }, []);
 
-  const setExplicitTheme = useCallback((nextTheme) => {
-    const normalized = nextTheme === "dark" ? "dark" : "light";
-    hasExplicitPreference.current = true;
-    setTheme((prev) => {
-      if (prev === normalized) {
-        persistTheme(normalized);
-        return prev;
-      }
-      persistTheme(normalized);
-      return normalized;
+  const toggleTheme = () => {
+    setTheme((previous) => {
+      const next = previous === "dark" ? "light" : "dark";
+      hasExplicitPreference.current = true;
+      persistTheme(next);
+      return next;
     });
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setExplicitTheme((theme === "dark" ? "light" : "dark"));
-  }, [setExplicitTheme, theme]);
-
-  return {
-    theme,
-    isDark: theme === "dark",
-    setTheme: setExplicitTheme,
-    toggleTheme,
   };
+
+  return [theme, toggleTheme];
 }
 
 export { THEME_STORAGE_KEY };
