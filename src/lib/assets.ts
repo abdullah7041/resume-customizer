@@ -5,6 +5,12 @@ const SUPABASE_URL_KEY = "VITE_SUPABASE_URL" as const;
 const SKYLINE_BUCKET_KEY = "VITE_SUPABASE_SKYLINE_BUCKET" as const;
 const SKYLINE_OBJECT_KEY = "VITE_SUPABASE_SKYLINE_OBJECT" as const;
 
+const DEFAULT_SKYLINE_BUCKET = "marketing" as const;
+const DEFAULT_SKYLINE_OBJECT = "hero/KAFDH.webp" as const;
+
+export const HERO_SUPABASE_BUCKET = DEFAULT_SKYLINE_BUCKET;
+export const HERO_SUPABASE_OBJECT = DEFAULT_SKYLINE_OBJECT;
+
 const readBuildVersion = () => {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
   for (const key of BUILD_VERSION_KEYS) {
@@ -97,17 +103,25 @@ const resolveSkylineAsset = () => {
     return configured.trim();
   }
   const supabaseUrl = env?.[SUPABASE_URL_KEY];
-  const bucket = env?.[SKYLINE_BUCKET_KEY];
-  const objectKey = env?.[SKYLINE_OBJECT_KEY] || "KAFDH.webp";
+  const bucketRaw = env?.[SKYLINE_BUCKET_KEY];
+  const objectKeyRaw = env?.[SKYLINE_OBJECT_KEY];
+  const bucket =
+    typeof bucketRaw === "string" && bucketRaw.trim().length > 0
+      ? bucketRaw
+      : DEFAULT_SKYLINE_BUCKET;
+  const objectKey =
+    typeof objectKeyRaw === "string" && objectKeyRaw.trim().length > 0
+      ? objectKeyRaw
+      : DEFAULT_SKYLINE_OBJECT;
 
-  if (typeof supabaseUrl === "string" && supabaseUrl.trim().length > 0 && typeof objectKey === "string") {
+  if (typeof supabaseUrl === "string" && supabaseUrl.trim().length > 0) {
     const publicUrl = buildSupabasePublicUrl(supabaseUrl, bucket ?? "", objectKey);
     if (publicUrl) {
       return publicUrl;
     }
   }
 
-  return "KAFDH.webp";
+  return objectKey;
 };
 
 export const skyline = () => withVersion(asset(resolveSkylineAsset()));

@@ -54,7 +54,7 @@ describe("skyline", () => {
     vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com/media");
     vi.stubEnv("VITE_BUILD_ID", "20240924");
     const { skyline } = await loadModule();
-    expect(skyline()).toBe("https://cdn.example.com/media/KAFDH.webp?v=20240924");
+    expect(skyline()).toBe("https://cdn.example.com/media/hero/KAFDH.webp?v=20240924");
   });
 
   it("prefers the configured skyline asset when provided", async () => {
@@ -73,9 +73,16 @@ describe("skyline", () => {
     );
   });
 
-  it("falls back to the default asset when the bucket is missing", async () => {
+  it("uses the default marketing asset when bucket metadata is omitted", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
     const { skyline } = await loadModule();
-    expect(skyline()).toBe("/KAFDH.webp");
+    expect(skyline()).toBe(
+      "https://project.supabase.co/storage/v1/object/public/marketing/hero/KAFDH.webp",
+    );
+  });
+
+  it("returns the default object path when Supabase is not configured", async () => {
+    const { skyline } = await loadModule();
+    expect(skyline()).toBe("/hero/KAFDH.webp");
   });
 });
