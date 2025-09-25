@@ -5,7 +5,7 @@ import SecondaryButton from "../ui/SecondaryButton";
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
-import { skyline } from "../../lib/assets";
+import { getSkylineUrl } from "../../lib/assets";
 
 const saduPattern = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" fill="none"><path d="M0 140h280" stroke="white" stroke-opacity="0.03"/><path d="M140 0v280" stroke="white" stroke-opacity="0.03"/><path d="M0 0l140 140L0 280" stroke="white" stroke-opacity="0.024"/><path d="M280 0L140 140l140 140" stroke="white" stroke-opacity="0.024"/><rect x="122" y="122" width="36" height="36" fill="white" fill-opacity="0.024"/><path d="M0 70h70L0 0z" fill="white" fill-opacity="0.02"/><path d="M280 70h-70L280 0z" fill="white" fill-opacity="0.02"/><path d="M0 210h70l-70 70z" fill="white" fill-opacity="0.02"/><path d="M280 210h-70l70 70z" fill="white" fill-opacity="0.02"/></svg>'
@@ -21,7 +21,14 @@ const containerClass = "app-shell w-full";
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const { theme, isDark, setTheme } = useTheme();
-  const skylineUrl = useMemo(() => skyline(), []);
+  const skylineUrl = useMemo(() => {
+    try {
+      return getSkylineUrl();
+    } catch (error) {
+      console.error("Failed to resolve skyline asset", error);
+      return "";
+    }
+  }, []);
   const [animateSkyline, setAnimateSkyline] = useState(false);
 
   useEffect(() => {
@@ -68,19 +75,16 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate flex min-h-screen min-h-[100svh] flex-col justify-between gap-8 overflow-hidden text-surface-50 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 md:min-h-[100dvh] lg:pb-28 lg:pt-24"
+      className="hero-bg-animate relative isolate flex min-h-[calc(100vh-96px)] min-h-[100svh] flex-col justify-between gap-8 overflow-hidden bg-cover bg-center bg-no-repeat text-surface-50 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 md:min-h-[100dvh] md:bg-[position:50%_35%] lg:pb-28 lg:pt-24"
     >
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
           aria-hidden="true"
           className={cn(
-            "bg-hero absolute inset-0 -z-40 pointer-events-none",
+            "bg-hero absolute inset-0 -z-40 min-h-[calc(100vh-96px)] pointer-events-none bg-scroll bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
             animateSkyline ? "skyline-once" : "skyline-still"
           )}
-          style={{
-            "--hero-skyline-image": `url('${skylineUrl}')`,
-            "--hero-skyline-offset": "calc(100% - clamp(200px, 34vh, 360px))",
-          }}
+          style={{ backgroundImage: `url('${skylineUrl}')` }}
         />
       ) : null}
       <div

@@ -279,53 +279,22 @@
     }
   }
 
-  .skyline-once::before {
-    animation: skylineEntrance 1.6s ease-out forwards;
-  }
-
-  .skyline-still::before {
-    opacity: 0.88;
-  }
-
   .bg-hero {
     position: relative;
     pointer-events: none;
     overflow: hidden;
-    --hero-skyline-offset: calc(100% - clamp(220px, 32vh, 380px));
-    --hero-background-attachment: fixed;
-  }
-
-  .bg-hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: var(--hero-skyline-image);
-    background-attachment: var(--hero-background-attachment);
-    background-position: center var(--hero-skyline-offset);
-    background-repeat: no-repeat;
-    background-size: cover;
-    transform: scale(1.05);
     filter: saturate(1.05) brightness(0.96);
-    opacity: 0.84;
+    will-change: transform, opacity;
+    transform: translateY(0) scale(1);
   }
 
-  @media (max-width: 1024px) {
-    .bg-hero {
-      --hero-skyline-offset: calc(100% - clamp(200px, 30vh, 340px));
-    }
+  .skyline-once {
+    animation: skylineEntrance 1.6s ease-out forwards;
   }
 
-  @media (max-width: 768px) {
-    .bg-hero {
-      --hero-background-attachment: scroll;
-      --hero-skyline-offset: calc(100% - clamp(150px, 28vh, 280px));
-    }
-  }
-
-  @media (max-width: 480px) {
-    .bg-hero {
-      --hero-skyline-offset: calc(100% - clamp(120px, 34vh, 220px));
-    }
+  .skyline-still {
+    opacity: 0.88;
+    transform: translateY(0) scale(1);
   }
 
   @keyframes keywordChipShine {
