@@ -340,12 +340,10 @@ const handler: Handler = async (event) => {
       headers: HEADERS,
       body: JSON.stringify({
         score,
-        explanations: {
-          topMissing: missing.slice(0, 12),
-          topHits: hits.slice(0, 12),
-          cosine,
-          coverage: Number(coverage.toFixed(4)),
-        },
+        coverage: Number(coverage.toFixed(4)),
+        similarity: cosine,
+        missing_keywords: missing.slice(0, 12),
+        matched_keywords: hits.slice(0, 12),
       }),
     };
   } catch (error) {
