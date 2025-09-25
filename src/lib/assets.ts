@@ -1,20 +1,27 @@
 const SKYLINE_URL =
   "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp";
 
-const readBuildId = () => {
-  const candidates: Array<string | undefined> = [];
-  const metaEnv = (import.meta as { env?: Record<string, unknown> }).env;
-  if (typeof metaEnv?.VITE_BUILD_ID === "string") {
-    candidates.push(metaEnv.VITE_BUILD_ID);
-  }
-  if (typeof process !== "undefined" && typeof process.env?.VITE_BUILD_ID === "string") {
-    candidates.push(process.env.VITE_BUILD_ID);
-  }
+const ENV_VERSION_KEYS = ["VITE_BUILD_TIMESTAMP", "VITE_BUILD_ID", "VITE_BUILD_TAG"] as const;
 
-  for (const candidate of candidates) {
-    const trimmed = candidate?.trim();
-    if (trimmed && trimmed.length > 0) {
-      return trimmed;
+const readBuildId = () => {
+  const metaEnv = (import.meta as { env?: Record<string, unknown> }).env ?? {};
+  const runtimeEnv = typeof process !== "undefined" ? process.env ?? {} : {};
+
+  for (const key of ENV_VERSION_KEYS) {
+    const metaValue = metaEnv[key];
+    if (typeof metaValue === "string") {
+      const trimmed = metaValue.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+
+    const runtimeValue = runtimeEnv[key];
+    if (typeof runtimeValue === "string") {
+      const trimmed = runtimeValue.trim();
+      if (trimmed) {
+        return trimmed;
+      }
     }
   }
 

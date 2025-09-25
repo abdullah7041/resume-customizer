@@ -455,6 +455,13 @@ const triggerPrint = (html) => {
   }, 220);
 };
 
+const normalizeVariant = (variant = "styled") => {
+  if (variant === "ats" || variant === "ats-plain") {
+    return "ats-plain";
+  }
+  return "styled";
+};
+
 export const exportResumeToPdf = ({
   resumeDocument,
   resumeText = "",
@@ -465,9 +472,10 @@ export const exportResumeToPdf = ({
   variant = "styled",
 }) => {
   const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
-  const html = variant === "ats" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
+  const normalizedVariant = normalizeVariant(variant);
+  const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
   triggerPrint(html);
   return true;
 };
 
-export { buildExportHtml, buildPlainExportHtml };
+export { buildExportHtml, buildPlainExportHtml, normalizeVariant };

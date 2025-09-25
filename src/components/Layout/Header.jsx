@@ -68,7 +68,7 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate flex min-h-screen min-h-[100svh] flex-col justify-between gap-10 overflow-hidden text-surface-50 pb-16 pt-10 sm:gap-12 sm:pb-24 sm:pt-16 md:min-h-[100dvh]"
+      className="hero-bg-animate relative isolate flex min-h-screen min-h-[100svh] flex-col justify-between gap-8 overflow-hidden text-surface-50 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 md:min-h-[100dvh] lg:pb-28 lg:pt-24"
     >
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
@@ -103,7 +103,7 @@ export default function Header() {
 
       <div className="relative z-10 flex flex-1 flex-col">
         <div className="border-b border-surface-50/10">
-          <div className={`${containerClass} flex items-center justify-between py-4`}>
+          <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-6`}>
             <div className="flex items-center gap-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-50/10 text-accent-500 shadow-soft">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
@@ -157,9 +157,9 @@ export default function Header() {
         </div>
 
         <div
-          className={`${containerClass} grid flex-1 items-center gap-10 pb-16 pt-12 sm:gap-12 sm:pt-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:pb-20 lg:pt-16`}
+          className={`${containerClass} grid flex-1 items-center gap-10 pb-16 pt-10 sm:gap-12 sm:pt-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:pb-20 lg:pt-16`}
         >
-          <div className="space-y-6">
+          <div className="space-y-6 sm:space-y-7">
             <span
               tabIndex={0}
               className="badge-gold-shimmer inline-flex items-center gap-2 self-center rounded-full border border-surface-50/35 bg-surface-900/60 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero sm:self-start"
@@ -173,10 +173,10 @@ export default function Header() {
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl lg:text-6xl">
+              <h1 className="text-balance text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95">
+              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95 sm:text-lg">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
