@@ -59,7 +59,35 @@ const readEnvString = (key: string) => {
 };
 
 const trimTrailingSlashes = (value: string) => value.replace(/\/+$/, "");
-const trimLeadingSlashes = (value: string) => value.replace(/^\/+/, "");
+
+export const validatePublicUrl = (url: string) => {
+  if (typeof url !== "string") {
+    throw new TypeError("Public URL must be a string.");
+  }
+
+  const trimmed = url.trim();
+  if (trimmed.length === 0) {
+    throw new Error("Public URL cannot be empty.");
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error(`Invalid public URL: ${trimmed}`);
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`Public URL must use http or https: ${parsed.href}`);
+  }
+
+  const normalizedPathname = parsed.pathname.replace(/\/{2,}/g, "/");
+  if (normalizedPathname !== parsed.pathname) {
+    parsed.pathname = normalizedPathname;
+  }
+
+  return parsed.toString();
+};
 
 const joinUrlSegments = (...segments: Array<string | null | undefined>) =>
   segments
@@ -69,7 +97,7 @@ const joinUrlSegments = (...segments: Array<string | null | undefined>) =>
         return trimTrailingSlashes(segment);
       }
 
-      return trimLeadingSlashes(trimTrailingSlashes(segment));
+      return trimTrailingSlashes(segment.replace(/^\/+/, ""));
     })
     .join("/");
 
@@ -81,10 +109,12 @@ const getSupabaseBaseUrl = () => {
     );
   }
 
-  return trimTrailingSlashes(envValue);
+  const validated = validatePublicUrl(envValue);
+  return trimTrailingSlashes(validated);
 };
 
 const SKYLINE_OBJECT_PATH = "storage/v1/object/public/ui-assets/KAFDH.webp";
+const SKYLINE_FILENAME = "KAFDH.webp";
 
 let memoizedSkylineUrl: string | null = null;
 let hasLoggedSkylineUrl = false;
@@ -110,7 +140,30 @@ export const getSkylineUrl = () => {
 
   const baseUrl = getSupabaseBaseUrl();
   const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);
-  const versionedUrl = withVersion(normalized);
+  const sanitizedUrlString = validatePublicUrl(normalized);
+  const sanitizedUrl = new URL(sanitizedUrlString);
+
+  const normalizedPath = sanitizedUrl.pathname.replace(/\/{2,}/g, "/");
+  if (normalizedPath !== sanitizedUrl.pathname) {
+    sanitizedUrl.pathname = normalizedPath;
+  }
+
+  const skylineOccurrences = normalizedPath
+    .split("/")
+    .filter(Boolean)
+    .filter((segment) => segment === SKYLINE_FILENAME).length;
+
+  if (skylineOccurrences === 0) {
+    throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
+  }
+
+  if (skylineOccurrences > 1) {
+    throw new Error(
+      `Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`,
+    );
+  }
+
+  const versionedUrl = withVersion(sanitizedUrl.toString());
 
   memoizedSkylineUrl = versionedUrl;
 

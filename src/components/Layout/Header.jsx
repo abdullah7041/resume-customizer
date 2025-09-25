@@ -51,42 +51,14 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "hero-bg-animate relative isolate overflow-hidden text-surface-50",
+        "hero-bg-animate relative isolate flex flex-col overflow-hidden text-surface-50",
         heroMinHeightClass,
       )}
       style={{ "--hero-header-offset": HERO_HEADER_OFFSET }}
     >
-      {typeof skylineUrl === "string" && skylineUrl ? (
-        <div
-          aria-hidden="true"
-          className={cn(
-            "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
-            animateSkyline ? "skyline-once" : "skyline-still"
-          )}
-          style={{ backgroundImage: `url('${skylineUrl}')` }}
-        />
-      ) : null}
-      <div
-        aria-hidden="true"
-        className={cn(
-          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-700",
-          isDark
-            ? "bg-gradient-to-b from-black/50 via-emerald-900/40 to-emerald-950/60"
-            : "bg-gradient-to-b from-emerald-700/40 via-transparent to-emerald-900/35",
-        )}
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.3)_0%,rgba(3,20,13,0)_70%)] mix-blend-screen" />
-      </div>
-      <div
-        className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
-        style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
-        aria-hidden="true"
-      />
-      <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
-
       <div
         className={cn(
-          "relative z-10 flex flex-col justify-between gap-8 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24",
+          "relative z-10 flex flex-1 flex-col justify-between gap-8 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24",
           heroMinHeightClass,
         )}
       >
@@ -208,6 +180,33 @@ export default function Header() {
           </div>
         </div>
       </div>
+      {typeof skylineUrl === "string" && skylineUrl ? (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
+            animateSkyline ? "skyline-once" : "skyline-still"
+          )}
+          style={{ backgroundImage: `url('${skylineUrl}')` }}
+        />
+      ) : null}
+      <div
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-700",
+          isDark
+            ? "bg-gradient-to-b from-black/50 via-emerald-900/40 to-emerald-950/60"
+            : "bg-gradient-to-b from-emerald-700/40 via-transparent to-emerald-900/35",
+        )}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(32,201,151,0.3)_0%,rgba(3,20,13,0)_70%)] mix-blend-screen" />
+      </div>
+      <div
+        className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
+        style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
+        aria-hidden="true"
+      />
+      <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
     </header>
   );
 }
