@@ -131,7 +131,7 @@ export default function Optimization({
             </SecondaryButton>
             <SecondaryButton
               icon={FileDown}
-              onClick={() => onExport?.("ats")}
+              onClick={() => onExport?.("ats-plain")}
               disabled={!canExport || isOptimizing}
               title={
                 !canExport
@@ -141,7 +141,7 @@ export default function Optimization({
                   : undefined
               }
             >
-              ATS PDF
+              ATS Plain
             </SecondaryButton>
             <SecondaryButton
               icon={Check}
@@ -215,7 +215,7 @@ export default function Optimization({
 
         <div className="relative space-y-4">
           {watermarkVisible && (
-            <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center text-6xl font-black uppercase tracking-[0.6em] text-secondary-500/10">
+            <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center px-6 text-center text-[2.75rem] font-black uppercase tracking-[0.45em] text-secondary-500/10 sm:px-0 sm:text-6xl sm:tracking-[0.6em]">
               Preview
             </div>
           )}

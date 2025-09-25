@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { deriveResumeSections, buildExportHtml, buildPlainExportHtml, exportResumeToPdf } from "./exportPdf";
+import {
+  deriveResumeSections,
+  buildExportHtml,
+  buildPlainExportHtml,
+  exportResumeToPdf,
+  normalizeVariant,
+} from "./exportPdf";
 
 describe("exportPdf", () => {
   const sampleResume = `John Doe
@@ -66,6 +72,14 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("ATS Resume Export");
     expect(html).toContain("Experience Highlights");
     expect(html).toContain("AI Suggestions");
+  });
+
+  it("normalizes export variant aliases", () => {
+    expect(normalizeVariant()).toBe("styled");
+    expect(normalizeVariant("styled")).toBe("styled");
+    expect(normalizeVariant("ats")).toBe("ats-plain");
+    expect(normalizeVariant("ats-plain")).toBe("ats-plain");
+    expect(normalizeVariant("unknown")).toBe("styled");
   });
 
   it("throws in non-browser environments", () => {

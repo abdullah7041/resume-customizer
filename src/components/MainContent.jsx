@@ -383,36 +383,40 @@ export default function MainContent() {
   const handleExportPdf = useCallback(
     (variant) => {
       if (!resumeData?.plainText) {
-      pushToast({
-        type: "warning",
-        title: "Add your resume",
-        description: "Upload or paste your resume before exporting.",
-      });
-      return;
-    }
+        pushToast({
+          type: "warning",
+          title: "Add your resume",
+          description: "Upload or paste your resume before exporting.",
+        });
+        return;
+      }
 
-    try {
-      exportResumeToPdf({
-        resumeDocument: resumeData,
-        jobDescription,
-        matchAnalysis,
-        optimizations,
-        keywords: optimizationKeywords,
-        variant,
-      });
-      pushToast({
-        type: "success",
-        title: "Export ready",
-        description: "Use your browser dialog to save the PDF preview.",
-      });
-    } catch (error) {
-      pushToast({
-        type: "danger",
-        title: "Export blocked",
-        description: error?.message || "Enable pop-ups and try again.",
-      });
-    }
-  }, [jobDescription, matchAnalysis, optimizations, optimizationKeywords, pushToast, resumeData]);
+      const normalizedVariant = variant === "ats-plain" ? "ats-plain" : "styled";
+
+      try {
+        exportResumeToPdf({
+          resumeDocument: resumeData,
+          jobDescription,
+          matchAnalysis,
+          optimizations,
+          keywords: optimizationKeywords,
+          variant: normalizedVariant,
+        });
+        pushToast({
+          type: "success",
+          title: "Export ready",
+          description: "Use your browser dialog to save the PDF preview.",
+        });
+      } catch (error) {
+        pushToast({
+          type: "danger",
+          title: "Export blocked",
+          description: error?.message || "Enable pop-ups and try again.",
+        });
+      }
+    },
+    [jobDescription, matchAnalysis, optimizations, optimizationKeywords, pushToast, resumeData]
+  );
 
   const renderedToasts = useMemo(
     () =>
@@ -476,10 +480,10 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative z-10 -mt-16 min-h-screen pb-24 pt-20 sm:-mt-20 sm:pb-32 sm:pt-24 lg:pb-40"
+      className="relative z-10 -mt-12 min-h-screen pb-24 pt-16 sm:-mt-20 sm:pb-32 sm:pt-24 lg:-mt-28 lg:pb-40 lg:pt-28"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
-      <div className={`${containerClass} space-y-8 text-ink-700 sm:space-y-10 lg:space-y-12 dark:text-surface-50`}>
+      <div className={`${containerClass} space-y-7 text-ink-700 sm:space-y-10 lg:space-y-12 dark:text-surface-50`}>
         <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] sm:p-8 sm:backdrop-blur-xl lg:p-9 dark:border-surface-50/12 dark:bg-zinc-900/60">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">

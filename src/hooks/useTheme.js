@@ -41,6 +41,7 @@ const applyThemeToDocument = (theme) => {
   if (typeof document === "undefined") return;
   const isDark = theme === "dark";
   document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.classList.toggle("light", !isDark);
   const value = isDark ? "dark" : "light";
   document.documentElement.dataset.theme = value;
   document.documentElement.setAttribute("data-theme", value);
