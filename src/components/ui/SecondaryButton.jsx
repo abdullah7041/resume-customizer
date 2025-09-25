@@ -10,7 +10,7 @@ export default function SecondaryButton({ children, className, icon: Icon, ...pr
         "before:pointer-events-none before:absolute before:inset-[1px] before:translate-y-full before:rounded-[calc(var(--radius-card)_/_2.1)] before:bg-[linear-gradient(180deg,rgba(255,255,255,0.78)_0%,rgba(255,255,255,0)_72%)] before:opacity-0 before:transition before:duration-500 before:ease-out before:content-[''] hover:before:translate-y-0 hover:before:opacity-100",
         "after:pointer-events-none after:absolute after:inset-[2px] after:rounded-[calc(var(--radius-card)_/_2.2)] after:border after:border-secondary-500/15 after:opacity-75 after:content-['']",
         "disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-secondary-500/25 disabled:bg-secondary-100/70 disabled:text-secondary-500/75 disabled:shadow-none disabled:before:hidden disabled:after:hidden",
-        "dark:border-secondary-400/45 dark:bg-[linear-gradient(135deg,rgba(11,50,35,0.8)_0%,rgba(5,28,18,0.92)_100%)] dark:text-sand-50 dark:hover:text-sand-50 dark:hover:shadow-[0_30px_78px_-34px_rgba(9,90,60,0.5)] dark:focus-visible:ring-secondary-300 dark:focus-visible:ring-offset-surface-900 dark:after:border-secondary-500/20",
+        "dark:border-secondary-400/45 dark:bg-[linear-gradient(135deg,rgba(11,50,35,0.8)_0%,rgba(5,28,18,0.92)_100%)] dark:text-surface-50 dark:hover:text-surface-50 dark:hover:shadow-[0_30px_78px_-34px_rgba(9,90,60,0.5)] dark:focus-visible:ring-secondary-300 dark:focus-visible:ring-offset-surface-900 dark:after:border-secondary-500/20",
         className
       )}
       {...props}

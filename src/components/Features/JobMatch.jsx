@@ -102,7 +102,7 @@ export default function JobMatch({
           description="Paste the job description to uncover keyword gaps and alignment opportunities."
         />
         <textarea
-          className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-surface-50 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-sand-50 dark:focus-visible:ring-offset-zinc-900"
+          className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-white/80 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
           placeholder="Paste the job description for your next Riyadh role…"
           value={jobText}
           onChange={(event) => setJobText(event.target.value)}
@@ -120,16 +120,16 @@ export default function JobMatch({
             </PrimaryButton>
           </div>
           {disabledHint && (
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ink-500/70 dark:text-sand-50/60">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">
               {disabledHint}
             </p>
           )}
         </div>
       </div>
 
-      <aside className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/80 p-6 shadow-soft backdrop-blur-sm transition-shadow sm:p-7 sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60">
+      <aside className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-white/80 p-6 text-ink-700 shadow-soft backdrop-blur-sm transition-shadow sm:p-7 sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50">
         {isAnalyzing ? (
-          <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-sm text-ink-500/80 dark:text-sand-50/70">
+          <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-sm text-ink-500/80 dark:text-surface-50/70">
             <Loader2 className="h-6 w-6 animate-spin text-secondary-500" aria-hidden="true" />
             <p>Analyzing text similarities…</p>
           </div>
@@ -170,18 +170,18 @@ export default function JobMatch({
                       />
                     </svg>
                     <div
-                      className="relative grid h-full w-full place-items-center rounded-full border border-surface-50/20 bg-surface-50/10 p-4 text-ink-900 dark:bg-zinc-900/40"
+                      className="relative grid h-full w-full place-items-center rounded-full border border-surface-50/20 bg-white/10 p-4 text-ink-900 dark:bg-zinc-900/40"
                       style={{
                         backgroundImage: `conic-gradient(${variant.conic} ${(progress / 100) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
                       }}
                     >
-                      <div className="grid place-items-center rounded-full bg-surface-50/90 px-6 py-6 text-center text-ink-900 shadow-inner dark:bg-zinc-900/70 dark:text-sand-50">
+                      <div className="grid place-items-center rounded-full bg-white/90 px-6 py-6 text-center text-ink-900 shadow-inner dark:bg-zinc-900/70 dark:text-surface-50">
                         <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500/80">
                           Match
                         </span>
                         <span className="mt-2 text-4xl font-bold tracking-tight">
                           {score}
-                          <span className="text-base font-semibold text-ink-500/70 dark:text-sand-50/70">/100</span>
+                          <span className="text-base font-semibold text-ink-500/70 dark:text-surface-50/70">/100</span>
                         </span>
                       </div>
                     </div>
@@ -229,7 +229,7 @@ export default function JobMatch({
 
             {hits.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-ink-500/70 dark:text-sand-50/70">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-ink-500/70 dark:text-surface-50/70">
                   Recognized strengths
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -251,11 +251,11 @@ export default function JobMatch({
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                   Suggestions
                 </h3>
-                <ul className="space-y-2 text-sm leading-relaxed text-ink-700 dark:text-sand-50">
+                <ul className="space-y-2 text-sm leading-relaxed text-ink-700 dark:text-surface-50">
                   {matchAnalysis.suggestions.map((suggestion, index) => (
                     <li
                       key={index}
-                      className="rounded-2xl border border-secondary-500/12 bg-surface-50/90 px-4 py-3 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60"
+                      className="rounded-2xl border border-secondary-500/12 bg-white/80 px-4 py-3 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60"
                     >
                       {suggestion}
                     </li>
@@ -265,7 +265,7 @@ export default function JobMatch({
             )}
           </div>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-sm text-ink-500/80 dark:text-sand-50/70">
+          <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-sm text-ink-500/80 dark:text-surface-50/70">
             <Sparkles className="h-6 w-6 text-secondary-500" aria-hidden="true" />
             <p>Paste a job description to see match insights here.</p>
           </div>

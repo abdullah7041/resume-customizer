@@ -28,10 +28,10 @@ const PreviewBanner = ({ onUpgrade }) => (
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-secondary-500">
           Preview mode
         </p>
-        <p className="text-sm text-ink-500 dark:text-sand-50/80">
+        <p className="text-sm text-ink-500 dark:text-surface-50/80">
           Free preview run—results will not be saved until you upgrade.
         </p>
-        <div className="inline-flex items-center gap-2 rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs text-secondary-600 shadow-soft dark:border-surface-50/20 dark:bg-zinc-900/60 dark:text-sand-50/70">
+        <div className="inline-flex items-center gap-2 rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs text-secondary-600 shadow-soft dark:border-surface-50/20 dark:bg-zinc-900/60 dark:text-surface-50/70">
           <Info className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="leading-none">Preview lets you test the flow. Upgrade to save/export.</span>
         </div>
@@ -103,7 +103,7 @@ export default function Optimization({
           <select
             value={mode}
             onChange={(event) => setMode(event.target.value)}
-            className="w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-surface-50 px-4 py-3 text-sm font-medium text-ink-700 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-sand-50 dark:focus-visible:ring-offset-zinc-900"
+            className="w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-white/80 px-4 py-3 text-sm font-medium text-ink-700 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
           >
             {modes.map((option) => (
               <option key={option.value} value={option.value}>
@@ -168,14 +168,14 @@ export default function Optimization({
       </PrimaryButton>
 
       <section className="space-y-4">
-        <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-surface-50/80 p-5 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60">
+        <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-white/80 p-5 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60">
           <h3 className="text-sm font-semibold uppercase tracking-[0.28em] text-secondary-500">
             Keyword focus
           </h3>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {(["add", "neutral", "remove"]).map((bucket) => (
               <div key={bucket} className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-500/70 dark:text-sand-50/70">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-500/70 dark:text-surface-50/70">
                   {CHIP_LABELS[bucket]}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -191,7 +191,7 @@ export default function Optimization({
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-ink-400/80 dark:text-sand-50/50">No items yet</span>
+                    <span className="text-xs text-ink-400/80 dark:text-surface-50/50">No items yet</span>
                   )}
                 </div>
               </div>
@@ -211,7 +211,7 @@ export default function Optimization({
               {[...Array(3)].map((_, index) => (
                 <div
                   key={index}
-                  className="h-40 animate-pulse rounded-[var(--radius-card)] border border-secondary-500/10 bg-surface-50/70 dark:border-surface-50/10 dark:bg-zinc-900/60"
+                  className="h-40 animate-pulse rounded-[var(--radius-card)] border border-secondary-500/10 bg-white/75 dark:border-surface-50/10 dark:bg-zinc-900/60"
                 />
               ))}
             </div>
@@ -228,7 +228,7 @@ export default function Optimization({
               ))}
             </div>
           ) : (
-            <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/80 p-8 text-center text-sm text-ink-500/80 shadow-soft backdrop-blur-sm dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-sand-50/70">
+        <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/80 p-8 text-center text-sm text-ink-500/80 shadow-soft backdrop-blur-sm dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50/70">
               Run an analysis to see AI optimization cards appear here.
             </div>
           )}

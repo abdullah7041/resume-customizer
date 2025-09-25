@@ -22,16 +22,6 @@ export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const { theme, isDark, setTheme } = useTheme();
   const skylineUrl = useMemo(() => skyline(), []);
-  const heroBackgroundStyle = useMemo(() => {
-    if (typeof skylineUrl !== "string" || skylineUrl.length === 0) {
-      return undefined;
-    }
-    return {
-      backgroundImage: `url('${skylineUrl}')`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    };
-  }, [skylineUrl]);
   const [animateSkyline, setAnimateSkyline] = useState(false);
 
   useEffect(() => {
@@ -78,8 +68,7 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate flex min-h-screen min-h-[100svh] flex-col justify-between gap-12 overflow-hidden bg-cover bg-center text-surface-50 pb-16 pt-10 sm:pb-24 sm:pt-16 md:min-h-[100dvh]"
-      style={heroBackgroundStyle}
+      className="hero-bg-animate relative isolate flex min-h-screen min-h-[100svh] flex-col justify-between gap-10 overflow-hidden text-surface-50 pb-16 pt-10 sm:gap-12 sm:pb-24 sm:pt-16 md:min-h-[100dvh]"
     >
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div

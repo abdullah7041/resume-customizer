@@ -36,12 +36,6 @@
       radial-gradient(circle at 22% -12%, rgba(56, 189, 148, 0.24) 0%, rgba(6, 32, 24, 0) 68%),
       linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
     color: var(--color-sand-50);
-    background-color: #0a3f26;
-    background: var(--page-gradient-dark);
-  }
-
-  .dark body::before {
-    background: var(--page-radial-dark);
   }
 
   h1,
@@ -311,33 +305,6 @@
   @media (max-width: 768px) {
     .bg-hero {
       --hero-background-attachment: scroll;
-      --hero-skyline-offset: calc(100% - clamp(150px, 28vh, 280px));
-    }
-  }
-
-  @media (max-width: 480px) {
-    .bg-hero {
-      --hero-skyline-offset: calc(100% - clamp(120px, 34vh, 220px));
-    }
-  }
-
-  .bg-hero {
-    --hero-skyline-offset: calc(100% - clamp(220px, 32vh, 380px));
-    background-attachment: fixed;
-    background-position: center var(--hero-skyline-offset);
-    background-repeat: no-repeat;
-    background-size: cover;
-  }
-
-  @media (max-width: 1024px) {
-    .bg-hero {
-      --hero-skyline-offset: calc(100% - clamp(200px, 30vh, 340px));
-    }
-  }
-
-  @media (max-width: 768px) {
-    .bg-hero {
-      background-attachment: scroll;
       --hero-skyline-offset: calc(100% - clamp(150px, 28vh, 280px));
     }
   }

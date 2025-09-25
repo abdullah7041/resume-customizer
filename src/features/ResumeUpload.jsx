@@ -8,7 +8,7 @@ const ACCEPTED_TYPES = [
 ];
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const PDF_HELPER_MESSAGE = "This looks like a PDF. Use Upload.";
+const PDF_HELPER_MESSAGE = "This looks like a PDF. Use Upload instead so we can parse it.";
 
 export default function ResumeUpload({ onParseResume, resumeData, onToast }) {
   const [file, setFile] = useState(null);

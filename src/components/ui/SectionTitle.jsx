@@ -9,12 +9,12 @@ export default function SectionTitle({ eyebrow, title, description, className })
         </p>
       )}
       {title && (
-        <h2 className="text-2xl font-bold text-ink-700 dark:text-sand-50">
+        <h2 className="text-2xl font-bold text-ink-700 dark:text-surface-50">
           {title}
         </h2>
       )}
       {description && (
-        <p className="text-sm leading-relaxed text-ink-500/80 dark:text-sand-50/70">
+        <p className="text-sm leading-relaxed text-ink-500/80 dark:text-surface-50/70">
           {description}
         </p>
       )}

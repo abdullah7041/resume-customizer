@@ -214,25 +214,17 @@ const handler: Handler = async (event) => {
     const body = event.body ? JSON.parse(event.body) : {};
     const resume = sanitize(body?.resumeText ?? body?.resume);
     const job = sanitize(body?.jobText ?? body?.jobDesc ?? body?.job);
-    const messages = buildMessages(body);
-
     const hasMessages = Array.isArray(body?.messages) && body.messages.length > 0;
-    const hasInputArray = Array.isArray(body?.input) && body.input.length > 0;
-    const hasInputScalar = typeof body?.input === "string" && sanitize(body.input).length > 0;
-    const hasInputObject =
-      body?.input && typeof body.input === "object" && !Array.isArray(body.input) ? Object.keys(body.input).length > 0 : false;
-    const hasPrompt = typeof body?.prompt === "string" && sanitize(body.prompt).length > 0;
-    const hasText = typeof body?.text === "string" && sanitize(body.text).length > 0;
 
-    if (!resume && !job && !hasMessages && !hasInputArray && !hasInputScalar && !hasInputObject && !hasPrompt && !hasText) {
+    if (!resume && !job && !hasMessages) {
       return {
         statusCode: 400,
         headers: HEADERS,
-        body: JSON.stringify({
-          error: "Request must include resumeText, jobText, messages, input, or prompt.",
-        }),
+        body: JSON.stringify({ error: "Request must include resumeText, jobText, or messages." }),
       };
     }
+
+    const messages = buildMessages(body);
 
     if (!messages) {
       return {
