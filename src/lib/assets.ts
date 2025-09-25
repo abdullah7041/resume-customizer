@@ -1,6 +1,9 @@
 const ABSOLUTE_URL_PATTERN = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
 const BUILD_VERSION_KEYS = ["VITE_BUILD_ID", "VITE_BUILD_TIMESTAMP"] as const;
 const SKYLINE_ASSET_KEY = "VITE_SKYLINE_ASSET" as const;
+const SUPABASE_URL_KEY = "VITE_SUPABASE_URL" as const;
+const SKYLINE_BUCKET_KEY = "VITE_SUPABASE_SKYLINE_BUCKET" as const;
+const SKYLINE_OBJECT_KEY = "VITE_SUPABASE_SKYLINE_OBJECT" as const;
 
 const readBuildVersion = () => {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
@@ -75,12 +78,35 @@ export const asset = (p: string) => {
   return `${ASSET_BASE}/${normalizedPath}`;
 };
 
+const buildSupabasePublicUrl = (projectUrl: string, bucket: string, objectKey: string) => {
+  const normalizedProject = projectUrl.trim().replace(/\/$/, "");
+  const normalizedBucket = bucket.trim().replace(/^\/+|\/+$/g, "");
+  const normalizedObject = objectKey.trim().replace(/^\/+/, "");
+
+  if (!normalizedBucket || !normalizedObject) {
+    return "";
+  }
+
+  return `${normalizedProject}/storage/v1/object/public/${normalizedBucket}/${normalizedObject}`;
+};
+
 const resolveSkylineAsset = () => {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
   const configured = env?.[SKYLINE_ASSET_KEY];
   if (typeof configured === "string" && configured.trim().length > 0) {
     return configured.trim();
   }
+  const supabaseUrl = env?.[SUPABASE_URL_KEY];
+  const bucket = env?.[SKYLINE_BUCKET_KEY];
+  const objectKey = env?.[SKYLINE_OBJECT_KEY] || "KAFDH.webp";
+
+  if (typeof supabaseUrl === "string" && supabaseUrl.trim().length > 0 && typeof objectKey === "string") {
+    const publicUrl = buildSupabasePublicUrl(supabaseUrl, bucket ?? "", objectKey);
+    if (publicUrl) {
+      return publicUrl;
+    }
+  }
+
   return "KAFDH.webp";
 };
 

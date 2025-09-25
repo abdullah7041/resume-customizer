@@ -62,4 +62,20 @@ describe("skyline", () => {
     const { skyline } = await loadModule();
     expect(skyline()).toBe("/hero/custom.webp");
   });
+
+  it("builds a Supabase public asset url when bucket details are set", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_SKYLINE_BUCKET", "marketing");
+    vi.stubEnv("VITE_SUPABASE_SKYLINE_OBJECT", "hero/KAFDH.webp");
+    const { skyline } = await loadModule();
+    expect(skyline()).toBe(
+      "https://project.supabase.co/storage/v1/object/public/marketing/hero/KAFDH.webp",
+    );
+  });
+
+  it("falls back to the default asset when the bucket is missing", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    const { skyline } = await loadModule();
+    expect(skyline()).toBe("/KAFDH.webp");
+  });
 });

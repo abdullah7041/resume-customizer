@@ -59,6 +59,8 @@ Set these variables in your Netlify project:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_OPENAI_KEY`
+- `VITE_SUPABASE_SKYLINE_BUCKET` *(public bucket that stores marketing assets)*
+- `VITE_SUPABASE_SKYLINE_OBJECT` *(object path for the hero skyline, e.g. `hero/KAFDH.webp`)*
 
 ---
 
