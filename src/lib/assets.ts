@@ -96,7 +96,6 @@ const resolveSkylineAsset = () => {
   if (typeof configured === "string" && configured.trim().length > 0) {
     return configured.trim();
   }
-
   const supabaseUrl = env?.[SUPABASE_URL_KEY];
   const bucket = env?.[SKYLINE_BUCKET_KEY];
   const objectKey = env?.[SKYLINE_OBJECT_KEY] || "KAFDH.webp";
