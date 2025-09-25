@@ -11,6 +11,8 @@
   --color-accent-400: #D8B980;
   --color-accent-500: #C5A66A;
   --color-accent-600: #B18F53;
+  --accent-gold: #E3C77A;
+  --accent-gold-rgb: 227, 199, 122;
 
   --color-surface-50: #FFFFFF;
   --color-surface-900: #0F0F12;
@@ -43,3 +45,24 @@
   --gradient-muted: linear-gradient(135deg, rgba(11, 107, 58, 0.12) 0%, rgba(197, 166, 106, 0.12) 100%);
   --gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
+
+@keyframes accent-shimmer {
+  0% {
+    background-position: -200% 50%;
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.85;
+  }
+
+  80% {
+    opacity: 0.85;
+  }
+
+  100% {
+    background-position: 200% 50%;
+    opacity: 0;
+  }
+}
+
