@@ -59,6 +59,19 @@ const readEnvString = (key: string) => {
 };
 
 const trimTrailingSlashes = (value: string) => value.replace(/\/+$/, "");
+const trimLeadingSlashes = (value: string) => value.replace(/^\/+/, "");
+
+const joinUrlSegments = (...segments: Array<string | null | undefined>) =>
+  segments
+    .filter((segment): segment is string => typeof segment === "string" && segment.length > 0)
+    .map((segment, index) => {
+      if (index === 0) {
+        return trimTrailingSlashes(segment);
+      }
+
+      return trimLeadingSlashes(trimTrailingSlashes(segment));
+    })
+    .join("/");
 
 const getSupabaseBaseUrl = () => {
   const envValue = readEnvString("VITE_SUPABASE_URL");
@@ -96,7 +109,7 @@ export const getSkylineUrl = () => {
   }
 
   const baseUrl = getSupabaseBaseUrl();
-  const normalized = `${baseUrl}/${SKYLINE_OBJECT_PATH}`;
+  const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);
   const versionedUrl = withVersion(normalized);
 
   memoizedSkylineUrl = versionedUrl;
