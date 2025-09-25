@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
@@ -15,6 +15,14 @@ const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
 const heroMinHeightClass = "min-h-[calc(100vh-var(--hero-header-offset,4.5rem))]";
 
+const getPrefersReducedMotion = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+};
+
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const [theme, toggleTheme] = useTheme();
@@ -28,6 +36,12 @@ export default function Header() {
     }
   }, []);
   const [animateSkyline, setAnimateSkyline] = useState(false);
+  const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
+  const [heroVisible, setHeroVisible] = useState(initialReducedMotion);
+  const [workflowVisible, setWorkflowVisible] = useState(initialReducedMotion);
+  const heroAnimatedRef = useRef(initialReducedMotion);
+  const workflowAnimatedRef = useRef(initialReducedMotion);
 
   useEffect(() => {
     if (typeof window === "undefined" || !skylineUrl) {
@@ -38,6 +52,67 @@ export default function Header() {
     const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
     return () => window.clearTimeout(timer);
   }, [skylineUrl]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateFromMediaQuery = (event) => {
+      const shouldReduce = event.matches;
+      setPrefersReducedMotion(shouldReduce);
+
+      if (shouldReduce) {
+        heroAnimatedRef.current = true;
+        workflowAnimatedRef.current = true;
+        setHeroVisible(true);
+        setWorkflowVisible(true);
+      }
+    };
+
+    updateFromMediaQuery(mediaQuery);
+
+    let heroFrame;
+    let workflowTimer;
+
+    if (!mediaQuery.matches) {
+      if (!heroAnimatedRef.current) {
+        heroFrame = window.requestAnimationFrame(() => {
+          setHeroVisible(true);
+          heroAnimatedRef.current = true;
+        });
+      }
+
+      if (!workflowAnimatedRef.current) {
+        workflowTimer = window.setTimeout(() => {
+          setWorkflowVisible(true);
+          workflowAnimatedRef.current = true;
+        }, 140);
+      }
+    }
+
+    const removeMotionListener =
+      typeof mediaQuery.addEventListener === "function"
+        ? (() => {
+            mediaQuery.addEventListener("change", updateFromMediaQuery);
+            return () => mediaQuery.removeEventListener("change", updateFromMediaQuery);
+          })()
+        : (() => {
+            mediaQuery.addListener(updateFromMediaQuery);
+            return () => mediaQuery.removeListener(updateFromMediaQuery);
+          })();
+
+    return () => {
+      removeMotionListener();
+      if (typeof heroFrame === "number") {
+        window.cancelAnimationFrame(heroFrame);
+      }
+      if (typeof workflowTimer === "number") {
+        window.clearTimeout(workflowTimer);
+      }
+    };
+  }, []);
 
   const themeButtonClass = cn(
     "inline-flex h-10 w-10 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
@@ -109,7 +184,15 @@ export default function Header() {
         <div
           className={`${containerClass} grid flex-1 items-center gap-10 pb-16 pt-10 sm:gap-12 sm:pt-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:pb-20 lg:pt-16`}
         >
-          <div className="space-y-6 sm:space-y-7">
+          <div
+            className={cn(
+              "space-y-6 sm:space-y-7 transform-gpu",
+              prefersReducedMotion
+                ? "opacity-100"
+                : "transition-[opacity,transform] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+              heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            )}
+          >
             <span
               tabIndex={0}
               className="badge-gold-shimmer inline-flex items-center gap-2 self-center rounded-full border border-surface-50/35 bg-surface-900/60 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero sm:self-start"
@@ -131,22 +214,82 @@ export default function Header() {
               </p>
             </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
-              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+              <div
+                className={cn(
+                  "card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+                  prefersReducedMotion
+                    ? ""
+                    : "transform-gpu transition-[opacity,transform] duration-[520ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                )}
+                style={
+                  !prefersReducedMotion && heroVisible
+                    ? {
+                        transitionDelay: "120ms",
+                      }
+                    : undefined
+                }
+              >
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Smart Parsing</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Clean resume text</dd>
               </div>
-              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+              <div
+                className={cn(
+                  "card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+                  prefersReducedMotion
+                    ? ""
+                    : "transform-gpu transition-[opacity,transform] duration-[520ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                )}
+                style={
+                  !prefersReducedMotion && heroVisible
+                    ? {
+                        transitionDelay: "180ms",
+                      }
+                    : undefined
+                }
+              >
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Match Score</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Saudi market fit</dd>
               </div>
-              <div className="card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+              <div
+                className={cn(
+                  "card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+                  prefersReducedMotion
+                    ? ""
+                    : "transform-gpu transition-[opacity,transform] duration-[520ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                )}
+                style={
+                  !prefersReducedMotion && heroVisible
+                    ? {
+                        transitionDelay: "240ms",
+                      }
+                    : undefined
+                }
+              >
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Polished Output</dt>
                 <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Optimized insights</dd>
               </div>
             </dl>
           </div>
 
-          <div className="card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-sand-50/95 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-lg sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70">
+          <div
+            className={cn(
+              "card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-sand-50/95 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-lg sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+              prefersReducedMotion
+                ? ""
+                : "transform-gpu transition-[opacity,transform] duration-[560ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+              workflowVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            )}
+            style={
+              !prefersReducedMotion && workflowVisible
+                ? {
+                    transitionDelay: "220ms",
+                  }
+                : undefined
+            }
+          >
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
