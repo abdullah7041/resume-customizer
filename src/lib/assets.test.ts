@@ -74,13 +74,15 @@ describe("getSkylineUrl", () => {
     consoleSpy.mockRestore();
   });
 
-  it("rejects duplicates like .../KAFDH.webp/KAFDH.webp", async () => {
+  it("rejects when VITE_SUPABASE_URL is a full object URL (prevents .../KAFDH.webp/KAFDH.webp)", async () => {
     vi.stubEnv(
       "VITE_SUPABASE_URL",
       "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp/",
     );
     const { getSkylineUrl } = await loadModule();
-    expect(() => getSkylineUrl()).toThrow(/duplicated/i);
+    // The new guard explains the *real* misconfiguration:
+    // VITE_SUPABASE_URL must be the project base, not an object URL.
+    expect(() => getSkylineUrl()).toThrow(/project.*url/i);
   });
 
   it("trims accidental double slashes", async () => {
