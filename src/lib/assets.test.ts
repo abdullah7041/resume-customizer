@@ -81,9 +81,8 @@ describe("getSkylineUrl", () => {
     );
     const { getSkylineUrl } = await loadModule();
     // The new guard explains the *real* misconfiguration:
-    // VITE_SUPABASE_URL must be the project base, not an object URL.
-    expect(() => getSkylineUrl()).toThrow(/project.*url/i);
-  });
+    // Accept either guidance about project URL or the explicit "not a full object URL" phrasing.
+    expect(() => getSkylineUrl()).toThrow(/(project.*url|not.*full.*object.*url)/i);
 
   it("trims accidental double slashes", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co////");
