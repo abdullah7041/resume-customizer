@@ -138,7 +138,27 @@ export const getSkylineUrl = () => {
     return memoizedSkylineUrl;
   }
 
+  // Detects if the final filename appears more than once as a path *segment*
+const hasDuplicateFilename = (pathname: string, file: string) => {
+  // match “…/file” when followed by slash or end of string
+  const re = new RegExp(`/${file}(?=(/|$))`, "g");
+  const matches = pathname.match(re);
+  return Array.isArray(matches) && matches.length > 1;
+};
+
+// Guard against someone setting VITE_SUPABASE_URL to a *full object URL*.
+const looksLikeObjectUrl = (baseUrl: string) => {
+  return /\/storage\/v1\/object\/public\//.test(baseUrl) || /\/KAFDH\.webp(?:$|[/?#])/.test(baseUrl);
+};
+
+
   const baseUrl = getSupabaseBaseUrl();
+  if (looksLikeObjectUrl(baseUrl)) {
+  throw new Error(
+    "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
+  );
+}
+
   const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);
   const sanitizedUrlString = validatePublicUrl(normalized);
   const sanitizedUrl = new URL(sanitizedUrlString);
@@ -148,20 +168,15 @@ export const getSkylineUrl = () => {
     sanitizedUrl.pathname = normalizedPath;
   }
 
-  const skylineOccurrences = normalizedPath
-    .split("/")
-    .filter(Boolean)
-    .filter((segment) => segment === SKYLINE_FILENAME).length;
+  // Ensure exactly one filename segment occurs in the pathname
+if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
+  throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
+}
 
-  if (skylineOccurrences === 0) {
-    throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
-  }
+if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
+  throw new Error(`Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`);
+}
 
-  if (skylineOccurrences > 1) {
-    throw new Error(
-      `Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`,
-    );
-  }
 
   const versionedUrl = withVersion(sanitizedUrl.toString());
 
