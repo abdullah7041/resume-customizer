@@ -78,8 +78,11 @@ describe("getSkylineUrl", () => {
       "VITE_SUPABASE_URL",
       "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp/",
     );
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { getSkylineUrl } = await loadModule();
     expect(() => getSkylineUrl()).toThrowError(/(project.*url|not.*full.*object.*url)/i);
+    expect(consoleSpy).toHaveBeenCalledOnce();
+    consoleSpy.mockRestore();
   });
 
   it("trims accidental double slashes", async () => {
