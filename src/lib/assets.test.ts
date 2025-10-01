@@ -80,7 +80,7 @@ describe("getSkylineUrl", () => {
     );
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { getSkylineUrl } = await loadModule();
-    expect(() => getSkylineUrl()).toThrowError(/(project.*url|not.*full.*object.*url)/i);
+    expect(() => getSkylineUrl()).toThrow(/(project.*url|not.*full.*object.*url)/i);
     expect(consoleSpy).toHaveBeenCalledOnce();
     consoleSpy.mockRestore();
   });

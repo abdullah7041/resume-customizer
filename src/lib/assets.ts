@@ -146,6 +146,14 @@ const hasDuplicateFilename = (pathname: string, file: string) => {
   return Array.isArray(matches) && matches.length > 1;
 };
 
+// If base url is misconfigured to a full object path, sanitize it to just the project root.
+const toProjectBase = (baseUrl: string) => {
+  // e.g. https://xxx.supabase.co/storage/v1/object/public/... --> https://xxx.supabase.co
+  const url = new URL(baseUrl);
+  // project base is just origin for Supabase
+  return url.origin;
+};
+
 // Guard against someone setting VITE_SUPABASE_URL to a *full object URL*.
 const looksLikeObjectUrl = (baseUrl: string) => {
   return /\/storage\/v1\/object\/public\//.test(baseUrl) || /\/KAFDH\.webp(?:$|[/?#])/.test(baseUrl);
@@ -154,12 +162,26 @@ const looksLikeObjectUrl = (baseUrl: string) => {
 
   const baseUrl = getSupabaseBaseUrl();
   if (looksLikeObjectUrl(baseUrl)) {
-    console.error(
+    const msg =
       "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
-    );
-    throw new Error(
-      "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
-    );
+    if (shouldStrictThrow()) {
+      throw new Error(msg);
+    } else {
+      // In production build, don't kill the build—sanitize and continue.
+      console.error(msg);
+      const sanitizedBase = toProjectBase(baseUrl);
+      // Re-validate after sanitizing
+      const validated = validatePublicUrl(sanitizedBase);
+      const normalized = joinUrlSegments(validated, SKYLINE_OBJECT_PATH);
+      const sanitizedUrlString = validatePublicUrl(normalized);
+      const finalUrl = withVersion(sanitizedUrlString);
+      memoizedSkylineUrl = finalUrl;
+      if (!hasLoggedSkylineUrl && isDevEnvironment()) {
+        console.info("[skylineUrl]", finalUrl);
+        hasLoggedSkylineUrl = true;
+      }
+      return finalUrl;
+    }
   }
 
   const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);
@@ -192,3 +214,9 @@ if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
 
   return versionedUrl;
 };
+
+function shouldStrictThrow(): boolean {
+  // Return true in development to throw errors, false in production to sanitize
+  return isDevEnvironment();
+}
+
