@@ -164,11 +164,11 @@ const looksLikeObjectUrl = (baseUrl: string) => {
   if (looksLikeObjectUrl(baseUrl)) {
     const msg =
       "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
+    console.error(msg);
     if (shouldStrictThrow()) {
       throw new Error(msg);
     } else {
       // In production build, don't kill the build—sanitize and continue.
-      console.error(msg);
       const sanitizedBase = toProjectBase(baseUrl);
       // Re-validate after sanitizing
       const validated = validatePublicUrl(sanitizedBase);
