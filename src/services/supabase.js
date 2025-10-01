@@ -65,6 +65,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
   const baseName = cleanBaseName(file?.name || "");
   const bucket = supabase.storage.from("resumes");
   const maxAttempts = 5;
+  const contentType = typeof file?.type === "string" && file.type.length > 0 ? file.type : "application/octet-stream";
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const candidateName = buildVersionedName(baseName, attempt);
@@ -73,6 +74,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
     const { error } = await bucket.upload(path, file, {
       cacheControl: "3600",
       upsert: false,
+      contentType,
       onUploadProgress: (progressEvent) => {
         if (typeof onProgress === "function") {
           onProgress(progressEvent);
@@ -89,10 +91,39 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
       continue;
     }
 
+    const message = typeof error?.message === "string" ? error.message : "";
+    const normalized = message.toLowerCase();
+
+    if (status === 400) {
+      if (normalized.includes("bucket") && normalized.includes("not")) {
+        throw new AppError({
+          code: "upload/bucket-missing",
+          message: "Resume storage bucket is missing or misconfigured.",
+          hint: "Create a 'resumes' bucket in Supabase Storage and allow authenticated uploads.",
+        });
+      }
+
+      if (normalized.includes("invalid") || normalized.includes("payload")) {
+        throw new AppError({
+          code: "upload/invalid-request",
+          message: "Supabase rejected the upload request.",
+          hint: message || "Review your Supabase storage rules and request payload.",
+        });
+      }
+    }
+
+    if (status === 403) {
+      throw new AppError({
+        code: "auth/unauthorized",
+        message: "You're not allowed to upload to this storage bucket.",
+        hint: "Ask the workspace owner to update Supabase storage policies for authenticated users.",
+      });
+    }
+
     throw new AppError({
       code: "upload/storage-failure",
       message: "We couldn't store your resume.",
-      hint: "Please try again.",
+      hint: message || "Please try again.",
     });
   }
 
