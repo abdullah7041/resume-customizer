@@ -154,10 +154,13 @@ const looksLikeObjectUrl = (baseUrl: string) => {
 
   const baseUrl = getSupabaseBaseUrl();
   if (looksLikeObjectUrl(baseUrl)) {
-  throw new Error(
-    "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
-  );
-}
+    console.error(
+      "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
+    );
+    throw new Error(
+      "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
+    );
+  }
 
   const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);
   const sanitizedUrlString = validatePublicUrl(normalized);
