@@ -163,13 +163,8 @@ export default function MainContent() {
           { id: TOAST_IDS.upload }
         );
 
-        const content =
-          typeof resumeInput === "string"
-            ? resumeInput
-            : await resumeInput.text();
-
         setFlowProgress(48);
-        const parsed = await parseResume(content);
+        const parsed = await parseResume(resumeInput);
         setFlowProgress(88);
         setResumeData(parsed);
         setMatchAnalysis(null);
