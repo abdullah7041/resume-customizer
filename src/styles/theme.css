@@ -49,11 +49,9 @@
   --shadow-soft: var(--shadow-soft-value);
   --gradient-primary: var(--gradient-primary-value);
   --gradient-muted: var(--gradient-muted-value);
-  --gradient-card: var(--gradient-card-value);
-}
+--gradient-card: var(--gradient-card-value);
 
-@theme {
-  --color-primary-400: color-mix(in oklab, var(--emerald-700), transparent 10%);
+--color-primary-400: color-mix(in oklab, var(--emerald-700), transparent 10%);
   --color-primary-500: var(--emerald-700);
   --color-primary-600: color-mix(in oklab, var(--emerald-900), var(--emerald-700) 22%);
   --color-primary-700: var(--emerald-900);
@@ -92,12 +90,13 @@
 
   --gradient-primary: var(--gradient-primary-value);
   --gradient-muted: var(--gradient-muted-value);
+  --gradient-primary: var(--gradient-primary-value);
+  --gradient-muted: var(--gradient-muted-value);
   --gradient-card: var(--gradient-card-value);
 }
 
+:root.dark,
 .dark {
-  --surface-50: #edf6f1;
-  --surface-50-rgb: 237 246 241;
   --surface-900: #020c08;
   --surface-900-rgb: 2 12 8;
 

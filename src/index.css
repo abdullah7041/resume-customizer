@@ -73,13 +73,6 @@
   }
 }
 
-@utility card {
-  @apply bg-white rounded-2xl shadow-soft p-6;
-  ::selection {
-    background-color: color-mix(in srgb, var(--color-secondary-500) 35%, transparent);
-    color: var(--color-surface-50);
-  }
-}
 
 @layer utilities {
   .shadow-card {
@@ -90,12 +83,19 @@
     box-shadow: var(--shadow-soft);
   }
 
-  .transition-snappy {
-    transition: all var(--duration-snappy) var(--transition-snappy);
+  .card {
+    background-color: #ffffff;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-soft);
+    padding: 1.5rem;
+  }
+
+  .card::selection {
+    background-color: color-mix(in srgb, var(--color-secondary-500) 35%, transparent);
+    color: var(--color-surface-50);
   }
 
   .app-shell {
-    width: 100%;
     max-width: var(--app-shell-max);
     margin-inline: auto;
     padding-inline: var(--app-shell-gutter);

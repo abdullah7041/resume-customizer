@@ -13,7 +13,6 @@ describe("runOptimization", () => {
     if (originalFetch) {
       global.fetch = originalFetch;
     } else {
-      // @ts-expect-error - cleanup for environments without fetch
       delete global.fetch;
     }
     vi.restoreAllMocks();
