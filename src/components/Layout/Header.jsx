@@ -36,6 +36,7 @@ export default function Header() {
     }
   }, []);
   const [animateSkyline, setAnimateSkyline] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
   const [heroVisible, setHeroVisible] = useState(initialReducedMotion);
@@ -47,6 +48,12 @@ export default function Header() {
     if (typeof window === "undefined" || !skylineUrl) {
       return undefined;
     }
+
+    // Preload the image
+    const img = new Image();
+    img.onload = () => setImageLoaded(true);
+    img.onerror = () => setImageLoaded(true); // Still set loaded even on error to hide skeleton
+    img.src = skylineUrl;
 
     setAnimateSkyline(true);
     const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
@@ -323,12 +330,21 @@ export default function Header() {
           </div>
         </div>
       </div>
+      {/* Skeleton loader for hero image */}
+      {typeof skylineUrl === "string" && skylineUrl && !imageLoaded ? (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-40 pointer-events-none bg-gradient-to-b from-surface-900/5 via-emerald-900/10 to-surface-900/5 animate-pulse"
+        />
+      ) : null}
+      {/* Hero background image */}
       {typeof skylineUrl === "string" && skylineUrl ? (
         <div
           aria-hidden="true"
           className={cn(
             "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
-            animateSkyline ? "skyline-once" : "skyline-still"
+            animateSkyline ? "skyline-once" : "skyline-still",
+            !imageLoaded && "opacity-0"
           )}
           style={{ backgroundImage: `url('${skylineUrl}')` }}
         />
