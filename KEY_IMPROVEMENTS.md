@@ -116,7 +116,7 @@ useEffect(() => {
     skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
     !skylineLoaded && "opacity-0" // NEW: Hide until loaded
   )}
-  style={{ backgroundImage: `url('${skylineUrl}')` }}
+  style=\{\{ backgroundImage: `url('${skylineUrl}')` \}\}
 />
 ```
 
