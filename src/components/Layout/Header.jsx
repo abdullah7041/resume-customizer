@@ -29,12 +29,15 @@ export default function Header() {
   const isDark = theme === "dark";
   const skylineUrl = useMemo(() => {
     try {
-      return getSkylineUrl();
+      const url = getSkylineUrl();
+      console.log("[skylineUrl]", url);
+      return url;
     } catch (error) {
       console.error("Failed to resolve skyline asset", error);
       return "";
     }
   }, []);
+  const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
   const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
@@ -43,15 +46,37 @@ export default function Header() {
   const heroAnimatedRef = useRef(initialReducedMotion);
   const workflowAnimatedRef = useRef(initialReducedMotion);
 
+  // Preload skyline image
   useEffect(() => {
     if (typeof window === "undefined" || !skylineUrl) {
+      return undefined;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      setSkylineLoaded(true);
+    };
+    img.onerror = () => {
+      console.error("Failed to load skyline image:", skylineUrl);
+      setSkylineLoaded(false);
+    };
+    img.src = skylineUrl;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [skylineUrl]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !skylineUrl || !skylineLoaded) {
       return undefined;
     }
 
     setAnimateSkyline(true);
     const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
     return () => window.clearTimeout(timer);
-  }, [skylineUrl]);
+  }, [skylineUrl, skylineLoaded]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -323,15 +348,27 @@ export default function Header() {
           </div>
         </div>
       </div>
+      {/* Skyline background image with loading state */}
       {typeof skylineUrl === "string" && skylineUrl ? (
-        <div
-          aria-hidden="true"
-          className={cn(
-            "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
-            animateSkyline ? "skyline-once" : "skyline-still"
+        <>
+          {/* Skeleton loader while image loads */}
+          {!skylineLoaded && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -z-40 pointer-events-none bg-gradient-to-b from-emerald-900/20 via-emerald-800/10 to-transparent animate-pulse"
+            />
           )}
-          style={{ backgroundImage: `url('${skylineUrl}')` }}
-        />
+          {/* Actual skyline image */}
+          <div
+            aria-hidden="true"
+            className={cn(
+              "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
+              skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
+              !skylineLoaded && "opacity-0"
+            )}
+            style={{ backgroundImage: `url('${skylineUrl}')` }}
+          />
+        </>
       ) : null}
       <div
         aria-hidden="true"

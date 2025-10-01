@@ -124,10 +124,20 @@ const isDevEnvironment = () => {
   if (typeof metaEnv.DEV === "boolean") {
     return metaEnv.DEV;
   }
+  
+  // Check for MODE as well (Vite uses this)
+  if (typeof metaEnv.MODE === "string") {
+    return metaEnv.MODE !== "production";
+  }
 
   const runtimeEnv = typeof process !== "undefined" ? process.env ?? {} : {};
   if (typeof runtimeEnv.NODE_ENV === "string") {
     return runtimeEnv.NODE_ENV !== "production";
+  }
+
+  // Default to development in test environments
+  if (typeof runtimeEnv.VITEST === "string" || typeof runtimeEnv.NODE_ENV === "undefined") {
+    return true;
   }
 
   return false;
@@ -163,12 +173,15 @@ const looksLikeObjectUrl = (baseUrl: string) => {
   const baseUrl = getSupabaseBaseUrl();
   if (looksLikeObjectUrl(baseUrl)) {
     const msg =
-      "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL."
+      "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL.";
+    
+    // Always log the error for visibility
+    console.error(msg);
+    
     if (shouldStrictThrow()) {
       throw new Error(msg);
     } else {
       // In production build, don't kill the build—sanitize and continue.
-      console.error(msg);
       const sanitizedBase = toProjectBase(baseUrl);
       // Re-validate after sanitizing
       const validated = validatePublicUrl(sanitizedBase);
