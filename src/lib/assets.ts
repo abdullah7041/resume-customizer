@@ -60,6 +60,24 @@ const readEnvString = (key: string) => {
 
 const trimTrailingSlashes = (value: string) => value.replace(/\/+$/, "");
 
+const coerceBoolean = (value: unknown): boolean | null => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "0", "no", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return null;
+};
+
 export const validatePublicUrl = (url: string) => {
   if (typeof url !== "string") {
     throw new TypeError("Public URL must be a string.");
@@ -204,36 +222,34 @@ const readStrictOverride = (): boolean | null => {
 
 const isDevEnvironment = () => {
   const metaEnv = (import.meta as { env?: Record<string, unknown> }).env ?? {};
-  if (typeof metaEnv.DEV === "boolean") {
-    return metaEnv.DEV;
-  }
-
-  if (typeof metaEnv.DEV === "string") {
-    const normalized = metaEnv.DEV.trim().toLowerCase();
-    if (normalized === "false" || normalized === "0") {
-      return false;
-    }
-    if (normalized === "true" || normalized === "1") {
-      return true;
-    }
-  }
-  
-  // Check for MODE as well (Vite uses this)
-  if (typeof metaEnv.MODE === "string") {
-    return metaEnv.MODE !== "production";
-  }
-
   const runtimeEnv = typeof process !== "undefined" ? process.env ?? {} : {};
-  if (typeof runtimeEnv.NODE_ENV === "string") {
-    return runtimeEnv.NODE_ENV !== "production";
-  }
 
-  // Default to development in test environments
-  if (typeof runtimeEnv.VITEST === "string" || typeof runtimeEnv.NODE_ENV === "undefined") {
+  const vitestRuntime = coerceBoolean(runtimeEnv.VITEST);
+  if (vitestRuntime === true) {
     return true;
   }
 
-  return false;
+  const devMeta = coerceBoolean(metaEnv.DEV);
+  if (devMeta !== null) {
+    return devMeta;
+  }
+
+  if (typeof metaEnv.MODE === "string") {
+    return metaEnv.MODE.trim().toLowerCase() !== "production";
+  }
+
+  const nodeEnv = typeof runtimeEnv.NODE_ENV === "string"
+    ? runtimeEnv.NODE_ENV.trim().toLowerCase()
+    : null;
+  if (nodeEnv) {
+    return nodeEnv !== "production";
+  }
+
+  if (vitestRuntime === false) {
+    return false;
+  }
+
+  return true;
 };
 
 export const getSkylineUrl = () => {
