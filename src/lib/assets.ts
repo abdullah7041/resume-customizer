@@ -109,20 +109,113 @@ const getSupabaseBaseUrl = () => {
     );
   }
 
-  const validated = validatePublicUrl(envValue);
-  return trimTrailingSlashes(validated);
+  return envValue;
 };
 
 const SKYLINE_OBJECT_PATH = "storage/v1/object/public/ui-assets/KAFDH.webp";
 const SKYLINE_FILENAME = "KAFDH.webp";
 
+const hasDuplicateFilename = (pathname: string, file: string) => {
+  const re = new RegExp(`/${file}(?=(/|$))`, "g");
+  const matches = pathname.match(re);
+  return Array.isArray(matches) && matches.length > 1;
+};
+
+const looksLikeObjectUrl = (baseUrl: string) => {
+  return (
+    /\/storage\/v1\/object\/public\//.test(baseUrl) ||
+    /\/KAFDH\.webp(?:$|[/?#])/.test(baseUrl)
+  );
+};
+
+const toProjectBase = (baseUrl: string) => {
+  const url = new URL(baseUrl);
+  return url.origin;
+};
+
+const normalizeSupabaseProjectUrl = (rawBase: string, strictThrow: boolean) => {
+  const validated = validatePublicUrl(rawBase);
+  const normalized = trimTrailingSlashes(validated);
+
+  if (!looksLikeObjectUrl(normalized)) {
+    return normalized;
+  }
+
+  const msg =
+    "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL.";
+
+  console.error(msg);
+
+  if (strictThrow) {
+    throw new Error(msg);
+  }
+
+  const sanitizedBase = toProjectBase(normalized);
+  const sanitizedValidated = validatePublicUrl(sanitizedBase);
+  return trimTrailingSlashes(sanitizedValidated);
+};
+
+const buildSkylineObjectUrl = (projectBase: string) => {
+  const joined = joinUrlSegments(projectBase, SKYLINE_OBJECT_PATH);
+  const sanitizedUrlString = validatePublicUrl(joined);
+  const sanitizedUrl = new URL(sanitizedUrlString);
+
+  const normalizedPath = sanitizedUrl.pathname.replace(/\/{2,}/g, "/");
+  if (normalizedPath !== sanitizedUrl.pathname) {
+    sanitizedUrl.pathname = normalizedPath;
+  }
+
+  if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
+    throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
+  }
+
+  if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
+    throw new Error(
+      `Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`,
+    );
+  }
+
+  return sanitizedUrl.toString();
+};
+
 let memoizedSkylineUrl: string | null = null;
 let hasLoggedSkylineUrl = false;
+
+const readStrictOverride = (): boolean | null => {
+  const overrideValue =
+    readEnvString("VITE_SUPABASE_STRICT_SKYLINE") ??
+    readEnvString("SUPABASE_STRICT_SKYLINE");
+
+  if (!overrideValue) {
+    return null;
+  }
+
+  const normalized = overrideValue.trim().toLowerCase();
+  if (["false", "0", "off", "no"].includes(normalized)) {
+    return false;
+  }
+
+  if (["true", "1", "on", "yes"].includes(normalized)) {
+    return true;
+  }
+
+  return null;
+};
 
 const isDevEnvironment = () => {
   const metaEnv = (import.meta as { env?: Record<string, unknown> }).env ?? {};
   if (typeof metaEnv.DEV === "boolean") {
     return metaEnv.DEV;
+  }
+
+  if (typeof metaEnv.DEV === "string") {
+    const normalized = metaEnv.DEV.trim().toLowerCase();
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
   }
   
   // Check for MODE as well (Vite uses this)
@@ -148,75 +241,11 @@ export const getSkylineUrl = () => {
     return memoizedSkylineUrl;
   }
 
-  // Detects if the final filename appears more than once as a path *segment*
-const hasDuplicateFilename = (pathname: string, file: string) => {
-  // match “…/file” when followed by slash or end of string
-  const re = new RegExp(`/${file}(?=(/|$))`, "g");
-  const matches = pathname.match(re);
-  return Array.isArray(matches) && matches.length > 1;
-};
-
-// If base url is misconfigured to a full object path, sanitize it to just the project root.
-const toProjectBase = (baseUrl: string) => {
-  // e.g. https://xxx.supabase.co/storage/v1/object/public/... --> https://xxx.supabase.co
-  const url = new URL(baseUrl);
-  // project base is just origin for Supabase
-  return url.origin;
-};
-
-// Guard against someone setting VITE_SUPABASE_URL to a *full object URL*.
-const looksLikeObjectUrl = (baseUrl: string) => {
-  return /\/storage\/v1\/object\/public\//.test(baseUrl) || /\/KAFDH\.webp(?:$|[/?#])/.test(baseUrl);
-};
-
-
-  const baseUrl = getSupabaseBaseUrl();
-  if (looksLikeObjectUrl(baseUrl)) {
-    const msg =
-      "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL.";
-    
-    // Always log the error for visibility
-    console.error(msg);
-    
-    if (shouldStrictThrow()) {
-      throw new Error(msg);
-    } else {
-      // In production build, don't kill the build—sanitize and continue.
-      const sanitizedBase = toProjectBase(baseUrl);
-      // Re-validate after sanitizing
-      const validated = validatePublicUrl(sanitizedBase);
-      const normalized = joinUrlSegments(validated, SKYLINE_OBJECT_PATH);
-      const sanitizedUrlString = validatePublicUrl(normalized);
-      const finalUrl = withVersion(sanitizedUrlString);
-      memoizedSkylineUrl = finalUrl;
-      if (!hasLoggedSkylineUrl && isDevEnvironment()) {
-        console.info("[skylineUrl]", finalUrl);
-        hasLoggedSkylineUrl = true;
-      }
-      return finalUrl;
-    }
-  }
-
-  const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);
-  const sanitizedUrlString = validatePublicUrl(normalized);
-  const sanitizedUrl = new URL(sanitizedUrlString);
-
-  const normalizedPath = sanitizedUrl.pathname.replace(/\/{2,}/g, "/");
-  if (normalizedPath !== sanitizedUrl.pathname) {
-    sanitizedUrl.pathname = normalizedPath;
-  }
-
-  // Ensure exactly one filename segment occurs in the pathname
-if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
-  throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
-}
-
-if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
-  throw new Error(`Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`);
-}
-
-
-  const versionedUrl = withVersion(sanitizedUrl.toString());
+  const strictThrow = shouldStrictThrow();
+  const rawBaseUrl = getSupabaseBaseUrl();
+  const projectBaseUrl = normalizeSupabaseProjectUrl(rawBaseUrl, strictThrow);
+  const skylineUrl = buildSkylineObjectUrl(projectBaseUrl);
+  const versionedUrl = withVersion(skylineUrl);
 
   memoizedSkylineUrl = versionedUrl;
 
@@ -229,6 +258,11 @@ if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
 };
 
 function shouldStrictThrow(): boolean {
+  const override = readStrictOverride();
+  if (override !== null) {
+    return override;
+  }
+
   // Return true in development to throw errors, false in production to sanitize
   return isDevEnvironment();
 }
