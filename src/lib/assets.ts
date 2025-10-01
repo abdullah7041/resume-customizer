@@ -119,6 +119,7 @@ const SKYLINE_FILENAME = "KAFDH.webp";
 let memoizedSkylineUrl: string | null = null;
 let hasLoggedSkylineUrl = false;
 
+
 const isDevEnvironment = () => {
   const metaEnv = (import.meta as { env?: Record<string, unknown> }).env ?? {};
   if (typeof metaEnv.DEV === "boolean") {
@@ -133,14 +134,9 @@ const isDevEnvironment = () => {
   return false;
 };
 
-export const getSkylineUrl = () => {
-  if (memoizedSkylineUrl) {
-    return memoizedSkylineUrl;
-  }
-
-  // Detects if the final filename appears more than once as a path *segment*
+// Detects if the final filename appears more than once as a path *segment*
 const hasDuplicateFilename = (pathname: string, file: string) => {
-  // match “…/file” when followed by slash or end of string
+  // match "…/file" when followed by slash or end of string
   const re = new RegExp(`/${file}(?=(/|$))`, "g");
   const matches = pathname.match(re);
   return Array.isArray(matches) && matches.length > 1;
@@ -151,6 +147,10 @@ const looksLikeObjectUrl = (baseUrl: string) => {
   return /\/storage\/v1\/object\/public\//.test(baseUrl) || /\/KAFDH\.webp(?:$|[/?#])/.test(baseUrl);
 };
 
+export const getSkylineUrl = () => {
+  if (memoizedSkylineUrl) {
+    return memoizedSkylineUrl;
+  }
 
   const baseUrl = getSupabaseBaseUrl();
   if (looksLikeObjectUrl(baseUrl)) {
@@ -172,14 +172,13 @@ const looksLikeObjectUrl = (baseUrl: string) => {
   }
 
   // Ensure exactly one filename segment occurs in the pathname
-if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
-  throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
-}
+  if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
+    throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
+  }
 
-if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
-  throw new Error(`Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`);
-}
-
+  if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
+    throw new Error(`Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`);
+  }
 
   const versionedUrl = withVersion(sanitizedUrl.toString());
 
