@@ -91,6 +91,22 @@ const extractPdfText = async (buffer: Buffer): Promise<string> => {
     }
   }
 
+  // Fallback: try to extract text from stream objects if no BT/ET blocks found
+  if (lines.length === 0) {
+    const streamMatches = content.matchAll(/stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g);
+    for (const match of streamMatches) {
+      const streamContent = match[1];
+      // Try to find text patterns in the stream
+      const textPatterns = streamContent.matchAll(/\(([^)]+)\)/g);
+      for (const textMatch of textPatterns) {
+        const text = decodePdfEscapes(textMatch[1]).trim();
+        if (text && text.length > 0) {
+          lines.push(text);
+        }
+      }
+    }
+  }
+
   return lines.join("\n");
 };
 
@@ -254,7 +270,9 @@ const handler: Handler = async (event) => {
       return {
         statusCode: 400,
         headers: HEADERS,
-        body: JSON.stringify({ error: "Unable to extract readable text from the resume." }),
+        body: JSON.stringify({ 
+          error: "Unable to extract readable text from the resume. Please ensure your PDF contains selectable text (not scanned images). Try uploading a different format or pasting the text directly." 
+        }),
       };
     }
 
@@ -265,10 +283,16 @@ const handler: Handler = async (event) => {
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to parse resume.";
+    const userMessage = message.includes("Unsupported") 
+      ? "Unsupported file type. Please upload a PDF or DOCX file, or paste your resume text directly."
+      : message.includes("exceeds")
+      ? "File is too large. Please use a file smaller than 8 MB."
+      : `Unable to parse resume: ${message}`;
+    
     return {
       statusCode: 400,
       headers: HEADERS,
-      body: JSON.stringify({ error: message }),
+      body: JSON.stringify({ error: userMessage }),
     };
   }
 };

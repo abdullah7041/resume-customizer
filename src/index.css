@@ -9,6 +9,26 @@
     --app-shell-gutter: clamp(1.25rem, 5vw, 3rem);
   }
 
+  /* View Transitions API support for smooth theme switching */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(root) {
+    z-index: 1;
+  }
+
+  ::view-transition-new(root) {
+    z-index: 2;
+  }
+
+  html::view-transition-group(root) {
+    animation-duration: 0.4s;
+    animation-timing-function: var(--transition-snappy);
+  }
+
   html,
   body,
   #root,

@@ -40,12 +40,23 @@ const resolvePreferredTheme = () => {
 const applyThemeToDocument = (theme) => {
   if (typeof document === "undefined") return;
   const isDark = theme === "dark";
-  document.documentElement.classList.toggle("dark", isDark);
-  document.documentElement.classList.toggle("light", !isDark);
-  const value = isDark ? "dark" : "light";
-  document.documentElement.dataset.theme = value;
-  document.documentElement.setAttribute("data-theme", value);
-  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  
+  // Use View Transitions API if available for smoother color transitions
+  const updateTheme = () => {
+    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.classList.toggle("light", !isDark);
+    const value = isDark ? "dark" : "light";
+    document.documentElement.dataset.theme = value;
+    document.documentElement.setAttribute("data-theme", value);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  };
+  
+  // Check if View Transitions API is supported
+  if (typeof document.startViewTransition === "function" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.startViewTransition(() => updateTheme());
+  } else {
+    updateTheme();
+  }
 };
 
 const persistTheme = (theme) => {
@@ -88,9 +99,14 @@ export const initializeTheme = () => ensureDocumentTheme();
 export function useTheme() {
   const [theme, setTheme] = useState(() => ensureDocumentTheme());
   const hasExplicitPreference = useRef(readStoredTheme() !== null);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    applyThemeToDocument(theme);
+    // Only apply if this is not the initial mount or if theme changed
+    if (!isInitialMount.current) {
+      applyThemeToDocument(theme);
+    }
+    isInitialMount.current = false;
   }, [theme]);
 
   useEffect(() => {

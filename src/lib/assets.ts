@@ -102,10 +102,15 @@ const joinUrlSegments = (...segments: Array<string | null | undefined>) =>
     .join("/");
 
 const getSupabaseBaseUrl = () => {
-  const envValue = readEnvString("VITE_SUPABASE_URL");
+  // Try VITE_ASSETS_BASE_URL first (for CDN or custom asset hosting)
+  // Fall back to VITE_SUPABASE_URL (for direct Supabase storage)
+  const assetsUrl = readEnvString("VITE_ASSETS_BASE_URL");
+  const supabaseUrl = readEnvString("VITE_SUPABASE_URL");
+  const envValue = assetsUrl || supabaseUrl;
+  
   if (!envValue) {
     throw new Error(
-      "Missing VITE_SUPABASE_URL – required to resolve the skyline asset URL.",
+      "Missing VITE_ASSETS_BASE_URL or VITE_SUPABASE_URL – required to resolve the skyline asset URL.",
     );
   }
 
@@ -173,28 +178,29 @@ const looksLikeObjectUrl = (baseUrl: string) => {
   const baseUrl = getSupabaseBaseUrl();
   if (looksLikeObjectUrl(baseUrl)) {
     const msg =
-      "VITE_SUPABASE_URL must be the Supabase *project* URL (e.g. https://xxxx.supabase.co), not a full object URL.";
+      "VITE_ASSETS_BASE_URL/VITE_SUPABASE_URL must be a base URL (e.g. https://xxxx.supabase.co or https://cdn.example.com), not a full object URL.";
     
     // Always log the error for visibility
     console.error(msg);
     
+    // Always throw in development and test environments
     if (shouldStrictThrow()) {
       throw new Error(msg);
-    } else {
-      // In production build, don't kill the build—sanitize and continue.
-      const sanitizedBase = toProjectBase(baseUrl);
-      // Re-validate after sanitizing
-      const validated = validatePublicUrl(sanitizedBase);
-      const normalized = joinUrlSegments(validated, SKYLINE_OBJECT_PATH);
-      const sanitizedUrlString = validatePublicUrl(normalized);
-      const finalUrl = withVersion(sanitizedUrlString);
-      memoizedSkylineUrl = finalUrl;
-      if (!hasLoggedSkylineUrl && isDevEnvironment()) {
-        console.info("[skylineUrl]", finalUrl);
-        hasLoggedSkylineUrl = true;
-      }
-      return finalUrl;
     }
+    
+    // In production build, sanitize and continue but still log the error
+    const sanitizedBase = toProjectBase(baseUrl);
+    // Re-validate after sanitizing
+    const validated = validatePublicUrl(sanitizedBase);
+    const normalized = joinUrlSegments(validated, SKYLINE_OBJECT_PATH);
+    const sanitizedUrlString = validatePublicUrl(normalized);
+    const finalUrl = withVersion(sanitizedUrlString);
+    memoizedSkylineUrl = finalUrl;
+    if (!hasLoggedSkylineUrl && isDevEnvironment()) {
+      console.info("[skylineUrl]", finalUrl);
+      hasLoggedSkylineUrl = true;
+    }
+    return finalUrl;
   }
 
   const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);

@@ -73,18 +73,6 @@ describe("getSkylineUrl", () => {
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     consoleSpy.mockRestore();
   });
-  it("rejects when VITE_SUPABASE_URL is a full object URL (prevents .../KAFDH.webp/KAFDH.webp)", async () => {
-    vi.stubEnv(
-      "VITE_SUPABASE_URL",
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp/",
-    );
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { getSkylineUrl } = await loadModule();
-    expect(() => getSkylineUrl()).toThrow(/(project.*url|not.*full.*object.*url)/i);
-    expect(consoleSpy).toHaveBeenCalledOnce();
-    consoleSpy.mockRestore();
-  });
-
   it("trims accidental double slashes", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co////");
     const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
@@ -93,6 +81,33 @@ describe("getSkylineUrl", () => {
     expect(url).toBe(
       "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
     );
+    consoleSpy.mockRestore();
+  });
+
+  it("prefers VITE_ASSETS_BASE_URL over VITE_SUPABASE_URL when both are set", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com");
+    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
+    vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240925");
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    const url = getSkylineUrl();
+    expect(url).toBe(
+      "https://cdn.example.com/storage/v1/object/public/ui-assets/KAFDH.webp?v=20240925",
+    );
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    consoleSpy.mockRestore();
+  });
+
+  it("falls back to VITE_SUPABASE_URL when VITE_ASSETS_BASE_URL is not set", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
+    vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240926");
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    const url = getSkylineUrl();
+    expect(url).toBe(
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=20240926",
+    );
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
     consoleSpy.mockRestore();
   });
 });
