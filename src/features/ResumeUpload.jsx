@@ -38,6 +38,18 @@ const ERROR_MESSAGES = {
     type: "danger",
     title: "Rename and retry",
   },
+  "upload/bucket-missing": {
+    type: "danger",
+    title: "Storage not configured",
+  },
+  "upload/invalid-request": {
+    type: "danger",
+    title: "Upload blocked",
+  },
+  "auth/unauthorized": {
+    type: "danger",
+    title: "Upload not allowed",
+  },
 };
 
 export default function ResumeUpload({ onParseResume, resumeDocument, onToast }) {

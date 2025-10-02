@@ -60,6 +60,24 @@ const readEnvString = (key: string) => {
 
 const trimTrailingSlashes = (value: string) => value.replace(/\/+$/, "");
 
+const coerceBoolean = (value: unknown): boolean | null => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "0", "no", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return null;
+};
+
 export const validatePublicUrl = (url: string) => {
   if (typeof url !== "string") {
     throw new TypeError("Public URL must be a string.");
@@ -114,58 +132,27 @@ const getSupabaseBaseUrl = () => {
     );
   }
 
-  const validated = validatePublicUrl(envValue);
-  return trimTrailingSlashes(validated);
+  return envValue;
 };
 
 const SKYLINE_OBJECT_PATH = "storage/v1/object/public/ui-assets/KAFDH.webp";
 const SKYLINE_FILENAME = "KAFDH.webp";
 
-let memoizedSkylineUrl: string | null = null;
-let hasLoggedSkylineUrl = false;
-
-const isDevEnvironment = () => {
-  const metaEnv = (import.meta as { env?: Record<string, unknown> }).env ?? {};
-  if (typeof metaEnv.DEV === "boolean") {
-    return metaEnv.DEV;
-  }
-  
-  // Check for MODE as well (Vite uses this)
-  if (typeof metaEnv.MODE === "string") {
-    return metaEnv.MODE !== "production";
-  }
-
-  const runtimeEnv = typeof process !== "undefined" ? process.env ?? {} : {};
-  if (typeof runtimeEnv.NODE_ENV === "string") {
-    return runtimeEnv.NODE_ENV !== "production";
-  }
-
-  // Default to development in test environments
-  if (typeof runtimeEnv.VITEST === "string" || typeof runtimeEnv.NODE_ENV === "undefined") {
-    return true;
-  }
-
-  return false;
-};
-
-export const getSkylineUrl = () => {
-  if (memoizedSkylineUrl) {
-    return memoizedSkylineUrl;
-  }
-
-  // Detects if the final filename appears more than once as a path *segment*
 const hasDuplicateFilename = (pathname: string, file: string) => {
-  // match “…/file” when followed by slash or end of string
   const re = new RegExp(`/${file}(?=(/|$))`, "g");
   const matches = pathname.match(re);
   return Array.isArray(matches) && matches.length > 1;
 };
 
-// If base url is misconfigured to a full object path, sanitize it to just the project root.
+const looksLikeObjectUrl = (baseUrl: string) => {
+  return (
+    /\/storage\/v1\/object\/public\//.test(baseUrl) ||
+    /\/KAFDH\.webp(?:$|[/?#])/.test(baseUrl)
+  );
+};
+
 const toProjectBase = (baseUrl: string) => {
-  // e.g. https://xxx.supabase.co/storage/v1/object/public/... --> https://xxx.supabase.co
   const url = new URL(baseUrl);
-  // project base is just origin for Supabase
   return url.origin;
 };
 
@@ -212,17 +199,85 @@ const looksLikeObjectUrl = (baseUrl: string) => {
     sanitizedUrl.pathname = normalizedPath;
   }
 
-  // Ensure exactly one filename segment occurs in the pathname
-if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
-  throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
-}
+  if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
+    throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
+  }
 
-if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
-  throw new Error(`Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`);
-}
+  if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
+    throw new Error(
+      `Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`,
+    );
+  }
 
+  return sanitizedUrl.toString();
+};
 
-  const versionedUrl = withVersion(sanitizedUrl.toString());
+let memoizedSkylineUrl: string | null = null;
+let hasLoggedSkylineUrl = false;
+
+const readStrictOverride = (): boolean | null => {
+  const overrideValue =
+    readEnvString("VITE_SUPABASE_STRICT_SKYLINE") ??
+    readEnvString("SUPABASE_STRICT_SKYLINE");
+
+  if (!overrideValue) {
+    return null;
+  }
+
+  const normalized = overrideValue.trim().toLowerCase();
+  if (["false", "0", "off", "no"].includes(normalized)) {
+    return false;
+  }
+
+  if (["true", "1", "on", "yes"].includes(normalized)) {
+    return true;
+  }
+
+  return null;
+};
+
+const isDevEnvironment = () => {
+  const metaEnv = (import.meta as { env?: Record<string, unknown> }).env ?? {};
+  const runtimeEnv = typeof process !== "undefined" ? process.env ?? {} : {};
+
+  const vitestRuntime = coerceBoolean(runtimeEnv.VITEST);
+  if (vitestRuntime === true) {
+    return true;
+  }
+
+  const devMeta = coerceBoolean(metaEnv.DEV);
+  if (devMeta !== null) {
+    return devMeta;
+  }
+
+  if (typeof metaEnv.MODE === "string") {
+    return metaEnv.MODE.trim().toLowerCase() !== "production";
+  }
+
+  const nodeEnv = typeof runtimeEnv.NODE_ENV === "string"
+    ? runtimeEnv.NODE_ENV.trim().toLowerCase()
+    : null;
+  if (nodeEnv) {
+    return nodeEnv !== "production";
+  }
+
+  if (vitestRuntime === false) {
+    return false;
+  }
+
+  return true;
+};
+
+export const getSkylineUrl = () => {
+  if (memoizedSkylineUrl) {
+    return memoizedSkylineUrl;
+  }
+
+  const strictThrow = shouldStrictThrow();
+  const rawBaseUrl = getSupabaseBaseUrl();
+  const projectBaseUrl = normalizeSupabaseProjectUrl(rawBaseUrl, strictThrow);
+  const skylineUrl = buildSkylineObjectUrl(projectBaseUrl);
+  const versionedUrl = withVersion(skylineUrl);
 
   memoizedSkylineUrl = versionedUrl;
 
@@ -235,6 +290,11 @@ if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
 };
 
 function shouldStrictThrow(): boolean {
+  const override = readStrictOverride();
+  if (override !== null) {
+    return override;
+  }
+
   // Return true in development to throw errors, false in production to sanitize
   return isDevEnvironment();
 }

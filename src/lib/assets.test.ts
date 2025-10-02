@@ -73,6 +73,35 @@ describe("getSkylineUrl", () => {
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     consoleSpy.mockRestore();
   });
+  it("rejects when VITE_SUPABASE_URL is a full object URL (prevents .../KAFDH.webp/KAFDH.webp)", async () => {
+    vi.stubEnv(
+      "VITE_SUPABASE_URL",
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp/",
+    );
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    expect(() => getSkylineUrl()).toThrow(/(project.*url|not.*full.*object.*url)/i);
+    expect(consoleSpy).toHaveBeenCalledOnce();
+    consoleSpy.mockRestore();
+  });
+
+  it("sanitizes full object URLs without throwing in production", async () => {
+    vi.stubEnv(
+      "VITE_SUPABASE_URL",
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp/",
+    );
+    vi.stubEnv("VITE_SUPABASE_STRICT_SKYLINE", "false");
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { getSkylineUrl } = await loadModule();
+    const url = getSkylineUrl();
+    expect(url).toBe(
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
+    );
+    expect(consoleSpy).toHaveBeenCalledOnce();
+    consoleSpy.mockRestore();
+  });
+
   it("trims accidental double slashes", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co////");
     const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});

@@ -45,8 +45,23 @@ describe("supabase upload service", () => {
     expect(uploadSpy).toHaveBeenCalledTimes(2);
     expect(uploadSpy.mock.calls[0][0]).toBe("user-123/resume.pdf");
     expect(uploadSpy.mock.calls[1][0]).toBe("user-123/resume-v2.pdf");
+    expect(uploadSpy.mock.calls[0][2]).toMatchObject({ contentType: "application/octet-stream" });
     expect(result).toEqual({ path: "user-123/resume-v2.pdf", fileName: "resume-v2.pdf", userId: "user-123" });
     expect(progressSpy).toHaveBeenCalledWith({ loaded: 5, total: 10 });
+  });
+
+  it("uses the file content type when provided", async () => {
+    authMock.getUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
+    uploadSpy.mockResolvedValueOnce({ error: null });
+
+    const file = { name: "resume.docx", type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+    await uploadResumeFile(file);
+
+    expect(uploadSpy).toHaveBeenCalledWith(
+      "user-123/resume.docx",
+      file,
+      expect.objectContaining({ contentType: file.type })
+    );
   });
 
   it("throws an AppError when the user is not authenticated", async () => {
@@ -62,6 +77,38 @@ describe("supabase upload service", () => {
 
     await expect(uploadResumeFile({ name: "resume.pdf" })).rejects.toMatchObject({
       code: "upload/storage-failure",
+    });
+  });
+
+  it("maps bucket configuration errors to a dedicated AppError", async () => {
+    authMock.getUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
+    uploadSpy.mockResolvedValueOnce({ error: { statusCode: 400, message: "Bucket not found" } });
+
+    await expect(uploadResumeFile({ name: "resume.pdf" })).rejects.toMatchObject({
+      code: "upload/bucket-missing",
+    });
+  });
+
+  it("surfaces invalid payload responses", async () => {
+    authMock.getUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
+    uploadSpy.mockResolvedValueOnce({
+      error: { statusCode: 400, message: "Invalid request payload" },
+    });
+
+    await expect(uploadResumeFile({ name: "resume.pdf" })).rejects.toMatchObject({
+      code: "upload/invalid-request",
+      hint: expect.stringMatching(/invalid request payload/i),
+    });
+  });
+
+  it("maps storage policy denials to auth errors", async () => {
+    authMock.getUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
+    uploadSpy.mockResolvedValueOnce({
+      error: { statusCode: 403, message: "Storage policy denied" },
+    });
+
+    await expect(uploadResumeFile({ name: "resume.pdf" })).rejects.toMatchObject({
+      code: "auth/unauthorized",
     });
   });
 });
