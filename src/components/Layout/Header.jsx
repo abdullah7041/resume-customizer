@@ -148,6 +148,13 @@ export default function Header() {
   const nextThemeLabel = isDark ? "Switch to light theme" : "Switch to dark theme";
   const ThemeIcon = isDark ? Sun : Moon;
 
+  const skeletonBackgroundClass = cn(
+    "absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-opacity duration-700",
+    isDark
+      ? "bg-gradient-to-b from-emerald-950/40 via-emerald-900/30 to-emerald-950/60"
+      : "bg-gradient-to-b from-emerald-200/45 via-emerald-100/35 to-emerald-50/20",
+  );
+
   return (
     <header
       className={cn(
@@ -351,14 +358,9 @@ export default function Header() {
       {/* Skyline background image with loading state */}
       {typeof skylineUrl === "string" && skylineUrl ? (
         <>
-          {/* Skeleton loader while image loads */}
           {!skylineLoaded && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 -z-40 pointer-events-none bg-gradient-to-b from-emerald-900/20 via-emerald-800/10 to-transparent animate-pulse"
-            />
+            <div aria-hidden="true" className={skeletonBackgroundClass} />
           )}
-          {/* Actual skyline image */}
           <div
             aria-hidden="true"
             className={cn(
@@ -369,7 +371,9 @@ export default function Header() {
             style={{ backgroundImage: `url('${skylineUrl}')` }}
           />
         </>
-      ) : null}
+      ) : (
+        <div aria-hidden="true" className={skeletonBackgroundClass} />
+      )}
       <div
         aria-hidden="true"
         className={cn(

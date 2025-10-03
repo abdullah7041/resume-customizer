@@ -151,12 +151,6 @@ const getSupabaseBaseUrl = () => {
 const SKYLINE_OBJECT_PATH = "storage/v1/object/public/ui-assets/KAFDH.webp";
 const SKYLINE_FILENAME = "KAFDH.webp";
 
-const hasDuplicateFilename = (pathname: string, file: string) => {
-  const re = new RegExp(`/${file}(?=(/|$))`, "g");
-  const matches = pathname.match(re);
-  return Array.isArray(matches) && matches.length > 1;
-};
-
 const toProjectBase = (baseUrl: string) => {
   const url = new URL(baseUrl);
   return url.origin;
@@ -262,14 +256,28 @@ const buildSkylineObjectUrl = (baseUrl: string) => {
     sanitizedUrl.pathname = normalizedPath;
   }
 
-  if (!normalizedPath.endsWith(`/${SKYLINE_FILENAME}`)) {
+  const pathSegments = sanitizedUrl.pathname.split("/");
+  let filenameCount = 0;
+  const dedupedSegments = pathSegments.filter((segment) => {
+    if (segment === SKYLINE_FILENAME) {
+      filenameCount += 1;
+      if (filenameCount > 1) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (filenameCount === 0) {
     throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
   }
 
-  if (hasDuplicateFilename(normalizedPath, SKYLINE_FILENAME)) {
-    throw new Error(
-      `Skyline asset segment duplicated in resolved URL: ${sanitizedUrl.href}`,
-    );
+  if (dedupedSegments.length !== pathSegments.length) {
+    sanitizedUrl.pathname = dedupedSegments.join("/") || "/";
+  }
+
+  if (!sanitizedUrl.pathname.endsWith(`/${SKYLINE_FILENAME}`)) {
+    throw new Error(`Skyline asset segment missing in resolved URL: ${sanitizedUrl.href}`);
   }
 
   return sanitizedUrl.toString();
@@ -289,7 +297,7 @@ export const getSkylineUrl = () => {
   memoizedSkylineUrl = versionedUrl;
 
   if (!hasLoggedSkylineUrl && isDevEnvironment()) {
-    console.info("[skylineUrl]", versionedUrl);
+    console.log("[skylineUrl]", versionedUrl);
     hasLoggedSkylineUrl = true;
   }
 

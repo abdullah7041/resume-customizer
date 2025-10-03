@@ -107,7 +107,7 @@ describe("getSkylineUrl", () => {
 
   it("returns a single segment URL for the skyline asset", async () => {
     vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240924");
-    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const { getSkylineUrl } = await loadModule();
     const url = getSkylineUrl();
     expect(url).toBe(
@@ -148,7 +148,7 @@ describe("getSkylineUrl", () => {
 
   it("trims accidental double slashes", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co////");
-    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const { getSkylineUrl } = await loadModule();
     const url = getSkylineUrl();
     expect(url).toBe(
@@ -161,7 +161,7 @@ describe("getSkylineUrl", () => {
     vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com");
     vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
     vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240925");
-    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const { getSkylineUrl } = await loadModule();
     const url = getSkylineUrl();
     expect(url).toBe(
@@ -174,7 +174,7 @@ describe("getSkylineUrl", () => {
   it("falls back to VITE_SUPABASE_URL when VITE_ASSETS_BASE_URL is not set", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
     vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240926");
-    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const { getSkylineUrl } = await loadModule();
     const url = getSkylineUrl();
     expect(url).toBe(
