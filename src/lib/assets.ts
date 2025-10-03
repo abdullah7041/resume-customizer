@@ -30,6 +30,11 @@ export const withVersion = (url: string) => {
     return url;
   }
 
+  // Check if v= already exists in the URL to prevent double-appending
+  if (/[?&]v=/.test(url)) {
+    return url;
+  }
+
   const version = readBuildId() ?? "__dev__";
   const separator = url.includes("?") ? "&" : "?";
   return `${url}${separator}v=${version}`;

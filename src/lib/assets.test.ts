@@ -52,6 +52,30 @@ describe("withVersion", () => {
       "https://example.com/hero.webp?quality=80&v=next",
     );
   });
+
+  it("is idempotent - does not append version twice", async () => {
+    vi.stubEnv("VITE_BUILD_TIMESTAMP", "1234567890");
+    const { withVersion } = await loadModule();
+    const url = "https://example.com/hero.webp";
+    const versionedOnce = withVersion(url);
+    const versionedTwice = withVersion(versionedOnce);
+    expect(versionedTwice).toBe(versionedOnce);
+    expect(versionedTwice).toBe("https://example.com/hero.webp?v=1234567890");
+  });
+
+  it("does not append version if v= query param already exists", async () => {
+    vi.stubEnv("VITE_BUILD_TIMESTAMP", "newversion");
+    const { withVersion } = await loadModule();
+    const urlWithVersion = "https://example.com/hero.webp?v=oldversion";
+    expect(withVersion(urlWithVersion)).toBe(urlWithVersion);
+  });
+
+  it("does not append version if v= exists with other params", async () => {
+    vi.stubEnv("VITE_BUILD_TIMESTAMP", "newversion");
+    const { withVersion } = await loadModule();
+    const urlWithVersion = "https://example.com/hero.webp?quality=80&v=oldversion&format=webp";
+    expect(withVersion(urlWithVersion)).toBe(urlWithVersion);
+  });
 });
 
 describe("getSkylineUrl", () => {
