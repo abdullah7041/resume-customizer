@@ -30,31 +30,39 @@ export const withVersion = (url: string) => {
     return url;
   }
 
-  // Check if v= already exists in the URL to prevent double-appending
-  if (/[?&]v=/.test(url)) {
+  const [withoutHash, hashFragment] = url.split("#", 2);
+
+  if (/[?&]v=/i.test(withoutHash)) {
     return url;
   }
 
   const version = readBuildId() ?? "__dev__";
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}v=${version}`;
+  const hasQuery = withoutHash.includes("?");
+  const endsWithDelimiter = withoutHash.endsWith("?") || withoutHash.endsWith("&");
+  const separator = hasQuery ? (endsWithDelimiter ? "" : "&") : "?";
+  const versionedWithoutHash = `${withoutHash}${separator}v=${version}`;
+  return hashFragment ? `${versionedWithoutHash}#${hashFragment}` : versionedWithoutHash;
 };
 
 const readEnvString = (key: string) => {
   const metaEnv = (import.meta as { env?: Record<string, unknown> }).env ?? {};
   const runtimeEnv = typeof process !== "undefined" ? process.env ?? {} : {};
 
+  if (Object.prototype.hasOwnProperty.call(runtimeEnv, key)) {
+    const runtimeValue = runtimeEnv[key];
+    if (typeof runtimeValue === "string") {
+      const trimmed = runtimeValue.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+
+    return null;
+  }
+
   const metaValue = metaEnv[key];
   if (typeof metaValue === "string") {
     const trimmed = metaValue.trim();
-    if (trimmed) {
-      return trimmed;
-    }
-  }
-
-  const runtimeValue = runtimeEnv[key];
-  if (typeof runtimeValue === "string") {
-    const trimmed = runtimeValue.trim();
     if (trimmed) {
       return trimmed;
     }
@@ -233,29 +241,15 @@ const normalizeSupabaseProjectUrl = (baseUrl: string, strictThrow: boolean) => {
     // Always log the error for visibility
     console.error(msg);
     
-    // Always throw in development and test environments
-    if (shouldStrictThrow()) {
+    if (strictThrow) {
       throw new Error(msg);
     }
-    
-    // In production build, sanitize and continue but still log the error
+
     const sanitizedBase = toProjectBase(baseUrl);
-    // Re-validate after sanitizing
-    const validated = validatePublicUrl(sanitizedBase);
-    const normalized = joinUrlSegments(validated, SKYLINE_OBJECT_PATH);
-    const sanitizedUrlString = validatePublicUrl(normalized);
-    const finalUrl = withVersion(sanitizedUrlString);
-    memoizedSkylineUrl = finalUrl;
-    if (!hasLoggedSkylineUrl && isDevEnvironment()) {
-      console.info("[skylineUrl]", finalUrl);
-      hasLoggedSkylineUrl = true;
-    }
-    return finalUrl;
+    return validatePublicUrl(sanitizedBase);
   }
 
-  const normalized = joinUrlSegments(baseUrl, SKYLINE_OBJECT_PATH);
-  const sanitizedUrlString = validatePublicUrl(normalized);
-  return sanitizedUrlString;
+  return validatePublicUrl(baseUrl);
 };
 
 const buildSkylineObjectUrl = (baseUrl: string) => {

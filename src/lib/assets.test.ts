@@ -63,6 +63,19 @@ describe("withVersion", () => {
     expect(versionedTwice).toBe("https://example.com/hero.webp?v=1234567890");
   });
 
+  it("returns the same value when nested calls are made", async () => {
+    const { withVersion } = await loadModule();
+    const url = "https://example.com/hero.webp";
+    expect(withVersion(withVersion(url))).toBe(withVersion(url));
+  });
+
+  it("preserves hash fragments while versioning", async () => {
+    vi.stubEnv("VITE_BUILD_ID", "hashy");
+    const { withVersion } = await loadModule();
+    const url = "https://example.com/hero.webp#hero";
+    expect(withVersion(url)).toBe("https://example.com/hero.webp?v=hashy#hero");
+  });
+
   it("does not append version if v= query param already exists", async () => {
     vi.stubEnv("VITE_BUILD_TIMESTAMP", "newversion");
     const { withVersion } = await loadModule();
@@ -76,6 +89,12 @@ describe("withVersion", () => {
     const urlWithVersion = "https://example.com/hero.webp?quality=80&v=oldversion&format=webp";
     expect(withVersion(urlWithVersion)).toBe(urlWithVersion);
   });
+
+  it("treats already versioned URLs as idempotent", async () => {
+    const { withVersion } = await loadModule();
+    const urlWithVersion = "https://example.com/hero.webp?quality=80&v=precedent";
+    expect(withVersion(withVersion(urlWithVersion))).toBe(urlWithVersion);
+  });
 });
 
 describe("getSkylineUrl", () => {
@@ -83,6 +102,7 @@ describe("getSkylineUrl", () => {
     vi.resetModules();
     vi.unstubAllEnvs();
     vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co/");
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "");
   });
 
   it("returns a single segment URL for the skyline asset", async () => {
