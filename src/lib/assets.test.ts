@@ -139,21 +139,6 @@ describe("publicAssetUrl", () => {
     expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe("");
     warnSpy.mockRestore();
   });
-
-  it("falls back to Supabase host when assets base equals the runtime origin", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://resume-optimizing.netlify.app");
-    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
-    vi.stubGlobal("location", { origin: "https://resume-optimizing.netlify.app" } as Location);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { publicAssetUrl } = await loadModule();
-    expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe(
-      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp",
-    );
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("VITE_ASSETS_BASE_URL resolves to the app origin"),
-    );
-    warnSpy.mockRestore();
-  });
 });
 
 describe("getSkylineUrl", () => {

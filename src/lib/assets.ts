@@ -154,46 +154,16 @@ const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
   return origin;
 };
 
-const getRuntimeOrigin = () => {
-  if (typeof globalThis === "undefined") {
-    return null;
-  }
-
-  const globalLocation = (globalThis as { location?: { origin?: unknown } }).location;
-  if (!globalLocation) {
-    return null;
-  }
-
-  const { origin } = globalLocation;
-  if (typeof origin !== "string") {
-    return null;
-  }
-
-  const trimmed = origin.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    return new URL(trimmed).origin;
-  } catch {
-    return null;
-  }
-};
-
 const readAssetsBaseHost = () => {
   const warnInvalidEnv = (key: string, error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     warnHostOnlyEnv(`[assets] ${key} is invalid: ${message}`);
   };
 
-  let assetsHost: string | null = null;
-  let supabaseHost: string | null = null;
-
   const assetsBase = readEnvString("VITE_ASSETS_BASE_URL");
   if (assetsBase) {
     try {
-      assetsHost = ensureHostOnlyUrl(assetsBase, "VITE_ASSETS_BASE_URL");
+      return ensureHostOnlyUrl(assetsBase, "VITE_ASSETS_BASE_URL");
     } catch (error) {
       warnInvalidEnv("VITE_ASSETS_BASE_URL", error);
     }
@@ -202,28 +172,10 @@ const readAssetsBaseHost = () => {
   const supabaseUrl = readEnvString("VITE_SUPABASE_URL");
   if (supabaseUrl) {
     try {
-      supabaseHost = ensureHostOnlyUrl(supabaseUrl, "VITE_SUPABASE_URL");
+      return ensureHostOnlyUrl(supabaseUrl, "VITE_SUPABASE_URL");
     } catch (error) {
       warnInvalidEnv("VITE_SUPABASE_URL", error);
     }
-  }
-
-  if (assetsHost) {
-    if (supabaseHost) {
-      const runtimeOrigin = getRuntimeOrigin();
-      if (runtimeOrigin && assetsHost === runtimeOrigin && supabaseHost !== runtimeOrigin) {
-        warnHostOnlyEnv(
-          `[assets] VITE_ASSETS_BASE_URL resolves to the app origin (${runtimeOrigin}). Falling back to Supabase host ${supabaseHost}.`,
-        );
-        return supabaseHost;
-      }
-    }
-
-    return assetsHost;
-  }
-
-  if (supabaseHost) {
-    return supabaseHost;
   }
 
   return null;
