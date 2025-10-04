@@ -155,6 +155,10 @@ export default function Header() {
       : "bg-[radial-gradient(circle_at_18%_12%,color-mix(in_oklab,var(--surface-strong),transparent_28%)_0%,transparent_62%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_20%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_65%)_100%)]"
   );
 
+  const enableArabicBrand =
+    (import.meta.env.VITE_FEATURE_ARABIC_BRAND ?? "true") !== "false";
+  const arabicBrandName = "مُحَسِّنُ السِّيرَةِ الذَّاتِيَّةِ السُّعُودِيُّ";
+
   return (
     <header
       className={cn(
@@ -171,14 +175,28 @@ export default function Header() {
       >
         <div className="border-b border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_38%)]">
           <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-6`}>
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3"
+              aria-label={`AI Resume Optimizer${
+                enableArabicBrand ? ` — ${arabicBrandName}` : ""
+              } — By Abdullah bin Ahmed`}
+            >
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] text-[color:var(--accent)] shadow-[var(--shadow-soft)]">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
-              <div>
+              <div className="flex flex-col gap-1 text-left">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-accent-400/90">
                   AI Resume Optimizer
                 </p>
+                {enableArabicBrand ? (
+                  <p
+                    className="text-[13px] font-semibold leading-snug text-surface-50"
+                    lang="ar"
+                    dir="rtl"
+                  >
+                    {arabicBrandName}
+                  </p>
+                ) : null}
                 <p className="text-sm font-semibold uppercase tracking-[0.32em] text-surface-50/90">
                   By Abdullah bin Ahmed
                 </p>
