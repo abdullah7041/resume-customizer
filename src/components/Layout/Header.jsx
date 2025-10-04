@@ -140,19 +140,19 @@ export default function Header() {
   }, []);
 
   const themeButtonClass = cn(
-    "inline-flex h-10 w-10 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+    "inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
     isDark
-      ? "border-surface-50/25 bg-surface-900/70 text-surface-50/90 shadow-[0_18px_46px_-30px_rgba(0,0,0,0.6)] hover:text-accent-200 focus-visible:ring-accent-300/70 focus-visible:ring-offset-surface-900"
-      : "border-sand-200/60 bg-surface-50/95 text-ink-600 shadow-[0_18px_48px_-28px_rgba(9,91,50,0.42)] hover:text-primary-600 focus-visible:ring-accent-300/80 focus-visible:ring-offset-sand-50"
+      ? "bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] text-[color:var(--surface)] shadow-[var(--shadow-soft)] hover:text-[color:var(--accent)] focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface-strong)]"
+      : "bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_6%)] text-[color:var(--ink)] shadow-[var(--shadow-soft)] hover:text-[color:var(--accent)] focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_24%)] focus-visible:ring-offset-[color:var(--surface)]"
   );
   const nextThemeLabel = isDark ? "Switch to light theme" : "Switch to dark theme";
   const ThemeIcon = isDark ? Sun : Moon;
 
   const skeletonBackgroundClass = cn(
-    "absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-opacity duration-700",
+    "absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-opacity duration-300",
     isDark
-      ? "bg-gradient-to-b from-emerald-950/40 via-emerald-900/30 to-emerald-950/60"
-      : "bg-gradient-to-b from-emerald-200/45 via-emerald-100/35 to-emerald-50/20",
+      ? "bg-[radial-gradient(circle_at_20%_10%,color-mix(in_oklab,var(--surface-strong),transparent_50%)_0%,transparent_65%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface-strong),transparent_35%)_0%,color-mix(in_oklab,var(--surface),transparent_70%)_100%)]"
+      : "bg-[radial-gradient(circle_at_18%_12%,color-mix(in_oklab,var(--surface-strong),transparent_28%)_0%,transparent_62%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_20%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_65%)_100%)]"
   );
 
   return (
@@ -169,10 +169,10 @@ export default function Header() {
           heroMinHeightClass,
         )}
       >
-        <div className="border-b border-surface-50/10">
+        <div className="border-b border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_38%)]">
           <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-6`}>
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-50/10 text-accent-500 shadow-soft">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] text-[color:var(--accent)] shadow-[var(--shadow-soft)]">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
@@ -201,11 +201,7 @@ export default function Header() {
                   Sign Out
                 </SecondaryButton>
               ) : (
-                <PrimaryButton
-                  icon={LogIn}
-                  onClick={signInWithGoogle}
-                  className="from-primary-600 via-primary-600 to-primary-700 shadow-lg"
-                >
+                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
                   Sign In
                 </PrimaryButton>
               )}
@@ -221,7 +217,7 @@ export default function Header() {
               "space-y-6 sm:space-y-7 transform-gpu",
               prefersReducedMotion
                 ? "opacity-100"
-                : "transition-[opacity,transform] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                : "transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
               heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             )}
           >
@@ -231,27 +227,27 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_46%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] p-6 shadow-[0_28px_70px_-44px_color-mix(in_oklab,var(--emerald-900),transparent_60%)] backdrop-blur-xl sm:p-7 lg:p-8">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] p-6 text-[color:var(--surface)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-balance text-shadow-hero text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-[color:var(--surface)] sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95 sm:text-lg">
+              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-[color:color-mix(in_oklab,var(--surface),transparent_12%)] sm:text-lg">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+                  "card-glow group rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
                   prefersReducedMotion
                     ? ""
-                    : "transform-gpu transition-[opacity,transform] duration-[520ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
                   heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
                 )}
                 style={
@@ -267,10 +263,10 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+                  "card-glow group rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
                   prefersReducedMotion
                     ? ""
-                    : "transform-gpu transition-[opacity,transform] duration-[520ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
                   heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
                 )}
                 style={
@@ -286,10 +282,10 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-surface-50/20 bg-sand-50/95 p-4 text-ink-700 shadow-sm backdrop-blur-sm sm:backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-md dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+                  "card-glow group rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
                   prefersReducedMotion
                     ? ""
-                    : "transform-gpu transition-[opacity,transform] duration-[520ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
                   heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
                 )}
                 style={
@@ -308,10 +304,10 @@ export default function Header() {
 
           <div
             className={cn(
-              "card-glow group rounded-[var(--radius-card)] border border-surface-50/20 bg-sand-50/95 p-6 text-ink-700 shadow-md backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-sand-50 hover:shadow-lg sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50 dark:hover:bg-zinc-900/70",
+              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
               prefersReducedMotion
                 ? ""
-                : "transform-gpu transition-[opacity,transform] duration-[560ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                : "transform-gpu transition-[opacity,transform] duration-[300ms] ease-[var(--transition-snappy)]",
               workflowVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             )}
             style={
@@ -325,7 +321,7 @@ export default function Header() {
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-[color:var(--secondary)] shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -334,7 +330,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-[color:var(--secondary)] shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <Target className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -343,7 +339,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-[color:var(--secondary)] shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -364,7 +360,7 @@ export default function Header() {
           <div
             aria-hidden="true"
             className={cn(
-              "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-700 md:bg-fixed md:bg-[position:50%_35%]",
+              "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 md:bg-fixed md:bg-[position:50%_35%]",
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
               !skylineLoaded && "opacity-0"
             )}
@@ -377,10 +373,10 @@ export default function Header() {
       <div
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-700",
+          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-300",
           isDark
-            ? "bg-[radial-gradient(circle_at_18%_-12%,color-mix(in_oklab,var(--accent),transparent_82%)_0%,transparent_58%),radial-gradient(circle_at_82%_-18%,color-mix(in_oklab,var(--accent-gold),transparent_88%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_12%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_46%)_100%)]"
-            : "bg-[radial-gradient(circle_at_16%_-16%,color-mix(in_oklab,var(--accent),transparent_88%)_0%,transparent_62%),radial-gradient(circle_at_84%_-14%,color-mix(in_oklab,var(--accent-gold),transparent_90%)_0%,transparent_70%),linear-gradient(to_bottom,color-mix(in_oklab,var(--bg),transparent_12%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_58%)_100%)]",
+            ? "bg-[radial-gradient(circle_at_24%_-6%,color-mix(in_oklab,var(--accent),transparent_82%)_0%,transparent_58%),radial-gradient(circle_at_78%_-16%,color-mix(in_oklab,#8b5cf6,transparent_72%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_10%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_52%)_100%)]"
+            : "bg-[radial-gradient(circle_at_20%_-10%,color-mix(in_oklab,#a855f7,transparent_78%)_0%,transparent_60%),radial-gradient(circle_at_80%_-14%,color-mix(in_oklab,#ec4899,transparent_82%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--bg),transparent_06%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_50%)_100%)]",
         )}
       />
       <div

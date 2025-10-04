@@ -149,7 +149,7 @@ export default function UploadCard({
 
   return (
     <section
-      className="space-y-6 rounded-[var(--radius-card)] border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_48%)] bg-[color:var(--panel-bg)] p-8 text-[color:var(--ink)] shadow-[0_32px_88px_-48px_color-mix(in_oklab,var(--emerald-900),transparent_68%)] backdrop-blur-xl dark:text-[color:var(--surface)]"
+      className="space-y-6 rounded-[var(--radius-card)] border border-[color:var(--panel-stroke)] bg-[color:var(--panel-bg)] p-8 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] dark:text-[color:var(--surface)]"
       aria-live="polite"
     >
       <div className="space-y-2 text-left">
@@ -175,14 +175,14 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-card)_-_0.5rem)] border border-dashed border-[color:color-mix(in_oklab,var(--accent),transparent_48%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_4%)] px-6 py-12 text-center shadow-[0_28px_72px_-44px_color-mix(in_oklab,var(--emerald-900),transparent_62%)] backdrop-blur-xl transition-all duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_30%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]",
-          isDragging && "border-[color:color-mix(in_oklab,var(--accent),transparent_32%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] shadow-[0_32px_82px_-46px_color-mix(in_oklab,var(--emerald-900),transparent_54%)]"
+          "relative flex flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-card)_-_0.5rem)] border border-dashed border-[color:color-mix(in_oklab,var(--accent),transparent_36%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_6%)] px-6 py-12 text-center shadow-[var(--shadow-soft)] transition-[border-color,box-shadow,transform,background-color] duration-300 ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_26%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]",
+          isDragging && "border-[color:color-mix(in_oklab,var(--accent),transparent_20%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] shadow-[var(--shadow-lift)]"
         )}
       >
-        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_50%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_6%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)] shadow-[0_12px_32px_-24px_color-mix(in_oklab,var(--emerald-900),transparent_70%)]">
+        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">
           Max 5MB
         </span>
-        <div className="flex items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_42%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_8%)] px-4 py-2 text-xs font-semibold text-[color:var(--ink)] shadow-[0_20px_48px_-34px_color-mix(in_oklab,var(--emerald-900),transparent_66%)] dark:text-[color:var(--surface)]">
+        <div className="flex items-center gap-2 rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] px-4 py-2 text-xs font-semibold text-[color:var(--ink)] shadow-[var(--shadow-soft)] dark:text-[color:var(--surface)]">
           <FileText className="h-4 w-4" aria-hidden="true" />
           <span>PDF</span>
           <span className="mx-1 text-[color:color-mix(in_oklab,var(--ink-500),transparent_40%)]">|</span>
@@ -208,12 +208,12 @@ export default function UploadCard({
       />
 
       {fileName && (
-        <div className="flex items-center justify-between rounded-2xl border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_52%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] px-4 py-3 text-sm text-[color:var(--ink)] shadow-[0_18px_44px_-32px_color-mix(in_oklab,var(--emerald-900),transparent_64%)] backdrop-blur-xl dark:text-[color:var(--surface)]">
+        <div className="flex items-center justify-between rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] px-4 py-3 text-sm text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] dark:text-[color:var(--surface)]">
           <span className="truncate font-medium">{fileName}</span>
           <button
             type="button"
             onClick={onFileClear}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_55%)] text-[color:var(--accent)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_20%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_26%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] text-[color:var(--accent)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_16%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_24%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
             aria-label="Remove selected file"
           >
             <XCircle className="h-4 w-4" aria-hidden="true" />
@@ -227,7 +227,7 @@ export default function UploadCard({
           Paste resume text instead
         </span>
         <textarea
-          className="min-h-[160px] w-full resize-y rounded-2xl border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_46%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_16%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--ink)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--panel-highlight),transparent_25%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_30%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:text-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
+          className="min-h-[160px] w-full resize-y rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--ink)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--panel-highlight),transparent_22%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_28%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:text-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}
