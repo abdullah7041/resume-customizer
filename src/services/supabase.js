@@ -40,7 +40,67 @@ const buildVersionedName = (baseName, attempt) => {
   return `${namePart}-v${version}${extension}`;
 };
 
+const DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+const DOCUMENT_EXTENSIONS = new Map([
+  ["pdf", "application/pdf"],
+  ["docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+]);
+
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+const getExtension = (fileName) => {
+  if (typeof fileName !== "string") {
+    return "";
+  }
+  const match = fileName.match(/\.([^.]+)$/);
+  return match ? match[1].toLowerCase() : "";
+};
+
+const resolveContentType = (file) => {
+  const type = typeof file?.type === "string" ? file.type.toLowerCase() : "";
+  if (DOCUMENT_MIME_TYPES.has(type)) {
+    return type;
+  }
+  const extension = getExtension(file?.name);
+  return DOCUMENT_EXTENSIONS.get(extension) ?? "application/octet-stream";
+};
+
+const ensureSupportedDocument = (file) => {
+  if (!file || typeof file.name !== "string") {
+    throw new AppError({
+      code: "file/unsupported-type",
+      message: "Only PDF or DOCX files are supported.",
+      hint: "Upload a PDF or DOCX resume.",
+    });
+  }
+
+  const extension = getExtension(file.name);
+  const type = typeof file.type === "string" ? file.type.toLowerCase() : "";
+  if (!DOCUMENT_MIME_TYPES.has(type) && !DOCUMENT_EXTENSIONS.has(extension)) {
+    throw new AppError({
+      code: "file/unsupported-type",
+      message: "Only PDF or DOCX files are supported.",
+      hint: "Upload a PDF or DOCX resume.",
+    });
+  }
+
+  const size = Number.isFinite(file.size) ? file.size : 0;
+  if (size > MAX_UPLOAD_BYTES) {
+    throw new AppError({
+      code: "file/too-large",
+      message: "File must be 5MB or smaller.",
+      hint: "Compress the resume and try again.",
+    });
+  }
+};
+
 export const uploadResumeFile = async (file, { onProgress } = {}) => {
+  ensureSupportedDocument(file);
+
   const {
     data: { user },
     error: userError,
@@ -65,7 +125,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
   const baseName = cleanBaseName(file?.name || "");
   const bucket = supabase.storage.from("resumes");
   const maxAttempts = 5;
-  const contentType = typeof file?.type === "string" && file.type.length > 0 ? file.type : "application/octet-stream";
+  const contentType = resolveContentType(file);
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const candidateName = buildVersionedName(baseName, attempt);
