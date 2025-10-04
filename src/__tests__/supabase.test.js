@@ -45,9 +45,40 @@ describe("supabase upload service", () => {
     expect(uploadSpy).toHaveBeenCalledTimes(2);
     expect(uploadSpy.mock.calls[0][0]).toBe("user-123/resume.pdf");
     expect(uploadSpy.mock.calls[1][0]).toBe("user-123/resume-v2.pdf");
-    expect(uploadSpy.mock.calls[0][2]).toMatchObject({ contentType: "application/octet-stream" });
+    expect(uploadSpy.mock.calls[0][2]).toMatchObject({ contentType: "application/pdf" });
     expect(result).toEqual({ path: "user-123/resume-v2.pdf", fileName: "resume-v2.pdf", userId: "user-123" });
     expect(progressSpy).toHaveBeenCalledWith({ loaded: 5, total: 10 });
+  });
+
+  it("continues suffixing beyond five conflicts", async () => {
+    authMock.getUser.mockResolvedValue({ data: { user: { id: "user-789" } }, error: null });
+
+    for (let i = 0; i < 7; i += 1) {
+      uploadSpy.mockImplementationOnce(async () => ({ error: { statusCode: 409 } }));
+    }
+
+    uploadSpy.mockImplementationOnce(async () => ({ error: null }));
+
+    const result = await uploadResumeFile({ name: "resume.pdf" });
+
+    expect(uploadSpy).toHaveBeenCalledTimes(8);
+    expect(uploadSpy.mock.calls[7][0]).toBe("user-789/resume-v8.pdf");
+    expect(result).toEqual({ path: "user-789/resume-v8.pdf", fileName: "resume-v8.pdf", userId: "user-789" });
+  });
+
+  it("uploads successfully when storage accepts the first attempt", async () => {
+    authMock.getUser.mockResolvedValue({ data: { user: { id: "user-456" } }, error: null });
+    uploadSpy.mockResolvedValueOnce({ error: null });
+
+    const file = { name: "resume.docx", type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", size: 1024 };
+    const result = await uploadResumeFile(file);
+
+    expect(uploadSpy).toHaveBeenCalledWith(
+      "user-456/resume.docx",
+      file,
+      expect.objectContaining({ contentType: file.type, upsert: false })
+    );
+    expect(result).toEqual({ path: "user-456/resume.docx", fileName: "resume.docx", userId: "user-456" });
   });
 
   it("uses the file content type when provided", async () => {
@@ -69,6 +100,17 @@ describe("supabase upload service", () => {
     await expect(uploadResumeFile({ name: "resume.pdf" })).rejects.toMatchObject({
       code: "auth/unauthenticated",
     });
+  });
+
+  it("rejects files larger than 5MB", async () => {
+    const largeSize = 5 * 1024 * 1024 + 1;
+    const file = { name: "resume.pdf", type: "application/pdf", size: largeSize };
+
+    await expect(uploadResumeFile(file)).rejects.toMatchObject({
+      code: "file/too-large",
+    });
+    expect(authMock.getUser).not.toHaveBeenCalled();
+    expect(uploadSpy).not.toHaveBeenCalled();
   });
 
   it("wraps storage failures in an AppError", async () => {
