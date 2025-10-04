@@ -150,8 +150,30 @@ export default function MainContent() {
     setPreviewUsed(true);
   }, []);
 
+  const normalizeResumePayload = useCallback((input) => {
+    if (input && typeof input === "object") {
+      if (input.kind === "upload") {
+        const { file, storage } = input;
+        return {
+          parseInput: file,
+          storage: storage && typeof storage === "object" ? storage : null,
+        };
+      }
+
+      if (input.kind === "text") {
+        return {
+          parseInput: input.value,
+          storage: null,
+        };
+      }
+    }
+
+    return { parseInput: input, storage: null };
+  }, []);
+
   const handleParseResume = useCallback(
     async (resumeInput) => {
+      const { parseInput, storage } = normalizeResumePayload(resumeInput);
       try {
         setFlowProgress(18);
         pushToast(
@@ -164,9 +186,19 @@ export default function MainContent() {
         );
 
         setFlowProgress(48);
-        const parsed = await parseResume(resumeInput);
+        const parsed = await parseResume(parseInput);
         setFlowProgress(88);
-        setResumeData(parsed);
+        const enriched =
+          parsed && storage
+            ? {
+                ...parsed,
+                storagePath: storage.path,
+                storageBucket: storage.bucket,
+                storageFileName: storage.fileName,
+                storageUserId: storage.userId,
+              }
+            : parsed;
+        setResumeData(enriched);
         setMatchAnalysis(null);
         setJobDescription("");
         setOptimizations([]);
@@ -181,7 +213,7 @@ export default function MainContent() {
         );
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
-        return parsed;
+        return enriched;
       } catch (error) {
         setFlowProgress(0);
         pushToast(
@@ -196,7 +228,7 @@ export default function MainContent() {
         throw error;
       }
     },
-    [pushToast]
+    [normalizeResumePayload, pushToast]
   );
 
   const handleAnalyzeMatch = useCallback(

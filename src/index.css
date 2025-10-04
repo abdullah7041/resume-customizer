@@ -241,11 +241,11 @@
   .accent-divider {
     background: linear-gradient(
       90deg,
-      rgba(197, 166, 106, 0),
-      rgba(197, 166, 106, 0.75),
-      rgba(197, 166, 106, 0)
+      color-mix(in oklab, var(--accent-gold), transparent 94%) 0%,
+      color-mix(in oklab, var(--accent-gold), transparent 26%) 50%,
+      color-mix(in oklab, var(--accent-gold), transparent 94%) 100%
     );
-    box-shadow: 0 0 24px rgba(197, 166, 106, 0.45);
+    box-shadow: 0 0 24px color-mix(in oklab, var(--accent-gold), transparent 52%);
   }
 
   @keyframes subtleGlow {

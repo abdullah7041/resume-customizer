@@ -13,10 +13,11 @@ export default function PrimaryButton({
     <button
       className={cn(
         "relative inline-flex min-h-[44px] items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-2.5 text-sm font-semibold tracking-wide text-white transition-[transform,box-shadow] duration-300 ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        "border border-transparent bg-[var(--button-primary-gradient)] shadow-[var(--button-primary-shadow)]",
-        "hover:-translate-y-0.5 hover:shadow-[var(--button-primary-shadow-strong)]",
+        "border border-[color:var(--button-primary-border)] bg-[var(--button-primary-gradient)] shadow-[var(--button-primary-shadow)]",
+        "before:pointer-events-none before:absolute before:inset-px before:rounded-[inherit] before:bg-[var(--button-primary-overlay)] before:opacity-0 before:transition-opacity before:duration-300",
+        "hover:-translate-y-0.5 hover:shadow-[var(--button-primary-shadow-strong)] hover:before:opacity-100",
         "focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]",
-        "disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-[color-mix(in_oklab,var(--surface),transparent_16%)] disabled:text-[color:color-mix(in_oklab,var(--ink),transparent_54%)] disabled:shadow-none",
+        "disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-[color:var(--hairline-muted)] disabled:bg-[color-mix(in_oklab,var(--surface),transparent_16%)] disabled:text-[color:color-mix(in_oklab,var(--ink),transparent_54%)] disabled:shadow-none",
         className
       )}
       disabled={disabled || loading}

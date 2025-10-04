@@ -154,7 +154,13 @@ const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
   return origin;
 };
 
+let cachedAssetsBaseHost: string | null | undefined;
+
 const readAssetsBaseHost = () => {
+  if (cachedAssetsBaseHost !== undefined) {
+    return cachedAssetsBaseHost;
+  }
+
   const warnInvalidEnv = (key: string, error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     warnHostOnlyEnv(`[assets] ${key} is invalid: ${message}`);
@@ -163,7 +169,8 @@ const readAssetsBaseHost = () => {
   const assetsBase = readEnvString("VITE_ASSETS_BASE_URL");
   if (assetsBase) {
     try {
-      return ensureHostOnlyUrl(assetsBase, "VITE_ASSETS_BASE_URL");
+      cachedAssetsBaseHost = ensureHostOnlyUrl(assetsBase, "VITE_ASSETS_BASE_URL");
+      return cachedAssetsBaseHost;
     } catch (error) {
       warnInvalidEnv("VITE_ASSETS_BASE_URL", error);
     }
@@ -172,13 +179,15 @@ const readAssetsBaseHost = () => {
   const supabaseUrl = readEnvString("VITE_SUPABASE_URL");
   if (supabaseUrl) {
     try {
-      return ensureHostOnlyUrl(supabaseUrl, "VITE_SUPABASE_URL");
+      cachedAssetsBaseHost = ensureHostOnlyUrl(supabaseUrl, "VITE_SUPABASE_URL");
+      return cachedAssetsBaseHost;
     } catch (error) {
       warnInvalidEnv("VITE_SUPABASE_URL", error);
     }
   }
 
-  return null;
+  cachedAssetsBaseHost = null;
+  return cachedAssetsBaseHost;
 };
 
 const normalizeBucketName = (bucket: string) => {
@@ -237,22 +246,34 @@ export const publicAssetUrl = (bucket: string, objectPath: string) => {
 const SKYLINE_BUCKET = "ui-assets";
 const SKYLINE_OBJECT_PATH = "KAFDH.webp";
 
+const FALLBACK_SKYLINE_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B6B3A" stop-opacity="0.78"/><stop offset="0.5" stop-color="#7C3AED" stop-opacity="0.74"/><stop offset="1" stop-color="#EC4899" stop-opacity="0.68"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><g opacity="0.35" stroke="#F7F2E7" stroke-width="1.2"><path d="M160 720V420l120-60 120 60v300"/><path d="M520 720V360l140-80 140 80v360"/><path d="M880 720V300l160-90 160 90v420"/><path d="M1240 720V420l120-60 120 60v300"/></g><g opacity="0.18" fill="#F7F2E7"><circle cx="320" cy="240" r="36"/><circle cx="1280" cy="200" r="42"/><circle cx="1040" cy="160" r="24"/></g></svg>';
+
+const FALLBACK_SKYLINE_URL = `data:image/svg+xml,${encodeURIComponent(FALLBACK_SKYLINE_SVG)}`;
+
 let memoizedSkylineUrl: string | null = null;
 
 export const getSkylineUrl = () => {
   if (!memoizedSkylineUrl) {
     try {
       const resolvedUrl = publicAssetUrl(SKYLINE_BUCKET, SKYLINE_OBJECT_PATH);
-      memoizedSkylineUrl = resolvedUrl ? withVersion(resolvedUrl) : "";
+      memoizedSkylineUrl = resolvedUrl ? withVersion(resolvedUrl) : FALLBACK_SKYLINE_URL;
     } catch (error) {
       warnHostOnlyEnv(
         `[assets] Failed to resolve skyline asset: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
-      memoizedSkylineUrl = "";
+      memoizedSkylineUrl = FALLBACK_SKYLINE_URL;
     }
   }
 
   return memoizedSkylineUrl;
+};
+
+export const __internal = {
+  resetCache() {
+    cachedAssetsBaseHost = undefined;
+    memoizedSkylineUrl = null;
+  },
 };

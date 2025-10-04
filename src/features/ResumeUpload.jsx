@@ -11,6 +11,7 @@ const DOCUMENT_EXTENSIONS = new Set(["pdf", "docx"]);
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const PDF_HELPER_MESSAGE = "This looks like a PDF — use Upload.";
+const RESUME_BUCKET = "resumes";
 const ERROR_MESSAGES = {
   "file/unsupported-type": {
     type: "warning",
@@ -207,9 +208,11 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
       setError("");
       setProgress(0);
 
+      let storageMetadata = null;
+
       if (file) {
         setStatus("uploading");
-        await uploadResumeFile(file, {
+        const uploadResult = await uploadResumeFile(file, {
           onProgress: ({ loaded, total }) => {
             if (!total) return;
             const percent = Math.round((loaded / total) * 60);
@@ -218,16 +221,35 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         });
 
         setProgress((prev) => Math.max(prev, 70));
+        if (uploadResult) {
+          storageMetadata = {
+            bucket: uploadResult.bucket || RESUME_BUCKET,
+            path: uploadResult.path,
+            fileName: uploadResult.fileName,
+            userId: uploadResult.userId,
+          };
+        }
         onToast?.({
           type: "success",
           title: "File uploaded",
-          description: "Resume stored securely. Parsing next…",
+          description: storageMetadata
+            ? `Stored securely as ${storageMetadata.fileName}. Parsing next…`
+            : "Resume stored securely. Parsing next…",
         });
       }
 
       setStatus("parsing");
       setProgress((prev) => Math.max(prev, 80));
-      const payload = file || textValue;
+      const payload = file
+        ? {
+            kind: "upload",
+            file,
+            storage: storageMetadata,
+          }
+        : {
+            kind: "text",
+            value: trimmedText,
+          };
       const parsed = await onParseResume?.(payload);
       setProgress(100);
       setStatus("success");
