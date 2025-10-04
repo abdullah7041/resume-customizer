@@ -50,22 +50,6 @@ describe("supabase upload service", () => {
     expect(progressSpy).toHaveBeenCalledWith({ loaded: 5, total: 10 });
   });
 
-  it("continues suffixing beyond five conflicts", async () => {
-    authMock.getUser.mockResolvedValue({ data: { user: { id: "user-789" } }, error: null });
-
-    for (let i = 0; i < 7; i += 1) {
-      uploadSpy.mockImplementationOnce(async () => ({ error: { statusCode: 409 } }));
-    }
-
-    uploadSpy.mockImplementationOnce(async () => ({ error: null }));
-
-    const result = await uploadResumeFile({ name: "resume.pdf" });
-
-    expect(uploadSpy).toHaveBeenCalledTimes(8);
-    expect(uploadSpy.mock.calls[7][0]).toBe("user-789/resume-v8.pdf");
-    expect(result).toEqual({ path: "user-789/resume-v8.pdf", fileName: "resume-v8.pdf", userId: "user-789" });
-  });
-
   it("uploads successfully when storage accepts the first attempt", async () => {
     authMock.getUser.mockResolvedValue({ data: { user: { id: "user-456" } }, error: null });
     uploadSpy.mockResolvedValueOnce({ error: null });

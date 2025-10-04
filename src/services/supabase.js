@@ -124,7 +124,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
 
   const baseName = cleanBaseName(file?.name || "");
   const bucket = supabase.storage.from("resumes");
-  const maxAttempts = 50;
+  const maxAttempts = 5;
   const contentType = resolveContentType(file);
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
