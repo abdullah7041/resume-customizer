@@ -104,20 +104,39 @@ describe("publicAssetUrl", () => {
   });
 
   it("builds a single well-formed public asset URL", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com");
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com/");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { publicAssetUrl } = await loadModule();
     expect(publicAssetUrl("ui-assets", "/hero//KAFDH.webp")).toBe(
       "https://cdn.example.com/storage/v1/object/public/ui-assets/hero/KAFDH.webp",
     );
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
-  it("rejects when the environment contains a full object URL", async () => {
+  it("coerces pathful base URLs to the origin and warns in dev", async () => {
     vi.stubEnv(
-      "VITE_SUPABASE_URL",
+      "VITE_ASSETS_BASE_URL",
+      "https://project.supabase.co/storage/v1/object/public/ui-assets",
+    );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { publicAssetUrl } = await loadModule();
+    expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe(
       "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp",
     );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("VITE_ASSETS_BASE_URL should be host-only"),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("falls back to an empty string when neither env is valid", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { publicAssetUrl } = await loadModule();
-    expect(() => publicAssetUrl("ui-assets", "KAFDH.webp")).toThrow(/host-only url/i);
+    expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe("");
+    warnSpy.mockRestore();
   });
 });
 
