@@ -100,6 +100,27 @@ export const validatePublicUrl = (url: string) => {
   return parsed.toString();
 };
 
+const HOST_ONLY_PATTERN = /^https?:\/\/[^/]+$/i;
+
+const isDevEnvironment = () => {
+  const metaEnv = (import.meta as { env?: Record<string, unknown> }).env;
+  if (metaEnv && typeof metaEnv.DEV === "boolean") {
+    return metaEnv.DEV;
+  }
+
+  if (typeof process !== "undefined" && typeof process.env?.NODE_ENV === "string") {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  return false;
+};
+
+const warnHostOnlyEnv = (message: string) => {
+  if (isDevEnvironment()) {
+    console.warn(message);
+  }
+};
+
 const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -117,28 +138,47 @@ const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
     throw new Error(`${sourceKey} must use http or https.`);
   }
 
-  const hasPath = parsed.pathname && parsed.pathname !== "/";
-  if (hasPath || parsed.search || parsed.hash) {
-    throw new Error(`${sourceKey} must be a host-only URL (https://host.tld).`);
+  const origin = parsed.origin;
+  const trailingSlashNormalized = trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+  const isAlreadyHostOnly = HOST_ONLY_PATTERN.test(trimmed) || trailingSlashNormalized === origin;
+
+  const hasNonRootPath = parsed.pathname && parsed.pathname !== "/" && parsed.pathname !== "";
+  const hasQueryOrHash = (parsed.search && parsed.search !== "") || (parsed.hash && parsed.hash !== "");
+
+  if (!isAlreadyHostOnly || hasNonRootPath || hasQueryOrHash) {
+    warnHostOnlyEnv(
+      `[assets] ${sourceKey} should be host-only (https://host.tld). Using ${origin} instead of ${trimmed}.`,
+    );
   }
 
-  return parsed.origin;
+  return origin;
 };
 
 const readAssetsBaseHost = () => {
+  const warnInvalidEnv = (key: string, error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    warnHostOnlyEnv(`[assets] ${key} is invalid: ${message}`);
+  };
+
   const assetsBase = readEnvString("VITE_ASSETS_BASE_URL");
   if (assetsBase) {
-    return ensureHostOnlyUrl(assetsBase, "VITE_ASSETS_BASE_URL");
+    try {
+      return ensureHostOnlyUrl(assetsBase, "VITE_ASSETS_BASE_URL");
+    } catch (error) {
+      warnInvalidEnv("VITE_ASSETS_BASE_URL", error);
+    }
   }
 
   const supabaseUrl = readEnvString("VITE_SUPABASE_URL");
   if (supabaseUrl) {
-    return ensureHostOnlyUrl(supabaseUrl, "VITE_SUPABASE_URL");
+    try {
+      return ensureHostOnlyUrl(supabaseUrl, "VITE_SUPABASE_URL");
+    } catch (error) {
+      warnInvalidEnv("VITE_SUPABASE_URL", error);
+    }
   }
 
-  throw new Error(
-    "Missing VITE_ASSETS_BASE_URL or VITE_SUPABASE_URL – required to resolve the skyline asset URL.",
-  );
+  return null;
 };
 
 const normalizeBucketName = (bucket: string) => {
@@ -185,6 +225,9 @@ const PUBLIC_STORAGE_PREFIX = "/storage/v1/object/public";
 
 export const publicAssetUrl = (bucket: string, objectPath: string) => {
   const baseHost = readAssetsBaseHost();
+  if (!baseHost) {
+    return "";
+  }
   const bucketSegment = normalizeBucketName(bucket);
   const objectSegment = normalizeObjectPath(objectPath);
   const pathname = `${PUBLIC_STORAGE_PREFIX}/${bucketSegment}/${objectSegment}`;
@@ -198,7 +241,17 @@ let memoizedSkylineUrl: string | null = null;
 
 export const getSkylineUrl = () => {
   if (!memoizedSkylineUrl) {
-    memoizedSkylineUrl = withVersion(publicAssetUrl(SKYLINE_BUCKET, SKYLINE_OBJECT_PATH));
+    try {
+      const resolvedUrl = publicAssetUrl(SKYLINE_BUCKET, SKYLINE_OBJECT_PATH);
+      memoizedSkylineUrl = resolvedUrl ? withVersion(resolvedUrl) : "";
+    } catch (error) {
+      warnHostOnlyEnv(
+        `[assets] Failed to resolve skyline asset: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      memoizedSkylineUrl = "";
+    }
   }
 
   return memoizedSkylineUrl;
