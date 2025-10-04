@@ -74,7 +74,7 @@ describe("Header", () => {
     expect(container.querySelector(".bg-hero")).toBeNull();
 
     const fallback = Array.from(container.querySelectorAll('[aria-hidden="true"]')).find((element) =>
-      element.className.includes("bg-gradient-to-b"),
+      element.className.includes("bg-[radial-gradient"),
     );
 
     expect(fallback).toBeDefined();

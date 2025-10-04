@@ -1,13 +1,13 @@
 :root {
-  --bg: #f4f9f6;
-  --surface: #ffffff;
-  --surface-strong: #e5f2eb;
-  --ink: #08291b;
-  --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 55%);
-  --accent: #0f8a5f;
-  --secondary: #135f44;
-  --panel-bg: color-mix(in oklab, var(--surface), transparent 35%);
-  --panel-stroke: color-mix(in oklab, var(--ink), transparent 82%);
+  --bg: #f4f7f3;
+  --surface: #fefdfb;
+  --surface-strong: #e7f2ea;
+  --ink: #05271b;
+  --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 52%);
+  --accent: #0e7c54;
+  --secondary: #146247;
+  --panel-bg: color-mix(in oklab, var(--surface), transparent 38%);
+  --panel-stroke: color-mix(in oklab, var(--ink), transparent 88%);
   /* Accessibility: palette ensures ≥4.5:1 contrast between ink text and key surfaces. */
 
   --surface-50: var(--bg);
@@ -29,21 +29,17 @@
   --accent-gold-rgb: 212 184 106;
 
   --panel-border: var(--panel-stroke);
-  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 45%);
+  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 42%);
 
-  --shadow-card-value: 0 28px 80px -46px color-mix(in oklab, var(--emerald-900), transparent 68%);
-  --shadow-soft-value: 0 18px 48px -32px color-mix(in oklab, var(--emerald-700), transparent 65%);
+  --shadow-card-value: 0 20px 60px -40px color-mix(in oklab, var(--emerald-900), transparent 76%);
+  --shadow-soft-value: 0 14px 38px -28px color-mix(in oklab, var(--emerald-700), transparent 74%);
+  --shadow-lift-value: 0 22px 64px -40px color-mix(in oklab, var(--emerald-900), transparent 70%);
 
   --duration-snappy: 180ms;
   --duration-breathe: 280ms;
   --transition-snappy: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --gradient-primary-value: linear-gradient(
-    132deg,
-    color-mix(in oklab, var(--accent), var(--surface) 14%) 0%,
-    var(--accent) 50%,
-    color-mix(in oklab, var(--emerald-900), transparent 6%) 100%
-  );
+  --gradient-primary-value: linear-gradient(135deg, #6f3dcf 0%, #d946aa 100%);
   --gradient-muted-value: linear-gradient(
     135deg,
     color-mix(in oklab, var(--accent), transparent 88%) 0%,
@@ -57,9 +53,15 @@
 
   --shadow-card: var(--shadow-card-value);
   --shadow-soft: var(--shadow-soft-value);
+  --shadow-lift: var(--shadow-lift-value);
   --gradient-primary: var(--gradient-primary-value);
   --gradient-muted: var(--gradient-muted-value);
   --gradient-card: var(--gradient-card-value);
+
+  --button-primary-gradient: var(--gradient-primary-value);
+  --button-primary-shadow: 0 18px 42px -28px color-mix(in oklab, #d946aa, transparent 68%);
+  --button-primary-shadow-strong: 0 24px 52px -28px color-mix(in oklab, #c026d3, transparent 62%);
+  --button-primary-focus: color-mix(in oklab, #c084fc 60%, #f472b6);
 
   --color-primary-400: color-mix(in oklab, var(--accent), transparent 10%);
   --color-primary-500: var(--accent);
@@ -99,14 +101,14 @@
 :root.dark,
 .dark {
   --bg: #020c08;
-  --surface: #071611;
-  --surface-strong: #0f261c;
-  --ink: #e5f6ef;
-  --ink-muted: color-mix(in oklab, var(--ink), var(--surface) 35%);
-  --accent: #1aa877;
-  --secondary: #4dd0a1;
-  --panel-bg: color-mix(in oklab, var(--surface-strong), transparent 38%);
-  --panel-stroke: color-mix(in oklab, var(--ink), transparent 68%);
+  --surface: #06130f;
+  --surface-strong: #0d2217;
+  --ink: #e6f6ef;
+  --ink-muted: color-mix(in oklab, var(--ink), var(--surface) 40%);
+  --accent: #22b37d;
+  --secondary: #57d2a5;
+  --panel-bg: color-mix(in oklab, var(--surface-strong), transparent 34%);
+  --panel-stroke: color-mix(in oklab, var(--ink), transparent 82%);
 
   --surface-900: var(--bg);
   --surface-900-rgb: 2 12 8;
@@ -122,17 +124,13 @@
   --emerald-900-rgb: 11 106 73;
 
   --panel-border: var(--panel-stroke);
-  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 38%);
+  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 32%);
 
-  --shadow-card-value: 0 32px 82px -48px color-mix(in oklab, var(--emerald-900), transparent 58%);
-  --shadow-soft-value: 0 20px 52px -36px color-mix(in oklab, var(--emerald-900), transparent 60%);
+  --shadow-card-value: 0 20px 56px -36px color-mix(in oklab, var(--emerald-900), transparent 58%);
+  --shadow-soft-value: 0 14px 40px -28px color-mix(in oklab, var(--emerald-900), transparent 60%);
+  --shadow-lift-value: 0 24px 62px -36px color-mix(in oklab, var(--emerald-900), transparent 54%);
 
-  --gradient-primary-value: linear-gradient(
-    132deg,
-    color-mix(in oklab, var(--accent), transparent 10%) 0%,
-    color-mix(in oklab, var(--emerald-900), transparent 6%) 52%,
-    var(--emerald-900) 100%
-  );
+  --gradient-primary-value: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
   --gradient-muted-value: linear-gradient(
     135deg,
     color-mix(in oklab, var(--emerald-900), transparent 80%) 0%,
@@ -140,9 +138,14 @@
   );
   --gradient-card-value: linear-gradient(
     135deg,
-    color-mix(in oklab, var(--panel-highlight), transparent 40%) 0%,
-    color-mix(in oklab, var(--panel-highlight), transparent 72%) 100%
+    color-mix(in oklab, var(--panel-highlight), transparent 34%) 0%,
+    color-mix(in oklab, var(--panel-highlight), transparent 68%) 100%
   );
+
+  --button-primary-gradient: var(--gradient-primary-value);
+  --button-primary-shadow: 0 20px 44px -28px color-mix(in oklab, #ec4899, transparent 60%);
+  --button-primary-shadow-strong: 0 26px 52px -28px color-mix(in oklab, #f472b6, transparent 54%);
+  --button-primary-focus: color-mix(in oklab, #d8b4fe 55%, #f9a8d4);
 }
 
 @keyframes accent-shimmer {
