@@ -17,6 +17,11 @@ Make your resume match the job—fast. Compare a resume to a job description and
 
 ---
 
+## 🚀 Deployment notes
+- The repository no longer contains the nested `resume-customizer/` Git submodule that previously broke GitHub Pages builds. Make sure future commits avoid reintroducing that path so Actions can check out the project without submodule configuration.
+
+---
+
 ## 🧩 How it works (high level)
 - Extracts text from the resume (client)
 - Sends minimal text to the AI matcher (server function / API adapter)
