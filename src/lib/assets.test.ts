@@ -101,6 +101,7 @@ describe("publicAssetUrl", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it("builds a single well-formed public asset URL", async () => {
@@ -144,6 +145,7 @@ describe("getSkylineUrl", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it("uses the versioned skyline asset URL", async () => {
