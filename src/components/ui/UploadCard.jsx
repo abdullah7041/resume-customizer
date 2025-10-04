@@ -5,13 +5,43 @@ import { cn } from "../../lib/cn";
 import PrimaryButton from "./PrimaryButton";
 import SecondaryButton from "./SecondaryButton";
 
-const ACCEPTED_MIME_TYPES = new Set([
+const DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
 ]);
 
+const DOCUMENT_EXTENSIONS = new Set(["pdf", "docx"]);
+
+const TEXT_MIME_TYPES = new Set(["text/plain"]);
+const TEXT_EXTENSIONS = new Set(["txt"]);
+
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+
+const getExtension = (fileName) => {
+  if (typeof fileName !== "string") return "";
+  const match = fileName.match(/\.([^.]+)$/);
+  return match ? match[1].toLowerCase() : "";
+};
+
+const isDocumentFile = (file) => {
+  if (!file) return false;
+  const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
+  if (DOCUMENT_MIME_TYPES.has(normalizedType)) {
+    return true;
+  }
+  const extension = getExtension(file.name);
+  return DOCUMENT_EXTENSIONS.has(extension);
+};
+
+const isPlainTextFile = (file) => {
+  if (!file) return false;
+  const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
+  if (TEXT_MIME_TYPES.has(normalizedType)) {
+    return true;
+  }
+  const extension = getExtension(file.name);
+  return TEXT_EXTENSIONS.has(extension);
+};
 
 const statusCopy = {
   uploading: "Uploading resume…",
@@ -40,7 +70,11 @@ export default function UploadCard({
   const handleFile = async (file) => {
     if (!file) return;
 
-    if (!ACCEPTED_MIME_TYPES.has(file.type)) {
+    const size = typeof file.size === "number" ? file.size : 0;
+    const documentFile = isDocumentFile(file);
+    const plainTextFile = isPlainTextFile(file);
+
+    if (!documentFile && !plainTextFile) {
       onValidationError?.(
         new AppError({
           code: "file/unsupported-type",
@@ -51,7 +85,7 @@ export default function UploadCard({
       return;
     }
 
-    if (file.size > MAX_SIZE_BYTES) {
+    if (size > MAX_SIZE_BYTES) {
       onValidationError?.(
         new AppError({
           code: "file/too-large",
@@ -62,7 +96,7 @@ export default function UploadCard({
       return;
     }
 
-    if (file.type === "text/plain") {
+    if (plainTextFile) {
       try {
         const text = await file.text();
         onTextChange?.(text);

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import UploadCard from "../components/ui/UploadCard.jsx";
 import { AppError, uploadResumeFile } from "../services/supabase.js";
 
-const ACCEPTED_TYPES = new Set([
+const DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
+
+const DOCUMENT_EXTENSIONS = new Set(["pdf", "docx"]);
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const PDF_HELPER_MESSAGE = "This looks like a PDF — use Upload.";
@@ -50,6 +52,24 @@ const ERROR_MESSAGES = {
     type: "danger",
     title: "Upload not allowed",
   },
+};
+
+const getExtension = (fileName) => {
+  if (typeof fileName !== "string") {
+    return "";
+  }
+  const match = fileName.match(/\.([^.]+)$/);
+  return match ? match[1].toLowerCase() : "";
+};
+
+const isDocumentFile = (file) => {
+  if (!file) return false;
+  const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
+  if (DOCUMENT_MIME_TYPES.has(normalizedType)) {
+    return true;
+  }
+  const extension = getExtension(file.name);
+  return DOCUMENT_EXTENSIONS.has(extension);
 };
 
 export default function ResumeUpload({ onParseResume, resumeDocument, onToast }) {
@@ -131,7 +151,7 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
   const handleFileSelect = useCallback(
     (selectedFile) => {
       if (!selectedFile) return;
-      if (!ACCEPTED_TYPES.has(selectedFile.type)) {
+      if (!isDocumentFile(selectedFile)) {
         handleValidationError(
           new AppError({
             code: "file/unsupported-type",
@@ -141,7 +161,8 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         );
         return;
       }
-      if (selectedFile.size > MAX_BYTES) {
+      const size = typeof selectedFile.size === "number" ? selectedFile.size : 0;
+      if (size > MAX_BYTES) {
         handleValidationError(
           new AppError({
             code: "file/too-large",
