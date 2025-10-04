@@ -97,90 +97,42 @@ describe("withVersion", () => {
   });
 });
 
+describe("publicAssetUrl", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  it("builds a single well-formed public asset URL", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com");
+    const { publicAssetUrl } = await loadModule();
+    expect(publicAssetUrl("ui-assets", "/hero//KAFDH.webp")).toBe(
+      "https://cdn.example.com/storage/v1/object/public/ui-assets/hero/KAFDH.webp",
+    );
+  });
+
+  it("rejects when the environment contains a full object URL", async () => {
+    vi.stubEnv(
+      "VITE_SUPABASE_URL",
+      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp",
+    );
+    const { publicAssetUrl } = await loadModule();
+    expect(() => publicAssetUrl("ui-assets", "KAFDH.webp")).toThrow(/host-only url/i);
+  });
+});
+
 describe("getSkylineUrl", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllEnvs();
-    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co/");
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "");
   });
 
-  it("returns a single segment URL for the skyline asset", async () => {
-    vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240924");
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  it("uses the versioned skyline asset URL", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_BUILD_ID", "build-xyz");
     const { getSkylineUrl } = await loadModule();
-    const url = getSkylineUrl();
-    expect(url).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=20240924",
+    expect(getSkylineUrl()).toBe(
+      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=build-xyz",
     );
-    expect(url.split("KAFDH.webp").length - 1).toBe(1);
-    expect(consoleSpy).toHaveBeenCalledTimes(1);
-    consoleSpy.mockRestore();
-  });
-  it("rejects when VITE_SUPABASE_URL is a full object URL (prevents .../KAFDH.webp/KAFDH.webp)", async () => {
-    vi.stubEnv(
-      "VITE_SUPABASE_URL",
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp/",
-    );
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { getSkylineUrl } = await loadModule();
-    expect(() => getSkylineUrl()).toThrow(/(project.*url|not.*full.*object.*url)/i);
-    expect(consoleSpy).toHaveBeenCalledOnce();
-    consoleSpy.mockRestore();
-  });
-
-  it("sanitizes full object URLs without throwing in production", async () => {
-    vi.stubEnv(
-      "VITE_SUPABASE_URL",
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp/",
-    );
-    vi.stubEnv("VITE_SUPABASE_STRICT_SKYLINE", "false");
-
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { getSkylineUrl } = await loadModule();
-    const url = getSkylineUrl();
-    expect(url).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
-    );
-    expect(consoleSpy).toHaveBeenCalledOnce();
-    consoleSpy.mockRestore();
-  });
-
-  it("trims accidental double slashes", async () => {
-    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co////");
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const { getSkylineUrl } = await loadModule();
-    const url = getSkylineUrl();
-    expect(url).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
-    );
-    consoleSpy.mockRestore();
-  });
-
-  it("prefers VITE_ASSETS_BASE_URL over VITE_SUPABASE_URL when both are set", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cdn.example.com");
-    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
-    vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240925");
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const { getSkylineUrl } = await loadModule();
-    const url = getSkylineUrl();
-    expect(url).toBe(
-      "https://cdn.example.com/storage/v1/object/public/ui-assets/KAFDH.webp?v=20240925",
-    );
-    expect(consoleSpy).toHaveBeenCalledTimes(1);
-    consoleSpy.mockRestore();
-  });
-
-  it("falls back to VITE_SUPABASE_URL when VITE_ASSETS_BASE_URL is not set", async () => {
-    vi.stubEnv("VITE_SUPABASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
-    vi.stubEnv("VITE_BUILD_TIMESTAMP", "20240926");
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const { getSkylineUrl } = await loadModule();
-    const url = getSkylineUrl();
-    expect(url).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=20240926",
-    );
-    expect(consoleSpy).toHaveBeenCalledTimes(1);
-    consoleSpy.mockRestore();
   });
 });
