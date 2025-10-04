@@ -231,14 +231,14 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] bg-surface-900/55 p-6 backdrop-blur-2xl shadow-[0_32px_90px_-40px_rgba(0,0,0,0.6)] sm:p-7 lg:p-8">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_46%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] p-6 shadow-[0_28px_70px_-44px_color-mix(in_oklab,var(--emerald-900),transparent_60%)] backdrop-blur-xl sm:p-7 lg:p-8">
               <span
                 aria-hidden="true"
-                className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_18px_rgba(197,166,106,0.45)]"
+                className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
               >
                 <Sparkles className="h-7 w-7" />
               </span>
-              <h1 className="text-balance text-shadow-hero text-4xl font-bold leading-tight tracking-tight drop-shadow-[0_16px_34px_rgba(0,0,0,0.6)] sm:text-5xl lg:text-6xl">
+              <h1 className="text-balance text-shadow-hero text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
               </h1>
               <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/95 sm:text-lg">
@@ -325,7 +325,7 @@ export default function Header() {
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-secondary-600 shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-[color:var(--secondary)] shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -334,7 +334,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-secondary-600 shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-[color:var(--secondary)] shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
                   <Target className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -343,7 +343,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-secondary-600 shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/70 text-[color:var(--secondary)] shadow-sm dark:bg-surface-50/15 dark:text-surface-50">
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -379,12 +379,10 @@ export default function Header() {
         className={cn(
           "absolute inset-0 -z-30 pointer-events-none transition-colors duration-700",
           isDark
-            ? "bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_8%)_0%,color-mix(in_oklab,var(--accent),transparent_32%)_48%,color-mix(in_oklab,var(--surface-strong),transparent_48%)_100%)]"
-            : "bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--accent),transparent_58%)_0%,color-mix(in_oklab,var(--bg),transparent_22%)_52%,color-mix(in_oklab,var(--surface-strong),transparent_62%)_100%)]",
+            ? "bg-[radial-gradient(circle_at_18%_-12%,color-mix(in_oklab,var(--accent),transparent_82%)_0%,transparent_58%),radial-gradient(circle_at_82%_-18%,color-mix(in_oklab,var(--accent-gold),transparent_88%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_12%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_46%)_100%)]"
+            : "bg-[radial-gradient(circle_at_16%_-16%,color-mix(in_oklab,var(--accent),transparent_88%)_0%,transparent_62%),radial-gradient(circle_at_84%_-14%,color-mix(in_oklab,var(--accent-gold),transparent_90%)_0%,transparent_70%),linear-gradient(to_bottom,color-mix(in_oklab,var(--bg),transparent_12%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_58%)_100%)]",
         )}
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,color-mix(in_oklab,var(--accent),transparent_42%)_0%,transparent_70%)] mix-blend-screen" />
-      </div>
+      />
       <div
         className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}

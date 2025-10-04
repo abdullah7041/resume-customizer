@@ -1,12 +1,13 @@
 :root {
   --bg: #f4f9f6;
   --surface: #ffffff;
-  --surface-strong: #e2f0ea;
+  --surface-strong: #e5f2eb;
   --ink: #08291b;
   --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 55%);
   --accent: #0f8a5f;
-  --panel-bg: color-mix(in oklab, var(--surface), transparent 28%);
-  --panel-stroke: color-mix(in oklab, var(--ink), var(--surface) 86%);
+  --secondary: #135f44;
+  --panel-bg: color-mix(in oklab, var(--surface), transparent 35%);
+  --panel-stroke: color-mix(in oklab, var(--ink), transparent 82%);
   /* Accessibility: palette ensures ≥4.5:1 contrast between ink text and key surfaces. */
 
   --surface-50: var(--bg);
@@ -98,13 +99,14 @@
 :root.dark,
 .dark {
   --bg: #020c08;
-  --surface: #061912;
-  --surface-strong: #0d261a;
+  --surface: #071611;
+  --surface-strong: #0f261c;
   --ink: #e5f6ef;
   --ink-muted: color-mix(in oklab, var(--ink), var(--surface) 35%);
   --accent: #1aa877;
-  --panel-bg: color-mix(in oklab, var(--surface-strong), transparent 18%);
-  --panel-stroke: color-mix(in oklab, var(--ink), var(--surface) 72%);
+  --secondary: #4dd0a1;
+  --panel-bg: color-mix(in oklab, var(--surface-strong), transparent 38%);
+  --panel-stroke: color-mix(in oklab, var(--ink), transparent 68%);
 
   --surface-900: var(--bg);
   --surface-900-rgb: 2 12 8;

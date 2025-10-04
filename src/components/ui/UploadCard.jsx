@@ -115,13 +115,13 @@ export default function UploadCard({
 
   return (
     <section
-      className="space-y-6 rounded-[var(--radius-card)] border border-[color:color-mix(in_oklab,var(--panel-border),transparent_30%)] bg-[color:var(--panel-bg)] p-8 text-[color:color-mix(in_oklab,var(--ink-900),transparent_10%)] shadow-[var(--shadow-card)] backdrop-blur-xl dark:text-[color:color-mix(in_oklab,var(--surface-50),transparent_15%)]"
+      className="space-y-6 rounded-[var(--radius-card)] border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_48%)] bg-[color:var(--panel-bg)] p-8 text-[color:var(--ink)] shadow-[0_32px_88px_-48px_color-mix(in_oklab,var(--emerald-900),transparent_68%)] backdrop-blur-xl dark:text-[color:var(--surface)]"
       aria-live="polite"
     >
       <div className="space-y-2 text-left">
-        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-accent-500">Step 1</p>
-        <h3 className="text-xl font-bold text-[color:color-mix(in_oklab,var(--ink-900),transparent_8%)] dark:text-[color:var(--surface-50)]">Upload or Paste Your Resume</h3>
-        <p className="text-sm text-[color:color-mix(in_oklab,var(--ink-500),transparent_18%)] dark:text-[color:color-mix(in_oklab,var(--surface-50),transparent_30%)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--accent)]">Step 1</p>
+        <h3 className="text-xl font-bold text-[color:var(--ink)] dark:text-[color:var(--surface)]">Upload or Paste Your Resume</h3>
+        <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:color-mix(in_oklab,var(--surface),transparent_35%)]">
           Drag a PDF or DOCX, or paste the text to let our AI optimize every line.
         </p>
       </div>
@@ -141,24 +141,24 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-card)_-_0.5rem)] border-2 border-dashed border-[color:color-mix(in_oklab,var(--emerald-700),transparent_55%)] bg-[color:color-mix(in_oklab,var(--emerald-700),transparent_92%)] px-6 py-12 text-center transition-all duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--emerald-700),transparent_30%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface-50)] dark:focus-visible:ring-offset-[color:var(--surface-900)] backdrop-blur-xl",
-          isDragging && "border-[color:color-mix(in_oklab,var(--emerald-700),transparent_35%)] bg-[color:color-mix(in_oklab,var(--emerald-700),transparent_82%)] shadow-[var(--shadow-soft)]"
+          "relative flex flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-card)_-_0.5rem)] border border-dashed border-[color:color-mix(in_oklab,var(--accent),transparent_48%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_4%)] px-6 py-12 text-center shadow-[0_28px_72px_-44px_color-mix(in_oklab,var(--emerald-900),transparent_62%)] backdrop-blur-xl transition-all duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_30%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]",
+          isDragging && "border-[color:color-mix(in_oklab,var(--accent),transparent_32%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] shadow-[0_32px_82px_-46px_color-mix(in_oklab,var(--emerald-900),transparent_54%)]"
         )}
       >
-        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_oklab,var(--emerald-700),transparent_88%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:color-mix(in_oklab,var(--emerald-700),transparent_20%)]">
+        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_50%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_6%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)] shadow-[0_12px_32px_-24px_color-mix(in_oklab,var(--emerald-900),transparent_70%)]">
           Max 5MB
         </span>
-        <div className="flex items-center gap-2 rounded-full bg-[color:color-mix(in_oklab,var(--surface-50),transparent_25%)] px-4 py-2 text-xs font-semibold text-[color:color-mix(in_oklab,var(--ink-900),transparent_8%)] shadow-[var(--shadow-soft)] dark:text-[color:color-mix(in_oklab,var(--surface-50),transparent_15%)]">
+        <div className="flex items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_42%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_8%)] px-4 py-2 text-xs font-semibold text-[color:var(--ink)] shadow-[0_20px_48px_-34px_color-mix(in_oklab,var(--emerald-900),transparent_66%)] dark:text-[color:var(--surface)]">
           <FileText className="h-4 w-4" aria-hidden="true" />
           <span>PDF</span>
           <span className="mx-1 text-[color:color-mix(in_oklab,var(--ink-500),transparent_40%)]">|</span>
           <span>DOCX</span>
         </div>
         <UploadCloud className="h-10 w-10 text-[color:color-mix(in_oklab,var(--emerald-700),transparent_10%)]" aria-hidden="true" />
-        <p className="text-base font-semibold text-[color:color-mix(in_oklab,var(--ink-900),transparent_10%)] dark:text-[color:var(--surface-50)]">
+        <p className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--surface)]">
           Drop your resume here or click to browse
         </p>
-        <p className="text-sm text-[color:color-mix(in_oklab,var(--ink-500),transparent_22%)] dark:text-[color:color-mix(in_oklab,var(--surface-50),transparent_35%)]">
+        <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:color-mix(in_oklab,var(--surface),transparent_35%)]">
           We keep uploads private and secure.
         </p>
       </div>
@@ -174,12 +174,12 @@ export default function UploadCard({
       />
 
       {fileName && (
-        <div className="flex items-center justify-between rounded-2xl border border-[color:color-mix(in_oklab,var(--emerald-700),transparent_70%)] bg-[color:color-mix(in_oklab,var(--emerald-700),transparent_94%)] px-4 py-3 text-sm text-[color:color-mix(in_oklab,var(--ink-900),transparent_10%)] dark:text-[color:color-mix(in_oklab,var(--surface-50),transparent_15%)]">
+        <div className="flex items-center justify-between rounded-2xl border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_52%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] px-4 py-3 text-sm text-[color:var(--ink)] shadow-[0_18px_44px_-32px_color-mix(in_oklab,var(--emerald-900),transparent_64%)] backdrop-blur-xl dark:text-[color:var(--surface)]">
           <span className="truncate font-medium">{fileName}</span>
           <button
             type="button"
             onClick={onFileClear}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:color-mix(in_oklab,var(--emerald-700),transparent_15%)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--emerald-700),transparent_78%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--emerald-700),transparent_30%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface-50)] dark:focus-visible:ring-offset-[color:var(--surface-900)]"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_55%)] text-[color:var(--accent)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_20%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_26%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
             aria-label="Remove selected file"
           >
             <XCircle className="h-4 w-4" aria-hidden="true" />
@@ -188,12 +188,12 @@ export default function UploadCard({
       )}
 
       <label className="flex flex-col gap-3">
-        <span className="flex items-center gap-2 text-sm font-semibold text-[color:color-mix(in_oklab,var(--ink-900),transparent_10%)] dark:text-[color:var(--surface-50)]">
-          <ClipboardPenLine className="h-4 w-4 text-[color:color-mix(in_oklab,var(--emerald-700),transparent_18%)]" aria-hidden="true" />
+        <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--surface)]">
+          <ClipboardPenLine className="h-4 w-4 text-[color:var(--accent)]" aria-hidden="true" />
           Paste resume text instead
         </span>
         <textarea
-          className="min-h-[160px] w-full resize-y rounded-2xl border border-[color:color-mix(in_oklab,var(--panel-border),transparent_35%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] px-4 py-3 text-sm leading-relaxed text-[color:color-mix(in_oklab,var(--ink-900),transparent_10%)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--emerald-700),transparent_30%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface-50)] dark:text-[color:color-mix(in_oklab,var(--surface-50),transparent_18%)] dark:focus-visible:ring-offset-[color:var(--surface-900)]"
+          className="min-h-[160px] w-full resize-y rounded-2xl border border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_46%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_16%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--ink)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--panel-highlight),transparent_25%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_30%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:text-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}
