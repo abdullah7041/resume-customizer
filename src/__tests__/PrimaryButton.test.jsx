@@ -7,7 +7,7 @@ describe('PrimaryButton', () => {
     render(<PrimaryButton>Call to Action</PrimaryButton>);
 
     const button = screen.getByRole('button', { name: 'Call to Action' });
-    expect(button.className).toContain('focus-visible:ring-[color:var(--accent-gold)]');
+    expect(button.className).toContain('focus-visible:ring-[color:var(--accent)]');
     expect(button.className).toContain('motion-safe:hover:before:animate-[accent-shimmer_1.4s_linear]');
     expect(button.className).toContain('motion-reduce:hover:before:animate-none');
   });
