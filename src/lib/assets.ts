@@ -115,10 +115,20 @@ const isDevEnvironment = () => {
   return false;
 };
 
+const warnedMessages = new Set<string>();
+
 const warnHostOnlyEnv = (message: string) => {
-  if (isDevEnvironment()) {
-    console.warn(message);
+  if (!isDevEnvironment()) {
+    return;
   }
+
+  const normalizedMessage = message.trim();
+  if (warnedMessages.has(normalizedMessage)) {
+    return;
+  }
+
+  warnedMessages.add(normalizedMessage);
+  console.warn(normalizedMessage);
 };
 
 const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
@@ -275,5 +285,6 @@ export const __internal = {
   resetCache() {
     cachedAssetsBaseHost = undefined;
     memoizedSkylineUrl = null;
+    warnedMessages.clear();
   },
 };

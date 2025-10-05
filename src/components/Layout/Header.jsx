@@ -28,13 +28,7 @@ export default function Header() {
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
   const skylineUrl = useMemo(() => {
-    try {
-      const url = getSkylineUrl();
-      return url;
-    } catch (error) {
-      console.error("Failed to resolve skyline asset", error);
-      return "";
-    }
+    return getSkylineUrl();
   }, []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
@@ -60,7 +54,7 @@ export default function Header() {
       setSkylineLoaded(true);
     };
     img.onerror = () => {
-      console.error("Failed to load skyline image:", skylineUrl);
+      console.warn("[hero] Failed to load skyline image:", skylineUrl);
       setSkylineLoaded(false);
     };
     img.src = skylineUrl;
