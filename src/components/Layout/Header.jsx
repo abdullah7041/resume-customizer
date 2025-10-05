@@ -186,6 +186,19 @@ export default function Header() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-accent-400/90">
                   AI Resume Optimizer
                 </p>
+                {enableArabicBrand ? (
+                  <p
+                    className="text-[13px] font-semibold leading-snug text-surface-50"
+                    lang="ar"
+                    dir="rtl"
+                    style={{
+                      fontFamily:
+                        '"Scheherazade New", "Amiri", "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Traditional Arabic", serif',
+                    }}
+                  >
+                    {arabicBrandName}
+                  </p>
+                ) : null}
                 <p className="text-sm font-semibold uppercase tracking-[0.32em] text-surface-50/90">
                   By Abdullah bin Ahmed
                 </p>
