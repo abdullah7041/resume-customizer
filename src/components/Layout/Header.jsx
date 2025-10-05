@@ -14,6 +14,7 @@ const saduPattern = encodeURIComponent(
 const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
 const heroMinHeightClass = "min-h-[calc(100vh-var(--hero-header-offset,4.5rem))]";
+const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-22rem]";
 
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") {
@@ -28,17 +29,14 @@ export default function Header() {
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
   const skylineUrl = useMemo(() => {
-    try {
-      const url = getSkylineUrl();
-      console.log("[skylineUrl]", url);
-      return url;
-    } catch (error) {
-      console.error("Failed to resolve skyline asset", error);
-      return "";
-    }
+    return getSkylineUrl();
   }, []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
+  const isFallbackSkyline = useMemo(
+    () => typeof skylineUrl === "string" && skylineUrl.startsWith("data:image/"),
+    [skylineUrl]
+  );
   const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
   const [heroVisible, setHeroVisible] = useState(initialReducedMotion);
@@ -57,7 +55,7 @@ export default function Header() {
       setSkylineLoaded(true);
     };
     img.onerror = () => {
-      console.error("Failed to load skyline image:", skylineUrl);
+      console.warn("[hero] Failed to load skyline image:", skylineUrl);
       setSkylineLoaded(false);
     };
     img.src = skylineUrl;
@@ -69,14 +67,14 @@ export default function Header() {
   }, [skylineUrl]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !skylineUrl || !skylineLoaded) {
+    if (typeof window === "undefined" || !skylineUrl || !skylineLoaded || isFallbackSkyline) {
       return undefined;
     }
 
     setAnimateSkyline(true);
     const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
     return () => window.clearTimeout(timer);
-  }, [skylineUrl, skylineLoaded]);
+  }, [isFallbackSkyline, skylineLoaded, skylineUrl]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -162,18 +160,18 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "hero-bg-animate relative isolate flex flex-col overflow-hidden text-surface-50",
+        "hero-bg-animate relative isolate flex flex-col overflow-visible text-surface-50",
         heroMinHeightClass,
       )}
       style={{ "--hero-header-offset": HERO_HEADER_OFFSET }}
     >
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col justify-between gap-8 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24",
+          "relative z-10 flex flex-1 flex-col justify-between gap-10 py-16 sm:gap-12 sm:py-20 lg:gap-14 lg:py-24",
           heroMinHeightClass,
         )}
       >
-        <div className="border-b border-[color:color-mix(in_oklab,var(--panel-stroke),transparent_38%)]">
+        <div className="border-b border-[color:var(--hairline-soft)]">
           <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-6`}>
             <div
               className="flex items-center gap-3"
@@ -181,7 +179,7 @@ export default function Header() {
                 enableArabicBrand ? ` — ${arabicBrandName}` : ""
               } — By Abdullah bin Ahmed`}
             >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] text-[color:var(--accent)] shadow-[var(--shadow-soft)]">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] text-[color:var(--accent)] shadow-[var(--shadow-soft)]">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="flex flex-col gap-1 text-left">
@@ -204,6 +202,15 @@ export default function Header() {
                 <p className="text-sm font-semibold uppercase tracking-[0.32em] text-surface-50/90">
                   By Abdullah bin Ahmed
                 </p>
+                {enableArabicBrand ? (
+                  <p
+                    className="text-[13px] font-semibold leading-snug text-surface-50"
+                    lang="ar"
+                    dir="rtl"
+                  >
+                    {arabicBrandName}
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
@@ -232,7 +239,7 @@ export default function Header() {
         </div>
 
         <div
-          className={`${containerClass} grid flex-1 items-center gap-10 pb-16 pt-10 sm:gap-12 sm:pt-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:pb-20 lg:pt-16`}
+          className={`${containerClass} grid flex-1 items-center gap-10 py-12 sm:gap-12 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:py-16`}
         >
           <div
             className={cn(
@@ -249,12 +256,12 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] p-6 text-[color:var(--surface)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] p-6 text-[color:var(--surface)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
               >
-                <Sparkles className="h-7 w-7" />
+                <Sparkles className="h-7 w-7" aria-hidden="true" />
               </span>
               <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-[color:var(--surface)] sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
@@ -266,7 +273,7 @@ export default function Header() {
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -285,7 +292,7 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -304,7 +311,7 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -326,7 +333,7 @@ export default function Header() {
 
           <div
             className={cn(
-              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
               prefersReducedMotion
                 ? ""
                 : "transform-gpu transition-[opacity,transform] duration-[300ms] ease-[var(--transition-snappy)]",
@@ -343,7 +350,7 @@ export default function Header() {
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -352,7 +359,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <Target className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -361,7 +368,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -377,12 +384,14 @@ export default function Header() {
       {typeof skylineUrl === "string" && skylineUrl ? (
         <>
           {!skylineLoaded && (
-            <div aria-hidden="true" className={skeletonBackgroundClass} />
+            <div aria-hidden="true" className={cn(skeletonBackgroundClass, heroBackgroundExtentClass)} />
           )}
           <div
             aria-hidden="true"
             className={cn(
-              "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 md:bg-fixed md:bg-[position:50%_35%]",
+              "bg-hero -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300",
+              heroBackgroundExtentClass,
+              !isFallbackSkyline && "md:bg-fixed md:bg-[position:50%_35%]",
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
               !skylineLoaded && "opacity-0"
             )}
@@ -390,23 +399,28 @@ export default function Header() {
           />
         </>
       ) : (
-        <div aria-hidden="true" className={skeletonBackgroundClass} />
+        <div aria-hidden="true" className={cn(skeletonBackgroundClass, heroBackgroundExtentClass)} />
       )}
       <div
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-300",
+          "-z-30 pointer-events-none transition-colors duration-300",
+          heroBackgroundExtentClass,
           isDark
             ? "bg-[radial-gradient(circle_at_24%_-6%,color-mix(in_oklab,var(--accent),transparent_82%)_0%,transparent_58%),radial-gradient(circle_at_78%_-16%,color-mix(in_oklab,#8b5cf6,transparent_72%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_10%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_52%)_100%)]"
             : "bg-[radial-gradient(circle_at_20%_-10%,color-mix(in_oklab,#a855f7,transparent_78%)_0%,transparent_60%),radial-gradient(circle_at_80%_-14%,color-mix(in_oklab,#ec4899,transparent_82%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--bg),transparent_06%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_50%)_100%)]",
         )}
       />
       <div
-        className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
+        aria-hidden="true"
+        className={cn("-z-25 pointer-events-none opacity-80 mix-blend-screen", heroBackgroundExtentClass)}
+        style={{ backgroundImage: "var(--hero-overlay-sheen)" }}
+      />
+      <div
+        className={cn("-z-20 opacity-[0.08] mix-blend-soft-light", heroBackgroundExtentClass)}
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
         aria-hidden="true"
       />
-      <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
     </header>
   );
 }

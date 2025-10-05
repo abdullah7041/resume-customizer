@@ -98,19 +98,48 @@ describe("MainContent resume parsing", () => {
     });
   });
 
-  it("passes File inputs directly to parseResume", async () => {
+  it("passes upload payloads through parseResume with storage metadata", async () => {
     render(<MainContent />);
 
     expect(resumeUploadMockProps.current).toBeTruthy();
     const file = new File(["%PDF-1.7 data"], "resume.pdf", {
       type: "application/pdf",
     });
+    const uploadPayload = {
+      kind: "upload",
+      file,
+      storage: {
+        bucket: "resumes",
+        path: "user-123/resume.pdf",
+        fileName: "resume.pdf",
+        userId: "user-123",
+      },
+    };
 
+    let parsed;
     await act(async () => {
-      await resumeUploadMockProps.current.onParseResume(file);
+      parsed = await resumeUploadMockProps.current.onParseResume(uploadPayload);
     });
 
     expect(parseResumeMock).toHaveBeenCalledTimes(1);
     expect(parseResumeMock).toHaveBeenCalledWith(file);
+    expect(parsed).toMatchObject({
+      storagePath: "user-123/resume.pdf",
+      storageBucket: "resumes",
+      storageFileName: "resume.pdf",
+      storageUserId: "user-123",
+    });
+  });
+
+  it("supports text payloads", async () => {
+    render(<MainContent />);
+
+    expect(resumeUploadMockProps.current).toBeTruthy();
+
+    await act(async () => {
+      await resumeUploadMockProps.current.onParseResume({ kind: "text", value: "My resume" });
+    });
+
+    expect(parseResumeMock).toHaveBeenCalledWith("My resume");
   });
 });

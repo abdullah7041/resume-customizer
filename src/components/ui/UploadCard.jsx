@@ -26,8 +26,8 @@ const getExtension = (fileName) => {
 const isDocumentFile = (file) => {
   if (!file) return false;
   const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
-  if (DOCUMENT_MIME_TYPES.has(normalizedType)) {
-    return true;
+  if (normalizedType) {
+    return DOCUMENT_MIME_TYPES.has(normalizedType);
   }
   const extension = getExtension(file.name);
   return DOCUMENT_EXTENSIONS.has(extension);
@@ -36,11 +36,14 @@ const isDocumentFile = (file) => {
 const isPlainTextFile = (file) => {
   if (!file) return false;
   const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
-  if (TEXT_MIME_TYPES.has(normalizedType)) {
-    return true;
+  if (normalizedType) {
+    return TEXT_MIME_TYPES.has(normalizedType);
   }
-  const extension = getExtension(file.name);
-  return TEXT_EXTENSIONS.has(extension);
+  if (normalizedType === "") {
+    const extension = getExtension(file.name);
+    return TEXT_EXTENSIONS.has(extension);
+  }
+  return false;
 };
 
 const statusCopy = {
@@ -149,7 +152,7 @@ export default function UploadCard({
 
   return (
     <section
-      className="space-y-6 rounded-[var(--radius-card)] border border-[color:var(--panel-stroke)] bg-[color:var(--panel-bg)] p-8 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] dark:text-[color:var(--surface)]"
+      className="space-y-6 rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-8 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] dark:text-[color:var(--surface)]"
       aria-live="polite"
     >
       <div className="space-y-2 text-left">
@@ -164,6 +167,7 @@ export default function UploadCard({
         role="button"
         tabIndex={0}
         aria-label="Upload resume file"
+        title="Upload resume file"
         onClick={() => inputRef.current?.click()}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -179,10 +183,10 @@ export default function UploadCard({
           isDragging && "border-[color:color-mix(in_oklab,var(--accent),transparent_20%)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] shadow-[var(--shadow-lift)]"
         )}
       >
-        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">
+        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full border border-[color:var(--hairline-soft)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">
           Max 5MB
         </span>
-        <div className="flex items-center gap-2 rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] px-4 py-2 text-xs font-semibold text-[color:var(--ink)] shadow-[var(--shadow-soft)] dark:text-[color:var(--surface)]">
+        <div className="flex items-center gap-2 rounded-full border border-[color:var(--hairline-soft)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] px-4 py-2 text-xs font-semibold text-[color:var(--ink)] shadow-[var(--shadow-soft)] dark:text-[color:var(--surface)]">
           <FileText className="h-4 w-4" aria-hidden="true" />
           <span>PDF</span>
           <span className="mx-1 text-[color:color-mix(in_oklab,var(--ink-500),transparent_40%)]">|</span>
@@ -208,13 +212,14 @@ export default function UploadCard({
       />
 
       {fileName && (
-        <div className="flex items-center justify-between rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] px-4 py-3 text-sm text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] dark:text-[color:var(--surface)]">
+        <div className="flex items-center justify-between rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] px-4 py-3 text-sm text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] dark:text-[color:var(--surface)]">
           <span className="truncate font-medium">{fileName}</span>
           <button
             type="button"
             onClick={onFileClear}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] text-[color:var(--accent)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_16%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_24%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--hairline-soft)] text-[color:var(--accent)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_16%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_24%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
             aria-label="Remove selected file"
+            title="Remove selected file"
           >
             <XCircle className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -227,7 +232,7 @@ export default function UploadCard({
           Paste resume text instead
         </span>
         <textarea
-          className="min-h-[160px] w-full resize-y rounded-2xl border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--ink)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--panel-highlight),transparent_22%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_28%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:text-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
+          className="min-h-[160px] w-full resize-y rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--ink)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--panel-highlight),transparent_22%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_28%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:text-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}

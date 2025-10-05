@@ -52,7 +52,12 @@ describe("ResumeUpload", () => {
   it("uploads PDFs and shows a success toast", async () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn().mockResolvedValue({});
-    uploadResumeFile.mockResolvedValueOnce({ path: "user-123/resume.pdf" });
+    uploadResumeFile.mockResolvedValueOnce({
+      path: "user-123/resumes/20240218-153045-resume.pdf",
+      fileName: "20240218-153045-resume.pdf",
+      userId: "user-123",
+      bucket: "resumes",
+    });
 
     render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} />);
 
@@ -75,13 +80,47 @@ describe("ResumeUpload", () => {
     });
 
     expect(uploadResumeFile).toHaveBeenCalledWith(file, expect.any(Object));
-    expect(onParseResume).toHaveBeenCalledWith(file);
-    expect(onToast).toHaveBeenCalledWith(
+    expect(onParseResume).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "success",
-        title: expect.stringMatching(/file uploaded/i),
+        kind: "upload",
+        file,
+        storage: expect.objectContaining({
+          bucket: "resumes",
+          path: "user-123/resumes/20240218-153045-resume.pdf",
+          fileName: "20240218-153045-resume.pdf",
+        }),
       })
     );
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "info", title: "Uploading resume" })
+    );
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Upload complete" })
+    );
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Resume ready" })
+    );
+
+    expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
+  });
+
+  it("passes pasted text to onParseResume with context", async () => {
+    const onToast = vi.fn();
+    const onParseResume = vi.fn().mockResolvedValue({ plainText: "Resume text" });
+
+    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} />);
+
+    const textarea = screen.getByPlaceholderText(/paste resume text/i);
+    fireEvent.change(textarea, { target: { value: "  My resume text  " } });
+
+    const submitButton = screen.getByRole("button", { name: /prepare resume/i });
+
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(onParseResume).toHaveBeenCalledWith({ kind: "text", value: "My resume text" });
+    expect(textarea).toHaveValue("Resume text");
   });
 
   it("rejects files over 5MB with a warning toast", async () => {

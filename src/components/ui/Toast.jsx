@@ -59,6 +59,7 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
             onClick={onDismiss}
             className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-current transition-all duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] hover:bg-surface-50/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-0"
             aria-label="Dismiss notification"
+            title="Dismiss notification"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
