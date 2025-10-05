@@ -200,12 +200,12 @@ export default function Header() {
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="flex flex-col gap-1 text-left">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-accent-400/90">
+                <p className="text-[15px] font-semibold uppercase tracking-[0.45em] text-accent-400/90" style={{ fontFamily: '"Comic Sans MS"'}}>
                   AI Resume Optimizer
                 </p>
                 {enableArabicBrand ? (
                   <p
-                    className="text-[13px] font-semibold leading-snug text-surface-50"
+                    className="text-[25px] font-semibold leading-snug text-surface-50/80"
                     lang="ar"
                     dir="rtl"
                     style={{
@@ -216,18 +216,9 @@ export default function Header() {
                     {arabicBrandName}
                   </p>
                 ) : null}
-                <p className="text-sm font-semibold uppercase tracking-[0.32em] text-surface-50/90">
+                <p className="text-sm font-semibold uppercase tracking-[0.20em] text-surface-50/90" style={{ fontFamily: '"Comic Sans MS"'}}>
                   By Abdullah bin Ahmed
                 </p>
-                {enableArabicBrand ? (
-                  <p
-                    className="text-[13px] font-semibold leading-snug text-surface-50"
-                    lang="ar"
-                    dir="rtl"
-                  >
-                    {arabicBrandName}
-                  </p>
-                ) : null}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
