@@ -14,6 +14,8 @@ const saduPattern = encodeURIComponent(
 const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
 const heroMinHeightClass = "min-h-[calc(100vh-var(--hero-header-offset,4.5rem))]";
+const heroBackgroundExtentClass =
+  "absolute inset-x-0 top-0 bottom-[-38rem] sm:bottom-[-48rem] lg:bottom-[-60rem]";
 
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") {
@@ -159,14 +161,14 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "hero-bg-animate relative isolate flex flex-col overflow-hidden text-surface-50",
+        "hero-bg-animate relative isolate flex flex-col overflow-visible text-surface-50",
         heroMinHeightClass,
       )}
       style={{ "--hero-header-offset": HERO_HEADER_OFFSET }}
     >
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col justify-between gap-8 pb-16 pt-12 sm:gap-12 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24",
+          "relative z-10 flex flex-1 flex-col justify-between gap-10 py-16 sm:gap-12 sm:py-20 lg:gap-14 lg:py-24",
           heroMinHeightClass,
         )}
       >
@@ -225,7 +227,7 @@ export default function Header() {
         </div>
 
         <div
-          className={`${containerClass} grid flex-1 items-center gap-10 pb-16 pt-10 sm:gap-12 sm:pt-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:pb-20 lg:pt-16`}
+          className={`${containerClass} grid flex-1 items-center gap-10 py-12 sm:gap-12 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:py-16`}
         >
           <div
             className={cn(
@@ -370,12 +372,13 @@ export default function Header() {
       {typeof skylineUrl === "string" && skylineUrl ? (
         <>
           {!skylineLoaded && (
-            <div aria-hidden="true" className={skeletonBackgroundClass} />
+            <div aria-hidden="true" className={cn(skeletonBackgroundClass, heroBackgroundExtentClass)} />
           )}
           <div
             aria-hidden="true"
             className={cn(
-              "bg-hero absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300",
+              "bg-hero -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300",
+              heroBackgroundExtentClass,
               !isFallbackSkyline && "md:bg-fixed md:bg-[position:50%_35%]",
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
               !skylineLoaded && "opacity-0"
@@ -384,12 +387,13 @@ export default function Header() {
           />
         </>
       ) : (
-        <div aria-hidden="true" className={skeletonBackgroundClass} />
+        <div aria-hidden="true" className={cn(skeletonBackgroundClass, heroBackgroundExtentClass)} />
       )}
       <div
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 -z-30 pointer-events-none transition-colors duration-300",
+          "-z-30 pointer-events-none transition-colors duration-300",
+          heroBackgroundExtentClass,
           isDark
             ? "bg-[radial-gradient(circle_at_24%_-6%,color-mix(in_oklab,var(--accent),transparent_82%)_0%,transparent_58%),radial-gradient(circle_at_78%_-16%,color-mix(in_oklab,#8b5cf6,transparent_72%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_10%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_52%)_100%)]"
             : "bg-[radial-gradient(circle_at_20%_-10%,color-mix(in_oklab,#a855f7,transparent_78%)_0%,transparent_60%),radial-gradient(circle_at_80%_-14%,color-mix(in_oklab,#ec4899,transparent_82%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--bg),transparent_06%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_50%)_100%)]",
@@ -397,15 +401,14 @@ export default function Header() {
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-25 pointer-events-none opacity-80 mix-blend-screen"
+        className={cn("-z-25 pointer-events-none opacity-80 mix-blend-screen", heroBackgroundExtentClass)}
         style={{ backgroundImage: "var(--hero-overlay-sheen)" }}
       />
       <div
-        className="absolute inset-0 -z-20 opacity-[0.08] mix-blend-soft-light"
+        className={cn("-z-20 opacity-[0.08] mix-blend-soft-light", heroBackgroundExtentClass)}
         style={{ backgroundImage: `url("data:image/svg+xml,${saduPattern}")`, backgroundSize: "260px" }}
         aria-hidden="true"
       />
-      <div className="accent-divider absolute inset-x-0 bottom-0 -z-10 h-px" aria-hidden="true" />
     </header>
   );
 }
