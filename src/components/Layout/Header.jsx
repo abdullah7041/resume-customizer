@@ -13,7 +13,6 @@ const saduPattern = encodeURIComponent(
 
 const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
-const heroMinHeightClass = "min-h-[calc(100vh-var(--hero-header-offset,4.5rem))]";
 const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-48rem]";
 
 const getPrefersReducedMotion = () => {
@@ -28,6 +27,10 @@ export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
+  
+  // Feature flag for dark mode toggle
+  const darkModeEnabled =
+    (import.meta.env.VITE_FEATURE_DARK_MODE ?? "true") !== "false";
   const skylineUrl = useMemo(() => {
     const url = getSkylineUrl();
     console.log("[hero] Skyline URL:", url);
@@ -222,17 +225,19 @@ export default function Header() {
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className={themeButtonClass}
-                aria-pressed={isDark}
-                aria-label={nextThemeLabel}
-                title={nextThemeLabel}
-              >
-                <ThemeIcon className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">{nextThemeLabel}</span>
-              </button>
+              {darkModeEnabled && (
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className={themeButtonClass}
+                  aria-pressed={isDark}
+                  aria-label={nextThemeLabel}
+                  title={nextThemeLabel}
+                >
+                  <ThemeIcon className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">{nextThemeLabel}</span>
+                </button>
+              )}
               {user ? (
                 <SecondaryButton icon={LogOut} onClick={signOut}>
                   Sign Out

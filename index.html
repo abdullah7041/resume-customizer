@@ -7,8 +7,13 @@
         const root = document.documentElement;
         const storageKey = "theme";
         const legacyKey = "airo:theme";
+        
+        // Check feature flag - replace at build time by Vite
+        const darkModeEnabled = "%VITE_FEATURE_DARK_MODE%" !== "false";
+        
         const apply = (theme) => {
-          const next = theme === "dark" ? "dark" : "light";
+          // If dark mode is disabled, force light theme
+          const next = darkModeEnabled && theme === "dark" ? "dark" : "light";
           const isDark = next === "dark";
           root.classList.toggle("dark", isDark);
           root.classList.toggle("light", !isDark);
@@ -44,6 +49,7 @@
 
         if (!stored) {
           const prefersDark =
+            darkModeEnabled &&
             typeof window !== "undefined" &&
             typeof window.matchMedia === "function" &&
             window.matchMedia("(prefers-color-scheme: dark)").matches;

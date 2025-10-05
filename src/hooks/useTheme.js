@@ -4,8 +4,22 @@ const THEME_STORAGE_KEY = "theme";
 const LEGACY_THEME_KEY = "airo:theme";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
+// Check feature flag - if dark mode is disabled, always return light
+const isDarkModeEnabled = () => {
+  if (typeof import.meta === "undefined" || typeof import.meta.env === "undefined") {
+    return true;
+  }
+  return (import.meta.env.VITE_FEATURE_DARK_MODE ?? "true") !== "false";
+};
+
 const readStoredTheme = () => {
   if (typeof window === "undefined") return null;
+  
+  // If dark mode is disabled, always return light
+  if (!isDarkModeEnabled()) {
+    return "light";
+  }
+  
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === "dark" || stored === "light") {
@@ -23,6 +37,11 @@ const readStoredTheme = () => {
 };
 
 const resolvePreferredTheme = () => {
+  // If dark mode is disabled, always return light
+  if (!isDarkModeEnabled()) {
+    return "light";
+  }
+  
   const stored = readStoredTheme();
   if (stored) {
     return stored;
@@ -37,7 +56,7 @@ const resolvePreferredTheme = () => {
   return "light";
 };
 
-const applyThemeToDocument = (theme) => {
+const applyThemeToDocument = (theme, useTransition = true) => {
   if (typeof document === "undefined") return;
   const isDark = theme === "dark";
   
@@ -51,8 +70,12 @@ const applyThemeToDocument = (theme) => {
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   };
   
-  // Check if View Transitions API is supported
-  if (typeof document.startViewTransition === "function" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  // Only use View Transitions after initial mount to avoid flash
+  if (
+    useTransition &&
+    typeof document.startViewTransition === "function" &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
     document.startViewTransition(() => updateTheme());
   } else {
     updateTheme();
@@ -86,11 +109,13 @@ const readDocumentTheme = () => {
 const ensureDocumentTheme = () => {
   const existing = readDocumentTheme();
   if (existing) {
-    applyThemeToDocument(existing);
+    // No transition on initial mount - theme already set by bootstrap script
+    applyThemeToDocument(existing, false);
     return existing;
   }
   const resolved = resolvePreferredTheme();
-  applyThemeToDocument(resolved);
+  // No transition on initial mount
+  applyThemeToDocument(resolved, false);
   return resolved;
 };
 
@@ -103,14 +128,16 @@ export function useTheme() {
 
   useEffect(() => {
     // Only apply if this is not the initial mount or if theme changed
+    // Use transition for user-initiated changes after mount
     if (!isInitialMount.current) {
-      applyThemeToDocument(theme);
+      applyThemeToDocument(theme, true);
     }
     isInitialMount.current = false;
   }, [theme]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || hasExplicitPreference.current) {
+    // If dark mode is disabled, don't listen to system preference changes
+    if (typeof window === "undefined" || hasExplicitPreference.current || !isDarkModeEnabled()) {
       return undefined;
     }
     const mediaQuery = window.matchMedia(DARK_QUERY);
@@ -129,6 +156,11 @@ export function useTheme() {
   }, []);
 
   const toggleTheme = () => {
+    // If dark mode is disabled, don't allow toggling
+    if (!isDarkModeEnabled()) {
+      return;
+    }
+    
     setTheme((previous) => {
       const next = previous === "dark" ? "light" : "dark";
       hasExplicitPreference.current = true;
