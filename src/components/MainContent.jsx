@@ -507,10 +507,10 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative isolate z-20 min-h-screen pb-24 pt-20 sm:pb-32 sm:pt-28 lg:pb-40 lg:pt-32 before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-full before:bg-gradient-to-b before:from-transparent before:via-sand-50/70 before:to-sand-50/95 before:content-[''] before:pointer-events-none dark:before:via-zinc-900/50 dark:before:to-zinc-950/85"
+      className="relative isolate z-20 min-h-screen pb-24 pt-8 sm:pb-32 sm:pt-12 lg:pb-40 lg:pt-16"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
-      <div className={`${containerClass} space-y-7 text-ink-700 sm:space-y-10 lg:space-y-12 dark:text-surface-50`}>
+      <div className={`${containerClass} space-y-8 text-ink-700 sm:space-y-12 lg:space-y-16 dark:text-surface-50`}>
         <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-6 shadow-card backdrop-blur-sm transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] sm:p-8 sm:backdrop-blur-xl lg:p-9 dark:border-surface-50/12 dark:bg-zinc-900/60">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
