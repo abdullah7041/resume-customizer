@@ -131,6 +131,24 @@ describe("publicAssetUrl", () => {
     warnSpy.mockRestore();
   });
 
+  it("only emits one warning per invalid base host", async () => {
+    vi.stubEnv(
+      "VITE_ASSETS_BASE_URL",
+      "https://project.supabase.co/storage/v1/object/public/ui-assets",
+    );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { publicAssetUrl, __internal } = await loadModule();
+    const expectedUrl =
+      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp";
+
+    expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe(expectedUrl);
+    expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe(expectedUrl);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    __internal.resetCache();
+    warnSpy.mockRestore();
+  });
+
   it("falls back to an empty string when neither env is valid", async () => {
     vi.stubEnv("VITE_ASSETS_BASE_URL", "");
     vi.stubEnv("VITE_SUPABASE_URL", "");
