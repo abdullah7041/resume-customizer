@@ -53,8 +53,8 @@ describe("ResumeUpload", () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn().mockResolvedValue({});
     uploadResumeFile.mockResolvedValueOnce({
-      path: "user-123/resume.pdf",
-      fileName: "resume.pdf",
+      path: "user-123/resumes/20240218-153045-resume.pdf",
+      fileName: "20240218-153045-resume.pdf",
       userId: "user-123",
       bucket: "resumes",
     });
@@ -86,17 +86,54 @@ describe("ResumeUpload", () => {
         file,
         storage: expect.objectContaining({
           bucket: "resumes",
-          path: "user-123/resume.pdf",
-          fileName: "resume.pdf",
+          path: "user-123/resumes/20240218-153045-resume.pdf",
+          fileName: "20240218-153045-resume.pdf",
         }),
       })
     );
     expect(onToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "success",
-        title: expect.stringMatching(/file uploaded/i),
-      })
+      expect.objectContaining({ type: "info", title: "Uploading resume" })
     );
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Upload complete" })
+    );
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Resume ready" })
+    );
+  });
+
+  it("keeps the paste textarea empty while a file upload is selected", async () => {
+    const onToast = vi.fn();
+    const onParseResume = vi.fn();
+
+    const { rerender } = render(
+      <ResumeUpload onParseResume={onParseResume} onToast={onToast} />
+    );
+
+    const fileInput = screen
+      .getAllByLabelText(/upload resume file/i)
+      .find((element) => element.tagName === "INPUT");
+    if (!(fileInput instanceof HTMLInputElement)) {
+      throw new Error("Hidden file input not found");
+    }
+
+    const file = new File(["resume"], "resume.pdf", { type: "application/pdf" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
+
+    rerender(
+      <ResumeUpload
+        onParseResume={onParseResume}
+        onToast={onToast}
+        resumeDocument={{ plainText: "Parsed resume content" }}
+      />
+    );
+
+    expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
   });
 
   it("passes pasted text to onParseResume with context", async () => {
