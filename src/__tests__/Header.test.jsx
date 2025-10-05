@@ -78,9 +78,20 @@ describe("Header", () => {
     );
 
     expect(fallback).toBeDefined();
+    expect(fallback).toBeTruthy();
 
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
+  });
+
+  it("renders gradient overlay even when skyline is missing", () => {
+    const { container } = render(<Header />);
+
+    const gradients = Array.from(container.querySelectorAll('[aria-hidden="true"]')).filter((el) =>
+      el.className.includes("bg-[radial-gradient"),
+    );
+
+    expect(gradients.length).toBeGreaterThan(0);
   });
 
   it("provides accessible labelling for interactive controls and hides decorative icons", () => {

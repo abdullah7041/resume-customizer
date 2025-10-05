@@ -199,4 +199,59 @@ describe("getSkylineUrl", () => {
     expect(skyline.length).toBeGreaterThan(120);
     warnSpy.mockRestore();
   });
+
+  it("builds one clean URL for ui-assets/KAFDH.webp with no double slashes", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
+    const { getSkylineUrl, __internal } = await loadModule();
+    __internal.resetCache();
+    const skyline = getSkylineUrl();
+    expect(skyline).toContain("/storage/v1/object/public/ui-assets/KAFDH.webp");
+    expect(skyline).not.toContain("//storage");
+    expect(skyline).not.toContain("/KAFDH.webp/KAFDH.webp");
+    expect(skyline).not.toContain("KAFDH.webpKAFDH.webp");
+  });
+
+  it("rejects full object env and ensures DEV warning", async () => {
+    vi.stubEnv(
+      "VITE_ASSETS_BASE_URL",
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets",
+    );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { getSkylineUrl, __internal } = await loadModule();
+    __internal.resetCache();
+    const skyline = getSkylineUrl();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("VITE_ASSETS_BASE_URL should be host-only"),
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("https://cwcjeujextkwpmzdfzdz.supabase.co"),
+    );
+    expect(skyline).toBe(
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("returns gradient fallback when base is empty", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    const { getSkylineUrl, __internal } = await loadModule();
+    __internal.resetCache();
+    const skyline = getSkylineUrl();
+    expect(skyline).toMatch(/^data:image\/svg\+xml,/);
+    expect(skyline).toContain("linearGradient");
+  });
+
+  it("memoizes the skyline URL across multiple calls", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
+    vi.stubEnv("VITE_BUILD_ID", "build-456");
+    const { getSkylineUrl, __internal } = await loadModule();
+    __internal.resetCache();
+    const first = getSkylineUrl();
+    const second = getSkylineUrl();
+    expect(first).toBe(second);
+    expect(first).toBe(
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=build-456",
+    );
+  });
 });
