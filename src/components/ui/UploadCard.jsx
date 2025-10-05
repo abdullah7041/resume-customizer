@@ -26,8 +26,8 @@ const getExtension = (fileName) => {
 const isDocumentFile = (file) => {
   if (!file) return false;
   const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
-  if (DOCUMENT_MIME_TYPES.has(normalizedType)) {
-    return true;
+  if (normalizedType) {
+    return DOCUMENT_MIME_TYPES.has(normalizedType);
   }
   const extension = getExtension(file.name);
   return DOCUMENT_EXTENSIONS.has(extension);
@@ -36,11 +36,14 @@ const isDocumentFile = (file) => {
 const isPlainTextFile = (file) => {
   if (!file) return false;
   const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
-  if (TEXT_MIME_TYPES.has(normalizedType)) {
-    return true;
+  if (normalizedType) {
+    return TEXT_MIME_TYPES.has(normalizedType);
   }
-  const extension = getExtension(file.name);
-  return TEXT_EXTENSIONS.has(extension);
+  if (normalizedType === "") {
+    const extension = getExtension(file.name);
+    return TEXT_EXTENSIONS.has(extension);
+  }
+  return false;
 };
 
 const statusCopy = {

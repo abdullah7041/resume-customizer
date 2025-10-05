@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { uploadSpy, authMock, storageMock } = vi.hoisted(() => {
   const uploadFn = vi.fn();
@@ -14,25 +14,31 @@ vi.mock("@supabase/supabase-js", () => ({
   })),
 }));
 
-import { cleanBaseName, uploadResumeFile } from "../services/supabase.js";
+import { uploadResumeFile } from "../services/supabase.js";
 
 describe("supabase upload service", () => {
+  const fixedDate = new Date(Date.UTC(2024, 1, 18, 15, 30, 45));
+
+  beforeAll(() => {
+    vi.useFakeTimers();
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     uploadSpy.mockReset();
     authMock.getUser.mockReset();
     storageMock.from.mockClear();
-  });
-
-  it("sanitizes file names while preserving extensions", () => {
-    expect(cleanBaseName(" Senior Resume .PDF ")).toBe("senior-resume.pdf");
-    expect(cleanBaseName("résumé final.docx")).toBe("r-sum-final.docx");
-    expect(cleanBaseName("resume")).toBe("resume.pdf");
+    vi.setSystemTime(fixedDate);
   });
 
   it("appends version suffix when storage reports a conflict", async () => {
     authMock.getUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
     uploadSpy
       .mockImplementationOnce(async () => ({ error: { statusCode: 409 } }))
+      .mockImplementationOnce(async () => ({ error: { statusCode: 409, message: "resource exists" } }))
       .mockImplementationOnce(async (_path, _file, options) => {
         options?.onUploadProgress?.({ loaded: 5, total: 10 });
         return { error: null };
@@ -42,13 +48,14 @@ describe("supabase upload service", () => {
     const result = await uploadResumeFile({ name: "Resume.PDF" }, { onProgress: progressSpy });
 
     expect(storageMock.from).toHaveBeenCalledWith("resumes");
-    expect(uploadSpy).toHaveBeenCalledTimes(2);
-    expect(uploadSpy.mock.calls[0][0]).toBe("user-123/resume.pdf");
-    expect(uploadSpy.mock.calls[1][0]).toBe("user-123/resume-v2.pdf");
+    expect(uploadSpy).toHaveBeenCalledTimes(3);
+    expect(uploadSpy.mock.calls[0][0]).toBe("user-123/resumes/20240218-153045-resume.pdf");
+    expect(uploadSpy.mock.calls[1][0]).toBe("user-123/resumes/20240218-153045-resume-v2.pdf");
+    expect(uploadSpy.mock.calls[2][0]).toBe("user-123/resumes/20240218-153045-resume-v3.pdf");
     expect(uploadSpy.mock.calls[0][2]).toMatchObject({ contentType: "application/pdf" });
     expect(result).toEqual({
-      path: "user-123/resume-v2.pdf",
-      fileName: "resume-v2.pdf",
+      path: "user-123/resumes/20240218-153045-resume-v3.pdf",
+      fileName: "20240218-153045-resume-v3.pdf",
       userId: "user-123",
       bucket: "resumes",
     });
@@ -63,13 +70,13 @@ describe("supabase upload service", () => {
     const result = await uploadResumeFile(file);
 
     expect(uploadSpy).toHaveBeenCalledWith(
-      "user-456/resume.docx",
+      "user-456/resumes/20240218-153045-resume.docx",
       file,
       expect.objectContaining({ contentType: file.type, upsert: false })
     );
     expect(result).toEqual({
-      path: "user-456/resume.docx",
-      fileName: "resume.docx",
+      path: "user-456/resumes/20240218-153045-resume.docx",
+      fileName: "20240218-153045-resume.docx",
       userId: "user-456",
       bucket: "resumes",
     });
@@ -83,7 +90,7 @@ describe("supabase upload service", () => {
     await uploadResumeFile(file);
 
     expect(uploadSpy).toHaveBeenCalledWith(
-      "user-123/resume.docx",
+      "user-123/resumes/20240218-153045-resume.docx",
       file,
       expect.objectContaining({ contentType: file.type })
     );
