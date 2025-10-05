@@ -306,6 +306,5 @@ export const __internal = {
     cachedAssetsBaseHost = undefined;
     memoizedSkylineUrl = null;
     warnedMessages.clear();
-    cachedSupabaseAnonKey = undefined;
   },
 };

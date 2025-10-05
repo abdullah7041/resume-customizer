@@ -53,8 +53,8 @@ describe("ResumeUpload", () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn().mockResolvedValue({});
     uploadResumeFile.mockResolvedValueOnce({
-      path: "user-123/resume.pdf",
-      fileName: "resume.pdf",
+      path: "user-123/resumes/20240218-153045-resume.pdf",
+      fileName: "20240218-153045-resume.pdf",
       userId: "user-123",
       bucket: "resumes",
     });
@@ -86,17 +86,22 @@ describe("ResumeUpload", () => {
         file,
         storage: expect.objectContaining({
           bucket: "resumes",
-          path: "user-123/resume.pdf",
-          fileName: "resume.pdf",
+          path: "user-123/resumes/20240218-153045-resume.pdf",
+          fileName: "20240218-153045-resume.pdf",
         }),
       })
     );
     expect(onToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "success",
-        title: expect.stringMatching(/file uploaded/i),
-      })
+      expect.objectContaining({ type: "info", title: "Uploading resume" })
     );
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Upload complete" })
+    );
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Resume ready" })
+    );
+
+    expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
   });
 
   it("passes pasted text to onParseResume with context", async () => {
