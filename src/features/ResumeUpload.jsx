@@ -37,10 +37,6 @@ const ERROR_MESSAGES = {
     type: "danger",
     title: "Upload failed",
   },
-  "upload/name-conflict": {
-    type: "danger",
-    title: "Rename and retry",
-  },
   "upload/bucket-missing": {
     type: "danger",
     title: "Storage not configured",
@@ -52,6 +48,10 @@ const ERROR_MESSAGES = {
   "auth/unauthorized": {
     type: "danger",
     title: "Upload not allowed",
+  },
+  "upload/name-conflict": {
+    type: "warning",
+    title: "File already stored",
   },
 };
 
@@ -212,6 +212,11 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
 
       if (file) {
         setStatus("uploading");
+        onToast?.({
+          type: "info",
+          title: "Uploading resume",
+          description: "Sending your resume to secure storage…",
+        });
         const uploadResult = await uploadResumeFile(file, {
           onProgress: ({ loaded, total }) => {
             if (!total) return;
@@ -231,9 +236,9 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         }
         onToast?.({
           type: "success",
-          title: "File uploaded",
+          title: "Upload complete",
           description: storageMetadata
-            ? `Stored securely as ${storageMetadata.fileName}. Parsing next…`
+            ? `Saved as ${storageMetadata.fileName}. Parsing next…`
             : "Resume stored securely. Parsing next…",
         });
       }
@@ -253,6 +258,13 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
       const parsed = await onParseResume?.(payload);
       setProgress(100);
       setStatus("success");
+      onToast?.({
+        type: "success",
+        title: "Resume ready",
+        description: file
+          ? "We saved and parsed your resume."
+          : "Your pasted resume is ready.",
+      });
       if (!file && parsed?.plainText) {
         setTextValue(parsed.plainText);
       }

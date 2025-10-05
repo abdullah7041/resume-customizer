@@ -15,31 +15,6 @@ export class AppError extends Error {
   }
 }
 
-export const cleanBaseName = (fileName) => {
-  if (!fileName) {
-    return "resume.pdf";
-  }
-  const trimmed = fileName.trim();
-  const extensionMatch = trimmed.match(/\.([^.\s]{1,10})$/i);
-  const extension = extensionMatch ? `.${extensionMatch[1].toLowerCase()}` : "";
-  const base = trimmed.replace(/\.[^.]+$/, "").toLowerCase();
-  const slug = base.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  const safeBase = slug || "resume";
-  return `${safeBase}${extension || ".pdf"}`;
-};
-
-const buildVersionedName = (baseName, attempt) => {
-  if (attempt === 0) return baseName;
-  const version = attempt + 1;
-  const extensionIndex = baseName.lastIndexOf(".");
-  if (extensionIndex === -1) {
-    return `${baseName}-v${version}`;
-  }
-  const namePart = baseName.slice(0, extensionIndex);
-  const extension = baseName.slice(extensionIndex);
-  return `${namePart}-v${version}${extension}`;
-};
-
 const RESUME_BUCKET = "resumes";
 
 const buildStorageObjectKey = (userId, fileName) => {
@@ -52,18 +27,24 @@ const buildStorageObjectKey = (userId, fileName) => {
     });
   }
 
-  return `${trimmedUserId}/${fileName}`;
+  return `${trimmedUserId}/resumes/${fileName}`;
 };
 
-const DOCUMENT_MIME_TYPES = new Set([
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
+const DOCUMENT_TYPES = [
+  { extension: "pdf", mime: "application/pdf" },
+  {
+    extension: "docx",
+    mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  },
+];
 
-const DOCUMENT_EXTENSIONS = new Map([
-  ["pdf", "application/pdf"],
-  ["docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-]);
+const DOCUMENT_MIME_TYPES = new Set(DOCUMENT_TYPES.map(({ mime }) => mime));
+const DOCUMENT_EXTENSION_TO_MIME = new Map(
+  DOCUMENT_TYPES.map(({ extension, mime }) => [extension, mime])
+);
+const DOCUMENT_MIME_TO_EXTENSION = new Map(
+  DOCUMENT_TYPES.map(({ extension, mime }) => [mime, extension])
+);
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -75,13 +56,34 @@ const getExtension = (fileName) => {
   return match ? match[1].toLowerCase() : "";
 };
 
-const resolveContentType = (file) => {
-  const type = typeof file?.type === "string" ? file.type.toLowerCase() : "";
-  if (DOCUMENT_MIME_TYPES.has(type)) {
-    return type;
+const FALLBACK_BINARY_MIME = new Set(["application/octet-stream", "binary/octet-stream"]);
+
+const normalizeMime = (file) => {
+  const rawType = typeof file?.type === "string" ? file.type.toLowerCase() : "";
+  if (rawType && DOCUMENT_MIME_TYPES.has(rawType)) {
+    return rawType;
+  }
+  if (rawType && !FALLBACK_BINARY_MIME.has(rawType)) {
+    return "";
   }
   const extension = getExtension(file?.name);
-  return DOCUMENT_EXTENSIONS.get(extension) ?? "application/octet-stream";
+  return DOCUMENT_EXTENSION_TO_MIME.get(extension) ?? "";
+};
+
+const slugify = (value) =>
+  value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const formatUtcTimestamp = (date) => {
+  const pad = (input) => String(input).padStart(2, "0");
+  return [
+    `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}`,
+    `${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`,
+  ].join("-");
 };
 
 const ensureSupportedDocument = (file) => {
@@ -93,9 +95,9 @@ const ensureSupportedDocument = (file) => {
     });
   }
 
-  const extension = getExtension(file.name);
-  const type = typeof file.type === "string" ? file.type.toLowerCase() : "";
-  if (!DOCUMENT_MIME_TYPES.has(type) && !DOCUMENT_EXTENSIONS.has(extension)) {
+  const mime = normalizeMime(file);
+
+  if (!mime || !DOCUMENT_MIME_TYPES.has(mime)) {
     throw new AppError({
       code: "file/unsupported-type",
       message: "Only PDF or DOCX files are supported.",
@@ -111,10 +113,22 @@ const ensureSupportedDocument = (file) => {
       hint: "Compress the resume and try again.",
     });
   }
+  const extension = DOCUMENT_MIME_TO_EXTENSION.get(mime) ?? "pdf";
+
+  const baseName = typeof file.name === "string" ? file.name : "resume";
+  const withoutExtension = baseName.replace(/\.[^.]+$/, "");
+  const slugBase = slugify(withoutExtension) || "resume";
+  const timestamp = formatUtcTimestamp(new Date());
+
+  return {
+    mime,
+    extension,
+    baseKey: `${timestamp}-${slugBase}`,
+  };
 };
 
 export const uploadResumeFile = async (file, { onProgress } = {}) => {
-  ensureSupportedDocument(file);
+  const { mime, extension, baseKey } = ensureSupportedDocument(file);
 
   const {
     data: { user },
@@ -137,19 +151,19 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
     });
   }
 
-  const baseName = cleanBaseName(file?.name || "");
   const bucket = supabase.storage.from(RESUME_BUCKET);
-  const maxAttempts = 5;
-  const contentType = resolveContentType(file);
+  const maxAttempts = 3;
+  let lastConflictError = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const candidateName = buildVersionedName(baseName, attempt);
+    const suffix = attempt === 0 ? "" : `-v${attempt + 1}`;
+    const candidateName = `${baseKey}${suffix}.${extension}`;
     const path = buildStorageObjectKey(user.id, candidateName);
 
     const { error } = await bucket.upload(path, file, {
       cacheControl: "3600",
       upsert: false,
-      contentType,
+      contentType: mime,
       onUploadProgress: (progressEvent) => {
         if (typeof onProgress === "function") {
           onProgress(progressEvent);
@@ -163,11 +177,17 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
 
     const status = error?.statusCode ?? error?.status;
     if (status === 409) {
+      lastConflictError = error;
       continue;
     }
 
     const message = typeof error?.message === "string" ? error.message : "";
     const normalized = message.toLowerCase();
+
+    if (normalized.includes("resource exists") || normalized.includes("already exists")) {
+      lastConflictError = error;
+      continue;
+    }
 
     if (status === 400) {
       if (normalized.includes("bucket") && normalized.includes("not")) {
@@ -204,7 +224,9 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
 
   throw new AppError({
     code: "upload/name-conflict",
-    message: "We couldn't store your resume.",
-    hint: "Rename the file and try again.",
+    message: "We couldn't store your resume after multiple attempts.",
+    hint:
+      lastConflictError?.message ||
+      "Rename the file and try again, or delete older copies from storage.",
   });
 };
