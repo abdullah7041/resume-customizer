@@ -40,6 +40,21 @@ const buildVersionedName = (baseName, attempt) => {
   return `${namePart}-v${version}${extension}`;
 };
 
+const RESUME_BUCKET = "resumes";
+
+const buildStorageObjectKey = (userId, fileName) => {
+  const trimmedUserId = typeof userId === "string" ? userId.trim() : "";
+  if (!trimmedUserId) {
+    throw new AppError({
+      code: "auth/unauthenticated",
+      message: "Missing user id for storage upload.",
+      hint: "Refresh and sign in again.",
+    });
+  }
+
+  return `${trimmedUserId}/${fileName}`;
+};
+
 const DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -123,13 +138,13 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
   }
 
   const baseName = cleanBaseName(file?.name || "");
-  const bucket = supabase.storage.from("resumes");
+  const bucket = supabase.storage.from(RESUME_BUCKET);
   const maxAttempts = 5;
   const contentType = resolveContentType(file);
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const candidateName = buildVersionedName(baseName, attempt);
-    const path = `${user.id}/${candidateName}`;
+    const path = buildStorageObjectKey(user.id, candidateName);
 
     const { error } = await bucket.upload(path, file, {
       cacheControl: "3600",
@@ -143,7 +158,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
     });
 
     if (!error) {
-      return { path, fileName: candidateName, userId: user.id };
+      return { path, fileName: candidateName, userId: user.id, bucket: RESUME_BUCKET };
     }
 
     const status = error?.statusCode ?? error?.status;

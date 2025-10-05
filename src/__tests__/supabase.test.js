@@ -46,7 +46,12 @@ describe("supabase upload service", () => {
     expect(uploadSpy.mock.calls[0][0]).toBe("user-123/resume.pdf");
     expect(uploadSpy.mock.calls[1][0]).toBe("user-123/resume-v2.pdf");
     expect(uploadSpy.mock.calls[0][2]).toMatchObject({ contentType: "application/pdf" });
-    expect(result).toEqual({ path: "user-123/resume-v2.pdf", fileName: "resume-v2.pdf", userId: "user-123" });
+    expect(result).toEqual({
+      path: "user-123/resume-v2.pdf",
+      fileName: "resume-v2.pdf",
+      userId: "user-123",
+      bucket: "resumes",
+    });
     expect(progressSpy).toHaveBeenCalledWith({ loaded: 5, total: 10 });
   });
 
@@ -62,7 +67,12 @@ describe("supabase upload service", () => {
       file,
       expect.objectContaining({ contentType: file.type, upsert: false })
     );
-    expect(result).toEqual({ path: "user-456/resume.docx", fileName: "resume.docx", userId: "user-456" });
+    expect(result).toEqual({
+      path: "user-456/resume.docx",
+      fileName: "resume.docx",
+      userId: "user-456",
+      bucket: "resumes",
+    });
   });
 
   it("uses the file content type when provided", async () => {
@@ -136,5 +146,15 @@ describe("supabase upload service", () => {
     await expect(uploadResumeFile({ name: "resume.pdf" })).rejects.toMatchObject({
       code: "auth/unauthorized",
     });
+  });
+
+  it("throws when the authenticated user id is missing", async () => {
+    authMock.getUser.mockResolvedValue({ data: { user: { id: "   " } }, error: null });
+
+    await expect(uploadResumeFile({ name: "resume.pdf", type: "application/pdf" })).rejects.toMatchObject({
+      code: "auth/unauthenticated",
+      message: expect.stringMatching(/missing user id/i),
+    });
+    expect(uploadSpy).not.toHaveBeenCalled();
   });
 });

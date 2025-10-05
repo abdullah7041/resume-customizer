@@ -156,4 +156,14 @@ describe("getSkylineUrl", () => {
       "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=build-xyz",
     );
   });
+
+  it("falls back to a Saudi gradient when env config is missing", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { getSkylineUrl, __internal } = await loadModule();
+    __internal.resetCache();
+    const skyline = getSkylineUrl();
+    expect(skyline).toMatch(/^data:image\/svg\+xml,/);
+    expect(skyline.length).toBeGreaterThan(120);
+    warnSpy.mockRestore();
+  });
 });
