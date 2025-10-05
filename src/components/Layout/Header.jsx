@@ -247,7 +247,7 @@ export default function Header() {
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
               >
-                <Sparkles className="h-7 w-7" />
+                <Sparkles className="h-7 w-7" aria-hidden="true" />
               </span>
               <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-[color:var(--surface)] sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer

@@ -167,6 +167,7 @@ export default function UploadCard({
         role="button"
         tabIndex={0}
         aria-label="Upload resume file"
+        title="Upload resume file"
         onClick={() => inputRef.current?.click()}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -218,6 +219,7 @@ export default function UploadCard({
             onClick={onFileClear}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--hairline-soft)] text-[color:var(--accent)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_16%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_24%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] dark:focus-visible:ring-offset-[color:var(--surface-strong)]"
             aria-label="Remove selected file"
+            title="Remove selected file"
           >
             <XCircle className="h-4 w-4" aria-hidden="true" />
           </button>
