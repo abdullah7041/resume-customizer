@@ -132,6 +132,8 @@ const warnHostOnlyEnv = (message: string) => {
   console.warn(normalizedMessage);
 };
 
+type AssetsBaseHost = { origin: string; coerced: boolean } | null;
+
 const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -156,16 +158,18 @@ const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
   const hasNonRootPath = parsed.pathname && parsed.pathname !== "/" && parsed.pathname !== "";
   const hasQueryOrHash = (parsed.search && parsed.search !== "") || (parsed.hash && parsed.hash !== "");
 
-  if (!isAlreadyHostOnly || hasNonRootPath || hasQueryOrHash) {
+  const wasCoerced = !isAlreadyHostOnly || hasNonRootPath || hasQueryOrHash;
+
+  if (wasCoerced) {
     warnHostOnlyEnv(
       `[assets] ${sourceKey} should be host-only (https://host.tld). Using ${origin} instead of ${trimmed}.`,
     );
   }
 
-  return origin;
+  return { origin, coerced: wasCoerced };
 };
 
-let cachedAssetsBaseHost: string | null | undefined;
+let cachedAssetsBaseHost: AssetsBaseHost | undefined;
 let cachedSupabaseAnonKey: string | null | undefined;
 
 const readAssetsBaseHost = () => {
@@ -258,12 +262,13 @@ export const publicAssetUrl = (bucket: string, objectPath: string) => {
   if (!baseHost) {
     return "";
   }
+  const { origin, coerced } = baseHost;
   const bucketSegment = normalizeBucketName(bucket);
   const objectSegment = normalizeObjectPath(objectPath);
   const pathname = `${PUBLIC_STORAGE_PREFIX}/${bucketSegment}/${objectSegment}`;
-  const url = new URL(pathname, baseHost);
+  const url = new URL(pathname, origin);
 
-  if (SUPABASE_HOST_PATTERN.test(url.hostname)) {
+  if (!coerced && SUPABASE_HOST_PATTERN.test(url.hostname)) {
     const anonKey = readSupabaseAnonKey();
     if (anonKey) {
       url.searchParams.set("apikey", anonKey);
@@ -304,6 +309,7 @@ export const getSkylineUrl = () => {
 export const __internal = {
   resetCache() {
     cachedAssetsBaseHost = undefined;
+    cachedSupabaseAnonKey = undefined;
     memoizedSkylineUrl = null;
     warnedMessages.clear();
   },
