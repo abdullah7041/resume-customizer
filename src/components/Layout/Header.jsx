@@ -203,7 +203,7 @@ export default function Header() {
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="flex flex-col gap-1 text-left">
-                <p className="text-[15px] font-semibold uppercase tracking-[0.45em] text-accent-400/90" style={{ fontFamily: '"Comic Sans MS"'}}>
+                <p className="text-[15px] font-semibold uppercase tracking-[0.20em] text-accent-400/90" style={{ fontFamily: '"Comic Sans MS"'}}>
                   AI Resume Optimizer
                 </p>
                 {enableArabicBrand ? (
