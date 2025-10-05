@@ -275,7 +275,7 @@
     }
 
     100% {
-      opacity: 0.9;
+      opacity: 1;
       transform: translateY(0) scale(1);
     }
   }
@@ -294,7 +294,7 @@
   }
 
   .skyline-still {
-    opacity: 0.88;
+    opacity: 1;
     transform: translateY(0) scale(1);
   }
 

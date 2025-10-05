@@ -29,12 +29,18 @@ export default function Header() {
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
   const skylineUrl = useMemo(() => {
-    return getSkylineUrl();
+    const url = getSkylineUrl();
+    console.log("[hero] Skyline URL:", url);
+    return url;
   }, []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
   const isFallbackSkyline = useMemo(
-    () => typeof skylineUrl === "string" && skylineUrl.startsWith("data:image/"),
+    () => {
+      const isFallback = typeof skylineUrl === "string" && skylineUrl.startsWith("data:image/");
+      console.log("[hero] Is fallback skyline:", isFallback);
+      return isFallback;
+    },
     [skylineUrl]
   );
   const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
@@ -44,18 +50,30 @@ export default function Header() {
   const heroAnimatedRef = useRef(initialReducedMotion);
   const workflowAnimatedRef = useRef(initialReducedMotion);
 
+  // Debug state changes
+  useEffect(() => {
+    console.log("[hero] State update:", {
+      skylineUrl: skylineUrl ? `${skylineUrl.substring(0, 60)}...` : null,
+      skylineLoaded,
+      animateSkyline,
+      isFallbackSkyline,
+    });
+  }, [skylineUrl, skylineLoaded, animateSkyline, isFallbackSkyline]);
+
   // Preload skyline image
   useEffect(() => {
     if (typeof window === "undefined" || !skylineUrl) {
       return undefined;
     }
 
+    console.log("[hero] Preloading skyline:", skylineUrl);
     const img = new Image();
     img.onload = () => {
+      console.log("[hero] Skyline loaded successfully");
       setSkylineLoaded(true);
     };
-    img.onerror = () => {
-      console.warn("[hero] Failed to load skyline image:", skylineUrl);
+    img.onerror = (error) => {
+      console.warn("[hero] Failed to load skyline image:", skylineUrl, error);
       setSkylineLoaded(false);
     };
     img.src = skylineUrl;
@@ -71,6 +89,7 @@ export default function Header() {
       return undefined;
     }
 
+    console.log("[hero] Setting animation state:", { skylineLoaded, isFallbackSkyline });
     setAnimateSkyline(true);
     const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
     return () => window.clearTimeout(timer);
@@ -394,6 +413,13 @@ export default function Header() {
               !skylineLoaded && "opacity-0"
             )}
             style={{ backgroundImage: `url('${skylineUrl}')` }}
+            ref={(el) => {
+              if (el && skylineLoaded) {
+                console.log("[hero] Skyline div rendered with classes:", el.className);
+                console.log("[hero] Background image style:", el.style.backgroundImage);
+                console.log("[hero] Computed opacity:", window.getComputedStyle(el).opacity);
+              }
+            }}
           />
         </>
       ) : (
