@@ -115,6 +115,20 @@ describe("publicAssetUrl", () => {
     warnSpy.mockRestore();
   });
 
+  it("appends the anon key when targeting Supabase storage", async () => {
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon-123");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { publicAssetUrl, __internal } = await loadModule();
+    const result = publicAssetUrl("ui-assets", "KAFDH.webp");
+    expect(result).toBe(
+      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?apikey=anon-123",
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+    __internal.resetCache();
+    warnSpy.mockRestore();
+  });
+
   it("coerces pathful base URLs to the origin and warns in dev", async () => {
     vi.stubEnv(
       "VITE_ASSETS_BASE_URL",
@@ -128,6 +142,24 @@ describe("publicAssetUrl", () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("VITE_ASSETS_BASE_URL should be host-only"),
     );
+    warnSpy.mockRestore();
+  });
+
+  it("only emits one warning per invalid base host", async () => {
+    vi.stubEnv(
+      "VITE_ASSETS_BASE_URL",
+      "https://project.supabase.co/storage/v1/object/public/ui-assets",
+    );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { publicAssetUrl, __internal } = await loadModule();
+    const expectedUrl =
+      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp";
+
+    expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe(expectedUrl);
+    expect(publicAssetUrl("ui-assets", "KAFDH.webp")).toBe(expectedUrl);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    __internal.resetCache();
     warnSpy.mockRestore();
   });
 
@@ -150,10 +182,11 @@ describe("getSkylineUrl", () => {
 
   it("uses the versioned skyline asset URL", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon-456");
     vi.stubEnv("VITE_BUILD_ID", "build-xyz");
     const { getSkylineUrl } = await loadModule();
     expect(getSkylineUrl()).toBe(
-      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=build-xyz",
+      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?apikey=anon-456&v=build-xyz",
     );
   });
 
