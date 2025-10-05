@@ -101,6 +101,7 @@ export const validatePublicUrl = (url: string) => {
 };
 
 const HOST_ONLY_PATTERN = /^https?:\/\/[^/]+$/i;
+const SUPABASE_HOST_PATTERN = /\.supabase\.(co|in)$/i;
 
 const isDevEnvironment = () => {
   const metaEnv = (import.meta as { env?: Record<string, unknown> }).env;
@@ -165,6 +166,7 @@ const ensureHostOnlyUrl = (value: string, sourceKey: string) => {
 };
 
 let cachedAssetsBaseHost: string | null | undefined;
+let cachedSupabaseAnonKey: string | null | undefined;
 
 const readAssetsBaseHost = () => {
   if (cachedAssetsBaseHost !== undefined) {
@@ -198,6 +200,15 @@ const readAssetsBaseHost = () => {
 
   cachedAssetsBaseHost = null;
   return cachedAssetsBaseHost;
+};
+
+const readSupabaseAnonKey = () => {
+  if (cachedSupabaseAnonKey !== undefined) {
+    return cachedSupabaseAnonKey;
+  }
+
+  cachedSupabaseAnonKey = readEnvString("VITE_SUPABASE_ANON_KEY");
+  return cachedSupabaseAnonKey;
 };
 
 const normalizeBucketName = (bucket: string) => {
@@ -250,7 +261,16 @@ export const publicAssetUrl = (bucket: string, objectPath: string) => {
   const bucketSegment = normalizeBucketName(bucket);
   const objectSegment = normalizeObjectPath(objectPath);
   const pathname = `${PUBLIC_STORAGE_PREFIX}/${bucketSegment}/${objectSegment}`;
-  return new URL(pathname, baseHost).toString();
+  const url = new URL(pathname, baseHost);
+
+  if (SUPABASE_HOST_PATTERN.test(url.hostname)) {
+    const anonKey = readSupabaseAnonKey();
+    if (anonKey) {
+      url.searchParams.set("apikey", anonKey);
+    }
+  }
+
+  return url.toString();
 };
 
 const SKYLINE_BUCKET = "ui-assets";
