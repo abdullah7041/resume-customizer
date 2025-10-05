@@ -160,10 +160,8 @@ export default function Header() {
   }, []);
 
   const themeButtonClass = cn(
-    "inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--panel-stroke)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-    isDark
-      ? "bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] text-[color:var(--surface)] shadow-[var(--shadow-soft)] hover:text-[color:var(--accent)] focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface-strong)]"
-      : "bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_6%)] text-[color:var(--ink)] shadow-[var(--shadow-soft)] hover:text-[color:var(--accent)] focus-visible:ring-[color:color-mix(in_oklab,var(--accent),transparent_24%)] focus-visible:ring-offset-[color:var(--surface)]"
+    "inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+    "bg-[color:var(--panel-bg)] text-[color:var(--ink)] shadow-[var(--shadow-soft)] hover:text-[color:var(--accent)] focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface)]"
   );
   const nextThemeLabel = isDark ? "Switch to light theme" : "Switch to dark theme";
   const ThemeIcon = isDark ? Sun : Moon;
@@ -199,7 +197,7 @@ export default function Header() {
                 enableArabicBrand ? ` — ${arabicBrandName}` : ""
               } — By Abdullah bin Ahmed`}
             >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_18%)] text-[color:var(--accent)] shadow-[var(--shadow-soft)]">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--accent)] shadow-[var(--shadow-soft)]">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="flex flex-col gap-1 text-left">
@@ -269,7 +267,7 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_14%)] p-6 text-[color:var(--surface)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 text-[color:var(--surface)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
@@ -286,7 +284,7 @@ export default function Header() {
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -305,7 +303,7 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -324,7 +322,7 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -346,7 +344,7 @@ export default function Header() {
 
           <div
             className={cn(
-              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_22%)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[transform,box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:-translate-y-0.5 hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_28%)] hover:shadow-[var(--shadow-lift)] dark:text-[color:var(--surface)]",
+              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
               prefersReducedMotion
                 ? ""
                 : "transform-gpu transition-[opacity,transform] duration-[300ms] ease-[var(--transition-snappy)]",
@@ -363,7 +361,7 @@ export default function Header() {
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -372,7 +370,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <Target className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -381,7 +379,7 @@ export default function Header() {
                 </div>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>

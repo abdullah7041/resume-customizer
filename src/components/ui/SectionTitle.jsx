@@ -4,13 +4,13 @@ export default function SectionTitle({ eyebrow, title, description, className })
   return (
     <div
       className={cn(
-        "group/section-title relative overflow-hidden rounded-[calc(var(--radius-card)_/_2.1)] border border-[color:var(--panel-stroke)] bg-[color:var(--panel-bg)] px-6 py-5 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-300 ease-[var(--transition-snappy)]",
+        "group/section-title relative overflow-hidden rounded-[calc(var(--radius-card)_/_2.1)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] px-6 py-5 shadow-[var(--shadow-soft)] transition-[box-shadow] duration-300 ease-[var(--transition-snappy)]",
         "hover:shadow-[var(--shadow-lift)]",
         className,
       )}
     >
       {eyebrow && (
-        <p className="inline-flex items-center rounded-full border border-[color:var(--panel-stroke)] bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_12%)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--accent)]">
+        <p className="inline-flex items-center rounded-full border border-[color:var(--hairline-soft)] bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--accent)]">
           {eyebrow}
         </p>
       )}
