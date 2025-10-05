@@ -14,7 +14,7 @@ const saduPattern = encodeURIComponent(
 const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
 const heroMinHeightClass = "min-h-[calc(100vh-var(--hero-header-offset,4.5rem))]";
-const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-22rem]";
+const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-48rem]";
 
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") {
@@ -160,15 +160,13 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "hero-bg-animate relative isolate flex flex-col overflow-visible text-surface-50",
-        heroMinHeightClass,
+        "hero-bg-animate relative isolate flex flex-col overflow-visible text-surface-50 min-h-screen",
       )}
       style={{ "--hero-header-offset": HERO_HEADER_OFFSET }}
     >
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col justify-between gap-10 py-16 sm:gap-12 sm:py-20 lg:gap-14 lg:py-24",
-          heroMinHeightClass,
+          "relative z-10 flex flex-1 flex-col justify-between gap-10 sm:gap-12 lg:gap-14 py-16 sm:py-20 lg:py-24",
         )}
       >
         <div className="border-b border-[color:var(--hairline-soft)]">

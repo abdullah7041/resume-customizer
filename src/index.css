@@ -37,15 +37,8 @@
   }
 
   html {
-    background-color: #0b6b3a;
-    background-image:
-      radial-gradient(circle at 20% -10%, rgba(32, 201, 151, 0.28) 0%, rgba(3, 20, 13, 0) 65%),
-      linear-gradient(135deg, #0b6b3a 0%, #146356 55%, #0c5335 100%);
-    background-attachment: fixed, fixed;
-    background-repeat: no-repeat;
-    background-size: 160% 160%, cover;
-    transition: background-color var(--duration-breathe) var(--transition-snappy),
-      background-image var(--duration-breathe) var(--transition-snappy);
+    background-color: transparent;
+    transition: background-color var(--duration-breathe) var(--transition-snappy);
   }
 
   body {
@@ -58,13 +51,6 @@
   #root,
   #app-root {
     background: transparent;
-  }
-
-  .dark html {
-    background-color: #0a3f26;
-    background-image:
-      radial-gradient(circle at 22% -12%, rgba(56, 189, 148, 0.24) 0%, rgba(6, 32, 24, 0) 68%),
-      linear-gradient(135deg, #0a3f26 0%, #0b3a30 55%, #0c2e25 100%);
   }
 
   .dark body {
