@@ -99,11 +99,18 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
   );
 
   useEffect(() => {
-    if (resumeDocument?.plainText && !textValue) {
-      setTextValue(resumeDocument.plainText);
-      setTextWarning("");
+    if (!resumeDocument?.plainText) {
+      return;
     }
-  }, [resumeDocument, textValue]);
+    if (file) {
+      return;
+    }
+    if (textValue) {
+      return;
+    }
+    setTextValue(resumeDocument.plainText);
+    setTextWarning("");
+  }, [file, resumeDocument, textValue]);
 
   const resetState = useCallback(() => {
     setFile(null);

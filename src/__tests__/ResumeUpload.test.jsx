@@ -100,6 +100,8 @@ describe("ResumeUpload", () => {
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({ type: "success", title: "Resume ready" })
     );
+
+    expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
   });
 
   it("passes pasted text to onParseResume with context", async () => {
