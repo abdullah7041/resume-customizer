@@ -21,7 +21,7 @@ describe("UploadCard", () => {
   it("matches snapshot and exposes accessible controls", () => {
     const { container } = render(
       <UploadCard
-        fileName=""
+        fileName="resume.pdf"
         onFileSelect={() => {}}
         onFileClear={() => {}}
         onTextChange={() => {}}
@@ -34,9 +34,13 @@ describe("UploadCard", () => {
       />
     );
 
-    expect(
-      screen.getByRole('button', { name: /upload resume file/i })
-    ).toBeInTheDocument();
+    const dropzone = screen.getByRole("button", { name: /upload resume file/i });
+    expect(dropzone).toBeInTheDocument();
+    expect(dropzone).toHaveAttribute("title", "Upload resume file");
+
+    const removeButton = screen.getByRole("button", { name: /remove selected file/i });
+    expect(removeButton).toHaveAttribute("title", "Remove selected file");
+
     expect(
       screen.getByRole('button', { name: /prepare resume/i })
     ).toBeEnabled();

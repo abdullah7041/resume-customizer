@@ -1,4 +1,4 @@
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import Header from "../components/Layout/Header.jsx";
@@ -81,6 +81,18 @@ describe("Header", () => {
 
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
+  });
+
+  it("provides accessible labelling for interactive controls and hides decorative icons", () => {
+    const { container } = render(<Header />);
+
+    const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
+    expect(themeToggle).toHaveAttribute("title", "Switch to dark theme");
+    expect(themeToggle).toHaveAttribute("aria-pressed");
+
+    container.querySelectorAll("svg").forEach((icon) => {
+      expect(icon).toHaveAttribute("aria-hidden", "true");
+    });
   });
 });
 
