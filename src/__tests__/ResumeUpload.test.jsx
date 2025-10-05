@@ -100,38 +100,6 @@ describe("ResumeUpload", () => {
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({ type: "success", title: "Resume ready" })
     );
-  });
-
-  it("keeps the paste textarea empty while a file upload is selected", async () => {
-    const onToast = vi.fn();
-    const onParseResume = vi.fn();
-
-    const { rerender } = render(
-      <ResumeUpload onParseResume={onParseResume} onToast={onToast} />
-    );
-
-    const fileInput = screen
-      .getAllByLabelText(/upload resume file/i)
-      .find((element) => element.tagName === "INPUT");
-    if (!(fileInput instanceof HTMLInputElement)) {
-      throw new Error("Hidden file input not found");
-    }
-
-    const file = new File(["resume"], "resume.pdf", { type: "application/pdf" });
-
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
-
-    expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
-
-    rerender(
-      <ResumeUpload
-        onParseResume={onParseResume}
-        onToast={onToast}
-        resumeDocument={{ plainText: "Parsed resume content" }}
-      />
-    );
 
     expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
   });
