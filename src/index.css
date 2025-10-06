@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    color-scheme: light dark;
+    color-scheme: dark;
     --app-shell-max: 1120px;
     --app-shell-gutter: clamp(1.25rem, 5vw, 3rem);
   }
@@ -39,6 +39,8 @@
   html {
     background-color: var(--bg);
     transition: background-color var(--duration-breathe) var(--transition-snappy);
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   body {
@@ -46,6 +48,7 @@
     color: var(--ink);
     background: var(--bg);
     overflow-x: hidden;
+    overflow-y: auto;
   }
 
   #root,
@@ -180,8 +183,7 @@
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
-    animation: shimmer 2.8s linear infinite;
-    animation-play-state: paused;
+    animation: shimmer 3.5s linear infinite;
     transition: filter 180ms ease, text-shadow 180ms ease;
   }
 
@@ -339,13 +341,30 @@
     }
 
     100% {
-      opacity: 1;
+      opacity: 0.85;
       transform: translateY(0) scale(1);
     }
   }
 
+  @keyframes heroFloat {
+    0%, 100% {
+      transform: translateY(0px) scale(1);
+    }
+    
+    25% {
+      transform: translateY(-8px) scale(1.005);
+    }
+    
+    50% {
+      transform: translateY(-12px) scale(1.008);
+    }
+    
+    75% {
+      transform: translateY(-8px) scale(1.005);
+    }
+  }
+
   .bg-hero {
-    position: relative;
     pointer-events: none;
     overflow: hidden;
     filter: saturate(1.04) brightness(0.98);
@@ -354,12 +373,13 @@
   }
 
   .skyline-once {
-    animation: skylineEntrance 300ms ease-out forwards;
+    animation: skylineEntrance 800ms ease-out forwards, heroFloat 20s ease-in-out 800ms infinite;
   }
 
   .skyline-still {
-    opacity: 1;
+    opacity: 0.85;
     transform: translateY(0) scale(1);
+    animation: heroFloat 20s ease-in-out infinite;
   }
 
   @keyframes keywordChipShine {

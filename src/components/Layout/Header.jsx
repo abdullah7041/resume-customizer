@@ -223,19 +223,6 @@ export default function Header() {
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-              {darkModeEnabled && (
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className={themeButtonClass}
-                  aria-pressed={isDark}
-                  aria-label={nextThemeLabel}
-                  title={nextThemeLabel}
-                >
-                  <ThemeIcon className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">{nextThemeLabel}</span>
-                </button>
-              )}
               {user ? (
                 <SecondaryButton icon={LogOut} onClick={signOut}>
                   Sign Out
@@ -267,17 +254,17 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 text-[color:var(--surface)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
               >
                 <Sparkles className="h-7 w-7" aria-hidden="true" />
               </span>
-              <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-[color:var(--surface)] sm:text-5xl lg:text-6xl">
+              <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-surface-50 sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-[color:color-mix(in_oklab,var(--surface),transparent_12%)] sm:text-lg">
+              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90 sm:text-lg">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
@@ -398,13 +385,15 @@ export default function Header() {
             <div aria-hidden="true" className={cn(skeletonBackgroundClass, heroBackgroundExtentClass)} />
           )}
           <div
-            aria-hidden="true"
+            role="img"
+            aria-label="Decorative skyline background"
+            title="Saudi Arabia skyline"
             className={cn(
-              "bg-hero -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300",
+              "bg-hero -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 absolute",
               heroBackgroundExtentClass,
               !isFallbackSkyline && "md:bg-fixed md:bg-[position:50%_35%]",
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
-              !skylineLoaded && "opacity-0"
+              skylineLoaded ? "opacity-100" : "opacity-0"
             )}
             style={{ backgroundImage: `url('${skylineUrl}')` }}
             ref={(el) => {
