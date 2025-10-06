@@ -144,12 +144,12 @@
 
   .badge-gold-shimmer {
     position: relative;
-    color: #c5a66a;
+    color: #f59e0b;
     background-image: linear-gradient(
       120deg,
-      rgba(197, 166, 106, 0.35) 0%,
-      rgba(253, 230, 138, 0.55) 20%,
-      rgba(197, 166, 106, 0.35) 40%
+      rgba(245, 158, 11, 0.35) 0%,
+      rgba(251, 191, 36, 0.60) 20%,
+      rgba(245, 158, 11, 0.35) 40%
     );
     background-size: 220% auto;
     background-clip: text;
@@ -165,7 +165,7 @@
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(197, 166, 106, 0) 25%, rgba(253, 230, 138, 0.45) 50%, rgba(197, 166, 106, 0) 75%);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0) 25%, rgba(251, 191, 36, 0.45) 50%, rgba(245, 158, 11, 0) 75%);
     opacity: 0;
     transition: opacity 200ms ease;
     pointer-events: none;
@@ -174,7 +174,7 @@
   .badge-gold-shimmer:hover,
   .badge-gold-shimmer:focus-visible {
     animation-play-state: running;
-    filter: drop-shadow(0 0 12px rgba(197, 166, 106, 0.35));
+    filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.40));
   }
 
   .badge-gold-shimmer:hover::after,
@@ -184,7 +184,7 @@
 
   @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
     .badge-gold-shimmer {
-      color: #c5a66a;
+      color: #f59e0b;
       background-image: none;
     }
   }
@@ -228,20 +228,20 @@
     background: linear-gradient(
       90deg,
       color-mix(in oklab, var(--accent-gold), transparent 94%) 0%,
-      color-mix(in oklab, var(--accent-gold), transparent 26%) 50%,
+      color-mix(in oklab, var(--accent-gold), transparent 30%) 50%,
       color-mix(in oklab, var(--accent-gold), transparent 94%) 100%
     );
-    box-shadow: 0 0 24px color-mix(in oklab, var(--accent-gold), transparent 52%);
+    box-shadow: 0 0 24px color-mix(in oklab, var(--accent-gold), transparent 60%);
   }
 
   @keyframes subtleGlow {
     0%,
     100% {
-      box-shadow: 0 18px 45px -32px rgba(11, 107, 58, 0.25);
+      box-shadow: 0 18px 45px -32px rgba(4, 120, 87, 0.22);
     }
 
     50% {
-      box-shadow: 0 22px 70px -30px rgba(16, 185, 129, 0.35);
+      box-shadow: 0 22px 70px -30px rgba(16, 185, 129, 0.32);
     }
   }
 

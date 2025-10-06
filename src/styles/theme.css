@@ -1,50 +1,50 @@
 :root {
-  /* Base colors */
-  --bg: #f4f7f3;
-  --surface: #fefdfb;
+  /* Base colors - Refined for better harmony */
+  --bg: #f8faf9;
+  --surface: #ffffff;
   --surface-strong: #ffffff;
-  --ink: #05271b;
-  --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 52%);
-  --accent: #0e7c54;
-  --secondary: #146247;
+  --ink: #0a2818;
+  --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 48%);
+  --accent: #10b981;
+  --secondary: #059669;
   
   /* Panel system with refined opacity */
-  --panel-bg: color-mix(in oklab, var(--surface), transparent 35%);
-  --panel-stroke: color-mix(in oklab, var(--ink), transparent 90%);
+  --panel-bg: color-mix(in oklab, var(--surface), transparent 20%);
+  --panel-stroke: color-mix(in oklab, var(--ink), transparent 88%);
   
   /* Accessibility: palette ensures ≥4.5:1 contrast between ink text and key surfaces. */
 
   --surface-50: var(--bg);
-  --surface-50-rgb: 244 249 246;
+  --surface-50-rgb: 248 250 249;
   --surface-900: #04130d;
   --surface-900-rgb: 4 19 13;
 
   --ink-900: var(--ink);
-  --ink-900-rgb: 8 41 27;
-  --ink-500: color-mix(in oklab, var(--ink), var(--bg) 42%);
-  --ink-500-rgb: 43 96 73;
+  --ink-900-rgb: 10 40 24;
+  --ink-500: color-mix(in oklab, var(--ink), var(--bg) 45%);
+  --ink-500-rgb: 52 105 76;
 
   --emerald-700: var(--accent);
-  --emerald-700-rgb: 15 138 95;
-  --emerald-900: #066145;
-  --emerald-900-rgb: 6 97 69;
+  --emerald-700-rgb: 16 185 129;
+  --emerald-900: #047857;
+  --emerald-900-rgb: 4 120 87;
 
-  --accent-gold: #d4b86a;
-  --accent-gold-rgb: 212 184 106;
+  --accent-gold: #f59e0b;
+  --accent-gold-rgb: 245 158 11;
 
   --panel-border: var(--panel-stroke);
-  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 50%);
+  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 45%);
 
   /* Refined hairline system (1px borders) */
-  --hairline-strong: color-mix(in oklab, var(--ink), transparent 85%);
+  --hairline-strong: color-mix(in oklab, var(--ink), transparent 86%);
   --hairline-soft: color-mix(in oklab, var(--ink), transparent 92%);
-  --hairline-muted: color-mix(in oklab, var(--ink), transparent 94%);
+  --hairline-muted: color-mix(in oklab, var(--ink), transparent 95%);
 
   /* Soft elevation shadows (no heavy strokes) */
   --shadow-card-value: 0 1px 3px -1px color-mix(in oklab, var(--ink), transparent 92%),
                        0 2px 8px -2px color-mix(in oklab, var(--ink), transparent 94%);
   --shadow-soft-value: 0 1px 2px -1px color-mix(in oklab, var(--ink), transparent 94%),
-                       0 2px 6px -2px color-mix(in oklab, var(--ink), transparent 95%);
+                       0 2px 6px -2px color-mix(in oklab, var(--ink), transparent 96%);
   --shadow-lift-value: 0 2px 4px -1px color-mix(in oklab, var(--ink), transparent 90%),
                        0 4px 12px -2px color-mix(in oklab, var(--ink), transparent 92%);
 
@@ -52,12 +52,12 @@
   --duration-breathe: 280ms;
   --transition-snappy: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Primary gradient button (purple→magenta) */
-  --gradient-primary-value: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  /* Primary gradient button (emerald→teal) - More cohesive with the brand */
+  --gradient-primary-value: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
   --gradient-muted-value: linear-gradient(
     135deg,
     color-mix(in oklab, var(--accent), transparent 88%) 0%,
-    color-mix(in oklab, var(--accent-gold), transparent 82%) 100%
+    color-mix(in oklab, var(--accent-gold), transparent 85%) 100%
   );
   --gradient-card-value: linear-gradient(
     135deg,
@@ -75,38 +75,38 @@
   /* Button primary with refined styling */
   --button-primary-gradient: var(--gradient-primary-value);
   --button-primary-border: transparent;
-  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
-  --button-primary-shadow: 0 2px 6px -2px color-mix(in oklab, #ec4899, transparent 70%);
-  --button-primary-shadow-strong: 0 4px 12px -2px color-mix(in oklab, #8b5cf6, transparent 65%);
-  --button-primary-focus: color-mix(in oklab, #a78bfa 60%, #f472b6);
+  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --button-primary-shadow: 0 2px 6px -2px color-mix(in oklab, #10b981, transparent 65%);
+  --button-primary-shadow-strong: 0 4px 12px -2px color-mix(in oklab, #10b981, transparent 60%);
+  --button-primary-focus: color-mix(in oklab, #10b981 70%, #14b8a6);
 
-  --hero-overlay-sheen: radial-gradient(circle at 18% 12%, rgba(247, 242, 231, 0.32) 0%, rgba(247, 242, 231, 0) 58%);
+  --hero-overlay-sheen: radial-gradient(circle at 18% 12%, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 58%);
 
-  --color-primary-400: color-mix(in oklab, var(--accent), transparent 10%);
+  --color-primary-400: color-mix(in oklab, var(--accent), transparent 12%);
   --color-primary-500: var(--accent);
-  --color-primary-600: color-mix(in oklab, var(--emerald-900), var(--accent) 22%);
+  --color-primary-600: color-mix(in oklab, var(--emerald-900), var(--accent) 25%);
   --color-primary-700: var(--emerald-900);
 
-  --color-secondary-400: color-mix(in oklab, var(--accent), transparent 15%);
-  --color-secondary-500: color-mix(in oklab, var(--accent), transparent 5%);
-  --color-secondary-600: color-mix(in oklab, var(--emerald-900), transparent 15%);
+  --color-secondary-400: color-mix(in oklab, var(--accent), transparent 18%);
+  --color-secondary-500: color-mix(in oklab, var(--accent), transparent 8%);
+  --color-secondary-600: color-mix(in oklab, var(--emerald-900), transparent 12%);
 
-  --color-accent-400: color-mix(in oklab, var(--accent-gold), transparent 18%);
+  --color-accent-400: color-mix(in oklab, var(--accent-gold), transparent 20%);
   --color-accent-500: var(--accent-gold);
-  --color-accent-600: color-mix(in oklab, var(--accent-gold), var(--emerald-900) 18%);
+  --color-accent-600: color-mix(in oklab, var(--accent-gold), var(--emerald-900) 20%);
 
   --color-surface-50: rgb(var(--surface-50-rgb));
   --color-surface-900: rgb(var(--surface-900-rgb));
 
-  --color-sand-50: color-mix(in oklab, var(--surface), transparent 10%);
-  --color-dune-100: color-mix(in oklab, var(--accent-gold), transparent 74%);
-  --color-smoke-50: color-mix(in oklab, var(--bg), transparent 20%);
+  --color-sand-50: color-mix(in oklab, var(--surface), transparent 8%);
+  --color-dune-100: color-mix(in oklab, var(--accent-gold), transparent 76%);
+  --color-smoke-50: color-mix(in oklab, var(--bg), transparent 15%);
 
   --color-ink-500: rgb(var(--ink-500-rgb));
-  --color-ink-700: color-mix(in oklab, var(--ink), transparent 20%);
+  --color-ink-700: color-mix(in oklab, var(--ink), transparent 18%);
   --color-ink-900: rgb(var(--ink-900-rgb));
 
-  --color-success-500: #12b981;
+  --color-success-500: #10b981;
   --color-warning-500: #f59e0b;
   --color-danger-500: #ef4444;
 

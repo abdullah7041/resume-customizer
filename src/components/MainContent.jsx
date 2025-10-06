@@ -508,7 +508,7 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative isolate z-20 min-h-screen pb-24 sm:pb-32 lg:pb-40 -mt-32 sm:-mt-40 lg:-mt-48"
+      className="relative isolate z-20 min-h-screen pb-24 sm:pb-32 lg:pb-40 -mt-32 sm:-mt-30 lg:-mt-30"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className={`${containerClass} space-y-8 sm:space-y-12 lg:space-y-16 text-ink-700 dark:text-surface-50`}>
