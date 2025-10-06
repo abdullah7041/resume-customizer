@@ -1,28 +1,28 @@
 :root {
-  /* Base colors - Refined for better harmony */
-  --bg: #f8faf9;
+  /* Base colors - Refined for better harmony and contrast */
+  --bg: #f0fdf4;
   --surface: #ffffff;
   --surface-strong: #ffffff;
-  --ink: #0a2818;
-  --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 48%);
+  --ink: #064e3b;
+  --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 55%);
   --accent: #10b981;
   --secondary: #059669;
   
-  /* Panel system with refined opacity */
-  --panel-bg: color-mix(in oklab, var(--surface), transparent 20%);
+  /* Panel system - Enhanced for better visual distinction */
+  --panel-bg: color-mix(in oklab, #ffffff, transparent 5%);
   --panel-stroke: color-mix(in oklab, var(--ink), transparent 88%);
   
   /* Accessibility: palette ensures ≥4.5:1 contrast between ink text and key surfaces. */
 
   --surface-50: var(--bg);
-  --surface-50-rgb: 248 250 249;
-  --surface-900: #04130d;
-  --surface-900-rgb: 4 19 13;
+  --surface-50-rgb: 240 253 244;
+  --surface-900: #022c22;
+  --surface-900-rgb: 2 44 34;
 
   --ink-900: var(--ink);
-  --ink-900-rgb: 10 40 24;
-  --ink-500: color-mix(in oklab, var(--ink), var(--bg) 45%);
-  --ink-500-rgb: 52 105 76;
+  --ink-900-rgb: 6 78 59;
+  --ink-500: color-mix(in oklab, var(--ink), var(--bg) 50%);
+  --ink-500-rgb: 52 125 96;
 
   --emerald-700: var(--accent);
   --emerald-700-rgb: 16 185 129;
@@ -33,26 +33,26 @@
   --accent-gold-rgb: 245 158 11;
 
   --panel-border: var(--panel-stroke);
-  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 45%);
+  --panel-highlight: color-mix(in oklab, #ecfdf5, transparent 30%);
 
-  /* Refined hairline system (1px borders) */
-  --hairline-strong: color-mix(in oklab, var(--ink), transparent 86%);
-  --hairline-soft: color-mix(in oklab, var(--ink), transparent 92%);
-  --hairline-muted: color-mix(in oklab, var(--ink), transparent 95%);
+  /* Refined hairline system (1px borders) - Better visibility */
+  --hairline-strong: color-mix(in oklab, var(--ink), transparent 82%);
+  --hairline-soft: color-mix(in oklab, var(--ink), transparent 90%);
+  --hairline-muted: color-mix(in oklab, var(--ink), transparent 94%);
 
-  /* Soft elevation shadows (no heavy strokes) */
-  --shadow-card-value: 0 1px 3px -1px color-mix(in oklab, var(--ink), transparent 92%),
-                       0 2px 8px -2px color-mix(in oklab, var(--ink), transparent 94%);
-  --shadow-soft-value: 0 1px 2px -1px color-mix(in oklab, var(--ink), transparent 94%),
-                       0 2px 6px -2px color-mix(in oklab, var(--ink), transparent 96%);
-  --shadow-lift-value: 0 2px 4px -1px color-mix(in oklab, var(--ink), transparent 90%),
-                       0 4px 12px -2px color-mix(in oklab, var(--ink), transparent 92%);
+  /* Enhanced elevation shadows */
+  --shadow-card-value: 0 1px 3px -1px rgba(6, 78, 59, 0.10),
+                       0 4px 12px -2px rgba(6, 78, 59, 0.08);
+  --shadow-soft-value: 0 1px 2px -1px rgba(6, 78, 59, 0.08),
+                       0 3px 8px -2px rgba(6, 78, 59, 0.06);
+  --shadow-lift-value: 0 4px 6px -1px rgba(6, 78, 59, 0.12),
+                       0 8px 20px -4px rgba(6, 78, 59, 0.10);
 
   --duration-snappy: 180ms;
   --duration-breathe: 280ms;
   --transition-snappy: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Primary gradient button (emerald→teal) - More cohesive with the brand */
+  /* Primary gradient button (emerald→teal) - Cohesive with brand */
   --gradient-primary-value: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
   --gradient-muted-value: linear-gradient(
     135deg,
@@ -61,8 +61,8 @@
   );
   --gradient-card-value: linear-gradient(
     135deg,
-    color-mix(in oklab, var(--panel-highlight), transparent 30%) 0%,
-    color-mix(in oklab, var(--panel-highlight), transparent 68%) 100%
+    color-mix(in oklab, var(--panel-highlight), transparent 20%) 0%,
+    color-mix(in oklab, var(--panel-highlight), transparent 60%) 100%
   );
 
   --shadow-card: var(--shadow-card-value);
@@ -76,8 +76,8 @@
   --button-primary-gradient: var(--gradient-primary-value);
   --button-primary-border: transparent;
   --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
-  --button-primary-shadow: 0 2px 6px -2px color-mix(in oklab, #10b981, transparent 65%);
-  --button-primary-shadow-strong: 0 4px 12px -2px color-mix(in oklab, #10b981, transparent 60%);
+  --button-primary-shadow: 0 2px 8px -2px rgba(16, 185, 129, 0.40);
+  --button-primary-shadow-strong: 0 4px 16px -2px rgba(16, 185, 129, 0.35);
   --button-primary-focus: color-mix(in oklab, #10b981 70%, #14b8a6);
 
   --hero-overlay-sheen: radial-gradient(circle at 18% 12%, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 58%);
@@ -119,69 +119,83 @@
 
 :root.dark,
 .dark {
-  --bg: #020c08;
-  --surface: #06130f;
-  --surface-strong: #0d2217;
-  --ink: #e6f6ef;
-  --ink-muted: color-mix(in oklab, var(--ink), var(--surface) 40%);
-  --accent: #22b37d;
-  --secondary: #57d2a5;
+  /* Base colors - Enhanced for better readability */
+  --bg: #0a1612;
+  --surface: #0f1e1a;
+  --surface-strong: #1a2e27;
+  --ink: #ecfdf5;
+  --ink-muted: color-mix(in oklab, var(--ink), var(--surface) 45%);
+  --accent: #34d399;
+  --secondary: #6ee7b7;
   
-  /* Panel system with refined opacity */
-  --panel-bg: color-mix(in oklab, var(--surface-strong), transparent 30%);
-  --panel-stroke: color-mix(in oklab, var(--ink), transparent 88%);
+  /* Panel system - Enhanced contrast and depth */
+  --panel-bg: color-mix(in oklab, #1a2e27, transparent 15%);
+  --panel-stroke: color-mix(in oklab, var(--ink), transparent 85%);
 
   --surface-900: var(--bg);
-  --surface-900-rgb: 2 12 8;
+  --surface-900-rgb: 10 22 18;
 
   --ink-900: var(--ink);
-  --ink-900-rgb: 229 246 239;
-  --ink-500: color-mix(in oklab, var(--ink), var(--surface) 58%);
-  --ink-500-rgb: 181 222 204;
+  --ink-900-rgb: 236 253 245;
+  --ink-500: color-mix(in oklab, var(--ink), var(--surface) 50%);
+  --ink-500-rgb: 167 216 200;
 
   --emerald-700: var(--accent);
-  --emerald-700-rgb: 26 168 119;
-  --emerald-900: #0b6a49;
-  --emerald-900-rgb: 11 106 73;
+  --emerald-700-rgb: 52 211 153;
+  --emerald-900: #059669;
+  --emerald-900-rgb: 5 150 105;
+
+  --accent-gold: #fbbf24;
+  --accent-gold-rgb: 251 191 36;
 
   --panel-border: var(--panel-stroke);
-  --panel-highlight: color-mix(in oklab, var(--surface-strong), transparent 40%);
+  --panel-highlight: color-mix(in oklab, #d1fae5, transparent 85%);
 
-  /* Refined hairline system (1px borders) */
-  --hairline-strong: color-mix(in oklab, var(--ink), transparent 82%);
-  --hairline-soft: color-mix(in oklab, var(--ink), transparent 90%);
-  --hairline-muted: color-mix(in oklab, var(--ink), transparent 92%);
+  /* Refined hairline system - Better visibility in dark mode */
+  --hairline-strong: color-mix(in oklab, var(--ink), transparent 80%);
+  --hairline-soft: color-mix(in oklab, var(--ink), transparent 88%);
+  --hairline-muted: color-mix(in oklab, var(--ink), transparent 91%);
 
-  /* Soft elevation shadows (no heavy strokes) */
-  --shadow-card-value: 0 1px 3px -1px color-mix(in oklab, #000, transparent 85%),
-                       0 2px 8px -2px color-mix(in oklab, #000, transparent 88%);
-  --shadow-soft-value: 0 1px 2px -1px color-mix(in oklab, #000, transparent 88%),
-                       0 2px 6px -2px color-mix(in oklab, #000, transparent 90%);
-  --shadow-lift-value: 0 2px 4px -1px color-mix(in oklab, #000, transparent 82%),
-                       0 4px 12px -2px color-mix(in oklab, #000, transparent 85%);
+  /* Enhanced elevation shadows for dark mode */
+  --shadow-card-value: 0 2px 4px -1px rgba(0, 0, 0, 0.40),
+                       0 6px 16px -3px rgba(0, 0, 0, 0.35);
+  --shadow-soft-value: 0 1px 3px -1px rgba(0, 0, 0, 0.35),
+                       0 4px 12px -2px rgba(0, 0, 0, 0.30);
+  --shadow-lift-value: 0 4px 8px -1px rgba(0, 0, 0, 0.45),
+                       0 10px 24px -4px rgba(0, 0, 0, 0.40);
 
-  /* Primary gradient button (purple→magenta) */
-  --gradient-primary-value: linear-gradient(135deg, #a78bfa 0%, #f472b6 100%);
+  /* Primary gradient button - Vibrant for dark mode */
+  --gradient-primary-value: linear-gradient(135deg, #34d399 0%, #14b8a6 100%);
   --gradient-muted-value: linear-gradient(
     135deg,
-    color-mix(in oklab, var(--emerald-900), transparent 80%) 0%,
-    color-mix(in oklab, var(--accent-gold), transparent 78%) 100%
+    color-mix(in oklab, var(--emerald-900), transparent 75%) 0%,
+    color-mix(in oklab, var(--accent-gold), transparent 70%) 100%
   );
   --gradient-card-value: linear-gradient(
     135deg,
-    color-mix(in oklab, var(--panel-highlight), transparent 34%) 0%,
-    color-mix(in oklab, var(--panel-highlight), transparent 68%) 100%
+    color-mix(in oklab, var(--panel-highlight), transparent 20%) 0%,
+    color-mix(in oklab, var(--panel-highlight), transparent 60%) 100%
   );
 
-  /* Button primary with refined styling */
+  /* Button primary - Enhanced for dark mode */
   --button-primary-gradient: var(--gradient-primary-value);
   --button-primary-border: transparent;
-  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-  --button-primary-shadow: 0 2px 6px -2px color-mix(in oklab, #f472b6, transparent 65%);
-  --button-primary-shadow-strong: 0 4px 12px -2px color-mix(in oklab, #a78bfa, transparent 60%);
-  --button-primary-focus: color-mix(in oklab, #c4b5fd 60%, #f9a8d4);
+  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 100%);
+  --button-primary-shadow: 0 2px 8px -2px rgba(52, 211, 153, 0.45);
+  --button-primary-shadow-strong: 0 4px 16px -2px rgba(52, 211, 153, 0.40);
+  --button-primary-focus: color-mix(in oklab, #34d399 70%, #14b8a6);
 
-  --hero-overlay-sheen: radial-gradient(circle at 26% 10%, rgba(34, 179, 125, 0.24) 0%, rgba(34, 179, 125, 0) 62%);
+  --hero-overlay-sheen: radial-gradient(circle at 26% 10%, rgba(52, 211, 153, 0.20) 0%, rgba(52, 211, 153, 0) 62%);
+  
+  /* Enhanced accent colors for dark mode */
+  --color-primary-400: color-mix(in oklab, var(--accent), transparent 15%);
+  --color-primary-500: var(--accent);
+  --color-primary-600: color-mix(in oklab, var(--emerald-900), var(--accent) 30%);
+  --color-primary-700: var(--emerald-900);
+
+  --color-accent-400: color-mix(in oklab, var(--accent-gold), transparent 25%);
+  --color-accent-500: var(--accent-gold);
+  --color-accent-600: color-mix(in oklab, var(--accent-gold), var(--emerald-900) 25%);
 }
 
 @keyframes accent-shimmer {
