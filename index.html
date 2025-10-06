@@ -8,19 +8,28 @@
         const storageKey = "theme";
         const legacyKey = "airo:theme";
         
-        // Check feature flag - replace at build time by Vite
+        // Check feature flag - replaced at build time by Vite
         const darkModeEnabled = "%VITE_FEATURE_DARK_MODE%" !== "false";
         
+        // If dark mode is disabled, always apply light theme and skip detection
+        if (!darkModeEnabled) {
+          root.classList.add("light");
+          root.classList.remove("dark");
+          root.dataset.theme = "light";
+          root.setAttribute("data-theme", "light");
+          root.style.colorScheme = "light";
+          return;
+        }
+        
         const apply = (theme) => {
-          // If dark mode is disabled, force light theme
-          const next = darkModeEnabled && theme === "dark" ? "dark" : "light";
-          const isDark = next === "dark";
+          const isDark = theme === "dark";
           root.classList.toggle("dark", isDark);
           root.classList.toggle("light", !isDark);
-          root.dataset.theme = next;
-          root.setAttribute("data-theme", next);
-          root.style.colorScheme = next;
+          root.dataset.theme = theme;
+          root.setAttribute("data-theme", theme);
+          root.style.colorScheme = theme;
         };
+        
         const read = (key) => {
           try {
             return window.localStorage.getItem(key);
@@ -28,6 +37,7 @@
             return null;
           }
         };
+        
         const write = (key, value) => {
           try {
             window.localStorage.setItem(key, value);
@@ -49,7 +59,6 @@
 
         if (!stored) {
           const prefersDark =
-            darkModeEnabled &&
             typeof window !== "undefined" &&
             typeof window.matchMedia === "function" &&
             window.matchMedia("(prefers-color-scheme: dark)").matches;
