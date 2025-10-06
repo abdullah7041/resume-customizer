@@ -13,7 +13,7 @@ const saduPattern = encodeURIComponent(
 
 const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
-const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-48rem]";
+const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-64rem]";
 
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") {
