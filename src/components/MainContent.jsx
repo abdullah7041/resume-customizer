@@ -477,6 +477,7 @@ export default function MainContent() {
             matchAnalysis={matchAnalysis}
             isAnalyzing={isAnalyzing}
             hasResume={Boolean(resumeData?.plainText)}
+            onToast={pushToast}
           />
         )}
         {activeTab === "optimize" && (

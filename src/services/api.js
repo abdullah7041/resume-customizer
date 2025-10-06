@@ -10,6 +10,24 @@ const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/parse-resume`;
 const REQUEST_TIMEOUT = 15000;
 const OPTIMIZATION_TIMEOUT = 45000;
 
+const clampScore = (value) => {
+  const numeric = Number.parseFloat(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.min(100, Math.max(0, Math.round(numeric)));
+};
+
+const clampRatio = (value) => {
+  const numeric = Number.parseFloat(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  if (numeric <= 0) return 0;
+  if (numeric >= 1) return 1;
+  return numeric;
+};
+
 const sanitize = (value) => {
   let buffer = "";
   for (const char of value) {
@@ -371,15 +389,16 @@ export const analyzeResume = async (resumeInput, jobText, options = {}) => {
     const topHits = Array.isArray(data?.matched_keywords)
       ? data.matched_keywords.map((item) => sanitize(String(item))).filter(Boolean)
       : [];
-    const coverage = Number(data?.coverage ?? 0);
-    const cosine = Number(data?.similarity ?? 0);
+    const coverage = clampRatio(data?.coverage);
+    const cosine = clampRatio(data?.similarity);
+    const score = clampScore(data?.score);
 
     const suggestions = topMissing.slice(0, 6).map(
       (keyword) => `Consider highlighting “${keyword}” to better reflect the role requirements.`,
     );
 
     const baseResult = {
-      score: Number.isFinite(data?.score) ? Math.round(data.score) : 0,
+      score,
       missingKeywords: topMissing.slice(0, 12),
       suggestions,
       topHits: topHits.slice(0, 12),

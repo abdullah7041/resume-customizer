@@ -42,6 +42,7 @@ export default function JobMatch({
   matchAnalysis,
   isAnalyzing = false,
   hasResume = false,
+  onToast,
 }) {
   const [jobText, setJobText] = useState(() => {
     if (typeof window === "undefined") {
@@ -60,14 +61,23 @@ export default function JobMatch({
     }
   }, [jobText]);
 
+  const notify = onToast ?? null;
+
   const handleAnalyze = async () => {
-    if (!jobText.trim()) {
-      setError("Paste the job description before analyzing.");
+    const trimmedJob = jobText.trim();
+    if (!trimmedJob) {
+      const message = "Paste the job description before analyzing.";
+      setError(message);
+      notify?.({
+        type: "warning",
+        title: "Job description needed",
+        description: "Paste the job description before analyzing the match.",
+      });
       return;
     }
     setError("");
     try {
-      await onAnalyzeMatch(jobText);
+      await onAnalyzeMatch(trimmedJob);
     } catch (err) {
       setError(err?.message || "We could not analyze this match.");
     }
