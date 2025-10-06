@@ -331,9 +331,16 @@ const handler: Handler = async (event) => {
 
     const coverage = keywords.length === 0 ? 0 : hits.length / keywords.length;
 
-    const score = Math.round(
-      clamp(0.7 * 100 * cosine + 0.3 * 100 * coverage, 0, 100),
-    );
+    // Calculate base score with weighted formula: 70% cosine similarity + 30% keyword coverage
+    let rawScore = 0.7 * 100 * cosine + 0.3 * 100 * coverage;
+    
+    // Ensure non-zero score for valid content: if both inputs have content and some overlap exists,
+    // guarantee a minimum score of 5 to indicate some matching exists
+    if (resumeTokens.length > 0 && jobTokens.length > 0 && (cosine > 0 || coverage > 0)) {
+      rawScore = Math.max(rawScore, 5);
+    }
+    
+    const score = Math.round(clamp(rawScore, 0, 100));
 
     return {
       statusCode: 200,
