@@ -177,7 +177,7 @@ const escapeHtml = (value) =>
 
 const buildList = (items, className) => {
   if (!items || items.length === 0) {
-    return ''; // Empty for ATS compatibility - no sample data
+    return ''; // Return empty string for ATS compatibility - no placeholder text
   }
   const listItems = items
     .map((item) => `<li>${escapeHtml(item)}</li>`)
@@ -233,27 +233,33 @@ const buildSkills = (skills, keywords) => {
     }
   }
   if (merged.size === 0) {
-    return ''; // Empty for ATS compatibility
+    return ''; // Return empty string for ATS compatibility - no placeholder text
   }
   return `<ul class="skills">${Array.from(merged)
     .map((item) => `<li>${escapeHtml(item)}</li>`)
     .join("")}</ul>`;
 };
 
-const buildSection = (title, content) => `
+const buildSection = (title, content) => {
+  // Only render section if it has content
+  if (!content || content.trim().length === 0) {
+    return '';
+  }
+  return `
   <section class="section">
     <h2>${escapeHtml(title)}</h2>
     ${content}
   </section>
 `;
+};
 
 const buildContact = (lines) => {
   if (!lines || lines.length === 0) {
-    return { name: "AI Resume Export", entries: [] };
+    return { name: "", entries: [] }; // Return empty for proper ATS formatting
   }
   const [primary, ...rest] = lines;
   return {
-    name: primary,
+    name: primary || "",
     entries: rest,
   };
 };
@@ -274,7 +280,7 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
   const contactContent =
     contact.entries.length > 0
       ? `<ul class="contact-list">${contact.entries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-      : ''; // Empty for ATS compatibility
+      : ''; // Return empty string for ATS compatibility - no placeholder text
 
   return `<!doctype html>
 <html lang="en">
@@ -302,9 +308,9 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
   </head>
   <body>
     <article class="page">
-      <header class="page-header">
+      ${contact.name ? `<header class="page-header">
         <h1>${escapeHtml(contact.name)}</h1>
-      </header>
+      </header>` : ''}
       ${buildSection("Contact", contactContent)}
       ${buildSection("Summary", summaryHtml + jdSnippet)}
       ${buildSection("Skills", skillsHtml)}
@@ -362,7 +368,7 @@ const buildPlainExportHtml = ({
     return `<section><h2>${escapeHtml(title)}</h2><ul>${content}</ul></section>`;
   };
 
-  const contactLine = contact.entries.length > 0 ? contact.entries.join(" • ") : "Add contact information.";
+  const contactLine = contact.entries.length > 0 ? contact.entries.join(" • ") : "";
   const jdPreview = jobDescription
     ? `<section><h2>Target Role</h2><p>${escapeHtml(jobDescription)}</p></section>`
     : "";
@@ -395,11 +401,11 @@ const buildPlainExportHtml = ({
   </head>
   <body>
     <main>
-      <header>
+      ${contact.name ? `<header>
         <h1>${escapeHtml(contact.name)}</h1>
-        <p class="contact">${escapeHtml(contactLine)}</p>
+        ${contactLine ? `<p class="contact">${escapeHtml(contactLine)}</p>` : ''}
         ${metricsLine}
-      </header>
+      </header>` : ''}
       ${renderSection("Summary", summaryLines)}
       ${renderListSection("Experience Highlights", bulletLines)}
       ${renderSection("Skills", skillsLines)}

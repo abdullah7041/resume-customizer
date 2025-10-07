@@ -85,7 +85,7 @@
 @media (max-width: 480px) {
   :root {
     --radius-card: 1.1rem;
-    --app-shell-gutter: clamp(1rem, 4vw, 1.5rem);
+    --app-shell-gutter: clamp(0.75rem, 3vw, 1rem);
   }
 
   .hero-mobile-compact {
@@ -403,9 +403,9 @@
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgba(11, 107, 58, 0.45) 0%,
-      rgba(20, 99, 86, 0.35) 50%,
-      rgba(12, 83, 53, 0.45) 100%
+      rgba(11, 107, 58, 0.28) 0%,
+      rgba(20, 99, 86, 0.22) 50%,
+      rgba(12, 83, 53, 0.28) 100%
     );
     opacity: 1;
     pointer-events: none;
@@ -415,9 +415,9 @@
   .dark .bg-hero::before {
     background: linear-gradient(
       180deg,
-      rgba(10, 63, 38, 0.55) 0%,
-      rgba(11, 58, 48, 0.45) 50%,
-      rgba(12, 46, 37, 0.55) 100%
+      rgba(10, 63, 38, 0.40) 0%,
+      rgba(11, 58, 48, 0.32) 50%,
+      rgba(12, 46, 37, 0.40) 100%
     );
   }
 

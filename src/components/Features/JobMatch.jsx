@@ -235,7 +235,7 @@ export default function JobMatch({
                       <div
                         id="match-why-popover"
                         role="dialog"
-                        className="absolute right-0 z-20 mt-3 w-72 space-y-3 rounded-2xl border border-secondary-500/20 bg-sand-50/95 p-4 text-left text-sm text-ink-700 shadow-xl dark:border-secondary-500/25 dark:bg-zinc-900/80 dark:text-surface-50"
+                        className="absolute right-0 z-50 mt-3 w-72 space-y-3 rounded-2xl border border-secondary-500/20 bg-sand-50/98 p-4 text-left text-sm text-ink-700 shadow-xl backdrop-blur-sm dark:border-secondary-500/25 dark:bg-zinc-900/95 dark:text-surface-50"
                       >
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Coverage</p>

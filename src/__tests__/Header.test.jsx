@@ -97,21 +97,19 @@ describe("Header", () => {
   it("provides accessible labelling for interactive controls and hides decorative icons", () => {
     const { container } = render(<Header />);
 
-    // Only check for theme toggle if dark mode is enabled
-    const darkModeEnabled = (import.meta.env.VITE_FEATURE_DARK_MODE ?? "true") !== "false";
-    
-    if (darkModeEnabled) {
-      const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
-      expect(themeToggle).toHaveAttribute("title", "Switch to dark theme");
-      expect(themeToggle).toHaveAttribute("aria-pressed");
-    } else {
-      const themeToggle = screen.queryByRole("button", { name: /switch to dark theme/i });
-      expect(themeToggle).toBeNull();
-    }
-
+    // Check that decorative icons have aria-hidden
     container.querySelectorAll("svg").forEach((icon) => {
       expect(icon).toHaveAttribute("aria-hidden", "true");
     });
+
+    // Check for Sign In button
+    const signInButton = screen.getByRole("button", { name: /sign in/i });
+    expect(signInButton).toBeInTheDocument();
+
+    // Check for interactive badge
+    const badge = screen.getByRole("button", { name: /saudi arabia ambition badge/i });
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("tabindex", "0");
   });
 });
 

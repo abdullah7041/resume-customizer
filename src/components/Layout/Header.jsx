@@ -409,14 +409,15 @@ export default function Header() {
             aria-label="Decorative skyline background"
             title="Saudi Arabia skyline"
             className={cn(
-              "bg-hero -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 absolute",
+              "bg-hero pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 absolute print:opacity-100",
               heroBackgroundExtentClass,
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
               skylineLoaded ? "opacity-100" : "opacity-0"
             )}
             style={{ 
               backgroundImage: `url('${skylineUrl}')`,
-              backgroundPosition: '50% 35%'
+              backgroundPosition: '50% 35%',
+              zIndex: -40
             }}
             ref={(el) => {
               if (el && skylineLoaded) {

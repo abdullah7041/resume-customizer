@@ -127,21 +127,7 @@ export default function Optimization({
                   : undefined
               }
             >
-              Styled PDF
-            </SecondaryButton>
-            <SecondaryButton
-              icon={FileDown}
-              onClick={() => onExport?.("ats-plain")}
-              disabled={!canExport || isOptimizing}
-              title={
-                !canExport
-                  ? "Upload and parse your resume before exporting."
-                  : isOptimizing
-                  ? "Please wait for the optimization run to finish."
-                  : undefined
-              }
-            >
-              ATS Plain
+              Export PDF
             </SecondaryButton>
             <SecondaryButton
               icon={Check}
