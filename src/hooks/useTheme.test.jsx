@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useTheme, THEME_STORAGE_KEY, initializeTheme } from "./useTheme";
+import { useTheme, THEME_STORAGE_KEY } from "./useTheme";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 const originalMatchMedia = typeof window !== "undefined" ? window.matchMedia : undefined;
@@ -84,38 +84,39 @@ describe("useTheme", () => {
     expect(document.documentElement.style.colorScheme).toBe("dark");
   });
 
-  it("can toggle themes and persist the choice", () => {
+  it("always uses dark theme (theme is locked)", () => {
+    window.localStorage.clear();
+    window.localStorage.removeItem(THEME_STORAGE_KEY);
+    const controller = setupMatchMedia(false);
     const { result } = renderHook(() => useTheme());
 
-    expect(result.current[0]).toBe("light");
+    // Theme is always dark
+    expect(result.current[0]).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
 
+    // Toggle does nothing - theme remains dark
     act(() => {
       result.current[1]();
     });
 
     expect(result.current[0]).toBe("dark");
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("light")).toBe(false);
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-
-    act(() => {
-      result.current[1]();
-    });
-
-    expect(result.current[0]).toBe("light");
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
-    expect(document.documentElement.classList.contains("light")).toBe(true);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });
 
-  it("responds to system preference changes when unset", () => {
+  it("ignores system preference changes (theme is locked to dark)", () => {
     const controller = setupMatchMedia(false);
     const { result } = renderHook(() => useTheme());
 
-    expect(result.current[0]).toBe("light");
+    // Theme is always dark regardless of system preference
+    expect(result.current[0]).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
 
+    // System preference change has no effect
     act(() => {
       controller.update(true);
     });
@@ -125,14 +126,17 @@ describe("useTheme", () => {
     expect(document.documentElement.classList.contains("light")).toBe(false);
   });
 
-  it("initializes document theme synchronously", () => {
+  it("always applies dark theme to document", () => {
     document.documentElement.classList.remove("dark");
     document.documentElement.classList.remove("light");
     delete document.documentElement.dataset.theme;
 
-    const applied = initializeTheme();
+    const { result } = renderHook(() => useTheme());
 
-    expect(applied === "dark" || applied === "light").toBe(true);
-    expect(document.documentElement.dataset.theme).toBe(applied);
+    // Theme is always dark
+    expect(result.current[0]).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(document.documentElement.style.colorScheme).toBe("dark");
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
 import PrimaryButton from "../ui/PrimaryButton";
 import SecondaryButton from "../ui/SecondaryButton";
@@ -27,6 +27,7 @@ export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
+  const [isShimmerActive, setIsShimmerActive] = useState(false);
   
   // Feature flag for dark mode toggle
   const darkModeEnabled =
@@ -177,20 +178,27 @@ export default function Header() {
     (import.meta.env.VITE_FEATURE_ARABIC_BRAND ?? "true") !== "false";
   const arabicBrandName = "مُحَسِّنُ السِّيرَةِ الذَّاتِيَّةِ السُّعُودِيُّ";
 
+  const handleBadgeInteraction = useCallback((event) => {
+    event.preventDefault();
+    setIsShimmerActive(true);
+    const timer = setTimeout(() => setIsShimmerActive(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <header
       className={cn(
-        "hero-bg-animate relative isolate flex flex-col overflow-visible text-surface-50 min-h-screen",
+        "hero-bg-animate hero-mobile-compact relative isolate flex flex-col overflow-visible text-surface-50 min-h-screen",
       )}
       style={{ "--hero-header-offset": HERO_HEADER_OFFSET }}
     >
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col justify-between gap-10 sm:gap-12 lg:gap-14 py-16 sm:py-20 lg:py-24",
+          "relative z-10 flex flex-1 flex-col justify-between gap-8 sm:gap-10 lg:gap-14 py-12 sm:py-16 lg:py-20",
         )}
       >
         <div className="border-b border-[color:var(--hairline-soft)]">
-          <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-6`}>
+          <div className={`${containerClass} flex items-center justify-between gap-4 py-3 sm:py-5`}>
             <div
               className="flex items-center gap-3"
               aria-label={`AI Resume Optimizer${
@@ -237,11 +245,11 @@ export default function Header() {
         </div>
 
         <div
-          className={`${containerClass} grid flex-1 items-center gap-10 py-12 sm:gap-12 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:py-16`}
+          className={`${containerClass} grid flex-1 items-center gap-8 py-10 sm:gap-10 sm:py-12 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-14 lg:py-14`}
         >
           <div
             className={cn(
-              "space-y-6 sm:space-y-7 transform-gpu",
+              "space-y-5 sm:space-y-6 transform-gpu",
               prefersReducedMotion
                 ? "opacity-100"
                 : "transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -249,29 +257,41 @@ export default function Header() {
             )}
           >
             <span
+              role="button"
               tabIndex={0}
-              className="badge-gold-shimmer inline-flex items-center gap-2 self-center rounded-full border border-surface-50/35 bg-surface-900/60 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero sm:self-start"
+              className={cn(
+                "badge-gold-shimmer inline-flex items-center gap-2 self-center rounded-full border border-surface-50/35 bg-surface-900/60 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] backdrop-blur-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent text-shadow-hero sm:self-start",
+                isShimmerActive && "shimmer-active"
+              )}
+              onClick={handleBadgeInteraction}
+              onTouchStart={handleBadgeInteraction}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleBadgeInteraction(e);
+                }
+              }}
+              aria-label="Saudi Arabia ambition badge - tap for shimmer effect"
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-5 shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-6 lg:p-7">
               <span
                 aria-hidden="true"
-                className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
+                className="absolute -top-7 left-5 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
               >
-                <Sparkles className="h-7 w-7" aria-hidden="true" />
+                <Sparkles className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />
               </span>
-              <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-surface-50 sm:text-5xl lg:text-6xl">
+              <h1 className="text-balance text-shadow-hero text-3xl font-semibold leading-tight tracking-tight text-surface-50 sm:text-4xl lg:text-5xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90 sm:text-lg">
+              <p className="text-balance text-pretty text-shadow-hero mt-3 max-w-xl text-sm leading-relaxed text-surface-50/90 sm:text-base lg:text-lg">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
-            <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
+            <dl className="grid grid-cols-1 gap-3 text-left sm:grid-cols-3 sm:gap-4">
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-3 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)] sm:p-4",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -286,11 +306,11 @@ export default function Header() {
                 }
               >
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Smart Parsing</dt>
-                <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Clean resume text</dd>
+                <dd className="mt-2 text-base font-semibold text-ink-900 dark:text-surface-50 sm:text-lg">Clean resume text</dd>
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-3 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)] sm:p-4",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -305,11 +325,11 @@ export default function Header() {
                 }
               >
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Match Score</dt>
-                <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Saudi market fit</dd>
+                <dd className="mt-2 text-base font-semibold text-ink-900 dark:text-surface-50 sm:text-lg">Saudi market fit</dd>
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-3 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)] sm:p-4",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -324,14 +344,14 @@ export default function Header() {
                 }
               >
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Polished Output</dt>
-                <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Optimized insights</dd>
+                <dd className="mt-2 text-base font-semibold text-ink-900 dark:text-surface-50 sm:text-lg">Optimized insights</dd>
               </div>
             </dl>
           </div>
 
           <div
             className={cn(
-              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-5 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)] sm:p-6",
               prefersReducedMotion
                 ? ""
                 : "transform-gpu transition-[opacity,transform] duration-[300ms] ease-[var(--transition-snappy)]",
@@ -345,29 +365,29 @@ export default function Header() {
                 : undefined
             }
           >
-            <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
-            <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
-              <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
-                  <FileText className="h-4 w-4" aria-hidden="true" />
+            <h2 className="text-base font-semibold tracking-wide text-ink-900 dark:text-surface-50 sm:text-lg">Your Saudi-ready workflow</h2>
+            <ul className="mt-5 space-y-4 text-sm text-ink-500 dark:text-surface-50/85">
+              <li className="flex gap-2.5 sm:gap-3">
+                <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)] sm:h-9 sm:w-9">
+                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Upload or paste your resume</p>
                   <p className="text-xs text-ink-500 dark:text-surface-50/70">Glassmorphic card with drag & drop, paste, and progress tracking.</p>
                 </div>
               </li>
-              <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
-                  <Target className="h-4 w-4" aria-hidden="true" />
+              <li className="flex gap-2.5 sm:gap-3">
+                <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)] sm:h-9 sm:w-9">
+                  <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Match against Saudi job roles</p>
                   <p className="text-xs text-ink-500 dark:text-surface-50/70">Get a confidence score, missing keywords, and guidance.</p>
                 </div>
               </li>
-              <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
-                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+              <li className="flex gap-2.5 sm:gap-3">
+                <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)] sm:h-9 sm:w-9">
+                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Optimize with precision</p>

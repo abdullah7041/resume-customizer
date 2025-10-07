@@ -39,7 +39,8 @@
   html {
     background-color: var(--bg);
     transition: background-color var(--duration-breathe) var(--transition-snappy);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     height: 100%;
   }
 
@@ -48,8 +49,9 @@
     color: var(--ink);
     background: var(--bg);
     overflow-x: hidden;
-    overflow-y: scroll;
-    height: 100%;
+    overflow-y: visible;
+    height: auto;
+    min-height: 100%;
   }
 
   #root,
@@ -83,6 +85,11 @@
 @media (max-width: 480px) {
   :root {
     --radius-card: 1.1rem;
+    --app-shell-gutter: clamp(1rem, 4vw, 1.5rem);
+  }
+
+  .hero-mobile-compact {
+    min-height: 90vh;
   }
 }
 
@@ -171,6 +178,29 @@
     text-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
   }
 
+  @keyframes badge-shimmer-sweep {
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  @keyframes badge-shimmer-shine {
+    0% {
+      left: -100%;
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      left: 100%;
+      opacity: 0;
+    }
+  }
+
   .badge-gold-shimmer {
     position: relative;
     color: #fbbf24;
@@ -186,9 +216,11 @@
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
-    animation: none;
     background-position: 0% center;
     transition: filter 250ms ease, background-position 0.8s ease-out;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   .badge-gold-shimmer::after {
@@ -205,23 +237,37 @@
       rgba(252, 211, 77, 0) 100%
     );
     opacity: 0;
-    transition: left 0.6s ease-out, opacity 0.3s ease;
     pointer-events: none;
     border-radius: inherit;
   }
 
   .badge-gold-shimmer:hover,
-  .badge-gold-shimmer:focus-visible,
-  .badge-gold-shimmer:active {
+  .badge-gold-shimmer:focus-visible {
     background-position: 200% center;
     filter: drop-shadow(0 0 16px rgba(252, 211, 77, 0.7)) brightness(1.2);
   }
 
   .badge-gold-shimmer:hover::after,
-  .badge-gold-shimmer:focus-visible::after,
-  .badge-gold-shimmer:active::after {
-    left: 100%;
-    opacity: 1;
+  .badge-gold-shimmer:focus-visible::after {
+    animation: badge-shimmer-shine 0.6s ease-out forwards;
+  }
+
+  .badge-gold-shimmer:active,
+  .badge-gold-shimmer.shimmer-active {
+    animation: badge-shimmer-sweep 0.8s ease-out forwards;
+    filter: drop-shadow(0 0 16px rgba(252, 211, 77, 0.7)) brightness(1.2);
+  }
+
+  .badge-gold-shimmer:active::after,
+  .badge-gold-shimmer.shimmer-active::after {
+    animation: badge-shimmer-shine 0.6s ease-out forwards;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .badge-gold-shimmer:active,
+    .badge-gold-shimmer.shimmer-active {
+      animation: badge-shimmer-sweep 0.8s ease-out forwards;
+    }
   }
 
   @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
@@ -351,6 +397,30 @@
     transform: translateY(0) scale(1);
   }
 
+  .bg-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(11, 107, 58, 0.45) 0%,
+      rgba(20, 99, 86, 0.35) 50%,
+      rgba(12, 83, 53, 0.45) 100%
+    );
+    opacity: 1;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .dark .bg-hero::before {
+    background: linear-gradient(
+      180deg,
+      rgba(10, 63, 38, 0.55) 0%,
+      rgba(11, 58, 48, 0.45) 50%,
+      rgba(12, 46, 37, 0.55) 100%
+    );
+  }
+
   .skyline-once {
     animation: skylineEntrance 800ms ease-out forwards, heroFloat 20s ease-in-out 800ms infinite;
   }
@@ -402,12 +472,17 @@
       animation: none;
     }
 
-    .badge-gold-shimmer {
+    .badge-gold-shimmer,
+    .badge-gold-shimmer:active,
+    .badge-gold-shimmer.shimmer-active {
       animation: none;
       filter: none;
     }
 
-    .badge-gold-shimmer::after {
+    .badge-gold-shimmer::after,
+    .badge-gold-shimmer:active::after,
+    .badge-gold-shimmer.shimmer-active::after {
+      animation: none;
       opacity: 0;
     }
 
