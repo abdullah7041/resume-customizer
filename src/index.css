@@ -6,7 +6,7 @@
   :root {
     color-scheme: dark;
     --app-shell-max: 1120px;
-    --app-shell-gutter: clamp(1.25rem, 5vw, 3rem);
+    --app-shell-gutter: clamp(1rem, 4vw, 3rem);
   }
 
   /* View Transitions API support for smooth theme switching */
@@ -39,8 +39,8 @@
   html {
     background-color: var(--bg);
     transition: background-color var(--duration-breathe) var(--transition-snappy);
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
+    height: 100%;
   }
 
   body {
@@ -48,7 +48,8 @@
     color: var(--ink);
     background: var(--bg);
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: scroll;
+    height: 100%;
   }
 
   #root,
@@ -172,83 +173,61 @@
 
   .badge-gold-shimmer {
     position: relative;
-    color: #f59e0b;
-    background-image: linear-gradient(
-      120deg,
-      rgba(245, 158, 11, 0.40) 0%,
-      rgba(251, 191, 36, 0.70) 20%,
-      rgba(245, 158, 11, 0.40) 40%
-    );
-    background-size: 220% auto;
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    animation: shimmer 3.5s linear infinite;
-    transition: filter 180ms ease, text-shadow 180ms ease;
-  }
-
-  /* Enhanced badge shimmer for dark mode */
-  .dark .badge-gold-shimmer {
     color: #fbbf24;
     background-image: linear-gradient(
       120deg,
       rgba(251, 191, 36, 0.50) 0%,
-      rgba(252, 211, 77, 0.80) 20%,
-      rgba(251, 191, 36, 0.50) 40%
+      rgba(252, 211, 77, 1) 25%,
+      rgba(253, 224, 71, 1) 35%,
+      rgba(252, 211, 77, 1) 45%,
+      rgba(251, 191, 36, 0.50) 70%
     );
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: none;
+    background-position: 0% center;
+    transition: filter 250ms ease, background-position 0.8s ease-out;
   }
 
   .badge-gold-shimmer::after {
     content: "";
     position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0) 25%, rgba(251, 191, 36, 0.50) 50%, rgba(245, 158, 11, 0) 75%);
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      rgba(252, 211, 77, 0) 0%,
+      rgba(252, 211, 77, 0.8) 50%,
+      rgba(252, 211, 77, 0) 100%
+    );
     opacity: 0;
-    transition: opacity 200ms ease;
+    transition: left 0.6s ease-out, opacity 0.3s ease;
     pointer-events: none;
-  }
-
-  .dark .badge-gold-shimmer::after {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0) 25%, rgba(252, 211, 77, 0.60) 50%, rgba(251, 191, 36, 0) 75%);
+    border-radius: inherit;
   }
 
   .badge-gold-shimmer:hover,
-  .badge-gold-shimmer:focus-visible {
-    animation-play-state: running;
-    filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.45));
-  }
-
-  .dark .badge-gold-shimmer:hover,
-  .dark .badge-gold-shimmer:focus-visible {
-    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.55));
+  .badge-gold-shimmer:focus-visible,
+  .badge-gold-shimmer:active {
+    background-position: 200% center;
+    filter: drop-shadow(0 0 16px rgba(252, 211, 77, 0.7)) brightness(1.2);
   }
 
   .badge-gold-shimmer:hover::after,
-  .badge-gold-shimmer:focus-visible::after {
-    opacity: 0.30;
+  .badge-gold-shimmer:focus-visible::after,
+  .badge-gold-shimmer:active::after {
+    left: 100%;
+    opacity: 1;
   }
 
   @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
     .badge-gold-shimmer {
-      color: #f59e0b;
-      background-image: none;
-    }
-    .dark .badge-gold-shimmer {
       color: #fbbf24;
-    }
-  }
-
-  @keyframes shimmer {
-    to {
-      background-position: 200% center;
-    }
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .badge-gold-shimmer:hover,
-    .badge-gold-shimmer:focus-visible {
-      animation-play-state: running;
+      background-image: none;
     }
   }
 

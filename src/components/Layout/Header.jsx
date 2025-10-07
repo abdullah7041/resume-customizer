@@ -391,11 +391,13 @@ export default function Header() {
             className={cn(
               "bg-hero -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 absolute",
               heroBackgroundExtentClass,
-              !isFallbackSkyline && "md:bg-fixed md:bg-[position:50%_35%]",
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
               skylineLoaded ? "opacity-100" : "opacity-0"
             )}
-            style={{ backgroundImage: `url('${skylineUrl}')` }}
+            style={{ 
+              backgroundImage: `url('${skylineUrl}')`,
+              backgroundPosition: '50% 35%'
+            }}
             ref={(el) => {
               if (el && skylineLoaded) {
                 console.log("[hero] Skyline div rendered with classes:", el.className);

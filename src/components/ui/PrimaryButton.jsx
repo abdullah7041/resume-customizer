@@ -12,7 +12,7 @@ export default function PrimaryButton({
   return (
     <button
       className={cn(
-        "relative inline-flex min-h-[44px] items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-2.5 text-sm font-semibold tracking-wide text-white transition-[transform,box-shadow] duration-300 ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        "relative inline-flex min-h-[44px] items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-2.5 text-sm font-semibold tracking-wide text-surface-50 transition-[transform,box-shadow] duration-300 ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
         "bg-[var(--button-primary-gradient)] shadow-[var(--button-primary-shadow)]",
         "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[var(--button-primary-overlay)] before:opacity-0 before:transition-opacity before:duration-300",
         "hover:shadow-[var(--button-primary-shadow-strong)] hover:before:opacity-100",

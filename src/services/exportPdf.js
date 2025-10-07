@@ -177,7 +177,7 @@ const escapeHtml = (value) =>
 
 const buildList = (items, className) => {
   if (!items || items.length === 0) {
-    return '<p class="muted">No details provided.</p>';
+    return ''; // Empty for ATS compatibility - no sample data
   }
   const listItems = items
     .map((item) => `<li>${escapeHtml(item)}</li>`)
@@ -220,10 +220,7 @@ const buildSummary = (summary, matchAnalysis, optimizations) => {
     fragments.push(`<ul class="stack">${items}</ul>`);
   }
 
-  if (fragments.length === 0) {
-    fragments.push('<p class="muted">Add a short professional summary.</p>');
-  }
-
+  // Return actual content only - no sample data for ATS
   return fragments.join("");
 };
 
@@ -236,7 +233,7 @@ const buildSkills = (skills, keywords) => {
     }
   }
   if (merged.size === 0) {
-    return '<p class="muted">Highlight your core tools and strengths.</p>';
+    return ''; // Empty for ATS compatibility
   }
   return `<ul class="skills">${Array.from(merged)
     .map((item) => `<li>${escapeHtml(item)}</li>`)
@@ -277,7 +274,7 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
   const contactContent =
     contact.entries.length > 0
       ? `<ul class="contact-list">${contact.entries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-      : '<p class="muted">Add an email, phone, and LinkedIn to this section.</p>';
+      : ''; // Empty for ATS compatibility
 
   return `<!doctype html>
 <html lang="en">
