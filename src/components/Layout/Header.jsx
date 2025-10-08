@@ -13,7 +13,9 @@ const saduPattern = encodeURIComponent(
 
 const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
-const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-64rem]";
+const heroBackgroundExtentClass =
+  "absolute inset-x-0 top-0 h-[120dvh] max-h-[1100px] md:h-auto md:bottom-[-64rem]";
+const MOBILE_GUTTER_VALUE = "clamp(0.55rem, 2.8vw, 1.35rem)";
 
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") {
@@ -53,6 +55,42 @@ export default function Header() {
   const [workflowVisible, setWorkflowVisible] = useState(initialReducedMotion);
   const heroAnimatedRef = useRef(initialReducedMotion);
   const workflowAnimatedRef = useRef(initialReducedMotion);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia("(max-width: 560px)");
+
+    const applyGutter = (matches) => {
+      if (matches) {
+        root.style.setProperty("--app-shell-gutter", MOBILE_GUTTER_VALUE);
+      } else {
+        root.style.removeProperty("--app-shell-gutter");
+      }
+    };
+
+    applyGutter(mediaQuery.matches);
+
+    const listener = (event) => applyGutter(event.matches);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", listener);
+    } else if (typeof mediaQuery.addListener === "function") {
+      mediaQuery.addListener(listener);
+    }
+
+    return () => {
+      root.style.removeProperty("--app-shell-gutter");
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", listener);
+      } else if (typeof mediaQuery.removeListener === "function") {
+        mediaQuery.removeListener(listener);
+      }
+    };
+  }, []);
 
   // Debug state changes
   useEffect(() => {
@@ -409,15 +447,15 @@ export default function Header() {
             aria-label="Decorative skyline background"
             title="Saudi Arabia skyline"
             className={cn(
-              "bg-hero pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 absolute print:opacity-100",
+              "bg-hero pointer-events-none bg-cover bg-center bg-no-repeat transition-[opacity,transform] duration-300 absolute overflow-hidden print:opacity-100",
               heroBackgroundExtentClass,
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
-              skylineLoaded ? "opacity-100" : "opacity-0"
+              skylineLoaded ? "opacity-100" : "opacity-90"
             )}
-            style={{ 
+            style={{
               backgroundImage: `url('${skylineUrl}')`,
-              backgroundPosition: '50% 35%',
-              zIndex: -40
+              backgroundPosition: "50% 35%",
+              zIndex: -40,
             }}
             ref={(el) => {
               if (el && skylineLoaded) {
@@ -426,7 +464,17 @@ export default function Header() {
                 console.log("[hero] Computed opacity:", window.getComputedStyle(el).opacity);
               }
             }}
-          />
+          >
+            <img
+              src={skylineUrl}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ filter: "saturate(1.12) brightness(1.08)", opacity: 0.95 }}
+            />
+          </div>
         </>
       ) : (
         <div aria-hidden="true" className={cn(skeletonBackgroundClass, heroBackgroundExtentClass)} />
@@ -443,8 +491,8 @@ export default function Header() {
       />
       <div
         aria-hidden="true"
-        className={cn("-z-25 pointer-events-none opacity-80 mix-blend-screen", heroBackgroundExtentClass)}
-        style={{ backgroundImage: "var(--hero-overlay-sheen)" }}
+        className={cn("-z-25 pointer-events-none mix-blend-screen", heroBackgroundExtentClass)}
+        style={{ backgroundImage: "var(--hero-overlay-sheen)", opacity: isDark ? 0.5 : 0.68 }}
       />
       <div
         className={cn("-z-20 opacity-[0.08] mix-blend-soft-light", heroBackgroundExtentClass)}

@@ -15,7 +15,46 @@ const SECTION_KEYWORDS = {
   projects: ["projects", "selected projects", "key projects", "portfolio"],
 };
 
-const normalize = (value) => value.replace(/\s+/g, " ").trim();
+const NON_TEXT_PATTERN = /[^\p{L}\p{N}\p{P}\p{Zs}]/gu;
+const DIACRITIC_PATTERN = /\p{Diacritic}/gu;
+
+const stripControlCharacters = (value) => {
+  let sanitized = "";
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    if ((code >= 0 && code <= 31) || (code >= 127 && code <= 159) || char === "\u2028" || char === "\u2029") {
+      sanitized += " ";
+    } else {
+      sanitized += char;
+    }
+  }
+  return sanitized;
+};
+
+const normalize = (value) => {
+  const withoutDiacritics = value.normalize("NFKD").replace(DIACRITIC_PATTERN, "");
+  return stripControlCharacters(withoutDiacritics.normalize("NFKC"))
+    .replace(NON_TEXT_PATTERN, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const isMeaningfulLine = (line) => {
+  if (!line) {
+    return false;
+  }
+  const compact = line.replace(/\s+/g, "");
+  if (compact.length === 0) {
+    return false;
+  }
+  const letters = compact.match(/\p{L}/gu)?.length ?? 0;
+  const digits = compact.match(/\p{N}/gu)?.length ?? 0;
+  const informative = letters + digits;
+  if (compact.length <= 4) {
+    return informative > 0;
+  }
+  return informative / compact.length >= 0.25;
+};
 
 const detectHeading = (line) => {
   const normalized = line.toLowerCase().replace(/[:.]+$/, "");
@@ -30,11 +69,13 @@ const splitLines = (text) =>
   text
     .split(/\r?\n/)
     .map((line) => normalize(line))
-    .filter(Boolean);
+    .filter(isMeaningfulLine);
 
 const sanitizeLines = (items) =>
   Array.isArray(items)
-    ? items.map((item) => normalize(String(item ?? ""))).filter(Boolean)
+    ? items
+        .map((item) => normalize(String(item ?? "")))
+        .filter(isMeaningfulLine)
     : [];
 
 const ensureResumeDocument = (input) => {
@@ -459,7 +500,11 @@ const triggerPrint = (html) => {
 };
 
 const normalizeVariant = (variant = "styled") => {
-  if (variant === "ats" || variant === "ats-plain") {
+  if (typeof variant !== "string") {
+    return "styled";
+  }
+  const normalized = variant.trim().toLowerCase();
+  if (["ats", "ats-plain", "ats_safe", "ats-safe", "plain", "plain-ats"].includes(normalized)) {
     return "ats-plain";
   }
   return "styled";
