@@ -185,7 +185,7 @@ export default function Header() {
     >
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col justify-between gap-10 sm:gap-12 lg:gap-14 py-16 sm:py-20 lg:py-24",
+          "relative z-10 flex flex-1 flex-col justify-between gap-8 sm:gap-10 lg:gap-12 py-16 sm:py-20 lg:py-24",
         )}
       >
         <div className="border-b border-[color:var(--hairline-soft)]">
@@ -251,7 +251,7 @@ export default function Header() {
         </div>
 
         <div
-          className={`${containerClass} grid flex-1 items-center gap-10 py-12 sm:gap-12 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-16 lg:py-16`}
+          className={`${containerClass} grid flex-1 items-center gap-8 py-12 sm:gap-10 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-14 lg:py-16`}
         >
           <div
             className={cn(

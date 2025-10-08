@@ -194,7 +194,7 @@ describe("Mobile Layout Polish", () => {
       
       // Check main content container has compact gaps
       const mainGrid = container.querySelector(".grid");
-      expect(mainGrid).toHaveClass("gap-10");
+      expect(mainGrid).toHaveClass("gap-8");
     });
   });
 
@@ -225,7 +225,7 @@ describe("Mobile Layout Polish", () => {
       
       const grid = container.querySelector(".grid");
       
-      expect(grid).toHaveClass("gap-10", "sm:gap-12", "lg:gap-16");
+      expect(grid).toHaveClass("gap-8", "sm:gap-10", "lg:gap-14");
     });
   });
 });
