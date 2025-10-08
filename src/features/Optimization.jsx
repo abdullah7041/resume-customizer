@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ClipboardCheck, FileDown, Info, Lock, Sparkles } from "lucide-react";
-import PrimaryButton from "../components/ui/PrimaryButton.jsx";
-import SecondaryButton from "../components/ui/SecondaryButton.jsx";
+import Button from "../components/ui/Button.jsx";
+import Card from "../components/ui/Card.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
+import { cn } from "../lib/cn.js";
 import OptimizationCard from "../components/shared/OptimizationCard.jsx";
 
 const modes = [
@@ -19,30 +20,35 @@ const CHIP_LABELS = {
 };
 
 const PreviewBanner = ({ onUpgrade }) => (
-  <div className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-secondary-500/15 bg-secondary-500/5 p-6 text-left shadow-soft backdrop-blur-sm sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60">
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary-500/15 text-secondary-500">
+  <Card
+    tone="translucent"
+    glow
+    className="bg-[image:var(--gradient-muted-value)] text-white"
+    contentClassName="space-y-4"
+  >
+    <div className="flex flex-wrap items-center gap-4">
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white shadow-soft">
         <Lock className="h-5 w-5" aria-hidden="true" />
       </span>
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-secondary-500">
+      <div className="space-y-2 text-left">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold-400/90">
           Preview mode
         </p>
-        <p className="text-sm text-ink-500 dark:text-surface-50/80">
+        <p className="text-sm text-white/80">
           Free preview run—results will not be saved until you upgrade.
         </p>
-        <div className="inline-flex items-center gap-2 rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs text-secondary-600 shadow-soft dark:border-surface-50/20 dark:bg-zinc-900/60 dark:text-surface-50/70">
+        <div className="inline-flex items-center gap-2 rounded-pill border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/85 shadow-soft">
           <Info className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="leading-none">Preview lets you test the flow. Upgrade to save/export.</span>
         </div>
       </div>
     </div>
     <div>
-      <PrimaryButton onClick={onUpgrade} className="w-full justify-center sm:w-auto">
+      <Button onClick={onUpgrade} className="w-full justify-center sm:w-auto">
         Unlock premium insights
-      </PrimaryButton>
+      </Button>
     </div>
-  </div>
+  </Card>
 );
 
 export default function Optimization({
@@ -99,23 +105,27 @@ export default function Optimization({
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Optimization mode</span>
-          <select
-            value={mode}
-            onChange={(event) => setMode(event.target.value)}
-            className="w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-sand-50/95 px-4 py-3 text-sm font-medium text-ink-700 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
-          >
-            {modes.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500/90">Optimization mode</span>
+          <div className="relative">
+            <select
+              value={mode}
+              onChange={(event) => setMode(event.target.value)}
+              className="w-full appearance-none rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-4 py-3 text-sm font-medium text-ink shadow-soft backdrop-blur-soft transition-all duration-snappy ease-snappy focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--button-primary-focus)] focus:ring-offset-2 focus:ring-offset-[color:var(--surface)]"
+            >
+              {modes.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-soft/60">▾</span>
+          </div>
         </label>
         <div className="space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Actions</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500/90">Actions</span>
           <div className="flex flex-wrap gap-2">
-            <SecondaryButton
+            <Button
+              variant="secondary"
               icon={FileDown}
               onClick={() => onExport?.("styled")}
               disabled={!canExport || isOptimizing}
@@ -126,10 +136,12 @@ export default function Optimization({
                   ? "Please wait for the optimization run to finish."
                   : undefined
               }
+              className="justify-center"
             >
               Export PDF
-            </SecondaryButton>
-            <SecondaryButton
+            </Button>
+            <Button
+              variant="secondary"
               icon={Check}
               disabled={!isPremium}
               title=
@@ -138,10 +150,12 @@ export default function Optimization({
                     ? "Upgrade to save results."
                     : "Run a preview to unlock results."
                   : undefined}
+              className="justify-center"
             >
               Save to account
-            </SecondaryButton>
-            <SecondaryButton
+            </Button>
+            <Button
+              variant="secondary"
               icon={ClipboardCheck}
               disabled={!isPremium}
               title=
@@ -150,14 +164,15 @@ export default function Optimization({
                     ? "Upgrade to export your optimized resume."
                     : "Preview your optimizations first."
                   : undefined}
+              className="justify-center"
             >
               Export summary
-            </SecondaryButton>
+            </Button>
           </div>
         </div>
       </div>
 
-      <PrimaryButton
+      <Button
         icon={Sparkles}
         onClick={handleRun}
         loading={isOptimizing}
@@ -165,17 +180,17 @@ export default function Optimization({
         className="w-full justify-center min-h-[44px]"
       >
         Run AI optimization
-      </PrimaryButton>
+      </Button>
 
       <section className="space-y-4">
-        <div className="rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-5 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.28em] text-secondary-500">
+        <Card tone="translucent" className="p-5" contentClassName="space-y-4 text-left">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.28em] text-emerald-500/90">
             Keyword focus
           </h3>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {(["add", "neutral", "remove"]).map((bucket) => (
               <div key={bucket} className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-500/70 dark:text-surface-50/70">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft/75">
                   {CHIP_LABELS[bucket]}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -183,25 +198,26 @@ export default function Optimization({
                     keywordBuckets[bucket].map((token) => (
                       <span
                         key={token}
-                        className={`relative overflow-hidden rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs font-semibold text-secondary-600 dark:border-secondary-500/30 dark:bg-secondary-500/20 dark:text-secondary-100 ${
-                          chipsAnimated ? "keyword-chip-shimmer" : ""
-                        }`}
+                        className={cn(
+                          "relative overflow-hidden rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_35%)] px-3 py-1 text-xs font-semibold text-emerald-500 shadow-soft",
+                          chipsAnimated && "keyword-chip-shimmer"
+                        )}
                       >
                         {token}
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-ink-400/80 dark:text-surface-50/50">No items yet</span>
+                    <span className="text-xs text-ink-soft/60">No items yet</span>
                   )}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
         <div className="relative space-y-4">
           {watermarkVisible && (
-            <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center px-6 text-center text-[2.75rem] font-black uppercase tracking-[0.45em] text-secondary-500/10 sm:px-0 sm:text-6xl sm:tracking-[0.6em]">
+            <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center px-6 text-center text-[2.75rem] font-black uppercase tracking-[0.45em] text-emerald-500/10 sm:px-0 sm:text-6xl sm:tracking-[0.6em]">
               Preview
             </div>
           )}
@@ -211,7 +227,7 @@ export default function Optimization({
               {[...Array(3)].map((_, index) => (
                 <div
                   key={index}
-                  className="h-40 animate-pulse rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/90 dark:border-surface-50/10 dark:bg-zinc-900/60"
+                  className="h-40 animate-pulse rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] backdrop-blur-soft"
                 />
               ))}
             </div>
@@ -228,9 +244,9 @@ export default function Optimization({
               ))}
             </div>
           ) : (
-        <div className="rounded-[var(--radius-card)] border border-secondary-500/10 bg-sand-50/80 p-8 text-center text-sm text-ink-500/80 shadow-soft backdrop-blur-sm dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50/70">
-              Run an analysis to see AI optimization cards appear here.
-            </div>
+            <Card tone="translucent" className="p-8" contentClassName="space-y-2 text-center text-sm text-ink-soft">
+              <p className="opacity-80">Run an analysis to see AI optimization cards appear here.</p>
+            </Card>
           )}
         </div>
       </section>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Info, Loader2, Sparkles } from "lucide-react";
-import PrimaryButton from "../ui/PrimaryButton.jsx";
+import Button from "../ui/Button.jsx";
+import Card from "../ui/Card.jsx";
+import Input from "../ui/Input.jsx";
 import SectionTitle from "../ui/SectionTitle.jsx";
 
 const resolveVariant = (score) => {
@@ -125,11 +127,14 @@ export default function JobMatch({
           title="Match to a Saudi job role"
           description="Paste the job description to uncover keyword gaps and alignment opportunities."
         />
-        <textarea
-          className="min-h-[220px] w-full rounded-[var(--radius-card)] border border-secondary-500/25 bg-sand-50/95 px-5 py-4 text-sm leading-relaxed text-ink-700 shadow-inner transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50 dark:border-surface-50/15 dark:bg-zinc-900/60 dark:text-surface-50 dark:focus-visible:ring-offset-zinc-900"
+        <Input
+          multiline
+          label="Job description"
           placeholder="Paste the job description for your next Riyadh role…"
           value={jobText}
           onChange={(event) => setJobText(event.target.value)}
+          inputClassName="min-h-[220px]"
+          error={Boolean(error)}
         />
         {error && (
           <p className="flex items-center gap-2 text-sm font-medium text-danger-500" role="alert">
@@ -139,9 +144,15 @@ export default function JobMatch({
         )}
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-3">
-            <PrimaryButton onClick={handleAnalyze} loading={isAnalyzing} disabled={buttonDisabled}>
+            <Button
+              onClick={handleAnalyze}
+              loading={isAnalyzing}
+              disabled={buttonDisabled}
+              icon={Sparkles}
+              className="justify-center sm:justify-start"
+            >
               Analyze match
-            </PrimaryButton>
+            </Button>
           </div>
           {disabledHint && (
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">
@@ -151,10 +162,10 @@ export default function JobMatch({
         </div>
       </div>
 
-      <aside className="relative space-y-5 rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-6 text-ink-700 shadow-soft backdrop-blur-sm transition-shadow sm:p-7 sm:backdrop-blur-xl dark:border-surface-50/10 dark:bg-zinc-900/60 dark:text-surface-50">
+      <Card as="aside" tone="translucent" className="space-y-5" contentClassName="space-y-5 text-ink">
         {isAnalyzing ? (
           <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-sm text-ink-500/80 dark:text-surface-50/70">
-            <Loader2 className="h-6 w-6 animate-spin text-secondary-500" aria-hidden="true" />
+            <Loader2 className="h-6 w-6 animate-spin text-emerald-500" aria-hidden="true" />
             <p>Analyzing text similarities…</p>
           </div>
         ) : hasResults ? (
@@ -194,19 +205,19 @@ export default function JobMatch({
                       />
                     </svg>
                     <div
-                      className="relative grid h-full w-full place-items-center rounded-full border border-surface-50/20 bg-sand-50/30 p-4 text-ink-900 dark:bg-zinc-900/40"
+                      className="relative grid h-full w-full place-items-center rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] p-4 text-ink backdrop-blur-soft"
                       style={{
                         backgroundImage: `conic-gradient(${variant.conic} ${(progress / 100) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
                       }}
                     >
-                      <div className="grid place-items-center rounded-full bg-sand-50 px-6 py-6 text-center text-ink-900 shadow-inner dark:bg-zinc-900/70 dark:text-surface-50">
-                        <span className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500/80">
+                      <div className="grid place-items-center rounded-full bg-[color:var(--surface-glass-strong)] px-6 py-6 text-center text-ink shadow-inner">
+                        <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500 opacity-80">
                           Match
                         </span>
                         <span className="mt-2 text-4xl font-bold tracking-tight">
                           {score == null ? "—" : score}
                           {score != null && (
-                            <span className="text-base font-semibold text-ink-500/70 dark:text-surface-50/70">/100</span>
+                            <span className="text-base font-semibold text-ink-soft opacity-80">/100</span>
                           )}
                         </span>
                       </div>
@@ -224,7 +235,7 @@ export default function JobMatch({
                   <div className="relative" ref={popoverRef}>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-surface-50/30 bg-surface-50/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-surface-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary-900"
+                      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-surface-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                       onClick={() => setWhyOpen((prev) => !prev)}
                       aria-expanded={whyOpen}
                       aria-controls="match-why-popover"
@@ -235,20 +246,20 @@ export default function JobMatch({
                       <div
                         id="match-why-popover"
                         role="dialog"
-                        className="absolute right-0 z-50 mt-3 w-72 space-y-3 rounded-2xl border border-secondary-500/20 bg-sand-50/98 p-4 text-left text-sm text-ink-700 shadow-xl backdrop-blur-sm dark:border-secondary-500/25 dark:bg-zinc-900/95 dark:text-surface-50"
+                        className="absolute right-0 z-50 mt-3 w-72 space-y-3 rounded-2xl border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-4 text-left text-sm text-ink shadow-glass backdrop-blur-glass"
                       >
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Coverage</p>
-                          <span className="text-sm font-semibold text-ink-900 dark:text-surface-50">{coverageLabel}</span>
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500">Coverage</p>
+                          <span className="text-sm font-semibold text-ink">{coverageLabel}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Similarity</p>
-                          <span className="text-sm font-semibold text-ink-900 dark:text-surface-50">{cosineLabel}</span>
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500">Similarity</p>
+                          <span className="text-sm font-semibold text-ink">{cosineLabel}</span>
                         </div>
                         {missing.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary-500">Missing</p>
-                            <ul className="mt-2 space-y-1 text-xs leading-snug text-ink-600 dark:text-surface-50/80">
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500">Missing</p>
+                            <ul className="mt-2 space-y-1 text-xs leading-snug text-ink-soft">
                               {missing.slice(0, 4).map((keyword) => (
                                 <li key={keyword}>• {keyword}</li>
                               ))}
@@ -256,13 +267,13 @@ export default function JobMatch({
                           </div>
                         )}
                         {matchAnalysis?.explanation?.reason && (
-                          <p className="text-xs text-ink-500 dark:text-surface-50/70">
+                          <p className="text-xs text-ink-soft opacity-80">
                             {matchAnalysis.explanation.reason}
                           </p>
                         )}
                         {Array.isArray(matchAnalysis?.explanation?.tips) &&
                           matchAnalysis.explanation.tips.length > 0 && (
-                            <ul className="space-y-1 text-xs leading-snug text-ink-600 dark:text-surface-50/80">
+                            <ul className="space-y-1 text-xs leading-snug text-ink-soft">
                               {matchAnalysis.explanation.tips.slice(0, 3).map((tip, index) => (
                                 <li key={`${tip}-${index}`}>• {tip}</li>
                               ))}
@@ -282,14 +293,14 @@ export default function JobMatch({
 
             {missing.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-secondary-500">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500">
                   Top missing keywords
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {missing.map((keyword) => (
                     <span
                       key={keyword}
-                      className="rounded-full border border-secondary-500/30 bg-secondary-500/10 px-3 py-1 text-xs font-semibold text-secondary-600 dark:border-secondary-400/40 dark:bg-secondary-500/20 dark:text-secondary-100"
+                      className="rounded-full border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-3 py-1 text-xs font-semibold text-emerald-500 shadow-soft"
                     >
                       {keyword}
                     </span>
@@ -300,14 +311,14 @@ export default function JobMatch({
 
             {hits.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-ink-500/70 dark:text-surface-50/70">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-ink opacity-80">
                   Recognized strengths
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {hits.map((keyword) => (
                     <span
                       key={keyword}
-                      className="rounded-full border border-accent-500/30 bg-accent-500/10 px-3 py-1 text-xs font-semibold text-accent-600 dark:border-accent-400/40 dark:bg-accent-500/20 dark:text-accent-100"
+                      className="rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_15%)] px-3 py-1 text-xs font-semibold text-ink"
                     >
                       {keyword}
                     </span>
@@ -318,15 +329,15 @@ export default function JobMatch({
 
             {matchAnalysis?.suggestions?.length > 0 && (
               <div className="space-y-3">
-                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-accent-500">
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-gold-500">
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                   Suggestions
                 </h3>
-                <ul className="space-y-2 text-sm leading-relaxed text-ink-700 dark:text-surface-50">
+                <ul className="space-y-2 text-sm leading-relaxed text-ink">
                   {matchAnalysis.suggestions.map((suggestion, index) => (
                     <li
                       key={index}
-                      className="rounded-2xl border border-secondary-500/12 bg-sand-50/95 px-4 py-3 shadow-soft dark:border-surface-50/10 dark:bg-zinc-900/60"
+                      className="rounded-2xl border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_15%)] px-4 py-3 shadow-soft backdrop-blur-soft"
                     >
                       {suggestion}
                     </li>
@@ -337,11 +348,11 @@ export default function JobMatch({
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-sm text-ink-500/80 dark:text-surface-50/70">
-            <Sparkles className="h-6 w-6 text-secondary-500" aria-hidden="true" />
+            <Sparkles className="h-6 w-6 text-emerald-500" aria-hidden="true" />
             <p>Paste a job description to see match insights here.</p>
           </div>
         )}
-      </aside>
+      </Card>
     </div>
   );
 }

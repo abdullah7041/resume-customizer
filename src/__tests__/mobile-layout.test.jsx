@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Header from "../components/Layout/Header";
 
 // Mock modules
+const toggleThemeMock = vi.fn();
+
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
     user: null,
@@ -14,7 +16,7 @@ vi.mock("../hooks/useAuth", () => ({
 }));
 
 vi.mock("../hooks/useTheme", () => ({
-  useTheme: () => ["light", vi.fn()],
+  useTheme: () => ["light", toggleThemeMock],
 }));
 
 vi.mock("../lib/assets", () => ({
@@ -40,6 +42,7 @@ describe("Mobile Layout Polish", () => {
   });
 
   afterEach(() => {
+    toggleThemeMock.mockClear();
     vi.clearAllMocks();
   });
 
@@ -84,9 +87,11 @@ describe("Mobile Layout Polish", () => {
       });
 
       const { container } = render(<Header />);
-      const header = container.querySelector("header");
-      
-      expect(header).toHaveClass("hero-mobile-compact");
+      const appShell = container.querySelector("header .app-shell");
+
+      expect(appShell).not.toBeNull();
+      expect(appShell?.className).toContain("py-4");
+      expect(appShell?.className).toContain("sm:py-6");
     });
 
     it("should reduce padding on mobile", () => {
@@ -107,129 +112,44 @@ describe("Mobile Layout Polish", () => {
     });
   });
 
-  describe("Shimmer on Touch", () => {
-    it("should trigger shimmer animation on touch", async () => {
-      const user = userEvent.setup();
+  describe("Theme Toggle Accessibility", () => {
+    it("provides clear labelling and reflective affordance", () => {
       render(<Header />);
-      
-      const badge = screen.getByRole("button", {
-        name: /Saudi Arabia ambition badge/i,
-      });
-      
-      expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass("badge-gold-shimmer");
-      
-      // Initially should not have shimmer-active
-      expect(badge).not.toHaveClass("shimmer-active");
-      
-      // Trigger touch
-      fireEvent.touchStart(badge);
-      
-      // Should add shimmer-active class
-      await waitFor(() => {
-        expect(badge).toHaveClass("shimmer-active");
-      });
-      
-      // Should remove after timeout (800ms)
-      await waitFor(
-        () => {
-          expect(badge).not.toHaveClass("shimmer-active");
-        },
-        { timeout: 1000 }
-      );
+
+      const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
+      expect(themeToggle).toBeInTheDocument();
+      expect(themeToggle).toHaveAttribute("aria-pressed", "false");
+      expect(themeToggle.className).toContain("backdrop-blur-soft");
+
+      const reflectionLayer = themeToggle.querySelector('[aria-hidden="true"]');
+      expect(reflectionLayer).not.toBeNull();
+      expect(reflectionLayer?.className).toContain("opacity-0");
     });
 
-    it("should trigger shimmer on click", async () => {
+    it("invokes the theme toggle handler on click", async () => {
       const user = userEvent.setup();
       render(<Header />);
-      
-      const badge = screen.getByRole("button", {
-        name: /Saudi Arabia ambition badge/i,
-      });
-      
-      expect(badge).not.toHaveClass("shimmer-active");
-      
-      await user.click(badge);
-      
-      await waitFor(() => {
-        expect(badge).toHaveClass("shimmer-active");
-      });
+
+      const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
+      await user.click(themeToggle);
+
+      expect(toggleThemeMock).toHaveBeenCalledTimes(1);
     });
 
-    it("should trigger shimmer on keyboard Enter", async () => {
+    it("supports keyboard activation", async () => {
       const user = userEvent.setup();
       render(<Header />);
-      
-      const badge = screen.getByRole("button", {
-        name: /Saudi Arabia ambition badge/i,
-      });
-      
-      badge.focus();
-      expect(badge).not.toHaveClass("shimmer-active");
-      
+
+      const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
+      themeToggle.focus();
+
       await user.keyboard("{Enter}");
-      
-      await waitFor(() => {
-        expect(badge).toHaveClass("shimmer-active");
-      });
-    });
+      expect(toggleThemeMock).toHaveBeenCalledTimes(1);
 
-    it("should trigger shimmer on keyboard Space", async () => {
-      const user = userEvent.setup();
-      render(<Header />);
-      
-      const badge = screen.getByRole("button", {
-        name: /Saudi Arabia ambition badge/i,
-      });
-      
-      badge.focus();
+      toggleThemeMock.mockClear();
+
       await user.keyboard(" ");
-      
-      await waitFor(() => {
-        expect(badge).toHaveClass("shimmer-active");
-      });
-    });
-
-    it("should have pointer cursor and touch-action styles", () => {
-      render(<Header />);
-      
-      const badge = screen.getByRole("button", {
-        name: /Saudi Arabia ambition badge/i,
-      });
-      
-      expect(badge).toHaveClass("badge-gold-shimmer");
-      
-      // Check for CSS class that includes pointer and touch styles
-      const styles = window.getComputedStyle(badge);
-      expect(badge.className).toContain("badge-gold-shimmer");
-    });
-
-    it("should not animate when prefers-reduced-motion is enabled", async () => {
-      // Mock prefers-reduced-motion
-      matchMedia.mockImplementation((query) => ({
-        matches: query === "(prefers-reduced-motion: reduce)",
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      }));
-
-      const user = userEvent.setup();
-      render(<Header />);
-      
-      const badge = screen.getByRole("button", {
-        name: /Saudi Arabia ambition badge/i,
-      });
-      
-      await user.click(badge);
-      
-      // Should still add class but CSS will prevent animation
-      await waitFor(() => {
-        expect(badge).toHaveClass("shimmer-active");
-      });
+      expect(toggleThemeMock).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -266,7 +186,7 @@ describe("Mobile Layout Polish", () => {
       });
       
       // Should have responsive text classes
-      expect(heading).toHaveClass("text-3xl", "sm:text-4xl", "lg:text-5xl");
+      expect(heading).toHaveClass("text-4xl", "sm:text-5xl", "lg:text-6xl");
     });
 
     it("should have compact spacing between elements", () => {
@@ -274,7 +194,7 @@ describe("Mobile Layout Polish", () => {
       
       // Check main content container has compact gaps
       const mainGrid = container.querySelector(".grid");
-      expect(mainGrid).toHaveClass("gap-8");
+      expect(mainGrid).toHaveClass("gap-10");
     });
   });
 
@@ -282,15 +202,11 @@ describe("Mobile Layout Polish", () => {
     it("should have adequate touch target size for mobile", () => {
       render(<Header />);
       
-      const badge = screen.getByRole("button", {
-        name: /Saudi Arabia ambition badge/i,
+      const themeToggle = screen.getByRole("button", {
+        name: /switch to dark theme/i,
       });
-      
-      const rect = badge.getBoundingClientRect();
-      
-      // Should have padding that makes it at least 44x44 (iOS recommendation)
-      // The badge has px-4 py-1 plus text content
-      expect(badge).toHaveClass("px-4", "py-1");
+
+      expect(themeToggle).toHaveClass("h-10", "w-10");
     });
   });
 
@@ -301,7 +217,7 @@ describe("Mobile Layout Polish", () => {
       const headerContent = container.querySelector("header > div");
       
       // Should have mobile-first compact padding
-      expect(headerContent).toHaveClass("py-12", "sm:py-16", "lg:py-20");
+      expect(headerContent).toHaveClass("py-16", "sm:py-20", "lg:py-24");
     });
 
     it("should have compact grid gaps", () => {
@@ -309,7 +225,7 @@ describe("Mobile Layout Polish", () => {
       
       const grid = container.querySelector(".grid");
       
-      expect(grid).toHaveClass("gap-8", "sm:gap-10");
+      expect(grid).toHaveClass("gap-10", "sm:gap-12", "lg:gap-16");
     });
   });
 });

@@ -6,11 +6,11 @@ describe('SectionTitle', () => {
   it('applies the new panel stroke styling to the heading container', () => {
     render(<SectionTitle eyebrow="Insights" title="Experience" description="Detail" />);
 
-    const wrapper = screen.getByRole('heading', { name: 'Experience', level: 2 }).parentElement;
-    expect(wrapper).toHaveClass('group/section-title');
-    // Update the expected class to match the actual class applied in SectionTitle
-    expect(wrapper.className).toContain('relative');
-    expect(wrapper.className).toContain('overflow');
+    const heading = screen.getByRole('heading', { name: 'Experience', level: 2 });
+    const wrapper = heading.closest('section');
+    expect(wrapper?.className).toContain('rounded-card');
+    expect(wrapper?.className).toContain('border-[color:var(--glass-border-strong)]');
+    expect(wrapper?.className).toContain('bg-[color:color-mix');
   });
 
   it('exposes the tightened typography rhythm on the heading', () => {
@@ -18,6 +18,6 @@ describe('SectionTitle', () => {
 
     const heading = screen.getByRole('heading', { name: 'Experience', level: 2 });
     expect(heading.className).toContain('tracking-tight');
-    expect(heading.className).toContain('text-[color:var(--ink)]');
+    expect(heading.className).toContain('text-ink');
   });
 });

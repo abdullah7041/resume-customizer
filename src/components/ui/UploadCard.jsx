@@ -2,8 +2,9 @@ import { useRef, useState } from "react";
 import { ClipboardPenLine, FileText, UploadCloud, XCircle } from "lucide-react";
 import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/cn";
-import PrimaryButton from "./PrimaryButton";
-import SecondaryButton from "./SecondaryButton";
+import Button from "./Button.jsx";
+import Card from "./Card.jsx";
+import Input from "./Input.jsx";
 
 const DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
@@ -151,17 +152,21 @@ export default function UploadCard({
   const showProgress = status === "uploading" || status === "parsing";
 
   return (
-    <section
-      className="space-y-6 rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-8 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)]"
+    <Card
+      as="section"
+      tone="glass"
+      glow
+      className="space-y-6"
+      contentClassName="space-y-6"
       aria-live="polite"
     >
-      <div className="space-y-2 text-left">
-        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--accent)]">Step 1</p>
-        <h3 className="text-xl font-bold text-[color:var(--ink)]">Upload or Paste Your Resume</h3>
-        <p className="text-sm text-[color:var(--ink-muted)]">
+      <header className="space-y-2 text-left">
+        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-gold-500">Step 1</p>
+        <h3 className="text-2xl font-semibold text-ink">Upload or Paste Your Resume</h3>
+        <p className="text-sm text-ink-soft/85">
           Drag a PDF or DOCX, or paste the text to let our AI optimize every line.
         </p>
-      </div>
+      </header>
 
       <div
         role="button"
@@ -179,24 +184,27 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-card)_-_0.5rem)] border border-dashed border-[color:color-mix(in_oklab,var(--accent),transparent_70%)] bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] px-6 py-12 text-center shadow-[var(--shadow-soft)] transition-[border-color,box-shadow,background-color] duration-300 ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]",
-          isDragging && "border-[color:color-mix(in_oklab,var(--accent),transparent_40%)] bg-[color:color-mix(in_oklab,var(--surface),transparent_10%)] shadow-[var(--shadow-lift)]"
+          "relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[calc(var(--radius-card)*0.8)] border border-dashed border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_20%)] px-6 py-12 text-center shadow-soft transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]",
+          "before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-0 before:transition-opacity before:duration-breathe before:content-['']",
+          "after:pointer-events-none after:absolute after:-left-1/3 after:-top-1/2 after:h-[260%] after:w-[160%] after:rotate-[18deg] after:bg-[image:var(--gradient-card-value)] after:opacity-0 after:transition-opacity after:duration-breathe",
+          isDragging &&
+            "border-[color:var(--glass-border-strong)] shadow-glass before:opacity-80 after:opacity-60"
         )}
       >
-        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-full border border-[color:var(--hairline-soft)] bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">
+        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_35%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-500">
           Max 5MB
         </span>
-        <div className="flex items-center gap-2 rounded-full border border-[color:var(--hairline-soft)] bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] px-4 py-2 text-xs font-semibold text-[color:var(--ink)] shadow-[var(--shadow-soft)]">
+        <div className="flex items-center gap-2 rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-4 py-2 text-xs font-semibold text-ink shadow-soft">
           <FileText className="h-4 w-4" aria-hidden="true" />
           <span>PDF</span>
-          <span className="mx-1 text-[color:color-mix(in_oklab,var(--ink-500),transparent_40%)]">|</span>
+          <span className="mx-1 text-ink-soft/60">|</span>
           <span>DOCX</span>
         </div>
-        <UploadCloud className="h-10 w-10 text-[color:color-mix(in_oklab,var(--emerald-700),transparent_10%)]" aria-hidden="true" />
-        <p className="text-base font-semibold text-[color:var(--ink)]">
+        <UploadCloud className="h-12 w-12 text-emerald-400" aria-hidden="true" />
+        <p className="text-base font-semibold text-ink">
           Drop your resume here or click to browse
         </p>
-        <p className="text-sm text-[color:var(--ink-muted)]">
+        <p className="text-sm text-ink-soft/80">
           We keep uploads private and secure.
         </p>
       </div>
@@ -212,12 +220,12 @@ export default function UploadCard({
       />
 
       {fileName && (
-        <div className="flex items-center justify-between rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] px-4 py-3 text-sm text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)]">
+        <div className="flex items-center justify-between rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_20%)] px-4 py-3 text-sm text-ink shadow-soft backdrop-blur-soft">
           <span className="truncate font-medium">{fileName}</span>
           <button
             type="button"
             onClick={onFileClear}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--hairline-soft)] text-[color:var(--accent)] transition-colors hover:bg-[color:color-mix(in_oklab,var(--surface),transparent_10%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-emerald-400 transition-all duration-snappy ease-snappy hover:bg-emerald-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]"
             aria-label="Remove selected file"
             title="Remove selected file"
           >
@@ -226,35 +234,39 @@ export default function UploadCard({
         </div>
       )}
 
-      <label className="flex flex-col gap-3">
-        <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--ink)]">
-          <ClipboardPenLine className="h-4 w-4 text-[color:var(--accent)]" aria-hidden="true" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <ClipboardPenLine className="h-4 w-4 text-emerald-400" aria-hidden="true" />
           Paste resume text instead
-        </span>
-        <textarea
-          className="min-h-[160px] w-full resize-y rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--ink)] shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]"
+        </div>
+        <Input
+          multiline
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}
+          inputClassName="min-h-[180px]"
         />
-      </label>
-
-      {textHelper && (
-        <p className="text-sm font-semibold text-warning-600 dark:text-warning-400" role="status">
-          {textHelper}
-        </p>
-      )}
+        {textHelper && (
+          <p className="text-sm font-semibold text-gold-500" role="status">
+            {textHelper}
+          </p>
+        )}
+      </div>
 
       {showProgress && (
-        <div className="space-y-2">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-smoke-50/70">
+        <div className="space-y-2" aria-live="assertive">
+          <div className="relative h-2 w-full overflow-hidden rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_50%)]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-all duration-300"
+              className="h-full w-full origin-left bg-[image:var(--gradient-primary-value)] transition-all duration-breathe ease-snappy"
               style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 animate-glass-reflect bg-[image:var(--glass-reflection)] opacity-40"
             />
           </div>
           {stateMessage && (
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-secondary-500">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-500">
               {stateMessage}
             </p>
           )}
@@ -262,25 +274,30 @@ export default function UploadCard({
       )}
 
       {!showProgress && stateMessage && (
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary-500">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-500">
           {stateMessage}
         </p>
       )}
 
       {error && (
-        <p className="text-sm font-medium text-danger-500" role="alert">
+        <p className="text-sm font-medium text-[color:var(--color-danger-500)]" role="alert">
           {error}
         </p>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <PrimaryButton onClick={onSubmit} disabled={disabled} loading={status === "uploading" || status === "parsing"}>
+        <Button onClick={onSubmit} disabled={disabled} loading={status === "uploading" || status === "parsing"}>
           Prepare Resume
-        </PrimaryButton>
-        <SecondaryButton onClick={onFileClear} disabled={!fileName && !textValue} icon={XCircle}>
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={onFileClear}
+          disabled={!fileName && !textValue}
+          icon={XCircle}
+        >
           Clear inputs
-        </SecondaryButton>
+        </Button>
       </div>
-    </section>
+    </Card>
   );
 }

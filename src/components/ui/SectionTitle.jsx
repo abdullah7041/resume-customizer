@@ -1,31 +1,29 @@
+import Card from "./Card.jsx";
 import { cn } from "../../lib/cn";
 
 export default function SectionTitle({ eyebrow, title, description, className }) {
   return (
-    <div
-      className={cn(
-        "group/section-title relative overflow-hidden rounded-[calc(var(--radius-card)_/_2.1)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] px-6 py-5 shadow-[var(--shadow-soft)] transition-[box-shadow] duration-300 ease-[var(--transition-snappy)]",
-        "hover:shadow-[var(--shadow-lift)]",
-        className,
-      )}
+    <Card
+      tone="translucent"
+      className={cn("px-6 py-6", className)}
+      contentClassName="space-y-3 text-left text-ink-soft"
     >
       {eyebrow && (
-        <p className="inline-flex items-center rounded-full border border-[color:var(--hairline-soft)] bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--accent)]">
+        <p className="inline-flex items-center gap-2 rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_35%)] px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-gold-500 shadow-soft">
+          <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-gold-400 to-emerald-500" aria-hidden="true" />
           {eyebrow}
         </p>
       )}
       {title && (
-        <h2
-          className="relative mt-2 text-2xl font-semibold tracking-tight text-[color:var(--ink)]"
-        >
+        <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink">
           {title}
         </h2>
       )}
       {description && (
-        <p className="mt-3 text-sm leading-relaxed text-[color:var(--ink-muted)]">
+        <p className="text-sm leading-relaxed text-ink-soft/80">
           {description}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

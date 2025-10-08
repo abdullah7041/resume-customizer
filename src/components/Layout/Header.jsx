@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
-import PrimaryButton from "../ui/PrimaryButton";
-import SecondaryButton from "../ui/SecondaryButton";
+import Button from "../ui/Button.jsx";
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
@@ -223,14 +222,29 @@ export default function Header() {
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+              {darkModeEnabled && (
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className={cn(
+                    themeButtonClass,
+                    "relative overflow-hidden backdrop-blur-soft"
+                  )}
+                  aria-label={nextThemeLabel}
+                  aria-pressed={isDark}
+                >
+                  <span className="absolute inset-0 rounded-full bg-[image:var(--glass-reflection)] opacity-0 transition-opacity duration-snappy ease-snappy hover:opacity-70" aria-hidden="true" />
+                  <ThemeIcon className="relative h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
               {user ? (
-                <SecondaryButton icon={LogOut} onClick={signOut}>
+                <Button variant="secondary" icon={LogOut} onClick={signOut} className="justify-center">
                   Sign Out
-                </SecondaryButton>
+                </Button>
               ) : (
-                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
+                <Button icon={LogIn} onClick={signInWithGoogle} className="justify-center">
                   Sign In
-                </PrimaryButton>
+                </Button>
               )}
             </div>
           </div>

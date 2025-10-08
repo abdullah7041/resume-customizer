@@ -1,10 +1,6 @@
 import { useEffect, useRef } from "react";
 import { cn } from "../../lib/cn";
 
-const tabPattern = encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none"><path d="M0 80h160" stroke="white" stroke-opacity="0.05" stroke-width="6"/><path d="M80 0v160" stroke="white" stroke-opacity="0.05" stroke-width="6"/><path d="M0 0l80 80L0 160" stroke="white" stroke-opacity="0.04" stroke-width="5"/><path d="M160 0l-80 80 80 80" stroke="white" stroke-opacity="0.04" stroke-width="5"/><circle cx="80" cy="80" r="22" stroke="white" stroke-opacity="0.04" stroke-width="6"/></svg>'
-);
-
 export default function Tabs({ tabs, activeValue, onTabChange }) {
   const itemsRef = useRef([]);
 
@@ -61,8 +57,12 @@ export default function Tabs({ tabs, activeValue, onTabChange }) {
     <div
       role="tablist"
       aria-label="Resume workflow navigation"
-      className="relative flex flex-wrap items-center justify-between gap-2 rounded-[calc(var(--radius-card)*1.2)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-1.5 text-[color:var(--ink)] backdrop-blur-sm"
+      className="relative flex flex-wrap items-center gap-2 rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_8%)] p-1.5 shadow-soft backdrop-blur-glass"
     >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 rounded-[inherit] border border-white/5 bg-[image:var(--glass-reflection)] opacity-40"
+      />
       {tabs.map(({ value, label, icon: Icon }, index) => {
         const isActive = value === activeValue;
         return (
@@ -78,19 +78,25 @@ export default function Tabs({ tabs, activeValue, onTabChange }) {
             onClick={() => onTabChange?.(value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              "group tab-pattern-hover relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-[calc(var(--radius-card)*0.85)] px-4 py-3 text-sm font-semibold transition-all duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]",
+              "group relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-[calc(var(--radius-pill)*0.7)] px-5 py-3 text-sm font-semibold tracking-wide transition-all duration-snappy ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent",
               isActive
-                ? "bg-[color:var(--surface)] text-[color:var(--ink)] shadow-[var(--shadow-soft)]"
-                : "text-[color:var(--ink-muted)] hover:bg-[color:color-mix(in_oklab,var(--surface),transparent_5%)] hover:text-[color:var(--ink)]"
+                ? "bg-[image:var(--gradient-muted-value)] text-white shadow-lift"
+                : "text-ink-muted hover:text-ink hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)]"
             )}
-            style={{ "--tab-pattern": `url("data:image/svg+xml,${tabPattern}")` }}
           >
-            {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
-            <span className="tracking-wide">{label}</span>
+            {Icon && <Icon className={cn("h-4 w-4", isActive ? "text-white" : "text-ink-soft/80")} aria-hidden="true" />}
+            <span className="relative z-[1]">{label}</span>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute inset-0 rounded-[inherit] border border-white/20 opacity-0 transition-opacity duration-snappy ease-snappy",
+                isActive ? "opacity-100" : "group-hover:opacity-30"
+              )}
+            />
             {isActive && (
               <span
                 aria-hidden="true"
-                className="absolute inset-x-6 bottom-1 h-1 rounded-full bg-[color:var(--secondary)]"
+                className="pointer-events-none absolute inset-x-4 bottom-1 h-0.5 rounded-full bg-white/70"
               />
             )}
           </button>

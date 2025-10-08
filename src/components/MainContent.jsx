@@ -13,8 +13,7 @@ import Optimization from "../features/Optimization.jsx";
 import Tabs from "./ui/Tabs.jsx";
 import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
-import PrimaryButton from "./ui/PrimaryButton.jsx";
-import SecondaryButton from "./ui/SecondaryButton.jsx";
+import Button from "./ui/Button.jsx";
 import { exportResumeToPdf } from "../services/exportPdf.js";
 
 const tabs = [
@@ -463,7 +462,7 @@ export default function MainContent() {
     <div className="space-y-5 sm:space-y-7 text-ink-700 dark:text-surface-50">
       <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
-      <div className="relative min-h-[420px] sm:min-h-[480px] rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-5 sm:p-6 lg:p-7 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)] dark:border-surface-50/12 dark:bg-zinc-900/60">
+      <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 sm:p-6 lg:p-7 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
         {activeTab === "resume" && (
           <ResumeUpload
             onParseResume={handleParseResume}
@@ -497,9 +496,9 @@ export default function MainContent() {
       </div>
       {hasNextTab && (
         <div className="flex justify-center sm:justify-end">
-          <SecondaryButton icon={ArrowRight} onClick={handleContinue}>
+          <Button variant="secondary" icon={ArrowRight} onClick={handleContinue} className="justify-center">
             Continue
-          </SecondaryButton>
+          </Button>
         </div>
       )}
     </div>
@@ -512,7 +511,7 @@ export default function MainContent() {
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <div className={`${containerClass} space-y-6 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="card-glow rounded-[var(--radius-card)] border border-secondary-500/12 bg-sand-50/95 p-5 sm:p-7 lg:p-8 shadow-card backdrop-blur-sm sm:backdrop-blur-xl transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)] dark:border-surface-50/12 dark:bg-zinc-900/60">
+        <div className="card-glow rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
@@ -538,17 +537,17 @@ export default function MainContent() {
               title="Sign in to unlock Saudi-ready insights"
               description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
               actions={
-                <PrimaryButton icon={LogIn} onClick={signInWithGoogle}>
+                <Button icon={LogIn} onClick={signInWithGoogle} className="justify-center">
                   Sign in via Google
-                </PrimaryButton>
+                </Button>
               }
             />
           )}
         </div>
         {isDev && aiDebug && (
           <section className="text-xs text-ink-500 dark:text-surface-50/70">
-            <div className="rounded-[var(--radius-card)] border border-secondary-500/20 bg-sand-50/95 p-4 shadow-soft backdrop-blur-sm sm:p-5 sm:backdrop-blur-xl dark:border-surface-50/15 dark:bg-zinc-900/60">
-              <p className="font-semibold uppercase tracking-[0.24em] text-secondary-500">AI Debug</p>
+            <div className="rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-4 shadow-soft backdrop-blur-glass sm:p-5">
+              <p className="font-semibold uppercase tracking-[0.24em] text-emerald-500">AI Debug</p>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-7">
                 <div>
                   <dt className="text-[10px] uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">Status</dt>

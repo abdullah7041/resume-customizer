@@ -1,69 +1,109 @@
 :root {
-  /* Base colors - Refined for better harmony and contrast */
-  --bg: #f0fdf4;
-  --surface: #ffffff;
-  --surface-strong: #ffffff;
-  --ink: #064e3b;
-  --ink-muted: color-mix(in oklab, var(--ink), var(--bg) 55%);
-  --accent: #10b981;
-  --secondary: #059669;
-  
-  /* Panel system - Enhanced for better visual distinction */
-  --panel-bg: color-mix(in oklab, #ffffff, transparent 5%);
-  --panel-stroke: color-mix(in oklab, var(--ink), transparent 88%);
-  
-  /* Accessibility: palette ensures ≥4.5:1 contrast between ink text and key surfaces. */
+  /* Atmosphere */
+  --bg: radial-gradient(circle at 20% -10%, rgba(255, 255, 255, 0.9) 0%, rgba(249, 240, 255, 0.65) 32%, rgba(244, 237, 255, 0.55) 50%, rgba(255, 248, 238, 0.7) 75%),
+    linear-gradient(140deg, #f8f5ff 0%, #f6f0ff 38%, #fff6fb 68%, #fdf6ec 100%);
+  --surface: color-mix(in oklab, #ffffff 88%, rgba(255, 255, 255, 0.9) 12%);
+  --surface-strong: color-mix(in oklab, #ffffff, transparent 8%);
+  --surface-glass-rgb: 255 255 255;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-glass-strong: rgba(255, 255, 255, 0.92);
+  --ink: #1d0f2b;
+  --ink-muted: color-mix(in oklab, var(--ink) 52%, #ffffff 48%);
+  --ink-soft: color-mix(in oklab, var(--ink) 36%, #ffffff 64%);
 
-  --surface-50: var(--bg);
-  --surface-50-rgb: 240 253 244;
-  --surface-900: #022c22;
-  --surface-900-rgb: 2 44 34;
+  /* Brand accents */
+  --accent: #6f3de8;
+  --accent-royal: #4726b6;
+  --accent-magenta: #c42cc3;
+  --secondary: #0fb98f;
+  --emerald-700: #0fb98f;
+  --emerald-900: #0a8f6b;
+  --accent-gold: #f5c96b;
+  --accent-gold-soft: rgba(245, 201, 107, 0.18);
+
+  /* Panels */
+  --panel-bg: color-mix(in oklab, rgba(var(--surface-glass-rgb), 0.82), transparent 6%);
+  --panel-stroke: color-mix(in oklab, rgba(73, 30, 133, 0.45), transparent 62%);
+  --panel-highlight: color-mix(in oklab, rgba(255, 255, 255, 0.6), transparent 30%);
+
+  /* Elevation + sheen */
+  --shadow-card: 0 28px 60px -26px rgba(45, 10, 68, 0.42), 0 18px 40px -32px rgba(12, 62, 74, 0.35);
+  --shadow-soft: 0 22px 40px -32px rgba(27, 19, 56, 0.35), 0 10px 28px -28px rgba(12, 74, 62, 0.22);
+  --shadow-lift: 0 24px 55px -32px rgba(107, 20, 143, 0.45), 0 18px 42px -26px rgba(15, 185, 143, 0.35);
+  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 18px 58px -34px rgba(226, 133, 255, 0.55);
+  --shadow-ring: 0 0 0 1px rgba(119, 71, 220, 0.36);
+
+  --glass-border: color-mix(in oklab, rgba(115, 63, 223, 0.68), transparent 58%);
+  --glass-border-strong: color-mix(in oklab, rgba(15, 185, 143, 0.74), transparent 60%);
+  --glass-reflection: linear-gradient(130deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.1) 45%, rgba(255, 255, 255, 0) 70%);
+  --glass-gold-sheen: linear-gradient(115deg, rgba(245, 201, 107, 0.28) 0%, rgba(255, 255, 255, 0.05) 55%, rgba(245, 201, 107, 0.18) 100%);
+
+  /* Color system */
+  --surface-50: #f8f5ff;
+  --surface-50-rgb: 248 245 255;
+  --surface-900: #0a0618;
+  --surface-900-rgb: 10 6 24;
 
   --ink-900: var(--ink);
-  --ink-900-rgb: 6 78 59;
-  --ink-500: color-mix(in oklab, var(--ink), var(--bg) 50%);
-  --ink-500-rgb: 52 125 96;
+  --ink-900-rgb: 29 15 43;
+  --ink-500: var(--ink-muted);
+  --ink-500-rgb: 99 73 132;
 
-  --emerald-700: var(--accent);
-  --emerald-700-rgb: 16 185 129;
-  --emerald-900: #047857;
-  --emerald-900-rgb: 4 120 87;
+  --color-royal-400: #7350ef;
+  --color-royal-500: #5f30de;
+  --color-royal-600: #4726b6;
+  --color-royal-700: #341c8f;
 
-  --accent-gold: #f59e0b;
-  --accent-gold-rgb: 245 158 11;
+  --color-magenta-500: #c42cc3;
+  --color-magenta-600: #a925af;
 
-  --panel-border: var(--panel-stroke);
-  --panel-highlight: color-mix(in oklab, #ecfdf5, transparent 30%);
+  --color-emerald-400: #2adcb0;
+  --color-emerald-500: var(--secondary);
+  --color-emerald-600: #0fa87f;
 
-  /* Refined hairline system (1px borders) - Better visibility */
-  --hairline-strong: color-mix(in oklab, var(--ink), transparent 82%);
-  --hairline-soft: color-mix(in oklab, var(--ink), transparent 90%);
-  --hairline-muted: color-mix(in oklab, var(--ink), transparent 94%);
+  --color-gold-400: #f9d996;
+  --color-gold-500: var(--accent-gold);
+  --color-gold-600: #dca849;
 
-  /* Enhanced elevation shadows */
-  --shadow-card-value: 0 1px 3px -1px rgba(6, 78, 59, 0.10),
-                       0 4px 12px -2px rgba(6, 78, 59, 0.08);
-  --shadow-soft-value: 0 1px 2px -1px rgba(6, 78, 59, 0.08),
-                       0 3px 8px -2px rgba(6, 78, 59, 0.06);
-  --shadow-lift-value: 0 4px 6px -1px rgba(6, 78, 59, 0.12),
-                       0 8px 20px -4px rgba(6, 78, 59, 0.10);
+  --color-ink-500: var(--ink-muted);
+  --color-ink-700: color-mix(in oklab, var(--ink), transparent 15%);
 
-  --duration-snappy: 180ms;
-  --duration-breathe: 280ms;
-  --transition-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+  --color-success-500: var(--secondary);
+  --color-warning-500: #f59f0b;
+  --color-danger-500: #ef4444;
 
-  /* Primary gradient button (emerald→teal) - Cohesive with brand */
-  --gradient-primary-value: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
-  --gradient-muted-value: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--accent), transparent 88%) 0%,
-    color-mix(in oklab, var(--accent-gold), transparent 85%) 100%
-  );
-  --gradient-card-value: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--panel-highlight), transparent 20%) 0%,
-    color-mix(in oklab, var(--panel-highlight), transparent 60%) 100%
-  );
+  /* Typography */
+  --font-display: "Poppins", "Tajawal", "Geist", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", "Tajawal", system-ui, sans-serif;
+
+  /* Radii */
+  --radius-xs: 0.75rem;
+  --radius-sm: 1rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.75rem;
+  --radius-xl: 2.35rem;
+  --radius-card: var(--radius-lg);
+  --radius-pill: 999px;
+
+  /* Blur tokens */
+  --blur-soft: 14px;
+  --blur-glass: 28px;
+
+  /* Motion */
+  --duration-snappy: 200ms;
+  --duration-breathe: 340ms;
+  --transition-snappy: cubic-bezier(0.18, 0.85, 0.32, 1);
+
+  /* Gradients */
+  --gradient-primary-value: linear-gradient(135deg, var(--accent-royal) 0%, #7d3fed 38%, var(--accent-magenta) 72%, #ff71c4 100%);
+  --gradient-emerald: linear-gradient(135deg, rgba(15, 185, 143, 0.95) 0%, rgba(44, 220, 186, 0.85) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(255, 255, 255, 0.18) 0%, rgba(99, 56, 214, 0.35) 45%, rgba(196, 44, 195, 0.2) 100%);
+  --gradient-card-value: linear-gradient(150deg, rgba(255, 255, 255, 0.44) 0%, rgba(255, 255, 255, 0.06) 52%, rgba(245, 201, 107, 0.18) 100%);
+  --gradient-halo: radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 60%);
+
+  --shadow-card-value: var(--shadow-card);
+  --shadow-soft-value: var(--shadow-soft);
+  --shadow-lift-value: var(--shadow-lift);
 
   --shadow-card: var(--shadow-card-value);
   --shadow-soft: var(--shadow-soft-value);
@@ -72,130 +112,88 @@
   --gradient-muted: var(--gradient-muted-value);
   --gradient-card: var(--gradient-card-value);
 
-  /* Button primary with refined styling */
+  /* Buttons */
   --button-primary-gradient: var(--gradient-primary-value);
   --button-primary-border: transparent;
-  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
-  --button-primary-shadow: 0 2px 8px -2px rgba(16, 185, 129, 0.40);
-  --button-primary-shadow-strong: 0 4px 16px -2px rgba(16, 185, 129, 0.35);
-  --button-primary-focus: color-mix(in oklab, #10b981 70%, #14b8a6);
+  --button-primary-overlay: linear-gradient(130deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0) 100%);
+  --button-primary-shadow: 0 14px 45px -22px rgba(134, 58, 237, 0.68), 0 10px 32px -18px rgba(15, 185, 143, 0.45);
+  --button-primary-shadow-strong: 0 22px 50px -18px rgba(195, 44, 195, 0.55), 0 16px 38px -16px rgba(15, 185, 143, 0.4);
+  --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 65%, var(--secondary));
 
-  --hero-overlay-sheen: radial-gradient(circle at 18% 12%, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 58%);
-
-  --color-primary-400: color-mix(in oklab, var(--accent), transparent 12%);
-  --color-primary-500: var(--accent);
-  --color-primary-600: color-mix(in oklab, var(--emerald-900), var(--accent) 25%);
-  --color-primary-700: var(--emerald-900);
-
-  --color-secondary-400: color-mix(in oklab, var(--accent), transparent 18%);
-  --color-secondary-500: color-mix(in oklab, var(--accent), transparent 8%);
-  --color-secondary-600: color-mix(in oklab, var(--emerald-900), transparent 12%);
-
-  --color-accent-400: color-mix(in oklab, var(--accent-gold), transparent 20%);
-  --color-accent-500: var(--accent-gold);
-  --color-accent-600: color-mix(in oklab, var(--accent-gold), var(--emerald-900) 20%);
-
-  --color-surface-50: rgb(var(--surface-50-rgb));
-  --color-surface-900: rgb(var(--surface-900-rgb));
-
-  --color-sand-50: color-mix(in oklab, var(--surface), transparent 8%);
-  --color-dune-100: color-mix(in oklab, var(--accent-gold), transparent 76%);
-  --color-smoke-50: color-mix(in oklab, var(--bg), transparent 15%);
-
-  --color-ink-500: rgb(var(--ink-500-rgb));
-  --color-ink-700: color-mix(in oklab, var(--ink), transparent 18%);
-  --color-ink-900: rgb(var(--ink-900-rgb));
-
-  --color-success-500: #10b981;
-  --color-warning-500: #f59e0b;
-  --color-danger-500: #ef4444;
-
-  --font-display: "Inter", "Geist", "Tajawal", "Segoe UI", system-ui, sans-serif;
-  --font-body: "Inter", "Tajawal", "Segoe UI", system-ui, sans-serif;
-
-  --radius-card: 1.5rem;
-  --radius-pill: 999px;
+  --hero-overlay-sheen: radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 65%);
 }
 
 :root.dark,
 .dark {
-  /* Base colors - Enhanced for better readability */
-  --bg: #0a1612;
-  --surface: #0f1e1a;
-  --surface-strong: #1a2e27;
-  --ink: #ecfdf5;
-  --ink-muted: color-mix(in oklab, var(--ink), var(--surface) 45%);
-  --accent: #34d399;
-  --secondary: #6ee7b7;
-  
-  /* Panel system - Enhanced contrast and depth */
-  --panel-bg: color-mix(in oklab, #1a2e27, transparent 15%);
-  --panel-stroke: color-mix(in oklab, var(--ink), transparent 85%);
+  --bg: radial-gradient(circle at 14% -12%, rgba(60, 24, 144, 0.32) 0%, rgba(13, 5, 36, 0.85) 46%),
+    linear-gradient(160deg, #0b051d 0%, #140726 35%, #1a0d2e 68%, #0e161a 100%);
+  --surface: color-mix(in oklab, rgba(34, 20, 48, 0.86), transparent 4%);
+  --surface-strong: rgba(18, 12, 30, 0.9);
+  --surface-glass-rgb: 22 15 36;
+  --surface-glass: rgba(26, 18, 46, 0.68);
+  --surface-glass-strong: rgba(39, 25, 62, 0.82);
+  --ink: #f4f1ff;
+  --ink-muted: color-mix(in oklab, var(--ink), rgba(112, 106, 146, 0.7) 40%);
+  --ink-soft: color-mix(in oklab, var(--ink), rgba(120, 126, 158, 0.65) 55%);
+
+  --accent: #8d6bff;
+  --accent-royal: #5c2fd4;
+  --accent-magenta: #ff64d2;
+  --secondary: #2ed8ae;
+  --emerald-700: #2ed8ae;
+  --emerald-900: #1d9f82;
+  --accent-gold: #f6cd7a;
+  --accent-gold-soft: rgba(249, 209, 128, 0.2);
+
+  --panel-bg: color-mix(in oklab, rgba(26, 20, 44, 0.78), transparent 8%);
+  --panel-stroke: color-mix(in oklab, rgba(123, 80, 232, 0.62), transparent 35%);
+  --panel-highlight: color-mix(in oklab, rgba(147, 108, 255, 0.42), transparent 40%);
+
+  --shadow-card: 0 28px 55px -24px rgba(11, 7, 28, 0.85), 0 26px 58px -28px rgba(88, 23, 134, 0.55);
+  --shadow-soft: 0 18px 45px -28px rgba(5, 7, 25, 0.85), 0 16px 32px -24px rgba(34, 121, 98, 0.45);
+  --shadow-lift: 0 28px 60px -22px rgba(166, 67, 235, 0.6), 0 24px 58px -26px rgba(33, 199, 165, 0.45);
+  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(145, 69, 227, 0.55);
+  --shadow-ring: 0 0 0 1px rgba(87, 51, 196, 0.55);
+
+  --glass-border: color-mix(in oklab, rgba(119, 83, 227, 0.75), transparent 40%);
+  --glass-border-strong: color-mix(in oklab, rgba(46, 196, 169, 0.75), transparent 45%);
+  --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 65%);
+  --glass-gold-sheen: linear-gradient(125deg, rgba(246, 205, 122, 0.3) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(246, 205, 122, 0.12) 100%);
 
   --surface-900: var(--bg);
-  --surface-900-rgb: 10 22 18;
-
+  --surface-900-rgb: 9 5 24;
   --ink-900: var(--ink);
-  --ink-900-rgb: 236 253 245;
-  --ink-500: color-mix(in oklab, var(--ink), var(--surface) 50%);
-  --ink-500-rgb: 167 216 200;
+  --ink-900-rgb: 244 241 255;
+  --ink-500: var(--ink-muted);
+  --ink-500-rgb: 182 173 228;
 
-  --emerald-700: var(--accent);
-  --emerald-700-rgb: 52 211 153;
-  --emerald-900: #059669;
-  --emerald-900-rgb: 5 150 105;
+  --color-royal-400: #7f68f8;
+  --color-royal-500: #7350ef;
+  --color-royal-600: #5c2fd4;
+  --color-royal-700: #4826a9;
 
-  --accent-gold: #fbbf24;
-  --accent-gold-rgb: 251 191 36;
+  --color-magenta-500: #ff64d2;
+  --color-magenta-600: #f03fb5;
 
-  --panel-border: var(--panel-stroke);
-  --panel-highlight: color-mix(in oklab, #d1fae5, transparent 85%);
+  --color-emerald-400: #44ebc4;
+  --color-emerald-500: var(--secondary);
+  --color-emerald-600: #27c099;
 
-  /* Refined hairline system - Better visibility in dark mode */
-  --hairline-strong: color-mix(in oklab, var(--ink), transparent 80%);
-  --hairline-soft: color-mix(in oklab, var(--ink), transparent 88%);
-  --hairline-muted: color-mix(in oklab, var(--ink), transparent 91%);
+  --color-gold-400: #f7d48c;
+  --color-gold-500: var(--accent-gold);
+  --color-gold-600: #dfa94f;
 
-  /* Enhanced elevation shadows for dark mode */
-  --shadow-card-value: 0 2px 4px -1px rgba(0, 0, 0, 0.40),
-                       0 6px 16px -3px rgba(0, 0, 0, 0.35);
-  --shadow-soft-value: 0 1px 3px -1px rgba(0, 0, 0, 0.35),
-                       0 4px 12px -2px rgba(0, 0, 0, 0.30);
-  --shadow-lift-value: 0 4px 8px -1px rgba(0, 0, 0, 0.45),
-                       0 10px 24px -4px rgba(0, 0, 0, 0.40);
+  --button-primary-shadow: 0 20px 60px -24px rgba(130, 77, 232, 0.58), 0 18px 48px -22px rgba(46, 196, 169, 0.45);
+  --button-primary-shadow-strong: 0 26px 64px -20px rgba(255, 100, 210, 0.55), 0 18px 54px -18px rgba(46, 196, 169, 0.45);
+  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 65%, rgba(255, 255, 255, 0) 100%);
+  --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 70%, var(--secondary));
 
-  /* Primary gradient button - Vibrant for dark mode */
-  --gradient-primary-value: linear-gradient(135deg, #34d399 0%, #14b8a6 100%);
-  --gradient-muted-value: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--emerald-900), transparent 75%) 0%,
-    color-mix(in oklab, var(--accent-gold), transparent 70%) 100%
-  );
-  --gradient-card-value: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--panel-highlight), transparent 20%) 0%,
-    color-mix(in oklab, var(--panel-highlight), transparent 60%) 100%
-  );
+  --gradient-primary-value: linear-gradient(135deg, rgba(73, 50, 195, 0.9) 0%, rgba(130, 70, 232, 0.92) 35%, rgba(255, 100, 210, 0.85) 68%, rgba(243, 139, 208, 0.9) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(69, 45, 153, 0.55) 0%, rgba(140, 83, 245, 0.45) 52%, rgba(255, 98, 196, 0.36) 100%);
+  --gradient-card-value: linear-gradient(150deg, rgba(66, 41, 143, 0.5) 0%, rgba(25, 25, 66, 0.65) 48%, rgba(54, 111, 109, 0.42) 100%);
+  --gradient-emerald: linear-gradient(135deg, rgba(41, 204, 163, 0.92) 0%, rgba(75, 225, 195, 0.88) 100%);
 
-  /* Button primary - Enhanced for dark mode */
-  --button-primary-gradient: var(--gradient-primary-value);
-  --button-primary-border: transparent;
-  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 100%);
-  --button-primary-shadow: 0 2px 8px -2px rgba(52, 211, 153, 0.45);
-  --button-primary-shadow-strong: 0 4px 16px -2px rgba(52, 211, 153, 0.40);
-  --button-primary-focus: color-mix(in oklab, #34d399 70%, #14b8a6);
-
-  --hero-overlay-sheen: radial-gradient(circle at 26% 10%, rgba(52, 211, 153, 0.20) 0%, rgba(52, 211, 153, 0) 62%);
-  
-  /* Enhanced accent colors for dark mode */
-  --color-primary-400: color-mix(in oklab, var(--accent), transparent 15%);
-  --color-primary-500: var(--accent);
-  --color-primary-600: color-mix(in oklab, var(--emerald-900), var(--accent) 30%);
-  --color-primary-700: var(--emerald-900);
-
-  --color-accent-400: color-mix(in oklab, var(--accent-gold), transparent 25%);
-  --color-accent-500: var(--accent-gold);
-  --color-accent-600: color-mix(in oklab, var(--accent-gold), var(--emerald-900) 25%);
+  --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
 }
 
 @keyframes accent-shimmer {
