@@ -245,6 +245,7 @@ export default function UploadCard({
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}
           inputClassName="min-h-[180px]"
+          aria-label="Paste resume text instead"
         />
         {textHelper && (
           <p className="text-sm font-semibold text-gold-500" role="status">
