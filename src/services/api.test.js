@@ -81,6 +81,32 @@ describe('analyzeResume', () => {
     });
   });
 
+  it('falls back to keyword overlap scoring when API returns zeros', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          score: 0,
+          coverage: 0,
+          similarity: 0,
+          missing_keywords: [],
+          matched_keywords: [],
+        }),
+    });
+
+    const resume = {
+      plainText:
+        'Senior data analyst skilled in SQL, Tableau dashboards, and financial reporting for Riyadh banking clients.',
+    };
+
+    const result = await analyzeResume(resume, 'Looking for a data analyst with SQL and Tableau experience.');
+
+    expect(result.score).toBeGreaterThan(20);
+    expect(result.coverage).toBeGreaterThan(0);
+    expect(result.missingKeywords.length).toBeGreaterThan(0);
+    expect(result.topHits).toContain('sql');
+  });
+
   it('throws a timeout error when aborted', async () => {
     const abortError = new Error('Aborted');
     abortError.name = 'AbortError';

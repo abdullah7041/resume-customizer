@@ -74,11 +74,27 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("AI Suggestions");
   });
 
+  it("removes noisy glyphs before exporting", () => {
+    const noisyResume = `John Doe\nÿå§×ñ Contact\nSUMMARY\nDriven leader\nEXPERIENCE\n• Built Riyadh data platform`;
+    const sections = deriveResumeSections(noisyResume);
+    expect(sections.contactLines[0]).toBe("John Doe");
+    expect(sections.contactLines).not.toContain(expect.stringContaining("ÿ"));
+    const html = buildPlainExportHtml({
+      resumeDocument: { plainText: noisyResume },
+      jobDescription: "Data platform lead",
+      matchAnalysis: { score: 0, coverage: 0, cosine: 0 },
+      optimizations: [],
+    });
+    expect(html).not.toContain("ÿ");
+  });
+
   it("normalizes export variant aliases", () => {
     expect(normalizeVariant()).toBe("styled");
     expect(normalizeVariant("styled")).toBe("styled");
     expect(normalizeVariant("ats")).toBe("ats-plain");
     expect(normalizeVariant("ats-plain")).toBe("ats-plain");
+    expect(normalizeVariant("ATS_SAFE")).toBe("ats-plain");
+    expect(normalizeVariant("plain")).toBe("ats-plain");
     expect(normalizeVariant("unknown")).toBe("styled");
   });
 

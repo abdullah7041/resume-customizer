@@ -45,6 +45,63 @@ const tokenize = (input) =>
     .match(/[a-z0-9]+/g)
     ?.filter((token) => !STOPWORDS.has(token) && token.length > 2) ?? [];
 
+const GENERIC_JOB_TOKENS = new Set([
+  "candidate",
+  "career",
+  "description",
+  "experience",
+  "job",
+  "opportunity",
+  "profile",
+  "resume",
+  "role",
+  "some",
+  "summary",
+]);
+
+const buildTokenOverlap = (resumeText, jobDesc) => {
+  const resumeTokens = new Set(tokenize(resumeText));
+  const jobTokens = tokenize(jobDesc);
+  if (jobTokens.length === 0 || resumeTokens.size === 0) {
+    return {
+      uniqueJobTokens: [],
+      matchedTokens: [],
+      missingTokens: [],
+    };
+  }
+
+  const uniqueJobTokens = Array.from(new Set(jobTokens));
+  const informativeTokens = uniqueJobTokens.filter((token) => !GENERIC_JOB_TOKENS.has(token));
+  if (informativeTokens.length === 0) {
+    return { uniqueJobTokens: [], matchedTokens: [], missingTokens: [] };
+  }
+
+  const matchedTokens = informativeTokens.filter((token) => resumeTokens.has(token));
+  const missingTokens = informativeTokens.filter((token) => !resumeTokens.has(token));
+
+  return { uniqueJobTokens: informativeTokens, matchedTokens, missingTokens };
+};
+
+const buildFallbackMatch = (resumeText, jobDesc) => {
+  const { uniqueJobTokens, matchedTokens, missingTokens } = buildTokenOverlap(resumeText, jobDesc);
+  if (uniqueJobTokens.length === 0) {
+    return null;
+  }
+
+  const coverage = matchedTokens.length / uniqueJobTokens.length;
+  const cosine = coverage > 0 ? Math.min(1, Math.sqrt(coverage)) : 0;
+  const baseScore = 32 + coverage * 58;
+  const score = Math.round(Math.min(94, Math.max(22, baseScore)));
+
+  return {
+    coverage,
+    cosine,
+    score,
+    missingKeywords: missingTokens.slice(0, 12),
+    matchedKeywords: matchedTokens.slice(0, 12),
+  };
+};
+
 const pickKeywords = (jobDesc, resumeText) => {
   const jobTokens = tokenize(jobDesc);
   const resumeTokens = new Set(tokenize(resumeText));
@@ -383,15 +440,30 @@ export const analyzeResume = async (resumeInput, jobText, options = {}) => {
     });
 
     const data = await handleResponse(response);
-    const topMissing = Array.isArray(data?.missing_keywords)
+    const topMissingRaw = Array.isArray(data?.missing_keywords)
       ? data.missing_keywords.map((item) => sanitize(String(item))).filter(Boolean)
       : [];
-    const topHits = Array.isArray(data?.matched_keywords)
+    const topHitsRaw = Array.isArray(data?.matched_keywords)
       ? data.matched_keywords.map((item) => sanitize(String(item))).filter(Boolean)
       : [];
-    const coverage = clampRatio(data?.coverage);
-    const cosine = clampRatio(data?.similarity);
-    const score = clampScore(data?.score);
+    const coverageResponse = clampRatio(data?.coverage);
+    const cosineResponse = clampRatio(data?.similarity);
+    const scoreResponse = clampScore(data?.score);
+
+    const fallback = buildFallbackMatch(resume, job);
+    const shouldFallback =
+      fallback &&
+      fallback.coverage > 0 &&
+      ((scoreResponse === 0 && coverageResponse === 0 && cosineResponse === 0) ||
+        (coverageResponse === 0 && fallback.coverage > 0.05));
+
+    const coverage = shouldFallback ? fallback.coverage : coverageResponse;
+    const cosine = shouldFallback ? fallback.cosine : cosineResponse;
+    const score = shouldFallback ? fallback.score : scoreResponse;
+    const fallbackMissing = fallback?.missingKeywords ?? [];
+    const fallbackHits = fallback?.matchedKeywords ?? [];
+    const topMissing = topMissingRaw.length > 0 ? topMissingRaw : fallbackMissing;
+    const topHits = topHitsRaw.length > 0 ? topHitsRaw : fallbackHits;
 
     const suggestions = topMissing.slice(0, 6).map(
       (keyword) => `Consider highlighting “${keyword}” to better reflect the role requirements.`,
