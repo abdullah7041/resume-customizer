@@ -4,26 +4,30 @@ import { cn } from "../../lib/cn";
 const variants = {
   success: {
     icon: CheckCircle2,
-    className: "bg-success-500 text-surface-50",
+    accent: "from-emerald-400/80 to-emerald-500/50",
+    ring: "shadow-glass",
   },
   danger: {
     icon: AlertTriangle,
-    className: "bg-danger-500 text-surface-50",
+    accent: "from-magenta-600/80 to-royal-600/60",
+    ring: "shadow-ring",
   },
   warning: {
     icon: AlertTriangle,
-    className: "bg-warning-500 text-ink-900",
+    accent: "from-gold-500/85 to-gold-400/50",
+    ring: "shadow-lift",
   },
   info: {
     icon: Info,
-    className: "bg-primary-500 text-surface-50",
+    accent: "from-royal-500/80 to-magenta-500/60",
+    ring: "shadow-soft",
   },
 };
 
 export function ToastContainer({ children }) {
   return (
     <div
-      className="pointer-events-none fixed top-5 right-5 z-50 flex w-full max-w-xs flex-col gap-2.5"
+      className="pointer-events-none fixed top-6 right-6 z-50 flex w-full max-w-xs flex-col gap-3"
       role="region"
       aria-live="polite"
       aria-label="Notifications"
@@ -41,29 +45,33 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
     <div
       role="status"
       className={cn(
-        "pointer-events-auto overflow-hidden rounded-2xl shadow-soft backdrop-blur-lg",
-        variant.className
+        "pointer-events-auto overflow-hidden rounded-xl border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] p-0.5 shadow-card backdrop-blur-glass animate-glass-in",
+        variant.ring
       )}
     >
-      <div className="flex items-start gap-2.5 px-4 py-3">
-        <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-surface-50/20 text-surface-50">
-          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      <div className={cn("relative flex items-start gap-3 rounded-[inherit] bg-gradient-to-br p-4 text-sm text-ink", variant.accent)}>
+        <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_20%)] text-white shadow-soft">
+          <Icon className="h-4 w-4" aria-hidden="true" />
         </span>
-        <div className="flex-1 space-y-1 text-sm">
-          <p className="font-semibold tracking-wide">{title}</p>
-          {description && <p className="text-xs/relaxed opacity-90">{description}</p>}
+        <div className="flex-1 space-y-1 text-left">
+          <p className="font-semibold tracking-wide text-white drop-shadow-md">{title}</p>
+          {description && <p className="text-xs/relaxed text-white/90">{description}</p>}
         </div>
         {onDismiss && (
           <button
             type="button"
             onClick={onDismiss}
-            className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-current transition-all duration-[var(--duration-snappy)] ease-[var(--transition-snappy)] hover:bg-surface-50/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-0"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/90 transition-all duration-snappy ease-snappy hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:ring-[color:var(--button-primary-focus)]"
             aria-label="Dismiss notification"
             title="Dismiss notification"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 w-px bg-white/30"
+        />
       </div>
     </div>
   );

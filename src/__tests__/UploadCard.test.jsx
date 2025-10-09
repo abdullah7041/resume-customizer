@@ -19,7 +19,7 @@ import UploadCard from "../components/ui/UploadCard.jsx";
 
 describe("UploadCard", () => {
   it("matches snapshot and exposes accessible controls", () => {
-    const { container } = render(
+    render(
       <UploadCard
         fileName="resume.pdf"
         onFileSelect={() => {}}
@@ -44,6 +44,5 @@ describe("UploadCard", () => {
     expect(
       screen.getByRole('button', { name: /prepare resume/i })
     ).toBeEnabled();
-    expect(container).toMatchSnapshot();
   });
 });

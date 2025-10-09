@@ -11,10 +11,6 @@ vi.mock("../hooks/useAuth", () => ({
   }),
 }));
 
-vi.mock("../hooks/useTheme", () => ({
-  useTheme: () => ["light", vi.fn()],
-}));
-
 vi.mock("../lib/assets", () => ({
   getSkylineUrl: vi.fn(() => ""),
 }));
@@ -106,10 +102,6 @@ describe("Header", () => {
     const signInButton = screen.getByRole("button", { name: /sign in/i });
     expect(signInButton).toBeInTheDocument();
 
-    // Check for interactive badge
-    const badge = screen.getByRole("button", { name: /saudi arabia ambition badge/i });
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveAttribute("tabindex", "0");
   });
 });
 
