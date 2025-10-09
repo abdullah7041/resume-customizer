@@ -194,7 +194,7 @@ export default function Header() {
                 enableArabicBrand ? ` — ${arabicBrandName}` : ""
               } — By Abdullah bin Ahmed`}
             >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--accent)] shadow-[var(--shadow-soft)]">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--accent)] shadow-[0_18px_48px_-28px_rgba(12,90,60,0.85)] backdrop-blur-glass">
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="flex flex-col gap-1 text-left">
@@ -221,11 +221,16 @@ export default function Header() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
               {user ? (
-                <Button variant="secondary" icon={LogOut} onClick={signOut} className="justify-center">
+                <Button variant="frosted" icon={LogOut} onClick={signOut} className="justify-center text-[15px] font-semibold">
                   Sign Out
                 </Button>
               ) : (
-                <Button icon={LogIn} onClick={signInWithGoogle} className="justify-center">
+                <Button
+                  variant="frosted"
+                  icon={LogIn}
+                  onClick={signInWithGoogle}
+                  className="justify-center text-[15px] font-semibold"
+                >
                   Sign In
                 </Button>
               )}
@@ -238,7 +243,7 @@ export default function Header() {
         >
           <div
             className={cn(
-              "space-y-6 sm:space-y-7 transform-gpu",
+              "space-y-6 sm:space-y-7 transform-gpu text-center sm:text-left",
               prefersReducedMotion
                 ? "opacity-100"
                 : "transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -251,7 +256,7 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 shadow-[var(--shadow-soft)] transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8">
+            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-6 text-center shadow-[var(--shadow-soft)] backdrop-blur-glass transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8 sm:text-left">
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
@@ -261,14 +266,14 @@ export default function Header() {
               <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-surface-50 sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90 sm:text-lg">
+              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90 sm:text-lg sm:max-w-none">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+                  "card-glow group rounded-2xl border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur-glass transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] hover:shadow-[var(--shadow-lift)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -287,7 +292,7 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+                  "card-glow group rounded-2xl border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur-glass transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] hover:shadow-[var(--shadow-lift)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -306,7 +311,7 @@ export default function Header() {
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+                  "card-glow group rounded-2xl border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur-glass transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] hover:shadow-[var(--shadow-lift)]",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -328,7 +333,7 @@ export default function Header() {
 
           <div
             className={cn(
-              "card-glow group rounded-[var(--radius-card)] border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--panel-bg),transparent_10%)] hover:shadow-[var(--shadow-lift)]",
+              "card-glow group rounded-[var(--radius-card)] border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] p-6 text-[color:var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur-glass transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] hover:shadow-[var(--shadow-lift)]",
               prefersReducedMotion
                 ? ""
                 : "transform-gpu transition-[opacity,transform] duration-[300ms] ease-[var(--transition-snappy)]",
@@ -342,10 +347,10 @@ export default function Header() {
                 : undefined
             }
           >
-            <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50">Your Saudi-ready workflow</h2>
+            <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50 sm:text-left text-center">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
-              <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--secondary)] shadow-[0_16px_42px_-30px_rgba(14,93,63,0.9)]">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -353,8 +358,8 @@ export default function Header() {
                   <p className="text-xs text-ink-500 dark:text-surface-50/70">Glassmorphic card with drag & drop, paste, and progress tracking.</p>
                 </div>
               </li>
-              <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--secondary)] shadow-[0_16px_42px_-30px_rgba(14,93,63,0.9)]">
                   <Target className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
@@ -362,8 +367,8 @@ export default function Header() {
                   <p className="text-xs text-ink-500 dark:text-surface-50/70">Get a confidence score, missing keywords, and guidance.</p>
                 </div>
               </li>
-              <li className="flex gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] bg-[color:var(--panel-bg)] text-[color:var(--secondary)] shadow-[var(--shadow-soft)]">
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--secondary)] shadow-[0_16px_42px_-30px_rgba(14,93,63,0.9)]">
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>

@@ -532,17 +532,22 @@ export default function MainContent() {
           ) : user ? (
             workspace
           ) : (
-            <EmptyState
-              icon={UserPlus}
-              title="Sign in to unlock Saudi-ready insights"
-              description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
-              actions={
-                <Button icon={LogIn} onClick={signInWithGoogle} className="justify-center">
+              <EmptyState
+                icon={UserPlus}
+                title="Sign in to unlock Saudi-ready insights"
+                description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
+                actions={
+                <Button
+                  variant="frosted"
+                  icon={LogIn}
+                  onClick={signInWithGoogle}
+                  className="justify-center text-[15px] font-semibold"
+                >
                   Sign in via Google
                 </Button>
-              }
-            />
-          )}
+                }
+              />
+            )}
         </div>
         {isDev && aiDebug && (
           <section className="text-xs text-ink-500 dark:text-surface-50/70">

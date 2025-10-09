@@ -7,6 +7,8 @@ const variantStyles = {
     "bg-[image:var(--gradient-primary-value)] text-white shadow-lift",
   secondary:
     "border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] text-ink shadow-soft",
+  frosted:
+    "border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] text-surface-50 shadow-glass backdrop-blur-glass",
   ghost:
     "border border-transparent bg-transparent text-ink-muted hover:text-ink",
   outline:
@@ -42,6 +44,9 @@ export const Button = forwardRef(function Button(
         variant === "ghost" ? "hover:bg-[color:color-mix(in_oklab,var(--surface),transparent_60%)]" : "",
         variant === "secondary" ? "backdrop-blur-glass" : "",
         variant === "outline" ? "backdrop-blur-soft" : "",
+        variant === "frosted"
+          ? "before:opacity-80 before:mix-blend-screen after:bg-[image:var(--gradient-primary-soft)] after:opacity-50"
+          : "",
         resolvedVariant,
         focusDisabled,
         "hover:-translate-y-[1px] hover:shadow-glass",
