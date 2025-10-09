@@ -1,72 +1,72 @@
 :root {
   /* Atmosphere */
-  --bg: radial-gradient(circle at 20% -10%, rgba(255, 255, 255, 0.9) 0%, rgba(249, 240, 255, 0.65) 32%, rgba(244, 237, 255, 0.55) 50%, rgba(255, 248, 238, 0.7) 75%),
-    linear-gradient(140deg, #f8f5ff 0%, #f6f0ff 38%, #fff6fb 68%, #fdf6ec 100%);
-  --surface: color-mix(in oklab, #ffffff 88%, rgba(255, 255, 255, 0.9) 12%);
-  --surface-strong: color-mix(in oklab, #ffffff, transparent 8%);
-  --surface-glass-rgb: 255 255 255;
-  --surface-glass: rgba(255, 255, 255, 0.72);
-  --surface-glass-strong: rgba(255, 255, 255, 0.92);
-  --ink: #1d0f2b;
-  --ink-muted: color-mix(in oklab, var(--ink) 52%, #ffffff 48%);
-  --ink-soft: color-mix(in oklab, var(--ink) 36%, #ffffff 64%);
+  --bg: radial-gradient(circle at 24% -12%, rgba(13, 78, 70, 0.62) 0%, rgba(3, 22, 27, 0.94) 45%),
+    linear-gradient(160deg, #021114 0%, #031a1c 48%, #041f1c 100%);
+  --surface: color-mix(in oklab, rgba(5, 27, 29, 0.86), transparent 6%);
+  --surface-strong: rgba(4, 26, 27, 0.94);
+  --surface-glass-rgb: 10 52 52;
+  --surface-glass: rgba(7, 42, 44, 0.7);
+  --surface-glass-strong: rgba(18, 74, 74, 0.86);
+  --ink: #f1fcf7;
+  --ink-muted: color-mix(in oklab, var(--ink), rgba(122, 189, 177, 0.42) 45%);
+  --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 60%);
 
   /* Brand accents */
-  --accent: #6f3de8;
-  --accent-royal: #4726b6;
-  --accent-magenta: #c42cc3;
-  --secondary: #0fb98f;
-  --emerald-700: #0fb98f;
-  --emerald-900: #0a8f6b;
-  --accent-gold: #f5c96b;
-  --accent-gold-soft: rgba(245, 201, 107, 0.18);
+  --accent: #0f766e;
+  --accent-royal: #075951;
+  --accent-magenta: #34d399;
+  --secondary: #0ea472;
+  --emerald-700: #0d8f72;
+  --emerald-900: #0a5d4a;
+  --accent-gold: #f4d37d;
+  --accent-gold-soft: rgba(244, 211, 125, 0.2);
 
   /* Panels */
-  --panel-bg: color-mix(in oklab, rgba(var(--surface-glass-rgb), 0.82), transparent 6%);
-  --panel-stroke: color-mix(in oklab, rgba(73, 30, 133, 0.45), transparent 62%);
-  --panel-highlight: color-mix(in oklab, rgba(255, 255, 255, 0.6), transparent 30%);
+  --panel-bg: color-mix(in oklab, rgba(7, 42, 44, 0.78), transparent 8%);
+  --panel-stroke: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 42%);
+  --panel-highlight: color-mix(in oklab, rgba(52, 211, 153, 0.38), transparent 40%);
 
   /* Elevation + sheen */
-  --shadow-card: 0 28px 60px -26px rgba(45, 10, 68, 0.42), 0 18px 40px -32px rgba(12, 62, 74, 0.35);
-  --shadow-soft: 0 22px 40px -32px rgba(27, 19, 56, 0.35), 0 10px 28px -28px rgba(12, 74, 62, 0.22);
-  --shadow-lift: 0 24px 55px -32px rgba(107, 20, 143, 0.45), 0 18px 42px -26px rgba(15, 185, 143, 0.35);
-  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 18px 58px -34px rgba(226, 133, 255, 0.55);
-  --shadow-ring: 0 0 0 1px rgba(119, 71, 220, 0.36);
+  --shadow-card: 0 28px 60px -24px rgba(1, 10, 12, 0.85), 0 24px 56px -28px rgba(9, 96, 84, 0.5);
+  --shadow-soft: 0 18px 48px -26px rgba(0, 12, 15, 0.85), 0 16px 36px -24px rgba(18, 112, 92, 0.45);
+  --shadow-lift: 0 28px 62px -24px rgba(30, 185, 153, 0.5), 0 24px 58px -26px rgba(11, 132, 111, 0.45);
+  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(52, 211, 153, 0.45);
+  --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.55);
 
-  --glass-border: color-mix(in oklab, rgba(115, 63, 223, 0.68), transparent 58%);
-  --glass-border-strong: color-mix(in oklab, rgba(15, 185, 143, 0.74), transparent 60%);
+  --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.68), transparent 42%);
+  --glass-border-strong: color-mix(in oklab, rgba(34, 211, 185, 0.75), transparent 35%);
   --glass-reflection: linear-gradient(130deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.1) 45%, rgba(255, 255, 255, 0) 70%);
-  --glass-gold-sheen: linear-gradient(115deg, rgba(245, 201, 107, 0.28) 0%, rgba(255, 255, 255, 0.05) 55%, rgba(245, 201, 107, 0.18) 100%);
+  --glass-gold-sheen: linear-gradient(115deg, rgba(244, 211, 125, 0.22) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(244, 211, 125, 0.18) 100%);
 
   /* Color system */
-  --surface-50: #f8f5ff;
-  --surface-50-rgb: 248 245 255;
-  --surface-900: #0a0618;
-  --surface-900-rgb: 10 6 24;
+  --surface-50: #e6f7f1;
+  --surface-50-rgb: 230 247 241;
+  --surface-900: #021715;
+  --surface-900-rgb: 2 23 21;
 
   --ink-900: var(--ink);
-  --ink-900-rgb: 29 15 43;
+  --ink-900-rgb: 241 252 247;
   --ink-500: var(--ink-muted);
-  --ink-500-rgb: 99 73 132;
+  --ink-500-rgb: 196 224 216;
 
-  --color-royal-400: #7350ef;
-  --color-royal-500: #5f30de;
-  --color-royal-600: #4726b6;
-  --color-royal-700: #341c8f;
+  --color-royal-400: #13a093;
+  --color-royal-500: #0f766e;
+  --color-royal-600: #0b5d55;
+  --color-royal-700: #08403a;
 
-  --color-magenta-500: #c42cc3;
-  --color-magenta-600: #a925af;
+  --color-magenta-500: #34d399;
+  --color-magenta-600: #10b981;
 
-  --color-emerald-400: #2adcb0;
+  --color-emerald-400: #34d399;
   --color-emerald-500: var(--secondary);
-  --color-emerald-600: #0fa87f;
+  --color-emerald-600: #0c8c6a;
 
   --color-gold-400: #f9d996;
   --color-gold-500: var(--accent-gold);
   --color-gold-600: #dca849;
 
   --color-ink-500: var(--ink-muted);
-  --color-ink-700: color-mix(in oklab, var(--ink), transparent 15%);
+  --color-ink-700: color-mix(in oklab, var(--ink), transparent 10%);
 
   --color-success-500: var(--secondary);
   --color-warning-500: #f59f0b;
@@ -95,10 +95,10 @@
   --transition-snappy: cubic-bezier(0.18, 0.85, 0.32, 1);
 
   /* Gradients */
-  --gradient-primary-value: linear-gradient(135deg, var(--accent-royal) 0%, #7d3fed 38%, var(--accent-magenta) 72%, #ff71c4 100%);
-  --gradient-emerald: linear-gradient(135deg, rgba(15, 185, 143, 0.95) 0%, rgba(44, 220, 186, 0.85) 100%);
-  --gradient-muted-value: linear-gradient(120deg, rgba(255, 255, 255, 0.18) 0%, rgba(99, 56, 214, 0.35) 45%, rgba(196, 44, 195, 0.2) 100%);
-  --gradient-card-value: linear-gradient(150deg, rgba(255, 255, 255, 0.44) 0%, rgba(255, 255, 255, 0.06) 52%, rgba(245, 201, 107, 0.18) 100%);
+  --gradient-primary-value: linear-gradient(135deg, rgba(7, 89, 81, 0.95) 0%, rgba(15, 118, 110, 0.9) 38%, rgba(34, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
+  --gradient-emerald: linear-gradient(135deg, rgba(14, 164, 114, 0.95) 0%, rgba(52, 211, 153, 0.9) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(12, 60, 56, 0.55) 0%, rgba(15, 118, 110, 0.45) 52%, rgba(52, 211, 153, 0.36) 100%);
+  --gradient-card-value: linear-gradient(150deg, rgba(11, 60, 56, 0.5) 0%, rgba(6, 30, 32, 0.65) 48%, rgba(22, 98, 85, 0.45) 100%);
   --gradient-halo: radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 60%);
 
   --shadow-card-value: var(--shadow-card);
@@ -116,82 +116,82 @@
   --button-primary-gradient: var(--gradient-primary-value);
   --button-primary-border: transparent;
   --button-primary-overlay: linear-gradient(130deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0) 100%);
-  --button-primary-shadow: 0 14px 45px -22px rgba(134, 58, 237, 0.68), 0 10px 32px -18px rgba(15, 185, 143, 0.45);
-  --button-primary-shadow-strong: 0 22px 50px -18px rgba(195, 44, 195, 0.55), 0 16px 38px -16px rgba(15, 185, 143, 0.4);
+  --button-primary-shadow: 0 20px 58px -22px rgba(14, 148, 118, 0.55), 0 16px 48px -22px rgba(3, 47, 45, 0.6);
+  --button-primary-shadow-strong: 0 26px 62px -20px rgba(52, 211, 153, 0.55), 0 20px 56px -20px rgba(3, 47, 44, 0.6);
   --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 65%, var(--secondary));
 
-  --hero-overlay-sheen: radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 65%);
+  --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 70%);
 }
 
 :root.dark,
 .dark {
-  --bg: radial-gradient(circle at 14% -12%, rgba(60, 24, 144, 0.32) 0%, rgba(13, 5, 36, 0.85) 46%),
-    linear-gradient(160deg, #0b051d 0%, #140726 35%, #1a0d2e 68%, #0e161a 100%);
-  --surface: color-mix(in oklab, rgba(34, 20, 48, 0.86), transparent 4%);
-  --surface-strong: rgba(18, 12, 30, 0.9);
-  --surface-glass-rgb: 22 15 36;
-  --surface-glass: rgba(26, 18, 46, 0.68);
-  --surface-glass-strong: rgba(39, 25, 62, 0.82);
-  --ink: #f4f1ff;
-  --ink-muted: color-mix(in oklab, var(--ink), rgba(112, 106, 146, 0.7) 40%);
-  --ink-soft: color-mix(in oklab, var(--ink), rgba(120, 126, 158, 0.65) 55%);
+  --bg: radial-gradient(circle at 24% -12%, rgba(13, 78, 70, 0.62) 0%, rgba(3, 22, 27, 0.94) 45%),
+    linear-gradient(160deg, #021114 0%, #031a1c 48%, #041f1c 100%);
+  --surface: color-mix(in oklab, rgba(5, 27, 29, 0.86), transparent 6%);
+  --surface-strong: rgba(4, 26, 27, 0.94);
+  --surface-glass-rgb: 10 52 52;
+  --surface-glass: rgba(7, 42, 44, 0.7);
+  --surface-glass-strong: rgba(18, 74, 74, 0.86);
+  --ink: #f1fcf7;
+  --ink-muted: color-mix(in oklab, var(--ink), rgba(122, 189, 177, 0.42) 45%);
+  --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 60%);
 
-  --accent: #8d6bff;
-  --accent-royal: #5c2fd4;
-  --accent-magenta: #ff64d2;
-  --secondary: #2ed8ae;
-  --emerald-700: #2ed8ae;
-  --emerald-900: #1d9f82;
-  --accent-gold: #f6cd7a;
-  --accent-gold-soft: rgba(249, 209, 128, 0.2);
+  --accent: #0f766e;
+  --accent-royal: #075951;
+  --accent-magenta: #34d399;
+  --secondary: #0ea472;
+  --emerald-700: #0d8f72;
+  --emerald-900: #0a5d4a;
+  --accent-gold: #f4d37d;
+  --accent-gold-soft: rgba(244, 211, 125, 0.2);
 
-  --panel-bg: color-mix(in oklab, rgba(26, 20, 44, 0.78), transparent 8%);
-  --panel-stroke: color-mix(in oklab, rgba(123, 80, 232, 0.62), transparent 35%);
-  --panel-highlight: color-mix(in oklab, rgba(147, 108, 255, 0.42), transparent 40%);
+  --panel-bg: color-mix(in oklab, rgba(7, 42, 44, 0.78), transparent 8%);
+  --panel-stroke: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 42%);
+  --panel-highlight: color-mix(in oklab, rgba(52, 211, 153, 0.38), transparent 40%);
 
-  --shadow-card: 0 28px 55px -24px rgba(11, 7, 28, 0.85), 0 26px 58px -28px rgba(88, 23, 134, 0.55);
-  --shadow-soft: 0 18px 45px -28px rgba(5, 7, 25, 0.85), 0 16px 32px -24px rgba(34, 121, 98, 0.45);
-  --shadow-lift: 0 28px 60px -22px rgba(166, 67, 235, 0.6), 0 24px 58px -26px rgba(33, 199, 165, 0.45);
-  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(145, 69, 227, 0.55);
-  --shadow-ring: 0 0 0 1px rgba(87, 51, 196, 0.55);
+  --shadow-card: 0 28px 60px -24px rgba(1, 10, 12, 0.85), 0 24px 56px -28px rgba(9, 96, 84, 0.5);
+  --shadow-soft: 0 18px 48px -26px rgba(0, 12, 15, 0.85), 0 16px 36px -24px rgba(18, 112, 92, 0.45);
+  --shadow-lift: 0 28px 62px -24px rgba(30, 185, 153, 0.5), 0 24px 58px -26px rgba(11, 132, 111, 0.45);
+  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(52, 211, 153, 0.45);
+  --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.55);
 
-  --glass-border: color-mix(in oklab, rgba(119, 83, 227, 0.75), transparent 40%);
-  --glass-border-strong: color-mix(in oklab, rgba(46, 196, 169, 0.75), transparent 45%);
+  --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.68), transparent 42%);
+  --glass-border-strong: color-mix(in oklab, rgba(34, 211, 185, 0.75), transparent 35%);
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 65%);
-  --glass-gold-sheen: linear-gradient(125deg, rgba(246, 205, 122, 0.3) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(246, 205, 122, 0.12) 100%);
+  --glass-gold-sheen: linear-gradient(125deg, rgba(244, 211, 125, 0.26) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(244, 211, 125, 0.14) 100%);
 
   --surface-900: var(--bg);
-  --surface-900-rgb: 9 5 24;
+  --surface-900-rgb: 2 23 21;
   --ink-900: var(--ink);
-  --ink-900-rgb: 244 241 255;
+  --ink-900-rgb: 241 252 247;
   --ink-500: var(--ink-muted);
-  --ink-500-rgb: 182 173 228;
+  --ink-500-rgb: 196 224 216;
 
-  --color-royal-400: #7f68f8;
-  --color-royal-500: #7350ef;
-  --color-royal-600: #5c2fd4;
-  --color-royal-700: #4826a9;
+  --color-royal-400: #13a093;
+  --color-royal-500: #0f766e;
+  --color-royal-600: #0b5d55;
+  --color-royal-700: #08403a;
 
-  --color-magenta-500: #ff64d2;
-  --color-magenta-600: #f03fb5;
+  --color-magenta-500: #34d399;
+  --color-magenta-600: #10b981;
 
-  --color-emerald-400: #44ebc4;
+  --color-emerald-400: #34d399;
   --color-emerald-500: var(--secondary);
-  --color-emerald-600: #27c099;
+  --color-emerald-600: #0c8c6a;
 
   --color-gold-400: #f7d48c;
   --color-gold-500: var(--accent-gold);
   --color-gold-600: #dfa94f;
 
-  --button-primary-shadow: 0 20px 60px -24px rgba(130, 77, 232, 0.58), 0 18px 48px -22px rgba(46, 196, 169, 0.45);
-  --button-primary-shadow-strong: 0 26px 64px -20px rgba(255, 100, 210, 0.55), 0 18px 54px -18px rgba(46, 196, 169, 0.45);
+  --button-primary-shadow: 0 20px 58px -22px rgba(14, 148, 118, 0.55), 0 16px 48px -22px rgba(3, 47, 45, 0.6);
+  --button-primary-shadow-strong: 0 26px 62px -20px rgba(52, 211, 153, 0.55), 0 20px 56px -20px rgba(3, 47, 44, 0.6);
   --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 65%, rgba(255, 255, 255, 0) 100%);
   --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 70%, var(--secondary));
 
-  --gradient-primary-value: linear-gradient(135deg, rgba(73, 50, 195, 0.9) 0%, rgba(130, 70, 232, 0.92) 35%, rgba(255, 100, 210, 0.85) 68%, rgba(243, 139, 208, 0.9) 100%);
-  --gradient-muted-value: linear-gradient(120deg, rgba(69, 45, 153, 0.55) 0%, rgba(140, 83, 245, 0.45) 52%, rgba(255, 98, 196, 0.36) 100%);
-  --gradient-card-value: linear-gradient(150deg, rgba(66, 41, 143, 0.5) 0%, rgba(25, 25, 66, 0.65) 48%, rgba(54, 111, 109, 0.42) 100%);
-  --gradient-emerald: linear-gradient(135deg, rgba(41, 204, 163, 0.92) 0%, rgba(75, 225, 195, 0.88) 100%);
+  --gradient-primary-value: linear-gradient(135deg, rgba(7, 89, 81, 0.95) 0%, rgba(15, 118, 110, 0.9) 38%, rgba(34, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(12, 60, 56, 0.55) 0%, rgba(15, 118, 110, 0.45) 52%, rgba(52, 211, 153, 0.36) 100%);
+  --gradient-card-value: linear-gradient(150deg, rgba(11, 60, 56, 0.5) 0%, rgba(6, 30, 32, 0.65) 48%, rgba(22, 98, 85, 0.45) 100%);
+  --gradient-emerald: linear-gradient(135deg, rgba(14, 164, 114, 0.95) 0%, rgba(52, 211, 153, 0.9) 100%);
 
   --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
 }

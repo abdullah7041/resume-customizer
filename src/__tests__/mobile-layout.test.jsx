@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import Header from "../components/Layout/Header";
-
-// Mock modules
-const toggleThemeMock = vi.fn();
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
@@ -13,10 +9,6 @@ vi.mock("../hooks/useAuth", () => ({
     signInWithGoogle: vi.fn(),
     signOut: vi.fn(),
   }),
-}));
-
-vi.mock("../hooks/useTheme", () => ({
-  useTheme: () => ["light", toggleThemeMock],
 }));
 
 vi.mock("../lib/assets", () => ({
@@ -42,7 +34,6 @@ describe("Mobile Layout Polish", () => {
   });
 
   afterEach(() => {
-    toggleThemeMock.mockClear();
     vi.clearAllMocks();
   });
 
@@ -112,47 +103,6 @@ describe("Mobile Layout Polish", () => {
     });
   });
 
-  describe("Theme Toggle Accessibility", () => {
-    it("provides clear labelling and reflective affordance", () => {
-      render(<Header />);
-
-      const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
-      expect(themeToggle).toBeInTheDocument();
-      expect(themeToggle).toHaveAttribute("aria-pressed", "false");
-      expect(themeToggle.className).toContain("backdrop-blur-soft");
-
-      const reflectionLayer = themeToggle.querySelector('[aria-hidden="true"]');
-      expect(reflectionLayer).not.toBeNull();
-      expect(reflectionLayer?.className).toContain("opacity-0");
-    });
-
-    it("invokes the theme toggle handler on click", async () => {
-      const user = userEvent.setup();
-      render(<Header />);
-
-      const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
-      await user.click(themeToggle);
-
-      expect(toggleThemeMock).toHaveBeenCalledTimes(1);
-    });
-
-    it("supports keyboard activation", async () => {
-      const user = userEvent.setup();
-      render(<Header />);
-
-      const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
-      themeToggle.focus();
-
-      await user.keyboard("{Enter}");
-      expect(toggleThemeMock).toHaveBeenCalledTimes(1);
-
-      toggleThemeMock.mockClear();
-
-      await user.keyboard(" ");
-      expect(toggleThemeMock).toHaveBeenCalledTimes(1);
-    });
-  });
-
   describe("Hero Image Overlay", () => {
     it("should have overlay on background image", () => {
       const { container } = render(<Header />);
@@ -201,12 +151,11 @@ describe("Mobile Layout Polish", () => {
   describe("Touch-Friendly Targets", () => {
     it("should have adequate touch target size for mobile", () => {
       render(<Header />);
-      
-      const themeToggle = screen.getByRole("button", {
-        name: /switch to dark theme/i,
-      });
 
-      expect(themeToggle).toHaveClass("h-10", "w-10");
+      const signInButton = screen.getByRole("button", { name: /sign in/i });
+
+      expect(signInButton).toHaveClass("min-h-[44px]");
+      expect(signInButton).toHaveClass("px-6");
     });
   });
 

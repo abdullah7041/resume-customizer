@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, LogIn, LogOut, Moon, Sparkles, Sun, Target } from "lucide-react";
+import { FileText, LogIn, LogOut, Sparkles, Target } from "lucide-react";
 import Button from "../ui/Button.jsx";
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
-import { useTheme } from "../../hooks/useTheme";
 import { getSkylineUrl } from "../../lib/assets";
 
 const saduPattern = encodeURIComponent(
@@ -24,12 +23,6 @@ const getPrefersReducedMotion = () => {
 
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
-  const [theme, toggleTheme] = useTheme();
-  const isDark = theme === "dark";
-  
-  // Feature flag for dark mode toggle
-  const darkModeEnabled =
-    (import.meta.env.VITE_FEATURE_DARK_MODE ?? "true") !== "false";
   const skylineUrl = useMemo(() => {
     const url = getSkylineUrl();
     console.log("[hero] Skyline URL:", url);
@@ -172,18 +165,9 @@ export default function Header() {
     };
   }, []);
 
-  const themeButtonClass = cn(
-    "inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--hairline-strong)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-    "bg-[color:var(--panel-bg)] text-[color:var(--ink)] shadow-[var(--shadow-soft)] hover:text-[color:var(--accent)] focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface)]"
-  );
-  const nextThemeLabel = isDark ? "Switch to light theme" : "Switch to dark theme";
-  const ThemeIcon = isDark ? Sun : Moon;
-
   const skeletonBackgroundClass = cn(
     "absolute inset-0 -z-40 pointer-events-none bg-cover bg-center bg-no-repeat transition-opacity duration-300",
-    isDark
-      ? "bg-[radial-gradient(circle_at_20%_10%,color-mix(in_oklab,var(--surface-strong),transparent_50%)_0%,transparent_65%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface-strong),transparent_35%)_0%,color-mix(in_oklab,var(--surface),transparent_70%)_100%)]"
-      : "bg-[radial-gradient(circle_at_18%_12%,color-mix(in_oklab,var(--surface-strong),transparent_28%)_0%,transparent_62%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_20%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_65%)_100%)]"
+    "bg-[radial-gradient(circle_at_18%_12%,color-mix(in_oklab,var(--surface-strong),transparent_32%)_0%,transparent_64%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_24%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_58%)_100%)]"
   );
 
   const enableArabicBrand =
@@ -236,21 +220,6 @@ export default function Header() {
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-              {darkModeEnabled && (
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className={cn(
-                    themeButtonClass,
-                    "relative overflow-hidden backdrop-blur-soft"
-                  )}
-                  aria-label={nextThemeLabel}
-                  aria-pressed={isDark}
-                >
-                  <span className="absolute inset-0 rounded-full bg-[image:var(--glass-reflection)] opacity-0 transition-opacity duration-snappy ease-snappy hover:opacity-70" aria-hidden="true" />
-                  <ThemeIcon className="relative h-4 w-4" aria-hidden="true" />
-                </button>
-              )}
               {user ? (
                 <Button variant="secondary" icon={LogOut} onClick={signOut} className="justify-center">
                   Sign Out
@@ -265,7 +234,7 @@ export default function Header() {
         </div>
 
         <div
-          className={`${containerClass} grid flex-1 items-center gap-8 py-12 sm:gap-10 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12 lg:py-16`}
+          className={`${containerClass} grid flex-1 items-center gap-8 py-12 sm:gap-10 sm:py-16 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12 lg:py-20`}
         >
           <div
             className={cn(
@@ -443,9 +412,7 @@ export default function Header() {
         className={cn(
           "-z-30 pointer-events-none transition-colors duration-300",
           heroBackgroundExtentClass,
-          isDark
-            ? "bg-[radial-gradient(circle_at_24%_-6%,color-mix(in_oklab,var(--accent),transparent_82%)_0%,transparent_58%),radial-gradient(circle_at_78%_-16%,color-mix(in_oklab,#8b5cf6,transparent_72%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--surface),transparent_10%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_52%)_100%)]"
-            : "bg-[radial-gradient(circle_at_20%_-10%,color-mix(in_oklab,#a855f7,transparent_78%)_0%,transparent_60%),radial-gradient(circle_at_80%_-14%,color-mix(in_oklab,#ec4899,transparent_82%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--bg),transparent_06%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_50%)_100%)]",
+          "bg-[radial-gradient(circle_at_18%_-12%,color-mix(in_oklab,var(--accent),transparent_78%)_0%,transparent_64%),radial-gradient(circle_at_82%_-16%,color-mix(in_oklab,var(--accent-royal),transparent_76%)_0%,transparent_68%),linear-gradient(to_bottom,color-mix(in_oklab,var(--bg),transparent_08%)_0%,color-mix(in_oklab,var(--surface-strong),transparent_52%)_100%)]",
         )}
       />
       <div

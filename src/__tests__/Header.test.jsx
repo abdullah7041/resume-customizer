@@ -1,10 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import Header from "../components/Layout/Header.jsx";
-
-const toggleThemeMock = vi.fn();
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
@@ -12,10 +9,6 @@ vi.mock("../hooks/useAuth", () => ({
     signInWithGoogle: vi.fn(),
     signOut: vi.fn(),
   }),
-}));
-
-vi.mock("../hooks/useTheme", () => ({
-  useTheme: () => ["light", toggleThemeMock],
 }));
 
 vi.mock("../lib/assets", () => ({
@@ -64,7 +57,6 @@ beforeAll(() => {
 
 afterEach(() => {
   cleanup();
-  toggleThemeMock.mockClear();
   vi.clearAllMocks();
 });
 
@@ -110,21 +102,6 @@ describe("Header", () => {
     const signInButton = screen.getByRole("button", { name: /sign in/i });
     expect(signInButton).toBeInTheDocument();
 
-    // Check for theme toggle control
-    const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
-    expect(themeToggle).toBeInTheDocument();
-    expect(themeToggle.className).toContain("h-10");
-    expect(themeToggle.className).toContain("w-10");
-  });
-
-  it("calls the theme toggle handler when activated", async () => {
-    const user = userEvent.setup();
-    render(<Header />);
-
-    const themeToggle = screen.getByRole("button", { name: /switch to dark theme/i });
-
-    await user.click(themeToggle);
-    expect(toggleThemeMock).toHaveBeenCalledTimes(1);
   });
 });
 

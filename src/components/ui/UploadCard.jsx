@@ -156,8 +156,8 @@ export default function UploadCard({
       as="section"
       tone="glass"
       glow
-      className="space-y-6"
-      contentClassName="space-y-6"
+      className="mx-auto max-w-3xl space-y-5"
+      contentClassName="space-y-5"
       aria-live="polite"
     >
       <header className="space-y-2 text-left">
@@ -184,9 +184,9 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[calc(var(--radius-card)*0.8)] border border-dashed border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_20%)] px-6 py-12 text-center shadow-soft transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]",
+          "relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-[calc(var(--radius-card)*0.8)] border border-dashed border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-6 py-10 text-center shadow-soft transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]",
           "before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-0 before:transition-opacity before:duration-breathe before:content-['']",
-          "after:pointer-events-none after:absolute after:-left-1/3 after:-top-1/2 after:h-[260%] after:w-[160%] after:rotate-[18deg] after:bg-[image:var(--gradient-card-value)] after:opacity-0 after:transition-opacity after:duration-breathe",
+          "after:pointer-events-none after:absolute after:-left-1/4 after:-top-1/2 after:h-[240%] after:w-[150%] after:rotate-[16deg] after:bg-[image:var(--gradient-card-value)] after:opacity-0 after:transition-opacity after:duration-breathe",
           isDragging &&
             "border-[color:var(--glass-border-strong)] shadow-glass before:opacity-80 after:opacity-60"
         )}
@@ -200,7 +200,7 @@ export default function UploadCard({
           <span className="mx-1 text-ink-soft/60">|</span>
           <span>DOCX</span>
         </div>
-        <UploadCloud className="h-12 w-12 text-emerald-400" aria-hidden="true" />
+        <UploadCloud className="h-11 w-11 text-emerald-400" aria-hidden="true" />
         <p className="text-base font-semibold text-ink">
           Drop your resume here or click to browse
         </p>
@@ -244,7 +244,7 @@ export default function UploadCard({
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}
-          inputClassName="min-h-[180px]"
+          inputClassName="min-h-[160px]"
           aria-label="Paste resume text instead"
         />
         {textHelper && (

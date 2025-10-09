@@ -49,7 +49,7 @@
     color: var(--ink);
     background: var(--bg);
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: auto;
     height: auto;
     min-height: 100%;
   }

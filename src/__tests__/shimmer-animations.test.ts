@@ -134,10 +134,10 @@ describe("Single Document Scroll CSS", () => {
     expect(htmlBlock).not.toContain("overflow: hidden");
   });
 
-  it("should set body overflow-y to visible instead of scroll", () => {
+  it("should set body overflow-y to auto instead of scroll", () => {
     const bodyBlock = cssContent.match(/body\s*{[^}]+}/s)?.[0];
     expect(bodyBlock).toBeTruthy();
-    expect(bodyBlock).toContain("overflow-y: visible");
+    expect(bodyBlock).toContain("overflow-y: auto");
     expect(bodyBlock).not.toContain("overflow-y: scroll");
   });
 

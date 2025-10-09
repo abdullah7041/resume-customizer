@@ -78,7 +78,7 @@ Set these variables in your Netlify project:
 
 ## 🎨 Saudi Edition design system
 - Theme tokens live in [`src/styles/theme.css`](src/styles/theme.css) and drive Tailwind v4 utilities.
-- Primary gradient flows from royal purple `#7C3AED` to magenta `#EC4899`, with Saudi emerald (`#0B6B3A`) for accents.
+- Primary gradient flows from deep teal `#075951` to emerald `#34D399`, with Saudi gold (`#F4D37D`) for accents.
 - Surface neutrals: sand (`#F7F2E7`), dune (`#E7DFCF`), smoke (`#F3F4F6`), and ink (`#1F2937`). Dark mode targets `#0F0F12`.
 - State colors: success `#12B981`, warning `#F59E0B`, danger `#EF4444`.
 - Typography stacks `"Inter", "Geist", "Tajawal"` with generous tracking for headings.
