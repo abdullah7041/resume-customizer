@@ -93,8 +93,8 @@ export default function Header() {
 
     console.log("[hero] Setting animation state:", { skylineLoaded, isFallbackSkyline });
     setAnimateSkyline(true);
-    const timer = window.setTimeout(() => setAnimateSkyline(false), 1800);
-    return () => window.clearTimeout(timer);
+    const timer = setTimeout(() => setAnimateSkyline(false), 1800);
+    return () => clearTimeout(timer);
   }, [isFallbackSkyline, skylineLoaded, skylineUrl]);
 
   useEffect(() => {
@@ -120,16 +120,26 @@ export default function Header() {
     let heroFrame;
     let workflowTimer;
 
+    const requestFrame =
+      typeof window.requestAnimationFrame === "function"
+        ? window.requestAnimationFrame.bind(window)
+        : (callback) => setTimeout(callback, 16);
+
+    const cancelFrame =
+      typeof window.cancelAnimationFrame === "function"
+        ? window.cancelAnimationFrame.bind(window)
+        : clearTimeout;
+
     if (!mediaQuery.matches) {
       if (!heroAnimatedRef.current) {
-        heroFrame = window.requestAnimationFrame(() => {
+        heroFrame = requestFrame(() => {
           setHeroVisible(true);
           heroAnimatedRef.current = true;
         });
       }
 
       if (!workflowAnimatedRef.current) {
-        workflowTimer = window.setTimeout(() => {
+        workflowTimer = setTimeout(() => {
           setWorkflowVisible(true);
           workflowAnimatedRef.current = true;
         }, 140);
@@ -150,10 +160,14 @@ export default function Header() {
     return () => {
       removeMotionListener();
       if (typeof heroFrame === "number") {
-        window.cancelAnimationFrame(heroFrame);
+        cancelFrame(heroFrame);
+      } else if (heroFrame) {
+        cancelFrame(heroFrame);
       }
       if (typeof workflowTimer === "number") {
-        window.clearTimeout(workflowTimer);
+        clearTimeout(workflowTimer);
+      } else if (workflowTimer) {
+        clearTimeout(workflowTimer);
       }
     };
   }, []);
@@ -185,7 +199,7 @@ export default function Header() {
     >
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col justify-between gap-8 sm:gap-10 lg:gap-12 py-16 sm:py-20 lg:py-24",
+          "relative z-10 flex flex-1 flex-col justify-between gap-8 sm:gap-10 lg:gap-12 py-12 sm:py-16 lg:py-20",
         )}
       >
         <div className="border-b border-[color:var(--hairline-soft)]">
@@ -251,7 +265,7 @@ export default function Header() {
         </div>
 
         <div
-          className={`${containerClass} grid flex-1 items-center gap-8 py-12 sm:gap-10 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-14 lg:py-16`}
+          className={`${containerClass} grid flex-1 items-center gap-8 py-12 sm:gap-10 sm:py-14 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12 lg:py-16`}
         >
           <div
             className={cn(

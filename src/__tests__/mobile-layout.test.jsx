@@ -213,19 +213,19 @@ describe("Mobile Layout Polish", () => {
   describe("Page Height Reduction", () => {
     it("should have reduced padding in header", () => {
       const { container } = render(<Header />);
-      
+
       const headerContent = container.querySelector("header > div");
-      
+
       // Should have mobile-first compact padding
-      expect(headerContent).toHaveClass("py-16", "sm:py-20", "lg:py-24");
+      expect(headerContent).toHaveClass("py-12", "sm:py-16", "lg:py-20");
     });
 
     it("should have compact grid gaps", () => {
       const { container } = render(<Header />);
-      
+
       const grid = container.querySelector(".grid");
-      
-      expect(grid).toHaveClass("gap-8", "sm:gap-10", "lg:gap-14");
+
+      expect(grid).toHaveClass("gap-8", "sm:gap-10", "lg:gap-12");
     });
   });
 });
