@@ -54,6 +54,10 @@ const statusCopy = {
   error: "We couldn't process that file.",
 };
 
+const chipClass =
+  "inline-flex items-center justify-center rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_22%)] text-emerald-400 shadow-soft backdrop-blur-soft";
+
+
 export default function UploadCard({
   fileName,
   onFileSelect,
@@ -184,23 +188,28 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-[calc(var(--radius-card)*0.8)] border border-dashed border-[color:color-mix(in_oklab,var(--glass-border),transparent_20%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] px-6 py-8 text-center shadow-soft backdrop-blur-glass transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] sm:py-10",
-          "before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-0 before:transition-opacity before:duration-breathe before:content-['']",
-          "after:pointer-events-none after:absolute after:-left-1/4 after:-top-1/2 after:h-[240%] after:w-[150%] after:rotate-[16deg] after:bg-[image:var(--gradient-card-value)] after:opacity-0 after:transition-opacity after:duration-breathe",
+          "relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[calc(var(--radius-card)*0.82)] border border-[color:color-mix(in_oklab,var(--glass-border),transparent_10%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] px-6 py-9 text-center shadow-[var(--shadow-soft)] backdrop-blur-2xl transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] sm:py-12",
+          "before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-60 before:mix-blend-screen before:transition-opacity before:duration-breathe before:content-['']",
+          "after:pointer-events-none after:absolute after:inset-[-35%] after:rounded-full after:bg-[radial-gradient(circle_at_top,rgba(162,255,217,0.18),transparent_65%)] after:opacity-0 after:transition-opacity after:duration-breathe",
           isDragging &&
-            "border-[color:var(--glass-border-strong)] shadow-glass before:opacity-80 after:opacity-60"
+            "border-[color:var(--glass-border-strong)] shadow-glass before:opacity-90 after:opacity-80"
         )}
       >
-        <span className="absolute right-6 top-6 inline-flex items-center gap-1 rounded-pill bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-400 shadow-soft backdrop-blur-glass">
+        <span className={cn("absolute right-6 top-6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]", chipClass)}>
           Max 5MB
         </span>
-        <div className="flex items-center gap-2 rounded-pill bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_26%)] px-4 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur-soft">
-          <FileText className="h-4 w-4" aria-hidden="true" />
+        <div className="flex items-center gap-2 rounded-pill border border-[color:color-mix(in_oklab,var(--glass-border),transparent_30%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-4 py-2 text-xs font-semibold text-emerald-100 shadow-soft backdrop-blur-xl">
+          <FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" />
           <span>PDF</span>
-          <span className="mx-1 text-ink-soft/60">|</span>
+          <span className="text-emerald-200/70">&amp;</span>
           <span>DOCX</span>
         </div>
-        <UploadCloud className="h-11 w-11 text-emerald-400" aria-hidden="true" />
+        <span className="relative inline-flex items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-emerald-400/15 blur-3xl" aria-hidden="true" />
+          <span className="relative inline-flex h-14 w-14 items-center justify-center rounded-full border border-[color:color-mix(in_oklab,var(--glass-border-strong),transparent_10%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] shadow-[0_24px_62px_-28px_rgba(8,140,104,0.85)] backdrop-blur-2xl">
+            <UploadCloud className="h-7 w-7 text-emerald-300 drop-shadow-[0_8px_18px_rgba(5,120,95,0.65)]" aria-hidden="true" />
+          </span>
+        </span>
         <p className="text-base font-semibold text-ink">
           Drop your resume here or click to browse
         </p>
@@ -220,7 +229,7 @@ export default function UploadCard({
       />
 
       {fileName && (
-        <div className="flex items-center justify-between rounded-lg bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_22%)] px-4 py-3 text-sm text-ink shadow-soft backdrop-blur-soft">
+        <div className="flex items-center justify-between rounded-lg border border-[color:color-mix(in_oklab,var(--glass-border),transparent_32%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_16%)] px-4 py-3 text-sm text-ink shadow-soft backdrop-blur-xl">
           <span className="truncate font-medium">{fileName}</span>
           <button
             type="button"
@@ -236,7 +245,7 @@ export default function UploadCard({
 
       <div className="space-y-3 text-center sm:text-left">
         <div className="flex items-center gap-2 text-sm font-semibold text-ink sm:justify-start justify-center">
-          <ClipboardPenLine className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+          <ClipboardPenLine className="h-4 w-4 text-emerald-300 drop-shadow-[0_4px_12px_rgba(8,120,96,0.75)]" aria-hidden="true" />
           <span>Paste resume text instead</span>
         </div>
         <Input
@@ -244,7 +253,7 @@ export default function UploadCard({
           placeholder="Paste resume text…"
           value={textValue}
           onChange={(event) => onTextChange?.(event.target.value)}
-          inputClassName="min-h-[160px]"
+          inputClassName="min-h-[160px] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)]"
           aria-label="Paste resume text instead"
         />
         {textHelper && (

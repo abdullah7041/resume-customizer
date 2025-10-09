@@ -13,6 +13,12 @@ const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
 const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-64rem]";
 
+const heroIconCircleClass =
+  "relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[color:color-mix(in_oklab,var(--glass-border-strong),transparent_28%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_16%)] text-[color:var(--secondary)] shadow-[0_28px_68px_-32px_rgba(6,110,82,0.9)] backdrop-blur-2xl before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-80 before:mix-blend-screen before:content-[''] after:pointer-events-none after:absolute after:inset-[-28%] after:rounded-full after:bg-[radial-gradient(circle_at_top,rgba(162,255,217,0.16),transparent_70%)] after:opacity-0 after:transition-opacity after:duration-breathe";
+
+const heroTileClass =
+  "group relative overflow-hidden rounded-[calc(var(--radius-card)*0.84)] border border-[color:color-mix(in_oklab,var(--glass-border),transparent_15%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 text-left text-ink shadow-[var(--shadow-soft)] backdrop-blur-2xl transition-[transform,box-shadow,background-color] duration-breathe ease-snappy before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-60 before:mix-blend-screen before:transition-opacity before:duration-breathe before:content-[''] after:pointer-events-none after:absolute after:inset-[-40%] after:rounded-full after:bg-[radial-gradient(circle_at_top,rgba(32,185,148,0.16),transparent_70%)] after:opacity-0 after:transition-opacity after:duration-breathe hover:-translate-y-[2px] hover:after:opacity-90 hover:shadow-[var(--shadow-lift)]";
+
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") {
     return false;
@@ -23,19 +29,11 @@ const getPrefersReducedMotion = () => {
 
 export default function Header() {
   const { user, signInWithGoogle, signOut } = useAuth();
-  const skylineUrl = useMemo(() => {
-    const url = getSkylineUrl();
-    console.log("[hero] Skyline URL:", url);
-    return url;
-  }, []);
+  const skylineUrl = useMemo(() => getSkylineUrl(), []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
   const isFallbackSkyline = useMemo(
-    () => {
-      const isFallback = typeof skylineUrl === "string" && skylineUrl.startsWith("data:image/");
-      console.log("[hero] Is fallback skyline:", isFallback);
-      return isFallback;
-    },
+    () => typeof skylineUrl === "string" && skylineUrl.startsWith("data:image/"),
     [skylineUrl]
   );
   const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
@@ -45,30 +43,17 @@ export default function Header() {
   const heroAnimatedRef = useRef(initialReducedMotion);
   const workflowAnimatedRef = useRef(initialReducedMotion);
 
-  // Debug state changes
-  useEffect(() => {
-    console.log("[hero] State update:", {
-      skylineUrl: skylineUrl ? `${skylineUrl.substring(0, 60)}...` : null,
-      skylineLoaded,
-      animateSkyline,
-      isFallbackSkyline,
-    });
-  }, [skylineUrl, skylineLoaded, animateSkyline, isFallbackSkyline]);
-
   // Preload skyline image
   useEffect(() => {
     if (typeof window === "undefined" || !skylineUrl) {
       return undefined;
     }
 
-    console.log("[hero] Preloading skyline:", skylineUrl);
     const img = new Image();
     img.onload = () => {
-      console.log("[hero] Skyline loaded successfully");
       setSkylineLoaded(true);
     };
-    img.onerror = (error) => {
-      console.warn("[hero] Failed to load skyline image:", skylineUrl, error);
+    img.onerror = () => {
       setSkylineLoaded(false);
     };
     img.src = skylineUrl;
@@ -84,7 +69,6 @@ export default function Header() {
       return undefined;
     }
 
-    console.log("[hero] Setting animation state:", { skylineLoaded, isFallbackSkyline });
     setAnimateSkyline(true);
     const timer = setTimeout(() => setAnimateSkyline(false), 1800);
     return () => clearTimeout(timer);
@@ -194,11 +178,12 @@ export default function Header() {
                 enableArabicBrand ? ` — ${arabicBrandName}` : ""
               } — By Abdullah bin Ahmed`}
             >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--accent)] shadow-[0_18px_48px_-28px_rgba(12,90,60,0.85)] backdrop-blur-glass">
-                <Sparkles className="h-5 w-5" aria-hidden="true" />
+              <span className="relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[color:color-mix(in_oklab,var(--glass-border-strong),transparent_30%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] text-[color:var(--secondary)] shadow-[0_26px_58px_-30px_rgba(8,118,90,0.92)] backdrop-blur-xl">
+                <span className="absolute inset-0 bg-[image:var(--glass-reflection)] opacity-80 mix-blend-screen" aria-hidden="true" />
+                <Sparkles className="relative h-5 w-5 drop-shadow-[0_8px_18px_rgba(9,120,96,0.7)]" aria-hidden="true" />
               </span>
               <div className="flex flex-col gap-1 text-left">
-                <p className="text-[15px] font-semibold uppercase tracking-[0.20em] text-accent-400/90" style={{ fontFamily: '"Comic Sans MS"'}}>
+                <p className="text-[15px] font-semibold uppercase tracking-[0.20em] text-accent-400/90">
                   AI Resume Optimizer
                 </p>
                 {enableArabicBrand ? (
@@ -214,7 +199,7 @@ export default function Header() {
                     {arabicBrandName}
                   </p>
                 ) : null}
-                <p className="text-sm font-semibold uppercase tracking-[0.20em] text-surface-50/90" style={{ fontFamily: '"Comic Sans MS"'}}>
+                <p className="text-sm font-semibold uppercase tracking-[0.20em] text-surface-50/90">
                   By Abdullah bin Ahmed
                 </p>
               </div>
@@ -256,24 +241,27 @@ export default function Header() {
             >
               Designed for Saudi ambition
             </span>
-            <div className="relative max-w-2xl rounded-[var(--radius-card)] border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-6 text-center shadow-[var(--shadow-soft)] backdrop-blur-glass transition-shadow duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8 sm:text-left">
+            <div className="relative max-w-2xl overflow-hidden rounded-[var(--radius-card)] border border-[color:color-mix(in_oklab,var(--glass-border),transparent_20%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-6 text-center shadow-[var(--shadow-soft)] backdrop-blur-2xl transition-[box-shadow,transform] duration-300 ease-[var(--transition-snappy)] sm:p-7 lg:p-8 sm:text-left">
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[image:var(--glass-reflection)] opacity-70 mix-blend-screen" />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_-12%,rgba(160,255,217,0.14),transparent_68%)]" />
               <span
                 aria-hidden="true"
                 className="absolute -top-8 left-6 text-accent-400 drop-shadow-[0_0_12px_rgba(197,166,106,0.35)]"
               >
                 <Sparkles className="h-7 w-7" aria-hidden="true" />
               </span>
-              <h1 className="text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-surface-50 sm:text-5xl lg:text-6xl">
+              <h1 className="relative text-balance text-shadow-hero text-4xl font-semibold leading-tight tracking-tight text-surface-50 sm:text-5xl lg:text-6xl">
                 AI Resume Optimizer
               </h1>
-              <p className="text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90 sm:text-lg sm:max-w-none">
+              <p className="relative text-balance text-pretty text-shadow-hero mt-4 max-w-xl text-base leading-relaxed text-surface-50/90 sm:text-lg sm:max-w-none">
                 Transform your experience into a story. Our AI analyzes, matches, and optimizes your resume.
               </p>
             </div>
             <dl className="grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur-glass transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] hover:shadow-[var(--shadow-lift)]",
+                  heroTileClass,
+                  "text-center sm:text-left",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -287,12 +275,13 @@ export default function Header() {
                     : undefined
                 }
               >
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Smart Parsing</dt>
-                <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Clean resume text</dd>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-200/80">Smart Parsing</dt>
+                <dd className="mt-2 text-lg font-semibold text-surface-50">Clean resume text</dd>
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur-glass transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] hover:shadow-[var(--shadow-lift)]",
+                  heroTileClass,
+                  "text-center sm:text-left",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -306,12 +295,13 @@ export default function Header() {
                     : undefined
                 }
               >
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Match Score</dt>
-                <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Saudi market fit</dd>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-200/80">Match Score</dt>
+                <dd className="mt-2 text-lg font-semibold text-surface-50">Saudi market fit</dd>
               </div>
               <div
                 className={cn(
-                  "card-glow group rounded-2xl border border-transparent bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] p-4 text-[color:var(--ink)] shadow-[var(--shadow-soft)] backdrop-blur-glass transition-[box-shadow,background-color] duration-280 ease-[var(--transition-snappy)] hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_4%)] hover:shadow-[var(--shadow-lift)]",
+                  heroTileClass,
+                  "text-center sm:text-left",
                   prefersReducedMotion
                     ? ""
                     : "transform-gpu transition-[opacity,transform] duration-[280ms] ease-[var(--transition-snappy)]",
@@ -325,8 +315,8 @@ export default function Header() {
                     : undefined
                 }
               >
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-500 dark:text-surface-50/70">Polished Output</dt>
-                <dd className="mt-2 text-lg font-semibold text-ink-900 dark:text-surface-50">Optimized insights</dd>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-200/80">Polished Output</dt>
+                <dd className="mt-2 text-lg font-semibold text-surface-50">Optimized insights</dd>
               </div>
             </dl>
           </div>
@@ -349,27 +339,27 @@ export default function Header() {
           >
             <h2 className="text-lg font-semibold tracking-wide text-ink-900 dark:text-surface-50 sm:text-left text-center">Your Saudi-ready workflow</h2>
             <ul className="mt-6 space-y-5 text-sm text-ink-500 dark:text-surface-50/85">
-              <li className="flex items-start gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--secondary)] shadow-[0_16px_42px_-30px_rgba(14,93,63,0.9)]">
-                  <FileText className="h-4 w-4" aria-hidden="true" />
+              <li className="group flex items-start gap-3">
+                <span className={cn(heroIconCircleClass, "mt-1 h-11 w-11 flex-shrink-0 sm:mt-0 sm:h-12 sm:w-12 after:opacity-70 group-hover:after:opacity-100")}>
+                  <FileText className="h-4 w-4 drop-shadow-[0_6px_14px_rgba(10,120,96,0.6)]" aria-hidden="true" />
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Upload or paste your resume</p>
                   <p className="text-xs text-ink-500 dark:text-surface-50/70">Glassmorphic card with drag & drop, paste, and progress tracking.</p>
                 </div>
               </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--secondary)] shadow-[0_16px_42px_-30px_rgba(14,93,63,0.9)]">
-                  <Target className="h-4 w-4" aria-hidden="true" />
+              <li className="group flex items-start gap-3">
+                <span className={cn(heroIconCircleClass, "mt-1 h-11 w-11 flex-shrink-0 sm:mt-0 sm:h-12 sm:w-12 after:opacity-70 group-hover:after:opacity-100")}>
+                  <Target className="h-4 w-4 drop-shadow-[0_6px_14px_rgba(10,120,96,0.6)]" aria-hidden="true" />
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Match against Saudi job roles</p>
                   <p className="text-xs text-ink-500 dark:text-surface-50/70">Get a confidence score, missing keywords, and guidance.</p>
                 </div>
               </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-primary-soft)] text-[color:var(--secondary)] shadow-[0_16px_42px_-30px_rgba(14,93,63,0.9)]">
-                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+              <li className="group flex items-start gap-3">
+                <span className={cn(heroIconCircleClass, "mt-1 h-11 w-11 flex-shrink-0 sm:mt-0 sm:h-12 sm:w-12 after:opacity-70 group-hover:after:opacity-100")}>
+                  <Sparkles className="h-4 w-4 drop-shadow-[0_6px_14px_rgba(10,120,96,0.6)]" aria-hidden="true" />
                 </span>
                 <div>
                   <p className="font-semibold text-ink-900 dark:text-surface-50">Optimize with precision</p>
@@ -396,16 +386,9 @@ export default function Header() {
               skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
               skylineLoaded ? "opacity-100" : "opacity-0"
             )}
-            style={{ 
+            style={{
               backgroundImage: `url('${skylineUrl}')`,
               backgroundPosition: '50% 35%'
-            }}
-            ref={(el) => {
-              if (el && skylineLoaded) {
-                console.log("[hero] Skyline div rendered with classes:", el.className);
-                console.log("[hero] Background image style:", el.style.backgroundImage);
-                console.log("[hero] Computed opacity:", window.getComputedStyle(el).opacity);
-              }
             }}
           />
         </>

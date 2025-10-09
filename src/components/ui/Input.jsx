@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { cn } from "../../lib/cn";
 
 export const Input = forwardRef(function Input(
@@ -8,13 +8,39 @@ export const Input = forwardRef(function Input(
     helperText,
     error,
     multiline = false,
+    autoSize = multiline,
     className,
     inputClassName,
     ...props
   },
-  ref
+  forwardedRef
 ) {
+  const { value, defaultValue, ...restProps } = props;
+  const internalRef = useRef(null);
+  useImperativeHandle(forwardedRef, () => internalRef.current);
+
   const Component = multiline ? "textarea" : "input";
+
+  useEffect(() => {
+    if (!multiline || !autoSize) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const element = internalRef.current;
+    if (!element) {
+      return;
+    }
+
+    element.style.height = "auto";
+    const computed = window.getComputedStyle(element);
+    const minHeight = Number.parseFloat(computed.minHeight ?? "0") || 0;
+    const nextHeight = Math.max(element.scrollHeight, minHeight);
+    element.style.height = `${nextHeight}px`;
+  }, [autoSize, multiline, value, defaultValue]);
 
   return (
     <label className={cn("group/input block space-y-2", className)}>
@@ -29,16 +55,20 @@ export const Input = forwardRef(function Input(
       )}
       <div className="relative">
         <Component
-          ref={ref}
+          ref={internalRef}
           className={cn(
             "peer block w-full rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_6%)] bg-clip-padding px-4 py-3 text-sm text-ink shadow-soft transition-all duration-snappy ease-snappy placeholder:text-ink-soft/70 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--button-primary-focus)] focus:ring-offset-2 focus:ring-offset-[color:var(--surface)]",
-            multiline ? "min-h-[160px] resize-y" : "h-12",
+            multiline
+              ? "min-h-[160px] resize-none overflow-hidden leading-relaxed"
+              : "h-12",
             "hover:border-[color:var(--glass-border-strong)] hover:shadow-lift backdrop-blur-soft",
             error && "border-[color:var(--color-danger-500)] focus:ring-[color:var(--color-danger-500)]",
             inputClassName
           )}
           aria-invalid={Boolean(error) || undefined}
-          {...props}
+          value={value}
+          defaultValue={defaultValue}
+          {...restProps}
         />
         <span
           aria-hidden="true"
