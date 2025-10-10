@@ -56,6 +56,13 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("Match Score");
   });
 
+  it("preserves utf-8 characters in export html", () => {
+    const resumeDocument = { plainText: "محمد علي\nSenior Engineer – تجربة" };
+    const html = buildExportHtml({ resumeDocument });
+    expect(html).toContain("محمد علي");
+    expect(html).toContain("تجربة");
+  });
+
   it("builds ATS-friendly export html", () => {
     const html = buildPlainExportHtml({
       resumeDocument: { plainText: sampleResume, bullets: ["• Launched product"], sections: [] },
