@@ -58,7 +58,7 @@
   #app-root {
     background: transparent;
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: hidden;
   }
 
   .dark body {
@@ -405,7 +405,7 @@
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgba(11, 107, 58, 0.28) 0%,
+      rgba(25, 206, 112, 0.28) 0%,
       rgba(20, 99, 86, 0.22) 50%,
       rgba(12, 83, 53, 0.28) 100%
     );
