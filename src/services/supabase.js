@@ -1,6 +1,8 @@
 // src/services/supabase.js
 import { createClient } from "@supabase/supabase-js";
 
+import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
+
 const { VITE_SUPABASE_URL: supabaseUrl, VITE_SUPABASE_ANON_KEY: supabaseAnonKey } =
   import.meta.env ?? {};
 
@@ -127,6 +129,25 @@ const ensureSupportedDocument = (file) => {
   };
 };
 
+const ensureStoragePath = (value) => {
+  if (typeof value !== "string") {
+    throw new AppError({
+      code: "download/invalid-path",
+      message: "Resume file path must be a string.",
+      hint: "Retry the request or upload the resume again.",
+    });
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new AppError({
+      code: "download/invalid-path",
+      message: "Resume file path is missing.",
+      hint: "Upload the resume again to regenerate storage metadata.",
+    });
+  }
+  return trimmed;
+};
+
 export const uploadResumeFile = async (file, { onProgress } = {}) => {
   const { mime, extension, baseKey } = ensureSupportedDocument(file);
 
@@ -229,4 +250,55 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
       lastConflictError?.message ||
       "Rename the file and try again, or delete older copies from storage.",
   });
+};
+
+export const fetchResumePlainTextFromStorage = async (
+  path,
+  { bucket = RESUME_BUCKET } = {}
+) => {
+  const normalizedPath = ensureStoragePath(path);
+  const storageBucket = supabase.storage.from(bucket);
+  const { data, error } = await storageBucket.download(normalizedPath);
+
+  if (error || !data) {
+    const status = error?.statusCode ?? error?.status ?? null;
+    if (status === 404) {
+      throw new AppError({
+        code: "download/not-found",
+        message: "We couldn't locate the stored resume in Supabase Storage.",
+        hint: "Upload the resume again and retry.",
+      });
+    }
+
+    throw new AppError({
+      code: "download/storage-failure",
+      message: "We couldn't retrieve your stored resume.",
+      hint: error?.message || "Try again shortly.",
+    });
+  }
+
+  if (typeof data.arrayBuffer !== "function") {
+    throw new AppError({
+      code: "download/storage-failure",
+      message: "Supabase returned an unexpected resume payload.",
+      hint: "Re-upload the resume and try again.",
+    });
+  }
+
+  const arrayBuffer = await data.arrayBuffer();
+  const mimeType = inferMimeType({ mimeType: data.type, fileName: normalizedPath });
+  const blob = new Blob([arrayBuffer], { type: mimeType });
+  const plainText = await extractPlainTextFromArrayBuffer(arrayBuffer, {
+    mimeType,
+    fileName: normalizedPath,
+  });
+
+  return {
+    plainText: typeof plainText === "string" ? plainText.trim() : "",
+    blob,
+    mimeType,
+    arrayBuffer,
+    path: normalizedPath,
+    bucket,
+  };
 };
