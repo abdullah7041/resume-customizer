@@ -1,6 +1,8 @@
 import type { Handler } from "@netlify/functions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { extractPlainTextFromArrayBuffer, inferMimeType } from "../../src/lib/resumeText.js";
+
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -269,8 +271,15 @@ const fetchResumeText = async (resumeText: string | undefined, resumeFileId: str
     throw error;
   }
 
-  const text = await data.text();
-  return text;
+  const arrayBuffer = await data.arrayBuffer();
+  const downloadMime =
+    typeof (data as { type?: string })?.type === "string" ? (data as { type?: string }).type : undefined;
+  const mimeType = inferMimeType({ mimeType: downloadMime, fileName: resumeFileId });
+  const plainText = await extractPlainTextFromArrayBuffer(arrayBuffer, {
+    mimeType,
+    fileName: resumeFileId,
+  });
+  return typeof plainText === "string" ? plainText : "";
 };
 
 const handler: Handler = async (event) => {

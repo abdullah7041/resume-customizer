@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { uploadSpy, authMock, storageMock } = vi.hoisted(() => {
+const { uploadSpy, downloadSpy, authMock, storageMock } = vi.hoisted(() => {
   const uploadFn = vi.fn();
+  const downloadFn = vi.fn();
   const auth = { getUser: vi.fn() };
-  const storage = { from: vi.fn(() => ({ upload: uploadFn })) };
-  return { uploadSpy: uploadFn, authMock: auth, storageMock: storage };
+  const storage = { from: vi.fn(() => ({ upload: uploadFn, download: downloadFn })) };
+  return { uploadSpy: uploadFn, downloadSpy: downloadFn, authMock: auth, storageMock: storage };
 });
 
 vi.mock("@supabase/supabase-js", () => ({
@@ -14,7 +15,13 @@ vi.mock("@supabase/supabase-js", () => ({
   })),
 }));
 
-import { uploadResumeFile } from "../services/supabase.js";
+vi.mock("../lib/resumeText.js", () => ({
+  extractPlainTextFromArrayBuffer: vi.fn(async () => "Parsed resume"),
+  inferMimeType: vi.fn(({ mimeType, fileName }) => mimeType ?? (fileName?.endsWith(".pdf") ? "application/pdf" : "")),
+}));
+
+import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
+import { fetchResumePlainTextFromStorage, uploadResumeFile } from "../services/supabase.js";
 
 describe("supabase upload service", () => {
   const fixedDate = new Date(Date.UTC(2024, 1, 18, 15, 30, 45));
@@ -30,6 +37,9 @@ describe("supabase upload service", () => {
   beforeEach(() => {
     uploadSpy.mockReset();
     authMock.getUser.mockReset();
+    downloadSpy.mockReset();
+    extractPlainTextFromArrayBuffer.mockClear();
+    inferMimeType.mockClear();
     storageMock.from.mockClear();
     vi.setSystemTime(fixedDate);
   });
@@ -163,5 +173,49 @@ describe("supabase upload service", () => {
       message: expect.stringMatching(/missing user id/i),
     });
     expect(uploadSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchResumePlainTextFromStorage", () => {
+  beforeEach(() => {
+    downloadSpy.mockReset();
+    extractPlainTextFromArrayBuffer.mockClear();
+    inferMimeType.mockClear();
+    storageMock.from.mockClear();
+  });
+
+  it("downloads and parses resume text", async () => {
+    const arrayBuffer = new TextEncoder().encode("dummy").buffer;
+    const arrayBufferMock = vi.fn(async () => arrayBuffer);
+    downloadSpy.mockResolvedValueOnce({ data: { arrayBuffer: arrayBufferMock, type: "application/pdf" }, error: null });
+
+    const result = await fetchResumePlainTextFromStorage("user-1/resumes/file.pdf");
+
+    expect(storageMock.from).toHaveBeenCalledWith("resumes");
+    expect(downloadSpy).toHaveBeenCalledWith("user-1/resumes/file.pdf");
+    expect(arrayBufferMock).toHaveBeenCalled();
+    expect(inferMimeType).toHaveBeenCalledWith({ mimeType: "application/pdf", fileName: "user-1/resumes/file.pdf" });
+    expect(extractPlainTextFromArrayBuffer).toHaveBeenCalledWith(arrayBuffer, {
+      mimeType: "application/pdf",
+      fileName: "user-1/resumes/file.pdf",
+    });
+    expect(result).toMatchObject({
+      plainText: "Parsed resume",
+      mimeType: "application/pdf",
+      path: "user-1/resumes/file.pdf",
+      bucket: "resumes",
+    });
+  });
+
+  it("throws when path is empty", async () => {
+    await expect(fetchResumePlainTextFromStorage("   ")).rejects.toMatchObject({ code: "download/invalid-path" });
+    expect(downloadSpy).not.toHaveBeenCalled();
+  });
+
+  it("maps storage 404 errors", async () => {
+    downloadSpy.mockResolvedValueOnce({ data: null, error: { statusCode: 404 } });
+    await expect(fetchResumePlainTextFromStorage("missing.pdf")).rejects.toMatchObject({
+      code: "download/not-found",
+    });
   });
 });
