@@ -17,6 +17,11 @@ export default defineConfig({
       },
     },
   ],
+  build: {
+    rollupOptions: {
+      external: ["path2d"]
+    }
+  },
   test: {
     environment: "happy-dom",        // <-- switch from jsdom
     globals: true,
