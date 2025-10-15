@@ -407,7 +407,7 @@ export default function MainContent() {
   }, [pushToast]);
 
   const handleExportPdf = useCallback(
-    (variant) => {
+    async (variant) => {
       if (!resumeData?.plainText) {
         pushToast({
           type: "warning",
@@ -420,7 +420,7 @@ export default function MainContent() {
       const normalizedVariant = variant === "ats-plain" ? "ats-plain" : "styled";
 
       try {
-        exportResumeToPdf({
+        await exportResumeToPdf({
           resumeDocument: resumeData,
           jobDescription,
           matchAnalysis,
@@ -430,14 +430,14 @@ export default function MainContent() {
         });
         pushToast({
           type: "success",
-          title: "Export ready",
-          description: "Use your browser dialog to save the PDF preview.",
+          title: "Export successful",
+          description: "Your resume PDF has been downloaded.",
         });
       } catch (error) {
         pushToast({
           type: "danger",
-          title: "Export blocked",
-          description: error?.message || "Enable pop-ups and try again.",
+          title: "Export failed",
+          description: error?.message || "Unable to generate PDF. Please try again.",
         });
       }
     },

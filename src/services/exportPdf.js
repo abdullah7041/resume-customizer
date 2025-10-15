@@ -1,3 +1,4 @@
+import html2pdf from "html2pdf.js";
 import { buildResumeDocument } from "../../shared/normalize-resume.js";
 
 const SECTION_KEYWORDS = {
@@ -320,8 +321,26 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
 
   const contactContent =
     contact.entries.length > 0
-      ? `<ul class="contact-list">${contact.entries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-      : ''; // Return empty string for ATS compatibility - no placeholder text
+      ? `<p class="contact-line">${contact.entries.map((item) => escapeHtml(item)).join(" • ")}</p>`
+      : '';
+
+  // Split skills into technical and soft skills for two-column layout
+  const allSkills = Array.from(new Set([...sections.skills, ...(keywords?.add || [])]));
+  const midPoint = Math.ceil(allSkills.length / 2);
+  const technicalSkills = allSkills.slice(0, midPoint);
+  const softSkills = allSkills.slice(midPoint);
+
+  const buildSkillColumn = (skills, title) => {
+    if (!skills || skills.length === 0) return '';
+    return `
+      <div class="skill-column">
+        <h3 class="skill-category">${escapeHtml(title)}</h3>
+        <ul class="skill-list">
+          ${skills.map((skill) => `<li>${escapeHtml(skill)}</li>`).join("")}
+        </ul>
+      </div>
+    `;
+  };
 
   return `<!doctype html>
 <html lang="en">
@@ -329,36 +348,212 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
     <meta charset="utf-8" />
     <title>Resume Export</title>
     <style>
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; font-family: 'Inter', 'Tajawal', system-ui, -apple-system, sans-serif; color: #111827; background: #ffffff; }
-      body { padding: 32px; }
-      @media print { body { margin: 0; padding: 24px; } }
-      .page { max-width: 210mm; margin: 0 auto; background: #ffffff; border: 1px solid #d1d5db; padding: 32px 40px; }
-      .page-header { border-bottom: 1px solid #d1d5db; padding-bottom: 16px; margin-bottom: 24px; }
-      .page-header h1 { font-size: 28px; letter-spacing: 0.02em; margin: 0; text-transform: uppercase; }
-      .contact-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12px; color: #334155; }
-      .section { margin-bottom: 20px; }
-      .section h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.22em; margin-bottom: 10px; color: #0b6b3a; }
-      .section p { margin: 0 0 8px; line-height: 1.6; font-size: 13px; }
-      .stack { list-style: disc; padding-left: 20px; margin: 0; display: grid; gap: 6px; font-size: 13px; line-height: 1.5; }
-      .stack li { padding-left: 4px; }
-      .skills { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 12px; }
-      .skills li { background: rgba(11, 107, 58, 0.08); color: #0b5335; padding: 4px 10px; border-radius: 999px; }
-      .muted { color: #475569; font-size: 12px; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { 
+        font-family: 'Georgia', 'Merriweather', 'Times New Roman', serif; 
+        color: #1a1a1a; 
+        background: #ffffff; 
+        font-size: 11pt;
+        line-height: 1.6;
+      }
+      body { padding: 0.75in; max-width: 8.5in; margin: 0 auto; }
+      
+      /* Header - Centered name and contact */
+      .resume-header { 
+        text-align: center; 
+        border-bottom: 2px solid #1a1a1a; 
+        padding-bottom: 16px; 
+        margin-bottom: 24px; 
+      }
+      .resume-header h1 { 
+        font-size: 24pt; 
+        font-weight: 700; 
+        letter-spacing: 0.05em; 
+        margin-bottom: 8px; 
+        text-transform: uppercase;
+      }
+      .contact-line { 
+        font-size: 10pt; 
+        color: #444; 
+        font-family: 'Arial', 'Helvetica', sans-serif;
+      }
+      
+      /* Section with left rule */
+      .resume-section { 
+        margin-bottom: 20px; 
+        page-break-inside: avoid;
+      }
+      .section-header { 
+        display: flex; 
+        align-items: center; 
+        margin-bottom: 12px;
+        gap: 12px;
+      }
+      .section-rule { 
+        width: 40px; 
+        height: 1px; 
+        background-color: #1a1a1a; 
+        flex-shrink: 0;
+      }
+      .section-title { 
+        font-size: 12pt; 
+        font-weight: 700; 
+        text-transform: uppercase; 
+        letter-spacing: 0.08em;
+        flex-grow: 1;
+      }
+      
+      /* Content */
+      .section-content { 
+        padding-left: 52px; 
+      }
+      .section-content p { 
+        margin-bottom: 8px; 
+        text-align: justify;
+      }
+      
+      /* Two-column skills layout */
+      .skills-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 20px;
+        padding-left: 52px;
+      }
+      .skill-column { }
+      .skill-category { 
+        font-size: 10pt; 
+        font-weight: 700; 
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .skill-list { 
+        list-style: none; 
+        padding-left: 0;
+      }
+      .skill-list li { 
+        padding: 3px 0; 
+        font-size: 10pt;
+        font-family: 'Arial', 'Helvetica', sans-serif;
+      }
+      .skill-list li:before { 
+        content: "• "; 
+        color: #666;
+        margin-right: 6px;
+      }
+      
+      /* Lists */
+      .content-list { 
+        list-style: none; 
+        padding-left: 52px;
+      }
+      .content-list li { 
+        margin-bottom: 6px; 
+        padding-left: 16px;
+        position: relative;
+      }
+      .content-list li:before { 
+        content: "▪"; 
+        position: absolute;
+        left: 0;
+        color: #333;
+      }
+      
+      .stack { 
+        list-style: none; 
+        padding-left: 0;
+        margin-bottom: 8px;
+      }
+      .stack li { 
+        margin-bottom: 4px; 
+        padding-left: 16px;
+        position: relative;
+      }
+      .stack li:before { 
+        content: "•"; 
+        position: absolute;
+        left: 0;
+        color: #666;
+      }
+      
+      .muted { 
+        color: #666; 
+        font-size: 9pt; 
+        font-style: italic;
+        margin-top: 4px;
+      }
+      
+      @media print {
+        body { padding: 0.5in; }
+        .resume-section { page-break-inside: avoid; }
+      }
     </style>
   </head>
   <body>
-    <article class="page">
-      ${contact.name ? `<header class="page-header">
+    <div class="resume">
+      ${contact.name ? `
+      <header class="resume-header">
         <h1>${escapeHtml(contact.name)}</h1>
+        ${contactContent}
       </header>` : ''}
-      ${buildSection("Contact", contactContent)}
-      ${buildSection("Summary", summaryHtml + jdSnippet)}
-      ${buildSection("Skills", skillsHtml)}
-      ${buildSection("Experience", experienceHtml)}
-      ${buildSection("Education", educationHtml)}
-      ${buildSection("Projects", projectsHtml)}
-    </article>
+      
+      ${summaryHtml || jdSnippet ? `
+      <section class="resume-section">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <h2 class="section-title">Professional Summary</h2>
+        </div>
+        <div class="section-content">
+          ${summaryHtml}
+          ${jdSnippet}
+        </div>
+      </section>` : ''}
+      
+      ${allSkills.length > 0 ? `
+      <section class="resume-section">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <h2 class="section-title">Skills</h2>
+        </div>
+        <div class="skills-grid">
+          ${buildSkillColumn(technicalSkills, "Technical Skills")}
+          ${buildSkillColumn(softSkills, "Soft Skills")}
+        </div>
+      </section>` : ''}
+      
+      ${sections.experience.length > 0 ? `
+      <section class="resume-section">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <h2 class="section-title">Experience</h2>
+        </div>
+        <ul class="content-list">
+          ${sections.experience.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
+      </section>` : ''}
+      
+      ${sections.education.length > 0 ? `
+      <section class="resume-section">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <h2 class="section-title">Education</h2>
+        </div>
+        <ul class="content-list">
+          ${sections.education.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
+      </section>` : ''}
+      
+      ${sections.projects.length > 0 ? `
+      <section class="resume-section">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <h2 class="section-title">Projects</h2>
+        </div>
+        <ul class="content-list">
+          ${sections.projects.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
+      </section>` : ''}
+    </div>
   </body>
 </html>`;
 };
@@ -459,46 +654,6 @@ const buildPlainExportHtml = ({
 </html>`;
 };
 
-const triggerPrint = (html) => {
-  if (typeof document === "undefined") {
-    throw new Error("Export is only available in the browser.");
-  }
-
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-
-  const remove = () => {
-    iframe.parentNode?.removeChild(iframe);
-  };
-
-  const frameDocument = iframe.contentWindow?.document || iframe.contentDocument;
-  if (!frameDocument) {
-    remove();
-    throw new Error("Unable to prepare export frame.");
-  }
-
-  frameDocument.open();
-  frameDocument.write(html);
-  frameDocument.close();
-
-  setTimeout(() => {
-    const frameWindow = iframe.contentWindow;
-    if (!frameWindow) {
-      remove();
-      return;
-    }
-    frameWindow.focus();
-    frameWindow.print();
-    setTimeout(remove, 800);
-  }, 220);
-};
-
 const normalizeVariant = (variant = "styled") => {
   if (typeof variant !== "string") {
     return "styled";
@@ -510,7 +665,7 @@ const normalizeVariant = (variant = "styled") => {
   return "styled";
 };
 
-export const exportResumeToPdf = ({
+export const exportResumeToPdf = async ({
   resumeDocument,
   resumeText = "",
   jobDescription = "",
@@ -522,8 +677,47 @@ export const exportResumeToPdf = ({
   const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
   const normalizedVariant = normalizeVariant(variant);
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
-  triggerPrint(html);
-  return true;
+  
+  // Create a temporary container to hold the HTML
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  document.body.appendChild(container);
+  
+  try {
+    // Configure html2pdf options for high-quality output
+    const options = {
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename: `resume-${Date.now()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        letterRendering: true,
+        logging: false
+      },
+      jsPDF: { 
+        unit: 'in', 
+        format: 'letter', 
+        orientation: 'portrait',
+        compress: true
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+    
+    // Generate and download the PDF
+    await html2pdf().set(options).from(container).save();
+    
+    return true;
+  } catch (error) {
+    console.error('PDF export failed:', error);
+    throw new Error('Failed to generate PDF. Please try again.');
+  } finally {
+    // Clean up the temporary container
+    document.body.removeChild(container);
+  }
 };
 
 export { buildExportHtml, buildPlainExportHtml, normalizeVariant };

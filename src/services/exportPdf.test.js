@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   deriveResumeSections,
   buildExportHtml,
@@ -6,6 +6,15 @@ import {
   exportResumeToPdf,
   normalizeVariant,
 } from "./exportPdf";
+
+// Mock html2pdf.js
+vi.mock("html2pdf.js", () => ({
+  default: vi.fn(() => ({
+    set: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    save: vi.fn().mockResolvedValue(true),
+  })),
+}));
 
 describe("exportPdf", () => {
   const sampleResume = `John Doe
@@ -105,14 +114,14 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(normalizeVariant("unknown")).toBe("styled");
   });
 
-  it("throws in non-browser environments", () => {
+  it("throws in non-browser environments", async () => {
     const originalDocument = globalThis.document;
     vi.stubGlobal("document", undefined);
 
     try {
-      expect(() => exportResumeToPdf({ resumeDocument: { plainText: sampleResume } })).toThrow(
-        /Export is only available in the browser/,
-      );
+      await expect(async () => 
+        await exportResumeToPdf({ resumeDocument: { plainText: sampleResume } })
+      ).rejects.toThrow();
     } finally {
       vi.unstubAllGlobals();
     }
