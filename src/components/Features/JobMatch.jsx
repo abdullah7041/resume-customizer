@@ -214,12 +214,14 @@ export default function JobMatch({
                         <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500 opacity-80">
                           Match
                         </span>
-                        <span className="mt-2 text-4xl font-bold tracking-tight">
-                          {score == null ? "—" : score}
+                        <div className="mt-2 flex items-baseline justify-center gap-0.5">
+                          <span className="text-4xl font-bold tracking-tight leading-none">
+                            {score == null ? "—" : score}
+                          </span>
                           {score != null && (
-                            <span className="text-base font-semibold text-ink-soft opacity-80">/100</span>
+                            <span className="text-base font-semibold text-ink-soft opacity-80 leading-none">/100</span>
                           )}
-                        </span>
+                        </div>
                       </div>
                     </div>
                   </div>

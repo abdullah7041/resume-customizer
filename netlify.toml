@@ -6,6 +6,17 @@
   NODE_VERSION = "20"
   SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
 
+[functions]
+  node_bundler = "esbuild"
+
+[[functions]]
+  path = "/.netlify/functions/ai"
+  node_bundler = "esbuild"
+
+[[functions]]
+  path = "/.netlify/functions/optimize"
+  node_bundler = "esbuild"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -350,142 +350,158 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { 
-        font-family: 'Georgia', 'Merriweather', 'Times New Roman', serif; 
-        color: #1a1a1a; 
+        font-family: 'Calibri', 'Arial', 'Helvetica', sans-serif; 
+        color: #212529; 
         background: #ffffff; 
         font-size: 11pt;
-        line-height: 1.6;
+        line-height: 1.5;
       }
-      body { padding: 0.75in; max-width: 8.5in; margin: 0 auto; }
+      body { padding: 0.5in 0.75in; max-width: 8.5in; margin: 0 auto; }
       
-      /* Header - Centered name and contact */
+      /* Header - Professional centered name and contact */
       .resume-header { 
         text-align: center; 
-        border-bottom: 2px solid #1a1a1a; 
-        padding-bottom: 16px; 
-        margin-bottom: 24px; 
+        border-bottom: 2.5px solid #2c3e50; 
+        padding-bottom: 14px; 
+        margin-bottom: 20px; 
       }
       .resume-header h1 { 
-        font-size: 24pt; 
+        font-size: 26pt; 
         font-weight: 700; 
-        letter-spacing: 0.05em; 
-        margin-bottom: 8px; 
+        letter-spacing: 0.08em; 
+        margin-bottom: 6px; 
         text-transform: uppercase;
+        color: #1a252f;
       }
       .contact-line { 
-        font-size: 10pt; 
-        color: #444; 
-        font-family: 'Arial', 'Helvetica', sans-serif;
+        font-size: 9.5pt; 
+        color: #495057; 
+        font-family: 'Calibri', 'Arial', sans-serif;
+        line-height: 1.4;
       }
       
-      /* Section with left rule */
+      /* Section styling with professional appearance */
       .resume-section { 
-        margin-bottom: 20px; 
+        margin-bottom: 18px; 
         page-break-inside: avoid;
       }
       .section-header { 
         display: flex; 
         align-items: center; 
-        margin-bottom: 12px;
-        gap: 12px;
+        margin-bottom: 10px;
+        gap: 10px;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 4px;
       }
       .section-rule { 
-        width: 40px; 
-        height: 1px; 
-        background-color: #1a1a1a; 
+        width: 35px; 
+        height: 2px; 
+        background-color: #2c3e50; 
         flex-shrink: 0;
       }
       .section-title { 
-        font-size: 12pt; 
+        font-size: 13pt; 
         font-weight: 700; 
         text-transform: uppercase; 
-        letter-spacing: 0.08em;
+        letter-spacing: 0.1em;
         flex-grow: 1;
+        color: #2c3e50;
       }
       
-      /* Content */
+      /* Content with proper spacing */
       .section-content { 
-        padding-left: 52px; 
+        padding-left: 45px; 
       }
       .section-content p { 
-        margin-bottom: 8px; 
+        margin-bottom: 7px; 
         text-align: justify;
+        line-height: 1.5;
       }
       
-      /* Two-column skills layout */
+      /* Two-column skills layout - ATS-friendly */
       .skills-grid { 
         display: grid; 
         grid-template-columns: 1fr 1fr; 
-        gap: 20px;
-        padding-left: 52px;
+        gap: 18px;
+        padding-left: 45px;
       }
       .skill-column { }
       .skill-category { 
-        font-size: 10pt; 
+        font-size: 10.5pt; 
         font-weight: 700; 
-        margin-bottom: 6px;
+        margin-bottom: 5px;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
+        color: #2c3e50;
       }
       .skill-list { 
         list-style: none; 
         padding-left: 0;
       }
       .skill-list li { 
-        padding: 3px 0; 
+        padding: 2.5px 0; 
         font-size: 10pt;
-        font-family: 'Arial', 'Helvetica', sans-serif;
+        font-family: 'Calibri', 'Arial', sans-serif;
+        line-height: 1.4;
       }
       .skill-list li:before { 
-        content: "• "; 
-        color: #666;
-        margin-right: 6px;
+        content: "■ "; 
+        color: #6c757d;
+        margin-right: 5px;
+        font-size: 8pt;
       }
       
-      /* Lists */
+      /* Lists with professional bullets */
       .content-list { 
         list-style: none; 
-        padding-left: 52px;
+        padding-left: 45px;
       }
       .content-list li { 
-        margin-bottom: 6px; 
-        padding-left: 16px;
+        margin-bottom: 5px; 
+        padding-left: 14px;
         position: relative;
+        line-height: 1.5;
       }
       .content-list li:before { 
         content: "▪"; 
         position: absolute;
         left: 0;
-        color: #333;
+        color: #495057;
+        font-size: 10pt;
       }
       
       .stack { 
         list-style: none; 
         padding-left: 0;
-        margin-bottom: 8px;
+        margin-bottom: 7px;
       }
       .stack li { 
         margin-bottom: 4px; 
-        padding-left: 16px;
+        padding-left: 14px;
         position: relative;
+        line-height: 1.5;
       }
       .stack li:before { 
         content: "•"; 
         position: absolute;
         left: 0;
-        color: #666;
+        color: #6c757d;
+        font-size: 9pt;
       }
       
       .muted { 
-        color: #666; 
+        color: #6c757d; 
         font-size: 9pt; 
         font-style: italic;
         margin-top: 4px;
+        line-height: 1.4;
       }
       
+      /* Print optimization */
       @media print {
-        body { padding: 0.5in; }
+        body { padding: 0.4in 0.6in; }
         .resume-section { page-break-inside: avoid; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       }
     </style>
   </head>

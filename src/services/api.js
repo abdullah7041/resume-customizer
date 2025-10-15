@@ -451,11 +451,13 @@ export const analyzeResume = async (resumeInput, jobText, options = {}) => {
     const scoreResponse = clampScore(data?.score);
 
     const fallback = buildFallbackMatch(resume, job);
-    const shouldFallback =
-      fallback &&
-      fallback.coverage > 0 &&
-      ((scoreResponse === 0 && coverageResponse === 0 && cosineResponse === 0) ||
-        (coverageResponse === 0 && fallback.coverage > 0.05));
+    
+    // Use fallback if:
+    // 1. All metrics are 0 but fallback shows overlap exists
+    // 2. Score is unrealistically low (< 10) when fallback shows substantial overlap (> 15%)
+    const allZero = scoreResponse === 0 && coverageResponse === 0 && cosineResponse === 0;
+    const unrealisticScore = scoreResponse > 0 && scoreResponse < 10 && fallback && fallback.coverage > 0.15;
+    const shouldFallback = fallback && fallback.coverage > 0 && (allZero || unrealisticScore);
 
     const coverage = shouldFallback ? fallback.coverage : coverageResponse;
     const cosine = shouldFallback ? fallback.cosine : cosineResponse;

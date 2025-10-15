@@ -37,7 +37,7 @@ const HEADERS = {
   "Content-Type": "application/json",
 } as const;
 
-const REQUEST_TIMEOUT = 15_000;
+const REQUEST_TIMEOUT = 25_000; // Increased from 15s to 25s
 
 const STOPWORDS = new Set([
   "a",
@@ -243,12 +243,16 @@ const postToOpenAI = async (body: Record<string, unknown>, apiKey: string, timeo
     const data = await response.json();
     if (!response.ok) {
       const message = typeof data?.error?.message === "string" ? data.error.message : "OpenAI request failed";
-      throw new Error(message);
+      const error = new Error(message);
+      (error as any).status = response.status;
+      throw error;
     }
     return data;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("OpenAI request timed out");
+      const timeoutError = new Error("OpenAI request timed out after " + (timeout / 1000) + "s");
+      (timeoutError as any).code = "TIMEOUT";
+      throw timeoutError;
     }
     throw error;
   } finally {
@@ -274,7 +278,7 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
       max_output_tokens: maxOutputTokens,
       max_completion_tokens: maxCompletionTokens,
     },
-    900,
+    800, // Reduced from 900 to 800 tokens for faster response
   );
   const messages = [
     {
@@ -348,13 +352,26 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
         },
       },
       apiKey,
+      REQUEST_TIMEOUT, // Use the configured timeout
     );
 
     const text = extractText(primary);
     const parsed = safeJson(text);
     const payloadResult = toPayload(parsed);
     return { ...payloadResult, source: "openai" };
-  } catch {
+  } catch (primaryError) {
+    // If timeout or 5xx error, use fallback immediately
+    const shouldUseFallback = 
+      (primaryError as any)?.code === "TIMEOUT" || 
+      ((primaryError as any)?.status >= 500);
+    
+    if (shouldUseFallback) {
+      console.warn("[optimize] Primary request failed, using mock data:", 
+        (primaryError as Error).message);
+      return buildMockCards(resumeText, jobDesc, mode);
+    }
+    
+    // For other errors, try text fallback
     try {
       const fallback = await postToOpenAI(
         {
@@ -362,13 +379,15 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
           response_format: { type: "text" },
         },
         apiKey,
+        REQUEST_TIMEOUT,
       );
 
       const raw = extractText(fallback);
       const parsed = safeJson(raw);
       const payloadResult = toPayload(parsed);
       return { ...payloadResult, source: "openai" };
-    } catch {
+    } catch (fallbackError) {
+      console.warn("[optimize] All attempts failed, using mock data");
       return buildMockCards(resumeText, jobDesc, mode);
     }
   }

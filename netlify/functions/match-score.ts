@@ -343,10 +343,22 @@ const handler: Handler = async (event) => {
     // Calculate base score with weighted formula: 70% cosine similarity + 30% keyword coverage
     let rawScore = 0.7 * 100 * cosine + 0.3 * 100 * coverage;
     
-    // Ensure non-zero score for valid content: if both inputs have content and some overlap exists,
-    // guarantee a minimum score of 5 to indicate some matching exists
-    if (resumeTokens.length > 0 && jobTokens.length > 0 && (cosine > 0 || coverage > 0)) {
-      rawScore = Math.max(rawScore, 5);
+    // Ensure realistic score for valid content:
+    // If both inputs have substantial content (>50 tokens) and ANY overlap exists,
+    // guarantee a minimum score to indicate matching
+    const hasSubstantialContent = resumeTokens.length >= 50 && jobTokens.length >= 50;
+    const hasAnyOverlap = cosine > 0 || coverage > 0 || hits.length > 0;
+    
+    if (hasSubstantialContent && hasAnyOverlap) {
+      // Base minimum of 15 if there's any match at all
+      rawScore = Math.max(rawScore, 15);
+      
+      // If we have keyword hits, ensure proportional minimum
+      if (hits.length > 0) {
+        const hitRatio = hits.length / Math.max(keywords.length, 1);
+        const minForHits = 20 + (hitRatio * 30); // 20-50 range based on hit ratio
+        rawScore = Math.max(rawScore, minForHits);
+      }
     }
     
     const score = Math.round(clamp(rawScore, 0, 100));
