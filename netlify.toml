@@ -9,14 +9,6 @@
 [functions]
   node_bundler = "esbuild"
 
-[[functions]]
-  path = "/.netlify/functions/ai"
-  node_bundler = "esbuild"
-
-[[functions]]
-  path = "/.netlify/functions/optimize"
-  node_bundler = "esbuild"
-
 [[redirects]]
   from = "/*"
   to = "/index.html"
