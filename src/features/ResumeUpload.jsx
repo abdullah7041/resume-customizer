@@ -84,13 +84,20 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         const parsed = JSON.parse(stored);
         const plainText = parsed?.plainText || "";
         
-        // Validate that it's actual text, not binary/base64 data
+        // Enhanced validation - check if it's actual text, not binary/base64 data
         if (typeof plainText === "string" && plainText.length > 0) {
+          // eslint-disable-next-line no-control-regex
           const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
           const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
+          // eslint-disable-next-line no-control-regex
+          const hasControlChars = (plainText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/g) || []).length > plainText.length * 0.1;
+          const hasWeirdEncoding = /[�]{3,}/.test(plainText);
           
-          if (!isBinary && !isBase64Like) {
+          if (!isBinary && !isBase64Like && !hasControlChars && !hasWeirdEncoding) {
             return plainText;
+          } else {
+            console.warn("Detected corrupted data in localStorage, skipping restore");
+            window.localStorage.removeItem("airo:resumeData");
           }
         }
       }
@@ -135,13 +142,19 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
     // Ensure plainText is a valid string and not corrupted binary data
     const plainText = resumeDocument.plainText;
     if (typeof plainText === "string") {
-      // Check if it looks like base64 or binary data
+      // Enhanced validation
+      // eslint-disable-next-line no-control-regex
       const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
       const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
+      // eslint-disable-next-line no-control-regex
+      const hasControlChars = (plainText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/g) || []).length > plainText.length * 0.1;
+      const hasWeirdEncoding = /[�]{3,}/.test(plainText);
       
-      if (!isBinary && !isBase64Like) {
+      if (!isBinary && !isBase64Like && !hasControlChars && !hasWeirdEncoding) {
         setTextValue(plainText);
         setTextWarning("");
+      } else {
+        console.error("Received corrupted plainText from resumeDocument");
       }
     }
   }, [file, resumeDocument, textValue]);

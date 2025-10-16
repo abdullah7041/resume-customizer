@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ClipboardCheck, FileDown, Info, Lock, Sparkles } from "lucide-react";
+import { ClipboardCheck, FileDown, Info, Lock, Sparkles } from "lucide-react";
 import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -158,20 +158,6 @@ export default function Optimization({
             </Button>
             <Button
               variant="secondary"
-              icon={Check}
-              disabled={!isPremium}
-              title=
-                {!isPremium
-                  ? previewUsed
-                    ? "Upgrade to save results."
-                    : "Run a preview to unlock results."
-                  : undefined}
-              className="justify-center"
-            >
-              Save to account
-            </Button>
-            <Button
-              variant="secondary"
               icon={ClipboardCheck}
               disabled={!isPremium}
               title=
@@ -182,7 +168,7 @@ export default function Optimization({
                   : undefined}
               className="justify-center"
             >
-              Export summary
+              Export Summary
             </Button>
           </div>
         </div>

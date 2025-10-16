@@ -87,7 +87,7 @@ describe("useTheme", () => {
   it("always uses dark theme (theme is locked)", () => {
     window.localStorage.clear();
     window.localStorage.removeItem(THEME_STORAGE_KEY);
-    const controller = setupMatchMedia(false);
+    setupMatchMedia(false);
     const { result } = renderHook(() => useTheme());
 
     // Theme is always dark

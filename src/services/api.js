@@ -2,7 +2,7 @@
 
 import { runOptimization, USE_MOCK } from "../lib/aiClient";
 
-export const AI_DEFAULT_TEMPERATURE = 1;
+export const AI_DEFAULT_TEMPERATURE = 0.7;
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/match-score`;
@@ -162,10 +162,41 @@ const buildMockCards = (resumeText, jobDesc, mode) => {
 };
 
 const buildPrompt = (resumeText, jobDesc, mode = "auto") =>
-  `You rewrite resumes for the Saudi market using ATS-safe language. Return ONLY JSON with keys cards (array) and keywords (object). ` +
-  `cards[].section, cards[].issue, cards[].suggestion, cards[].exampleBefore, cards[].exampleAfter must all be non-empty strings. ` +
-  `keywords must include add, remove, neutral arrays. Keep bullets concise, metric-driven, and culturally neutral.` +
-  `\n\nMODE: ${mode}\n\nRESUME:\n${resumeText.slice(0, 4000)}\n\nJOB DESCRIPTION:\n${jobDesc.slice(0, 4000)}`;
+  `You are a resume optimization assistant for the Saudi job market. Analyze the resume and suggest improvements based on the job description.
+
+CRITICAL RULES:
+1. ONLY use information explicitly stated in the resume - DO NOT invent or hallucinate facts
+2. DO NOT add degrees, certifications, or experiences that aren't in the resume
+3. DO NOT fabricate company names, dates, or achievements
+4. ONLY suggest rewording existing content, never adding fictional information
+5. Return ONLY valid JSON with no markdown, explanations, or extra text
+
+Required JSON structure:
+{
+  "cards": [
+    {
+      "section": "string (Summary|Experience|Skills|Education|etc)",
+      "issue": "string (what's missing or weak in THIS section)",
+      "suggestion": "string (how to improve using ONLY existing resume content)",
+      "exampleBefore": "string (actual text from the resume)",
+      "exampleAfter": "string (improved version of the actual text)"
+    }
+  ],
+  "keywords": {
+    "add": ["string array of missing keywords from job description"],
+    "neutral": ["string array of keywords already in resume"],
+    "remove": ["string array of keywords to de-emphasize"]
+  }
+}
+
+MODE: ${mode}
+Keep suggestions concise, metric-driven, and ATS-safe.
+
+RESUME:
+${resumeText.slice(0, 4000)}
+
+JOB DESCRIPTION:
+${jobDesc.slice(0, 4000)}`;
 
 const buildMessages = (resumeText, jobDesc, mode = "auto") => {
   const system =

@@ -106,7 +106,7 @@ export const exportToSupabase = async ({
       if (dbError) {
         console.warn("Could not save export record (table may not exist):", dbError);
       }
-    } catch (dbError) {
+    } catch {
       console.warn("Database table 'resume_exports' not found - skipping metadata save");
       // This is fine - file is still saved in storage
     }

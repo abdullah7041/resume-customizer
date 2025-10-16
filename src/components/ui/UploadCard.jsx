@@ -53,9 +53,11 @@ const sanitizeTextInput = (text) => {
   
   // Only remove NULL bytes and other control characters that break parsing
   // Preserve all valid UTF-8 characters including international text
-  let sanitized = text
-    .replace(/\x00/g, "") // Remove NULL bytes
-    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, ""); // Remove control chars except \n, \r, \t
+  // eslint-disable-next-line no-control-regex
+  let sanitized = text.replace(/\x00/g, ""); // Remove NULL bytes
+  // Remove control chars except \n, \r, \t
+  // eslint-disable-next-line no-control-regex
+  sanitized = sanitized.replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, "");
   
   // Normalize line endings to \n
   sanitized = sanitized.replace(/\r\n/g, "\n").replace(/\r/g, "\n");

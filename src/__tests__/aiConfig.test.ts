@@ -13,7 +13,7 @@ describe("ai-config", () => {
     const { resolveOpenAIOptions } = await loadConfigModule();
     const options = resolveOpenAIOptions({}, 900);
     expect(options.model).toBe("gpt-5-nano");
-    expect(options.temperature).toBe(1);
+    expect(options.temperature).toBe(0.7);
     expect(options.max_output_tokens).toBe(900);
   });
 

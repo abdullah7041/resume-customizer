@@ -1,7 +1,7 @@
 const AI_ENDPOINT = "/.netlify/functions/ai";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_AI === "true";
 const DEFAULT_MODEL = "gpt-5-nano";
-const DEFAULT_TEMPERATURE = 1;
+const DEFAULT_TEMPERATURE = 0.7;
 
 export type RunOptimizationPayload = Record<string, unknown>;
 

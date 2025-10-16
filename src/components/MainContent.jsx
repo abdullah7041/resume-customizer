@@ -69,11 +69,15 @@ export default function MainContent() {
       // Validate plainText is actual text, not binary/corrupted data
       const plainText = parsed.plainText;
       if (typeof plainText === "string" && plainText.length > 0) {
-        // Check for binary data patterns
+        // Enhanced binary data detection
+        // eslint-disable-next-line no-control-regex
         const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
         const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
+        // eslint-disable-next-line no-control-regex
+        const hasControlChars = (plainText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/g) || []).length > plainText.length * 0.1;
+        const hasWeirdEncoding = /[�]{3,}/.test(plainText);
         
-        if (isBinary || isBase64Like) {
+        if (isBinary || isBase64Like || hasControlChars || hasWeirdEncoding) {
           console.warn("Detected corrupted resume data in localStorage, clearing it");
           window.localStorage.removeItem(RESUME_STORAGE_KEY);
           return "";
@@ -83,6 +87,7 @@ export default function MainContent() {
       return parsed;
     } catch (error) {
       console.warn("Failed to parse resume data from localStorage:", error);
+      window.localStorage.removeItem(RESUME_STORAGE_KEY);
       return "";
     }
   });

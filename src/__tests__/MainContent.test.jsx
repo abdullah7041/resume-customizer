@@ -80,6 +80,32 @@ vi.mock("../components/ui/Toast.jsx", () => {
   };
 });
 
+vi.mock("../services/supabase.js", () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn(),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    },
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn(),
+        getPublicUrl: vi.fn(),
+      })),
+    },
+  },
+  AppError: class AppError extends Error {
+    constructor(message, code) {
+      super(message);
+      this.code = code;
+    }
+  },
+}));
+
+vi.mock("../services/supabaseExport.js", () => ({
+  saveResumeToSupabase: vi.fn(),
+  saveOptimizationToSupabase: vi.fn(),
+}));
+
 vi.mock("../services/api.js", () => ({
   parseResume: parseResumeMock,
   analyzeResume: analyzeResumeMock,

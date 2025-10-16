@@ -386,7 +386,7 @@ const callOpenAI = async (payload: OptimizeBody, apiKey: string): Promise<Optimi
       const parsed = safeJson(raw);
       const payloadResult = toPayload(parsed);
       return { ...payloadResult, source: "openai" };
-    } catch (fallbackError) {
+    } catch {
       console.warn("[optimize] All attempts failed, using mock data");
       return buildMockCards(resumeText, jobDesc, mode);
     }

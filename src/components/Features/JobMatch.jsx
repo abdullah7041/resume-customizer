@@ -11,7 +11,8 @@ const resolveVariant = (score) => {
       gradient: "from-secondary-400 via-accent-400 to-secondary-500",
       glow: "bg-secondary-500/30",
       conic: "rgba(34,197,94,0.9)",
-      label: "Strong alignment",
+      label: "🎯 Strong alignment",
+      emoji: "🌟",
     };
   }
   if (score >= 50) {
@@ -19,14 +20,16 @@ const resolveVariant = (score) => {
       gradient: "from-warning-400 via-warning-500 to-accent-500",
       glow: "bg-warning-500/30",
       conic: "rgba(249,191,36,0.9)",
-      label: "Moderate alignment",
+      label: "⚡ Moderate alignment",
+      emoji: "💡",
     };
   }
   return {
     gradient: "from-danger-500 via-danger-400 to-warning-500",
     glow: "bg-danger-500/30",
     conic: "rgba(239,68,68,0.88)",
-    label: "Needs attention",
+    label: "🔧 Needs attention",
+    emoji: "📝",
   };
 };
 
@@ -211,6 +214,9 @@ export default function JobMatch({
                       }}
                     >
                       <div className="grid place-items-center rounded-full bg-[color:var(--surface-glass-strong)] px-6 py-6 text-center text-ink shadow-inner">
+                        <span className="text-2xl mb-1" role="img" aria-label="Match quality">
+                          {variant.emoji}
+                        </span>
                         <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500 opacity-80">
                           Match
                         </span>

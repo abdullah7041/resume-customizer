@@ -18,10 +18,7 @@ const sanitize = (value: unknown): string => {
   return value.trim();
 };
 
-type ResponseContentItem = { type: string; [key: string]: unknown };
 type ResponseMessage = { role: string; content: string };
-
-const toInputText = (text: string): string => text;
 
 const normalizeContentItem = (item: unknown): string | null => {
   if (typeof item === "string") {

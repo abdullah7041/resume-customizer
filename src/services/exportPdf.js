@@ -218,16 +218,6 @@ const escapeHtml = (value) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-const buildList = (items, className) => {
-  if (!items || items.length === 0) {
-    return ''; // Return empty string for ATS compatibility - no placeholder text
-  }
-  const listItems = items
-    .map((item) => `<li>${escapeHtml(item)}</li>`)
-    .join("");
-  return `<ul class="${className}">${listItems}</ul>`;
-};
-
 const buildSummary = (summary, matchAnalysis, optimizations) => {
   const fragments = [];
   if (summary.length > 0) {
@@ -265,35 +255,6 @@ const buildSummary = (summary, matchAnalysis, optimizations) => {
 
   // Return actual content only - no sample data for ATS
   return fragments.join("");
-};
-
-const buildSkills = (skills, keywords) => {
-  const merged = new Set(skills);
-  if (keywords?.add) {
-    for (const token of keywords.add) {
-      if (merged.size >= 30) break;
-      merged.add(token);
-    }
-  }
-  if (merged.size === 0) {
-    return ''; // Return empty string for ATS compatibility - no placeholder text
-  }
-  return `<ul class="skills">${Array.from(merged)
-    .map((item) => `<li>${escapeHtml(item)}</li>`)
-    .join("")}</ul>`;
-};
-
-const buildSection = (title, content) => {
-  // Only render section if it has content
-  if (!content || content.trim().length === 0) {
-    return '';
-  }
-  return `
-  <section class="section">
-    <h2>${escapeHtml(title)}</h2>
-    ${content}
-  </section>
-`;
 };
 
 const buildContact = (lines) => {
@@ -337,10 +298,6 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
   
   const contact = buildContact(sections.contactLines);
   const summaryHtml = buildSummary(sections.summary, matchAnalysis, optimizations);
-  const skillsHtml = buildSkills(sections.skills, keywords);
-  const experienceHtml = buildList(sections.experience, "stack");
-  const educationHtml = buildList(sections.education, "stack");
-  const projectsHtml = buildList(sections.projects, "stack");
   const jdSnippet = jobDescription ? `<p class="muted">Target role context: ${escapeHtml(jobDescription.slice(0, 240))}${
     jobDescription.length > 240 ? "…" : ""
   }</p>` : "";

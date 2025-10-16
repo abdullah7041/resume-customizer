@@ -1,5 +1,5 @@
 const FALLBACK_MODEL = "gpt-5-nano";
-const DEFAULT_TEMPERATURE = 1;
+const DEFAULT_TEMPERATURE = 0.7;
 const MIN_TOKENS = 1;
 const MAX_TOKENS = 4096;
 
