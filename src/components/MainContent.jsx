@@ -30,6 +30,8 @@ const TOAST_IDS = {
   optimize: "toast:optimize",
 };
 const TAB_STORAGE_KEY = "airo:lastActiveTab";
+const RESUME_STORAGE_KEY = "airo:resumeData";
+const JOB_STORAGE_KEY = "airo:jobDescription";
 const withTemperature = (message) => `${message} • Temp ${AI_DEFAULT_TEMPERATURE}`;
 
 const getId = () => {
@@ -54,8 +56,19 @@ export default function MainContent() {
 
   const [activeTab, setActiveTab] = useState("resume");
   const [flowProgress, setFlowProgress] = useState(0);
-  const [resumeData, setResumeData] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
+  const [resumeData, setResumeData] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const stored = window.localStorage.getItem(RESUME_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : "";
+    } catch {
+      return "";
+    }
+  });
+  const [jobDescription, setJobDescription] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
+  });
   const [matchAnalysis, setMatchAnalysis] = useState(null);
   const [optimizations, setOptimizations] = useState([]);
   const [optimizationKeywords, setOptimizationKeywords] = useState({ add: [], remove: [], neutral: [] });
@@ -123,6 +136,26 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
     setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
   }, []);
+
+  // Persist resume data to localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (resumeData && resumeData.plainText) {
+      try {
+        window.localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resumeData));
+      } catch (error) {
+        console.warn("Failed to save resume to localStorage:", error);
+      }
+    }
+  }, [resumeData]);
+
+  // Persist job description to localStorage  
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (jobDescription) {
+      window.localStorage.setItem(JOB_STORAGE_KEY, jobDescription);
+    }
+  }, [jobDescription]);
 
   const handleTabChange = useCallback((value) => {
     setActiveTab(value);
