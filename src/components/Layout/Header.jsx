@@ -206,18 +206,21 @@ export default function Header() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
               {user ? (
-                <Button variant="frosted" icon={LogOut} onClick={signOut} className="justify-center text-[15px] font-semibold">
-                  Sign Out
-                </Button>
-              ) : (
-                <Button
-                  variant="frosted"
-                  icon={LogIn}
-                  onClick={signInWithGoogle}
-                  className="justify-center text-[15px] font-semibold"
+                <button
+                  onClick={signOut}
+                  className="group inline-flex items-center gap-2.5 rounded-2xl border border-surface-50/20 bg-gradient-to-br from-surface-50/15 to-surface-50/5 px-6 py-3 min-h-[44px] text-[15px] font-semibold text-surface-50 shadow-[0_4px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl transition-all duration-300 hover:border-surface-50/30 hover:from-surface-50/20 hover:to-surface-50/10 hover:shadow-[0_8px_32px_rgba(0,0,0,0.16)] hover:scale-[1.02] active:scale-[0.98]"
                 >
+                  <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
+                  Sign Out
+                </button>
+              ) : (
+                <button
+                  onClick={signInWithGoogle}
+                  className="group inline-flex items-center gap-2.5 rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 px-6 py-3 min-h-[44px] text-[15px] font-semibold text-surface-50 shadow-[0_4px_24px_rgba(16,185,129,0.20)] backdrop-blur-xl transition-all duration-300 hover:border-emerald-400/40 hover:from-emerald-500/30 hover:to-emerald-600/15 hover:shadow-[0_8px_32px_rgba(16,185,129,0.28)] hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <LogIn className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
                   Sign In
-                </Button>
+                </button>
               )}
             </div>
           </div>

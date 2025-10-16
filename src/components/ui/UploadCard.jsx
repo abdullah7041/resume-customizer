@@ -231,9 +231,9 @@ export default function UploadCard({
           <span>DOCX</span>
         </div>
         <span className="relative inline-flex items-center justify-center">
-          <span className="absolute inset-0 rounded-full bg-emerald-400/15 blur-3xl" aria-hidden="true" />
-          <span className="relative inline-flex h-14 w-14 items-center justify-center rounded-full border border-[color:color-mix(in_oklab,var(--glass-border-strong),transparent_10%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] shadow-[0_24px_62px_-28px_rgba(8,140,104,0.85)] backdrop-blur-2xl">
-            <UploadCloud className="h-7 w-7 text-emerald-300 drop-shadow-[0_8px_18px_rgba(5,120,95,0.65)]" aria-hidden="true" />
+          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-emerald-600/10 blur-3xl" aria-hidden="true" />
+          <span className="relative inline-flex h-20 w-20 items-center justify-center rounded-full border-2 border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 shadow-[0_12px_40px_-12px_rgba(16,185,129,0.35)] backdrop-blur-2xl transition-all duration-300 hover:border-emerald-400/40 hover:from-emerald-500/20 hover:to-emerald-600/10 hover:shadow-[0_16px_48px_-8px_rgba(16,185,129,0.45)] hover:scale-105">
+            <UploadCloud className="h-9 w-9 text-emerald-300 drop-shadow-[0_4px_12px_rgba(16,185,129,0.5)] transition-transform duration-300 hover:scale-110" aria-hidden="true" />
           </span>
         </span>
         <p className="text-base font-semibold text-ink">

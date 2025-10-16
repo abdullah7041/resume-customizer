@@ -208,24 +208,24 @@ export default function JobMatch({
                       />
                     </svg>
                     <div
-                      className="relative grid h-full w-full place-items-center rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] p-4 text-ink backdrop-blur-soft"
+                      className="relative grid h-full w-full place-items-center rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] p-3 text-ink backdrop-blur-soft"
                       style={{
                         backgroundImage: `conic-gradient(${variant.conic} ${(progress / 100) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
                       }}
                     >
-                      <div className="grid place-items-center rounded-full bg-[color:var(--surface-glass-strong)] px-6 py-6 text-center text-ink shadow-inner">
-                        <span className="text-2xl mb-1" role="img" aria-label="Match quality">
+                      <div className="grid place-items-center rounded-full bg-[color:var(--surface-glass-strong)] px-4 py-4 text-center text-ink shadow-inner">
+                        <span className="text-xl mb-0.5" role="img" aria-label="Match quality">
                           {variant.emoji}
                         </span>
-                        <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500 opacity-80">
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-emerald-500 opacity-80">
                           Match
                         </span>
-                        <div className="mt-2 flex items-baseline justify-center gap-0.5">
-                          <span className="text-4xl font-bold tracking-tight leading-none">
+                        <div className="mt-1 flex items-baseline justify-center gap-0.5">
+                          <span className="text-3xl font-bold tracking-tight leading-none">
                             {score == null ? "—" : score}
                           </span>
                           {score != null && (
-                            <span className="text-base font-semibold text-ink-soft opacity-80 leading-none">/100</span>
+                            <span className="text-sm font-semibold text-ink-soft opacity-80 leading-none">/100</span>
                           )}
                         </div>
                       </div>
@@ -254,15 +254,15 @@ export default function JobMatch({
                       <div
                         id="match-why-popover"
                         role="dialog"
-                        className="absolute right-0 z-50 mt-3 w-72 space-y-3 rounded-2xl border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-4 text-left text-sm text-ink shadow-glass backdrop-blur-glass"
+                        className="absolute right-0 z-50 mt-3 w-72 space-y-4 rounded-2xl border-2 border-emerald-500/30 bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_5%)] p-5 text-left text-sm text-ink shadow-[0_8px_32px_rgba(0,0,0,0.24)] backdrop-blur-glass"
                       >
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500">Coverage</p>
-                          <span className="text-sm font-semibold text-ink">{coverageLabel}</span>
+                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-3 py-2.5">
+                          <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Coverage</p>
+                          <span className="text-lg font-bold text-ink">{coverageLabel}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500">Similarity</p>
-                          <span className="text-sm font-semibold text-ink">{cosineLabel}</span>
+                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-3 py-2.5">
+                          <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Similarity</p>
+                          <span className="text-lg font-bold text-ink">{cosineLabel}</span>
                         </div>
                         {missing.length > 0 && (
                           <div>
