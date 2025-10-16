@@ -134,11 +134,11 @@ export default function Optimization({
                   ? "Upload and parse your resume before exporting."
                   : isOptimizing
                   ? "Please wait for the optimization run to finish."
-                  : undefined
+                  : "Opens print dialog - Save as PDF"
               }
               className="justify-center"
             >
-              Export PDF
+              Print/Save PDF
             </Button>
             <Button
               variant="secondary"

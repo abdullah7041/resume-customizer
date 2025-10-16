@@ -15,7 +15,6 @@
     "@netlify/functions": "^5.0.0",
     "@supabase/supabase-js": "^2.75.0",
     "axios": "^1.12.2",
-    "html2pdf.js": "^0.12.1",
     "latest": "^0.2.0",
     "lucide-react": "^0.545.0",
     "node": "^24.10.0",

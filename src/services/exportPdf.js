@@ -1,4 +1,5 @@
-import html2pdf from "html2pdf.js";
+// src/services/exportPdf.js
+
 import { buildResumeDocument } from "../../shared/normalize-resume.js";
 
 const SECTION_KEYWORDS = {
@@ -745,70 +746,55 @@ export const exportResumeToPdf = async ({
   keywords,
   variant = "styled",
 }) => {
-  console.log('[PDF Export] Starting export...', {
-    hasDocument: !!resumeDocument,
-    hasText: !!resumeText,
-    variant
-  });
+  console.log('[PDF Export] Starting export...');
   
   const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
   const normalizedVariant = normalizeVariant(variant);
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
   
   console.log('[PDF Export] HTML generated, length:', html.length);
-  console.log('[PDF Export] HTML preview:', html.substring(0, 500));
   
-  // Create a temporary container to hold the HTML
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  container.style.width = '8.5in';
-  document.body.appendChild(container);
+  // Create a new window for printing
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
   
-  console.log('[PDF Export] Container created and appended');
+  if (!printWindow) {
+    throw new Error('Please allow pop-ups to export PDF. Check your browser settings.');
+  }
   
   try {
-    // Configure html2pdf options for high-quality output
-    const options = {
-      margin: [0.5, 0.5, 0.5, 0.5],
-      filename: `resume-${Date.now()}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        letterRendering: true,
-        logging: true
-      },
-      jsPDF: { 
-        unit: 'in', 
-        format: 'letter', 
-        orientation: 'portrait',
-        compress: true
-      },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
+    // Write the HTML to the new window
+    printWindow.document.write(html);
+    printWindow.document.close();
     
-    console.log('[PDF Export] Starting html2pdf conversion...');
+    // Wait for content to load
+    await new Promise((resolve) => {
+      if (printWindow.document.readyState === 'complete') {
+        resolve();
+      } else {
+        printWindow.addEventListener('load', resolve);
+      }
+    });
     
-    // Generate and download the PDF
-    await html2pdf().set(options).from(container).save();
+    // Small delay to ensure rendering is complete
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    console.log('[PDF Export] PDF generation complete!');
+    console.log('[PDF Export] Opening print dialog...');
+    
+    // Trigger the browser's native print dialog
+    printWindow.print();
+    
+    // Close the window after a delay (user can cancel print)
+    setTimeout(() => {
+      printWindow.close();
+    }, 1000);
+    
+    console.log('[PDF Export] Print dialog opened successfully!');
     
     return true;
   } catch (error) {
     console.error('[PDF Export] Failed:', error);
-    throw new Error('Failed to generate PDF. Please try again.');
-  } finally {
-    // Clean up the temporary container after a delay to ensure html2pdf has finished
-    setTimeout(() => {
-      if (container && container.parentNode) {
-        document.body.removeChild(container);
-        console.log('[PDF Export] Container cleaned up');
-      }
-    }, 1000);
+    printWindow.close();
+    throw new Error('Failed to open print dialog. Please try again.');
   }
 };
 
