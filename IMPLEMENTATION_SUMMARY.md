@@ -34,20 +34,25 @@ CRITICAL RULES:
 
 ---
 
-### 3. Lowered GPT-5 Nano Temperature to 0.7
+### 2. ~~Lower GPT-5 Temperature~~ ❌ NOT SUPPORTED
 
-**Problem**: Temperature=1.0 caused creative but sometimes inaccurate responses.
+**Status:** Reverted - gpt-5-nano model ONLY supports temperature=1 (API enforced)
 
-**Solution**: Reduced temperature to **0.7** across all files:
-- `src/services/api.js` - `AI_DEFAULT_TEMPERATURE = 0.7`
-- `netlify/lib/ai-config.ts` - `DEFAULT_TEMPERATURE = 0.7`
-- `src/lib/aiClient.ts` - `DEFAULT_TEMPERATURE = 0.7`
+**Attempted Change:** Reduce temperature from 1.0 to 0.7
 
-**Impact**: 
-- More factual, consistent outputs
-- Reduced hallucination risk by ~40%
-- Better adherence to resume facts
-- Maintained creativity for rephrasing
+**Result:** 
+- API returns 400 error: "Unsupported value: 'temperature' does not support 0.7 with this model. Only the default (1) value is supported."
+- Temperature must remain at 1.0 for gpt-5-nano
+- If lower temperature needed, must use a different model
+
+**Files Reverted:**
+- `netlify/lib/ai-config.ts`: Changed `DEFAULT_TEMPERATURE` back to 1
+- `src/lib/aiClient.ts`: Changed `DEFAULT_TEMPERATURE` back to 1
+- `src/services/api.js`: Changed `AI_DEFAULT_TEMPERATURE` back to 1
+- `src/__tests__/aiConfig.test.ts`: Reverted test expectation to 1
+- `src/lib/aiClient.test.ts`: Reverted test expectation to 1
+
+**Alternative Solution:** Enhanced prompt engineering (Task #1) to reduce hallucination WITHOUT changing temperature
 
 ---
 

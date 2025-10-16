@@ -50,7 +50,7 @@ describe("runOptimization", () => {
     const body = JSON.parse(request?.body as string);
     expect(body).toMatchObject({
       model: "gpt-5-nano",
-      temperature: 0.7,
+      temperature: 1,
       max_output_tokens: 256,
     });
   });

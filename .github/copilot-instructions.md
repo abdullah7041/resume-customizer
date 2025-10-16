@@ -27,8 +27,8 @@ This is a **Netlify-deployed React SPA** with serverless functions that optimize
 - **`parse-resume.ts`**: Extracts plainText from PDF/DOCX using `pdfjs-dist` + custom DOCX parser
 - **`optimize.ts`**: Legacy endpoint (prefer `ai.ts` for new features)
 
-**AI Config**: `netlify/lib/ai-config.ts` centralizes defaults (`gpt-5-nano`, **temp=0.7**, max tokens 1-4096)
-  - **Temperature lowered to 0.7** for more factual, consistent outputs (reduced hallucination)
+**AI Config**: `netlify/lib/ai-config.ts` centralizes defaults (`gpt-5-nano`, **temp=1**)
+  - **Temperature must be 1** - gpt-5-nano model does NOT support other values (API enforced)
 
 ### Frontend Services (`src/services/`)
 - **`api.js`**: Main API client - exports `parseResume()`, `analyzeResume()`, `optimizeResume()`
@@ -121,7 +121,7 @@ npm run build  # Executes scripts/build.mjs → sets VITE_BUILD_ID → vite buil
 4. **API timeouts**: Parse=15s, Optimization=45s - extend in `api.js` constants if needed
 5. **localStorage prefix**: All keys start with `airo:` for namespacing
 6. **Resume storage path**: Supabase format is `resumes/{userId}/{timestamp}_{filename}`
-7. **AI Temperature**: Always use 0.7 for factual responses (prevent hallucination)
+7. **AI Temperature**: Always use 1.0 (gpt-5-nano ONLY supports default temperature of 1)
 8. **Match score display**: Include emojis (🎯⚡🔧) for visual quality indicators
 
 ## Environment Variables
@@ -149,7 +149,7 @@ npm run build  # Executes scripts/build.mjs → sets VITE_BUILD_ID → vite buil
 // Correct format for ai.ts
 {
   model: "gpt-5-nano",
-  temperature: 0.7,  // Lowered from 1.0
+  temperature: 1,  // REQUIRED - model only supports 1 (default)
   max_output_tokens: 2048,
   messages: [
     { role: "system", content: "You are a resume optimizer..." },
@@ -182,11 +182,11 @@ CRITICAL RULES:
 4. **UI Components**: Extend `src/components/ui/` primitives, maintain `cn()` pattern
 5. **Tests**: Run `npm test` before pushing - mock external deps (Supabase, pdfjs)
 6. **AI Changes**: Always test with real resume data to check for hallucination
-7. **Temperature**: Keep at 0.7 unless specific feature needs more creativity
+7. **Temperature**: Keep at 1.0 - gpt-5-nano model ONLY supports this value (API enforced)
 
 ## Recent Updates
 
-- ✅ Temperature reduced from 1.0 to 0.7 for better factual accuracy
+- ✅ Temperature must be 1.0 (gpt-5-nano requirement - other values cause 400 errors)
 - ✅ Enhanced binary data validation (4-layer detection)
 - ✅ Removed duplicate "Save to Account" button in Optimization
 - ✅ Added emoji indicators for match score quality (🎯⚡🔧)

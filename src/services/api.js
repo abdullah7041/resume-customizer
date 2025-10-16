@@ -2,7 +2,9 @@
 
 import { runOptimization, USE_MOCK } from "../lib/aiClient";
 
-export const AI_DEFAULT_TEMPERATURE = 0.7;
+export const AI_DEFAULT_MODEL = "gpt-5-nano";
+export const AI_DEFAULT_TEMPERATURE = 1;
+export const AI_DEFAULT_MAX_TOKENS = 2048;
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/match-score`;
