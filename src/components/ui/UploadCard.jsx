@@ -47,6 +47,28 @@ const isPlainTextFile = (file) => {
   return false;
 };
 
+// Sanitize text input to remove non-printable characters and invalid unicode
+const sanitizeTextInput = (text) => {
+  if (typeof text !== "string") return "";
+  
+  // Remove null bytes and other control characters except newlines, tabs
+  let sanitized = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "");
+  
+  // Replace invalid UTF-8 sequences
+  try {
+    // Test if string is valid UTF-8 by encoding/decoding
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder("utf-8", { fatal: false });
+    const bytes = encoder.encode(sanitized);
+    sanitized = decoder.decode(bytes);
+  } catch {
+    // If encoding fails, remove non-ASCII characters
+    sanitized = sanitized.replace(/[^\x20-\x7E\n\r\t]/g, "");
+  }
+  
+  return sanitized;
+};
+
 const statusCopy = {
   uploading: "Uploading resume…",
   parsing: "Parsing resume with AI…",
@@ -165,7 +187,15 @@ export default function UploadCard({
       aria-live="polite"
     >
       <header className="space-y-2 text-center sm:text-left">
-        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-gold-500">Step 1</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-gold-500">Step 1</p>
+          {textValue && textValue.length > 100 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Saved Locally
+            </span>
+          )}
+        </div>
         <h3 className="text-2xl font-semibold text-ink">Upload or Paste Your Resume</h3>
         <p className="text-sm text-ink-soft/85">
           Drag a PDF or DOCX, or paste the text to let our AI optimize every line.
@@ -252,7 +282,11 @@ export default function UploadCard({
           multiline
           placeholder="Paste resume text…"
           value={textValue}
-          onChange={(event) => onTextChange?.(event.target.value)}
+          onChange={(event) => {
+            const raw = event.target.value;
+            const sanitized = sanitizeTextInput(raw);
+            onTextChange?.(sanitized);
+          }}
           inputClassName="min-h-[160px] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)]"
           aria-label="Paste resume text instead"
         />

@@ -75,7 +75,20 @@ const isDocumentFile = (file) => {
 
 export default function ResumeUpload({ onParseResume, resumeDocument, onToast }) {
   const [file, setFile] = useState(null);
-  const [textValue, setTextValue] = useState("");
+  const [textValue, setTextValue] = useState(() => {
+    // Try to restore from previous session
+    if (typeof window === "undefined") return "";
+    try {
+      const stored = window.localStorage.getItem("airo:resumeData");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed?.plainText || "";
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+    return "";
+  });
   const [status, setStatus] = useState("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");

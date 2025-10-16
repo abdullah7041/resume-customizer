@@ -182,6 +182,29 @@ export default function MainContent() {
     setPreviewUsed(true);
   }, []);
 
+  const handleClearAllData = useCallback(() => {
+    if (typeof window === "undefined") return;
+    
+    // Clear all stored data
+    window.localStorage.removeItem(RESUME_STORAGE_KEY);
+    window.localStorage.removeItem(JOB_STORAGE_KEY);
+    window.localStorage.removeItem("airo:lastJobDescription");
+    
+    // Reset state
+    setResumeData("");
+    setJobDescription("");
+    setMatchAnalysis(null);
+    setOptimizations([]);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    setActiveTab("resume");
+    
+    pushToast({
+      type: "success",
+      title: "Data cleared",
+      description: "All resume and job data has been removed from local storage.",
+    });
+  }, [pushToast]);
+
   const normalizeResumePayload = useCallback((input) => {
     if (input && typeof input === "object") {
       if (input.kind === "upload") {
@@ -239,7 +262,7 @@ export default function MainContent() {
           {
             type: "success",
             title: "Resume parsed",
-            description: "Use Continue to compare with a job description.",
+            description: "Your resume is saved locally. Use Continue to compare with a job description.",
           },
           { id: TOAST_IDS.upload }
         );
@@ -493,7 +516,19 @@ export default function MainContent() {
 
   const workspace = (
     <div className="space-y-5 sm:space-y-7 text-ink-700 dark:text-surface-50">
-      <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
+      <div className="flex items-center justify-between gap-4">
+        <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
+        {resumeData?.plainText && (
+          <button
+            type="button"
+            onClick={handleClearAllData}
+            className="text-xs font-semibold uppercase tracking-[0.24em] text-ink-500/70 hover:text-danger-500 transition-colors duration-200 dark:text-surface-50/60 dark:hover:text-danger-400"
+            title="Clear all saved data"
+          >
+            Clear All
+          </button>
+        )}
+      </div>
       <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
       <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 sm:p-6 lg:p-7 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
         {activeTab === "resume" && (
