@@ -297,11 +297,11 @@ const buildSection = (title, content) => {
 
 const buildContact = (lines) => {
   if (!lines || lines.length === 0) {
-    return { name: "", entries: [] }; // Return empty for proper ATS formatting
+    return { name: "Professional Resume", entries: [] }; // Provide default name if none found
   }
   const [primary, ...rest] = lines;
   return {
-    name: primary || "",
+    name: primary || "Professional Resume",
     entries: rest,
   };
 };
@@ -341,6 +341,27 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
       </div>
     `;
   };
+
+  // Check if we have any structured content
+  const hasStructuredContent = 
+    sections.experience.length > 0 || 
+    sections.education.length > 0 || 
+    sections.projects.length > 0 || 
+    allSkills.length > 0 ||
+    summaryHtml;
+
+  // Fallback: if no sections parsed, show raw resume text
+  const fallbackContent = !hasStructuredContent && document.plainText ? `
+    <section class="resume-section">
+      <div class="section-header">
+        <div class="section-rule"></div>
+        <h2 class="section-title">Resume Content</h2>
+      </div>
+      <div class="section-content">
+        <p style="white-space: pre-wrap;">${escapeHtml(document.plainText)}</p>
+      </div>
+    </section>
+  ` : '';
 
   return `<!doctype html>
 <html lang="en">
@@ -569,6 +590,8 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
           ${sections.projects.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
         </ul>
       </section>` : ''}
+      
+      ${fallbackContent}
     </div>
   </body>
 </html>`;
