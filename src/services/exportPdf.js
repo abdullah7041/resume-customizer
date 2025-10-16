@@ -307,8 +307,33 @@ const buildContact = (lines) => {
 };
 
 const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "", matchAnalysis, optimizations, keywords }) => {
+  console.log('[buildExportHtml] Input:', {
+    hasDocument: !!resumeDocument,
+    documentType: typeof resumeDocument,
+    hasText: !!resumeText,
+    textLength: resumeText?.length,
+    plainTextLength: resumeDocument?.plainText?.length
+  });
+  
   const document = ensureResumeDocument(resumeDocument ?? resumeText);
+  console.log('[buildExportHtml] Document ensured:', {
+    plainTextLength: document.plainText?.length,
+    hasSections: !!document.sections,
+    sectionsCount: document.sections?.length,
+    hasBullets: !!document.bullets,
+    bulletsCount: document.bullets?.length
+  });
+  
   const sections = deriveResumeSections(document.plainText);
+  console.log('[buildExportHtml] Sections derived:', {
+    contactLines: sections.contactLines?.length,
+    summary: sections.summary?.length,
+    skills: sections.skills?.length,
+    experience: sections.experience?.length,
+    education: sections.education?.length,
+    projects: sections.projects?.length
+  });
+  
   const contact = buildContact(sections.contactLines);
   const summaryHtml = buildSummary(sections.summary, matchAnalysis, optimizations);
   const skillsHtml = buildSkills(sections.skills, keywords);
@@ -349,6 +374,13 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
     sections.projects.length > 0 || 
     allSkills.length > 0 ||
     summaryHtml;
+
+  console.log('[buildExportHtml] Content check:', {
+    hasStructuredContent,
+    contactName: contact.name,
+    allSkillsCount: allSkills.length,
+    plainTextLength: document.plainText?.length
+  });
 
   // Fallback: if no sections parsed, show raw resume text
   const fallbackContent = !hasStructuredContent && document.plainText ? `
@@ -713,9 +745,18 @@ export const exportResumeToPdf = async ({
   keywords,
   variant = "styled",
 }) => {
+  console.log('[PDF Export] Starting export...', {
+    hasDocument: !!resumeDocument,
+    hasText: !!resumeText,
+    variant
+  });
+  
   const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
   const normalizedVariant = normalizeVariant(variant);
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
+  
+  console.log('[PDF Export] HTML generated, length:', html.length);
+  console.log('[PDF Export] HTML preview:', html.substring(0, 500));
   
   // Create a temporary container to hold the HTML
   const container = document.createElement('div');
@@ -723,7 +764,10 @@ export const exportResumeToPdf = async ({
   container.style.position = 'absolute';
   container.style.left = '-9999px';
   container.style.top = '0';
+  container.style.width = '8.5in';
   document.body.appendChild(container);
+  
+  console.log('[PDF Export] Container created and appended');
   
   try {
     // Configure html2pdf options for high-quality output
@@ -735,7 +779,7 @@ export const exportResumeToPdf = async ({
         scale: 2,
         useCORS: true,
         letterRendering: true,
-        logging: false
+        logging: true
       },
       jsPDF: { 
         unit: 'in', 
@@ -746,16 +790,25 @@ export const exportResumeToPdf = async ({
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
     
+    console.log('[PDF Export] Starting html2pdf conversion...');
+    
     // Generate and download the PDF
     await html2pdf().set(options).from(container).save();
     
+    console.log('[PDF Export] PDF generation complete!');
+    
     return true;
   } catch (error) {
-    console.error('PDF export failed:', error);
+    console.error('[PDF Export] Failed:', error);
     throw new Error('Failed to generate PDF. Please try again.');
   } finally {
-    // Clean up the temporary container
-    document.body.removeChild(container);
+    // Clean up the temporary container after a delay to ensure html2pdf has finished
+    setTimeout(() => {
+      if (container && container.parentNode) {
+        document.body.removeChild(container);
+        console.log('[PDF Export] Container cleaned up');
+      }
+    }, 1000);
   }
 };
 
