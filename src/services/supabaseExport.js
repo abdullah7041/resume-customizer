@@ -3,7 +3,8 @@
 
 import { supabase, AppError } from "./supabase.js";
 
-const EXPORT_BUCKET = "resume-exports";
+// Reuse existing 'resumes' bucket instead of creating a new one
+const EXPORT_BUCKET = "resumes";
 
 /**
  * Convert HTML to Blob for storage
@@ -20,31 +21,6 @@ const generateFileName = (baseName = "Resume_Optimized") => {
   const timestamp = date.toISOString().split("T")[0]; // YYYY-MM-DD
   const random = Math.random().toString(36).substring(2, 8);
   return `${baseName}_${timestamp}_${random}.html`;
-};
-
-/**
- * Ensure the export bucket exists
- */
-const ensureExportBucket = async () => {
-  try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some((b) => b.name === EXPORT_BUCKET);
-
-    if (!bucketExists) {
-      const { error } = await supabase.storage.createBucket(EXPORT_BUCKET, {
-        public: false,
-        fileSizeLimit: 10485760, // 10MB
-      });
-
-      if (error && !error.message?.includes("already exists")) {
-        console.warn("Could not create export bucket:", error);
-        // Continue anyway - bucket might exist but API returned error
-      }
-    }
-  } catch (error) {
-    console.warn("Bucket check failed:", error);
-    // Continue anyway - we'll try to upload and handle errors there
-  }
 };
 
 /**
@@ -79,15 +55,15 @@ export const exportToSupabase = async ({
   }
 
   try {
-    // Ensure bucket exists
-    await ensureExportBucket();
-
+    // No need to create bucket - reusing existing 'resumes' bucket
+    
     // Convert HTML to Blob
     const blob = htmlToBlob(htmlContent);
     const uniqueFileName = generateFileName(fileName);
-    const filePath = `${user.id}/exports/${uniqueFileName}`;
+    // Store in optimized/ subfolder to separate from raw resume uploads
+    const filePath = `${user.id}/optimized/${uniqueFileName}`;
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage (reuses existing bucket)
     const { data, error } = await supabase.storage
       .from(EXPORT_BUCKET)
       .upload(filePath, blob, {
@@ -110,6 +86,7 @@ export const exportToSupabase = async ({
       .createSignedUrl(filePath, 3600 * 24 * 7); // 7 days
 
     // Save metadata to database (optional - for listing user's exports)
+    // Only if resume_exports table exists
     const exportRecord = {
       user_id: user.id,
       file_path: filePath,
@@ -123,12 +100,15 @@ export const exportToSupabase = async ({
       },
     };
 
-    // Try to save to database (table might not exist yet)
+    // Try to save to database (table might not exist - that's OK)
     try {
-      await supabase.from("resume_exports").insert(exportRecord);
+      const { error: dbError } = await supabase.from("resume_exports").insert(exportRecord);
+      if (dbError) {
+        console.warn("Could not save export record (table may not exist):", dbError);
+      }
     } catch (dbError) {
-      console.warn("Could not save export record to database:", dbError);
-      // Continue anyway - file is still saved in storage
+      console.warn("Database table 'resume_exports' not found - skipping metadata save");
+      // This is fine - file is still saved in storage
     }
 
     return {
@@ -171,10 +151,10 @@ export const listExports = async () => {
   }
 
   try {
-    // List files from storage
+    // List files from storage (in optimized subfolder)
     const { data: files, error } = await supabase.storage
       .from(EXPORT_BUCKET)
-      .list(`${user.id}/exports`);
+      .list(`${user.id}/optimized`);
 
     if (error) {
       throw error;
