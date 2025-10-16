@@ -61,8 +61,28 @@ export default function MainContent() {
     if (typeof window === "undefined") return "";
     try {
       const stored = window.localStorage.getItem(RESUME_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : "";
-    } catch {
+      if (!stored) return "";
+      
+      const parsed = JSON.parse(stored);
+      if (!parsed || typeof parsed !== "object") return "";
+      
+      // Validate plainText is actual text, not binary/corrupted data
+      const plainText = parsed.plainText;
+      if (typeof plainText === "string" && plainText.length > 0) {
+        // Check for binary data patterns
+        const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
+        const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
+        
+        if (isBinary || isBase64Like) {
+          console.warn("Detected corrupted resume data in localStorage, clearing it");
+          window.localStorage.removeItem(RESUME_STORAGE_KEY);
+          return "";
+        }
+      }
+      
+      return parsed;
+    } catch (error) {
+      console.warn("Failed to parse resume data from localStorage:", error);
       return "";
     }
   });

@@ -82,7 +82,17 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
       const stored = window.localStorage.getItem("airo:resumeData");
       if (stored) {
         const parsed = JSON.parse(stored);
-        return parsed?.plainText || "";
+        const plainText = parsed?.plainText || "";
+        
+        // Validate that it's actual text, not binary/base64 data
+        if (typeof plainText === "string" && plainText.length > 0) {
+          const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
+          const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
+          
+          if (!isBinary && !isBase64Like) {
+            return plainText;
+          }
+        }
       }
     } catch {
       // Ignore parsing errors
@@ -121,8 +131,19 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
     if (textValue) {
       return;
     }
-    setTextValue(resumeDocument.plainText);
-    setTextWarning("");
+    
+    // Ensure plainText is a valid string and not corrupted binary data
+    const plainText = resumeDocument.plainText;
+    if (typeof plainText === "string") {
+      // Check if it looks like base64 or binary data
+      const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
+      const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
+      
+      if (!isBinary && !isBase64Like) {
+        setTextValue(plainText);
+        setTextWarning("");
+      }
+    }
   }, [file, resumeDocument, textValue]);
 
   const resetState = useCallback(() => {

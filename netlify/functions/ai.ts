@@ -2,7 +2,7 @@ import type { Handler } from "@netlify/functions";
 import { performance } from "node:perf_hooks";
 import { resolveOpenAIOptions } from "../lib/ai-config";
 
-const OPENAI_URL = "https://api.openai.com/v1/responses";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -19,17 +19,14 @@ const sanitize = (value: unknown): string => {
 };
 
 type ResponseContentItem = { type: string; [key: string]: unknown };
-type ResponseMessage = { role: string; content: ResponseContentItem[] };
+type ResponseMessage = { role: string; content: string };
 
-const toInputText = (text: string): ResponseContentItem => ({
-  type: "input_text",
-  text,
-});
+const toInputText = (text: string): string => text;
 
-const normalizeContentItem = (item: unknown): ResponseContentItem | null => {
+const normalizeContentItem = (item: unknown): string | null => {
   if (typeof item === "string") {
     const text = sanitize(item);
-    return text ? toInputText(text) : null;
+    return text || null;
   }
 
   if (!item || typeof item !== "object") {
@@ -39,36 +36,31 @@ const normalizeContentItem = (item: unknown): ResponseContentItem | null => {
   const candidate = item as Record<string, unknown>;
   if (typeof candidate.text === "string") {
     const text = candidate.text.trim();
-    if (!text) return null;
-    const rawType = typeof candidate.type === "string" ? candidate.type.trim() : "";
-    const type = rawType === "text" || rawType.length === 0 ? "input_text" : rawType;
-    return { ...candidate, type, text } as ResponseContentItem;
+    return text || null;
   }
 
-  return candidate as ResponseContentItem;
+  return null;
 };
 
-const normalizeContent = (content: unknown): ResponseContentItem[] | null => {
+const normalizeContent = (content: unknown): string | null => {
   if (Array.isArray(content)) {
-    const normalized = content
+    // Join array items into a single string
+    const texts = content
       .map((item) => normalizeContentItem(item))
-      .filter((item): item is ResponseContentItem => Boolean(item));
-    return normalized.length > 0 ? normalized : null;
+      .filter((item): item is string => Boolean(item));
+    return texts.length > 0 ? texts.join("\n") : null;
   }
 
   if (typeof content === "string") {
     const text = sanitize(content);
-    return text ? [toInputText(text)] : null;
+    return text || null;
   }
 
   if (content && typeof content === "object") {
     const candidate = content as Record<string, unknown>;
     if (typeof candidate.text === "string") {
       const text = candidate.text.trim();
-      if (!text) return null;
-      const rawType = typeof candidate.type === "string" ? candidate.type.trim() : "";
-      const type = rawType === "text" || rawType.length === 0 ? "input_text" : rawType;
-      return [{ type, text }];
+      return text || null;
     }
   }
 
@@ -78,7 +70,7 @@ const normalizeContent = (content: unknown): ResponseContentItem[] | null => {
 const normalizeMessage = (value: unknown): ResponseMessage | null => {
   if (typeof value === "string") {
     const text = sanitize(value);
-    return text ? { role: "user", content: [toInputText(text)] } : null;
+    return text ? { role: "user", content: text } : null;
   }
 
   if (!value || typeof value !== "object") {
@@ -98,7 +90,7 @@ const normalizeMessage = (value: unknown): ResponseMessage | null => {
 
 const createUserMessage = (text: string): ResponseMessage => ({
   role: "user",
-  content: [toInputText(text)],
+  content: text,
 });
 
 const normalizeInput = (value: unknown): ResponseMessage[] | null => {
@@ -150,7 +142,7 @@ const buildMessages = (body: any): ResponseMessage[] | null => {
     if (systemPrompt) {
       messages.push({
         role: "system",
-        content: [toInputText(systemPrompt)],
+        content: systemPrompt,
       });
     }
 
@@ -168,6 +160,16 @@ const buildMessages = (body: any): ResponseMessage[] | null => {
 
 const extractOutputText = (data: any): string => {
   if (!data) return "";
+  
+  // OpenAI chat completions format
+  if (Array.isArray(data.choices) && data.choices.length > 0) {
+    const choice = data.choices[0];
+    if (choice?.message?.content && typeof choice.message.content === "string") {
+      return choice.message.content;
+    }
+  }
+  
+  // Legacy format support
   if (typeof data.output_text === "string") return data.output_text;
   if (Array.isArray(data.output_text)) {
     for (const entry of data.output_text) {
@@ -185,12 +187,7 @@ const extractOutputText = (data: any): string => {
       }
     }
   }
-  if (Array.isArray(data.choices)) {
-    const text = data.choices[0]?.message?.content;
-    if (typeof text === "string") {
-      return text;
-    }
-  }
+  
   return "";
 };
 
@@ -262,7 +259,7 @@ const handler: Handler = async (event) => {
       },
       body: JSON.stringify({
         ...options,
-        input: messages,
+        messages: messages,
       }),
     });
 

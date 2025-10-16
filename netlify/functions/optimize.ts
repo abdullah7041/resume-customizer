@@ -230,7 +230,7 @@ const postToOpenAI = async (body: Record<string, unknown>, apiKey: string, timeo
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
