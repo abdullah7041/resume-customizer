@@ -745,6 +745,7 @@ export const exportResumeToPdf = async ({
   optimizations,
   keywords,
   variant = "styled",
+  skipPrint = false,
 }) => {
   console.log('[PDF Export] Starting export...');
   
@@ -753,6 +754,12 @@ export const exportResumeToPdf = async ({
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
   
   console.log('[PDF Export] HTML generated, length:', html.length);
+  
+  // If skipPrint is true, just return the HTML content
+  if (skipPrint) {
+    console.log('[PDF Export] Returning HTML content without printing');
+    return html;
+  }
   
   // Create a new window for printing
   const printWindow = window.open('', '_blank', 'width=800,height=600');

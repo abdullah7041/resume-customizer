@@ -15,6 +15,7 @@ import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import Button from "./ui/Button.jsx";
 import { exportResumeToPdf } from "../services/exportPdf.js";
+import { exportToSupabase, isSupabaseExportAvailable } from "../services/supabaseExport.js";
 
 const tabs = [
   { value: "resume", label: "Resume", icon: FileText },
@@ -463,7 +464,7 @@ export default function MainContent() {
   }, [pushToast]);
 
   const handleExportPdf = useCallback(
-    async (variant) => {
+    async (variant, exportMethod = "supabase") => {
       if (!resumeData?.plainText) {
         pushToast({
           type: "warning",
@@ -476,28 +477,78 @@ export default function MainContent() {
       const normalizedVariant = variant === "ats-plain" ? "ats-plain" : "styled";
 
       try {
-        await exportResumeToPdf({
+        // Get the HTML content from exportPdf (without triggering print)
+        const htmlContent = await exportResumeToPdf({
           resumeDocument: resumeData,
           jobDescription,
           matchAnalysis,
           optimizations,
           keywords: optimizationKeywords,
           variant: normalizedVariant,
+          skipPrint: true, // Don't trigger print, just return HTML
         });
-        pushToast({
-          type: "success",
-          title: "Export successful",
-          description: "Your resume PDF has been downloaded.",
-        });
+
+        // Check export method
+        if (exportMethod === "supabase" && isSupabaseExportAvailable()) {
+          // Check if user is authenticated
+          if (!user) {
+            pushToast({
+              type: "warning",
+              title: "Sign in required",
+              description: "Please sign in to save your resume to your account.",
+            });
+            return;
+          }
+
+          // Export to Supabase Storage
+          const result = await exportToSupabase({
+            htmlContent,
+            fileName: "Resume_Optimized",
+            metadata: {
+              variant: normalizedVariant,
+              hasJobDescription: Boolean(jobDescription),
+              hasOptimizations: optimizations.length > 0,
+              matchScore: matchAnalysis?.score,
+            },
+          });
+
+          pushToast({
+            type: "success",
+            title: "Saved to your account",
+            description: `Your resume "${result.fileName}" has been saved securely.`,
+          });
+
+          // Optionally open the file in a new tab
+          if (result.signedUrl) {
+            window.open(result.signedUrl, "_blank");
+          }
+        } else {
+          // Fallback to print dialog if Supabase is not available or user not signed in
+          await exportResumeToPdf({
+            resumeDocument: resumeData,
+            jobDescription,
+            matchAnalysis,
+            optimizations,
+            keywords: optimizationKeywords,
+            variant: normalizedVariant,
+          });
+          
+          pushToast({
+            type: "success",
+            title: "Print dialog opened",
+            description: "Use the print dialog to save as PDF or print your resume.",
+          });
+        }
       } catch (error) {
+        console.error("Export error:", error);
         pushToast({
           type: "danger",
           title: "Export failed",
-          description: error?.message || "Unable to generate PDF. Please try again.",
+          description: error?.message || "Unable to export resume. Please try again.",
         });
       }
     },
-    [jobDescription, matchAnalysis, optimizations, optimizationKeywords, pushToast, resumeData]
+    [jobDescription, matchAnalysis, optimizations, optimizationKeywords, pushToast, resumeData, user]
   );
 
   const renderedToasts = useMemo(

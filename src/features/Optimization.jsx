@@ -127,18 +127,34 @@ export default function Optimization({
             <Button
               variant="secondary"
               icon={FileDown}
-              onClick={() => onExport?.("styled")}
+              onClick={() => onExport?.("styled", "supabase")}
               disabled={!canExport || isOptimizing}
               title={
                 !canExport
                   ? "Upload and parse your resume before exporting."
                   : isOptimizing
                   ? "Please wait for the optimization run to finish."
-                  : "Opens print dialog - Save as PDF"
+                  : "Save to your Supabase account"
               }
               className="justify-center"
             >
-              Print/Save PDF
+              Save to Account
+            </Button>
+            <Button
+              variant="secondary"
+              icon={FileDown}
+              onClick={() => onExport?.("styled", "print")}
+              disabled={!canExport || isOptimizing}
+              title={
+                !canExport
+                  ? "Upload and parse your resume before exporting."
+                  : isOptimizing
+                  ? "Please wait for the optimization run to finish."
+                  : "Open print dialog to save as PDF"
+              }
+              className="justify-center"
+            >
+              Print as PDF
             </Button>
             <Button
               variant="secondary"

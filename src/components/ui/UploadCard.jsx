@@ -47,24 +47,18 @@ const isPlainTextFile = (file) => {
   return false;
 };
 
-// Sanitize text input to remove non-printable characters and invalid unicode
+// Sanitize text input to preserve UTF-8 and remove only truly problematic characters
 const sanitizeTextInput = (text) => {
   if (typeof text !== "string") return "";
   
-  // Remove null bytes and other control characters except newlines, tabs
-  let sanitized = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "");
+  // Only remove NULL bytes and other control characters that break parsing
+  // Preserve all valid UTF-8 characters including international text
+  let sanitized = text
+    .replace(/\x00/g, "") // Remove NULL bytes
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, ""); // Remove control chars except \n, \r, \t
   
-  // Replace invalid UTF-8 sequences
-  try {
-    // Test if string is valid UTF-8 by encoding/decoding
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder("utf-8", { fatal: false });
-    const bytes = encoder.encode(sanitized);
-    sanitized = decoder.decode(bytes);
-  } catch {
-    // If encoding fails, remove non-ASCII characters
-    sanitized = sanitized.replace(/[^\x20-\x7E\n\r\t]/g, "");
-  }
+  // Normalize line endings to \n
+  sanitized = sanitized.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   
   return sanitized;
 };
@@ -286,6 +280,27 @@ export default function UploadCard({
             const raw = event.target.value;
             const sanitized = sanitizeTextInput(raw);
             onTextChange?.(sanitized);
+          }}
+          onPaste={(event) => {
+            // Handle paste events to ensure proper UTF-8 encoding
+            event.preventDefault();
+            const clipboardData = event.clipboardData || window.clipboardData;
+            const pastedText = clipboardData.getData("text/plain");
+            const sanitized = sanitizeTextInput(pastedText);
+            
+            // Insert at cursor position
+            const target = event.target;
+            const start = target.selectionStart;
+            const end = target.selectionEnd;
+            const currentValue = textValue || "";
+            const newValue = currentValue.substring(0, start) + sanitized + currentValue.substring(end);
+            
+            onTextChange?.(newValue);
+            
+            // Restore cursor position
+            setTimeout(() => {
+              target.selectionStart = target.selectionEnd = start + sanitized.length;
+            }, 0);
           }}
           inputClassName="min-h-[160px] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)]"
           aria-label="Paste resume text instead"
