@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, LogIn, LogOut, Sparkles, Target } from "lucide-react";
-import Button from "../ui/Button.jsx";
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";

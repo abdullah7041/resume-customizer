@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate } from "lucide-react";
 import {
   parseResume,
   analyzeResume,
@@ -10,6 +10,11 @@ import { useAuth } from "../hooks/useAuth.jsx";
 import ResumeUpload from "../features/ResumeUpload.jsx";
 import JobMatch from "./Features/JobMatch.jsx";
 import Optimization from "../features/Optimization.jsx";
+import KeywordAnalyzer from "../features/KeywordAnalyzer.jsx";
+import TemplateGallery from "../features/TemplateGallery.jsx";
+import InterviewPrep from "../features/InterviewPrep.jsx";
+import BulkAnalysis from "../features/BulkAnalysis.jsx";
+import CoverLetter from "../features/CoverLetter.jsx";
 import Tabs from "./ui/Tabs.jsx";
 import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
@@ -21,6 +26,11 @@ const tabs = [
   { value: "resume", label: "Resume", icon: FileText },
   { value: "match", label: "Match", icon: Target },
   { value: "optimize", label: "Optimize", icon: Sparkles },
+  { value: "keywords", label: "Keywords", icon: TrendingUp },
+  { value: "templates", label: "Templates", icon: LayoutTemplate },
+  { value: "interview", label: "Interview", icon: MessageSquare },
+  { value: "bulk", label: "Bulk Analysis", icon: FileText },
+  { value: "cover-letter", label: "Cover Letter", icon: Mail },
 ];
 
 const containerClass = "app-shell w-full";
@@ -635,6 +645,41 @@ export default function MainContent() {
             onUpgrade={handleUpgrade}
             onExport={handleExportPdf}
             canExport={Boolean(resumeData?.plainText)}
+          />
+        )}
+        {activeTab === "keywords" && (
+          <KeywordAnalyzer
+            resumeText={resumeData?.plainText || ""}
+            jobDescription={jobDescription}
+          />
+        )}
+        {activeTab === "templates" && (
+          <TemplateGallery
+            resumeData={resumeData}
+            onSelectTemplate={(template) => {
+              pushToast({
+                type: "success",
+                title: "Template Selected",
+                description: `Using ${template.name} template. You can now apply it to your resume.`
+              });
+            }}
+          />
+        )}
+        {activeTab === "interview" && (
+          <InterviewPrep
+            jobDescription={jobDescription}
+            resumeText={resumeData?.plainText || ""}
+          />
+        )}
+        {activeTab === "bulk" && (
+          <BulkAnalysis
+            jobDescription={jobDescription}
+          />
+        )}
+        {activeTab === "cover-letter" && (
+          <CoverLetter
+            resumeText={resumeData?.plainText || ""}
+            jobDescription={jobDescription}
           />
         )}
       </div>

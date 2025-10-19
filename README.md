@@ -130,16 +130,24 @@ src/
 ### Development
 
 ```bash
-# Run with Netlify functions
-netlify dev               # Starts Vite + functions on :8888
+# Run with Netlify functions (RECOMMENDED)
+npm run dev:netlify      # Starts Vite + functions on :8888
+
+# Run frontend only (faster, but no backend functions)
+npm run dev              # Vite only on :5173
 
 # Testing
 npm test                  # Run Vitest tests
+npm run test:watch        # Run tests in watch mode
 npm run lint              # ESLint check
+./test-local.sh           # Full pre-deploy test suite
 
 # Production build
 npm run build             # Generates VITE_BUILD_ID + builds
+npm run preview           # Preview production build
 ```
+
+**📖 Before Deployment**: See [LOCAL_TESTING_GUIDE.md](LOCAL_TESTING_GUIDE.md) for comprehensive testing instructions.
 
 ---
 
