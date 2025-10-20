@@ -27,8 +27,10 @@ export const Card = forwardRef(function Card(
       ref={ref}
       className={cn(
         "relative overflow-hidden rounded-card p-6 shadow-card transition-all duration-breathe ease-snappy",
-        "before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:transition-opacity before:duration-breathe before:content-[''] before:bg-[image:var(--glass-reflection)] hover:before:opacity-80",
-        "after:pointer-events-none after:absolute after:bottom-[-40%] after:left-[-20%] after:h-[140%] after:w-[160%] after:rounded-full after:bg-[image:var(--gradient-halo)] after:opacity-0 after:transition-opacity after:duration-breathe hover:after:opacity-60",
+        "before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:transition-all before:duration-breathe before:content-[''] before:bg-[image:var(--glass-reflection)] hover:before:opacity-90 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100",
+        "after:pointer-events-none after:absolute after:bottom-[-40%] after:left-[-20%] after:h-[140%] after:w-[160%] after:rounded-full after:bg-[image:var(--gradient-halo)] after:opacity-0 after:transition-opacity after:duration-breathe hover:after:opacity-70",
+        "hover:shadow-[var(--shadow-hover)] hover:border-[color:var(--glass-border-hover)]",
+        "active:scale-[0.99] active:transition-transform active:duration-75",
         glow ? "shadow-glass" : "",
         toneStyles[tone] ?? toneStyles.glass,
         className

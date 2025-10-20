@@ -187,43 +187,6 @@ export default function BulkAnalysis({ jobDescription }) {
   const [resumes, setResumes] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   
-  const handleFiles = useCallback(async (files) => {
-    const fileArray = Array.from(files).slice(0, MAX_FILES - resumes.length);
-    
-    // Validate files
-    const validFiles = fileArray.filter(file => {
-      if (file.size > MAX_SIZE) {
-        console.warn(`File ${file.name} is too large`);
-        return false;
-      }
-      if (!file.name.match(/\.(pdf|docx)$/i)) {
-        console.warn(`File ${file.name} has unsupported format`);
-        return false;
-      }
-      return true;
-    });
-    
-    if (validFiles.length === 0) return;
-    
-    // Add files to state
-    const newResumes = validFiles.map(file => ({
-      id: `${Date.now()}-${Math.random()}`,
-      name: file.name,
-      file,
-      status: "pending",
-      plainText: null,
-      analysis: null,
-      error: null
-    }));
-    
-    setResumes(prev => [...prev, ...newResumes]);
-    
-    // Process each file
-    for (const resume of newResumes) {
-      await processResume(resume.id, resume.file);
-    }
-  }, [resumes.length, processResume]);
-  
   const processResume = useCallback(async (resumeId, file) => {
     // Update status to parsing
     setResumes(prev => prev.map(r => 
@@ -263,6 +226,43 @@ export default function BulkAnalysis({ jobDescription }) {
       ));
     }
   }, [jobDescription]);
+  
+  const handleFiles = useCallback(async (files) => {
+    const fileArray = Array.from(files).slice(0, MAX_FILES - resumes.length);
+    
+    // Validate files
+    const validFiles = fileArray.filter(file => {
+      if (file.size > MAX_SIZE) {
+        console.warn(`File ${file.name} is too large`);
+        return false;
+      }
+      if (!file.name.match(/\.(pdf|docx)$/i)) {
+        console.warn(`File ${file.name} has unsupported format`);
+        return false;
+      }
+      return true;
+    });
+    
+    if (validFiles.length === 0) return;
+    
+    // Add files to state
+    const newResumes = validFiles.map(file => ({
+      id: `${Date.now()}-${Math.random()}`,
+      name: file.name,
+      file,
+      status: "pending",
+      plainText: null,
+      analysis: null,
+      error: null
+    }));
+    
+    setResumes(prev => [...prev, ...newResumes]);
+    
+    // Process each file
+    for (const resume of newResumes) {
+      await processResume(resume.id, resume.file);
+    }
+  }, [resumes.length, processResume]);
   
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -345,7 +345,7 @@ export default function BulkAnalysis({ jobDescription }) {
           </Button>
         )}
       </div>
-      
+
       {/* Upload Area */}
       {canUploadMore && (
         <div
@@ -375,6 +375,7 @@ export default function BulkAnalysis({ jobDescription }) {
             <input
               type="file"
               id="bulk-upload"
+              name="bulk-upload"
               multiple
               accept=".pdf,.docx"
               onChange={handleFileInput}

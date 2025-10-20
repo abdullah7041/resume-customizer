@@ -1,16 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ClipboardCheck, FileDown, Info, Lock, Sparkles } from "lucide-react";
+import { Info, Lock, Sparkles } from "lucide-react";
 import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
 import { cn } from "../lib/cn.js";
 import OptimizationCard from "../components/shared/OptimizationCard.jsx";
-
-const modes = [
-  { value: "auto", label: "AI automatic" },
-  { value: "conservative", label: "Conservative" },
-  { value: "aggressive", label: "Aggressive" },
-];
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
 const CHIP_LABELS = {
@@ -60,10 +54,8 @@ export default function Optimization({
   onCopy,
   previewUsed,
   onUpgrade,
-  onExport,
-  canExport = false,
+  hasMatchAnalysis = false,
 }) {
-  const [mode, setMode] = useState("auto");
   const [chipsAnimated, setChipsAnimated] = useState(false);
   const chipsShownRef = useRef(false);
 
@@ -76,7 +68,7 @@ export default function Optimization({
   const watermarkVisible = !isPremium && previewUsed;
   const showPreviewBanner = !isPremium && !previewUsed;
 
-  const handleRun = () => onOptimize?.(mode);
+  const handleRun = () => onOptimize?.("auto");
 
   useEffect(() => {
     const total =
@@ -103,85 +95,36 @@ export default function Optimization({
 
       {showPreviewBanner && <PreviewBanner onUpgrade={onUpgrade} />}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500/90">Optimization mode</span>
-          <div className="relative">
-            <select
-              value={mode}
-              onChange={(event) => setMode(event.target.value)}
-              className="w-full appearance-none rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-4 py-3 text-sm font-medium text-ink shadow-soft backdrop-blur-soft transition-all duration-snappy ease-snappy focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--button-primary-focus)] focus:ring-offset-2 focus:ring-offset-[color:var(--surface)]"
-            >
-              {modes.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-soft/60">▾</span>
+      {!hasMatchAnalysis && (
+        <Card
+          tone="translucent"
+          className="border-warning-500/30 bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)]"
+          contentClassName="space-y-3 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-warning-500/15 text-warning-500 shadow-soft">
+              <Info className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-warning-500">
+                Match analysis required
+              </p>
+              <p className="text-sm text-ink-soft">
+                Run a match analysis first to provide job context for optimization.
+              </p>
+            </div>
           </div>
-        </label>
-        <div className="space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500/90">Actions</span>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="secondary"
-              icon={FileDown}
-              onClick={() => onExport?.("styled", "supabase")}
-              disabled={!canExport || isOptimizing}
-              title={
-                !canExport
-                  ? "Upload and parse your resume before exporting."
-                  : isOptimizing
-                  ? "Please wait for the optimization run to finish."
-                  : "Save to your Supabase account"
-              }
-              className="justify-center"
-            >
-              Save to Account
-            </Button>
-            <Button
-              variant="secondary"
-              icon={FileDown}
-              onClick={() => onExport?.("styled", "print")}
-              disabled={!canExport || isOptimizing}
-              title={
-                !canExport
-                  ? "Upload and parse your resume before exporting."
-                  : isOptimizing
-                  ? "Please wait for the optimization run to finish."
-                  : "Open print dialog to save as PDF"
-              }
-              className="justify-center"
-            >
-              Print as PDF
-            </Button>
-            <Button
-              variant="secondary"
-              icon={ClipboardCheck}
-              disabled={!isPremium}
-              title=
-                {!isPremium
-                  ? previewUsed
-                    ? "Upgrade to export your optimized resume."
-                    : "Preview your optimizations first."
-                  : undefined}
-              className="justify-center"
-            >
-              Export Summary
-            </Button>
-          </div>
-        </div>
-      </div>
+        </Card>
+      )}
 
       <Button
         icon={Sparkles}
         onClick={handleRun}
         loading={isOptimizing}
-        disabled={isOptimizing}
+        disabled={isOptimizing || !hasMatchAnalysis}
         className="w-full justify-center min-h-[44px]"
       >
-        Run AI optimization
+        {hasMatchAnalysis ? "Optimize Resume with AI" : "Run Match Analysis First"}
       </Button>
 
       <section className="space-y-4">

@@ -1,5 +1,14 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useId, useImperativeHandle, useRef } from "react";
 import { cn } from "../../lib/cn";
+
+const slugify = (value) =>
+  value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "field";
 
 export const Input = forwardRef(function Input(
   {
@@ -11,13 +20,22 @@ export const Input = forwardRef(function Input(
     autoSize = multiline,
     className,
     inputClassName,
+    id,
+    name,
+    value,
+    defaultValue,
     ...props
   },
   forwardedRef
 ) {
-  const { value, defaultValue, ...restProps } = props;
+  const restProps = props;
   const internalRef = useRef(null);
   useImperativeHandle(forwardedRef, () => internalRef.current);
+  const reactId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const labelSlug = typeof label === "string" ? slugify(label) : "field";
+  const fallbackId = `input-${labelSlug}-${reactId}`;
+  const fieldId = id ?? fallbackId;
+  const fieldName = name ?? fieldId;
 
   const Component = multiline ? "textarea" : "input";
 
@@ -56,6 +74,8 @@ export const Input = forwardRef(function Input(
       <div className="relative">
         <Component
           ref={internalRef}
+          id={fieldId}
+          name={fieldName}
           className={cn(
             "peer block w-full rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_6%)] bg-clip-padding px-4 py-3 text-sm text-ink shadow-soft transition-all duration-snappy ease-snappy placeholder:text-ink-soft/70 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--button-primary-focus)] focus:ring-offset-2 focus:ring-offset-[color:var(--surface)]",
             multiline

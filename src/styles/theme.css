@@ -30,13 +30,16 @@
   --shadow-card: 0 28px 60px -24px rgba(1, 10, 12, 0.85), 0 24px 56px -28px rgba(9, 96, 84, 0.5);
   --shadow-soft: 0 18px 48px -26px rgba(0, 12, 15, 0.85), 0 16px 36px -24px rgba(18, 112, 92, 0.45);
   --shadow-lift: 0 28px 62px -24px rgba(30, 185, 153, 0.5), 0 24px 58px -26px rgba(11, 132, 111, 0.45);
+  --shadow-hover: 0 12px 32px -12px rgba(52, 211, 153, 0.35), 0 8px 20px -8px rgba(14, 164, 114, 0.4);
   --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(52, 211, 153, 0.45);
   --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.55);
 
   --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.68), transparent 42%);
   --glass-border-strong: color-mix(in oklab, rgba(34, 211, 185, 0.75), transparent 35%);
-  --glass-reflection: linear-gradient(130deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.1) 45%, rgba(255, 255, 255, 0) 70%);
-  --glass-gold-sheen: linear-gradient(115deg, rgba(244, 211, 125, 0.22) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(244, 211, 125, 0.18) 100%);
+  --glass-border-hover: color-mix(in oklab, rgba(52, 211, 153, 0.85), transparent 25%);
+  --glass-reflection: linear-gradient(130deg, rgba(52, 211, 153, 0.28) 0%, rgba(15, 118, 110, 0.18) 45%, rgba(52, 211, 153, 0.08) 70%);
+  --glass-reflection-hover: linear-gradient(130deg, rgba(52, 211, 153, 0.38) 0%, rgba(15, 118, 110, 0.28) 45%, rgba(52, 211, 153, 0.18) 70%);
+  --glass-gold-sheen: linear-gradient(115deg, rgba(244, 211, 125, 0.22) 0%, rgba(52, 211, 153, 0.12) 55%, rgba(244, 211, 125, 0.18) 100%);
 
   /* Color system */
   --surface-50: #e6f7f1;

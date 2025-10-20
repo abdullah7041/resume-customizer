@@ -120,7 +120,20 @@ export async function runOptimization(
 
     if (!response.ok) {
       const { message, code } = parseError(data);
-      const error = new AiRequestError(message, response.status, code);
+      
+      // Enhanced error message for missing API key
+      let enhancedMessage = message;
+      if (response.status === 503 && message.includes("not configured")) {
+        enhancedMessage = "⚙️ OpenAI API key not configured in Netlify. Please add OPENAI_API_KEY to your environment variables.";
+      } else if (response.status === 401) {
+        enhancedMessage = "🔑 Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.";
+      } else if (response.status === 429) {
+        enhancedMessage = "⏳ OpenAI rate limit exceeded. Please wait a moment and try again.";
+      } else if (response.status >= 500) {
+        enhancedMessage = `🔧 OpenAI server error: ${message}`;
+      }
+      
+      const error = new AiRequestError(enhancedMessage, response.status, code);
       options.onDebug?.({
         status: "error",
         model: (typeof data?.model === "string" ? data.model : null) ?? (normalizedPayload.model as string | undefined) ?? null,

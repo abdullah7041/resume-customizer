@@ -9,6 +9,18 @@
     --app-shell-gutter: clamp(1rem, 4vw, 3rem);
   }
 
+  html,
+  :host {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @supports (text-size-adjust: 100%) {
+    html,
+    :host {
+      text-size-adjust: 100%;
+    }
+  }
+
   /* View Transitions API support for smooth theme switching */
   ::view-transition-old(root),
   ::view-transition-new(root) {
@@ -103,6 +115,23 @@
 
 
 @layer utilities {
+  @supports (text-wrap: balance) {
+    .text-balance {
+      text-wrap: balance;
+    }
+  }
+
+  @supports (text-wrap: pretty) {
+    .text-pretty {
+      text-wrap: pretty;
+    }
+  }
+
+  .text-balance,
+  .text-pretty {
+    overflow-wrap: anywhere;
+  }
+
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
@@ -215,8 +244,8 @@
       rgba(251, 191, 36, 0.50) 70%
     );
     background-size: 200% auto;
-    background-clip: text;
     -webkit-background-clip: text;
+    background-clip: text;
     color: transparent;
     background-position: 0% center;
     transition: filter 250ms ease, background-position 0.8s ease-out;

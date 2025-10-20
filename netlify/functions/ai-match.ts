@@ -13,30 +13,40 @@ const HEADERS = {
 const getRequestId = (event: Parameters<Handler>[0]) =>
   event.headers?.["x-nf-request-id"] ?? crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
-const QUESTION_PREDICTION_PROMPT = `You are an expert HR interviewer and career coach. Based on the job description provided, predict 12-15 likely interview questions that a candidate might face.
+const AI_MATCH_PROMPT = `You are an expert ATS (Applicant Tracking System) and HR recruiter analyzer. Analyze how well a resume matches a job description.
 
 CRITICAL RULES:
-1. Generate realistic, specific questions based on the job requirements
-2. Include a mix of technical, behavioral, and situational questions
-3. Ensure questions are relevant to the role level (entry, mid, senior)
-4. Return ONLY valid JSON with no markdown, explanations, or extra text
+1. Provide an honest, realistic match score (0-100) - DO NOT give inflated scores
+2. Identify specific missing keywords and skills from the job description
+3. Highlight strong alignment areas where resume matches job requirements
+4. Provide actionable, specific recommendations
+5. Include detailed explanation with reasoning and tips
+6. Return ONLY valid JSON with no markdown code fences or extra text
 
-Output format:
+Output format (MUST be valid JSON):
 {
-  "questions": [
-    {
-      "question": "The interview question text",
-      "type": "technical|behavioral|situational|case-study",
-      "difficulty": "easy|medium|hard",
-      "category": "skills|experience|culture-fit|problem-solving",
-      "answerFramework": "Brief guidance on how to structure the answer (2-3 sentences)"
-    }
+  "score": 75,
+  "coverage": 0.68,
+  "similarity": 0.72,
+  "missingKeywords": ["Python", "AWS", "Docker", "Kubernetes"],
+  "strongMatches": ["JavaScript", "React", "Node.js", "TypeScript"],
+  "recommendations": [
+    "Add specific cloud platform experience (AWS/Azure)",
+    "Highlight any Python or backend development projects",
+    "Include containerization experience if available"
   ],
-  "roleLevel": "entry|mid|senior|executive",
-  "focusAreas": ["area1", "area2", "area3"]
+  "overallAssessment": "Strong frontend skills but needs backend/DevOps experience",
+  "explanation": {
+    "reason": "Your resume shows strong frontend development skills but the job requires full-stack capabilities including cloud infrastructure.",
+    "tips": [
+      "Emphasize any backend or cloud experience you have",
+      "Add metrics to demonstrate impact (e.g., '30% performance improvement')",
+      "Include relevant certifications if you have them"
+    ]
+  }
 }
 
-JOB DESCRIPTION:`;
+RESUME:`;
 
 const sanitize = (value: unknown): string => {
   if (typeof value !== "string") return "";
@@ -61,20 +71,20 @@ const handler: Handler = async (event) => {
 
   try {
     const body = event.body ? JSON.parse(event.body) : {};
-    const jobDescription = sanitize(body?.jobDescription ?? body?.jobDesc ?? body?.job);
     const resumeText = sanitize(body?.resumeText ?? body?.resume ?? "");
+    const jobDescription = sanitize(body?.jobDescription ?? body?.job ?? "");
 
-    if (!jobDescription) {
+    if (!resumeText || !jobDescription) {
       return {
         statusCode: 400,
         headers: HEADERS,
-        body: JSON.stringify({ error: "Job description is required" }),
+        body: JSON.stringify({ error: "Both resume and job description are required" }),
       };
     }
 
     const apiKey = process.env.OPENAI_API_KEY ?? process.env.VITE_OPENAI_KEY;
     if (!apiKey) {
-      console.error("[predict-questions] missing OPENAI_API_KEY", { requestId });
+      console.error("[ai-match] missing OPENAI_API_KEY", { requestId });
       return {
         statusCode: 503,
         headers: HEADERS,
@@ -82,16 +92,11 @@ const handler: Handler = async (event) => {
       };
     }
 
-    // Build context-aware prompt
-    let fullPrompt = QUESTION_PREDICTION_PROMPT + "\n" + jobDescription;
-    
-    if (resumeText) {
-      fullPrompt += "\n\nCANDIDATE RESUME CONTEXT (use to personalize questions):\n" + resumeText.substring(0, 1500);
-    }
+    const fullPrompt = `${AI_MATCH_PROMPT}\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescription}`;
 
     const options = resolveOpenAIOptions({
       model: body?.model,
-      max_completion_tokens: 2048,
+      max_completion_tokens: 1500,
     });
 
     const response = await fetch(OPENAI_URL, {
@@ -107,7 +112,7 @@ const handler: Handler = async (event) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert HR interviewer and career coach who predicts realistic interview questions.",
+            content: "You are an expert ATS analyzer who provides realistic, actionable resume-job matching insights.",
           },
           {
             role: "user",
@@ -121,7 +126,7 @@ const handler: Handler = async (event) => {
 
     if (!response.ok) {
       const message = typeof data?.error?.message === "string" ? data.error.message : "OpenAI request failed";
-      console.error("[predict-questions] request failed", {
+      console.error("[ai-match] request failed", {
         requestId,
         status: response.status,
         message,
@@ -136,39 +141,36 @@ const handler: Handler = async (event) => {
     const outputText = data?.choices?.[0]?.message?.content ?? "";
     
     // Parse JSON response
-    let questions = [];
-    let roleLevel = "mid";
-    let focusAreas = [];
+    let matchResult = null;
     
     try {
       // Remove markdown code fences if present
       const cleaned = outputText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      const parsed = JSON.parse(cleaned);
-      
-      questions = parsed.questions || [];
-      roleLevel = parsed.roleLevel || "mid";
-      focusAreas = parsed.focusAreas || [];
+      matchResult = JSON.parse(cleaned);
     } catch {
-      console.error("[predict-questions] JSON parse error", { requestId, outputText });
-      // Fallback: return raw text
+      console.error("[ai-match] JSON parse error", { requestId, outputText });
       return {
         statusCode: 200,
         headers: HEADERS,
         body: JSON.stringify({
-          questions: [],
-          roleLevel: "mid",
-          focusAreas: [],
+          score: 0,
+          coverage: 0,
+          similarity: 0,
+          missingKeywords: [],
+          strongMatches: [],
+          recommendations: [],
+          overallAssessment: "Failed to parse AI response",
           rawOutput: outputText,
-          error: "Failed to parse AI response"
+          error: "JSON parse failed"
         }),
       };
     }
 
     const latency = Math.round(performance.now() - start);
-    console.info("[predict-questions] request complete", {
+    console.info("[ai-match] request complete", {
       requestId,
       model: options.model,
-      questionCount: questions.length,
+      score: matchResult.score,
       latency_ms: latency,
     });
 
@@ -176,9 +178,7 @@ const handler: Handler = async (event) => {
       statusCode: 200,
       headers: HEADERS,
       body: JSON.stringify({
-        questions,
-        roleLevel,
-        focusAreas,
+        ...matchResult,
         model: data?.model ?? options.model,
         usage: data?.usage ?? null,
       }),
@@ -186,7 +186,7 @@ const handler: Handler = async (event) => {
   } catch (error) {
     const latency = Math.round(performance.now() - start);
     const message = error instanceof Error ? error.message : "Unexpected error";
-    console.error("[predict-questions] request error", { requestId, message, latency_ms: latency });
+    console.error("[ai-match] request error", { requestId, message, latency_ms: latency });
     return {
       statusCode: 500,
       headers: HEADERS,

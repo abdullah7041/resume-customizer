@@ -100,8 +100,7 @@ const handler: Handler = async (event) => {
 
     const options = resolveOpenAIOptions({
       model: body?.model,
-      temperature: 1, // gpt-5-nano requires temperature=1
-      max_output_tokens: 1500,
+      max_completion_tokens: 1500,
     });
 
     const response = await fetch(OPENAI_URL, {
@@ -111,7 +110,9 @@ const handler: Handler = async (event) => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        ...options,
+        model: options.model,
+        temperature: options.temperature,
+        max_completion_tokens: options.max_completion_tokens,
         messages: [
           {
             role: "system",

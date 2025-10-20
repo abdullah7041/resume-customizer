@@ -341,6 +341,8 @@ export default function CoverLetter({ resumeText, jobDescription }) {
                      focus:ring-2 focus:ring-emerald-500 focus:border-transparent
                      font-serif text-base leading-relaxed resize-none"
             placeholder="Your generated cover letter will appear here..."
+            id="cover-letter-editor"
+            name="cover-letter"
           />
           
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">

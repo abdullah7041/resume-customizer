@@ -269,32 +269,9 @@ const buildContact = (lines) => {
 };
 
 const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "", matchAnalysis, optimizations, keywords }) => {
-  console.log('[buildExportHtml] Input:', {
-    hasDocument: !!resumeDocument,
-    documentType: typeof resumeDocument,
-    hasText: !!resumeText,
-    textLength: resumeText?.length,
-    plainTextLength: resumeDocument?.plainText?.length
-  });
-  
   const document = ensureResumeDocument(resumeDocument ?? resumeText);
-  console.log('[buildExportHtml] Document ensured:', {
-    plainTextLength: document.plainText?.length,
-    hasSections: !!document.sections,
-    sectionsCount: document.sections?.length,
-    hasBullets: !!document.bullets,
-    bulletsCount: document.bullets?.length
-  });
   
   const sections = deriveResumeSections(document.plainText);
-  console.log('[buildExportHtml] Sections derived:', {
-    contactLines: sections.contactLines?.length,
-    summary: sections.summary?.length,
-    skills: sections.skills?.length,
-    experience: sections.experience?.length,
-    education: sections.education?.length,
-    projects: sections.projects?.length
-  });
   
   const contact = buildContact(sections.contactLines);
   const summaryHtml = buildSummary(sections.summary, matchAnalysis, optimizations);
@@ -332,13 +309,6 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
     sections.projects.length > 0 || 
     allSkills.length > 0 ||
     summaryHtml;
-
-  console.log('[buildExportHtml] Content check:', {
-    hasStructuredContent,
-    contactName: contact.name,
-    allSkillsCount: allSkills.length,
-    plainTextLength: document.plainText?.length
-  });
 
   // Fallback: if no sections parsed, show raw resume text
   const fallbackContent = !hasStructuredContent && document.plainText ? `
@@ -704,17 +674,12 @@ export const exportResumeToPdf = async ({
   variant = "styled",
   skipPrint = false,
 }) => {
-  console.log('[PDF Export] Starting export...');
-  
   const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
   const normalizedVariant = normalizeVariant(variant);
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
   
-  console.log('[PDF Export] HTML generated, length:', html.length);
-  
   // If skipPrint is true, just return the HTML content
   if (skipPrint) {
-    console.log('[PDF Export] Returning HTML content without printing');
     return html;
   }
   
@@ -742,8 +707,6 @@ export const exportResumeToPdf = async ({
     // Small delay to ensure rendering is complete
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    console.log('[PDF Export] Opening print dialog...');
-    
     // Trigger the browser's native print dialog
     printWindow.print();
     
@@ -751,8 +714,6 @@ export const exportResumeToPdf = async ({
     setTimeout(() => {
       printWindow.close();
     }, 1000);
-    
-    console.log('[PDF Export] Print dialog opened successfully!');
     
     return true;
   } catch (error) {

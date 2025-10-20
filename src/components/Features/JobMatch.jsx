@@ -4,6 +4,7 @@ import Button from "../ui/Button.jsx";
 import Card from "../ui/Card.jsx";
 import Input from "../ui/Input.jsx";
 import SectionTitle from "../ui/SectionTitle.jsx";
+import Tooltip from "../ui/Tooltip.jsx";
 
 const resolveVariant = (score) => {
   if (score >= 75) {
@@ -43,7 +44,7 @@ const RING_RADIUS = 56;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export default function JobMatch({
-  onAnalyzeMatch,
+  onAnalyzeMatchAI,
   matchAnalysis,
   isAnalyzing = false,
   hasResume = false,
@@ -82,7 +83,7 @@ export default function JobMatch({
     }
     setError("");
     try {
-      await onAnalyzeMatch(trimmedJob);
+      await onAnalyzeMatchAI(trimmedJob);
     } catch (err) {
       setError(err?.message || "We could not analyze this match.");
     }
@@ -146,20 +147,23 @@ export default function JobMatch({
           </p>
         )}
         <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={handleAnalyze}
-              loading={isAnalyzing}
-              disabled={buttonDisabled}
-              icon={Sparkles}
-              className="justify-center sm:justify-start"
-            >
-              Analyze match
-            </Button>
-          </div>
+          <Button
+            onClick={handleAnalyze}
+            loading={isAnalyzing}
+            disabled={buttonDisabled}
+            icon={Sparkles}
+            className="justify-center sm:justify-start"
+          >
+            Analyze Match with AI
+          </Button>
           {disabledHint && (
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ink-500/70 dark:text-surface-50/60">
               {disabledHint}
+            </p>
+          )}
+          {!disabledHint && (
+            <p className="text-xs text-ink-500/70 dark:text-surface-50/60">
+              AI provides intelligent insights with deeper analysis of your resume match
             </p>
           )}
         </div>
@@ -220,14 +224,19 @@ export default function JobMatch({
                         <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-emerald-500 opacity-80">
                           Match
                         </span>
-                        <div className="mt-1 flex items-baseline justify-center gap-0.5">
-                          <span className="text-3xl font-bold tracking-tight leading-none">
-                            {score == null ? "—" : score}
-                          </span>
-                          {score != null && (
-                            <span className="text-sm font-semibold text-ink-soft opacity-80 leading-none">/100</span>
-                          )}
-                        </div>
+                        <Tooltip
+                          content={`${score != null ? score : 0}/100 - ${variant.label.split(' ')[1]} match with job requirements`}
+                          position="bottom"
+                        >
+                          <div className="mt-1 flex items-baseline justify-center gap-0.5 cursor-help">
+                            <span className="text-3xl font-bold tracking-tight leading-none">
+                              {score == null ? "—" : score}
+                            </span>
+                            {score != null && (
+                              <span className="text-sm font-semibold text-ink-soft opacity-80 leading-none">/100</span>
+                            )}
+                          </div>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -238,12 +247,12 @@ export default function JobMatch({
                     {variant.label}
                   </p>
                   <p className="text-sm text-surface-50/80">
-                    Weighted by cosine similarity and keyword coverage for the pasted description.
+                    AI-powered analysis evaluating your resume's alignment with job requirements.
                   </p>
                   <div className="relative" ref={popoverRef}>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-surface-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+                      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-surface-50 transition active:scale-[0.95] active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                       onClick={() => setWhyOpen((prev) => !prev)}
                       aria-expanded={whyOpen}
                       aria-controls="match-why-popover"

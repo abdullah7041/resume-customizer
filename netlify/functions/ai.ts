@@ -242,8 +242,7 @@ const handler: Handler = async (event) => {
       {
         model: body?.model,
         temperature: body?.temperature,
-        max_output_tokens: body?.max_output_tokens,
-        max_completion_tokens: body?.max_completion_tokens,
+        max_completion_tokens: body?.max_completion_tokens ?? body?.max_tokens ?? body?.max_output_tokens,
       },
       typeof body?.fallback_max_tokens === "number" ? body.fallback_max_tokens : undefined,
     );
@@ -284,7 +283,7 @@ const handler: Handler = async (event) => {
       requestId,
       model: options.model,
       temperature: options.temperature,
-      max_output_tokens: options.max_output_tokens ?? null,
+      max_completion_tokens: options.max_completion_tokens ?? null,
       latency_ms: latency,
     });
 

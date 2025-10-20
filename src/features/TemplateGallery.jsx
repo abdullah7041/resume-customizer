@@ -2,8 +2,9 @@
 // Resume template gallery with preview and selection
 
 import { useState, useMemo } from "react";
-import { FileText, Download, Eye, CheckCircle2, Star, Filter } from "lucide-react";
+import { Download, Eye, CheckCircle2, Star, Filter, X } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES, calculateTemplateMatch } from "../data/resumeTemplates.js";
+import { generateTemplatePreview } from "../utils/templatePreviews.js";
 import TemplateRenderer from "../components/TemplateRenderer.jsx";
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
@@ -48,12 +49,12 @@ const TemplateCard = ({ template, isSelected, onSelect, onPreview, matchScore })
       </p>
       
       {/* Preview thumbnail */}
-      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4 h-48 flex items-center justify-center overflow-hidden">
-        <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-          <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p>{template.preview.layout} layout</p>
-          <p className="capitalize">{template.preview.font}</p>
-        </div>
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 mb-4 h-48 flex items-center justify-center overflow-hidden">
+        <img 
+          src={generateTemplatePreview(template)} 
+          alt={`${template.name} preview`}
+          className="w-full h-full object-contain rounded"
+        />
       </div>
       
       <div className="flex items-center justify-between mb-4">
@@ -130,6 +131,7 @@ export default function TemplateGallery({ resumeData, onSelectTemplate }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [exportPreview, setExportPreview] = useState(null);
   
   const filteredTemplates = useMemo(() => {
     if (selectedCategory === "all") {
@@ -171,15 +173,130 @@ export default function TemplateGallery({ resumeData, onSelectTemplate }) {
     handleClosePreview();
   };
   
-  const exportTemplate = (template) => {
-    const dataStr = JSON.stringify(template, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
+  const exportTemplate = async (template) => {
+    // Generate HTML from template structure
+    const html = generateTemplateHTML(template);
+    
+    // Show preview modal instead of print dialog
+    setExportPreview({ template, html });
+  };
+  
+  const handleDownloadPDF = () => {
+    if (!exportPreview) return;
+    
+    const { html } = exportPreview;
+    
+    // Create a blob with the HTML
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${template.id}-template.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    
+    // Open print dialog
+    const printWindow = window.open(url, '_blank', 'width=800,height=600');
+    
+    if (!printWindow) {
+      alert('Please allow pop-ups to download PDF. Check your browser settings.');
+      URL.revokeObjectURL(url);
+      return;
+    }
+    
+    // Wait for content to load then print
+    printWindow.addEventListener('load', () => {
+      setTimeout(() => {
+        printWindow.print();
+        setTimeout(() => {
+          printWindow.close();
+          URL.revokeObjectURL(url);
+        }, 500);
+      }, 500);
+    });
+    
+    setExportPreview(null);
+  };
+  
+  const handleCloseExportPreview = () => {
+    setExportPreview(null);
+  };
+  
+  const generateTemplateHTML = (template) => {
+    const colorSchemes = {
+      emerald: { primary: '#0ea472', secondary: '#075951', accent: '#f4d37d' },
+      royal: { primary: '#0f766e', secondary: '#134e4a', accent: '#34d399' },
+      classic: { primary: '#1f2937', secondary: '#4b5563', accent: '#6b7280' },
+      creative: { primary: '#ec4899', secondary: '#8b5cf6', accent: '#fbbf24' },
+      executive: { primary: '#1e3a8a', secondary: '#1e40af', accent: '#dc2626' }
+    };
+    
+    const colors = colorSchemes[template.preview.colorScheme] || colorSchemes.emerald;
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${template.name} Template</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Calibri', 'Arial', sans-serif; 
+      color: #212529; 
+      background: #ffffff; 
+      font-size: 11pt;
+      line-height: 1.5;
+      padding: 0.5in 0.75in;
+    }
+    @media print {
+      body { padding: 0.5in; }
+      .no-print { display: none; }
+    }
+    .header { text-align: center; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; margin-bottom: 20px; }
+    .header h1 { font-size: 28pt; font-weight: 700; color: ${colors.primary}; margin-bottom: 6px; }
+    .header p { font-size: 10pt; color: #666; }
+    .section { margin-bottom: 20px; }
+    .section-title { font-size: 14pt; font-weight: 700; color: ${colors.primary}; border-bottom: 2px solid ${colors.accent}; padding-bottom: 4px; margin-bottom: 12px; }
+    .content { font-size: 11pt; color: #333; }
+    ul { margin-left: 20px; margin-top: 8px; }
+    li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Your Name</h1>
+    <p>your.email@example.com | (123) 456-7890 | City, Country</p>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Professional Summary</div>
+    <div class="content">
+      <p>Add your professional summary here highlighting your key achievements and expertise.</p>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Experience</div>
+    <div class="content">
+      <p><strong>Job Title | Company Name</strong> <span style="float: right;">2020 - Present</span></p>
+      <ul>
+        <li>Achievement or responsibility with quantifiable results</li>
+        <li>Another achievement demonstrating impact</li>
+        <li>Key project or initiative you led</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Skills</div>
+    <div class="content">
+      <p>Skill 1 • Skill 2 • Skill 3 • Skill 4 • Skill 5</p>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Education</div>
+    <div class="content">
+      <p><strong>Degree Name</strong> - University Name <span style="float: right;">Year</span></p>
+    </div>
+  </div>
+</body>
+</html>`;
   };
   
   return (
@@ -276,6 +393,47 @@ export default function TemplateGallery({ resumeData, onSelectTemplate }) {
           onClose={handleClosePreview}
           onUse={handleUseTemplate}
         />
+      )}
+      
+      {/* Export Preview Modal */}
+      {exportPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={handleCloseExportPreview}>
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl border-2 border-emerald-500/30 bg-[color:var(--surface-glass)] shadow-[0_24px_68px_rgba(0,0,0,0.4)] backdrop-blur-glass" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] px-6 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-ink">Template Preview</h2>
+                <p className="text-sm text-ink-soft">Review your template before downloading</p>
+              </div>
+              <button
+                onClick={handleCloseExportPreview}
+                className="rounded-full p-2 text-ink-soft transition-colors hover:bg-[color:var(--surface-glass)] hover:text-ink"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Preview Content */}
+            <div className="max-h-[calc(90vh-180px)] overflow-y-auto bg-white p-8">
+              <div dangerouslySetInnerHTML={{ __html: exportPreview.html }} />
+            </div>
+            
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] px-6 py-4">
+              <p className="text-sm text-ink-soft">
+                Click "Download PDF" to open print dialog and save as PDF
+              </p>
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={handleCloseExportPreview}>
+                  Cancel
+                </Button>
+                <Button icon={Download} onClick={handleDownloadPDF}>
+                  Download PDF
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

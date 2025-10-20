@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate, HelpCircle } from "lucide-react";
 import {
   parseResume,
-  analyzeResume,
+  analyzeResumeWithAI,
   optimizeResume,
   AI_DEFAULT_TEMPERATURE,
 } from "../services/api.js";
@@ -19,6 +19,9 @@ import Tabs from "./ui/Tabs.jsx";
 import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import Button from "./ui/Button.jsx";
+import HelpModal from "./ui/HelpModal.jsx";
+import WelcomeModal from "./WelcomeModal.jsx";
+import { helpContent } from "../data/helpContent.jsx";
 import { exportResumeToPdf } from "../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../services/supabaseExport.js";
 
@@ -113,6 +116,8 @@ export default function MainContent() {
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, setAiDebug] = useState(null);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [currentHelpTopic, setCurrentHelpTopic] = useState(null);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
 
@@ -322,7 +327,7 @@ export default function MainContent() {
     [normalizeResumePayload, pushToast]
   );
 
-  const handleAnalyzeMatch = useCallback(
+  const handleAnalyzeMatchAI = useCallback(
     async (jobDescriptionInput) => {
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
@@ -340,20 +345,20 @@ export default function MainContent() {
         pushToast(
           {
             type: "info",
-            title: "Analyzing match",
-            description: withTemperature("Comparing your resume to the description…"),
+            title: "AI analyzing match",
+            description: "Using advanced AI for intelligent match insights…",
           },
           { id: TOAST_IDS.match }
         );
         const trimmedJob = jobDescriptionInput.trim();
-        const result = await analyzeResume(resumeData, trimmedJob);
+        const result = await analyzeResumeWithAI(resumeData.plainText, trimmedJob);
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
         pushToast(
           {
             type: "success",
-            title: "Match insights ready",
-            description: withTemperature("Use Continue to generate optimization guidance."),
+            title: "AI match complete",
+            description: "Intelligent insights generated. View recommendations below.",
           },
           { id: TOAST_IDS.match }
         );
@@ -365,11 +370,8 @@ export default function MainContent() {
         pushToast(
           {
             type: "danger",
-            title: "Match analysis failed",
-            description: withTemperature(
-              (error?.message || "Please try again in a moment.") +
-                " • Copy your inputs before retrying."
-            ),
+            title: "AI match analysis failed",
+            description: error?.message || "Please try again in a moment.",
           },
           { id: TOAST_IDS.match }
         );
@@ -603,7 +605,23 @@ export default function MainContent() {
   const workspace = (
     <div className="space-y-5 sm:space-y-7 text-ink-700 dark:text-surface-50">
       <div className="flex items-center justify-between gap-4">
-        <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
+        <div className="flex items-center gap-3">
+          <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
+          {/* Help button for current tab */}
+          {helpContent[getHelpKey(activeTab)] && (
+            <button
+              onClick={() => {
+                setCurrentHelpTopic(getHelpKey(activeTab));
+                setHelpModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-all"
+              title="How this feature works"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">How it Works</span>
+            </button>
+          )}
+        </div>
         {resumeData?.plainText && (
           <button
             type="button"
@@ -626,7 +644,7 @@ export default function MainContent() {
         )}
         {activeTab === "match" && (
           <JobMatch
-            onAnalyzeMatch={handleAnalyzeMatch}
+            onAnalyzeMatchAI={handleAnalyzeMatchAI}
             matchAnalysis={matchAnalysis}
             isAnalyzing={isAnalyzing}
             hasResume={Boolean(resumeData?.plainText)}
@@ -645,6 +663,7 @@ export default function MainContent() {
             onUpgrade={handleUpgrade}
             onExport={handleExportPdf}
             canExport={Boolean(resumeData?.plainText)}
+            hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
           />
         )}
         {activeTab === "keywords" && (
@@ -794,6 +813,35 @@ export default function MainContent() {
           </section>
         )}
       </div>
+      
+      {/* Welcome Modal for first-time users */}
+      <WelcomeModal />
+      
+      {/* Help Modal */}
+      {currentHelpTopic && (
+        <HelpModal
+          isOpen={helpModalOpen}
+          onClose={() => setHelpModalOpen(false)}
+          title={helpContent[currentHelpTopic]?.title || "Help"}
+        >
+          {helpContent[currentHelpTopic]?.content}
+        </HelpModal>
+      )}
     </main>
   );
+}
+
+// Helper function to map tab values to help content keys
+function getHelpKey(tabValue) {
+  const mapping = {
+    "resume": "upload",
+    "match": "match",
+    "optimize": "optimize",
+    "keywords": "keywords",
+    "templates": "templates",
+    "interview": "interview",
+    "bulk": "bulk",
+    "cover-letter": "cover",
+  };
+  return mapping[tabValue] || tabValue;
 }

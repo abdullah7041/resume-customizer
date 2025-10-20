@@ -16,13 +16,13 @@ const variantStyles = {
 };
 
 const interactiveStyles =
-  "relative inline-flex min-h-[44px] items-center justify-center gap-2 overflow-hidden rounded-pill px-6 py-2.5 text-sm font-semibold tracking-wide transition-all duration-snappy ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface)]";
+  "relative inline-flex min-h-[44px] items-center justify-center gap-2 overflow-hidden rounded-pill px-6 py-2.5 text-sm font-semibold tracking-wide transition-all duration-snappy ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface)] active:scale-[0.97] active:transition-transform active:duration-75";
 
 const surfaceSheen =
-  "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:content-[''] before:bg-[image:var(--glass-reflection)] before:opacity-0 before:transition-opacity before:duration-snappy hover:before:opacity-90";
+  "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:content-[''] before:bg-[image:var(--glass-reflection)] before:opacity-0 before:transition-all before:duration-snappy hover:before:opacity-100 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100";
 
 const rippleSheen =
-  "after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:bg-[image:var(--glass-gold-sheen)] after:opacity-0 after:transition-opacity after:duration-breathe hover:after:opacity-70";
+  "after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:bg-[image:var(--glass-gold-sheen)] after:opacity-0 after:transition-opacity after:duration-breathe hover:after:opacity-80 active:after:opacity-95";
 
 const focusDisabled =
   "disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none disabled:saturate-75";
@@ -50,8 +50,8 @@ export const Button = forwardRef(function Button(
         resolvedVariant,
         focusDisabled,
         variant === "frosted"
-          ? "hover:-translate-y-[1px] hover:shadow-[0_30px_70px_-28px_rgba(18,170,132,0.82)]"
-          : "hover:-translate-y-[1px] hover:shadow-glass",
+          ? "hover:-translate-y-[2px] hover:shadow-[0_30px_70px_-28px_rgba(18,170,132,0.82)] hover:border-[color:var(--glass-border-hover)]"
+          : "hover:-translate-y-[2px] hover:shadow-[var(--shadow-hover)] hover:border-[color:var(--glass-border-hover)]",
         className
       )}
       disabled={isDisabled}

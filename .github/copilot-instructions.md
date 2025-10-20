@@ -183,6 +183,7 @@ CRITICAL RULES:
 5. **Tests**: Run `npm test` before pushing - mock external deps (Supabase, pdfjs)
 6. **AI Changes**: Always test with real resume data to check for hallucination
 7. **Temperature**: Keep at 1.0 - gpt-5-nano model ONLY supports this value (API enforced)
+8. **Debug visibility**: Do not suppress or downgrade console warnings/errors without fixing the underlying issue; if noise is acceptable, document why in the repo.
 
 ## Recent Updates
 
@@ -198,3 +199,4 @@ CRITICAL RULES:
 - OpenAI Chat API: https://platform.openai.com/docs/api-reference/chat
 - Netlify Functions: https://docs.netlify.com/functions/overview/
 - Supabase Storage: https://supabase.com/docs/guides/storage
+- Supabase resume hardening checklist: `SUPABASE_STORAGE_SETUP.md`

@@ -94,7 +94,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
           
           {/* Practice Answer */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="practice-answer" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Practice Your Answer
             </label>
             <textarea
@@ -107,6 +107,8 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
                        placeholder:text-gray-400 dark:placeholder:text-gray-500
                        resize-none"
               rows={4}
+              id="practice-answer"
+              name="practice-answer"
             />
             <div className="flex justify-end">
               <Button

@@ -166,33 +166,48 @@ const buildMockCards = (resumeText, jobDesc, mode) => {
 const buildPrompt = (resumeText, jobDesc, mode = "auto") =>
   `You are a resume optimization assistant for the Saudi job market. Analyze the resume and suggest improvements based on the job description.
 
-CRITICAL RULES:
+CRITICAL RULES - STRICT ENFORCEMENT:
 1. ONLY use information explicitly stated in the resume - DO NOT invent or hallucinate facts
 2. DO NOT add degrees, certifications, or experiences that aren't in the resume
 3. DO NOT fabricate company names, dates, or achievements
 4. ONLY suggest rewording existing content, never adding fictional information
-5. Return ONLY valid JSON with no markdown, explanations, or extra text
+5. Each card MUST address a DIFFERENT section - NO REPETITION between cards
+6. Use the ACTUAL section names from the resume (e.g., "Professional Summary", "Work Experience", "Technical Skills")
+7. exampleBefore MUST be EXACT text copied from the resume (word-for-word)
+8. exampleAfter MUST preserve all factual details while improving clarity and impact
+9. Add quantifiable metrics ONLY if they logically fit existing achievements (e.g., "led team" → "led team of 5")
+10. Return ONLY valid JSON with no markdown, explanations, or extra text
 
 Required JSON structure:
 {
   "cards": [
     {
-      "section": "string (Summary|Experience|Skills|Education|etc)",
-      "issue": "string (what's missing or weak in THIS section)",
-      "suggestion": "string (how to improve using ONLY existing resume content)",
-      "exampleBefore": "string (actual text from the resume)",
-      "exampleAfter": "string (improved version of the actual text)"
+      "section": "string (use EXACT section name from resume: Summary|Professional Summary|Experience|Work Experience|Skills|Technical Skills|Education|Certifications|etc)",
+      "issue": "string (specific weakness in THIS section that affects job match - be precise, not generic)",
+      "suggestion": "string (actionable improvement using ONLY existing resume facts - explain WHY this helps)",
+      "exampleBefore": "string (EXACT verbatim text from the resume - copy word-for-word)",
+      "exampleAfter": "string (improved version preserving ALL facts, adding job-relevant keywords, using stronger action verbs)"
     }
   ],
   "keywords": {
-    "add": ["string array of missing keywords from job description"],
-    "neutral": ["string array of keywords already in resume"],
-    "remove": ["string array of keywords to de-emphasize"]
+    "add": ["string array of 3-8 missing keywords from job description that candidate could realistically have"],
+    "neutral": ["string array of 3-5 keywords already present in resume"],
+    "remove": ["string array of 1-3 keywords to de-emphasize if irrelevant to job"]
   }
 }
 
+DIVERSITY REQUIREMENT:
+- Card 1: Focus on Summary/Objective section
+- Card 2: Focus on most recent Work Experience bullet
+- Card 3: Focus on Skills section alignment with job requirements
+- Card 4: Focus on earlier Work Experience or Projects
+- Card 5: Focus on Education/Certifications relevance
+- Card 6: Focus on formatting/ATS optimization or additional experience
+
+Each card must target a DIFFERENT aspect. Do NOT repeat the same section or issue.
+
 MODE: ${mode}
-Keep suggestions concise, metric-driven, and ATS-safe.
+Keep suggestions concise, metric-driven, and ATS-safe. Prioritize changes that directly match job requirements.
 
 RESUME:
 ${resumeText.slice(0, 4000)}
@@ -530,6 +545,58 @@ export const analyzeResume = async (resumeInput, jobText, options = {}) => {
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error("Match analysis timed out. Please try again.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * AI-powered match analysis using OpenAI
+ * More expensive but provides intelligent insights
+ * @param {string} resumeText - Resume content
+ * @param {string} jobDescription - Job description
+ * @returns {Promise<Object>} AI-powered match analysis
+ */
+export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
+  const resume = sanitizeText(resumeText);
+  const job = sanitizeText(jobDescription);
+
+  if (!resume || !job) {
+    throw new Error("Both resume and job description are required for AI analysis.");
+  }
+
+  const { controller, timer } = createTimeoutController(OPTIMIZATION_TIMEOUT);
+
+  try {
+    const response = await fetch(`${FUNCTION_BASE_PATH}/ai-match`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resumeText: resume,
+        jobDescription: job,
+      }),
+      signal: controller.signal,
+    });
+
+    const data = await handleResponse(response);
+
+    return {
+      score: clampScore(data.score),
+      coverage: clampRatio(data.coverage),
+      cosine: clampRatio(data.similarity),
+      missingKeywords: data.missingKeywords || [],
+      topHits: data.strongMatches || [],
+      suggestions: data.recommendations || [],
+      overallAssessment: data.overallAssessment || "",
+      explanation: data.explanation || { reason: "", tips: [] },
+      model: data.model,
+      usage: data.usage,
+    };
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("AI match analysis timed out. Try again shortly.");
     }
     throw error;
   } finally {

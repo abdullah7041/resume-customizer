@@ -249,6 +249,7 @@ export default function UploadCard({
         type="file"
         accept=".pdf,.docx,.txt"
         className="sr-only"
+        name="resume-file"
         aria-label="Upload resume file"
         title="Upload resume file"
         onChange={handleFileChange}
