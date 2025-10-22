@@ -1,9 +1,9 @@
 import type { Handler } from "@netlify/functions";
-import { buildResumeDocument } from "../../shared/normalize-resume.js";
+import { buildResumeDocument } from "../lib/normalize-resume.js";
 import {
   extractPlainTextFromArrayBuffer,
   inferMimeType,
-} from "../../src/lib/resumeText.js";
+} from "../lib/resumeText.js";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",

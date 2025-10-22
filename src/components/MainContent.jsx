@@ -20,6 +20,7 @@ import Toast, { ToastContainer } from "./ui/Toast.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import Button from "./ui/Button.jsx";
 import HelpModal from "./ui/HelpModal.jsx";
+import LandingPage from "./LandingPage.jsx";
 import WelcomeModal from "./WelcomeModal.jsx";
 import { helpContent } from "../data/helpContent.jsx";
 import { exportResumeToPdf } from "../services/exportPdf.js";
@@ -118,6 +119,10 @@ export default function MainContent() {
   const [aiDebug, setAiDebug] = useState(null);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [currentHelpTopic, setCurrentHelpTopic] = useState(null);
+  const [showLanding, setShowLanding] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !window.localStorage.getItem("airo:landingSeen");
+  });
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
 
@@ -739,6 +744,15 @@ export default function MainContent() {
             </div>
           ) : user ? (
             workspace
+          ) : showLanding ? (
+            <LandingPage 
+              onGetStarted={() => {
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem("airo:landingSeen", "true");
+                }
+                setShowLanding(false);
+              }}
+            />
           ) : (
               <EmptyState
                 icon={UserPlus}

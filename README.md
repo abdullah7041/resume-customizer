@@ -16,9 +16,12 @@
 
 ### Key Features
 
+- **🌟 Engaging Landing Page** - Modern hero section with animations, trust indicators, and clear value proposition
 - **📤 Smart Resume Upload** - Upload PDF/DOCX or paste text with automatic section detection
+- **🔍 Structured JSON Parsing** - NEW! Extract resumes into clean, editable JSON format with schema validation
 - **🎯 Job Match Analysis** - Get 0-100 match scores using TF-IDF similarity algorithms
 - **✨ AI Optimization** - GPT-5 Nano rewrites sections with stronger language and better keywords
+- **🧪 Postman Collection** - Complete API testing suite with 8 pre-configured endpoints
 - **📊 Bulk Comparison** - Compare multiple resume versions side-by-side
 - **📄 Professional Export** - Download styled or ATS-plain PDFs
 - **🔒 Privacy-First** - All processing happens securely; your data stays private
@@ -46,12 +49,42 @@
 
 ## 🎯 How It Works
 
-1. **Upload Resume** → AI extracts and normalizes text
+1. **Upload Resume** → AI extracts and normalizes text (now with structured JSON parsing!)
 2. **Match to Job** → Calculate similarity score and identify keyword gaps
 3. **AI Optimize** → Get intelligent rewrite suggestions
 4. **Export PDF** → Download in styled or ATS-plain format
 
-*For detailed step-by-step explanations, visit the [live app](https://resume-optimizing.netlify.app) and click "How it Works" on any feature tab.*
+*For detailed step-by-step explanations, visit the [live app](https://resume-optimizing.netlify.app) and check out the new landing page with animated features showcase.*
+
+---
+
+## 🆕 Recent Updates
+
+- **🌟 Modern Landing Page** - Engaging hero section with animations and trust indicators
+- **🔍 JSON Resume Extraction** - New endpoint for structured data extraction with schema validation
+- **🧪 Postman Collection** - Complete API testing suite (8 endpoints) for developers
+- **📚 Improved Documentation** - Concise copilot instructions and visual guides
+- **🎨 UI/UX Roadmap** - Comprehensive enhancement suggestions document
+
+---
+
+## 🧪 API Testing
+
+Import the Postman collection for easy API testing:
+
+```bash
+# File: AI_Resume_Optimizer_API.postman_collection.json
+
+Endpoints:
+- POST /parse-resume           - Extract text from PDF/DOCX
+- POST /extract-resume-json    - NEW! Structured JSON parsing
+- POST /match-score            - Calculate match percentage
+- POST /ai-match               - AI-powered analysis
+- POST /optimize               - Optimize resume sections
+- POST /ai                     - Generic AI completion
+- POST /generate-cover-letter  - Create cover letters
+- POST /predict-questions      - Interview prep
+```
 
 ---
 

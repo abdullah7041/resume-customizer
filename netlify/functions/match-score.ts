@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { extractPlainTextFromArrayBuffer, inferMimeType } from "../../src/lib/resumeText.js";
+import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",

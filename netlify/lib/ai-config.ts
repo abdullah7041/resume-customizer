@@ -42,7 +42,7 @@ export const resolveOpenAIOptions = (
   const resolved: {
     model: string;
     temperature: number;
-    max_completion_tokens?: number;
+    max_output_tokens?: number;
   } = {
     model: sanitizeModel(overrides.model) ?? defaults.model,
     temperature:
@@ -51,15 +51,14 @@ export const resolveOpenAIOptions = (
         : defaults.temperature,
   };
 
-  let tokenValue = clampTokens(overrides.max_completion_tokens ?? overrides.max_tokens ?? overrides.max_output_tokens ?? undefined);
+  // Prefer max_output_tokens, then fall back to deprecated aliases
+  let tokenValue = clampTokens(overrides.max_output_tokens ?? overrides.max_tokens ?? overrides.max_completion_tokens ?? undefined);
 
   const aliasValue = clampTokens(overrides.max_completion_tokens ?? undefined);
-  if (aliasValue !== undefined) {
+  if (aliasValue !== undefined && !overrides.max_output_tokens) {
     if (!aliasWarningLogged) {
+      console.warn("max_completion_tokens is deprecated, use max_output_tokens instead");
       aliasWarningLogged = true;
-    }
-    if (tokenValue === undefined) {
-      tokenValue = aliasValue;
     }
   }
 
@@ -69,7 +68,7 @@ export const resolveOpenAIOptions = (
   }
 
   if (tokenValue !== undefined) {
-    resolved.max_completion_tokens = tokenValue;
+    resolved.max_output_tokens = tokenValue;
   }
 
   return resolved;

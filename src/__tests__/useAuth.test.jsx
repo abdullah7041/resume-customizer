@@ -1,9 +1,15 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi } from "vitest";
-import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
 
 const { mockSignIn, mockOnAuth, mockGetSession } = vi.hoisted(() => ({
-  mockSignIn: vi.fn().mockResolvedValue({}),
+  mockSignIn: vi
+    .fn()
+    .mockResolvedValue({
+      data: {
+        url: "https://example.supabase.co/oauth?redirect_to=http://localhost:3000",
+      },
+    }),
   mockOnAuth: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
   mockGetSession: vi.fn().mockResolvedValue({ data: { session: null } }),
 }));
@@ -22,15 +28,23 @@ vi.mock("@supabase/supabase-js", () => ({
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 
 describe('useAuth', () => {
-  it('redirects to /resume on Google sign in', async () => {
+  beforeEach(() => {
+    mockSignIn.mockClear();
+  });
+
+  it('enforces redirect url on Google sign in', async () => {
     const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
     const { result } = renderHook(() => useAuth(), { wrapper });
+    let attemptedRedirect;
     await act(async () => {
-      await result.current.signInWithGoogle();
+      attemptedRedirect = await result.current.signInWithGoogle();
     });
     expect(mockSignIn).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/resume` },
+      options: { redirectTo: window.location.origin, skipBrowserRedirect: true },
     });
+    expect(attemptedRedirect).toBeTruthy();
+    const redirectUrl = new URL(attemptedRedirect);
+    expect(redirectUrl.searchParams.get('redirect_to')).toBe(window.location.origin);
   });
 });

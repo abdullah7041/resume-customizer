@@ -1,13 +1,35 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
   SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
+  # External modules to avoid bundling large dependencies
+  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions"]
+  # Included files for shared modules (now in netlify/lib/)
+  included_files = ["netlify/lib/**"]
+
+# Individual function configurations
+[functions."ai"]
+  timeout = 30
+
+[functions."ai-match"]
+  timeout = 30
+
+[functions."optimize"]
+  timeout = 30
+
+[functions."generate-cover-letter"]
+  timeout = 30
+
+[functions."predict-questions"]
+  timeout = 30
 
 [[redirects]]
   from = "/*"

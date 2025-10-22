@@ -1,0 +1,115 @@
+{
+  "info": {
+    "name": "AI Resume Optimizer API",
+    "description": "Complete Postman collection for testing all Netlify serverless functions locally and in production",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "local_base",
+      "value": "http://localhost:8888/.netlify/functions"
+    },
+    {
+      "key": "prod_base",
+      "value": "https://your-app.netlify.app/.netlify/functions"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Parse Resume",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"JOHN DOE\\nSenior Software Engineer\\njohn.doe@example.com | (555) 123-4567\\n\\nEXPERIENCE\\nSenior Engineer - TechCorp\\nJan 2020 - Present\\n• Led microservices development\\n• Reduced API latency by 40%\\n\\nSKILLS\\nPython, React, AWS, Docker\"\n}"
+        },
+        "url": "{{local_base}}/parse-resume"
+      }
+    },
+    {
+      "name": "2. Extract JSON (NEW)",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resumeText\": \"SARAH JOHNSON\\nFrontend Developer\\nsarah@example.com\\nNew York, NY\\n\\nSUMMARY\\nCreative frontend developer with 4+ years in React and TypeScript.\\n\\nEXPERIENCE\\nFrontend Developer - Digital Agency | Mar 2021 - Present\\n• Built 15+ client websites\\n• Improved Lighthouse scores to 95\\n\\nEDUCATION\\nBS Computer Science - NYU | May 2019 | GPA 3.7\\n\\nSKILLS\\nReact, TypeScript, Tailwind CSS, Next.js\\n\\nCERTIFICATIONS\\nAWS Cloud Practitioner - AWS | Jan 2023\"\n}"
+        },
+        "url": "{{local_base}}/extract-resume-json"
+      }
+    },
+    {
+      "name": "3. Match Score",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resumeText\": \"Senior Software Engineer with Python, React, AWS, Docker, Kubernetes experience. Led microservices architecture.\",\n  \"jobDescription\": \"Seeking Senior Backend Engineer with Python, AWS, microservices, Docker, Kubernetes expertise.\"\n}"
+        },
+        "url": "{{local_base}}/match-score"
+      }
+    },
+    {
+      "name": "4. AI Match Analysis",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Analyze resume-job fit. Return JSON with: matchScore (0-100), matchingSkills (array), missingSkills (array), recommendations (array).\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"RESUME: Python developer with AWS experience.\\n\\nJOB: Python developer with AWS and Django needed.\"\n    }\n  ],\n  \"temperature\": 1,\n  \"max_output_tokens\": 500\n}"
+        },
+        "url": "{{local_base}}/ai-match"
+      }
+    },
+    {
+      "name": "5. Optimize Section",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"section\": \"experience\",\n  \"content\": \"Senior Engineer at TechCorp. Did backend work with Python and APIs.\",\n  \"jobDescription\": \"Seeking Senior Backend Engineer with Python, REST APIs, microservices.\",\n  \"keywords\": [\"Python\", \"REST APIs\", \"microservices\"]\n}"
+        },
+        "url": "{{local_base}}/optimize"
+      }
+    },
+    {
+      "name": "6. Generic AI Completion",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Rewrite with strong action verbs and metrics.\"},\n    {\"role\": \"user\", \"content\": \"Worked on improving website speed.\"}\n  ],\n  \"temperature\": 1,\n  \"max_output_tokens\": 150\n}"
+        },
+        "url": "{{local_base}}/ai"
+      }
+    },
+    {
+      "name": "7. Generate Cover Letter",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resumeText\": \"Software Engineer with 3 years Python/React experience.\",\n  \"jobDescription\": \"Python Developer at FinTech Inc.\",\n  \"tone\": \"professional\",\n  \"companyName\": \"FinTech Inc\"\n}"
+        },
+        "url": "{{local_base}}/generate-cover-letter"
+      }
+    },
+    {
+      "name": "8. Predict Interview Questions",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resumeText\": \"Senior Data Scientist with ML expertise.\",\n  \"jobDescription\": \"Machine Learning Engineer focused on NLP.\"\n}"
+        },
+        "url": "{{local_base}}/predict-questions"
+      }
+    }
+  ]
+}

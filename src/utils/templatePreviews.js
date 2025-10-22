@@ -2,7 +2,7 @@
 // Generate SVG preview images for resume templates
 
 export function generateTemplatePreview(template) {
-  const { preview, name, category } = template;
+  const { preview, category } = template;
   const width = 400;
   const height = 500;
   
