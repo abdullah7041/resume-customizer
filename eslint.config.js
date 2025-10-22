@@ -3,7 +3,7 @@ import js from "@eslint/js";
 import parserTs from "@typescript-eslint/parser";
 import pluginTs from "@typescript-eslint/eslint-plugin";
 import reactHooks from "eslint-plugin-react-hooks";
-import vitest from "eslint-plugin-vitest";
+import vitest from "@vitest/eslint-plugin";
 import globals from "globals";
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
