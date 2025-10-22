@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Info, Loader2, Sparkles } from "lucide-react";
 import Button from "../ui/Button.jsx";
-import Card from "../ui/Card.jsx";
+import AnimatedCard from "../ui/AnimatedCard.jsx";
+import { AnimatedCounter } from "../ui/AnimatedCounter.jsx";
+import { FadeInWhenVisible } from "../ui/ParallaxSection.jsx";
 import Input from "../ui/Input.jsx";
 import SectionTitle from "../ui/SectionTitle.jsx";
 import Tooltip from "../ui/Tooltip.jsx";
@@ -169,7 +171,14 @@ export default function JobMatch({
         </div>
       </div>
 
-      <Card as="aside" tone="translucent" className="space-y-5" contentClassName="space-y-5 text-ink">
+      <AnimatedCard 
+        as="aside" 
+        tone="translucent" 
+        className="space-y-5" 
+        contentClassName="space-y-5 text-ink"
+        enableTilt={hasResults}
+        tiltIntensity={15}
+      >
         {isAnalyzing ? (
           <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-sm text-ink-500/80 dark:text-surface-50/70">
             <Loader2 className="h-6 w-6 animate-spin text-emerald-500" aria-hidden="true" />
@@ -229,9 +238,15 @@ export default function JobMatch({
                           position="bottom"
                         >
                           <div className="mt-1 flex items-baseline justify-center gap-0.5 cursor-help">
-                            <span className="text-3xl font-bold tracking-tight leading-none">
-                              {score == null ? "—" : score}
-                            </span>
+                            {score != null ? (
+                              <AnimatedCounter
+                                to={score}
+                                duration={1500}
+                                className="text-3xl font-bold tracking-tight leading-none"
+                              />
+                            ) : (
+                              <span className="text-3xl font-bold tracking-tight leading-none">—</span>
+                            )}
                             {score != null && (
                               <span className="text-sm font-semibold text-ink-soft opacity-80 leading-none">/100</span>
                             )}
@@ -369,7 +384,7 @@ export default function JobMatch({
             <p>Paste a job description to see match insights here.</p>
           </div>
         )}
-      </Card>
+      </AnimatedCard>
     </div>
   );
 }

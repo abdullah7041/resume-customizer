@@ -98,7 +98,58 @@ Unlike generic resume tools, this platform is specifically optimized for:
 
 ---
 
-## 📈 Performance
+## � Quick Start
+
+### Prerequisites
+
+- Node.js 22.17.0 or higher
+- Netlify CLI (`npm install -g netlify-cli`)
+- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
+- Supabase account (optional, for auth/storage features)
+
+### Setup
+
+1. **Clone and install dependencies**
+   ```bash
+   git clone <repository-url>
+   cd resume-customizer
+   npm install
+   ```
+
+2. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and add your API keys:
+   ```env
+   OPENAI_API_KEY=your_openai_api_key_here
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+3. **Start the development server**
+   ```bash
+   netlify dev
+   ```
+   
+   Access the app at: http://localhost:8888
+
+### Troubleshooting
+
+**503 Error on AI endpoints?**
+- Verify `OPENAI_API_KEY` is set in your `.env` file
+- Restart `netlify dev` after adding environment variables
+- Check your OpenAI API key is valid and has credits
+
+**Mock AI for testing without OpenAI:**
+```env
+VITE_USE_MOCK_AI=true
+```
+
+---
+
+## �📈 Performance
 
 - **Parse Time**: 2-3 seconds (average resume)
 - **Match Analysis**: 1-2 seconds (no AI, pure algorithm)

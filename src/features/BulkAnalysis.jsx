@@ -33,10 +33,10 @@ const ResumeCard = ({ resume, index, onRemove }) => {
     <Card className="p-4">
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 dark:text-white truncate" title={name}>
+          <h3 className="font-semibold text-ink dark:text-white truncate" title={name}>
             {name}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+          <p className="text-sm text-ink-soft dark:text-gray-300 capitalize">
             {status}
           </p>
         </div>
@@ -65,12 +65,12 @@ const ResumeCard = ({ resume, index, onRemove }) => {
       {status === "completed" && analysis && (
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Match Score</span>
+            <span className="text-sm text-ink-soft dark:text-gray-300">Match Score</span>
             <ScoreBadge score={analysis.score || 0} />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Keywords</span>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+            <span className="text-sm text-ink-soft dark:text-gray-300">Keywords</span>
+            <span className="text-sm font-semibold text-ink dark:text-white">
               {analysis.matchedKeywords?.length || 0}
             </span>
           </div>
@@ -94,7 +94,7 @@ const ComparisonTable = ({ resumes }) => {
   
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <h2 className="text-xl font-bold text-ink dark:text-white mb-4 flex items-center gap-2">
         <BarChart3 className="w-5 h-5" />
         Comparison Results
       </h2>
@@ -103,22 +103,22 @@ const ComparisonTable = ({ resumes }) => {
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
+              <th className="text-left py-3 px-4 font-semibold text-ink dark:text-white">
                 Rank
               </th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
+              <th className="text-left py-3 px-4 font-semibold text-ink dark:text-white">
                 Resume
               </th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-white">
+              <th className="text-center py-3 px-4 font-semibold text-ink dark:text-white">
                 Match Score
               </th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-white">
+              <th className="text-center py-3 px-4 font-semibold text-ink dark:text-white">
                 Keywords
               </th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-white">
+              <th className="text-center py-3 px-4 font-semibold text-ink dark:text-white">
                 Coverage
               </th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-white">
+              <th className="text-center py-3 px-4 font-semibold text-ink dark:text-white">
                 Recommendation
               </th>
             </tr>
@@ -136,22 +136,22 @@ const ComparisonTable = ({ resumes }) => {
                 >
                   <td className="py-3 px-4">
                     <span className="text-2xl">{emoji}</span>
-                    <span className="ml-2 font-semibold text-gray-900 dark:text-white">
+                    <span className="ml-2 font-semibold text-ink dark:text-white">
                       #{rank}
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="text-gray-900 dark:text-white font-medium">
+                    <span className="text-ink dark:text-white font-medium">
                       {resume.name}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <ScoreBadge score={analysis.score || 0} />
                   </td>
-                  <td className="py-3 px-4 text-center text-gray-900 dark:text-white">
+                  <td className="py-3 px-4 text-center text-ink dark:text-white">
                     {analysis.matchedKeywords?.length || 0}
                   </td>
-                  <td className="py-3 px-4 text-center text-gray-900 dark:text-white">
+                  <td className="py-3 px-4 text-center text-ink dark:text-white">
                     {Math.round((analysis.coverage || 0) * 100)}%
                   </td>
                   <td className="py-3 px-4 text-center">
@@ -330,10 +330,10 @@ export default function BulkAnalysis({ jobDescription }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-ink dark:text-white mb-2">
             Bulk Resume Analysis
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-ink dark:text-gray-200">
             Compare multiple resume versions against the same job description
           </p>
         </div>

@@ -3,6 +3,25 @@ import { performance } from "node:perf_hooks";
 import { resolveOpenAIOptions } from "../lib/ai-config";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+
+interface OpenAIResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  model?: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  error?: {
+    message?: string;
+    type?: string;
+    code?: string;
+  };
+}
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -96,7 +115,7 @@ const handler: Handler = async (event) => {
 
     const options = resolveOpenAIOptions({
       model: body?.model,
-      max_completion_tokens: 1500,
+      max_output_tokens: 1500,
     });
 
     const response = await fetch(OPENAI_URL, {
@@ -108,7 +127,7 @@ const handler: Handler = async (event) => {
       body: JSON.stringify({
         model: options.model,
         temperature: options.temperature,
-        max_completion_tokens: options.max_completion_tokens,
+        max_completion_tokens: options.max_output_tokens,
         messages: [
           {
             role: "system",
@@ -122,7 +141,7 @@ const handler: Handler = async (event) => {
       }),
     });
 
-    const data = await response.json().catch(() => ({}));
+    const data = (await response.json().catch(() => ({}))) as OpenAIResponse;
 
     if (!response.ok) {
       const message = typeof data?.error?.message === "string" ? data.error.message : "OpenAI request failed";

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import UploadCard from "../components/ui/UploadCard.jsx";
+import { FadeInWhenVisible } from "../components/ui/ParallaxSection.jsx";
 import { AppError, uploadResumeFile } from "../services/supabase.js";
 
 const DOCUMENT_MIME_TYPES = new Set([
@@ -341,24 +342,26 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
   }, [file, onParseResume, onToast, showErrorToast, textValue]);
 
   return (
-    <div className="space-y-6">
-      <UploadCard
-        fileName={file?.name || ""}
-        onFileSelect={handleFileSelect}
-        onFileClear={() => {
-          resetState();
-          setTextValue("");
-        }}
-        onTextChange={handleTextValueChange}
-        textValue={textValue}
-        onSubmit={handleSubmit}
-        status={status}
-        progress={progress}
-        error={error}
-        disabled={status === "uploading" || status === "parsing"}
-        textHelper={textWarning}
-        onValidationError={handleValidationError}
-      />
-    </div>
+    <FadeInWhenVisible>
+      <div className="space-y-6">
+        <UploadCard
+          fileName={file?.name || ""}
+          onFileSelect={handleFileSelect}
+          onFileClear={() => {
+            resetState();
+            setTextValue("");
+          }}
+          onTextChange={handleTextValueChange}
+          textValue={textValue}
+          onSubmit={handleSubmit}
+          status={status}
+          progress={progress}
+          error={error}
+          disabled={status === "uploading" || status === "parsing"}
+          textHelper={textWarning}
+          onValidationError={handleValidationError}
+        />
+      </div>
+    </FadeInWhenVisible>
   );
 }

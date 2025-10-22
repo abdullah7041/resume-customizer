@@ -32,10 +32,10 @@ const TemplateCard = ({ template, isSelected, onSelect, onPreview, matchScore })
     )}>
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+          <h3 className="text-lg font-bold text-ink dark:text-white mb-1">
             {template.name}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-ink-soft dark:text-gray-300">
             {categoryLabels[template.category]}
           </p>
         </div>
@@ -44,7 +44,7 @@ const TemplateCard = ({ template, isSelected, onSelect, onPreview, matchScore })
         )}
       </div>
       
-      <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+      <p className="text-sm text-ink dark:text-gray-200 mb-4">
         {template.description}
       </p>
       
@@ -67,7 +67,7 @@ const TemplateCard = ({ template, isSelected, onSelect, onPreview, matchScore })
         
         {matchScore !== null && (
           <div className="text-sm">
-            <span className="text-gray-600 dark:text-gray-400">Match: </span>
+            <span className="text-ink-soft dark:text-gray-300">Match: </span>
             <span className="font-semibold text-emerald-600 dark:text-emerald-400">
               {matchScore}%
             </span>
@@ -303,17 +303,17 @@ export default function TemplateGallery({ resumeData, onSelectTemplate }) {
     <div className="w-full max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-ink dark:text-white mb-2">
           Resume Templates
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-ink dark:text-gray-200">
           Choose from ATS-optimized templates designed for different industries and roles
         </p>
       </div>
       
       {/* Category Filter */}
       <div className="mb-6 flex items-center gap-3 overflow-x-auto pb-2">
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-sm text-ink-soft dark:text-gray-300">
           <Filter className="w-4 h-4" />
           <span className="font-medium">Filter:</span>
         </div>
@@ -358,10 +358,10 @@ export default function TemplateGallery({ resumeData, onSelectTemplate }) {
         <Card className="mt-6 p-6 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-ink dark:text-white mb-1">
                 Selected: {selectedTemplate.name}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-ink dark:text-gray-200">
                 Ready to apply this template to your resume
               </p>
             </div>

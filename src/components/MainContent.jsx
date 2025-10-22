@@ -21,7 +21,9 @@ import EmptyState from "./ui/EmptyState.jsx";
 import Button from "./ui/Button.jsx";
 import HelpModal from "./ui/HelpModal.jsx";
 import LandingPage from "./LandingPage.jsx";
+import LandingPageV2 from "./LandingPageV2.jsx";
 import WelcomeModal from "./WelcomeModal.jsx";
+import { ParallaxContainer } from "./ui/ParallaxSection.jsx";
 import { helpContent } from "../data/helpContent.jsx";
 import { exportResumeToPdf } from "../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../services/supabaseExport.js";
@@ -123,6 +125,8 @@ export default function MainContent() {
     if (typeof window === "undefined") return true;
     return !window.localStorage.getItem("airo:landingSeen");
   });
+  // Toggle for new landing page version (V2)
+  const [useV2Landing, setUseV2Landing] = useState(true);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
 
@@ -608,7 +612,8 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <div className="space-y-5 sm:space-y-7 text-ink-700 dark:text-surface-50">
+    <ParallaxContainer enableLayers={true} className="py-4">
+      <div className="space-y-5 sm:space-y-7 text-ink-700 dark:text-surface-50">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
@@ -619,7 +624,7 @@ export default function MainContent() {
                 setCurrentHelpTopic(getHelpKey(activeTab));
                 setHelpModalOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200 bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-900/40 rounded-lg transition-all"
               title="How this feature works"
             >
               <HelpCircle className="w-4 h-4" />
@@ -714,7 +719,8 @@ export default function MainContent() {
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </ParallaxContainer>
   );
 
   return (
@@ -745,14 +751,25 @@ export default function MainContent() {
           ) : user ? (
             workspace
           ) : showLanding ? (
-            <LandingPage 
-              onGetStarted={() => {
-                if (typeof window !== "undefined") {
-                  window.localStorage.setItem("airo:landingSeen", "true");
-                }
-                setShowLanding(false);
-              }}
-            />
+            useV2Landing ? (
+              <LandingPageV2 
+                onGetStarted={() => {
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("airo:landingSeen", "true");
+                  }
+                  setShowLanding(false);
+                }}
+              />
+            ) : (
+              <LandingPage 
+                onGetStarted={() => {
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("airo:landingSeen", "true");
+                  }
+                  setShowLanding(false);
+                }}
+              />
+            )
           ) : (
               <EmptyState
                 icon={UserPlus}
