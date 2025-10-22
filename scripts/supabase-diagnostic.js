@@ -1,6 +1,8 @@
 // SUPABASE UPLOAD DIAGNOSTIC SCRIPT
 // Run this in your browser console to diagnose upload issues
 
+/* eslint-disable no-undef, no-unused-vars */
+
 (async function diagnosticCheck() {
   console.log('🔍 Starting Supabase Upload Diagnostic...\n');
   

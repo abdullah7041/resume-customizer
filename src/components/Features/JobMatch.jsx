@@ -3,7 +3,6 @@ import { AlertCircle, Info, Loader2, Sparkles } from "lucide-react";
 import Button from "../ui/Button.jsx";
 import AnimatedCard from "../ui/AnimatedCard.jsx";
 import { AnimatedCounter } from "../ui/AnimatedCounter.jsx";
-import { FadeInWhenVisible } from "../ui/ParallaxSection.jsx";
 import Input from "../ui/Input.jsx";
 import SectionTitle from "../ui/SectionTitle.jsx";
 import Tooltip from "../ui/Tooltip.jsx";

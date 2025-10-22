@@ -2,10 +2,10 @@
 // Next-generation landing page with dynamic parallax and interactive elements
 
 import { useState, useRef, useEffect } from "react";
-import { motion, useScroll, useTransform, useSpring, useInView, useMotionValue, useAnimation } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { 
   ArrowRight, FileText, Target, Sparkles, Zap, Shield, TrendingUp, 
-  CheckCircle2, Star, Users, Award, Briefcase, Clock, BarChart3
+  CheckCircle2, Star, Users, Award, Clock
 } from "lucide-react";
 import Button from "./ui/Button.jsx";
 import { cn } from "../lib/cn.js";
@@ -38,7 +38,6 @@ function HeroSection({ onGetStarted, scrollProgress }) {
   const [buttonOffset, setButtonOffset] = useState({ x: 0, y: 0 });
 
   // Parallax background layers
-  const y1 = useTransform(scrollProgress, [0, 1], ['0%', '30%']);
   const y2 = useTransform(scrollProgress, [0, 1], ['0%', '50%']);
   const y3 = useTransform(scrollProgress, [0, 1], ['0%', '70%']);
   const opacity = useTransform(scrollProgress, [0, 0.5], [1, 0]);

@@ -151,7 +151,7 @@ const sanitize = (value: unknown): string => {
   return value.trim();
 };
 
-export const handler: Handler = async (event, _context) => {
+export const handler: Handler = async (event) => {
   const requestId = event.headers?.["x-nf-request-id"] ?? crypto.randomUUID?.() ?? `${Date.now()}`;
 
   // Handle CORS preflight

@@ -55,8 +55,6 @@ export function ParallaxContainer({
     offset: ["start start", "end end"],
   });
 
-  const y1 = useTransform(scrollYProgress, [0, 1], ['0%', '10%']);
-  const y2 = useTransform(scrollYProgress, [0, 1], ['0%', '15%']);
   const y3 = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0.5]);
 

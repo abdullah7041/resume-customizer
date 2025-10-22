@@ -2,7 +2,7 @@
 // Modern landing page with hero section and feature showcase
 
 import { useState } from "react";
-import { ArrowRight, FileText, Target, Sparkles, Zap, Shield, TrendingUp, CheckCircle2, Star, Users } from "lucide-react";
+import { ArrowRight, FileText, Target, Sparkles, Zap, Shield, TrendingUp, CheckCircle2, Star } from "lucide-react";
 import Button from "./ui/Button.jsx";
 import { cn } from "../lib/cn.js";
 

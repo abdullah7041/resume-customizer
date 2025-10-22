@@ -126,7 +126,7 @@ export default function MainContent() {
     return !window.localStorage.getItem("airo:landingSeen");
   });
   // Toggle for new landing page version (V2)
-  const [useV2Landing, setUseV2Landing] = useState(true);
+  const [useV2Landing] = useState(true);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
 
