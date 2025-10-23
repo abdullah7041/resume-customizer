@@ -277,38 +277,50 @@ export default function JobMatch({
                       <div
                         id="match-why-popover"
                         role="dialog"
-                        className="absolute right-0 z-50 mt-3 w-80 max-w-[90vw] space-y-4 rounded-2xl border-2 border-emerald-500/30 bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_5%)] p-6 text-left text-sm text-ink shadow-[0_8px_32px_rgba(0,0,0,0.24)] backdrop-blur-glass max-h-[80vh] overflow-y-auto"
+                        className="absolute left-0 right-0 z-50 mt-3 w-full min-w-[320px] max-w-[90vw] space-y-4 rounded-2xl border-2 border-emerald-500/30 bg-[color:var(--surface-glass)] p-6 text-left text-sm text-ink shadow-[0_12px_48px_rgba(0,0,0,0.32)] backdrop-blur-glass max-h-[70vh] overflow-y-auto"
                       >
-                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-3 py-2.5">
+                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-4 py-3">
                           <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Coverage</p>
-                          <span className="text-lg font-bold text-ink">{coverageLabel}</span>
+                          <span className="text-xl font-bold text-ink">{coverageLabel}</span>
                         </div>
-                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-3 py-2.5">
+                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-4 py-3">
                           <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Similarity</p>
-                          <span className="text-lg font-bold text-ink">{cosineLabel}</span>
+                          <span className="text-xl font-bold text-ink">{cosineLabel}</span>
                         </div>
                         {missing.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500">Missing</p>
-                            <ul className="mt-2 space-y-1 text-xs leading-snug text-ink-soft">
-                              {missing.slice(0, 4).map((keyword) => (
-                                <li key={keyword}>• {keyword}</li>
+                          <div className="rounded-lg bg-rose-50/50 dark:bg-rose-900/10 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-600 dark:text-rose-400 mb-3">Missing Keywords</p>
+                            <ul className="mt-2 space-y-2 text-sm leading-relaxed text-ink">
+                              {missing.slice(0, 6).map((keyword) => (
+                                <li key={keyword} className="flex items-center gap-2">
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                  <span>{keyword}</span>
+                                </li>
                               ))}
                             </ul>
                           </div>
                         )}
                         {matchAnalysis?.explanation?.reason && (
-                          <p className="text-xs text-ink-soft opacity-80">
-                            {matchAnalysis.explanation.reason}
-                          </p>
+                          <div className="rounded-lg bg-blue-50/50 dark:bg-blue-900/10 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-400 mb-2">Analysis</p>
+                            <p className="text-sm leading-relaxed text-ink">
+                              {matchAnalysis.explanation.reason}
+                            </p>
+                          </div>
                         )}
                         {Array.isArray(matchAnalysis?.explanation?.tips) &&
                           matchAnalysis.explanation.tips.length > 0 && (
-                            <ul className="space-y-1 text-xs leading-snug text-ink-soft">
-                              {matchAnalysis.explanation.tips.slice(0, 3).map((tip, index) => (
-                                <li key={`${tip}-${index}`}>• {tip}</li>
-                              ))}
-                            </ul>
+                            <div className="rounded-lg bg-amber-50/50 dark:bg-amber-900/10 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-600 dark:text-amber-400 mb-3">Recommendations</p>
+                              <ul className="space-y-2 text-sm leading-relaxed text-ink">
+                                {matchAnalysis.explanation.tips.slice(0, 4).map((tip, index) => (
+                                  <li key={`${tip}-${index}`} className="flex items-start gap-2">
+                                    <span className="inline-block mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
+                                    <span>{tip}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           )}
                       </div>
                     )}

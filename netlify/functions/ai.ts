@@ -270,17 +270,25 @@ const handler: Handler = async (event) => {
       messageCount: messages.length,
     });
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+
     const response = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
+        "Accept-Encoding": "gzip, deflate",
       },
       body: JSON.stringify({
         ...options,
         messages: messages,
+        stream: false, // Disable streaming for faster response
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const data = await response.json().catch(() => ({})) as any;
 

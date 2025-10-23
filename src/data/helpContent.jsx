@@ -66,7 +66,7 @@ export const helpContent = {
       <>
         <div className="space-y-4">
           <p className="text-gray-700 dark:text-gray-300">
-            Compare your resume against a job description to see how well you match. Our <strong>TF-IDF algorithm</strong> (not AI) calculates a precise match score using statistical analysis.
+            Compare your resume against a job description using <strong>AI-powered semantic analysis</strong> to calculate precise match scores and identify optimization opportunities.
           </p>
           
           <div className="space-y-3">
@@ -87,9 +87,9 @@ export const helpContent = {
                 2
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-1">TF-IDF Algorithm Analyzes</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-1">AI Semantic Analysis</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Our <strong>TF-IDF (Term Frequency-Inverse Document Frequency)</strong> algorithm compares your resume to the job description using mathematical similarity calculations—no AI involved. This ensures fast, deterministic results.
+                  Our <strong>AI models (DeepSeek & GPT-5-Nano)</strong> analyze your resume using advanced natural language processing to understand context, skills, and semantic similarity—providing intelligent, contextual match insights.
                 </p>
               </div>
             </div>
@@ -99,20 +99,20 @@ export const helpContent = {
                 3
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Review Results</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Review AI Insights</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  See your match score (0-100), matched keywords, missing keywords, and actionable recommendations—all calculated instantly.
+                  See your match score (0-100), matched skills, missing keywords, AI-generated recommendations, and detailed explanations of your alignment.
                 </p>
               </div>
             </div>
           </div>
           
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <h5 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">How TF-IDF Scoring Works:</h5>
+            <h5 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">How AI Scoring Works:</h5>
             <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
-              <li>📊 <strong>70%:</strong> Cosine similarity between document vectors</li>
-              <li>🔑 <strong>30%:</strong> Keyword coverage percentage</li>
-              <li>⚡ <strong>Result:</strong> Fast, deterministic, ATS-like scoring</li>
+              <li>🤖 <strong>Semantic Understanding:</strong> AI comprehends context and meaning, not just keywords</li>
+              <li>� <strong>Multi-dimensional Analysis:</strong> Skills, experience, qualifications evaluated holistically</li>
+              <li>⚡ <strong>Smart Recommendations:</strong> Personalized suggestions based on your unique profile</li>
             </ul>
           </div>
           

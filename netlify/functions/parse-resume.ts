@@ -272,7 +272,29 @@ const handler: Handler = async (event) => {
   }
 
   try {
-    const body: ParseResumeRequest = event.body ? JSON.parse(event.body) : { kind: "text", value: "" };
+    const rawBody = event.body ? JSON.parse(event.body) : {};
+    
+    // Handle direct text input or normalize to ParseResumeRequest format
+    let body: ParseResumeRequest;
+    if (typeof rawBody.text === "string") {
+      // Direct text payload from Postman
+      body = { kind: "text", value: rawBody.text };
+    } else if (rawBody.kind === "text" || rawBody.kind === "file") {
+      // Already in correct format
+      body = rawBody as ParseResumeRequest;
+    } else if (typeof rawBody.data === "string" || typeof rawBody.name === "string") {
+      // File upload format
+      body = {
+        kind: "file",
+        name: rawBody.name,
+        mime: rawBody.mime,
+        data: rawBody.data,
+      };
+    } else {
+      // Default to empty text
+      body = { kind: "text", value: "" };
+    }
+    
     const extractionResult = await extractText(body);
     const normalized = buildResumeDocument(extractionResult.text);
 

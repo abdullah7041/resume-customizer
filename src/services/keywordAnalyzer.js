@@ -16,10 +16,42 @@ const STOPWORDS = new Set([
 ]);
 
 const GENERIC_TERMS = new Set([
-  "candidate", "career", "company", "description", "experience", "job", "opportunity", "position",
-  "profile", "resume", "role", "responsibilities", "requirements", "skills", "summary", "work",
-  "responsibilities", "duties", "tasks", "perform", "ensure", "provide", "support", "assist"
+  "candidate", "company", "description", "job", "opportunity", "position",
+  "profile", "resume", "role", "work",
+  "responsibilities", "duties", "tasks", "perform", "ensure", "provide", "support", "assist",
+  "including", "required", "preferred", "ability", "strong", "excellent", "good", "effective",
+  "various", "multiple", "related", "appropriate", "etc", "years", "months"
 ]);
+
+// Technical skills and domain-specific terms that should be prioritized
+const TECHNICAL_INDICATORS = new Set([
+  "api", "database", "framework", "cloud", "devops", "backend", "frontend", "fullstack",
+  "programming", "development", "engineering", "architecture", "infrastructure", "deployment",
+  "testing", "debugging", "optimization", "security", "authentication", "authorization",
+  "ci", "cd", "agile", "scrum", "kanban", "methodology", "design", "ux", "ui",
+  "algorithm", "data", "analytics", "machine", "learning", "artificial", "intelligence",
+  "automation", "integration", "migration", "scalability", "performance", "monitoring"
+]);
+
+/**
+ * Check if a term is likely a technical skill or important keyword
+ * @param {string} term - Token to evaluate
+ * @returns {boolean} True if term should be prioritized
+ */
+const isPriorityTerm = (term) => {
+  // Prioritize longer terms (likely compound skills or specific technologies)
+  if (term.length >= 6) return true;
+  
+  // Check if it's a known technical indicator
+  if (TECHNICAL_INDICATORS.has(term)) return true;
+  
+  // Check for common tech patterns (e.g., "js", "py", "ml", "ai")
+  if (/^[a-z]{2,4}$/.test(term) && !STOPWORDS.has(term)) {
+    return true;
+  }
+  
+  return false;
+};
 
 /**
  * Tokenize text into normalized lowercase words
@@ -75,13 +107,18 @@ export const calculateTFIDF = (resumeText, jobText) => {
   const resumeFreq = calculateTermFrequency(resumeTokens);
   const jobFreq = calculateTermFrequency(jobTokens);
   
-  // Calculate term frequency scores
+  // Calculate term frequency scores with priority weighting
   const resumeScores = new Map();
   const maxResumeFreq = Math.max(...resumeFreq.values());
   
   for (const [term, freq] of resumeFreq) {
     if (!GENERIC_TERMS.has(term)) {
-      resumeScores.set(term, freq / maxResumeFreq);
+      let score = freq / maxResumeFreq;
+      // Boost priority terms (technical skills, longer compound words)
+      if (isPriorityTerm(term)) {
+        score *= 1.5;
+      }
+      resumeScores.set(term, score);
     }
   }
   
@@ -90,7 +127,12 @@ export const calculateTFIDF = (resumeText, jobText) => {
   
   for (const [term, freq] of jobFreq) {
     if (!GENERIC_TERMS.has(term)) {
-      jobScores.set(term, freq / maxJobFreq);
+      let score = freq / maxJobFreq;
+      // Boost priority terms
+      if (isPriorityTerm(term)) {
+        score *= 1.5;
+      }
+      jobScores.set(term, score);
     }
   }
   

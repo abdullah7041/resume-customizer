@@ -103,12 +103,20 @@ export async function runOptimization(
   })();
 
   try {
+    // Set a reasonable timeout for AI requests (30 seconds)
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(AI_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept-Encoding": "gzip, deflate", // Enable compression
+      },
       body: JSON.stringify(normalizedPayload),
       signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const data = await response.json().catch(() => ({}));
     const latencyMs = now() - started;
@@ -124,7 +132,7 @@ export async function runOptimization(
       // Enhanced error message for missing API key
       let enhancedMessage = message;
       if (response.status === 503 && message.includes("not configured")) {
-        enhancedMessage = "⚙️ OpenAI API key not configured in Netlify. Please add OPENAI_API_KEY to your environment variables.";
+        enhancedMessage = "⚙️ OpenAI API key not configured. Please add OPENAI_API_KEY to your environment variables.";
       } else if (response.status === 401) {
         enhancedMessage = "🔑 Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.";
       } else if (response.status === 429) {
