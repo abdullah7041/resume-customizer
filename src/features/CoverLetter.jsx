@@ -345,8 +345,8 @@ export default function CoverLetter({ resumeText, jobDescription }) {
             name="cover-letter"
           />
           
-          <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-800 dark:text-blue-300">
+          <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <p className="text-sm text-emerald-800 dark:text-emerald-300">
               💡 <strong>Tip:</strong> Edit the generated text to add personal touches and ensure it accurately represents your experience. Always proofread before sending!
             </p>
           </div>

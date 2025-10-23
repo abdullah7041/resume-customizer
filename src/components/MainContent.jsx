@@ -121,6 +121,7 @@ export default function MainContent() {
   const [aiDebug, setAiDebug] = useState(null);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [currentHelpTopic, setCurrentHelpTopic] = useState(null);
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
   const [showLanding, setShowLanding] = useState(() => {
     if (typeof window === "undefined") return true;
     return !window.localStorage.getItem("airo:landingSeen");
@@ -614,7 +615,7 @@ export default function MainContent() {
   const workspace = (
     <ParallaxContainer enableLayers={true} className="py-4">
       <div className="space-y-5 sm:space-y-7 text-ink-700 dark:text-surface-50">
-      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
           {/* Help button for current tab */}
@@ -631,6 +632,15 @@ export default function MainContent() {
               <span className="hidden sm:inline">How it Works</span>
             </button>
           )}
+          {/* Welcome Modal trigger */}
+          <button
+            onClick={() => setWelcomeModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200 bg-teal-100 dark:bg-teal-900/30 hover:bg-teal-200 dark:hover:bg-teal-900/40 rounded-lg transition-all"
+            title="View getting started guide"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Getting Started</span>
+          </button>
         </div>
         {resumeData?.plainText && (
           <button
@@ -643,7 +653,6 @@ export default function MainContent() {
           </button>
         )}
       </div>
-      <div className="accent-divider mx-auto my-2 h-px w-full opacity-80" aria-hidden="true" />
       <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 sm:p-6 lg:p-7 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
         {activeTab === "resume" && (
           <ResumeUpload
@@ -845,8 +854,11 @@ export default function MainContent() {
         )}
       </div>
       
-      {/* Welcome Modal for first-time users */}
-      <WelcomeModal />
+      {/* Welcome Modal - shown on button click */}
+      <WelcomeModal 
+        isOpen={welcomeModalOpen}
+        onClose={() => setWelcomeModalOpen(false)}
+      />
       
       {/* Help Modal */}
       {currentHelpTopic && (

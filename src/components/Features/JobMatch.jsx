@@ -277,7 +277,7 @@ export default function JobMatch({
                       <div
                         id="match-why-popover"
                         role="dialog"
-                        className="absolute right-0 z-50 mt-3 w-72 space-y-4 rounded-2xl border-2 border-emerald-500/30 bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_5%)] p-5 text-left text-sm text-ink shadow-[0_8px_32px_rgba(0,0,0,0.24)] backdrop-blur-glass"
+                        className="absolute right-0 z-50 mt-3 w-80 max-w-[90vw] space-y-4 rounded-2xl border-2 border-emerald-500/30 bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_5%)] p-6 text-left text-sm text-ink shadow-[0_8px_32px_rgba(0,0,0,0.24)] backdrop-blur-glass max-h-[80vh] overflow-y-auto"
                       >
                         <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-3 py-2.5">
                           <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Coverage</p>

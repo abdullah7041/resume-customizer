@@ -127,7 +127,7 @@ const SuggestionCard = ({ suggestions }) => {
             <ul className="space-y-1">
               {needEmphasis.slice(0, 5).map((kw, idx) => (
                 <li key={idx} className="text-xs text-gray-600 dark:text-gray-400">
-                  • {kw.term} <span className="text-blue-500">({kw.resumeCount}→{kw.jobCount})</span>
+                  • {kw.term} <span className="text-emerald-500">({kw.resumeCount}→{kw.jobCount})</span>
                 </li>
               ))}
             </ul>

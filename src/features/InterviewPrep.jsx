@@ -66,7 +66,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
             <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded text-xs font-medium">
               {question.type}
             </span>
-            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs font-medium">
+            <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded text-xs font-medium">
               {question.category}
             </span>
           </div>
@@ -132,14 +132,14 @@ const RoleInsights = ({ roleLevel, focusAreas }) => {
   return (
     <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-750 border-blue-200 dark:border-blue-800">
       <div className="flex items-center gap-2 mb-4">
-        <Star className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <Star className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Interview Insights</h3>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Role Level</p>
-          <p className="text-xl font-bold text-blue-600 dark:text-blue-400 capitalize">
+          <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 capitalize">
             {roleLevel}
           </p>
         </div>
@@ -150,7 +150,7 @@ const RoleInsights = ({ roleLevel, focusAreas }) => {
             {focusAreas.map((area, idx) => (
               <span 
                 key={idx}
-                className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs font-medium"
+                className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded text-xs font-medium"
               >
                 {area}
               </span>

@@ -4,22 +4,22 @@ import { cn } from "../../lib/cn";
 const variants = {
   success: {
     icon: CheckCircle2,
-    accent: "from-emerald-400/80 to-emerald-500/50",
+    accent: "from-emerald-500/80 to-teal-600/60",
     ring: "shadow-glass",
   },
   danger: {
     icon: AlertTriangle,
-    accent: "from-magenta-600/80 to-royal-600/60",
+    accent: "from-rose-500/80 to-red-600/60",
     ring: "shadow-ring",
   },
   warning: {
     icon: AlertTriangle,
-    accent: "from-gold-500/85 to-gold-400/50",
+    accent: "from-amber-500/85 to-orange-500/60",
     ring: "shadow-lift",
   },
   info: {
     icon: Info,
-    accent: "from-royal-500/80 to-magenta-500/60",
+    accent: "from-blue-500/80 to-cyan-600/60",
     ring: "shadow-soft",
   },
 };

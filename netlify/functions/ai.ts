@@ -206,11 +206,23 @@ const handler: Handler = async (event) => {
 
   try {
     const body = event.body ? JSON.parse(event.body) : {};
+    
+    // Log request body for debugging (sanitized)
+    console.log("[ai] Request received", {
+      requestId,
+      hasMessages: Array.isArray(body?.messages),
+      hasResume: Boolean(body?.resumeText || body?.resume),
+      hasJob: Boolean(body?.jobText || body?.jobDesc || body?.job),
+      model: body?.model,
+      temperature: body?.temperature,
+    });
+    
     const resume = sanitize(body?.resumeText ?? body?.resume);
     const job = sanitize(body?.jobText ?? body?.jobDesc ?? body?.job);
     const hasMessages = Array.isArray(body?.messages) && body.messages.length > 0;
 
     if (!resume && !job && !hasMessages) {
+      console.warn("[ai] Missing required fields", { requestId });
       return {
         statusCode: 400,
         headers: HEADERS,
@@ -221,6 +233,7 @@ const handler: Handler = async (event) => {
     const messages = buildMessages(body);
 
     if (!messages) {
+      console.warn("[ai] Failed to build messages", { requestId });
       return {
         statusCode: 400,
         headers: HEADERS,
@@ -234,7 +247,10 @@ const handler: Handler = async (event) => {
       return {
         statusCode: 503,
         headers: HEADERS,
-        body: JSON.stringify({ error: "OpenAI is not configured." }),
+        body: JSON.stringify({ 
+          error: "OpenAI is not configured. Please add OPENAI_API_KEY to environment variables.",
+          code: "MISSING_API_KEY"
+        }),
       };
     }
 
@@ -246,6 +262,13 @@ const handler: Handler = async (event) => {
       },
       typeof body?.fallback_max_tokens === "number" ? body.fallback_max_tokens : undefined,
     );
+    
+    console.log("[ai] Calling OpenAI", {
+      requestId,
+      model: options.model,
+      temperature: options.temperature,
+      messageCount: messages.length,
+    });
 
     const response = await fetch(OPENAI_URL, {
       method: "POST",
@@ -259,7 +282,7 @@ const handler: Handler = async (event) => {
       }),
     });
 
-    const data = await response.json().catch(() => ({}));
+    const data = await response.json().catch(() => ({})) as any;
 
     if (!response.ok) {
       const message = typeof data?.error?.message === "string" ? data.error.message : "OpenAI request failed";
@@ -269,11 +292,16 @@ const handler: Handler = async (event) => {
         status: response.status,
         code,
         message,
+        errorType: data?.error?.type,
       });
       return {
         statusCode: response.status,
         headers: HEADERS,
-        body: JSON.stringify({ error: message, code: code ?? null }),
+        body: JSON.stringify({ 
+          error: message, 
+          code: code ?? null,
+          type: data?.error?.type ?? null,
+        }),
       };
     }
 
@@ -283,8 +311,9 @@ const handler: Handler = async (event) => {
       requestId,
       model: options.model,
       temperature: options.temperature,
-      max_completion_tokens: options.max_completion_tokens ?? null,
+      max_output_tokens: options.max_output_tokens ?? null,
       latency_ms: latency,
+      outputLength: outputText.length,
     });
 
     return {
@@ -299,11 +328,20 @@ const handler: Handler = async (event) => {
   } catch (error) {
     const latency = Math.round(performance.now() - start);
     const message = error instanceof Error ? error.message : "Unexpected error";
-    console.error("[ai] request error", { requestId, message, latency_ms: latency });
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error("[ai] request error", { 
+      requestId, 
+      message, 
+      latency_ms: latency,
+      stack: stack?.split('\n').slice(0, 3).join('\n'), // Log first 3 lines of stack
+    });
     return {
       statusCode: 500,
       headers: HEADERS,
-      body: JSON.stringify({ error: message }),
+      body: JSON.stringify({ 
+        error: message,
+        code: "INTERNAL_ERROR",
+      }),
     };
   }
 };
