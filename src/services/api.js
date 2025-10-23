@@ -9,8 +9,10 @@ export const AI_DEFAULT_MAX_TOKENS = 2048;
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/match-score`;
 const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/parse-resume`;
+const BATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/batch-api`;
 const REQUEST_TIMEOUT = 15000;
 const OPTIMIZATION_TIMEOUT = 45000;
+const BATCH_TIMEOUT = 60000;
 
 const clampScore = (value) => {
   const numeric = Number.parseFloat(value);
@@ -662,4 +664,142 @@ export const optimizeResume = async (
   } finally {
     clearTimeout(timer);
   }
+};
+
+/**
+ * Batch process multiple API operations in one request
+ * @param {Array<{id: string, type: string, payload: any}>} tasks - Array of tasks to process
+ * @param {Object} options - Batch processing options
+ * @returns {Promise<Object>} Batch results with success/error status for each task
+ */
+export const batchProcess = async (tasks, options = {}) => {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    throw new Error("Tasks must be a non-empty array");
+  }
+
+  const { controller, timer } = createTimeoutController(BATCH_TIMEOUT);
+
+  try {
+    const response = await fetch(BATCH_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tasks,
+        options: {
+          concurrency: options.concurrency || 3,
+          continueOnError: options.continueOnError !== false,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    const data = await handleResponse(response);
+
+    return {
+      results: data.results || [],
+      summary: data.summary || { total: 0, successful: 0, failed: 0 },
+    };
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("Batch request timed out. Try again shortly.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * Process a resume with batch API - parse, match, and optimize in one call
+ * @param {Object} params - Resume processing parameters
+ * @returns {Promise<Object>} Combined results from all operations
+ */
+export const processResumeBatch = async ({
+  resumeInput,
+  jobDescription,
+  mode = "auto",
+  onProgress,
+}) => {
+  const tasks = [];
+  let taskId = 1;
+
+  // Task 1: Parse resume
+  const parsePayload = await (async () => {
+    if (isFile(resumeInput)) {
+      const encoded = await fileToBase64(resumeInput);
+      return {
+        kind: "file",
+        name: resumeInput.name,
+        mime: resumeInput.type,
+        data: encoded,
+      };
+    }
+    if (typeof resumeInput === "string") {
+      return { kind: "text", value: resumeInput.trim() };
+    }
+    throw new Error("Invalid resume input");
+  })();
+
+  tasks.push({
+    id: `parse-${taskId++}`,
+    type: "parse",
+    payload: parsePayload,
+  });
+
+  // If we have job description, add match and optimize tasks
+  if (jobDescription && jobDescription.trim()) {
+    const jobText = sanitizeText(jobDescription);
+    
+    // We'll use the resume text for match/optimize
+    // Note: This assumes parse will complete first, but batch API handles them independently
+    // For proper chaining, we'd need the frontend to call batch twice
+    const resumeText = typeof resumeInput === "string" 
+      ? sanitizeText(resumeInput) 
+      : "";
+
+    if (resumeText) {
+      tasks.push({
+        id: `match-${taskId++}`,
+        type: "match",
+        payload: {
+          resumeText,
+          jobDesc: jobText,
+        },
+      });
+
+      tasks.push({
+        id: `optimize-${taskId++}`,
+        type: "optimize",
+        payload: {
+          resumeText,
+          jobDesc: jobText,
+          mode,
+        },
+      });
+    }
+  }
+
+  onProgress?.(0, tasks.length);
+
+  const result = await batchProcess(tasks, {
+    concurrency: 2, // Lower concurrency for complex operations
+    continueOnError: true,
+  });
+
+  onProgress?.(result.summary.total, result.summary.total);
+
+  // Extract results by type
+  const parseResult = result.results.find((r) => r.type === "parse");
+  const matchResult = result.results.find((r) => r.type === "match");
+  const optimizeResult = result.results.find((r) => r.type === "optimize");
+
+  return {
+    parsed: parseResult?.status === "success" ? parseResult.data : null,
+    match: matchResult?.status === "success" ? matchResult.data : null,
+    optimized: optimizeResult?.status === "success" ? optimizeResult.data : null,
+    errors: result.results
+      .filter((r) => r.status === "error")
+      .map((r) => ({ type: r.type, error: r.error })),
+    usedOCR: parseResult?.data?.usedOCR || false,
+  };
 };

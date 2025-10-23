@@ -8,7 +8,7 @@ import globals from "globals";
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
-  { ignores: ["node_modules/**","dist/**","build/**","public/**",".netlify/**","**/*.d.ts","tailwind.config.*"] },
+  { ignores: ["node_modules/**","dist/**","build/**","public/**",".netlify/**","**/*.d.ts","tailwind.config.*","USAGE_EXAMPLES.tsx"] },
 
   js.configs.recommended,
 

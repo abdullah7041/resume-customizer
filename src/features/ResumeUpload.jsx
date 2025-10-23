@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import UploadCard from "../components/ui/UploadCard.jsx";
+import OcrBadge from "../components/ui/OcrBadge.jsx";
 import { FadeInWhenVisible } from "../components/ui/ParallaxSection.jsx";
 import { AppError, uploadResumeFile } from "../services/supabase.js";
 
@@ -76,6 +77,7 @@ const isDocumentFile = (file) => {
 
 export default function ResumeUpload({ onParseResume, resumeDocument, onToast }) {
   const [file, setFile] = useState(null);
+  const [ocrUsed, setOcrUsed] = useState(false);
   const [textValue, setTextValue] = useState(() => {
     // Try to restore from previous session
     if (typeof window === "undefined") return "";
@@ -166,6 +168,7 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
     setProgress(0);
     setError("");
     setTextWarning("");
+    setOcrUsed(false);
   }, []);
 
   const handleTextValueChange = useCallback(
@@ -313,11 +316,18 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
       const parsed = await onParseResume?.(payload);
       setProgress(100);
       setStatus("success");
+      
+      // Check if OCR was used
+      const wasOcrUsed = parsed?.usedOCR || false;
+      setOcrUsed(wasOcrUsed);
+      
       onToast?.({
         type: "success",
         title: "Resume ready",
         description: file
-          ? "We saved and parsed your resume."
+          ? wasOcrUsed 
+            ? "We saved and parsed your resume using AI OCR."
+            : "We saved and parsed your resume."
           : "Your pasted resume is ready.",
       });
       if (!file && parsed?.plainText) {
@@ -361,6 +371,11 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
           textHelper={textWarning}
           onValidationError={handleValidationError}
         />
+        {ocrUsed && (status === "success" || status === "idle") && (
+          <div className="flex justify-center">
+            <OcrBadge />
+          </div>
+        )}
       </div>
     </FadeInWhenVisible>
   );

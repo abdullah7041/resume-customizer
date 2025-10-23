@@ -91,18 +91,23 @@ npm run lint # ESLint
 - ✅ Temperature locked to 1.0 (gpt-5-nano)
 - ✅ Enhanced binary data validation
 - ✅ Postman collection for API testing
+- ✅ **DeepSeek OCR integration** for scanned resumes and images
+- ✅ **Batch API** for processing multiple operations in one request
+- ✅ **Rate limiting utilities** with exponential backoff retry logic
+- ✅ **OCR Badge component** showing when AI extraction was used
 
 ### Match Score Always 0
 - **Cause**: Backend returns 0 for all metrics despite overlap
 - **Fix**: `api.js` has fallback scoring - ensure `buildFallbackMatch()` is called
 - **Minimum scores**: 15 for any overlap, 20-50 based on keyword hit ratio
 
-## Recent Updates
-- ✅ Landing page with animated hero
-- ✅ Structured JSON extraction endpoint (`extract-resume-json.ts`)
-- ✅ Temperature locked to 1.0 (gpt-5-nano)
-- ✅ Enhanced binary data validation
-- ✅ Postman collection for API testing
+### DeepSeek OCR & Batch API (New)
+- **Location**: `netlify/functions/parse-resume.ts` (enhanced), `batch-api.ts` (new)
+- **Frontend**: `src/services/api.js` has `batchProcess()` and `processResumeBatch()`
+- **Rate Limiting**: `netlify/lib/rate-limiter.ts` - handles concurrency, retries, backoff
+- **Usage**: Automatically detects images/scanned PDFs and uses DeepSeek OCR
+- **Batch**: Combine parse + match + optimize in single request
+- **Docs**: See `DEEPSEEK_OCR_BATCH_API_GUIDE.md` and `DEEPSEEK_OCR_QUICK_REF.md`
 
 ## Troubleshooting
 - **504 Errors**: Check `OPENAI_API_KEY` in Netlify env vars
