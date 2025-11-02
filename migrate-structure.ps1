@@ -455,7 +455,7 @@ function Start-Migration {
         Write-Host "1. Update import paths: npm run lint" -ForegroundColor Gray
         Write-Host "2. Run tests: npm test" -ForegroundColor Gray
         Write-Host "3. Test locally: netlify dev" -ForegroundColor Gray
-        Write-Host "4. Commit changes: git add . && git commit -m 'chore: restructure project'" -ForegroundColor Gray
+        Write-Host "4. Commit changes: git add . ; git commit -m 'chore: restructure project'" -ForegroundColor Gray
     } else {
         Write-Host "This was a dry run. Run without -DryRun to apply changes." -ForegroundColor Yellow
     }
