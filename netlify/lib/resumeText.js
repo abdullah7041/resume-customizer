@@ -206,14 +206,22 @@ const extractPdfPlainText = async (arrayBuffer) => {
       }
 
       if (lines.length > 0) {
-        return lines.join("\n");
+        const extractedText = lines.join("\n");
+        console.log(`[resumeText] PDF.js extraction: ${extractedText.length} chars from ${document.numPages} pages`);
+        return extractedText;
       }
-    } catch {
+      console.warn("[resumeText] PDF.js extraction returned no text, trying fallback parser");
+    } catch (error) {
+      console.warn("[resumeText] PDF.js extraction failed:", error?.message || "Unknown error");
       // fall back to manual parsing below
     }
+  } else {
+    console.warn("[resumeText] PDF.js library not available, using fallback parser");
   }
 
-  return extractPdfTextFallback(arrayBuffer);
+  const fallbackText = extractPdfTextFallback(arrayBuffer);
+  console.log(`[resumeText] Fallback extraction: ${fallbackText.length} chars`);
+  return fallbackText;
 };
 
 const ZIP_END_SIGNATURE = new Uint8Array([0x50, 0x4b, 0x05, 0x06]);
@@ -403,10 +411,14 @@ const extractDocxPlainText = async (arrayBuffer) => {
   try {
     const xml = await findDocumentXml(arrayBuffer);
     if (!xml) {
+      console.warn("[resumeText] DOCX extraction: No document.xml found in archive");
       return "";
     }
-    return decodeXmlParagraphs(xml);
-  } catch {
+    const extractedText = decodeXmlParagraphs(xml);
+    console.log(`[resumeText] DOCX extraction: ${extractedText.length} chars`);
+    return extractedText;
+  } catch (error) {
+    console.error("[resumeText] DOCX extraction failed:", error?.message || "Unknown error");
     return "";
   }
 };

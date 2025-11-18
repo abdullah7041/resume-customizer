@@ -324,8 +324,19 @@ const handler: Handler = async (event) => {
     const resumeTokens = normalize(resumeSource);
     const jobTokens = normalize(jobDesc);
 
+    // 🔍 DEBUG LOGGING: Token analysis
+    console.log("=========== MATCH SCORE DEBUG ===========");
+    console.log(`[match-score] Resume text length: ${resumeSource.length} characters`);
+    console.log(`[match-score] Job description length: ${jobDesc.length} characters`);
+    console.log(`[match-score] Resume tokens after normalization: ${resumeTokens.length}`);
+    console.log(`[match-score] Job tokens after normalization: ${jobTokens.length}`);
+    console.log(`[match-score] Sample resume tokens: [${resumeTokens.slice(0, 20).join(', ')}]`);
+    console.log(`[match-score] Sample job tokens: [${jobTokens.slice(0, 20).join(', ')}]`);
+
     const idf = inverseDocumentFrequency([resumeTokens, jobTokens]);
     const vocab = new Set([...resumeTokens, ...jobTokens]);
+
+    console.log(`[match-score] Vocabulary size: ${vocab.size} unique tokens`);
 
     const resumeVector = buildVector(termFrequency(resumeTokens), idf, vocab);
     const jobVector = buildVector(termFrequency(jobTokens), idf, vocab);
@@ -362,6 +373,15 @@ const handler: Handler = async (event) => {
     }
     
     const score = Math.round(clamp(rawScore, 0, 100));
+
+    // 🔍 DEBUG LOGGING: Final score breakdown
+    console.log(`[match-score] Cosine similarity: ${cosine.toFixed(4)}`);
+    console.log(`[match-score] Keyword coverage: ${coverage.toFixed(4)} (${hits.length}/${keywords.length} keywords matched)`);
+    console.log(`[match-score] Raw score: ${rawScore.toFixed(2)}`);
+    console.log(`[match-score] Final score: ${score}/100`);
+    console.log(`[match-score] Matched keywords: [${hits.slice(0, 8).join(', ')}]`);
+    console.log(`[match-score] Missing keywords: [${missing.slice(0, 8).join(', ')}]`);
+    console.log("=========================================");
 
     return {
       statusCode: 200,

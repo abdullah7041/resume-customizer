@@ -296,9 +296,23 @@ const handler: Handler = async (event) => {
     }
     
     const extractionResult = await extractText(body);
+
+    // 🔍 DEBUG LOGGING: Log extraction quality metrics
+    console.log("=========== PARSE RESUME DEBUG ===========");
+    console.log(`[parse-resume] Extraction method: ${extractionResult.usedOCR ? 'DeepSeek OCR' : 'Standard PDF/DOCX parsing'}`);
+    console.log(`[parse-resume] Raw text length: ${extractionResult.text.length} characters`);
+    console.log(`[parse-resume] First 200 chars: "${extractionResult.text.slice(0, 200)}"`);
+    console.log(`[parse-resume] Text preview (cleaned): "${extractionResult.text.trim().slice(0, 300).replace(/\s+/g, ' ')}"`);
+
     const normalized = buildResumeDocument(extractionResult.text);
 
+    console.log(`[parse-resume] Normalized plainText length: ${normalized.plainText?.length || 0} characters`);
+    console.log(`[parse-resume] Bullets extracted: ${normalized.bullets?.length || 0}`);
+    console.log(`[parse-resume] Sections extracted: ${normalized.sections?.length || 0}`);
+    console.log("==========================================");
+
     if (!normalized.plainText || normalized.plainText.trim().length === 0) {
+      console.error("[parse-resume] ❌ EXTRACTION FAILED: No text extracted from document");
       return {
         statusCode: 400,
         headers: HEADERS,
