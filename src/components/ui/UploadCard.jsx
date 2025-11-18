@@ -178,7 +178,7 @@ export default function UploadCard({
       as="section"
       tone="glass"
       glow
-      className="mx-auto max-w-2xl space-y-5 sm:space-y-6"
+      className="mx-auto max-w-5xl space-y-5 sm:space-y-6"
       contentClassName="space-y-5 sm:space-y-6"
       aria-live="polite"
     >

@@ -606,12 +606,27 @@ function VisualDemo() {
             <div className="absolute top-4 left-4 px-4 py-2 rounded-full bg-red-500/20 border border-red-500/50 text-red-200 text-sm font-semibold">
               Before
             </div>
-            <div className="mt-12 space-y-4">
-              <div className="h-8 bg-white/10 rounded w-3/4" />
-              <div className="h-6 bg-white/10 rounded w-full" />
-              <div className="h-6 bg-white/10 rounded w-5/6" />
-              <div className="h-6 bg-white/10 rounded w-full" />
-              <div className="h-6 bg-white/10 rounded w-2/3" />
+            <div className="mt-12 space-y-3 text-white/50 text-sm">
+              <div className="font-bold text-base text-white/60">Software Developer</div>
+              <p className="leading-relaxed">Worked on various projects and helped the team. Responsible for coding and debugging. Used different technologies to complete tasks.</p>
+              <ul className="space-y-1.5 pl-4 text-xs">
+                <li className="flex items-start gap-2">
+                  <span className="text-white/40 mt-0.5">•</span>
+                  <span>Coded features</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-white/40 mt-0.5">•</span>
+                  <span>Fixed bugs</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-white/40 mt-0.5">•</span>
+                  <span>Attended meetings</span>
+                </li>
+              </ul>
+              <div className="pt-3 flex items-center gap-2">
+                <div className="px-2 py-0.5 rounded bg-white/5 text-[10px] text-white/40">Match: 23%</div>
+                <div className="px-2 py-0.5 rounded bg-red-500/10 text-[10px] text-red-300">Weak Keywords</div>
+              </div>
             </div>
           </motion.div>
 
@@ -624,16 +639,39 @@ function VisualDemo() {
               <Sparkles className="w-4 h-4" />
               After
             </div>
-            <div className="mt-12 space-y-4">
+            <div className="mt-12 space-y-3 text-white/90 text-sm">
               <motion.div
-                animate={{ opacity: [0.5, 1, 0.5] }}
+                animate={{ opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="h-8 bg-gradient-to-r from-emerald-400/30 to-teal-400/30 rounded w-3/4"
-              />
-              <div className="h-6 bg-white/20 rounded w-full" />
-              <div className="h-6 bg-white/20 rounded w-5/6" />
-              <div className="h-6 bg-white/20 rounded w-full" />
-              <div className="h-6 bg-white/20 rounded w-2/3" />
+                className="font-bold text-base text-emerald-200"
+              >
+                Senior Full-Stack Software Engineer
+              </motion.div>
+              <p className="leading-relaxed">Led cross-functional agile team of 5 developers to architect and deploy scalable microservices platform, reducing system latency by 40% and supporting 2M+ daily active users.</p>
+              <ul className="space-y-1.5 pl-4 text-xs">
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 mt-0.5">✓</span>
+                  <span><strong>Engineered</strong> RESTful APIs with Node.js and PostgreSQL, improving throughput by 35%</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 mt-0.5">✓</span>
+                  <span><strong>Automated</strong> CI/CD pipeline using Docker & Kubernetes, cutting deployment time by 60%</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 mt-0.5">✓</span>
+                  <span><strong>Mentored</strong> junior developers through code reviews and technical architecture sessions</span>
+                </li>
+              </ul>
+              <div className="pt-3 flex items-center gap-2">
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="px-2 py-0.5 rounded bg-emerald-500/20 text-[10px] text-emerald-200 font-semibold"
+                >
+                  Match: 87%
+                </motion.div>
+                <div className="px-2 py-0.5 rounded bg-emerald-500/10 text-[10px] text-emerald-300">Strong Keywords</div>
+              </div>
             </div>
           </motion.div>
         </motion.div>
