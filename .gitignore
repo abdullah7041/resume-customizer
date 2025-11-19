@@ -7,9 +7,15 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-ssr
+build
+
+# Environment files
 .env*
 
 # Editor directories and files
@@ -23,17 +29,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local Netlify folder
+# Local Netlify folder (including build artifacts)
 .netlify
-dist/
-build/
-node_modules/
-coverage/
-*.log
-*.lock
-# if you prefer NOT to commit images at all (otherwise rely on LFS)
-# *.png
-# *.jpg
-# *.jpeg
-# *.webp
-# *.pdf
+
+# Test coverage
+coverage
+
+# Lock files (keeping package-lock.json for consistency)
+# *.lock

@@ -1,10 +1,9 @@
 import { forwardRef, useState } from "react";
-import { motion } from "framer-motion";
 import { cn } from "../../lib/cn";
 
 /**
- * AnimatedCard - Enhanced Card with 3D tilt and magnetic hover effects
- * Inspired by landing page V2 interactions
+ * AnimatedCard - Enhanced Card with 3D tilt and hover effects
+ * Simplified version without framer-motion
  */
 export const AnimatedCard = forwardRef(function AnimatedCard(
   {
@@ -15,7 +14,6 @@ export const AnimatedCard = forwardRef(function AnimatedCard(
     glow = false,
     contentClassName,
     enableTilt = true,
-    enableMagnet = false,
     tiltIntensity = 20,
     ...props
   },
@@ -36,13 +34,13 @@ export const AnimatedCard = forwardRef(function AnimatedCard(
 
   const handleMouseMove = (e) => {
     if (!enableTilt || !isHovered) return;
-    
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    
+
     setRotateY((x - centerX) / tiltIntensity);
     setRotateX((centerY - y) / tiltIntensity);
   };
@@ -57,7 +55,7 @@ export const AnimatedCard = forwardRef(function AnimatedCard(
     setRotateY(0);
   };
 
-  const Component = motion[as] || motion.section;
+  const Component = as;
 
   return (
     <div
@@ -68,47 +66,30 @@ export const AnimatedCard = forwardRef(function AnimatedCard(
     >
       <Component
         ref={ref}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ 
-          opacity: 1, 
-          y: 0,
-          rotateX: enableTilt ? rotateX : 0,
-          rotateY: enableTilt ? rotateY : 0,
-        }}
-        transition={{ 
-          opacity: { duration: 0.4 },
-          y: { duration: 0.4 },
-          rotateX: { type: "spring", stiffness: 300, damping: 30 },
-          rotateY: { type: "spring", stiffness: 300, damping: 30 },
-        }}
-        whileHover={{ scale: enableMagnet ? 1.02 : 1, y: -2 }}
         className={cn(
-          "relative overflow-hidden rounded-card p-6 shadow-card transition-all duration-breathe ease-snappy",
-          "before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:transition-all before:duration-breathe before:content-[''] before:bg-[image:var(--glass-reflection)] hover:before:opacity-90 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100",
-          "after:pointer-events-none after:absolute after:bottom-[-40%] after:left-[-20%] after:h-[140%] after:w-[160%] after:rounded-full after:bg-[image:var(--gradient-halo)] after:opacity-0 after:transition-opacity after:duration-breathe hover:after:opacity-70",
-          "hover:shadow-[var(--shadow-hover)] hover:border-[color:var(--glass-border-hover)]",
+          "relative overflow-hidden rounded-card p-6 shadow-card transition-all duration-300 ease-out",
+          "before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:transition-all before:duration-300 before:content-[''] before:bg-[image:var(--glass-reflection)] hover:before:opacity-90 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100",
+          "after:pointer-events-none after:absolute after:bottom-[-40%] after:left-[-20%] after:h-[140%] after:w-[160%] after:rounded-full after:bg-[image:var(--gradient-halo)] after:opacity-0 after:transition-opacity after:duration-300 hover:after:opacity-70",
+          "hover:shadow-[var(--shadow-hover)] hover:border-[color:var(--glass-border-hover)] hover:scale-[1.02] hover:-translate-y-0.5",
           glow ? "shadow-glass" : "",
           toneStyles[tone] ?? toneStyles.glass,
           className
         )}
         style={{
           transformStyle: enableTilt ? "preserve-3d" : "flat",
+          transform: enableTilt ? `rotateX(${rotateX}deg) rotateY(${rotateY}deg)` : "none",
+          transition: "transform 0.1s ease-out",
         }}
         {...props}
       >
         {/* Animated gradient border glow on hover */}
         {isHovered && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 rounded-card pointer-events-none"
-          >
+          <div className="absolute inset-0 rounded-card pointer-events-none opacity-0 animate-fade-in">
             <div className="absolute inset-0 rounded-card bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 blur-xl" />
-          </motion.div>
+          </div>
         )}
-        
-        <div 
+
+        <div
           className={cn("relative z-[1] space-y-4 text-ink-soft", contentClassName)}
           style={{ transform: enableTilt ? "translateZ(20px)" : "none" }}
         >

@@ -1,6 +1,6 @@
 // src/services/exportPdf.js
 
-import { buildResumeDocument } from "../../shared/normalize-resume.js";
+import { buildResumeDocument } from "../../netlify/lib/normalize-resume.js";
 
 const SECTION_KEYWORDS = {
   contact: ["contact", "contact information", "personal details"],

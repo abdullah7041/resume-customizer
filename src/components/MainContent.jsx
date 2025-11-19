@@ -21,7 +21,6 @@ import EmptyState from "./ui/EmptyState.jsx";
 import Button from "./ui/Button.jsx";
 import HelpModal from "./ui/HelpModal.jsx";
 import LandingPage from "./LandingPage.jsx";
-import LandingPageV2 from "./LandingPageV2.jsx";
 import WelcomeModal from "./WelcomeModal.jsx";
 import { ParallaxContainer } from "./ui/ParallaxSection.jsx";
 import { helpContent } from "../data/helpContent.jsx";
@@ -126,8 +125,6 @@ export default function MainContent() {
     if (typeof window === "undefined") return true;
     return !window.localStorage.getItem("airo:landingSeen");
   });
-  // Toggle for new landing page version (V2)
-  const [useV2Landing] = useState(true);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
 
@@ -760,25 +757,14 @@ export default function MainContent() {
           ) : user ? (
             workspace
           ) : showLanding ? (
-            useV2Landing ? (
-              <LandingPageV2 
-                onGetStarted={() => {
-                  if (typeof window !== "undefined") {
-                    window.localStorage.setItem("airo:landingSeen", "true");
-                  }
-                  setShowLanding(false);
-                }}
-              />
-            ) : (
-              <LandingPage 
-                onGetStarted={() => {
-                  if (typeof window !== "undefined") {
-                    window.localStorage.setItem("airo:landingSeen", "true");
-                  }
-                  setShowLanding(false);
-                }}
-              />
-            )
+            <LandingPage
+              onGetStarted={() => {
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem("airo:landingSeen", "true");
+                }
+                setShowLanding(false);
+              }}
+            />
           ) : (
               <EmptyState
                 icon={UserPlus}

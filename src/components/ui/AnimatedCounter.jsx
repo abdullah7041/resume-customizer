@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, useInView } from "framer-motion";
 import { cn } from "../../lib/cn";
 
 /**
  * AnimatedCounter - Scroll-triggered counter with easing
- * Inspired by landing page V2 stats section
+ * Simplified version without framer-motion
  */
 export function AnimatedCounter({
   from = 0,
@@ -18,11 +17,33 @@ export function AnimatedCounter({
   onComplete,
 }) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [count, setCount] = useState(from);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Simple intersection observer to trigger animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isVisible) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => {
+      if (ref.current) {
+        observer.unobserve(ref.current);
+      }
+    };
+  }, [isVisible]);
 
   useEffect(() => {
-    if (!isInView || !enableAnimation) {
+    if (!isVisible || !enableAnimation) {
       setCount(to);
       return;
     }
@@ -51,27 +72,25 @@ export function AnimatedCounter({
     };
 
     requestAnimationFrame(animate);
-  }, [isInView, from, to, duration, enableAnimation, onComplete]);
+  }, [isVisible, from, to, duration, enableAnimation, onComplete]);
 
-  const formattedValue = decimals > 0 
+  const formattedValue = decimals > 0
     ? count.toFixed(decimals)
     : Math.floor(count).toLocaleString();
 
   return (
-    <motion.div
+    <div
       ref={ref}
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={isInView ? { opacity: 1, scale: 1 } : {}}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      className={cn("tabular-nums", className)}
+      className={cn("tabular-nums transition-opacity duration-500", isVisible ? "opacity-100" : "opacity-0", className)}
     >
       {prefix}{formattedValue}{suffix}
-    </motion.div>
+    </div>
   );
 }
 
 /**
  * AnimatedStatCard - Stat card with counter and hover effects
+ * Simplified version using CSS transitions
  */
 export function AnimatedStatCard({
   icon: Icon,
@@ -80,47 +99,33 @@ export function AnimatedStatCard({
   suffix = "",
   prefix = "",
   decimals = 0,
-  delay = 0,
   className,
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.6, delay }}
-      whileHover={{ scale: 1.05, y: -5 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative p-8 rounded-2xl bg-surface-glass/50 backdrop-blur-md border border-glass-border hover:border-emerald-400/50 transition-all duration-300 cursor-pointer",
+        "group relative p-8 rounded-2xl bg-surface-glass/50 backdrop-blur-md border border-glass-border hover:border-emerald-400/50 transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-1",
         className
       )}
     >
       {/* Radial glow on hover */}
       {isHovered && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 rounded-2xl overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10" />
-        </motion.div>
+        <div className="absolute inset-0 rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 transition-opacity duration-300" />
+        </div>
       )}
 
       <div className="relative text-center space-y-3">
         {Icon && (
-          <motion.div
-            animate={isHovered ? { rotate: 360, scale: 1.1 } : { rotate: 0, scale: 1 }}
-            transition={{ duration: 0.6 }}
-          >
+          <div className={cn("transition-transform duration-600", isHovered && "rotate-360 scale-110")}>
             <Icon className="w-12 h-12 mx-auto text-emerald-400 mb-4" />
-          </motion.div>
+          </div>
         )}
-        
+
         <AnimatedCounter
           to={value}
           suffix={suffix}
@@ -128,22 +133,17 @@ export function AnimatedStatCard({
           decimals={decimals}
           className="text-5xl font-bold text-white"
         />
-        
+
         <div className="text-white/70 text-lg">{label}</div>
       </div>
 
       {/* Glow effect on hover */}
       {isHovered && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 rounded-2xl pointer-events-none"
-        >
+        <div className="absolute inset-0 rounded-2xl pointer-events-none transition-opacity duration-300">
           <div className="absolute inset-0 rounded-2xl shadow-xl shadow-emerald-500/20" />
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
