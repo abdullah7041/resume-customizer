@@ -287,6 +287,13 @@ export default function JobMatch({
                           <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Similarity</p>
                           <span className="text-xl font-bold text-ink">{cosineLabel}</span>
                         </div>
+                        <div className="rounded-lg bg-blue-50/50 dark:bg-blue-900/10 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-400 mb-2">How It Works</p>
+                          <p className="text-sm leading-relaxed text-ink">
+                            <strong>Coverage</strong> measures what percentage of key job requirements appear in your resume.
+                            <br /><strong>Similarity</strong> uses TF-IDF algorithm to compare semantic overlap between your resume and the job description.
+                          </p>
+                        </div>
                         {missing.length > 0 && (
                           <div className="rounded-lg bg-rose-50/50 dark:bg-rose-900/10 p-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-600 dark:text-rose-400 mb-3">Missing Keywords</p>
@@ -302,7 +309,7 @@ export default function JobMatch({
                         )}
                         {matchAnalysis?.explanation?.reason && (
                           <div className="rounded-lg bg-blue-50/50 dark:bg-blue-900/10 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-400 mb-2">Analysis</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-400 mb-2">AI Analysis</p>
                             <p className="text-sm leading-relaxed text-ink">
                               {matchAnalysis.explanation.reason}
                             </p>
@@ -311,7 +318,7 @@ export default function JobMatch({
                         {Array.isArray(matchAnalysis?.explanation?.tips) &&
                           matchAnalysis.explanation.tips.length > 0 && (
                             <div className="rounded-lg bg-amber-50/50 dark:bg-amber-900/10 p-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-600 dark:text-amber-400 mb-3">Recommendations</p>
+                              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-600 dark:text-amber-400 mb-3">AI Recommendations</p>
                               <ul className="space-y-2 text-sm leading-relaxed text-ink">
                                 {matchAnalysis.explanation.tips.slice(0, 4).map((tip, index) => (
                                   <li key={`${tip}-${index}`} className="flex items-start gap-2">
@@ -336,14 +343,14 @@ export default function JobMatch({
 
             {missing.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-rose-600 dark:text-rose-400">
                   Top missing keywords
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {missing.map((keyword) => (
                     <span
                       key={keyword}
-                      className="rounded-full border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-3 py-1 text-xs font-semibold text-emerald-500 shadow-soft"
+                      className="rounded-full border-2 border-rose-200 dark:border-rose-800/50 bg-rose-50 dark:bg-rose-900/20 px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-300 shadow-sm backdrop-blur-sm transition-transform hover:scale-105"
                     >
                       {keyword}
                     </span>
@@ -354,14 +361,14 @@ export default function JobMatch({
 
             {hits.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-ink opacity-80">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
                   Recognized strengths
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {hits.map((keyword) => (
                     <span
                       key={keyword}
-                      className="rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_15%)] px-3 py-1 text-xs font-semibold text-ink"
+                      className="rounded-full border-2 border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-sm backdrop-blur-sm transition-transform hover:scale-105"
                     >
                       {keyword}
                     </span>
