@@ -45,17 +45,18 @@ const decodeBase64 = (value: string): ArrayBuffer => {
 };
 
 /**
- * Extract structured resume data using DeepSeek OCR
+ * Extract structured resume data using OpenAI Vision API
  * Handles image-based documents and low-quality PDFs
+ * More reliable than DeepSeek API
  */
-const extractWithDeepSeekOCR = async (
+const extractWithVisionOCR = async (
   arrayBuffer: ArrayBuffer,
   mimeType: string
 ): Promise<{ text: string; structured: any; usedOCR: boolean }> => {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  
+  const apiKey = process.env.OPENAI_API_KEY ?? process.env.VITE_OPENAI_KEY;
+
   if (!apiKey) {
-    throw new Error("DeepSeek API key not configured");
+    throw new Error("OpenAI API key not configured. Set OPENAI_API_KEY environment variable.");
   }
 
   // Convert to base64 for API transmission
@@ -92,20 +93,26 @@ CRITICAL: Extract ONLY what you see. Do NOT invent information.
 Return valid JSON only - no markdown, no commentary.`;
 
   try {
-    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: "gpt-4o-mini", // Cost-effective vision model
         messages: [
           {
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: dataUri } },
+              {
+                type: "image_url",
+                image_url: {
+                  url: dataUri,
+                  detail: "high" // High detail for better OCR accuracy
+                }
+              },
             ],
           },
         ],
@@ -116,31 +123,30 @@ Return valid JSON only - no markdown, no commentary.`;
 
     if (!response.ok) {
       const error: any = await response.json().catch(() => ({}));
-      throw new Error(
-        `DeepSeek OCR failed: ${error.error?.message || response.statusText}`
-      );
+      const errorMessage = error.error?.message || response.statusText;
+      throw new Error(`OpenAI Vision OCR failed: ${errorMessage}`);
     }
 
     const data: any = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
     // Extract JSON from markdown code blocks if present
-    const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) || 
+    const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) ||
                      content.match(/(\{[\s\S]*\})/);
-    
+
     if (!jsonMatch) {
-      throw new Error("DeepSeek OCR did not return valid JSON");
+      throw new Error("OpenAI Vision OCR did not return valid JSON");
     }
 
     const structured = JSON.parse(jsonMatch[1]);
-    
+
     // Convert structured data back to plain text
     const textParts: string[] = [];
     if (structured.name) textParts.push(structured.name);
     if (structured.email) textParts.push(structured.email);
     if (structured.phone) textParts.push(structured.phone);
     if (structured.summary) textParts.push(`\n${structured.summary}`);
-    
+
     if (structured.experience?.length) {
       textParts.push("\n\nEXPERIENCE");
       for (const exp of structured.experience) {
@@ -151,19 +157,19 @@ Return valid JSON only - no markdown, no commentary.`;
         }
       }
     }
-    
+
     if (structured.education?.length) {
       textParts.push("\n\nEDUCATION");
       for (const edu of structured.education) {
         textParts.push(`\n${edu.degree} - ${edu.institution} (${edu.year})`);
       }
     }
-    
+
     if (structured.skills?.length) {
       textParts.push("\n\nSKILLS");
       textParts.push(structured.skills.join(", "));
     }
-    
+
     if (structured.certifications?.length) {
       textParts.push("\n\nCERTIFICATIONS");
       textParts.push(structured.certifications.join(", "));
@@ -176,7 +182,7 @@ Return valid JSON only - no markdown, no commentary.`;
     };
   } catch (error) {
     throw new Error(
-      `DeepSeek OCR extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Vision OCR extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`
     );
   }
 };
@@ -227,20 +233,21 @@ const extractText = async (
     
     if (isImage) {
       // Images always need OCR
-      return await extractWithDeepSeekOCR(arrayBuffer, mimeType);
+      return await extractWithVisionOCR(arrayBuffer, mimeType);
     }
-    
+
     // Try standard text extraction first for PDFs/DOCX
     const extractedText = await extractPlainTextFromArrayBuffer(arrayBuffer, {
       mimeType,
       fileName: body.name,
     });
-    
+
     // If extraction was poor quality, try OCR fallback
-    if (isLowQualityExtraction(extractedText) && process.env.DEEPSEEK_API_KEY) {
+    const hasOCRApiKey = process.env.OPENAI_API_KEY ?? process.env.VITE_OPENAI_KEY;
+    if (isLowQualityExtraction(extractedText) && hasOCRApiKey) {
       console.log("[parse-resume] Low quality extraction detected, attempting OCR fallback");
       try {
-        return await extractWithDeepSeekOCR(arrayBuffer, mimeType);
+        return await extractWithVisionOCR(arrayBuffer, mimeType);
       } catch (ocrError) {
         console.warn("[parse-resume] OCR fallback failed, using standard extraction:", ocrError);
         // Fall back to the original extraction

@@ -2,7 +2,7 @@
 // Modern landing page with hero section and feature showcase
 
 import { useState } from "react";
-import { ArrowRight, FileText, Target, Sparkles, Zap, Shield, TrendingUp, CheckCircle2, Star } from "lucide-react";
+import { ArrowRight, FileText, Target, Sparkles, Zap, Shield, TrendingUp, CheckCircle2, Star, Camera, FileImage } from "lucide-react";
 import Button from "./ui/Button.jsx";
 import { cn } from "../lib/cn.js";
 
@@ -37,7 +37,7 @@ export default function LandingPage({ onGetStarted }) {
 
           {/* Subheadline */}
           <p className="max-w-2xl mx-auto text-xl md:text-2xl text-white/90 leading-relaxed">
-            Transform your resume in minutes. Match job descriptions perfectly. Get past ATS systems. Land more interviews.
+            Transform your resume in minutes. Upload images, PDFs, or screenshots. Match job descriptions perfectly with AI. Land more interviews.
           </p>
 
           {/* CTA Buttons */}
@@ -72,6 +72,15 @@ export default function LandingPage({ onGetStarted }) {
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-300" />
               <span>Cancel anytime</span>
+            </div>
+          </div>
+
+          {/* OCR Feature Highlight Badge */}
+          <div className="pt-8">
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-purple-400/30 text-white">
+              <FileImage className="w-5 h-5 text-purple-300" />
+              <span className="font-semibold">NEW: AI-Powered OCR</span>
+              <span className="text-sm text-white/80">• Extract text from images & scans</span>
             </div>
           </div>
         </div>
@@ -175,6 +184,11 @@ export default function LandingPage({ onGetStarted }) {
 
 const features = [
   {
+    icon: FileImage,
+    title: "Advanced OCR Technology",
+    description: "Upload resume images, screenshots, or scanned documents. Our AI-powered OCR extracts text with 95%+ accuracy."
+  },
+  {
     icon: FileText,
     title: "Smart Resume Parsing",
     description: "Upload PDF, DOCX, or paste text. Our AI extracts and structures your experience instantly."
@@ -198,22 +212,17 @@ const features = [
     icon: Shield,
     title: "ATS-Friendly Export",
     description: "Download professionally formatted PDFs that pass applicant tracking systems."
-  },
-  {
-    icon: Zap,
-    title: "Instant Results",
-    description: "Get actionable feedback in seconds. No waiting, no complicated setup."
   }
 ];
 
 const steps = [
   {
     title: "Upload Resume",
-    description: "Drop your PDF/DOCX or paste text directly"
+    description: "Drop your PDF/DOCX, upload an image, or paste text directly"
   },
   {
     title: "Match & Analyze",
-    description: "Add job description and get instant match score"
+    description: "Add job description and get instant AI-powered match score"
   },
   {
     title: "Optimize & Download",

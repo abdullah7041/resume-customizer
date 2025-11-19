@@ -1,10 +1,12 @@
-# DeepSeek OCR & Batch API - Quick Reference
+# OCR & Batch API - Quick Reference
+
+> **⚠️ UPDATED:** OCR now uses **OpenAI Vision API (GPT-4o-mini)** instead of DeepSeek for better reliability and accuracy.
 
 ## 🚀 Quick Start
 
 ### 1. Set Environment Variable
 ```bash
-DEEPSEEK_API_KEY=your_key_here
+OPENAI_API_KEY=sk-your-openai-key-here
 ```
 
 ### 2. Upload Image Resume
@@ -34,7 +36,7 @@ const result = await processResumeBatch({
 `POST /.netlify/functions/parse-resume`
 
 **Auto-detects:**
-- Images → DeepSeek OCR
+- Images → OpenAI Vision OCR
 - Low-quality PDFs → OCR fallback
 - Normal PDFs/DOCX → Standard extraction
 
@@ -141,9 +143,10 @@ curl -X POST http://localhost:8888/.netlify/functions/batch-api \
 ## 🐛 Common Issues
 
 ### OCR Not Working
-- ✅ Check `DEEPSEEK_API_KEY` is set
+- ✅ Check `OPENAI_API_KEY` is set
 - ✅ Verify file is image or low-quality PDF
 - ✅ Check file size < 8 MB
+- ✅ Test API key: `curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"`
 
 ### Batch Timeouts
 - ✅ Reduce batch size (max 5 tasks)
@@ -248,8 +251,9 @@ await processResumeBatch({
 - Single task overhead: +300ms
 
 **Rate Limits:**
-- DeepSeek Free: ~10 req/min
-- OpenAI gpt-5-nano: Check tier
+- OpenAI gpt-4o-mini: Varies by tier (check dashboard)
+- Typical: 500 req/min for paid tier
+- Free tier: 3 req/min
 
 ---
 
@@ -260,4 +264,4 @@ await processResumeBatch({
 3. **Monitor**: Check Netlify function logs
 4. **Optimize**: Adjust rate limits based on usage
 
-For detailed documentation, see `DEEPSEEK_OCR_BATCH_API_GUIDE.md`
+For detailed testing instructions, see `OCR_TESTING_GUIDE.md`
