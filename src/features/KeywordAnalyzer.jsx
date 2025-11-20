@@ -20,7 +20,7 @@ const KeywordBar = ({ keyword, count, score, maxScore, variant = "default" }) =>
   
   return (
     <div className="flex items-center gap-3 py-2">
-      <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+      <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-100 truncate">
         {keyword}
       </div>
       <div className="flex-1 relative h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -30,10 +30,10 @@ const KeywordBar = ({ keyword, count, score, maxScore, variant = "default" }) =>
         />
       </div>
       <div className="w-20 text-right">
-        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <span className="text-sm font-semibold text-gray-900 dark:text-white">
           {count}×
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+        <span className="text-xs text-gray-600 dark:text-gray-200 ml-1">
           ({score}%)
         </span>
       </div>
@@ -49,13 +49,13 @@ const KeywordSection = ({ title, icon: Icon, keywords, variant = "default", empt
       <div className="flex items-center gap-2 mb-4">
         <Icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-        <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+        <span className="ml-auto text-sm text-gray-600 dark:text-gray-200">
           {keywords.length} keywords
         </span>
       </div>
-      
+
       {keywords.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 italic">{emptyMessage}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-200 italic">{emptyMessage}</p>
       ) : (
         <div className="space-y-1">
           {keywords.map((kw, idx) => (
@@ -107,8 +107,8 @@ const SuggestionCard = ({ suggestions }) => {
           {toAdd && toAdd.length > 0 && (
             <ul className="space-y-1">
               {toAdd.slice(0, 5).map((kw, idx) => (
-                <li key={idx} className="text-xs text-gray-600 dark:text-gray-400">
-                  • {kw.term} <span className="text-orange-500">({kw.priority})</span>
+                <li key={idx} className="text-xs text-gray-700 dark:text-gray-200">
+                  • {kw.term} <span className="text-orange-600 dark:text-orange-400">({kw.priority})</span>
                 </li>
               ))}
             </ul>
@@ -126,8 +126,8 @@ const SuggestionCard = ({ suggestions }) => {
           {needEmphasis && needEmphasis.length > 0 && (
             <ul className="space-y-1">
               {needEmphasis.slice(0, 5).map((kw, idx) => (
-                <li key={idx} className="text-xs text-gray-600 dark:text-gray-400">
-                  • {kw.term} <span className="text-emerald-500">({kw.resumeCount}→{kw.jobCount})</span>
+                <li key={idx} className="text-xs text-gray-700 dark:text-gray-200">
+                  • {kw.term} <span className="text-emerald-600 dark:text-emerald-400">({kw.resumeCount}→{kw.jobCount})</span>
                 </li>
               ))}
             </ul>
@@ -145,8 +145,8 @@ const SuggestionCard = ({ suggestions }) => {
           {wellRepresented && wellRepresented.length > 0 && (
             <ul className="space-y-1">
               {wellRepresented.slice(0, 5).map((kw, idx) => (
-                <li key={idx} className="text-xs text-gray-600 dark:text-gray-400">
-                  • {kw.term} <span className="text-green-500">({kw.resumeCount}×)</span>
+                <li key={idx} className="text-xs text-gray-700 dark:text-gray-200">
+                  • {kw.term} <span className="text-green-600 dark:text-green-400">({kw.resumeCount}×)</span>
                 </li>
               ))}
             </ul>
@@ -199,8 +199,8 @@ export default function KeywordAnalyzer({ resumeText, jobDescription }) {
       <div className="w-full max-w-7xl mx-auto p-6">
         <Card className="p-12">
           <div className="flex flex-col items-center justify-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-200 border-t-emerald-600"></div>
-            <p className="text-gray-600 dark:text-gray-400">Analyzing keywords...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-200 dark:border-emerald-800 border-t-emerald-600 dark:border-t-emerald-400"></div>
+            <p className="text-gray-700 dark:text-gray-200">Analyzing keywords...</p>
           </div>
         </Card>
       </div>
@@ -261,25 +261,25 @@ export default function KeywordAnalyzer({ resumeText, jobDescription }) {
         <Card className="p-4 bg-gray-50 dark:bg-gray-800/50">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Resume Words</p>
+              <p className="text-sm text-gray-700 dark:text-gray-200">Resume Words</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {analysis.resume?.totalWords || 0}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Unique Keywords</p>
+              <p className="text-sm text-gray-700 dark:text-gray-200">Unique Keywords</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {analysis.resume?.uniqueWords || 0}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Job Keywords</p>
+              <p className="text-sm text-gray-700 dark:text-gray-200">Job Keywords</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {analysis.job?.totalWords || 0}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Match Rate</p>
+              <p className="text-sm text-gray-700 dark:text-gray-200">Match Rate</p>
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 {analysis.tfidf?.overallMatch || 0}%
               </p>
