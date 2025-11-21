@@ -36,7 +36,7 @@ const ResumeCard = ({ resume, index, onRemove }) => {
           <h3 className="font-semibold text-ink dark:text-white truncate" title={name}>
             {name}
           </h3>
-          <p className="text-sm text-ink-soft dark:text-gray-300 capitalize">
+          <p className="text-sm text-ink-soft dark:text-gray-200 capitalize">
             {status}
           </p>
         </div>
@@ -65,11 +65,11 @@ const ResumeCard = ({ resume, index, onRemove }) => {
       {status === "completed" && analysis && (
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-ink-soft dark:text-gray-300">Match Score</span>
+            <span className="text-sm text-ink-soft dark:text-gray-200">Match Score</span>
             <ScoreBadge score={analysis.score || 0} />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-ink-soft dark:text-gray-300">Keywords</span>
+            <span className="text-sm text-ink-soft dark:text-gray-200">Keywords</span>
             <span className="text-sm font-semibold text-ink dark:text-white">
               {analysis.matchedKeywords?.length || 0}
             </span>
@@ -333,7 +333,7 @@ export default function BulkAnalysis({ jobDescription }) {
           <h1 className="text-3xl font-bold text-ink dark:text-white mb-2">
             Bulk Resume Analysis
           </h1>
-          <p className="text-ink dark:text-gray-200">
+          <p className="text-ink-soft dark:text-gray-100">
             Compare multiple resume versions against the same job description
           </p>
         </div>
@@ -365,10 +365,10 @@ export default function BulkAnalysis({ jobDescription }) {
               <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                 Upload Resume Files
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-700 dark:text-gray-200">
                 Drag & drop or click to browse • PDF or DOCX • Max {MAX_FILES} files
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                 {resumes.length}/{MAX_FILES} uploaded
               </p>
             </div>

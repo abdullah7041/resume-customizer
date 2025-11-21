@@ -182,28 +182,155 @@ Return valid JSON only - no markdown, no commentary.`;
 };
 
 /**
- * Check if text extraction resulted in very little content
- * Indicates a scanned/image-based document
+ * Common resume keywords that should appear in legitimate resumes
+ * Used to validate extraction quality
+ */
+const RESUME_INDICATORS = [
+  'experience', 'education', 'skills', 'work', 'university', 'college',
+  'bachelor', 'master', 'degree', 'project', 'developed', 'managed',
+  'leadership', 'team', 'certification', 'proficient', 'expert',
+  'responsible', 'achieved', 'implemented', 'designed', 'analyzed'
+];
+
+/**
+ * Calculate character entropy to detect repetitive/garbled text
+ * High entropy = diverse characters (good)
+ * Low entropy = repetitive patterns like "I I I I" (bad)
+ */
+const calculateEntropy = (text: string): number => {
+  if (!text || text.length === 0) return 0;
+
+  const charFreq = new Map<string, number>();
+  const normalized = text.toLowerCase().replace(/\s+/g, '');
+
+  for (const char of normalized) {
+    charFreq.set(char, (charFreq.get(char) || 0) + 1);
+  }
+
+  let entropy = 0;
+  const length = normalized.length;
+
+  for (const count of charFreq.values()) {
+    const probability = count / length;
+    entropy -= probability * Math.log2(probability);
+  }
+
+  return entropy;
+};
+
+/**
+ * Check if text extraction resulted in very little or poor quality content
+ * Indicates a scanned/image-based document that needs OCR
  */
 const isLowQualityExtraction = (text: string): boolean => {
   const cleaned = text.trim();
+
+  // Completely empty or very short
   if (cleaned.length < 50) return true;
-  
-  // Check for garbled text patterns
-  const words = cleaned.split(/\s+/);
+
+  // Check for garbled text patterns (short words)
+  const words = cleaned.split(/\s+/).filter(w => w.length > 0);
+  if (words.length < 10) return true; // Too few words extracted
+
   const shortWords = words.filter(w => w.length <= 2).length;
-  const wordRatio = shortWords / Math.max(words.length, 1);
-  
-  return wordRatio > 0.7; // More than 70% short words indicates poor extraction
+  const shortWordRatio = shortWords / Math.max(words.length, 1);
+
+  // Lowered threshold from 70% to 50%
+  if (shortWordRatio > 0.5) return true;
+
+  // Check character diversity (entropy)
+  // Typical English text has entropy ~4.0-4.5
+  // Garbled text like "I I I I" has low entropy ~1.0-2.0
+  const entropy = calculateEntropy(cleaned);
+  if (entropy < 2.5) return true;
+
+  // Check for repetitive character patterns
+  const charCounts = new Map<string, number>();
+  for (const char of cleaned.toLowerCase().replace(/\s/g, '')) {
+    charCounts.set(char, (charCounts.get(char) || 0) + 1);
+  }
+
+  // If any single character appears >40% of the time, likely garbled
+  const maxCharFreq = Math.max(...charCounts.values());
+  const repetitionRatio = maxCharFreq / cleaned.replace(/\s/g, '').length;
+  if (repetitionRatio > 0.4) return true;
+
+  // Check for resume-specific keywords
+  const lowerText = cleaned.toLowerCase();
+  const keywordMatches = RESUME_INDICATORS.filter(keyword =>
+    lowerText.includes(keyword)
+  ).length;
+
+  // If no resume keywords found in substantial text, likely garbage
+  if (cleaned.length > 200 && keywordMatches === 0) return true;
+  if (cleaned.length > 100 && keywordMatches < 2) return true;
+
+  return false;
+};
+
+/**
+ * Calculate extraction quality score (0-1)
+ * Used to warn users about poor OCR/extraction results
+ */
+const calculateExtractionQuality = (text: string): number => {
+  if (!text || text.trim().length === 0) return 0;
+
+  const cleaned = text.trim();
+  let score = 1.0;
+
+  // Penalize short extractions
+  if (cleaned.length < 100) score *= 0.3;
+  else if (cleaned.length < 200) score *= 0.6;
+  else if (cleaned.length < 500) score *= 0.8;
+
+  // Check word count and quality
+  const words = cleaned.split(/\s+/).filter(w => w.length > 0);
+  if (words.length < 20) score *= 0.4;
+  else if (words.length < 50) score *= 0.7;
+
+  // Penalize high ratio of short words
+  const shortWords = words.filter(w => w.length <= 2).length;
+  const shortWordRatio = shortWords / Math.max(words.length, 1);
+  if (shortWordRatio > 0.5) score *= 0.3;
+  else if (shortWordRatio > 0.3) score *= 0.6;
+
+  // Check entropy
+  const entropy = calculateEntropy(cleaned);
+  if (entropy < 2.0) score *= 0.2;
+  else if (entropy < 3.0) score *= 0.5;
+  else if (entropy < 3.5) score *= 0.8;
+
+  // Check for resume keywords
+  const lowerText = cleaned.toLowerCase();
+  const keywordMatches = RESUME_INDICATORS.filter(keyword =>
+    lowerText.includes(keyword)
+  ).length;
+
+  const keywordScore = Math.min(keywordMatches / 5, 1.0);
+  score *= (0.6 + 0.4 * keywordScore); // Keyword presence is weighted at 40%
+
+  return Math.max(0, Math.min(1, score));
+};
+
+type ExtractionResult = {
+  text: string;
+  usedOCR: boolean;
+  structured?: any;
+  quality: number;
+  warnings: string[];
 };
 
 const extractText = async (
   body: ParseResumeRequest
-): Promise<{ text: string; usedOCR: boolean; structured?: any }> => {
+): Promise<ExtractionResult> => {
   if (body.kind === "text") {
-    return { 
-      text: typeof body.value === "string" ? body.value : "",
-      usedOCR: false 
+    const text = typeof body.value === "string" ? body.value : "";
+    const quality = calculateExtractionQuality(text);
+    return {
+      text,
+      usedOCR: false,
+      quality,
+      warnings: quality < 0.5 ? ["Text quality is low. Ensure you've pasted the complete resume content."] : []
     };
   }
 
@@ -221,34 +348,58 @@ const extractText = async (
     }
 
     const mimeType = inferMimeType({ mimeType: body.mime, fileName: body.name });
-    
+
     // Check if it's an image file
     const isImage = IMAGE_MIME_TYPES.has(mimeType);
-    
+
     if (isImage) {
       // Images always need OCR
-      return await extractWithDeepSeekOCR(arrayBuffer, mimeType);
+      const ocrResult = await extractWithDeepSeekOCR(arrayBuffer, mimeType);
+      const quality = calculateExtractionQuality(ocrResult.text);
+      return {
+        ...ocrResult,
+        quality,
+        warnings: quality < 0.6 ? ["OCR extraction quality is moderate. Results may not be optimal."] : []
+      };
     }
-    
+
     // Try standard text extraction first for PDFs/DOCX
     const extractedText = await extractPlainTextFromArrayBuffer(arrayBuffer, {
       mimeType,
       fileName: body.name,
     });
-    
+
     // If extraction was poor quality, try OCR fallback
     if (isLowQualityExtraction(extractedText) && process.env.DEEPSEEK_API_KEY) {
       console.log("[parse-resume] Low quality extraction detected, attempting OCR fallback");
       try {
-        return await extractWithDeepSeekOCR(arrayBuffer, mimeType);
+        const ocrResult = await extractWithDeepSeekOCR(arrayBuffer, mimeType);
+        const quality = calculateExtractionQuality(ocrResult.text);
+        return {
+          ...ocrResult,
+          quality,
+          warnings: quality < 0.6 ? ["OCR was used due to poor standard extraction. Quality may vary."] : []
+        };
       } catch (ocrError) {
         console.warn("[parse-resume] OCR fallback failed, using standard extraction:", ocrError);
         // Fall back to the original extraction
-        return { text: extractedText, usedOCR: false };
+        const quality = calculateExtractionQuality(extractedText);
+        return {
+          text: extractedText,
+          usedOCR: false,
+          quality,
+          warnings: ["Text extraction quality is low. Consider uploading a text-based PDF or pasting content directly."]
+        };
       }
     }
-    
-    return { text: extractedText, usedOCR: false };
+
+    const quality = calculateExtractionQuality(extractedText);
+    return {
+      text: extractedText,
+      usedOCR: false,
+      quality,
+      warnings: quality < 0.6 ? ["Text extraction quality is low. Consider uploading a text-based PDF or pasting content directly."] : []
+    };
   }
 
   throw new Error("Invalid parse request.");
@@ -301,6 +452,8 @@ const handler: Handler = async (event) => {
     console.log("=========== PARSE RESUME DEBUG ===========");
     console.log(`[parse-resume] Extraction method: ${extractionResult.usedOCR ? 'DeepSeek OCR' : 'Standard PDF/DOCX parsing'}`);
     console.log(`[parse-resume] Raw text length: ${extractionResult.text.length} characters`);
+    console.log(`[parse-resume] Extraction quality: ${(extractionResult.quality * 100).toFixed(1)}%`);
+    console.log(`[parse-resume] Warnings: ${extractionResult.warnings.length > 0 ? extractionResult.warnings.join('; ') : 'None'}`);
     console.log(`[parse-resume] First 200 chars: "${extractionResult.text.slice(0, 200)}"`);
     console.log(`[parse-resume] Text preview (cleaned): "${extractionResult.text.trim().slice(0, 300).replace(/\s+/g, ' ')}"`);
 
@@ -326,10 +479,12 @@ const handler: Handler = async (event) => {
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         document: normalized,
         usedOCR: extractionResult.usedOCR,
         structured: extractionResult.structured,
+        quality: extractionResult.quality,
+        warnings: extractionResult.warnings,
       }),
     };
   } catch (error) {
