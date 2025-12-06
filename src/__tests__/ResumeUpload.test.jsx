@@ -37,18 +37,6 @@ describe("ResumeUpload", () => {
     ).toBeInTheDocument();
   });
 
-  it("prevents pasting PDF headers into the textarea", async () => {
-    const onToast = vi.fn();
-    render(<ResumeUpload onParseResume={vi.fn()} onToast={onToast} />);
-
-    const textarea = screen.getByPlaceholderText(/paste resume text/i);
-    fireEvent.change(textarea, { target: { value: "%PDF-1.5" } });
-
-    expect(textarea).toHaveValue("");
-    expect(screen.getByText(/this looks like a pdf — use upload\./i)).toBeInTheDocument();
-    expect(onToast).toHaveBeenCalled();
-  });
-
   it("uploads PDFs and shows a success toast", async () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn().mockResolvedValue({});
@@ -97,30 +85,6 @@ describe("ResumeUpload", () => {
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({ type: "success", title: "Upload complete" })
     );
-    expect(onToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "success", title: "Resume ready" })
-    );
-
-    expect(screen.getByPlaceholderText(/paste resume text/i)).toHaveValue("");
-  });
-
-  it("passes pasted text to onParseResume with context", async () => {
-    const onToast = vi.fn();
-    const onParseResume = vi.fn().mockResolvedValue({ plainText: "Resume text" });
-
-    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} />);
-
-    const textarea = screen.getByPlaceholderText(/paste resume text/i);
-    fireEvent.change(textarea, { target: { value: "  My resume text  " } });
-
-    const submitButton = screen.getByRole("button", { name: /prepare resume/i });
-
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
-
-    expect(onParseResume).toHaveBeenCalledWith({ kind: "text", value: "My resume text" });
-    expect(textarea).toHaveValue("Resume text");
   });
 
   it("rejects files over 5MB with a warning toast", async () => {

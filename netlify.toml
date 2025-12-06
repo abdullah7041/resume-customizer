@@ -31,6 +31,9 @@
 [functions."predict-questions"]
   timeout = 30
 
+[functions."extract-resume-json"]
+  timeout = 30
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -1,7 +1,7 @@
 // src/features/InterviewPrep.jsx
 // Interview question predictor and preparation tool
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { MessageSquare, Lightbulb, Star, Save, Download, RefreshCw, AlertCircle } from "lucide-react";
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
@@ -28,7 +28,7 @@ const DifficultyBadge = ({ difficulty }) => {
     medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
     hard: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
   };
-  
+
   return (
     <span className={cn("px-2 py-1 rounded-full text-xs font-semibold", colors[difficulty] || colors.medium)}>
       {difficulty}
@@ -40,20 +40,20 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
   const [showFramework, setShowFramework] = useState(false);
   const [answer, setAnswer] = useState("");
   const [isSaved, setIsSaved] = useState(false);
-  
+
   const handleSave = () => {
     onSaveAnswer(index, answer);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
-  
+
   return (
     <Card className="p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0">
           <QuestionTypeIcon type={question.type} />
         </div>
-        
+
         <div className="flex-1">
           <div className="flex items-start justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white pr-4">
@@ -61,7 +61,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
             </h3>
             <DifficultyBadge difficulty={question.difficulty} />
           </div>
-          
+
           <div className="flex flex-wrap gap-2 mb-3">
             <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded text-xs font-medium">
               {question.type}
@@ -70,7 +70,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
               {question.category}
             </span>
           </div>
-          
+
           {/* Answer Framework */}
           {question.answerFramework && (
             <div className="mb-4">
@@ -81,7 +81,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
                 <Lightbulb className="w-4 h-4" />
                 {showFramework ? "Hide" : "Show"} Answer Framework
               </button>
-              
+
               {showFramework && (
                 <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
                   <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -91,7 +91,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
               )}
             </div>
           )}
-          
+
           {/* Practice Answer */}
           <div className="space-y-2">
             <label htmlFor="practice-answer" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -135,7 +135,7 @@ const RoleInsights = ({ roleLevel, focusAreas }) => {
         <Star className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Interview Insights</h3>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Role Level</p>
@@ -143,12 +143,12 @@ const RoleInsights = ({ roleLevel, focusAreas }) => {
             {roleLevel}
           </p>
         </div>
-        
+
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Focus Areas</p>
           <div className="flex flex-wrap gap-2">
             {focusAreas.map((area, idx) => (
-              <span 
+              <span
                 key={idx}
                 className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded text-xs font-medium"
               >
@@ -162,23 +162,31 @@ const RoleInsights = ({ roleLevel, focusAreas }) => {
   );
 };
 
-export default function InterviewPrep({ jobDescription, resumeText }) {
+export default function InterviewPrep({ jobDescription, resumeText, matchAnalysis }) {
   const [questions, setQuestions] = useState([]);
   const [roleLevel, setRoleLevel] = useState("");
   const [focusAreas, setFocusAreas] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [savedAnswers, setSavedAnswers] = useState({});
-  
+
   const predictQuestions = useCallback(async () => {
+    // If we have matchAnalysis with interview prep data, use it first
+    if (matchAnalysis?.interviewPrep) {
+      setQuestions(matchAnalysis.interviewPrep.predicted_questions || []);
+      setRoleLevel(matchAnalysis.interviewPrep.roleLevel || "mid");
+      setFocusAreas(matchAnalysis.interviewPrep.focusAreas || []);
+      return;
+    }
+
     if (!jobDescription) {
       setError("Please provide a job description first");
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch(PREDICT_ENDPOINT, {
         method: "POST",
@@ -188,21 +196,21 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
           resumeText: resumeText || ""
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to predict questions: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-      
+
       setQuestions(data.questions || []);
       setRoleLevel(data.roleLevel || "mid");
       setFocusAreas(data.focusAreas || []);
-      
+
       // Save to localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -213,14 +221,23 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
     } finally {
       setIsLoading(false);
     }
-  }, [jobDescription, resumeText]);
-  
+  }, [jobDescription, resumeText, matchAnalysis]);
+
+  // Auto-populate if matchAnalysis is available on mount or change
+  useEffect(() => {
+    if (matchAnalysis?.interviewPrep) {
+      setQuestions(matchAnalysis.interviewPrep.predicted_questions || []);
+      setRoleLevel(matchAnalysis.interviewPrep.roleLevel || "mid");
+      setFocusAreas(matchAnalysis.interviewPrep.focusAreas || []);
+    }
+  }, [matchAnalysis]);
+
   const handleSaveAnswer = useCallback((questionIndex, answer) => {
     setSavedAnswers(prev => ({
       ...prev,
       [questionIndex]: answer
     }));
-    
+
     // Persist to localStorage
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -235,7 +252,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
       }
     }
   }, [savedAnswers]);
-  
+
   const exportQuestions = () => {
     const exportData = {
       questions,
@@ -245,7 +262,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
       jobDescription: jobDescription.substring(0, 200),
       generatedAt: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -254,7 +271,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
     link.click();
     URL.revokeObjectURL(url);
   };
-  
+
   if (!jobDescription) {
     return (
       <div className="w-full max-w-7xl mx-auto p-6">
@@ -266,7 +283,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
       </div>
     );
   }
-  
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -279,7 +296,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
             AI-predicted interview questions based on the job description
           </p>
         </div>
-        
+
         <div className="flex gap-2">
           {questions.length > 0 && (
             <Button onClick={exportQuestions} variant="outline">
@@ -287,8 +304,8 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
               Export
             </Button>
           )}
-          <Button 
-            onClick={predictQuestions} 
+          <Button
+            onClick={predictQuestions}
             variant="primary"
             disabled={isLoading}
           >
@@ -306,7 +323,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
           </Button>
         </div>
       </div>
-      
+
       {/* Error State */}
       {error && (
         <Card className="p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
@@ -316,7 +333,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
           </div>
         </Card>
       )}
-      
+
       {/* Loading State */}
       {isLoading && (
         <Card className="p-12">
@@ -328,19 +345,19 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
           </div>
         </Card>
       )}
-      
+
       {/* Results */}
       {!isLoading && questions.length > 0 && (
         <>
           {/* Role Insights */}
           <RoleInsights roleLevel={roleLevel} focusAreas={focusAreas} />
-          
+
           {/* Questions List */}
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Predicted Questions ({questions.length})
             </h2>
-            
+
             {questions.map((question, index) => (
               <QuestionCard
                 key={index}
@@ -352,7 +369,7 @@ export default function InterviewPrep({ jobDescription, resumeText }) {
           </div>
         </>
       )}
-      
+
       {/* Empty State */}
       {!isLoading && questions.length === 0 && !error && (
         <EmptyState

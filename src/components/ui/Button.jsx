@@ -4,7 +4,7 @@ import { cn } from "../../lib/cn";
 
 const variantStyles = {
   primary:
-    "bg-[image:var(--gradient-primary-value)] text-white shadow-lift",
+    "bg-[image:var(--gradient-primary-value)] text-white shadow-lift hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] hover:brightness-110",
   secondary:
     "border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] text-ink shadow-soft",
   frosted:
@@ -16,7 +16,7 @@ const variantStyles = {
 };
 
 const interactiveStyles =
-  "relative inline-flex min-h-[44px] items-center justify-center gap-2 overflow-hidden rounded-pill px-6 py-2.5 text-sm font-semibold tracking-wide transition-all duration-snappy ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface)] active:scale-[0.97] active:transition-transform active:duration-75";
+  "relative inline-flex min-h-[44px] items-center justify-center gap-2 overflow-hidden rounded-pill px-6 py-2.5 text-sm font-semibold tracking-wide transition-all duration-snappy ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-[color:var(--surface)] hover:scale-[1.02] hover:brightness-110 active:scale-95 active:transition-transform active:duration-75 cursor-pointer";
 
 const surfaceSheen =
   "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:content-[''] before:bg-[image:var(--glass-reflection)] before:opacity-0 before:transition-all before:duration-snappy hover:before:opacity-100 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100";

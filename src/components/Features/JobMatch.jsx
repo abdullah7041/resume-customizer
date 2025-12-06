@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Info, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Info, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import Button from "../ui/Button.jsx";
 import AnimatedCard from "../ui/AnimatedCard.jsx";
 import { AnimatedCounter } from "../ui/AnimatedCounter.jsx";
@@ -7,38 +7,42 @@ import Input from "../ui/Input.jsx";
 import SectionTitle from "../ui/SectionTitle.jsx";
 import Tooltip from "../ui/Tooltip.jsx";
 
+
 const resolveVariant = (score) => {
-  if (score >= 75) {
+  if (score >= 70) {
     return {
-      gradient: "from-secondary-400 via-accent-400 to-secondary-500",
-      glow: "bg-secondary-500/30",
-      conic: "rgba(34,197,94,0.9)",
-      label: "🎯 Strong alignment",
-      emoji: "🌟",
+      gradient: "from-emerald-500/20 via-emerald-500/10 to-emerald-500/5",
+      glow: "bg-emerald-500/20",
+      strokeStart: "#10B981", // Emerald-500
+      strokeEnd: "#34D399",   // Emerald-400
+      label: "Strong Match",
+      emoji: "🎯",
+      text: "text-emerald-400"
     };
   }
-  if (score >= 50) {
+  if (score >= 40) {
     return {
-      gradient: "from-warning-400 via-warning-500 to-accent-500",
-      glow: "bg-warning-500/30",
-      conic: "rgba(249,191,36,0.9)",
-      label: "⚡ Moderate alignment",
-      emoji: "💡",
+      gradient: "from-amber-500/20 via-amber-500/10 to-amber-500/5",
+      glow: "bg-amber-500/20",
+      strokeStart: "#F59E0B", // Amber-500
+      strokeEnd: "#FBBF24",   // Amber-400
+      label: "Good Start",
+      emoji: "⚡",
+      text: "text-amber-400"
     };
   }
   return {
-    gradient: "from-danger-500 via-danger-400 to-warning-500",
-    glow: "bg-danger-500/30",
-    conic: "rgba(239,68,68,0.88)",
-    label: "🔧 Needs attention",
-    emoji: "📝",
+    gradient: "from-rose-500/20 via-rose-500/10 to-rose-500/5",
+    glow: "bg-rose-500/20",
+    strokeStart: "#F43F5E", // Rose-500
+    strokeEnd: "#FB7185",   // Rose-400
+    label: "Needs Work",
+    emoji: "🔧",
+    text: "text-rose-400"
   };
 };
 
-const formatPercent = (value) => {
-  if (!Number.isFinite(value)) return "—";
-  return `${Math.round(value * 100)}%`;
-};
+
 
 const LAST_JOB_KEY = "airo:lastJobDescription";
 const RING_RADIUS = 56;
@@ -50,6 +54,7 @@ export default function JobMatch({
   isAnalyzing = false,
   hasResume = false,
   onToast,
+  onClear,
 }) {
   const [jobText, setJobText] = useState(() => {
     if (typeof window === "undefined") {
@@ -101,22 +106,24 @@ export default function JobMatch({
   );
   const missing = matchAnalysis?.missingKeywords?.slice(0, 6) ?? [];
   const hits = matchAnalysis?.topHits?.slice(0, 6) ?? [];
-  const coverageLabel = formatPercent(matchAnalysis?.coverage);
-  const cosineLabel = formatPercent(matchAnalysis?.cosine);
   const popoverRef = useRef(null);
+  const buttonRef = useRef(null);
   const [whyOpen, setWhyOpen] = useState(false);
 
   const buttonDisabled = !jobText.trim() || !hasResume || isAnalyzing;
   const disabledHint = !hasResume
     ? "Upload or paste your resume first."
     : !jobText.trim()
-    ? "Paste a job description to continue."
-    : "";
+      ? "Paste a job description to continue."
+      : "";
 
   useEffect(() => {
     if (!whyOpen) return undefined;
     const handleClick = (event) => {
-      if (!popoverRef.current?.contains(event.target)) {
+      if (
+        !popoverRef.current?.contains(event.target) &&
+        !buttonRef.current?.contains(event.target)
+      ) {
         setWhyOpen(false);
       }
     };
@@ -131,11 +138,24 @@ export default function JobMatch({
           eyebrow="Step 2"
           title="Match to a Saudi job role"
           description="Paste the job description to uncover keyword gaps and alignment opportunities."
+          action={
+            jobText ? (
+              <button
+                onClick={() => {
+                  setJobText("");
+                  onClear?.();
+                }}
+                className="text-xs font-medium text-ink-500 hover:text-danger-500 transition-colors"
+              >
+                Clear
+              </button>
+            ) : null
+          }
         />
         <Input
           multiline
           label="Job description"
-          placeholder="Paste the job description for your next Riyadh role…"
+          placeholder="Paste the job description here"
           value={jobText}
           onChange={(event) => setJobText(event.target.value)}
           inputClassName="min-h-[220px]"
@@ -170,12 +190,12 @@ export default function JobMatch({
         </div>
       </div>
 
-      <AnimatedCard 
-        as="aside" 
-        tone="translucent" 
-        className="space-y-5" 
+      <AnimatedCard
+        as="aside"
+        tone="translucent"
+        className="space-y-5"
         contentClassName="space-y-5 text-ink"
-        enableTilt={hasResults}
+        enableTilt={false}
         tiltIntensity={15}
       >
         {isAnalyzing ? (
@@ -185,173 +205,162 @@ export default function JobMatch({
           </div>
         ) : hasResults ? (
           <div className="space-y-5">
-            <div
-              className={`relative overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br ${variant.gradient} p-6 text-surface-50 shadow-soft`}
-            >
-              <div className={`absolute inset-0 opacity-40 blur-3xl ${variant.glow}`} aria-hidden="true" />
-              <div className="relative grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center">
-                <div className="grid place-items-center">
-                  <div className="relative h-36 w-36">
-                    <div className="absolute inset-0 rounded-full bg-surface-50/10" aria-hidden="true" />
-                    <svg
-                      className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] rotate-[-90deg]"
-                      viewBox="0 0 120 120"
-                      aria-hidden="true"
-                    >
-                      <circle
-                        cx="60"
-                        cy="60"
-                        r={RING_RADIUS}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.12)"
-                        strokeWidth="6"
-                      />
-                      <circle
-                        cx="60"
-                        cy="60"
-                        r={RING_RADIUS}
-                        fill="none"
-                        stroke={variant.conic}
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray={RING_CIRCUMFERENCE}
-                        strokeDashoffset={ringOffset}
-                        className="transition-[stroke-dashoffset] duration-700 ease-out"
-                      />
-                    </svg>
-                    <div
-                      className="relative grid h-full w-full place-items-center rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] p-3 text-ink backdrop-blur-soft"
-                      style={{
-                        backgroundImage: `conic-gradient(${variant.conic} ${(progress / 100) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
-                      }}
-                    >
-                      <div className="grid place-items-center rounded-full bg-[color:var(--surface-glass-strong)] px-4 py-4 text-center text-ink shadow-inner">
-                        <span className="text-xl mb-0.5" role="img" aria-label="Match quality">
-                          {variant.emoji}
-                        </span>
-                        <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-emerald-500 opacity-80">
-                          Match
-                        </span>
-                        <Tooltip
-                          content={`${score != null ? score : 0}/100 - ${variant.label.split(' ')[1]} match with job requirements`}
-                          position="bottom"
-                        >
-                          <div className="mt-1 flex items-baseline justify-center gap-0.5 cursor-help">
-                            {score != null ? (
-                              <AnimatedCounter
-                                to={score}
-                                duration={1500}
-                                className="text-3xl font-bold tracking-tight leading-none"
-                              />
-                            ) : (
-                              <span className="text-3xl font-bold tracking-tight leading-none">—</span>
-                            )}
-                            {score != null && (
-                              <span className="text-sm font-semibold text-ink-soft opacity-80 leading-none">/100</span>
-                            )}
-                          </div>
-                        </Tooltip>
+            <div className="relative rounded-[var(--radius-card)] shadow-soft group">
+              {/* Background Layer with Clipping */}
+              <div className={`absolute inset-0 overflow-hidden rounded-[inherit] bg-gradient-to-br ${variant.gradient}`}>
+                <div className={`absolute inset-0 opacity-40 blur-3xl ${variant.glow}`} aria-hidden="true" />
+              </div>
+
+              {/* Content Layer */}
+              <div className="relative z-10 p-6 text-surface-50">
+                <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
+                  <div className="grid place-items-center">
+                    <div className="relative h-32 w-32">
+                      {/* Outer Glow */}
+                      <div className={`absolute inset-0 rounded-full blur-2xl opacity-40 ${variant.glow}`} aria-hidden="true" />
+
+                      {/* Background Ring */}
+                      <svg
+                        className="absolute inset-0 h-full w-full rotate-[-90deg]"
+                        viewBox="0 0 120 120"
+                        aria-hidden="true"
+                      >
+                        <defs>
+                          <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor={variant.strokeStart} />
+                            <stop offset="100%" stopColor={variant.strokeEnd} />
+                          </linearGradient>
+                          <filter id="glow-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                            <feMerge>
+                              <feMergeNode in="coloredBlur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                        </defs>
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r={RING_RADIUS}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="8"
+                          className="text-white/10"
+                        />
+                        {/* Progress Ring */}
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r={RING_RADIUS}
+                          fill="none"
+                          stroke="url(#score-gradient)"
+                          strokeWidth="12"
+                          strokeLinecap="round"
+                          strokeDasharray={RING_CIRCUMFERENCE}
+                          strokeDashoffset={ringOffset}
+                          filter="url(#glow-shadow)"
+                          className="transition-[stroke-dashoffset] duration-1000 ease-out drop-shadow-[0_0_4px_rgba(0,0,0,0.3)]"
+                        />
+                      </svg>
+
+                      {/* Inner Content */}
+                      <div
+                        className="absolute inset-4 grid place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md shadow-inner"
+                      >
+                        <div className="flex flex-col items-center justify-center text-center pt-1">
+                          <span className="text-xl mb-0.5 filter drop-shadow-md animate-in zoom-in duration-500" role="img" aria-label="Match quality">
+                            {variant.emoji}
+                          </span>
+                          <Tooltip
+                            content={`${score != null ? score : 0}/100 - ${variant.label} match with job requirements`}
+                            position="bottom"
+                          >
+                            <div className="flex items-baseline justify-center gap-0.5 cursor-help">
+                              {score != null ? (
+                                <AnimatedCounter
+                                  to={score}
+                                  duration={1500}
+                                  className="text-3xl font-black tracking-tight leading-none text-white drop-shadow-lg"
+                                />
+                              ) : (
+                                <span className="text-3xl font-black tracking-tight leading-none text-white/50">—</span>
+                              )}
+                              {score != null && (
+                                <span className="text-[10px] font-bold text-white/70 leading-none">/100</span>
+                              )}
+                            </div>
+                          </Tooltip>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/60">
+                            Score
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-2 text-surface-50">
-                  <p className="text-sm font-semibold uppercase tracking-[0.32em] text-surface-50/70">
-                    {variant.label}
-                  </p>
-                  <p className="text-sm text-surface-50/80">
-                    AI-powered analysis evaluating your resume's alignment with job requirements.
-                  </p>
-                  <div className="relative" ref={popoverRef}>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-surface-50 transition active:scale-[0.95] active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-                      onClick={() => setWhyOpen((prev) => !prev)}
-                      aria-expanded={whyOpen}
-                      aria-controls="match-why-popover"
-                    >
-                      <Info className="h-3.5 w-3.5" aria-hidden="true" /> Why
-                    </button>
-                    {whyOpen && (
-                      <div
-                        id="match-why-popover"
-                        role="dialog"
-                        className="absolute left-0 right-0 z-50 mt-3 w-full min-w-[320px] max-w-[90vw] space-y-4 rounded-2xl border-2 border-emerald-500/30 bg-[color:var(--surface-glass)] p-6 text-left text-sm text-ink shadow-[0_12px_48px_rgba(0,0,0,0.32)] backdrop-blur-glass max-h-[70vh] overflow-y-auto"
+                  <div className="space-y-3 text-left">
+                    <div>
+                      <p className={`text-sm font-bold uppercase tracking-[0.32em] ${variant.text}`}>
+                        {variant.label}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-surface-50/80">
+                        {score >= 80
+                          ? "Your profile is highly aligned with this role. Focus on highlighting your specific achievements."
+                          : score >= 60
+                            ? "You have a solid foundation. Addressing a few key gaps could significantly boost your chances."
+                            : "There are significant gaps between your resume and the job requirements. Consider tailoring your experience."
+                        }
+                      </p>
+                    </div>
+
+                    <div>
+                      <button
+                        ref={buttonRef}
+                        type="button"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-white transition-all hover:bg-white/20 hover:border-white/40 active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                        onClick={() => setWhyOpen((prev) => !prev)}
+                        aria-expanded={whyOpen}
+                        aria-controls="match-why-popover"
                       >
-                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-4 py-3">
-                          <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Coverage</p>
-                          <span className="text-xl font-bold text-ink">{coverageLabel}</span>
-                        </div>
-                        <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 px-4 py-3">
-                          <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">Similarity</p>
-                          <span className="text-xl font-bold text-ink">{cosineLabel}</span>
-                        </div>
-                        <div className="rounded-lg bg-blue-50/50 dark:bg-blue-900/10 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-400 mb-2">How It Works</p>
-                          <p className="text-sm leading-relaxed text-ink">
-                            <strong>Coverage</strong> measures what percentage of key job requirements appear in your resume.
-                            <br /><strong>Similarity</strong> uses TF-IDF algorithm to compare semantic overlap between your resume and the job description.
-                          </p>
-                        </div>
-                        {missing.length > 0 && (
-                          <div className="rounded-lg bg-rose-50/50 dark:bg-rose-900/10 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-600 dark:text-rose-400 mb-3">Missing Keywords</p>
-                            <ul className="mt-2 space-y-2 text-sm leading-relaxed text-ink">
-                              {missing.slice(0, 6).map((keyword) => (
-                                <li key={keyword} className="flex items-center gap-2">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                                  <span>{keyword}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {matchAnalysis?.explanation?.reason && (
-                          <div className="rounded-lg bg-blue-50/50 dark:bg-blue-900/10 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-400 mb-2">AI Analysis</p>
-                            <p className="text-sm leading-relaxed text-ink">
-                              {matchAnalysis.explanation.reason}
-                            </p>
-                          </div>
-                        )}
-                        {Array.isArray(matchAnalysis?.explanation?.tips) &&
-                          matchAnalysis.explanation.tips.length > 0 && (
-                            <div className="rounded-lg bg-amber-50/50 dark:bg-amber-900/10 p-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-600 dark:text-amber-400 mb-3">AI Recommendations</p>
-                              <ul className="space-y-2 text-sm leading-relaxed text-ink">
-                                {matchAnalysis.explanation.tips.slice(0, 4).map((tip, index) => (
-                                  <li key={`${tip}-${index}`} className="flex items-start gap-2">
-                                    <span className="inline-block mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
-                                    <span>{tip}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                      </div>
-                    )}
+                        <Info className="h-3.5 w-3.5" aria-hidden="true" /> Score Breakdown
+                      </button>
+                    </div>
                   </div>
-                  {score == null && (
-                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-surface-50/70">
-                      — Not enough data
-                    </p>
-                  )}
                 </div>
               </div>
+
+              {/* Popover - Card Level */}
+              {whyOpen && (
+                <div
+                  ref={popoverRef}
+                  id="match-why-popover"
+                  role="dialog"
+                  className="absolute left-0 right-0 top-full z-50 mt-2 mx-4 rounded-2xl border border-white/20 bg-slate-900/95 p-5 text-left text-sm text-white shadow-[0_20px_60px_-10px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
+                >
+                  <div className="rounded-lg bg-white/5 p-4 border border-white/10">
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70 mb-2">How It Works</p>
+                    <p className="text-sm leading-relaxed text-white/90">
+                      <strong>Coverage</strong> measures what percentage of key job requirements appear in your resume.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {missing.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-rose-600 dark:text-rose-400">
-                  Top missing keywords
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-rose-500">
+                  <AlertCircle className="h-4 w-4" />
+                  Missing Keywords
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {missing.map((keyword) => (
                     <span
                       key={keyword}
-                      className="rounded-full border-2 border-rose-200 dark:border-rose-800/50 bg-rose-50 dark:bg-rose-900/20 px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-300 shadow-sm backdrop-blur-sm transition-transform hover:scale-105"
+                      className="group relative inline-flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-300 shadow-sm transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:text-emerald-600 dark:hover:text-emerald-300 hover:shadow-md hover:-translate-y-0.5 cursor-help"
+                      title="Add this keyword to your resume"
                     >
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
                       {keyword}
                     </span>
                   ))}
@@ -361,15 +370,17 @@ export default function JobMatch({
 
             {hits.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
-                  Recognized strengths
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Recognized Strengths
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {hits.map((keyword) => (
                     <span
                       key={keyword}
-                      className="rounded-full border-2 border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-sm backdrop-blur-sm transition-transform hover:scale-105"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-300 shadow-sm transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:shadow-md hover:-translate-y-0.5"
                     >
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                       {keyword}
                     </span>
                   ))}
@@ -403,6 +414,6 @@ export default function JobMatch({
           </div>
         )}
       </AnimatedCard>
-    </div>
+    </div >
   );
 }

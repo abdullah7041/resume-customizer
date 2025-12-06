@@ -57,7 +57,7 @@ const isRetryableError = (error: any, options: Required<RetryOptions>): boolean 
   if (error?.name === "AbortError" || error?.code === "TIMEOUT") {
     return false; // Don't retry timeouts
   }
-  
+
   if (error?.code === "ECONNREFUSED" || error?.code === "ENOTFOUND") {
     return true;
   }
@@ -216,6 +216,7 @@ export class RateLimiter {
  */
 export async function batchWithConcurrency<T, R>(
   items: T[],
+  // eslint-disable-next-line no-unused-vars
   fn: (item: T) => Promise<R>,
   options: {
     concurrency?: number;
@@ -231,7 +232,7 @@ export async function batchWithConcurrency<T, R>(
   // Process items in chunks based on concurrency
   for (let i = 0; i < items.length; i += concurrency) {
     const chunk = items.slice(i, i + concurrency);
-    
+
     const chunkPromises = chunk.map(async (currentItem) => {
       const executor = async () => {
         try {

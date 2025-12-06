@@ -13,12 +13,12 @@ const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 const ScoreBadge = ({ score }) => {
-  const color = score >= 75 
+  const color = score >= 75
     ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
     : score >= 50
-    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
-  
+      ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+
   return (
     <span className={cn("px-3 py-1 rounded-full text-sm font-bold", color)}>
       {score}%
@@ -28,7 +28,7 @@ const ScoreBadge = ({ score }) => {
 
 const ResumeCard = ({ resume, index, onRemove }) => {
   const { name, status, error, analysis } = resume;
-  
+
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between mb-2">
@@ -36,7 +36,7 @@ const ResumeCard = ({ resume, index, onRemove }) => {
           <h3 className="font-semibold text-ink dark:text-white truncate" title={name}>
             {name}
           </h3>
-          <p className="text-sm text-ink-soft dark:text-gray-300 capitalize">
+          <p className="text-sm text-ink-soft dark:text-gray-200 capitalize">
             {status}
           </p>
         </div>
@@ -47,7 +47,7 @@ const ResumeCard = ({ resume, index, onRemove }) => {
           <X className="w-5 h-5" />
         </button>
       </div>
-      
+
       {status === "analyzing" && (
         <div className="mt-2">
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -55,21 +55,21 @@ const ResumeCard = ({ resume, index, onRemove }) => {
           </div>
         </div>
       )}
-      
+
       {status === "error" && (
         <div className="mt-2 text-sm text-red-600 dark:text-red-400">
           {error || "Failed to analyze"}
         </div>
       )}
-      
+
       {status === "completed" && analysis && (
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-ink-soft dark:text-gray-300">Match Score</span>
+            <span className="text-sm text-ink-soft dark:text-gray-200">Match Score</span>
             <ScoreBadge score={analysis.score || 0} />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-ink-soft dark:text-gray-300">Keywords</span>
+            <span className="text-sm text-ink-soft dark:text-gray-200">Keywords</span>
             <span className="text-sm font-semibold text-ink dark:text-white">
               {analysis.matchedKeywords?.length || 0}
             </span>
@@ -82,23 +82,23 @@ const ResumeCard = ({ resume, index, onRemove }) => {
 
 const ComparisonTable = ({ resumes }) => {
   const completedResumes = resumes.filter(r => r.status === "completed" && r.analysis);
-  
+
   if (completedResumes.length === 0) {
     return null;
   }
-  
+
   // Sort by score descending
-  const sortedResumes = [...completedResumes].sort((a, b) => 
+  const sortedResumes = [...completedResumes].sort((a, b) =>
     (b.analysis?.score || 0) - (a.analysis?.score || 0)
   );
-  
+
   return (
     <Card className="p-6">
       <h2 className="text-xl font-bold text-ink dark:text-white mb-4 flex items-center gap-2">
         <BarChart3 className="w-5 h-5" />
         Comparison Results
       </h2>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -128,9 +128,9 @@ const ComparisonTable = ({ resumes }) => {
               const { analysis } = resume;
               const rank = index + 1;
               const emoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
-              
+
               return (
-                <tr 
+                <tr
                   key={resume.id}
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 >
@@ -186,50 +186,50 @@ const ComparisonTable = ({ resumes }) => {
 export default function BulkAnalysis({ jobDescription }) {
   const [resumes, setResumes] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  
+
   const processResume = useCallback(async (resumeId, file) => {
     // Update status to parsing
-    setResumes(prev => prev.map(r => 
+    setResumes(prev => prev.map(r =>
       r.id === resumeId ? { ...r, status: "parsing" } : r
     ));
-    
+
     try {
       // Parse resume
       const parseResult = await parseResume(file);
       const plainText = parseResult?.plainText || "";
-      
+
       if (!plainText) {
         throw new Error("Failed to extract text from resume");
       }
-      
+
       // Update with parsed text
-      setResumes(prev => prev.map(r => 
+      setResumes(prev => prev.map(r =>
         r.id === resumeId ? { ...r, plainText, status: "analyzing" } : r
       ));
-      
+
       // Analyze if job description is available
       if (jobDescription) {
         const analysis = await analyzeResume(plainText, jobDescription);
-        
-        setResumes(prev => prev.map(r => 
+
+        setResumes(prev => prev.map(r =>
           r.id === resumeId ? { ...r, analysis, status: "completed" } : r
         ));
       } else {
-        setResumes(prev => prev.map(r => 
+        setResumes(prev => prev.map(r =>
           r.id === resumeId ? { ...r, status: "completed" } : r
         ));
       }
     } catch (error) {
       console.error(`Error processing resume ${resumeId}:`, error);
-      setResumes(prev => prev.map(r => 
+      setResumes(prev => prev.map(r =>
         r.id === resumeId ? { ...r, status: "error", error: error.message } : r
       ));
     }
   }, [jobDescription]);
-  
+
   const handleFiles = useCallback(async (files) => {
     const fileArray = Array.from(files).slice(0, MAX_FILES - resumes.length);
-    
+
     // Validate files
     const validFiles = fileArray.filter(file => {
       if (file.size > MAX_SIZE) {
@@ -242,9 +242,9 @@ export default function BulkAnalysis({ jobDescription }) {
       }
       return true;
     });
-    
+
     if (validFiles.length === 0) return;
-    
+
     // Add files to state
     const newResumes = validFiles.map(file => ({
       id: `${Date.now()}-${Math.random()}`,
@@ -255,34 +255,32 @@ export default function BulkAnalysis({ jobDescription }) {
       analysis: null,
       error: null
     }));
-    
+
     setResumes(prev => [...prev, ...newResumes]);
-    
-    // Process each file
-    for (const resume of newResumes) {
-      await processResume(resume.id, resume.file);
-    }
+
+    // Process each file concurrently
+    await Promise.all(newResumes.map(resume => processResume(resume.id, resume.file)));
   }, [resumes.length, processResume]);
-  
+
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = e.dataTransfer?.files;
     if (files) {
       handleFiles(files);
     }
   }, [handleFiles]);
-  
+
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
-  
+
   const handleDragLeave = useCallback(() => {
     setIsDragging(false);
   }, []);
-  
+
   const handleFileInput = useCallback((e) => {
     const files = e.target.files;
     if (files) {
@@ -290,17 +288,17 @@ export default function BulkAnalysis({ jobDescription }) {
     }
     e.target.value = ""; // Reset input
   }, [handleFiles]);
-  
+
   const removeResume = useCallback((index) => {
     setResumes(prev => prev.filter((_, i) => i !== index));
   }, []);
-  
+
   const exportComparison = () => {
     const completedResumes = resumes.filter(r => r.status === "completed" && r.analysis);
-    const sortedResumes = [...completedResumes].sort((a, b) => 
+    const sortedResumes = [...completedResumes].sort((a, b) =>
       (b.analysis?.score || 0) - (a.analysis?.score || 0)
     );
-    
+
     const exportData = {
       jobDescription: jobDescription?.substring(0, 200) + "...",
       comparisonDate: new Date().toISOString(),
@@ -313,7 +311,7 @@ export default function BulkAnalysis({ jobDescription }) {
         missingKeywords: r.analysis?.missingKeywords || []
       }))
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -322,9 +320,9 @@ export default function BulkAnalysis({ jobDescription }) {
     link.click();
     URL.revokeObjectURL(url);
   };
-  
+
   const canUploadMore = resumes.length < MAX_FILES;
-  
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -333,11 +331,11 @@ export default function BulkAnalysis({ jobDescription }) {
           <h1 className="text-3xl font-bold text-ink dark:text-white mb-2">
             Bulk Resume Analysis
           </h1>
-          <p className="text-ink dark:text-gray-200">
+          <p className="text-ink-soft dark:text-gray-100">
             Compare multiple resume versions against the same job description
           </p>
         </div>
-        
+
         {resumes.length > 0 && (
           <Button onClick={exportComparison} variant="outline">
             <Download className="w-4 h-4 mr-2" />
@@ -365,10 +363,10 @@ export default function BulkAnalysis({ jobDescription }) {
               <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                 Upload Resume Files
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-700 dark:text-gray-200">
                 Drag & drop or click to browse • PDF or DOCX • Max {MAX_FILES} files
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                 {resumes.length}/{MAX_FILES} uploaded
               </p>
             </div>
@@ -391,7 +389,7 @@ export default function BulkAnalysis({ jobDescription }) {
           </div>
         </div>
       )}
-      
+
       {/* Resumes Grid */}
       {resumes.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -405,12 +403,12 @@ export default function BulkAnalysis({ jobDescription }) {
           ))}
         </div>
       )}
-      
+
       {/* Comparison Table */}
       {jobDescription && resumes.some(r => r.status === "completed") && (
         <ComparisonTable resumes={resumes} jobDescription={jobDescription} />
       )}
-      
+
       {/* Empty State */}
       {resumes.length === 0 && (
         <EmptyState
@@ -419,7 +417,7 @@ export default function BulkAnalysis({ jobDescription }) {
           description="Upload multiple resume versions to compare their match scores side-by-side."
         />
       )}
-      
+
       {/* Warning if no job description */}
       {!jobDescription && resumes.length > 0 && (
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">

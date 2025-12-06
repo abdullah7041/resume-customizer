@@ -40,29 +40,29 @@ describe("Mobile Layout Polish", () => {
   describe("Single Document Scroll", () => {
     it("should not have nested overflow-y scroll containers", () => {
       const { container } = render(<Header />);
-      
+
       // Check that body doesn't have overflow-y: scroll
       const bodyStyle = window.getComputedStyle(document.body);
       expect(bodyStyle.overflowY).not.toBe("scroll");
-      
+
       // Check that no nested elements have overflow-y: scroll or auto
       const allElements = container.querySelectorAll("*");
       const scrollableElements = Array.from(allElements).filter((el) => {
         const style = window.getComputedStyle(el);
         return style.overflowY === "scroll" || style.overflowY === "auto";
       });
-      
+
       // There should be no nested scrollable containers
       expect(scrollableElements.length).toBe(0);
     });
 
     it("should allow natural document flow", () => {
       render(<Header />);
-      
+
       // The header should not restrict height
       const header = screen.getByRole("banner");
       const style = window.getComputedStyle(header);
-      
+
       expect(style.overflow).not.toBe("hidden");
       expect(style.overflowY).not.toBe("scroll");
     });
@@ -93,11 +93,11 @@ describe("Mobile Layout Polish", () => {
       });
 
       render(<Header />);
-      
+
       // Check that mobile-optimized classes are present
       const mainContainer = screen.getByRole("banner").querySelector("div");
       const classes = mainContainer?.className || "";
-      
+
       // Should have responsive padding
       expect(classes).toMatch(/py-\d+/);
     });
@@ -106,21 +106,21 @@ describe("Mobile Layout Polish", () => {
   describe("Hero Image Overlay", () => {
     it("should have overlay on background image", () => {
       const { container } = render(<Header />);
-      
+
       // Find the skyline background
       const bgHero = container.querySelector(".bg-hero");
       expect(bgHero).toBeInTheDocument();
-      
+
       // Should have the bg-hero class which includes ::before overlay
       expect(bgHero).toHaveClass("bg-hero");
     });
 
     it("should reduce opacity via overlay for better text contrast", () => {
       const { container } = render(<Header />);
-      
+
       const bgHero = container.querySelector(".bg-hero");
       expect(bgHero).toBeInTheDocument();
-      
+
       // The overlay is applied via ::before pseudo-element in CSS
       // We verify the class is present
       expect(bgHero?.className).toContain("bg-hero");
@@ -130,18 +130,18 @@ describe("Mobile Layout Polish", () => {
   describe("Responsive Typography", () => {
     it("should scale font sizes for mobile", () => {
       render(<Header />);
-      
+
       const heading = screen.getByRole("heading", {
         name: /AI Resume Optimizer/i,
       });
-      
+
       // Should have responsive text classes
       expect(heading).toHaveClass("text-4xl", "sm:text-5xl", "lg:text-6xl");
     });
 
     it("should have compact spacing between elements", () => {
       const { container } = render(<Header />);
-      
+
       // Check main content container has compact gaps
       const mainGrid = container.querySelector(".grid");
       expect(mainGrid).toHaveClass("gap-8");
@@ -166,7 +166,7 @@ describe("Mobile Layout Polish", () => {
       const headerContent = container.querySelector("header > div");
 
       // Should have mobile-first compact padding
-      expect(headerContent).toHaveClass("py-12", "sm:py-16", "lg:py-20");
+      expect(headerContent).toHaveClass("py-8", "sm:py-10", "lg:py-12");
     });
 
     it("should have compact grid gaps", () => {

@@ -353,17 +353,18 @@ const handler: Handler = async (event) => {
 
     // Calculate base score with weighted formula: 70% cosine similarity + 30% keyword coverage
     let rawScore = 0.7 * 100 * cosine + 0.3 * 100 * coverage;
-    
+
     // Ensure realistic score for valid content:
-    // If both inputs have substantial content (>50 tokens) and ANY overlap exists,
-    // guarantee a minimum score to indicate matching
-    const hasSubstantialContent = resumeTokens.length >= 50 && jobTokens.length >= 50;
+    // ASYMMETRIC CHECK: Only require substantial resume content (>= 30 tokens)
+    // Job description can be any length (short or long) - this ensures we score
+    // regardless of job description length as requested
+    const hasSubstantialResume = resumeTokens.length >= 30;
     const hasAnyOverlap = cosine > 0 || coverage > 0 || hits.length > 0;
-    
-    if (hasSubstantialContent && hasAnyOverlap) {
+
+    if (hasSubstantialResume && hasAnyOverlap) {
       // Base minimum of 15 if there's any match at all
       rawScore = Math.max(rawScore, 15);
-      
+
       // If we have keyword hits, ensure proportional minimum
       if (hits.length > 0) {
         const hitRatio = hits.length / Math.max(keywords.length, 1);
@@ -371,7 +372,17 @@ const handler: Handler = async (event) => {
         rawScore = Math.max(rawScore, minForHits);
       }
     }
-    
+
+    // Proportional minimum for low-token resumes (10-29 tokens)
+    // This handles cases where OCR extraction was poor but some content exists
+    if (resumeTokens.length >= 10 && resumeTokens.length < 30 && hits.length > 0) {
+      // Scale minimum score based on both token count and hit ratio
+      const tokenRatio = resumeTokens.length / 30; // 0.33 to 0.97
+      const hitRatio = hits.length / Math.max(keywords.length, 1);
+      const proportionalMin = 10 + (tokenRatio * 15) + (hitRatio * 15); // 10-40 range
+      rawScore = Math.max(rawScore, proportionalMin);
+    }
+
     const score = Math.round(clamp(rawScore, 0, 100));
 
     // 🔍 DEBUG LOGGING: Final score breakdown
@@ -379,6 +390,8 @@ const handler: Handler = async (event) => {
     console.log(`[match-score] Keyword coverage: ${coverage.toFixed(4)} (${hits.length}/${keywords.length} keywords matched)`);
     console.log(`[match-score] Raw score: ${rawScore.toFixed(2)}`);
     console.log(`[match-score] Final score: ${score}/100`);
+    console.log(`[match-score] Resume substantial content check: ${hasSubstantialResume ? 'PASS (>= 30 tokens)' : `FAIL (${resumeTokens.length} tokens)`}`);
+    console.log(`[match-score] Job description length: ${jobTokens.length} tokens (no minimum required)`);
     console.log(`[match-score] Matched keywords: [${hits.slice(0, 8).join(', ')}]`);
     console.log(`[match-score] Missing keywords: [${missing.slice(0, 8).join(', ')}]`);
     console.log("=========================================");

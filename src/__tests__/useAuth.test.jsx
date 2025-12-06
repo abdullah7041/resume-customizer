@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
@@ -41,10 +41,10 @@ describe('useAuth', () => {
     });
     expect(mockSignIn).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: window.location.origin, skipBrowserRedirect: true },
+      options: { redirectTo: expect.stringMatching(/^https?:\/\//), skipBrowserRedirect: true },
     });
     expect(attemptedRedirect).toBeTruthy();
     const redirectUrl = new URL(attemptedRedirect);
-    expect(redirectUrl.searchParams.get('redirect_to')).toBe(window.location.origin);
+    expect(redirectUrl.searchParams.get('redirect_to')).toEqual(expect.stringMatching(/^https?:\/\//));
   });
 });

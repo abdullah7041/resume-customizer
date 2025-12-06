@@ -17,7 +17,7 @@ describe('JobMatch', () => {
     };
     render(
       <JobMatch
-        onAnalyzeMatch={async () => {}}
+        onAnalyzeMatch={async () => { }}
         matchAnalysis={match}
         isAnalyzing={false}
         hasResume
@@ -25,10 +25,10 @@ describe('JobMatch', () => {
     );
 
     expect(screen.getByRole('heading', { name: /match to a saudi job role/i })).toBeInTheDocument();
-    expect(screen.getByText(/top missing keywords/i)).toBeInTheDocument();
+    expect(screen.getByText(/missing keywords/i)).toBeInTheDocument();
     expect(screen.getByText(/recognized strengths/i)).toBeInTheDocument();
     expect(screen.getByText(/add react experience/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /why/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /score breakdown/i })).toBeInTheDocument();
   });
 
   it('prefills saved job description text', () => {
@@ -36,7 +36,7 @@ describe('JobMatch', () => {
 
     render(
       <JobMatch
-        onAnalyzeMatch={async () => {}}
+        onAnalyzeMatch={async () => { }}
         matchAnalysis={null}
         isAnalyzing={false}
         hasResume={false}

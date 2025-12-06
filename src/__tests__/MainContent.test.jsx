@@ -168,4 +168,21 @@ describe("MainContent resume parsing", () => {
 
     expect(parseResumeMock).toHaveBeenCalledWith("My resume");
   });
+
+  it("persists resume data with minor control characters (relaxed validation)", () => {
+    const resumeData = {
+      plainText: "Resume with \x09 tab and \x0A newline and maybe one \x00 null byte",
+      sections: [],
+    };
+    localStorage.setItem("airo:resumeData", JSON.stringify(resumeData));
+    const removeItemSpy = vi.spyOn(Storage.prototype, "removeItem");
+
+    render(<MainContent />);
+
+    expect(removeItemSpy).not.toHaveBeenCalledWith("airo:resumeData");
+    // Verify that the data was loaded into the component (by checking if ResumeUpload received it)
+    expect(resumeUploadMockProps.current.resumeDocument).toEqual(resumeData);
+
+    removeItemSpy.mockRestore();
+  });
 });

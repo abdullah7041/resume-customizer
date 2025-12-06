@@ -57,7 +57,7 @@ export default function Tabs({ tabs, activeValue, onTabChange }) {
     <div
       role="tablist"
       aria-label="Resume workflow navigation"
-      className="relative flex flex-wrap items-center gap-2 rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_8%)] p-1.5 shadow-soft backdrop-blur-glass"
+      className="relative flex w-full items-center gap-2 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_8%)] p-1.5 shadow-soft backdrop-blur-glass sm:flex-wrap"
     >
       <span
         aria-hidden="true"
@@ -78,7 +78,7 @@ export default function Tabs({ tabs, activeValue, onTabChange }) {
             onClick={() => onTabChange?.(value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              "group relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-[calc(var(--radius-pill)*0.7)] px-5 py-3 text-sm font-semibold tracking-wide transition-all duration-snappy ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent",
+              "group relative flex min-w-max flex-1 snap-start items-center justify-center gap-2 overflow-hidden rounded-[calc(var(--radius-pill)*0.7)] px-5 py-3 text-sm font-semibold tracking-wide transition-all duration-snappy ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent",
               isActive
                 ? "bg-[image:var(--gradient-muted-value)] text-white shadow-lift"
                 : "text-ink-muted hover:text-ink hover:bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)]"

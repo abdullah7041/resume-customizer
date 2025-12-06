@@ -178,7 +178,12 @@ const extractPdfPlainText = async (arrayBuffer) => {
   const pdfjs = await loadPdfjs();
   if (pdfjs) {
     try {
-      const document = await pdfjs.getDocument({ data: arrayBuffer, disableWorker: true }).promise;
+      const document = await pdfjs.getDocument({
+        data: arrayBuffer,
+        disableWorker: true,
+        cMapUrl: "https://unpkg.com/pdfjs-dist@5.4.394/cmaps/",
+        cMapPacked: true,
+      }).promise;
       const lines = [];
 
       try {

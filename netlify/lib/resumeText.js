@@ -66,10 +66,7 @@ const loadPdfjs = async () => {
   }
   pdfjsLibPromise = import("pdfjs-dist/legacy/build/pdf.mjs")
     .then((module) => {
-      if (module?.GlobalWorkerOptions) {
-        module.GlobalWorkerOptions.workerSrc = "";
-        module.GlobalWorkerOptions.workerPort = null;
-      }
+      // Don't set GlobalWorkerOptions in Node.js - we use disableWorker instead
       return module;
     })
     .catch(() => null);
@@ -178,7 +175,12 @@ const extractPdfPlainText = async (arrayBuffer) => {
   const pdfjs = await loadPdfjs();
   if (pdfjs) {
     try {
-      const document = await pdfjs.getDocument({ data: arrayBuffer, disableWorker: true }).promise;
+      const document = await pdfjs.getDocument({
+        data: arrayBuffer,
+        disableWorker: true,
+        cMapUrl: "https://unpkg.com/pdfjs-dist@5.4.394/cmaps/",
+        cMapPacked: true,
+      }).promise;
       const lines = [];
 
       try {

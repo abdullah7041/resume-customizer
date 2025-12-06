@@ -11,7 +11,7 @@ export default defineConfig({
       transformIndexHtml(html) {
         // Replace feature flag placeholders in HTML
         return html.replace(
-          /%VITE_FEATURE_DARK_MODE%/g,
+          /%FEATURE_DARK_MODE%/g,
           process.env.VITE_FEATURE_DARK_MODE || "true"
         );
       },

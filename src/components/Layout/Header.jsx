@@ -10,7 +10,7 @@ const saduPattern = encodeURIComponent(
 
 const containerClass = "app-shell w-full";
 const HERO_HEADER_OFFSET = "4.5rem";
-const heroBackgroundExtentClass = "absolute inset-x-0 top-0 bottom-[-64rem]";
+const heroBackgroundExtentClass = "fixed inset-0";
 
 const heroIconCircleClass =
   "relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[color:color-mix(in_oklab,var(--glass-border-strong),transparent_28%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_16%)] text-[color:var(--secondary)] shadow-[0_28px_68px_-32px_rgba(6,110,82,0.9)] backdrop-blur-2xl before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-80 before:mix-blend-screen before:content-[''] after:pointer-events-none after:absolute after:inset-[-28%] after:rounded-full after:bg-[radial-gradient(circle_at_top,rgba(162,255,217,0.16),transparent_70%)] after:opacity-0 after:transition-opacity after:duration-breathe";
@@ -125,13 +125,13 @@ export default function Header() {
     const removeMotionListener =
       typeof mediaQuery.addEventListener === "function"
         ? (() => {
-            mediaQuery.addEventListener("change", updateFromMediaQuery);
-            return () => mediaQuery.removeEventListener("change", updateFromMediaQuery);
-          })()
+          mediaQuery.addEventListener("change", updateFromMediaQuery);
+          return () => mediaQuery.removeEventListener("change", updateFromMediaQuery);
+        })()
         : (() => {
-            mediaQuery.addListener(updateFromMediaQuery);
-            return () => mediaQuery.removeListener(updateFromMediaQuery);
-          })();
+          mediaQuery.addListener(updateFromMediaQuery);
+          return () => mediaQuery.removeListener(updateFromMediaQuery);
+        })();
 
     return () => {
       removeMotionListener();
@@ -160,22 +160,21 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "hero-bg-animate relative isolate flex flex-col overflow-visible text-surface-50 min-h-screen",
+        "hero-bg-animate relative isolate flex flex-col overflow-hidden text-surface-50 min-h-[100dvh]",
       )}
       style={{ "--hero-header-offset": HERO_HEADER_OFFSET }}
     >
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col justify-between gap-8 sm:gap-10 lg:gap-12 py-12 sm:py-16 lg:py-20",
+          "relative z-10 flex flex-1 flex-col justify-between gap-8 sm:gap-10 lg:gap-12 py-8 sm:py-10 lg:py-12",
         )}
       >
         <div className="border-b border-[color:var(--hairline-soft)]">
           <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-6`}>
             <div
               className="flex items-center gap-3"
-              aria-label={`AI Resume Optimizer${
-                enableArabicBrand ? ` — ${arabicBrandName}` : ""
-              } — By Abdullah bin Ahmed`}
+              aria-label={`AI Resume Optimizer${enableArabicBrand ? ` — ${arabicBrandName}` : ""
+                } — By Abdullah bin Ahmed`}
             >
               <span className="relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[color:color-mix(in_oklab,var(--glass-border-strong),transparent_30%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_14%)] text-[color:var(--secondary)] shadow-[0_26px_58px_-30px_rgba(8,118,90,0.92)] backdrop-blur-xl">
                 <span className="absolute inset-0 bg-[image:var(--glass-reflection)] opacity-80 mix-blend-screen" aria-hidden="true" />
@@ -207,7 +206,7 @@ export default function Header() {
               {user ? (
                 <button
                   onClick={signOut}
-                  className="group inline-flex items-center gap-2.5 rounded-2xl border border-surface-50/20 bg-gradient-to-br from-surface-50/15 to-surface-50/5 px-6 py-3 min-h-[44px] text-[15px] font-semibold text-surface-50 shadow-[0_4px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl transition-all duration-300 hover:border-surface-50/30 hover:from-surface-50/20 hover:to-surface-50/10 hover:shadow-[0_8px_32px_rgba(0,0,0,0.16)] hover:scale-[1.02] active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2.5 rounded-2xl border border-surface-50/20 bg-surface-50/10 px-6 py-3 min-h-[44px] text-[15px] font-semibold text-surface-50 shadow-lg backdrop-blur-xl transition-all duration-300 hover:bg-surface-50/20 hover:border-surface-50/40 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
                   Sign Out
@@ -215,7 +214,7 @@ export default function Header() {
               ) : (
                 <button
                   onClick={signInWithGoogle}
-                  className="group inline-flex items-center gap-2.5 rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 px-6 py-3 min-h-[44px] text-[15px] font-semibold text-surface-50 shadow-[0_4px_24px_rgba(16,185,129,0.20)] backdrop-blur-xl transition-all duration-300 hover:border-emerald-400/40 hover:from-emerald-500/30 hover:to-emerald-600/15 hover:shadow-[0_8px_32px_rgba(16,185,129,0.28)] hover:scale-[1.02] active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2.5 rounded-2xl border border-emerald-400/50 bg-gradient-to-br from-emerald-500 to-emerald-600 px-6 py-3 min-h-[44px] text-[15px] font-semibold text-white shadow-[0_4px_20px_rgba(16,185,129,0.4)] transition-all duration-300 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-[0_8px_25px_rgba(16,185,129,0.5)] hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <LogIn className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
                   Sign In
@@ -272,8 +271,8 @@ export default function Header() {
                 style={
                   !prefersReducedMotion && heroVisible
                     ? {
-                        transitionDelay: "120ms",
-                      }
+                      transitionDelay: "120ms",
+                    }
                     : undefined
                 }
               >
@@ -292,8 +291,8 @@ export default function Header() {
                 style={
                   !prefersReducedMotion && heroVisible
                     ? {
-                        transitionDelay: "180ms",
-                      }
+                      transitionDelay: "180ms",
+                    }
                     : undefined
                 }
               >
@@ -312,8 +311,8 @@ export default function Header() {
                 style={
                   !prefersReducedMotion && heroVisible
                     ? {
-                        transitionDelay: "240ms",
-                      }
+                      transitionDelay: "240ms",
+                    }
                     : undefined
                 }
               >
@@ -334,8 +333,8 @@ export default function Header() {
             style={
               !prefersReducedMotion && workflowVisible
                 ? {
-                    transitionDelay: "220ms",
-                  }
+                  transitionDelay: "220ms",
+                }
                 : undefined
             }
           >

@@ -2,16 +2,16 @@
 // Keyword density analysis and TF-IDF extraction for resume optimization
 
 const STOPWORDS = new Set([
-  "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", 
-  "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", 
-  "by", "can", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", 
-  "from", "further", "had", "has", "have", "having", "he", "her", "here", "hers", "herself", 
-  "him", "himself", "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself", "just", 
-  "me", "might", "more", "most", "must", "my", "myself", "no", "nor", "not", "now", "of", "off", 
-  "on", "once", "only", "or", "other", "our", "ours", "ourselves", "out", "over", "own", "same", 
-  "she", "should", "so", "some", "such", "than", "that", "the", "their", "theirs", "them", 
-  "themselves", "then", "there", "these", "they", "this", "those", "through", "to", "too", 
-  "under", "until", "up", "very", "was", "we", "were", "what", "when", "where", "which", "while", 
+  "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
+  "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but",
+  "by", "can", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for",
+  "from", "further", "had", "has", "have", "having", "he", "her", "here", "hers", "herself",
+  "him", "himself", "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself", "just",
+  "me", "might", "more", "most", "must", "my", "myself", "no", "nor", "not", "now", "of", "off",
+  "on", "once", "only", "or", "other", "our", "ours", "ourselves", "out", "over", "own", "same",
+  "she", "should", "so", "some", "such", "than", "that", "the", "their", "theirs", "them",
+  "themselves", "then", "there", "these", "they", "this", "those", "through", "to", "too",
+  "under", "until", "up", "very", "was", "we", "were", "what", "when", "where", "which", "while",
   "who", "whom", "why", "will", "with", "would", "you", "your", "yours", "yourself", "yourselves"
 ]);
 
@@ -41,15 +41,15 @@ const TECHNICAL_INDICATORS = new Set([
 const isPriorityTerm = (term) => {
   // Prioritize longer terms (likely compound skills or specific technologies)
   if (term.length >= 6) return true;
-  
+
   // Check if it's a known technical indicator
   if (TECHNICAL_INDICATORS.has(term)) return true;
-  
+
   // Check for common tech patterns (e.g., "js", "py", "ml", "ai")
   if (/^[a-z]{2,4}$/.test(term) && !STOPWORDS.has(term)) {
     return true;
   }
-  
+
   return false;
 };
 
@@ -60,7 +60,7 @@ const isPriorityTerm = (term) => {
  */
 export const tokenize = (text) => {
   if (!text || typeof text !== "string") return [];
-  
+
   return text
     .toLowerCase()
     .normalize("NFD")
@@ -76,11 +76,11 @@ export const tokenize = (text) => {
  */
 export const calculateTermFrequency = (tokens) => {
   const frequency = new Map();
-  
+
   for (const token of tokens) {
     frequency.set(token, (frequency.get(token) || 0) + 1);
   }
-  
+
   return frequency;
 };
 
@@ -93,7 +93,7 @@ export const calculateTermFrequency = (tokens) => {
 export const calculateTFIDF = (resumeText, jobText) => {
   const resumeTokens = tokenize(resumeText);
   const jobTokens = tokenize(jobText);
-  
+
   if (resumeTokens.length === 0 || jobTokens.length === 0) {
     return {
       resumeKeywords: [],
@@ -103,14 +103,14 @@ export const calculateTFIDF = (resumeText, jobText) => {
       overallMatch: 0
     };
   }
-  
+
   const resumeFreq = calculateTermFrequency(resumeTokens);
   const jobFreq = calculateTermFrequency(jobTokens);
-  
+
   // Calculate term frequency scores with priority weighting
   const resumeScores = new Map();
   const maxResumeFreq = Math.max(...resumeFreq.values());
-  
+
   for (const [term, freq] of resumeFreq) {
     if (!GENERIC_TERMS.has(term)) {
       let score = freq / maxResumeFreq;
@@ -121,10 +121,10 @@ export const calculateTFIDF = (resumeText, jobText) => {
       resumeScores.set(term, score);
     }
   }
-  
+
   const jobScores = new Map();
   const maxJobFreq = Math.max(...jobFreq.values());
-  
+
   for (const [term, freq] of jobFreq) {
     if (!GENERIC_TERMS.has(term)) {
       let score = freq / maxJobFreq;
@@ -135,7 +135,7 @@ export const calculateTFIDF = (resumeText, jobText) => {
       jobScores.set(term, score);
     }
   }
-  
+
   // Get top keywords
   const resumeKeywords = Array.from(resumeScores.entries())
     .sort((a, b) => b[1] - a[1])
@@ -145,7 +145,7 @@ export const calculateTFIDF = (resumeText, jobText) => {
       count: resumeFreq.get(term) || 0,
       score: Math.round(score * 100)
     }));
-  
+
   const jobKeywords = Array.from(jobScores.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 20)
@@ -154,26 +154,26 @@ export const calculateTFIDF = (resumeText, jobText) => {
       count: jobFreq.get(term) || 0,
       score: Math.round(score * 100)
     }));
-  
+
   // Find matched and missing keywords
   const resumeTermSet = new Set(resumeScores.keys());
-  
+
   const matchedKeywords = jobKeywords
     .filter(kw => resumeTermSet.has(kw.term))
     .map(kw => ({
       ...kw,
       resumeCount: resumeFreq.get(kw.term) || 0
     }));
-  
+
   const missingKeywords = jobKeywords
     .filter(kw => !resumeTermSet.has(kw.term))
     .slice(0, 15); // Top 15 missing keywords
-  
+
   // Calculate overall match percentage
   const overallMatch = jobKeywords.length > 0
     ? Math.round((matchedKeywords.length / jobKeywords.length) * 100)
     : 0;
-  
+
   return {
     resumeKeywords,
     jobKeywords,
@@ -197,10 +197,10 @@ export const analyzeKeywordDensity = (text, topN = 10) => {
       uniqueWords: 0
     };
   }
-  
+
   const tokens = tokenize(text);
   const frequency = calculateTermFrequency(tokens);
-  
+
   // Filter out generic terms and calculate density
   const keywords = Array.from(frequency.entries())
     .filter(([term]) => !GENERIC_TERMS.has(term))
@@ -211,7 +211,7 @@ export const analyzeKeywordDensity = (text, topN = 10) => {
       count,
       density: ((count / tokens.length) * 100).toFixed(2)
     }));
-  
+
   return {
     keywords,
     totalWords: tokens.length,
@@ -227,17 +227,17 @@ export const analyzeKeywordDensity = (text, topN = 10) => {
  */
 export const suggestKeywordChanges = (resumeText, jobText) => {
   const analysis = calculateTFIDF(resumeText, jobText);
-  
+
   // Keywords to add (high-value missing keywords)
   const toAdd = analysis.missingKeywords
-    .filter(kw => kw.score >= 50) // High importance in job description
+    .filter(kw => kw.score >= 15) // Moderate importance in job description
     .slice(0, 10)
     .map(kw => ({
       term: kw.term,
       reason: `Appears ${kw.count}x in job description (${kw.score}% importance)`,
       priority: kw.score >= 80 ? "high" : "medium"
     }));
-  
+
   // Keywords that are well-represented
   const wellRepresented = analysis.matchedKeywords
     .filter(kw => kw.resumeCount >= kw.count) // Resume mentions >= job mentions
@@ -246,7 +246,7 @@ export const suggestKeywordChanges = (resumeText, jobText) => {
       jobCount: kw.count,
       resumeCount: kw.resumeCount
     }));
-  
+
   // Keywords that need more emphasis
   const needEmphasis = analysis.matchedKeywords
     .filter(kw => kw.resumeCount < kw.count && kw.score >= 60)
@@ -257,7 +257,7 @@ export const suggestKeywordChanges = (resumeText, jobText) => {
       resumeCount: kw.resumeCount,
       reason: `Mentioned ${kw.resumeCount}x in resume but ${kw.count}x in job (add ${kw.count - kw.resumeCount} more)`
     }));
-  
+
   return {
     toAdd,
     wellRepresented,
@@ -274,29 +274,29 @@ export const suggestKeywordChanges = (resumeText, jobText) => {
 export const categorizeKeywords = (text) => {
   const tokens = tokenize(text);
   const frequency = calculateTermFrequency(tokens);
-  
+
   // Common action verbs for resumes
   const actionVerbs = new Set([
     "achieved", "managed", "led", "developed", "created", "implemented", "designed",
     "improved", "increased", "reduced", "optimized", "delivered", "executed", "built",
     "launched", "established", "directed", "coordinated", "analyzed", "maintained"
   ]);
-  
+
   // Technical skills patterns (basic heuristic)
   const technicalPatterns = /^(python|java|javascript|react|node|aws|docker|sql|api|cloud|data|machine|learning|ai)/i;
-  
+
   const categories = {
     actionVerbs: [],
     technical: [],
     business: [],
     other: []
   };
-  
+
   for (const [term, count] of frequency) {
     if (GENERIC_TERMS.has(term)) continue;
-    
+
     const entry = { term, count };
-    
+
     if (actionVerbs.has(term)) {
       categories.actionVerbs.push(entry);
     } else if (technicalPatterns.test(term)) {
@@ -307,12 +307,12 @@ export const categorizeKeywords = (text) => {
       categories.other.push(entry);
     }
   }
-  
+
   // Sort each category by frequency
   for (const category of Object.keys(categories)) {
     categories[category].sort((a, b) => b.count - a.count);
   }
-  
+
   return categories;
 };
 

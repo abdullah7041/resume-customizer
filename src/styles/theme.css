@@ -5,8 +5,8 @@
   --surface: color-mix(in oklab, rgba(5, 27, 29, 0.86), transparent 6%);
   --surface-strong: rgba(4, 26, 27, 0.94);
   --surface-glass-rgb: 10 52 52;
-  --surface-glass: rgba(7, 42, 44, 0.7);
-  --surface-glass-strong: rgba(18, 74, 74, 0.86);
+  --surface-glass: rgba(7, 42, 44, 0.65);
+  --surface-glass-strong: rgba(18, 74, 74, 0.82);
   --ink: #f1fcf7;
   --ink-muted: color-mix(in oklab, var(--ink), rgba(122, 189, 177, 0.42) 45%);
   --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 60%);
@@ -27,14 +27,23 @@
   --panel-highlight: color-mix(in oklab, rgba(52, 211, 153, 0.38), transparent 40%);
 
   /* Elevation + sheen */
-  --shadow-card: 0 28px 60px -24px rgba(1, 10, 12, 0.85), 0 24px 56px -28px rgba(9, 96, 84, 0.5);
-  --shadow-soft: 0 18px 48px -26px rgba(0, 12, 15, 0.85), 0 16px 36px -24px rgba(18, 112, 92, 0.45);
-  --shadow-lift: 0 28px 62px -24px rgba(30, 185, 153, 0.5), 0 24px 58px -26px rgba(11, 132, 111, 0.45);
+  --shadow-card: 
+    0 0 0 1px rgba(15, 118, 110, 0.14),
+    0 28px 60px -24px rgba(1, 10, 12, 0.85), 
+    0 24px 56px -28px rgba(9, 96, 84, 0.5);
+  --shadow-soft: 
+    0 0 0 1px rgba(15, 118, 110, 0.1),
+    0 18px 48px -26px rgba(0, 12, 15, 0.85), 
+    0 16px 36px -24px rgba(18, 112, 92, 0.45);
+  --shadow-lift: 
+    0 0 0 1px rgba(30, 185, 153, 0.2),
+    0 32px 68px -24px rgba(30, 185, 153, 0.5), 
+    0 24px 64px -26px rgba(11, 132, 111, 0.45);
   --shadow-hover: 0 12px 32px -12px rgba(52, 211, 153, 0.35), 0 8px 20px -8px rgba(14, 164, 114, 0.4);
   --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(52, 211, 153, 0.45);
   --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.55);
 
-  --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.68), transparent 42%);
+  --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 55%);
   --glass-border-strong: color-mix(in oklab, rgba(34, 211, 185, 0.75), transparent 35%);
   --glass-border-hover: color-mix(in oklab, rgba(52, 211, 153, 0.85), transparent 25%);
   --glass-reflection: linear-gradient(130deg, rgba(52, 211, 153, 0.28) 0%, rgba(15, 118, 110, 0.18) 45%, rgba(52, 211, 153, 0.08) 70%);
@@ -134,8 +143,8 @@
   --surface: color-mix(in oklab, rgba(5, 27, 29, 0.86), transparent 6%);
   --surface-strong: rgba(4, 26, 27, 0.94);
   --surface-glass-rgb: 10 52 52;
-  --surface-glass: rgba(7, 42, 44, 0.7);
-  --surface-glass-strong: rgba(18, 74, 74, 0.86);
+  --surface-glass: rgba(7, 42, 44, 0.65);
+  --surface-glass-strong: rgba(18, 74, 74, 0.82);
   --ink: #f1fcf7;
   --ink-muted: color-mix(in oklab, var(--ink), rgba(122, 189, 177, 0.42) 45%);
   --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 60%);
@@ -153,13 +162,22 @@
   --panel-stroke: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 42%);
   --panel-highlight: color-mix(in oklab, rgba(52, 211, 153, 0.38), transparent 40%);
 
-  --shadow-card: 0 28px 60px -24px rgba(1, 10, 12, 0.85), 0 24px 56px -28px rgba(9, 96, 84, 0.5);
-  --shadow-soft: 0 18px 48px -26px rgba(0, 12, 15, 0.85), 0 16px 36px -24px rgba(18, 112, 92, 0.45);
-  --shadow-lift: 0 28px 62px -24px rgba(30, 185, 153, 0.5), 0 24px 58px -26px rgba(11, 132, 111, 0.45);
+  --shadow-card: 
+    0 0 0 1px rgba(15, 118, 110, 0.14),
+    0 28px 60px -24px rgba(1, 10, 12, 0.85), 
+    0 24px 56px -28px rgba(9, 96, 84, 0.5);
+  --shadow-soft: 
+    0 0 0 1px rgba(15, 118, 110, 0.1),
+    0 18px 48px -26px rgba(0, 12, 15, 0.85), 
+    0 16px 36px -24px rgba(18, 112, 92, 0.45);
+  --shadow-lift: 
+    0 0 0 1px rgba(30, 185, 153, 0.2),
+    0 32px 68px -24px rgba(30, 185, 153, 0.5), 
+    0 24px 64px -26px rgba(11, 132, 111, 0.45);
   --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(52, 211, 153, 0.45);
   --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.55);
 
-  --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.68), transparent 42%);
+  --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 55%);
   --glass-border-strong: color-mix(in oklab, rgba(34, 211, 185, 0.75), transparent 35%);
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 65%);
   --glass-gold-sheen: linear-gradient(125deg, rgba(244, 211, 125, 0.26) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(244, 211, 125, 0.14) 100%);

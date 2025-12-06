@@ -22,11 +22,9 @@ describe("UploadCard", () => {
     render(
       <UploadCard
         fileName="resume.pdf"
-        onFileSelect={() => {}}
-        onFileClear={() => {}}
-        onTextChange={() => {}}
-        textValue=""
-        onSubmit={() => {}}
+        onFileSelect={() => { }}
+        onFileClear={() => { }}
+        onSubmit={() => { }}
         status="idle"
         progress={0}
         error=""

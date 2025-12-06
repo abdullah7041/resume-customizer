@@ -5,7 +5,7 @@ export default function SectionTitle({ eyebrow, title, description, className })
   return (
     <Card
       tone="translucent"
-      className={cn("px-6 py-6", className)}
+      className={cn("px-6 py-4", className)}
       contentClassName="space-y-3 text-left text-ink-soft"
     >
       {eyebrow && (

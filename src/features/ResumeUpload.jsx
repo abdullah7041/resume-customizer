@@ -12,7 +12,6 @@ const DOCUMENT_MIME_TYPES = new Set([
 const DOCUMENT_EXTENSIONS = new Set(["pdf", "docx"]);
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const PDF_HELPER_MESSAGE = "This looks like a PDF — use Upload.";
 const RESUME_BUCKET = "resumes";
 const ERROR_MESSAGES = {
   "file/unsupported-type": {
@@ -55,6 +54,10 @@ const ERROR_MESSAGES = {
     type: "warning",
     title: "File already stored",
   },
+  "upload/duplicate": {
+    type: "warning",
+    title: "Already uploaded",
+  },
 };
 
 const getExtension = (fileName) => {
@@ -64,7 +67,6 @@ const getExtension = (fileName) => {
   const match = fileName.match(/\.([^.]+)$/);
   return match ? match[1].toLowerCase() : "";
 };
-
 const isDocumentFile = (file) => {
   if (!file) return false;
   const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
@@ -75,44 +77,12 @@ const isDocumentFile = (file) => {
   return DOCUMENT_EXTENSIONS.has(extension);
 };
 
-export default function ResumeUpload({ onParseResume, resumeDocument, onToast }) {
+export default function ResumeUpload({ onParseResume, resumeDocument, onToast, onClear, onViewText }) {
   const [file, setFile] = useState(null);
   const [ocrUsed, setOcrUsed] = useState(false);
-  const [textValue, setTextValue] = useState(() => {
-    // Try to restore from previous session
-    if (typeof window === "undefined") return "";
-    try {
-      const stored = window.localStorage.getItem("airo:resumeData");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const plainText = parsed?.plainText || "";
-        
-        // Enhanced validation - check if it's actual text, not binary/base64 data
-        if (typeof plainText === "string" && plainText.length > 0) {
-          // eslint-disable-next-line no-control-regex
-          const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
-          const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
-          // eslint-disable-next-line no-control-regex
-          const hasControlChars = (plainText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/g) || []).length > plainText.length * 0.1;
-          const hasWeirdEncoding = /[�]{3,}/.test(plainText);
-          
-          if (!isBinary && !isBase64Like && !hasControlChars && !hasWeirdEncoding) {
-            return plainText;
-          } else {
-            console.warn("Detected corrupted data in localStorage, skipping restore");
-            window.localStorage.removeItem("airo:resumeData");
-          }
-        }
-      }
-    } catch {
-      // Ignore parsing errors
-    }
-    return "";
-  });
   const [status, setStatus] = useState("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
-  const [textWarning, setTextWarning] = useState("");
 
   const showErrorToast = useCallback(
     (appError, fallbackType = "danger") => {
@@ -138,63 +108,15 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
     if (file) {
       return;
     }
-    if (textValue) {
-      return;
-    }
-    
-    // Ensure plainText is a valid string and not corrupted binary data
-    const plainText = resumeDocument.plainText;
-    if (typeof plainText === "string") {
-      // Enhanced validation
-      // eslint-disable-next-line no-control-regex
-      const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
-      const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
-      // eslint-disable-next-line no-control-regex
-      const hasControlChars = (plainText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/g) || []).length > plainText.length * 0.1;
-      const hasWeirdEncoding = /[�]{3,}/.test(plainText);
-      
-      if (!isBinary && !isBase64Like && !hasControlChars && !hasWeirdEncoding) {
-        setTextValue(plainText);
-        setTextWarning("");
-      } else {
-        console.error("Received corrupted plainText from resumeDocument");
-      }
-    }
-  }, [file, resumeDocument, textValue]);
+  }, [file, resumeDocument]);
 
   const resetState = useCallback(() => {
     setFile(null);
     setStatus("idle");
     setProgress(0);
     setError("");
-    setTextWarning("");
     setOcrUsed(false);
   }, []);
-
-  const handleTextValueChange = useCallback(
-    (value) => {
-      const trimmedStart = typeof value === "string" ? value.trimStart() : "";
-      if (trimmedStart.startsWith("%PDF")) {
-        if (textWarning !== PDF_HELPER_MESSAGE) {
-          setTextWarning(PDF_HELPER_MESSAGE);
-          onToast?.({
-            type: "warning",
-            title: "Paste blocked",
-            description: PDF_HELPER_MESSAGE,
-          });
-        }
-        return;
-      }
-      if (textWarning) {
-        setTextWarning("");
-      }
-      if (file) {
-        setFile(null);
-      }
-      setTextValue(value);
-    },
-    [file, onToast, textWarning]
-  );
 
   const handleValidationError = useCallback(
     (validationError) => {
@@ -207,9 +129,29 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
     [showErrorToast]
   );
 
+  const [lastUploadedFile, setLastUploadedFile] = useState(null);
+
   const handleFileSelect = useCallback(
     (selectedFile) => {
       if (!selectedFile) return;
+
+      // Duplicate check
+      if (
+        lastUploadedFile &&
+        selectedFile.name === lastUploadedFile.name &&
+        selectedFile.size === lastUploadedFile.size &&
+        selectedFile.lastModified === lastUploadedFile.lastModified
+      ) {
+        handleValidationError(
+          new AppError({
+            code: "upload/duplicate",
+            message: "You just uploaded this file.",
+            hint: "Upload a different file or wait a moment.",
+          })
+        );
+        return;
+      }
+
       if (!isDocumentFile(selectedFile)) {
         handleValidationError(
           new AppError({
@@ -231,33 +173,20 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         );
         return;
       }
-      setTextWarning("");
       setError("");
       setFile(selectedFile);
     },
-    [handleValidationError]
+    [handleValidationError, lastUploadedFile]
   );
 
   const handleSubmit = useCallback(async () => {
-    const trimmedText = textValue.trim();
-
-    if (!file && !trimmedText) {
-      const message = "Add a file or paste your resume text.";
+    if (!file) {
+      const message = "Please upload a resume file.";
       setError(message);
       onToast?.({
         type: "warning",
         title: "Resume missing",
         description: message,
-      });
-      return;
-    }
-
-    if (!file && trimmedText.startsWith("%PDF")) {
-      setTextWarning(PDF_HELPER_MESSAGE);
-      onToast?.({
-        type: "warning",
-        title: "Paste blocked",
-        description: PDF_HELPER_MESSAGE,
       });
       return;
     }
@@ -268,71 +197,61 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
 
       let storageMetadata = null;
 
-      if (file) {
-        setStatus("uploading");
-        onToast?.({
-          type: "info",
-          title: "Uploading resume",
-          description: "Sending your resume to secure storage…",
-        });
-        const uploadResult = await uploadResumeFile(file, {
-          onProgress: ({ loaded, total }) => {
-            if (!total) return;
-            const percent = Math.round((loaded / total) * 60);
-            setProgress(Math.max(5, percent));
-          },
-        });
+      setStatus("uploading");
+      onToast?.({
+        type: "info",
+        title: "Uploading resume",
+        description: "Sending your resume to secure storage…",
+      });
+      const uploadResult = await uploadResumeFile(file, {
+        onProgress: ({ loaded, total }) => {
+          if (!total) return;
+          const percent = Math.round((loaded / total) * 60);
+          setProgress(Math.max(5, percent));
+        },
+      });
 
-        setProgress((prev) => Math.max(prev, 70));
-        if (uploadResult) {
-          storageMetadata = {
-            bucket: uploadResult.bucket || RESUME_BUCKET,
-            path: uploadResult.path,
-            fileName: uploadResult.fileName,
-            userId: uploadResult.userId,
-          };
-        }
-        onToast?.({
-          type: "success",
-          title: "Upload complete",
-          description: storageMetadata
-            ? `Saved as ${storageMetadata.fileName}. Parsing next…`
-            : "Resume stored securely. Parsing next…",
-        });
+      setProgress((prev) => Math.max(prev, 70));
+      if (uploadResult) {
+        storageMetadata = {
+          bucket: uploadResult.bucket || RESUME_BUCKET,
+          path: uploadResult.path,
+          fileName: uploadResult.fileName,
+          userId: uploadResult.userId,
+        };
       }
+      onToast?.({
+        type: "success",
+        title: "Upload complete",
+        description: storageMetadata
+          ? `Saved as ${storageMetadata.fileName}. Parsing next…`
+          : "Resume stored securely. Parsing next…",
+      });
 
       setStatus("parsing");
       setProgress((prev) => Math.max(prev, 80));
-      const payload = file
-        ? {
-            kind: "upload",
-            file,
-            storage: storageMetadata,
-          }
-        : {
-            kind: "text",
-            value: trimmedText,
-          };
+      const payload = {
+        kind: "upload",
+        file,
+        storage: storageMetadata,
+      };
       const parsed = await onParseResume?.(payload);
       setProgress(100);
       setStatus("success");
-      
+
       // Check if OCR was used
       const wasOcrUsed = parsed?.usedOCR || false;
+      console.log('[ResumeUpload] OCR flag:', wasOcrUsed, 'Full parsed object:', parsed);
       setOcrUsed(wasOcrUsed);
-      
-      onToast?.({
-        type: "success",
-        title: "Resume ready",
-        description: file
-          ? wasOcrUsed 
-            ? "We saved and parsed your resume using AI OCR."
-            : "We saved and parsed your resume."
-          : "Your pasted resume is ready.",
+
+      // Toast removed to prevent duplicate notifications (handled by MainContent)
+
+      setLastUploadedFile({
+        name: file.name,
+        size: file.size,
+        lastModified: file.lastModified
       });
-      if (!file && parsed?.plainText) {
-        setTextValue(parsed.plainText);
-      }
+
       setTimeout(() => {
         setStatus("idle");
         setProgress(0);
@@ -343,13 +262,13 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
         submissionError instanceof AppError
           ? submissionError
           : new AppError({
-              code: "upload/storage-failure",
-              message: submissionError?.message || "We could not prepare your resume.",
-              hint: "Try again shortly.",
-            });
+            code: "upload/storage-failure",
+            message: submissionError?.message || "We could not prepare your resume.",
+            hint: "Try again shortly.",
+          });
       showErrorToast(appError);
     }
-  }, [file, onParseResume, onToast, showErrorToast, textValue]);
+  }, [file, onParseResume, onToast, showErrorToast]);
 
   return (
     <FadeInWhenVisible>
@@ -359,17 +278,16 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast })
           onFileSelect={handleFileSelect}
           onFileClear={() => {
             resetState();
-            setTextValue("");
           }}
-          onTextChange={handleTextValueChange}
-          textValue={textValue}
           onSubmit={handleSubmit}
           status={status}
           progress={progress}
           error={error}
           disabled={status === "uploading" || status === "parsing"}
-          textHelper={textWarning}
           onValidationError={handleValidationError}
+          onClear={onClear}
+          onViewText={onViewText}
+          canViewText={Boolean(resumeDocument?.plainText)}
         />
         {ocrUsed && (status === "success" || status === "idle") && (
           <div className="flex justify-center">

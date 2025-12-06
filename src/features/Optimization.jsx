@@ -55,6 +55,7 @@ export default function Optimization({
   previewUsed,
   onUpgrade,
   hasMatchAnalysis = false,
+  onClear,
 }) {
   const [chipsAnimated, setChipsAnimated] = useState(false);
   const chipsShownRef = useRef(false);
@@ -91,6 +92,16 @@ export default function Optimization({
         eyebrow="Step 3"
         title="Polish every section"
         description="Fine-tune your resume with recommendations that resonate in Saudi financial-tech circles."
+        action={
+          optimizations.length > 0 ? (
+            <button
+              onClick={onClear}
+              className="text-xs font-medium text-ink-500 hover:text-danger-500 transition-colors"
+            >
+              Clear
+            </button>
+          ) : null
+        }
       />
 
       {showPreviewBanner && <PreviewBanner onUpgrade={onUpgrade} />}
@@ -144,7 +155,10 @@ export default function Optimization({
                       <span
                         key={token}
                         className={cn(
-                          "relative overflow-hidden rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_35%)] px-3 py-1 text-xs font-semibold text-emerald-500 shadow-soft",
+                          "relative overflow-hidden rounded-pill border px-3 py-1 text-xs font-semibold shadow-soft transition-colors",
+                          bucket === "add" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-500",
+                          bucket === "neutral" && "border-blue-500/30 bg-blue-500/10 text-blue-500",
+                          bucket === "remove" && "border-rose-500/30 bg-rose-500/10 text-rose-500",
                           chipsAnimated && "keyword-chip-shimmer"
                         )}
                       >
@@ -177,14 +191,14 @@ export default function Optimization({
               ))}
             </div>
           ) : optimizations.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {optimizations.map((card, index) => (
                 <OptimizationCard
                   key={`${card.section}-${index}`}
                   card={card}
                   index={index}
                   onCopy={onCopy}
-                  disabledActions={!isPremium}
+                  disabledActions={false}
                 />
               ))}
             </div>

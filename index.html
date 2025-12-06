@@ -9,7 +9,7 @@
         const legacyKey = "airo:theme";
         
         // Check feature flag - replaced at build time by Vite
-        const darkModeEnabled = "%VITE_FEATURE_DARK_MODE%" !== "false";
+        const darkModeEnabled = "%FEATURE_DARK_MODE%" !== "false";
         
         // If dark mode is disabled, always apply light theme and skip detection
         if (!darkModeEnabled) {

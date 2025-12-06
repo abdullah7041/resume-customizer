@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate, HelpCircle } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate, HelpCircle, Trash2 } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
   optimizeResume,
-  AI_DEFAULT_TEMPERATURE,
 } from "../services/api.js";
 import { useAuth } from "../hooks/useAuth.jsx";
 import ResumeUpload from "../features/ResumeUpload.jsx";
@@ -26,6 +25,7 @@ import { ParallaxContainer } from "./ui/ParallaxSection.jsx";
 import { helpContent } from "../data/helpContent.jsx";
 import { exportResumeToPdf } from "../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../services/supabaseExport.js";
+import ViewTextModal from "./ui/ViewTextModal.jsx";
 
 const tabs = [
   { value: "resume", label: "Resume", icon: FileText },
@@ -48,7 +48,7 @@ const TOAST_IDS = {
 const TAB_STORAGE_KEY = "airo:lastActiveTab";
 const RESUME_STORAGE_KEY = "airo:resumeData";
 const JOB_STORAGE_KEY = "airo:jobDescription";
-const withTemperature = (message) => `${message} • Temp ${AI_DEFAULT_TEMPERATURE}`;
+const withTemperature = (message) => message;
 
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -66,8 +66,8 @@ export default function MainContent() {
   const { user, loading, signInWithGoogle } = useAuth();
   const isPremium = Boolean(
     user?.user_metadata?.is_premium ||
-      user?.user_metadata?.tier === "premium" ||
-      user?.app_metadata?.plan === "premium"
+    user?.user_metadata?.tier === "premium" ||
+    user?.app_metadata?.plan === "premium"
   );
 
   const [activeTab, setActiveTab] = useState("resume");
@@ -77,28 +77,26 @@ export default function MainContent() {
     try {
       const stored = window.localStorage.getItem(RESUME_STORAGE_KEY);
       if (!stored) return "";
-      
+
       const parsed = JSON.parse(stored);
       if (!parsed || typeof parsed !== "object") return "";
-      
+
       // Validate plainText is actual text, not binary/corrupted data
       const plainText = parsed.plainText;
       if (typeof plainText === "string" && plainText.length > 0) {
-        // Enhanced binary data detection
+        // Relaxed binary data detection to prevent false positives
+        // Only check for a high density of non-printable control characters (excluding whitespace)
         // eslint-disable-next-line no-control-regex
-        const isBinary = /^[\x00-\x1F\x7F-\xFF]{20,}/.test(plainText);
-        const isBase64Like = /^[A-Za-z0-9+/=]{100,}$/.test(plainText.replace(/\s/g, ""));
-        // eslint-disable-next-line no-control-regex
-        const hasControlChars = (plainText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/g) || []).length > plainText.length * 0.1;
-        const hasWeirdEncoding = /[�]{3,}/.test(plainText);
-        
-        if (isBinary || isBase64Like || hasControlChars || hasWeirdEncoding) {
+        const controlCharCount = (plainText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g) || []).length;
+        const isBinary = controlCharCount > plainText.length * 0.3; // Threshold: 30% control chars
+
+        if (isBinary) {
           console.warn("Detected corrupted resume data in localStorage, clearing it");
           window.localStorage.removeItem(RESUME_STORAGE_KEY);
           return "";
         }
       }
-      
+
       return parsed;
     } catch (error) {
       console.warn("Failed to parse resume data from localStorage:", error);
@@ -106,12 +104,14 @@ export default function MainContent() {
       return "";
     }
   });
+  const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState(() => {
     if (typeof window === "undefined") return "";
     return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
   });
   const [matchAnalysis, setMatchAnalysis] = useState(null);
   const [optimizations, setOptimizations] = useState([]);
+  const [optimizationData, setOptimizationData] = useState(null);
   const [optimizationKeywords, setOptimizationKeywords] = useState({ add: [], remove: [], neutral: [] });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -232,25 +232,52 @@ export default function MainContent() {
 
   const handleClearAllData = useCallback(() => {
     if (typeof window === "undefined") return;
-    
+
     // Clear all stored data
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(JOB_STORAGE_KEY);
     window.localStorage.removeItem("airo:lastJobDescription");
-    
+
     // Reset state
     setResumeData("");
     setJobDescription("");
     setMatchAnalysis(null);
     setOptimizations([]);
+    setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setActiveTab("resume");
-    
+
     pushToast({
       type: "success",
       title: "Data cleared",
       description: "All resume and job data has been removed from local storage.",
     });
+  }, [pushToast]);
+
+  const handleClearResume = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(RESUME_STORAGE_KEY);
+    setResumeData("");
+    // Also clear dependent data
+    setMatchAnalysis(null);
+    setJobDescription("");
+    setOptimizations([]);
+    setOptimizationData(null);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    pushToast({ type: "success", title: "Resume cleared", description: "Resume data removed." });
+  }, [pushToast]);
+
+  const handleClearMatch = useCallback(() => {
+    setMatchAnalysis(null);
+    setJobDescription("");
+    pushToast({ type: "success", title: "Match analysis cleared", description: "Match results and job description removed." });
+  }, [pushToast]);
+
+  const handleClearOptimizations = useCallback(() => {
+    setOptimizations([]);
+    setOptimizationData(null);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    pushToast({ type: "success", title: "Optimizations cleared", description: "Optimization results removed." });
   }, [pushToast]);
 
   const normalizeResumePayload = useCallback((input) => {
@@ -277,6 +304,12 @@ export default function MainContent() {
   const handleParseResume = useCallback(
     async (resumeInput) => {
       const { parseInput, storage } = normalizeResumePayload(resumeInput);
+
+      // Clear old localStorage data to prevent corruption issues
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(RESUME_STORAGE_KEY);
+      }
+
       try {
         setFlowProgress(18);
         pushToast(
@@ -294,17 +327,18 @@ export default function MainContent() {
         const enriched =
           parsed && storage
             ? {
-                ...parsed,
-                storagePath: storage.path,
-                storageBucket: storage.bucket,
-                storageFileName: storage.fileName,
-                storageUserId: storage.userId,
-              }
+              ...parsed,
+              storagePath: storage.path,
+              storageBucket: storage.bucket,
+              storageFileName: storage.fileName,
+              storageUserId: storage.userId,
+            }
             : parsed;
         setResumeData(enriched);
         setMatchAnalysis(null);
         setJobDescription("");
         setOptimizations([]);
+        setOptimizationData(null);
         setOptimizationKeywords({ add: [], remove: [], neutral: [] });
         pushToast(
           {
@@ -447,6 +481,7 @@ export default function MainContent() {
         );
 
         setOptimizations(result.cards ?? []);
+        setOptimizationData(result.optimization ?? null);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
         pushToast(
           {
@@ -576,7 +611,7 @@ export default function MainContent() {
             keywords: optimizationKeywords,
             variant: normalizedVariant,
           });
-          
+
           pushToast({
             type: "success",
             title: "Print dialog opened",
@@ -610,121 +645,130 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <ParallaxContainer enableLayers={true} className="py-4">
-      <div className="space-y-5 sm:space-y-7 text-ink-700 dark:text-surface-50">
+    <ParallaxContainer enableLayers={true} className="py-1">
+      <div className="space-y-3 sm:space-y-5 text-ink-700 dark:text-surface-50">
         <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
-          {/* Help button for current tab */}
-          {helpContent[getHelpKey(activeTab)] && (
+          <div className="flex items-center gap-3">
+            <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
+            {/* Help button for current tab */}
+            {/* Help button for current tab */}
+            {helpContent[getHelpKey(activeTab)] && (
+              <button
+                onClick={() => {
+                  setCurrentHelpTopic(getHelpKey(activeTab));
+                  setHelpModalOpen(true);
+                }}
+                className="group flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-white/50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded-full backdrop-blur-sm hover:bg-white/80 dark:hover:bg-emerald-900/40 transition-all shadow-sm hover:shadow-md"
+                title="How this feature works"
+              >
+                <HelpCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
+                <span className="hidden sm:inline">How it Works</span>
+              </button>
+            )}
+            {/* Welcome Modal trigger */}
             <button
-              onClick={() => {
-                setCurrentHelpTopic(getHelpKey(activeTab));
-                setHelpModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200 bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-900/40 rounded-lg transition-all"
-              title="How this feature works"
+              onClick={() => setWelcomeModalOpen(true)}
+              className="group flex items-center gap-2 px-4 py-2 text-sm font-medium text-teal-700 dark:text-teal-300 bg-white/50 dark:bg-teal-900/20 border border-teal-200/50 dark:border-teal-800/30 rounded-full backdrop-blur-sm hover:bg-white/80 dark:hover:bg-teal-900/40 transition-all shadow-sm hover:shadow-md"
+              title="View getting started guide"
             >
-              <HelpCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">How it Works</span>
+              <Sparkles className="w-4 h-4 transition-transform group-hover:scale-110" />
+              <span className="hidden sm:inline">Getting Started</span>
+            </button>
+          </div>
+          {resumeData?.plainText && (
+            <button
+              type="button"
+              onClick={handleClearAllData}
+              className="group flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-ink-500/70 hover:bg-danger-500/10 hover:text-danger-600 transition-all duration-200 dark:text-surface-50/60 dark:hover:bg-danger-400/10 dark:hover:text-danger-400"
+              title="Clear all saved data"
+            >
+              <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+              Clear All
             </button>
           )}
-          {/* Welcome Modal trigger */}
-          <button
-            onClick={() => setWelcomeModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200 bg-teal-100 dark:bg-teal-900/30 hover:bg-teal-200 dark:hover:bg-teal-900/40 rounded-lg transition-all"
-            title="View getting started guide"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Getting Started</span>
-          </button>
         </div>
-        {resumeData?.plainText && (
-          <button
-            type="button"
-            onClick={handleClearAllData}
-            className="text-xs font-semibold uppercase tracking-[0.24em] text-ink-500/70 hover:text-danger-500 transition-colors duration-200 dark:text-surface-50/60 dark:hover:text-danger-400"
-            title="Clear all saved data"
-          >
-            Clear All
-          </button>
-        )}
-      </div>
-      <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 sm:p-6 lg:p-7 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
-        {activeTab === "resume" && (
-          <ResumeUpload
-            onParseResume={handleParseResume}
-            resumeDocument={resumeData}
-            onToast={handleUploadToast}
-          />
-        )}
-        {activeTab === "match" && (
-          <JobMatch
-            onAnalyzeMatchAI={handleAnalyzeMatchAI}
-            matchAnalysis={matchAnalysis}
-            isAnalyzing={isAnalyzing}
-            hasResume={Boolean(resumeData?.plainText)}
-            onToast={pushToast}
-          />
-        )}
-        {activeTab === "optimize" && (
-          <Optimization
-            isPremium={isPremium}
-            optimizations={optimizations}
-            keywords={optimizationKeywords}
-            isOptimizing={isOptimizing}
-            onOptimize={handleOptimize}
-            onCopy={handleCopy}
-            previewUsed={previewUsed}
-            onUpgrade={handleUpgrade}
-            onExport={handleExportPdf}
-            canExport={Boolean(resumeData?.plainText)}
-            hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
-          />
-        )}
-        {activeTab === "keywords" && (
-          <KeywordAnalyzer
-            resumeText={resumeData?.plainText || ""}
-            jobDescription={jobDescription}
-          />
-        )}
-        {activeTab === "templates" && (
-          <TemplateGallery
-            resumeData={resumeData}
-            onSelectTemplate={(template) => {
-              pushToast({
-                type: "success",
-                title: "Template Selected",
-                description: `Using ${template.name} template. You can now apply it to your resume.`
-              });
-            }}
-          />
-        )}
-        {activeTab === "interview" && (
-          <InterviewPrep
-            jobDescription={jobDescription}
-            resumeText={resumeData?.plainText || ""}
-          />
-        )}
-        {activeTab === "bulk" && (
-          <BulkAnalysis
-            jobDescription={jobDescription}
-          />
-        )}
-        {activeTab === "cover-letter" && (
-          <CoverLetter
-            resumeText={resumeData?.plainText || ""}
-            jobDescription={jobDescription}
-          />
-        )}
-      </div>
-      {hasNextTab && (
-        <div className="flex justify-center sm:justify-end">
-          <Button variant="secondary" icon={ArrowRight} onClick={handleContinue} className="justify-center">
-            Continue
-          </Button>
+        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-4 sm:p-5 lg:p-6 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
+          {activeTab === "resume" && (
+            <ResumeUpload
+              onParseResume={handleParseResume}
+              resumeDocument={resumeData}
+              onToast={handleUploadToast}
+              onClear={handleClearResume}
+              onViewText={() => setViewTextModalOpen(true)}
+            />
+          )}
+          {activeTab === "match" && (
+            <JobMatch
+              onAnalyzeMatchAI={handleAnalyzeMatchAI}
+              matchAnalysis={matchAnalysis}
+              isAnalyzing={isAnalyzing}
+              hasResume={Boolean(resumeData?.plainText)}
+              onToast={pushToast}
+              onClear={handleClearMatch}
+            />
+          )}
+          {activeTab === "optimize" && (
+            <Optimization
+              isPremium={isPremium}
+              optimizations={optimizations}
+              keywords={optimizationKeywords}
+              isOptimizing={isOptimizing}
+              onOptimize={handleOptimize}
+              onCopy={handleCopy}
+              previewUsed={previewUsed}
+              onUpgrade={handleUpgrade}
+              onExport={handleExportPdf}
+              canExport={Boolean(resumeData?.plainText)}
+              hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
+              onClear={handleClearOptimizations}
+            />
+          )}
+          {activeTab === "keywords" && (
+            <KeywordAnalyzer
+              resumeText={resumeData?.plainText || ""}
+              jobDescription={jobDescription}
+            />
+          )}
+          {activeTab === "templates" && (
+            <TemplateGallery
+              resumeData={resumeData}
+              matchAnalysis={matchAnalysis}
+              optimizationData={optimizationData}
+              onSelectTemplate={(template) => {
+                pushToast({
+                  type: "success",
+                  title: "Template Selected",
+                  description: `Using ${template.name} template. You can now apply it to your resume.`
+                });
+              }}
+            />
+          )}
+          {activeTab === "interview" && (
+            <InterviewPrep
+              jobDescription={jobDescription}
+              resumeText={resumeData?.plainText || ""}
+              matchAnalysis={matchAnalysis}
+            />
+          )}
+          {activeTab === "bulk" && (
+            <BulkAnalysis
+              jobDescription={jobDescription}
+            />
+          )}
+          {activeTab === "cover-letter" && (
+            <CoverLetter
+              resumeText={resumeData?.plainText || ""}
+              jobDescription={jobDescription}
+            />
+          )}
         </div>
-      )}
+        {hasNextTab && (
+          <div className="flex justify-center sm:justify-end">
+            <Button variant="secondary" icon={ArrowRight} onClick={handleContinue} className="justify-center">
+              Continue
+            </Button>
+          </div>
+        )}
       </div>
     </ParallaxContainer>
   );
@@ -735,6 +779,11 @@ export default function MainContent() {
       className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-32 sm:-mt-30 lg:-mt-30"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
+      <ViewTextModal
+        isOpen={viewTextModalOpen}
+        onClose={() => setViewTextModalOpen(false)}
+        text={resumeData?.plainText || ""}
+      />
       <div className={`${containerClass} space-y-6 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
         <div className="card-glow rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
           {flowProgress > 0 && (
@@ -766,11 +815,11 @@ export default function MainContent() {
               }}
             />
           ) : (
-              <EmptyState
-                icon={UserPlus}
-                title="Sign in to unlock Saudi-ready insights"
-                description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
-                actions={
+            <EmptyState
+              icon={UserPlus}
+              title="Sign in to unlock Saudi-ready insights"
+              description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
+              actions={
                 <Button
                   variant="frosted"
                   icon={LogIn}
@@ -779,9 +828,9 @@ export default function MainContent() {
                 >
                   Sign in via Google
                 </Button>
-                }
-              />
-            )}
+              }
+            />
+          )}
         </div>
         {isDev && aiDebug && (
           <section className="text-xs text-ink-500 dark:text-surface-50/70">
@@ -839,13 +888,13 @@ export default function MainContent() {
           </section>
         )}
       </div>
-      
+
       {/* Welcome Modal - shown on button click */}
-      <WelcomeModal 
+      <WelcomeModal
         isOpen={welcomeModalOpen}
         onClose={() => setWelcomeModalOpen(false)}
       />
-      
+
       {/* Help Modal */}
       {currentHelpTopic && (
         <HelpModal

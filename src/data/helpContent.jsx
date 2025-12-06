@@ -10,7 +10,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Upload your resume to get started with AI-powered optimization. We support multiple formats and methods.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -24,7 +24,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -36,7 +36,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
@@ -49,7 +49,7 @@ export const helpContent = {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
             <p className="text-sm text-emerald-800 dark:text-emerald-300">
               <strong>💡 Pro Tip:</strong> For best results, use a well-formatted PDF or DOCX file. Scanned image PDFs may not parse correctly.
@@ -68,7 +68,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Compare your resume against a job description using <strong>AI-powered semantic analysis</strong> to calculate precise match scores and identify optimization opportunities.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -81,7 +81,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -89,11 +89,11 @@ export const helpContent = {
               <div>
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-1">AI Semantic Analysis</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Our <strong>AI models (DeepSeek & GPT-5-Nano)</strong> analyze your resume using advanced natural language processing to understand context, skills, and semantic similarity—providing intelligent, contextual match insights.
+                  Our <strong>AI models (DeepSeek & GPT-4o)</strong> analyze your resume using advanced natural language processing to understand context, skills, and semantic similarity—providing intelligent, contextual match insights.
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
@@ -106,7 +106,7 @@ export const helpContent = {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h5 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">How AI Scoring Works:</h5>
             <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
@@ -115,7 +115,7 @@ export const helpContent = {
               <li>⚡ <strong>Smart Recommendations:</strong> Personalized suggestions based on your unique profile</li>
             </ul>
           </div>
-          
+
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-3">
             <h5 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Understanding Match Scores:</h5>
             <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
@@ -137,7 +137,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Let AI rewrite your resume sections to better match job requirements while maintaining truthfulness and your unique voice.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -150,7 +150,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -162,7 +162,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
@@ -175,7 +175,7 @@ export const helpContent = {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
             <p className="text-sm text-amber-800 dark:text-amber-300">
               <strong>⚠️ Important:</strong> Our AI only rewrites existing content—it never invents degrees, job titles, or experiences. Always verify suggestions match your actual background.
@@ -194,7 +194,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Compare multiple resume versions side-by-side to determine which one best matches a specific job description.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -207,7 +207,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -219,7 +219,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
@@ -232,7 +232,7 @@ export const helpContent = {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
             <p className="text-sm text-purple-800 dark:text-purple-300">
               <strong>💡 Use Case:</strong> Test a technical resume vs. a leadership-focused resume, or compare ATS-optimized vs. visually designed versions to see which scores higher.
@@ -251,7 +251,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Choose from professionally designed resume templates optimized for Saudi Arabia's job market and ATS systems.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -264,7 +264,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -276,7 +276,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
@@ -302,7 +302,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Generate personalized cover letters based on your resume and the target job description.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -315,7 +315,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -327,7 +327,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
@@ -353,7 +353,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Get AI-predicted interview questions and prepare strong answers based on your resume and the job description.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -366,7 +366,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -378,7 +378,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
@@ -404,7 +404,7 @@ export const helpContent = {
           <p className="text-gray-700 dark:text-gray-300">
             Deep-dive into keyword optimization to ensure your resume passes ATS screening and highlights the right skills.
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -417,7 +417,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 2
@@ -429,7 +429,7 @@ export const helpContent = {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
                 3
