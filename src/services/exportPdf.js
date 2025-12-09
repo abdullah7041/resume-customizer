@@ -76,8 +76,8 @@ const splitLines = (text) =>
 const sanitizeLines = (items) =>
   Array.isArray(items)
     ? items
-        .map((item) => normalize(String(item ?? "")))
-        .filter(isMeaningfulLine)
+      .map((item) => normalize(String(item ?? "")))
+      .filter(isMeaningfulLine)
     : [];
 
 const ensureResumeDocument = (input) => {
@@ -86,10 +86,10 @@ const ensureResumeDocument = (input) => {
       plainText: String(input.plainText),
       sections: Array.isArray(input.sections)
         ? input.sections.map((section) => ({
-            id: typeof section.id === "string" ? section.id : null,
-            title: typeof section.title === "string" ? section.title : null,
-            content: sanitizeLines(section.content),
-          }))
+          id: typeof section.id === "string" ? section.id : null,
+          title: typeof section.title === "string" ? section.title : null,
+          content: sanitizeLines(section.content),
+        }))
         : [],
       bullets: sanitizeLines(input.bullets),
     };
@@ -243,9 +243,9 @@ const buildSummary = (summary, matchAnalysis, optimizations) => {
 
   const actionable = Array.isArray(optimizations)
     ? optimizations
-        .slice(0, 4)
-        .map((card) => `${card.section}: ${card.suggestion}`)
-        .filter(Boolean)
+      .slice(0, 4)
+      .map((card) => `${card.section}: ${card.suggestion}`)
+      .filter(Boolean)
     : [];
 
   if (actionable.length > 0) {
@@ -269,15 +269,56 @@ const buildContact = (lines) => {
 };
 
 const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "", matchAnalysis, optimizations, keywords }) => {
-  const document = ensureResumeDocument(resumeDocument ?? resumeText);
-  
-  const sections = deriveResumeSections(document.plainText);
-  
-  const contact = buildContact(sections.contactLines);
+  // Use structured data if available, otherwise parse text
+  let sections = {};
+  let contact = {};
+  let documentText = "";
+
+  if (resumeDocument && resumeDocument.header) {
+    // It's a structured/merged document
+    sections = {
+      summary: [resumeDocument.summary].flat().filter(Boolean),
+      skills: resumeDocument.skills || [],
+      experience: resumeDocument.experience ? resumeDocument.experience.map(exp => {
+        // Convert structured experience back to string format for display if needed
+        // OR adapt the template to handle objects.
+        // The existing template code expects strings in 'experience' array for most parts,
+        // BUT `experience` in resumeUtils is an array of objects { company, position, description[] }.
+        // The original `deriveResumeSections` returned an array of STRINGS for experience.
+        // We need to adapt the renderer below to handle this.
+        if (typeof exp === 'string') return exp;
+        const bullets = Array.isArray(exp.description) ? exp.description.join(" ") : exp.description;
+        return `${exp.position || ""} at ${exp.company || ""} - ${bullets}`;
+      }) : [],
+      education: resumeDocument.education ? resumeDocument.education.map(edu => {
+        if (typeof edu === 'string') return edu;
+        return `${edu.institution || ""} ${edu.date || ""}`;
+      }) : [],
+      projects: resumeDocument.projects || [],
+      contactLines: [] // We'll build contact manually
+    };
+
+    contact = {
+      name: resumeDocument.header.name,
+      entries: [
+        resumeDocument.header.email,
+        resumeDocument.header.phone,
+        resumeDocument.header.location,
+        resumeDocument.header.linkedin
+      ].filter(Boolean)
+    };
+    documentText = resumeDocument.plainText || "";
+  } else {
+    // Fallback to parsing
+    const document = ensureResumeDocument(resumeDocument ?? resumeText);
+    sections = deriveResumeSections(document.plainText);
+    contact = buildContact(sections.contactLines);
+    documentText = document.plainText;
+  }
+
   const summaryHtml = buildSummary(sections.summary, matchAnalysis, optimizations);
-  const jdSnippet = jobDescription ? `<p class="muted">Target role context: ${escapeHtml(jobDescription.slice(0, 240))}${
-    jobDescription.length > 240 ? "…" : ""
-  }</p>` : "";
+  const jdSnippet = jobDescription ? `<p class="muted">Target role context: ${escapeHtml(jobDescription.slice(0, 240))}${jobDescription.length > 240 ? "…" : ""
+    }</p>` : "";
 
   const contactContent =
     contact.entries.length > 0
@@ -303,10 +344,10 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
   };
 
   // Check if we have any structured content
-  const hasStructuredContent = 
-    sections.experience.length > 0 || 
-    sections.education.length > 0 || 
-    sections.projects.length > 0 || 
+  const hasStructuredContent =
+    sections.experience.length > 0 ||
+    sections.education.length > 0 ||
+    sections.projects.length > 0 ||
     allSkills.length > 0 ||
     summaryHtml;
 
@@ -564,22 +605,60 @@ const buildPlainExportHtml = ({
   matchAnalysis,
   optimizations,
 }) => {
-  const document = ensureResumeDocument(resumeDocument ?? resumeText);
-  const sections = deriveResumeSections(document.plainText);
-  const contact = buildContact(sections.contactLines);
+  let sections = {};
+  let contact = {};
+  let bullets = [];
+
+  if (resumeDocument && resumeDocument.header) {
+    // Structured Data
+    sections = {
+      summary: [resumeDocument.summary].flat().filter(Boolean),
+      skills: resumeDocument.skills || [],
+      experience: resumeDocument.experience ? resumeDocument.experience.map(exp => {
+        if (typeof exp === 'string') return exp;
+        // For plain export, we want readable lines
+        const desc = Array.isArray(exp.description) ? exp.description.join(". ") : exp.description;
+        return `${exp.position || "Role"} at ${exp.company || "Company"} | ${desc}`;
+      }) : [],
+      education: resumeDocument.education ? resumeDocument.education.map(edu => {
+        if (typeof edu === 'string') return edu;
+        return `${edu.institution || ""} ${edu.degree || ""}`;
+      }) : [],
+      projects: resumeDocument.projects || []
+    };
+
+    contact = {
+      name: resumeDocument.header.name,
+      entries: [
+        resumeDocument.header.email,
+        resumeDocument.header.phone,
+        resumeDocument.header.location,
+        resumeDocument.header.linkedin
+      ].filter(Boolean)
+    };
+    // For bullets in plain ATS, we might just use experience lines if specific bullets aren't separated nicely in the 'bullets' prop
+    bullets = sections.experience;
+  } else {
+    const document = ensureResumeDocument(resumeDocument ?? resumeText);
+    sections = deriveResumeSections(document.plainText);
+    contact = buildContact(sections.contactLines);
+    bullets = document.bullets.length > 0 ? document.bullets : sections.experience;
+  }
+
   const summaryLines = sections.summary.length > 0 ? sections.summary : sections.experience.slice(0, 3);
   const experienceLines = sections.experience;
   const educationLines = sections.education;
   const skillsLines = sections.skills;
   const projectsLines = sections.projects;
-  const bulletLines = document.bullets.length > 0 ? document.bullets : experienceLines;
+  const bulletLines = bullets;
+
   const optimizationBullets = Array.isArray(optimizations)
     ? optimizations
-        .map((item) =>
-          item?.suggestion ? `• ${escapeHtml(item.section ? `${item.section}: ${item.suggestion}` : item.suggestion)}` : null,
-        )
-        .filter(Boolean)
-        .slice(0, 5)
+      .map((item) =>
+        item?.suggestion ? `• ${escapeHtml(item.section ? `${item.section}: ${item.suggestion}` : item.suggestion)}` : null,
+      )
+      .filter(Boolean)
+      .slice(0, 5)
     : [];
 
   const formatPercentValue = (value) =>
@@ -599,7 +678,7 @@ const buildPlainExportHtml = ({
 
   const renderListSection = (title, lines) => {
     if (!lines || lines.length === 0) return "";
-    const content = lines.map((line) => `<li>${escapeHtml(line.replace(/^•\s*/, ""))}</li>`).join("");
+    const content = lines.map((line) => `<li>${escapeHtml(line.replace(/^•\s*/, "")) || ""}</li>`).join("");
     return `<section><h2>${escapeHtml(title)}</h2><ul>${content}</ul></section>`;
   };
 
@@ -677,24 +756,24 @@ export const exportResumeToPdf = async ({
   const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
   const normalizedVariant = normalizeVariant(variant);
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
-  
+
   // If skipPrint is true, just return the HTML content
   if (skipPrint) {
     return html;
   }
-  
+
   // Create a new window for printing
   const printWindow = window.open('', '_blank', 'width=800,height=600');
-  
+
   if (!printWindow) {
     throw new Error('Please allow pop-ups to export PDF. Check your browser settings.');
   }
-  
+
   try {
     // Write the HTML to the new window
     printWindow.document.write(html);
     printWindow.document.close();
-    
+
     // Wait for content to load
     await new Promise((resolve) => {
       if (printWindow.document.readyState === 'complete') {
@@ -703,18 +782,18 @@ export const exportResumeToPdf = async ({
         printWindow.addEventListener('load', resolve);
       }
     });
-    
+
     // Small delay to ensure rendering is complete
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // Trigger the browser's native print dialog
     printWindow.print();
-    
+
     // Close the window after a delay (user can cancel print)
     setTimeout(() => {
       printWindow.close();
     }, 1000);
-    
+
     return true;
   } catch (error) {
     console.error('[PDF Export] Failed:', error);

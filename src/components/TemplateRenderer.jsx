@@ -5,9 +5,35 @@ import { useMemo } from "react";
 import { cn } from "../lib/cn.js";
 import { ExternalLink, Github, Linkedin, Mail, Phone, MapPin } from "lucide-react";
 import ModernTemplate from "./templates/ModernTemplate.jsx";
-import ATSClassic from "./templates/ATSClassic.jsx";
+import { ATSClassic } from "./templates/ATSClassic.jsx";
+
+// Helper to safely render a value (handles strings, objects, arrays)
+// Helper to safely render a value (handles strings, objects, arrays, and React Elements)
+import { isValidElement } from "react";
+
+const safeRender = (value, fallback = "") => {
+  if (value === null || value === undefined) return fallback;
+  if (isValidElement(value)) return value; // Allow React components (for Diffs)
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (Array.isArray(value)) {
+    return value.map((item, i) => {
+      if (isValidElement(item)) return <span key={i}>{item}</span>;
+      if (typeof item === "string") return item;
+      if (typeof item === "object") {
+        return item.name || item.title || item.institution || item.text || JSON.stringify(item);
+      }
+      return String(item);
+    }).reduce((prev, curr) => [prev, ", ", curr]); // Join with commas for arrays of elements
+  }
+  if (typeof value === "object") {
+    return value.name || value.title || value.institution || value.text || JSON.stringify(value);
+  }
+  return String(value);
+};
 
 const ContactIcon = ({ type }) => {
+
   const icons = {
     email: Mail,
     phone: Phone,
@@ -111,7 +137,7 @@ const ParagraphSection = ({ section, content }) => {
   return (
     <div className="prose dark:prose-invert max-w-none">
       <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-        {content || section.placeholder}
+        {safeRender(content, section.placeholder)}
       </p>
     </div>
   );
@@ -166,7 +192,7 @@ const GridSection = ({ section, items }) => {
           key={idx}
           className="bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg text-center text-sm font-medium text-gray-900 dark:text-white"
         >
-          {typeof item === "string" ? item.trim() : item.name}
+          {safeRender(item)}
         </div>
       ))}
     </div>
@@ -190,7 +216,7 @@ const CategorizedSection = ({ section, data }) => {
             {item.category}
           </h4>
           <p className="text-gray-700 dark:text-gray-300 text-sm">
-            {item.skills || section.placeholder}
+            {safeRender(item.skills, section.placeholder)}
           </p>
         </div>
       ))}
@@ -206,7 +232,7 @@ const TagsSection = ({ section, tags }) => {
           key={idx}
           className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-medium rounded-full"
         >
-          {typeof tag === "string" ? tag.trim() : tag.name}
+          {safeRender(tag)}
         </span>
       ))}
     </div>
@@ -218,7 +244,7 @@ const ListSection = ({ section, items }) => {
     <ul className="space-y-2">
       {(items || [section.placeholder]).map((item, idx) => (
         <li key={idx} className="text-gray-700 dark:text-gray-300">
-          • {typeof item === "string" ? item : item.text}
+          • {safeRender(item)}
         </li>
       ))}
     </ul>
@@ -238,7 +264,7 @@ const SectionRenderer = ({ section, userData }) => {
     "simple-list": () => <ListSection section={section} items={content} />,
     showcase: () => <TimelineSection section={section} items={content} />,
     gallery: () => <GridSection section={section} items={content} />,
-    text: () => <p className="text-gray-700 dark:text-gray-300">{content || section.placeholder}</p>,
+    text: () => <p className="text-gray-700 dark:text-gray-300">{safeRender(content, section.placeholder)}</p>,
     formal: () => <ParagraphSection section={section} content={content} />
   };
 
@@ -297,7 +323,7 @@ export default function TemplateRenderer({ template, userData = {} }) {
   }
 
   if (template.id === "classic-traditional") {
-    return <ATSClassic userData={userData} />;
+    return <ATSClassic data={userData} />;
   }
 
   // Fallback to generic renderer for other templates

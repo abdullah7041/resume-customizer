@@ -556,9 +556,16 @@ export default function MainContent() {
       const normalizedVariant = variant === "ats-plain" ? "ats-plain" : "styled";
 
       try {
+        // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
+        const { mergeResumeData } = await import("../utils/resumeUtils.js");
+        const mergedResume = mergeResumeData(resumeData, {
+          optimization: optimizationData,
+          candidateProfile: null // Add if available
+        });
+
         // Get the HTML content from exportPdf (without triggering print)
         const htmlContent = await exportResumeToPdf({
-          resumeDocument: resumeData,
+          resumeDocument: mergedResume || resumeData, // Fallback to original if merge fails
           jobDescription,
           matchAnalysis,
           optimizations,
