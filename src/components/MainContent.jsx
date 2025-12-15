@@ -634,7 +634,7 @@ export default function MainContent() {
         });
       }
     },
-    [jobDescription, matchAnalysis, optimizations, optimizationKeywords, pushToast, resumeData, user]
+    [jobDescription, matchAnalysis, optimizationData, optimizations, optimizationKeywords, pushToast, resumeData, user]
   );
 
   const renderedToasts = useMemo(
@@ -694,7 +694,7 @@ export default function MainContent() {
             </button>
           )}
         </div>
-        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-4 sm:p-5 lg:p-6 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
+        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-4 sm:p-5 lg:p-6 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
           {activeTab === "resume" && (
             <ResumeUpload
               onParseResume={handleParseResume}
@@ -755,6 +755,8 @@ export default function MainContent() {
               jobDescription={jobDescription}
               resumeText={resumeData?.plainText || ""}
               matchAnalysis={matchAnalysis}
+              resumeData={resumeData}
+              onUpdate={(updates) => setResumeData(prev => ({ ...prev, ...updates }))}
             />
           )}
           {activeTab === "bulk" && (
@@ -792,7 +794,7 @@ export default function MainContent() {
         text={resumeData?.plainText || ""}
       />
       <div className={`${containerClass} space-y-6 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="card-glow rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-5 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
+        <div className="card-glow rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-5 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
@@ -824,7 +826,7 @@ export default function MainContent() {
           ) : (
             <EmptyState
               icon={UserPlus}
-              title="Sign in to unlock Saudi-ready insights"
+              title="Sign in to unlock insights"
               description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
               actions={
                 <Button

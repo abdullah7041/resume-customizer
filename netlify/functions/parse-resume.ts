@@ -4,6 +4,7 @@ import {
   extractPlainTextFromArrayBuffer,
   inferMimeType,
 } from "../lib/resumeText.js";
+import { withRateLimit } from "../lib/rate-limiter";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,15 +24,15 @@ const IMAGE_MIME_TYPES = new Set([
 
 type ParseResumeRequest =
   | {
-      kind: "text";
-      value?: string;
-    }
+    kind: "text";
+    value?: string;
+  }
   | {
-      kind: "file";
-      name?: string;
-      mime?: string;
-      data?: string;
-    };
+    kind: "file";
+    name?: string;
+    mime?: string;
+    data?: string;
+  };
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB safety guard
 
@@ -53,7 +54,7 @@ const extractWithDeepSeekOCR = async (
   mimeType: string
 ): Promise<{ text: string; structured: any; usedOCR: boolean }> => {
   const apiKey = process.env.DEEPSEEK_API_KEY;
-  
+
   if (!apiKey) {
     throw new Error("DeepSeek API key not configured");
   }
@@ -63,32 +64,58 @@ const extractWithDeepSeekOCR = async (
   const base64Image = buffer.toString("base64");
   const dataUri = `data:${mimeType};base64,${base64Image}`;
 
-  const prompt = `Extract all text from this resume image and structure it as JSON with these fields:
+  const prompt = `Extract ALL text from this resume image COMPLETELY. Structure it as JSON with these fields:
 {
   "name": "Full Name",
   "email": "email@example.com",
   "phone": "phone number",
-  "summary": "professional summary or objective",
+  "linkedin": "LinkedIn URL if present",
+  "github": "GitHub URL if present",
+  "portfolio": "Portfolio URL if present",
+  "headline": "Job title/headline if present",
+  "summary": "professional summary or objective - extract the COMPLETE text",
   "experience": [
     {
       "title": "Job Title",
       "company": "Company Name",
+      "location": "Location if present",
       "duration": "Start - End",
-      "responsibilities": ["bullet point 1", "bullet point 2"]
+      "responsibilities": ["bullet point 1", "bullet point 2", "...every bullet point"]
     }
   ],
   "education": [
     {
       "degree": "Degree Name",
       "institution": "School Name",
-      "year": "Graduation Year"
+      "location": "Location if present",
+      "year": "Graduation Year",
+      "details": ["Any additional details like GPA, honors, coursework"]
     }
   ],
-  "skills": ["skill1", "skill2", "skill3"],
-  "certifications": ["cert1", "cert2"]
+  "projects": [
+    {
+      "name": "Project Name",
+      "description": "Project description",
+      "highlights": ["bullet point 1", "bullet point 2"],
+      "technologies": ["tech1", "tech2"]
+    }
+  ],
+  "skills": {
+    "technical": ["skill1", "skill2"],
+    "soft": ["skill1", "skill2"],
+    "tools": ["tool1", "tool2"],
+    "languages": ["language1", "language2"]
+  },
+  "certifications": ["cert1", "cert2"],
+  "training": ["training1", "training2"]
 }
 
-CRITICAL: Extract ONLY what you see. Do NOT invent information.
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY piece of text you see - do not summarize or truncate
+2. Include ALL bullet points for each job experience
+3. Include ALL projects with their complete descriptions
+4. Preserve the EXACT wording from the resume
+5. Do NOT invent or infer information not visible in the image
 Return valid JSON only - no markdown, no commentary.`;
 
   try {
@@ -110,7 +137,7 @@ Return valid JSON only - no markdown, no commentary.`;
           },
         ],
         temperature: 0.1,
-        max_tokens: 2048,
+        max_tokens: 4096,
       }),
     });
 
@@ -125,48 +152,92 @@ Return valid JSON only - no markdown, no commentary.`;
     const content = data.choices?.[0]?.message?.content || "";
 
     // Extract JSON from markdown code blocks if present
-    const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) || 
-                     content.match(/(\{[\s\S]*\})/);
-    
+    const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) ||
+      content.match(/(\{[\s\S]*\})/);
+
     if (!jsonMatch) {
       throw new Error("DeepSeek OCR did not return valid JSON");
     }
 
     const structured = JSON.parse(jsonMatch[1]);
-    
-    // Convert structured data back to plain text
+
+    // Convert structured data back to plain text (comprehensive extraction)
     const textParts: string[] = [];
     if (structured.name) textParts.push(structured.name);
+    if (structured.headline) textParts.push(structured.headline);
     if (structured.email) textParts.push(structured.email);
     if (structured.phone) textParts.push(structured.phone);
-    if (structured.summary) textParts.push(`\n${structured.summary}`);
-    
+    if (structured.linkedin) textParts.push(structured.linkedin);
+    if (structured.github) textParts.push(structured.github);
+    if (structured.portfolio) textParts.push(structured.portfolio);
+
+    if (structured.summary) textParts.push(`\n\nSUMMARY\n${structured.summary}`);
+
     if (structured.experience?.length) {
       textParts.push("\n\nEXPERIENCE");
       for (const exp of structured.experience) {
         textParts.push(`\n${exp.title} at ${exp.company}`);
+        if (exp.location) textParts.push(`${exp.location}`);
         if (exp.duration) textParts.push(`${exp.duration}`);
         if (exp.responsibilities?.length) {
           textParts.push(...exp.responsibilities.map((r: string) => `• ${r}`));
         }
       }
     }
-    
+
+    if (structured.projects?.length) {
+      textParts.push("\n\nPROJECTS");
+      for (const project of structured.projects) {
+        textParts.push(`\n${project.name}`);
+        if (project.description) textParts.push(project.description);
+        if (project.highlights?.length) {
+          textParts.push(...project.highlights.map((h: string) => `• ${h}`));
+        }
+        if (project.technologies?.length) {
+          textParts.push(`Technologies: ${project.technologies.join(", ")}`);
+        }
+      }
+    }
+
     if (structured.education?.length) {
       textParts.push("\n\nEDUCATION");
       for (const edu of structured.education) {
-        textParts.push(`\n${edu.degree} - ${edu.institution} (${edu.year})`);
+        textParts.push(`\n${edu.degree} - ${edu.institution}${edu.location ? `, ${edu.location}` : ""} (${edu.year})`);
+        if (edu.details?.length) {
+          textParts.push(...edu.details.map((d: string) => `• ${d}`));
+        }
       }
     }
-    
-    if (structured.skills?.length) {
+
+    // Handle both array and object formats for skills
+    if (structured.skills) {
       textParts.push("\n\nSKILLS");
-      textParts.push(structured.skills.join(", "));
+      if (Array.isArray(structured.skills)) {
+        textParts.push(structured.skills.join(", "));
+      } else if (typeof structured.skills === 'object') {
+        if (structured.skills.technical?.length) {
+          textParts.push(`Technical: ${structured.skills.technical.join(", ")}`);
+        }
+        if (structured.skills.soft?.length) {
+          textParts.push(`Soft Skills: ${structured.skills.soft.join(", ")}`);
+        }
+        if (structured.skills.tools?.length) {
+          textParts.push(`Tools: ${structured.skills.tools.join(", ")}`);
+        }
+        if (structured.skills.languages?.length) {
+          textParts.push(`Languages: ${structured.skills.languages.join(", ")}`);
+        }
+      }
     }
-    
+
     if (structured.certifications?.length) {
       textParts.push("\n\nCERTIFICATIONS");
       textParts.push(structured.certifications.join(", "));
+    }
+
+    if (structured.training?.length) {
+      textParts.push("\n\nTRAINING");
+      textParts.push(structured.training.join(", "));
     }
 
     return {
@@ -405,7 +476,7 @@ const extractText = async (
   throw new Error("Invalid parse request.");
 };
 
-const handler: Handler = async (event) => {
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -424,7 +495,7 @@ const handler: Handler = async (event) => {
 
   try {
     const rawBody = event.body ? JSON.parse(event.body) : {};
-    
+
     // Handle direct text input or normalize to ParseResumeRequest format
     let body: ParseResumeRequest;
     if (typeof rawBody.text === "string") {
@@ -445,7 +516,7 @@ const handler: Handler = async (event) => {
       // Default to empty text
       body = { kind: "text", value: "" };
     }
-    
+
     const extractionResult = await extractText(body);
 
     // 🔍 DEBUG LOGGING: Log extraction quality metrics
@@ -492,8 +563,8 @@ const handler: Handler = async (event) => {
     const userMessage = message.includes("Unsupported")
       ? "Unsupported file type. Please upload a PDF or DOCX file, or paste your resume text directly."
       : message.includes("exceeds")
-      ? "File is too large. Please use a file smaller than 8 MB."
-      : `Unable to parse resume: ${message}`;
+        ? "File is too large. Please use a file smaller than 8 MB."
+        : `Unable to parse resume: ${message}`;
 
     return {
       statusCode: 400,
@@ -503,4 +574,6 @@ const handler: Handler = async (event) => {
   }
 };
 
+// Export handler with rate limiting applied
+const handler = withRateLimit("parse-resume", baseHandler);
 export { handler };

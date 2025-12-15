@@ -4,15 +4,15 @@ import { cn } from "../../lib/cn";
 
 const variantStyles = {
   primary:
-    "bg-[image:var(--gradient-primary-value)] text-white shadow-lift hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] hover:brightness-110",
+    "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-[1px] active:scale-[0.98] transition-all duration-200",
   secondary:
-    "border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] text-ink shadow-soft",
+    "border border-emerald-200/50 dark:border-emerald-800/30 bg-white/50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300 shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 backdrop-blur-sm",
   frosted:
     "border border-[color:color-mix(in_oklab,var(--glass-border-strong),transparent_24%)] bg-[linear-gradient(140deg,color-mix(in_oklab,var(--surface-glass),transparent_6%)_0%,color-mix(in_oklab,var(--surface-glass-strong),transparent_28%)_58%,rgba(32,195,155,0.28)_100%)] text-surface-50 shadow-[0_26px_62px_-28px_rgba(12,136,104,0.78)] backdrop-blur-2xl",
   ghost:
-    "border border-transparent bg-transparent text-ink-muted hover:text-ink",
+    "border border-transparent bg-transparent text-ink-muted hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20",
   outline:
-    "border border-[color:var(--glass-border-strong)] bg-transparent text-emerald-500",
+    "border border-emerald-200 dark:border-emerald-800 bg-transparent text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20",
 };
 
 const interactiveStyles =
@@ -49,9 +49,6 @@ export const Button = forwardRef(function Button(
           : "",
         resolvedVariant,
         focusDisabled,
-        variant === "frosted"
-          ? "hover:-translate-y-[2px] hover:shadow-[0_30px_70px_-28px_rgba(18,170,132,0.82)] hover:border-[color:var(--glass-border-hover)]"
-          : "hover:-translate-y-[2px] hover:shadow-[var(--shadow-hover)] hover:border-[color:var(--glass-border-hover)]",
         className
       )}
       disabled={isDisabled}

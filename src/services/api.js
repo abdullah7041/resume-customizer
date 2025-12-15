@@ -1,5 +1,4 @@
 // src/services/api.js
-import { updateDevStatus } from "../components/DevStatusHUD";
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
@@ -29,8 +28,6 @@ const fileToBase64 = async (file) => {
 };
 
 export const parseResume = async (resumeInput) => {
-  updateDevStatus("OCR_UPDATE", { status: "parsing", text: "" });
-
   try {
     let payload;
     if (resumeInput instanceof File) {
@@ -47,12 +44,9 @@ export const parseResume = async (resumeInput) => {
     });
 
     const data = await handleResponse(response);
-
-    updateDevStatus("OCR_UPDATE", { status: "success", text: data.document.plainText });
     return data.document;
 
   } catch (error) {
-    updateDevStatus("OCR_UPDATE", { status: "error", text: "" });
     console.error("Parse failed:", error);
     throw error;
   }
@@ -72,8 +66,6 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
     throw new Error("Paste the job description");
   }
 
-  updateDevStatus("API_UPDATE", { status: "active", lastOp: "AI Match", model: "gemini-2.5-flash-lite" });
-
   try {
     const response = await fetch(MATCH_ENDPOINT, {
       method: "POST",
@@ -82,8 +74,6 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
     });
 
     const data = await handleResponse(response);
-
-    updateDevStatus("API_UPDATE", { status: "idle", lastOp: "Match Complete", model: "gemini-2.5-flash-lite" });
 
     // Sanitize response to match expected frontend format and handle potential NaN/nulls
     return {
@@ -95,10 +85,10 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
       topHits: data.matched_keywords || data.strongMatches || [],
       suggestions: data.recommendations || [],
       missingKeywords: data.missingKeywords || data.missing_keywords || [],
+      reasoning: data.overallAssessment || data.explanation?.reason || null, // AI's explanation of the match score
     };
 
   } catch (error) {
-    updateDevStatus("API_UPDATE", { status: "error", lastOp: "Match Failed" });
     console.error("Match failed:", error);
     // Return graceful failure object to prevent app crash
     return {
@@ -115,8 +105,6 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 };
 
 export const optimizeResume = async ({ resumeText, jobDesc }) => {
-  updateDevStatus("API_UPDATE", { status: "active", lastOp: "Optimizing", model: "gemini-2.5-flash-lite" });
-
   try {
     const response = await fetch(OPTIMIZE_ENDPOINT, {
       method: "POST",
@@ -125,12 +113,9 @@ export const optimizeResume = async ({ resumeText, jobDesc }) => {
     });
 
     const data = await handleResponse(response);
-
-    updateDevStatus("API_UPDATE", { status: "idle", lastOp: "Optimization Complete", model: "gemini-2.5-flash-lite" });
     return data;
 
   } catch (error) {
-    updateDevStatus("API_UPDATE", { status: "error", lastOp: "Optimization Failed" });
     console.error("Optimization failed:", error);
     throw error;
   }
@@ -138,3 +123,4 @@ export const optimizeResume = async ({ resumeText, jobDesc }) => {
 
 // Legacy exports to prevent breaking imports if any remain
 export const analyzeResume = analyzeResumeWithAI;
+

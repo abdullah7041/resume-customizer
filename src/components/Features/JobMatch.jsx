@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Info, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Info, Loader2, Sparkles, CheckCircle2, Target, Zap, Wrench } from "lucide-react";
 import Button from "../ui/Button.jsx";
 import AnimatedCard from "../ui/AnimatedCard.jsx";
 import { AnimatedCounter } from "../ui/AnimatedCounter.jsx";
@@ -16,7 +16,7 @@ const resolveVariant = (score) => {
       strokeStart: "#10B981", // Emerald-500
       strokeEnd: "#34D399",   // Emerald-400
       label: "Strong Match",
-      emoji: "🎯",
+      icon: Target,
       text: "text-emerald-400"
     };
   }
@@ -27,7 +27,7 @@ const resolveVariant = (score) => {
       strokeStart: "#F59E0B", // Amber-500
       strokeEnd: "#FBBF24",   // Amber-400
       label: "Good Start",
-      emoji: "⚡",
+      icon: Zap,
       text: "text-amber-400"
     };
   }
@@ -37,7 +37,7 @@ const resolveVariant = (score) => {
     strokeStart: "#F43F5E", // Rose-500
     strokeEnd: "#FB7185",   // Rose-400
     label: "Needs Work",
-    emoji: "🔧",
+    icon: Wrench,
     text: "text-rose-400"
   };
 };
@@ -136,7 +136,7 @@ export default function JobMatch({
       <div className="space-y-6">
         <SectionTitle
           eyebrow="Step 2"
-          title="Match to a Saudi job role"
+          title="Match a role"
           description="Paste the job description to uncover keyword gaps and alignment opportunities."
           action={
             jobText ? (
@@ -213,7 +213,7 @@ export default function JobMatch({
 
               {/* Content Layer */}
               <div className="relative z-10 p-6 text-surface-50">
-                <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
+                <div className="flex flex-col items-center gap-6">
                   <div className="grid place-items-center">
                     <div className="relative h-32 w-32">
                       {/* Outer Glow */}
@@ -267,10 +267,8 @@ export default function JobMatch({
                       <div
                         className="absolute inset-4 grid place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md shadow-inner"
                       >
-                        <div className="flex flex-col items-center justify-center text-center pt-1">
-                          <span className="text-xl mb-0.5 filter drop-shadow-md animate-in zoom-in duration-500" role="img" aria-label="Match quality">
-                            {variant.emoji}
-                          </span>
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <variant.icon className="w-6 h-6 mb-1 text-white/90 drop-shadow-md animate-in zoom-in duration-500" />
                           <Tooltip
                             content={`${score != null ? score : 0}/100 - ${variant.label} match with job requirements`}
                             position="bottom"
@@ -280,10 +278,10 @@ export default function JobMatch({
                                 <AnimatedCounter
                                   to={score}
                                   duration={1500}
-                                  className="text-3xl font-black tracking-tight leading-none text-white drop-shadow-lg"
+                                  className="text-5xl font-black tracking-tight leading-none text-white drop-shadow-lg"
                                 />
                               ) : (
-                                <span className="text-3xl font-black tracking-tight leading-none text-white/50">—</span>
+                                <span className="text-5xl font-black tracking-tight leading-none text-white/50">—</span>
                               )}
                               {score != null && (
                                 <span className="text-[10px] font-bold text-white/70 leading-none">/100</span>
@@ -298,17 +296,19 @@ export default function JobMatch({
                     </div>
                   </div>
 
-                  <div className="space-y-3 text-left">
+                  <div className="space-y-3 text-center">
                     <div>
                       <p className={`text-sm font-bold uppercase tracking-[0.32em] ${variant.text}`}>
                         {variant.label}
                       </p>
                       <p className="mt-1 text-sm leading-relaxed text-surface-50/80">
-                        {score >= 80
-                          ? "Your profile is highly aligned with this role. Focus on highlighting your specific achievements."
-                          : score >= 60
-                            ? "You have a solid foundation. Addressing a few key gaps could significantly boost your chances."
-                            : "There are significant gaps between your resume and the job requirements. Consider tailoring your experience."
+                        {matchAnalysis?.reasoning
+                          ? matchAnalysis.reasoning
+                          : score >= 80
+                            ? "Your profile is highly aligned with this role. Focus on highlighting your specific achievements."
+                            : score >= 60
+                              ? "You have a solid foundation. Addressing a few key gaps could significantly boost your chances."
+                              : "There are significant gaps between your resume and the job requirements. Consider tailoring your experience."
                         }
                       </p>
                     </div>

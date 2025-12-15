@@ -295,8 +295,7 @@ export const getSkylineUrl = () => {
       memoizedSkylineUrl = resolvedUrl ? withVersion(resolvedUrl) : FALLBACK_SKYLINE_URL;
     } catch (error) {
       warnHostOnlyEnv(
-        `[assets] Failed to resolve skyline asset: ${
-          error instanceof Error ? error.message : String(error)
+        `[assets] Failed to resolve skyline asset: ${error instanceof Error ? error.message : String(error)
         }`,
       );
       memoizedSkylineUrl = FALLBACK_SKYLINE_URL;

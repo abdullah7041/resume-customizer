@@ -4,7 +4,7 @@ import Button from "../ui/Button.jsx";
 import Card from "../ui/Card.jsx";
 import { cn } from "../../lib/cn";
 
-export default function OptimizationCard({ card, onCopy, disabledActions = false }) {
+export default function OptimizationCard({ card, onCopy, disabledActions = false, viewMode = "split" }) {
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
 
@@ -71,17 +71,28 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft/80">Before</p>
-                <div className="h-full rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] px-4 py-3 text-sm leading-relaxed text-ink">
-                  <p>{card?.exampleBefore ?? "Original bullet pending."}</p>
+            <div className={cn(
+              "grid gap-4",
+              viewMode === "split" ? "md:grid-cols-2" : "grid-cols-1"
+            )}>
+              {/* Before Section - Hide in diff mode unless we want to show it distinctly? 
+                      Actually, "Inline Diff" usually implies merging them. 
+                      For now, let's keep it simple: Split = Side-by-Side, Diff = Unified View 
+                  */}
+
+              {viewMode === "split" && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft/80">Before</p>
+                  <div className="h-full rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] px-4 py-3 text-sm leading-relaxed text-ink">
+                    <p>{card?.exampleBefore ?? "Original bullet pending."}</p>
+                  </div>
                 </div>
-              </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">
-                    After
+                    {viewMode === "split" ? "After" : "Optimized View"}
                   </p>
                   <Button
                     variant="secondary"
@@ -96,7 +107,19 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
                 </div>
                 <div className="relative h-full overflow-hidden rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm leading-relaxed text-ink shadow-[0_0_15px_-3px_rgba(16,185,129,0.1)] dark:border-emerald-400/20 dark:bg-emerald-400/5">
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-50" />
-                  <p className="relative">{card?.exampleAfter ?? "Optimized bullet pending."}</p>
+
+                  {viewMode === "diff" && card?.exampleBefore ? (
+                    <p className="relative">
+                      <span className="line-through text-red-500/70 bg-red-50 dark:bg-red-900/20 px-1 rounded decoration-1 mr-1">
+                        {card.exampleBefore}
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-900/20 px-1 rounded">
+                        {card.exampleAfter}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="relative">{card?.exampleAfter ?? "Optimized bullet pending."}</p>
+                  )}
                 </div>
               </div>
             </div>

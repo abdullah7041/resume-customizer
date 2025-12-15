@@ -8,33 +8,63 @@ import Card from "../components/ui/Card.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import { cn } from "../lib/cn.js";
 
-const KeywordBar = ({ keyword, count, score, maxScore, variant = "default" }) => {
-  const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+const KeywordBar = ({ keyword, count, score, maxScore, variant = "default", isLoading = false }) => {
+  // Calculate percentage based on count relative to max, capped at 100%
+  const percentage = maxScore > 0 ? Math.min((count / maxScore) * 100, 100) : 0;
+  // Display score capped at 100%
+  const displayScore = Math.min(score, 100);
 
   const colors = {
-    default: "bg-gradient-to-r from-emerald-500 to-teal-600",
-    matched: "bg-gradient-to-r from-green-500 to-emerald-600",
-    missing: "bg-gradient-to-r from-amber-500 to-orange-600",
-    emphasis: "bg-gradient-to-r from-blue-500 to-cyan-600"
+    default: "bg-gradient-to-r from-cyan-400 via-teal-500 to-emerald-500",
+    matched: "bg-gradient-to-r from-emerald-400 via-green-500 to-teal-500",
+    missing: "bg-gradient-to-r from-rose-400 via-pink-500 to-orange-400",
+    emphasis: "bg-gradient-to-r from-violet-400 via-purple-500 to-indigo-500"
+  };
+
+  const glowColors = {
+    default: "shadow-[0_0_12px_rgba(20,184,166,0.4)]",
+    matched: "shadow-[0_0_12px_rgba(34,197,94,0.4)]",
+    missing: "shadow-[0_0_12px_rgba(244,63,94,0.4)]",
+    emphasis: "shadow-[0_0_12px_rgba(139,92,246,0.4)]"
   };
 
   return (
-    <div className="flex items-center gap-3 py-2">
-      <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-100 truncate">
-        {keyword}
+    <div className="group flex items-center gap-4 py-2.5 px-3 rounded-xl transition-all duration-300 hover:bg-white/5 dark:hover:bg-white/5">
+      <div className="w-28 flex-shrink-0">
+        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate block">
+          {keyword}
+        </span>
       </div>
-      <div className="flex-1 relative h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className="flex-1 relative h-7 bg-gray-200/50 dark:bg-gray-800/80 rounded-full overflow-hidden backdrop-blur-sm border border-gray-300/30 dark:border-gray-600/30">
+        {/* Animated shimmer background */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+        )}
+        {/* Progress bar with glow effect */}
         <div
-          className={cn("h-full transition-all duration-500 rounded-full", colors[variant])}
-          style={{ width: `${Math.min(percentage, 100)}%` }}
+          className={cn(
+            "h-full rounded-full transition-all duration-700 ease-out relative",
+            colors[variant],
+            glowColors[variant],
+            "after:absolute after:inset-0 after:bg-gradient-to-t after:from-transparent after:via-white/20 after:to-white/30 after:rounded-full"
+          )}
+          style={{
+            width: `${percentage}%`,
+            animation: 'growBar 0.8s ease-out'
+          }}
         />
       </div>
-      <div className="w-20 text-right">
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+      <div className="w-24 text-right flex items-center justify-end gap-1.5">
+        <span className="text-sm font-bold text-gray-900 dark:text-white bg-gray-100/80 dark:bg-gray-700/80 px-2 py-0.5 rounded-md">
           {count}×
         </span>
-        <span className="text-xs text-gray-600 dark:text-gray-200 ml-1">
-          ({score}%)
+        <span className={cn(
+          "text-xs font-semibold px-2 py-0.5 rounded-md",
+          displayScore >= 70 ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" :
+            displayScore >= 40 ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300" :
+              "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300"
+        )}>
+          {displayScore}%
         </span>
       </div>
     </div>
@@ -83,10 +113,10 @@ const SuggestionCard = ({ suggestions }) => {
       : "text-rose-600 dark:text-rose-400";
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-gray-800 dark:to-gray-750 border-emerald-100 dark:border-emerald-800/50">
+    <Card className="p-6 border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] backdrop-blur-soft shadow-card">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-emerald-100 dark:border-emerald-800">
+          <div className="p-2 bg-emerald-500/10 rounded-lg shadow-sm border border-emerald-500/20">
             <Target className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
@@ -107,28 +137,29 @@ const SuggestionCard = ({ suggestions }) => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-500" />
-              <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Critical Gaps</h4>
+              <AlertCircle className="w-5 h-5 text-rose-500" />
+              <h4 className="font-bold text-base text-gray-900 dark:text-white">Critical Gaps</h4>
             </div>
-            <span className="text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full">
+            <span className="text-sm font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-full">
               {toAdd?.length || 0}
             </span>
           </div>
 
-          <div className="bg-white dark:bg-gray-800/50 rounded-xl p-3 border border-rose-100 dark:border-rose-900/20 min-h-[120px]">
+          <div className="rounded-xl p-3 min-h-[120px]">
             {toAdd && toAdd.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {toAdd.slice(0, 8).map((kw, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-300 border border-rose-500/20 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:text-emerald-600 dark:hover:text-emerald-300 hover:-translate-y-0.5 hover:shadow-sm cursor-help"
+                    className="group relative inline-flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-600 dark:text-rose-300 shadow-sm transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:text-emerald-600 dark:hover:text-emerald-300 hover:shadow-md hover:-translate-y-0.5 cursor-help"
                     title={kw.reason}
                   >
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                     {kw.term}
                   </span>
                 ))}
                 {toAdd.length > 8 && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                     +{toAdd.length - 8} more
                   </span>
                 )}
@@ -146,25 +177,26 @@ const SuggestionCard = ({ suggestions }) => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-amber-500" />
-              <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Boost Frequency</h4>
+              <TrendingUp className="w-5 h-5 text-amber-500" />
+              <h4 className="font-bold text-base text-gray-900 dark:text-white">Boost Frequency</h4>
             </div>
-            <span className="text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
+            <span className="text-sm font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full">
               {needEmphasis?.length || 0}
             </span>
           </div>
 
-          <div className="bg-white dark:bg-gray-800/50 rounded-xl p-3 border border-amber-100 dark:border-amber-900/20 min-h-[120px]">
+          <div className="rounded-xl p-3 min-h-[120px]">
             {needEmphasis && needEmphasis.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {needEmphasis.slice(0, 8).map((kw, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:text-emerald-600 dark:hover:text-emerald-300 hover:-translate-y-0.5 hover:shadow-sm cursor-help"
+                    className="group relative inline-flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-600 dark:text-amber-300 shadow-sm transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:text-emerald-600 dark:hover:text-emerald-300 hover:shadow-md hover:-translate-y-0.5 cursor-help"
                     title={`Increase from ${kw.resumeCount} to ${kw.jobCount} mentions`}
                   >
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
                     {kw.term}
-                    <span className="ml-1.5 opacity-60 text-[10px]">{kw.resumeCount}→{kw.jobCount}</span>
+                    <span className="ml-1.5 opacity-70 text-xs">{kw.resumeCount}→{kw.jobCount}</span>
                   </span>
                 ))}
               </div>
@@ -181,27 +213,28 @@ const SuggestionCard = ({ suggestions }) => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Your Strengths</h4>
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              <h4 className="font-bold text-base text-gray-900 dark:text-white">Your Strengths</h4>
             </div>
-            <span className="text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+            <span className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full">
               {wellRepresented?.length || 0}
             </span>
           </div>
 
-          <div className="bg-white dark:bg-gray-800/50 rounded-xl p-3 border border-emerald-100 dark:border-emerald-900/20 min-h-[120px]">
+          <div className="rounded-xl p-3 min-h-[120px]">
             {wellRepresented && wellRepresented.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {wellRepresented.slice(0, 8).map((kw, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:text-emerald-600 dark:hover:text-emerald-300 hover:-translate-y-0.5 hover:shadow-sm"
+                    className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-600 dark:text-emerald-300 shadow-sm transition-all hover:border-emerald-500/50 hover:bg-emerald-500/20 hover:shadow-md hover:-translate-y-0.5"
                   >
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                     {kw.term}
                   </span>
                 ))}
                 {wellRepresented.length > 8 && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
                     +{wellRepresented.length - 8} more
                   </span>
                 )}
@@ -224,8 +257,6 @@ export default function KeywordAnalyzer({ resumeText, jobDescription }) {
     jobDescription || "",
     { enabled: Boolean(resumeText && jobDescription) }
   );
-
-  console.log("KeywordAnalyzer analysis:", analysis);
 
   const isEmpty = !resumeText || !jobDescription;
 

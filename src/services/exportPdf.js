@@ -272,7 +272,6 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
   // Use structured data if available, otherwise parse text
   let sections = {};
   let contact = {};
-  let documentText = "";
 
   if (resumeDocument && resumeDocument.header) {
     // It's a structured/merged document
@@ -307,14 +306,13 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
         resumeDocument.header.linkedin
       ].filter(Boolean)
     };
-    documentText = resumeDocument.plainText || "";
   } else {
     // Fallback to parsing
     const document = ensureResumeDocument(resumeDocument ?? resumeText);
     sections = deriveResumeSections(document.plainText);
     contact = buildContact(sections.contactLines);
-    documentText = document.plainText;
   }
+
 
   const summaryHtml = buildSummary(sections.summary, matchAnalysis, optimizations);
   const jdSnippet = jobDescription ? `<p class="muted">Target role context: ${escapeHtml(jobDescription.slice(0, 240))}${jobDescription.length > 240 ? "…" : ""
@@ -646,7 +644,7 @@ const buildPlainExportHtml = ({
   }
 
   const summaryLines = sections.summary.length > 0 ? sections.summary : sections.experience.slice(0, 3);
-  const experienceLines = sections.experience;
+  // sections.experience is used directly via bulletLines
   const educationLines = sections.education;
   const skillsLines = sections.skills;
   const projectsLines = sections.projects;

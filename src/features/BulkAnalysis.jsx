@@ -1,9 +1,10 @@
 // src/features/BulkAnalysis.jsx
 // Bulk resume analysis and comparison tool
 
-import { useState, useCallback } from "react";
-import { Upload, X, TrendingUp, Download, BarChart3 } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Upload, X, TrendingUp, Download, BarChart3, Trophy, Medal, Award, AlertTriangle, Trash2 } from "lucide-react";
 import { parseResume, analyzeResume } from "../services/api.js";
+import { calculateTFIDF } from "../services/keywordAnalyzer.js";
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
@@ -71,7 +72,7 @@ const ResumeCard = ({ resume, index, onRemove }) => {
           <div className="flex items-center justify-between">
             <span className="text-sm text-ink-soft dark:text-gray-200">Keywords</span>
             <span className="text-sm font-semibold text-ink dark:text-white">
-              {analysis.matchedKeywords?.length || 0}
+              {analysis.topHits?.length || analysis.matchedKeywords?.length || analysis.localAnalysis?.matchedKeywords?.length || 0}
             </span>
           </div>
         </div>
@@ -127,7 +128,16 @@ const ComparisonTable = ({ resumes }) => {
             {sortedResumes.map((resume, index) => {
               const { analysis } = resume;
               const rank = index + 1;
-              const emoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
+
+              // Rank icons instead of emojis
+              const RankIcon = rank === 1 ? Trophy : rank === 2 ? Medal : rank === 3 ? Award : null;
+              const rankIconColor = rank === 1
+                ? "text-yellow-500"
+                : rank === 2
+                  ? "text-gray-400"
+                  : rank === 3
+                    ? "text-amber-600"
+                    : "";
 
               return (
                 <tr
@@ -135,10 +145,12 @@ const ComparisonTable = ({ resumes }) => {
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 >
                   <td className="py-3 px-4">
-                    <span className="text-2xl">{emoji}</span>
-                    <span className="ml-2 font-semibold text-ink dark:text-white">
-                      #{rank}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {RankIcon && <RankIcon className={cn("w-6 h-6", rankIconColor)} />}
+                      <span className="font-semibold text-ink dark:text-white">
+                        #{rank}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <span className="text-ink dark:text-white font-medium">
@@ -149,7 +161,7 @@ const ComparisonTable = ({ resumes }) => {
                     <ScoreBadge score={analysis.score || 0} />
                   </td>
                   <td className="py-3 px-4 text-center text-ink dark:text-white">
-                    {analysis.matchedKeywords?.length || 0}
+                    {analysis.topHits?.length || analysis.matchedKeywords?.length || analysis.localAnalysis?.matchedKeywords?.length || 0}
                   </td>
                   <td className="py-3 px-4 text-center text-ink dark:text-white">
                     {Math.round((analysis.coverage || 0) * 100)}%
@@ -183,9 +195,52 @@ const ComparisonTable = ({ resumes }) => {
   );
 };
 
+const STORAGE_KEY = "airo:bulkAnalysis";
+
 export default function BulkAnalysis({ jobDescription }) {
-  const [resumes, setResumes] = useState([]);
+  // Initialize from localStorage
+  const [resumes, setResumes] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only restore completed resumes (can't restore pending/analyzing with File objects)
+        return parsed.filter(r => r.status === "completed" || r.status === "error");
+      }
+    } catch (e) {
+      console.warn("Failed to load saved bulk analysis:", e);
+    }
+    return [];
+  });
   const [isDragging, setIsDragging] = useState(false);
+
+  // Save to localStorage when resumes change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      // Only save completed/error resumes (can't serialize File objects)
+      const toSave = resumes
+        .filter(r => r.status === "completed" || r.status === "error")
+        .map(r => ({
+          ...r,
+          file: null // Can't serialize File objects
+        }));
+
+      if (toSave.length > 0) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      } else {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (e) {
+      console.warn("Failed to save bulk analysis:", e);
+    }
+  }, [resumes]);
+
+  const clearSavedData = useCallback(() => {
+    setResumes([]);
+    window.localStorage.removeItem(STORAGE_KEY);
+  }, []);
 
   const processResume = useCallback(async (resumeId, file) => {
     // Update status to parsing
@@ -209,10 +264,28 @@ export default function BulkAnalysis({ jobDescription }) {
 
       // Analyze if job description is available
       if (jobDescription) {
-        const analysis = await analyzeResume(plainText, jobDescription);
+        // Run AI analysis
+        const aiAnalysis = await analyzeResume(plainText, jobDescription);
+
+        // Run local TF-IDF analysis for more accurate keyword data
+        const localAnalysis = calculateTFIDF(plainText, jobDescription);
+
+        // Combine both analyses for comprehensive results
+        const combinedAnalysis = {
+          ...aiAnalysis,
+          localAnalysis, // Store local analysis for keyword fallback
+          // Use the better keyword count source
+          matchedKeywords: aiAnalysis.topHits?.length > 0
+            ? aiAnalysis.topHits
+            : localAnalysis.matchedKeywords,
+          // Calculate a more accurate coverage if AI coverage is missing
+          coverage: aiAnalysis.coverage > 0
+            ? aiAnalysis.coverage
+            : (localAnalysis.matchedKeywords.length / Math.max(localAnalysis.jobKeywords.length, 1))
+        };
 
         setResumes(prev => prev.map(r =>
-          r.id === resumeId ? { ...r, analysis, status: "completed" } : r
+          r.id === resumeId ? { ...r, analysis: combinedAnalysis, status: "completed" } : r
         ));
       } else {
         setResumes(prev => prev.map(r =>
@@ -306,7 +379,7 @@ export default function BulkAnalysis({ jobDescription }) {
         rank: idx + 1,
         name: r.name,
         matchScore: r.analysis?.score || 0,
-        keywordCount: r.analysis?.matchedKeywords?.length || 0,
+        keywordCount: r.analysis?.topHits?.length || r.analysis?.matchedKeywords?.length || r.analysis?.localAnalysis?.matchedKeywords?.length || 0,
         coverage: Math.round((r.analysis?.coverage || 0) * 100),
         missingKeywords: r.analysis?.missingKeywords || []
       }))
@@ -337,10 +410,16 @@ export default function BulkAnalysis({ jobDescription }) {
         </div>
 
         {resumes.length > 0 && (
-          <Button onClick={exportComparison} variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={clearSavedData} variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear All
+            </Button>
+            <Button onClick={exportComparison} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Export Report
+            </Button>
+          </div>
         )}
       </div>
 
@@ -421,8 +500,9 @@ export default function BulkAnalysis({ jobDescription }) {
       {/* Warning if no job description */}
       {!jobDescription && resumes.length > 0 && (
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-          <p className="text-amber-800 dark:text-amber-300">
-            ⚠️ Add a job description in the Match tab to analyze and compare resume match scores.
+          <p className="text-amber-800 dark:text-amber-300 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            Add a job description in the Match tab to analyze and compare resume match scores.
           </p>
         </Card>
       )}

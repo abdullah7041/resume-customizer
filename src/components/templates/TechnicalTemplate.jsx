@@ -1,11 +1,11 @@
 import { BaseATSTemplate } from "./BaseATSTemplate.jsx";
 
-const ModernTemplate = ({ userData }) => {
+const TechnicalTemplate = ({ userData }) => {
     return (
         <BaseATSTemplate
             data={userData}
             config={{
-                fontFamily: "Roboto, 'Segoe UI', Helvetica, sans-serif",
+                fontFamily: "'Courier New', Courier, monospace",
                 accentColor: "#000000", // Black for ATS compliance
                 headerAlignment: "left"
             }}
@@ -13,5 +13,5 @@ const ModernTemplate = ({ userData }) => {
     );
 };
 
-export default ModernTemplate;
+export default TechnicalTemplate;
 

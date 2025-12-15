@@ -1,20 +1,37 @@
 import { processResume } from "../lib/gemini-client";
+import { withRateLimit } from "../lib/rate-limiter";
+import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas";
 
-export const handler = async (event) => {
+const baseHandler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
   try {
-    const body = JSON.parse(event.body);
-    const { resumeText, jobDescription } = body;
+    const rawBody = JSON.parse(event.body || "{}");
+
+    // Validate request using Zod schema
+    const parseResult = PredictQuestionsRequestSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: formatZodError(parseResult.error) })
+      };
+    }
+
+    const { resumeText, jobDescription } = parseResult.data;
 
     const analysis = await processResume(resumeText, jobDescription, false);
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questions: analysis.interviewPrep.predicted_questions }),
+      body: JSON.stringify({
+        questions: analysis.interviewPrep.predicted_questions,
+        roleLevel: analysis.interviewPrep.role_level,
+        focusAreas: analysis.interviewPrep.focus_areas
+      }),
     };
 
   } catch {
@@ -24,3 +41,6 @@ export const handler = async (event) => {
     };
   }
 };
+
+// Export handler with rate limiting applied
+export const handler = withRateLimit("predict-questions", baseHandler);

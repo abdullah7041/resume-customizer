@@ -73,12 +73,48 @@ const loadPdfjs = async () => {
   return pdfjsLibPromise;
 };
 
-const collectPdfPageText = (contentItems) =>
-  contentItems
-    .map((item) => (typeof item?.str === "string" ? item.str : ""))
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
+/**
+ * Collect PDF page text while preserving line structure.
+ * Uses Y-coordinate changes to detect line breaks for better structure preservation.
+ * @param {Array} contentItems - Array of PDF.js text content items
+ * @returns {string} - Extracted text with preserved line structure
+ */
+const collectPdfPageText = (contentItems) => {
+  if (!contentItems || contentItems.length === 0) return "";
+
+  const lines = [];
+  let currentLine = [];
+  let lastY = null;
+  const Y_THRESHOLD = 5; // Pixels threshold to detect new line
+
+  for (const item of contentItems) {
+    if (typeof item?.str !== "string" || !item.str) continue;
+
+    // Get Y coordinate from transform matrix [scaleX, skewX, skewY, scaleY, translateX, translateY]
+    const currentY = item.transform?.[5];
+
+    // If Y coordinate changed significantly, it's a new line
+    if (lastY !== null && currentY !== undefined && Math.abs(currentY - lastY) > Y_THRESHOLD) {
+      if (currentLine.length > 0) {
+        lines.push(currentLine.join("").replace(/\s+/g, " ").trim());
+        currentLine = [];
+      }
+    }
+
+    currentLine.push(item.str);
+    if (currentY !== undefined) {
+      lastY = currentY;
+    }
+  }
+
+  // Don't forget the last line
+  if (currentLine.length > 0) {
+    lines.push(currentLine.join("").replace(/\s+/g, " ").trim());
+  }
+
+  // Filter out empty lines and join with newlines
+  return lines.filter(line => line.length > 0).join("\n");
+};
 
 const arrayBufferToLatin1 = (arrayBuffer) => {
   const view = new Uint8Array(arrayBuffer);

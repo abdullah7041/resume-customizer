@@ -6,21 +6,37 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    {
-      name: "html-transform",
-      transformIndexHtml(html) {
-        // Replace feature flag placeholders in HTML
-        return html.replace(
-          /%FEATURE_DARK_MODE%/g,
-          process.env.VITE_FEATURE_DARK_MODE || "true"
-        );
-      },
-    },
   ],
   build: {
     rollupOptions: {
-      external: ["path2d"]
-    }
+      external: ["path2d"],
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            // React core
+            if (id.includes("/react-dom/") || id.includes("/react/")) {
+              return "vendor-react";
+            }
+            // PDF rendering (@react-pdf/renderer)
+            if (id.includes("@react-pdf")) {
+              return "vendor-react-pdf";
+            }
+            // Document generation
+            if (id.includes("/docx/")) {
+              return "vendor-docs";
+            }
+            // Icons
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
+            }
+            // Supabase
+            if (id.includes("@supabase")) {
+              return "vendor-supabase";
+            }
+          }
+        },
+      },
+    },
   },
   test: {
     environment: "happy-dom",        // <-- switch from jsdom

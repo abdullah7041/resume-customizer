@@ -2,7 +2,7 @@
 // Interview question predictor and preparation tool
 
 import { useState, useCallback, useEffect } from "react";
-import { MessageSquare, Lightbulb, Star, Save, Download, RefreshCw, AlertCircle } from "lucide-react";
+import { MessageSquare, Lightbulb, Star, Save, RefreshCw, AlertCircle, Sparkles, Monitor, Users, Target, BarChart3, HelpCircle, FileSpreadsheet } from "lucide-react";
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
@@ -13,13 +13,15 @@ const PREDICT_ENDPOINT = `${FUNCTION_BASE_PATH}/predict-questions`;
 const STORAGE_KEY = "airo:interviewQuestions";
 
 const QuestionTypeIcon = ({ type }) => {
+  const iconClass = "w-6 h-6 text-emerald-600 dark:text-emerald-400";
   const icons = {
-    technical: "💻",
-    behavioral: "🤝",
-    situational: "🎯",
-    "case-study": "📊"
+    technical: <Monitor className={iconClass} />,
+    behavioral: <Users className={iconClass} />,
+    situational: <Target className={iconClass} />,
+    "case-study": <BarChart3 className={iconClass} />,
+    general: <HelpCircle className={iconClass} />
   };
-  return <span className="text-xl">{icons[type] || "❓"}</span>;
+  return <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">{icons[type] || icons.general}</span>;
 };
 
 const DifficultyBadge = ({ difficulty }) => {
@@ -31,9 +33,61 @@ const DifficultyBadge = ({ difficulty }) => {
 
   return (
     <span className={cn("px-2 py-1 rounded-full text-xs font-semibold", colors[difficulty] || colors.medium)}>
-      {difficulty}
+      {difficulty || "medium"}
     </span>
   );
+};
+
+/**
+ * Normalize question data - handles both string questions and structured objects
+ */
+const normalizeQuestion = (question, index) => {
+  // If it's already a structured object
+  if (typeof question === "object" && question !== null) {
+    return {
+      question: question.question || question.text || `Question ${index + 1}`,
+      type: question.type || "general",
+      difficulty: question.difficulty || "medium",
+      category: question.category || "General",
+      answerFramework: question.answerFramework || question.answer_framework || ""
+    };
+  }
+
+  // If it's a string, convert to structured format
+  if (typeof question === "string" && question.trim()) {
+    // Try to infer type from question content
+    const lowerQ = question.toLowerCase();
+    let type = "general";
+
+    // Distribute difficulty based on index for variety (40% easy, 35% medium, 25% hard)
+    const difficultyDistribution = ["easy", "medium", "hard", "easy", "medium", "easy", "hard", "medium", "easy", "medium"];
+    let difficulty = difficultyDistribution[index % difficultyDistribution.length];
+
+    if (lowerQ.includes("technical") || lowerQ.includes("code") || lowerQ.includes("algorithm") || lowerQ.includes("system design")) {
+      type = "technical";
+    } else if (lowerQ.includes("tell me about a time") || lowerQ.includes("describe a situation") || lowerQ.includes("behavioral")) {
+      type = "behavioral";
+    } else if (lowerQ.includes("what would you do") || lowerQ.includes("how would you handle")) {
+      type = "situational";
+    }
+
+    // Override difficulty based on content keywords
+    if (lowerQ.includes("senior") || lowerQ.includes("architect") || lowerQ.includes("lead") || lowerQ.includes("complex") || lowerQ.includes("scale")) {
+      difficulty = "hard";
+    } else if (lowerQ.includes("junior") || lowerQ.includes("basic") || lowerQ.includes("entry") || lowerQ.includes("simple") || lowerQ.includes("introduce")) {
+      difficulty = "easy";
+    }
+
+    return {
+      question: question.trim(),
+      type,
+      difficulty,
+      category: "Interview",
+      answerFramework: ""
+    };
+  }
+
+  return null; // Invalid question
 };
 
 const QuestionCard = ({ question, index, onSaveAnswer }) => {
@@ -84,7 +138,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
 
               {showFramework && (
                 <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
                     {question.answerFramework}
                   </p>
                 </div>
@@ -94,7 +148,7 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
 
           {/* Practice Answer */}
           <div className="space-y-2">
-            <label htmlFor="practice-answer" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor={`practice-answer-${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Practice Your Answer
             </label>
             <textarea
@@ -102,13 +156,10 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
               onChange={(e) => setAnswer(e.target.value)}
               placeholder="Write your answer here..."
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
-                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium
                        focus:ring-2 focus:ring-emerald-500 focus:border-transparent
-                       placeholder:text-gray-400 dark:placeholder:text-gray-500
+                       placeholder:text-gray-500 dark:placeholder:text-gray-400
                        resize-none"
-              rows={4}
-              id="practice-answer"
-              name="practice-answer"
             />
             <div className="flex justify-end">
               <Button
@@ -130,31 +181,35 @@ const QuestionCard = ({ question, index, onSaveAnswer }) => {
 
 const RoleInsights = ({ roleLevel, focusAreas }) => {
   return (
-    <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-750 border-blue-200 dark:border-blue-800">
+    <Card className="p-6 border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] backdrop-blur-soft shadow-card">
       <div className="flex items-center gap-2 mb-4">
-        <Star className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        <Star className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Interview Insights</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Role Level</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Role Level</p>
           <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 capitalize">
-            {roleLevel}
+            {roleLevel || "Mid"}
           </p>
         </div>
 
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Focus Areas</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Focus Areas</p>
           <div className="flex flex-wrap gap-2">
-            {focusAreas.map((area, idx) => (
+            {(focusAreas && focusAreas.length > 0) ? focusAreas.map((area, idx) => (
               <span
                 key={idx}
-                className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded text-xs font-medium"
+                className="px-2 py-1 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded text-xs font-medium border border-emerald-500/30"
               >
                 {area}
               </span>
-            ))}
+            )) : (
+              <span className="text-sm text-gray-500 dark:text-gray-400 italic">
+                Click "Generate Questions" to analyze
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -162,7 +217,52 @@ const RoleInsights = ({ roleLevel, focusAreas }) => {
   );
 };
 
-export default function InterviewPrep({ jobDescription, resumeText, matchAnalysis }) {
+/**
+ * Empty state with Generate Questions CTA
+ */
+const GenerateQuestionsPrompt = ({ onGenerate, isLoading }) => {
+  return (
+    <Card className="p-12 text-center border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] backdrop-blur-soft shadow-card">
+      <div className="flex flex-col items-center gap-6">
+        <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+          <Sparkles className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Prepare for Your Interview
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+            Generate AI-predicted interview questions based on the job description.
+            Practice your answers and ace your interview!
+          </p>
+        </div>
+
+        <Button
+          onClick={onGenerate}
+          variant="primary"
+          size="lg"
+          disabled={isLoading}
+          className="min-w-[200px]"
+        >
+          {isLoading ? (
+            <>
+              <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <MessageSquare className="w-5 h-5 mr-2" />
+              Generate Questions
+            </>
+          )}
+        </Button>
+      </div>
+    </Card>
+  );
+};
+
+export default function InterviewPrep({ jobDescription, resumeText, matchAnalysis, resumeData, onUpdate }) {
   const [questions, setQuestions] = useState([]);
   const [roleLevel, setRoleLevel] = useState("");
   const [focusAreas, setFocusAreas] = useState([]);
@@ -170,13 +270,55 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
   const [error, setError] = useState(null);
   const [savedAnswers, setSavedAnswers] = useState({});
 
-  const predictQuestions = useCallback(async () => {
-    // If we have matchAnalysis with interview prep data, use it first
-    if (matchAnalysis?.interviewPrep) {
-      setQuestions(matchAnalysis.interviewPrep.predicted_questions || []);
-      setRoleLevel(matchAnalysis.interviewPrep.roleLevel || "mid");
-      setFocusAreas(matchAnalysis.interviewPrep.focusAreas || []);
-      return;
+  /**
+   * Extract interview questions from available data sources
+   * Priority: matchAnalysis.interviewPrep > resumeData.meta.interview_prep > resumeData.interviewPrep
+   */
+  const extractQuestionsFromData = useCallback(() => {
+    // Source 1: matchAnalysis.interviewPrep (from ai-match endpoint)
+    if (matchAnalysis?.interviewPrep?.predicted_questions?.length > 0) {
+      return {
+        questions: matchAnalysis.interviewPrep.predicted_questions,
+        roleLevel: matchAnalysis.interviewPrep.roleLevel || matchAnalysis.interviewPrep.role_level,
+        focusAreas: matchAnalysis.interviewPrep.focusAreas || matchAnalysis.interviewPrep.focus_areas || []
+      };
+    }
+
+    // Source 2: resumeData.meta.interview_prep (JSON Resume schema)
+    if (resumeData?.meta?.interview_prep?.predicted_questions?.length > 0) {
+      return {
+        questions: resumeData.meta.interview_prep.predicted_questions,
+        roleLevel: resumeData.meta.interview_prep.role_level,
+        focusAreas: resumeData.meta.interview_prep.focus_areas || []
+      };
+    }
+
+    // Source 3: resumeData.interviewPrep (legacy/backwards compatibility)
+    if (resumeData?.interviewPrep?.predicted_questions?.length > 0) {
+      return {
+        questions: resumeData.interviewPrep.predicted_questions,
+        roleLevel: resumeData.interviewPrep.roleLevel,
+        focusAreas: resumeData.interviewPrep.focusAreas || []
+      };
+    }
+
+    return null;
+  }, [matchAnalysis, resumeData]);
+
+  const predictQuestions = useCallback(async (forceRegenerate = false) => {
+    // First, check if we already have data from props (skip if force regenerating)
+    if (!forceRegenerate) {
+      const existingData = extractQuestionsFromData();
+      if (existingData) {
+        const normalized = existingData.questions
+          .map((q, i) => normalizeQuestion(q, i))
+          .filter(Boolean);
+
+        setQuestions(normalized);
+        setRoleLevel(existingData.roleLevel || "mid");
+        setFocusAreas(existingData.focusAreas);
+        return;
+      }
     }
 
     if (!jobDescription) {
@@ -207,13 +349,39 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
         throw new Error(data.error);
       }
 
-      setQuestions(data.questions || []);
-      setRoleLevel(data.roleLevel || "mid");
-      setFocusAreas(data.focusAreas || []);
+      // Normalize questions from API response
+      const rawQuestions = data.questions || [];
+      const normalized = rawQuestions
+        .map((q, i) => normalizeQuestion(q, i))
+        .filter(Boolean);
+
+      setQuestions(normalized);
+      setRoleLevel(data.roleLevel || data.role_level || "mid");
+      setFocusAreas(data.focusAreas || data.focus_areas || []);
 
       // Save to localStorage
       if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          questions: normalized,
+          roleLevel: data.roleLevel || data.role_level,
+          focusAreas: data.focusAreas || data.focus_areas,
+          generatedAt: new Date().toISOString()
+        }));
+      }
+
+      // Persist to Resume Data (Meta)
+      if (onUpdate) {
+        onUpdate({
+          meta: {
+            ...resumeData?.meta,
+            interview_prep: {
+              predicted_questions: normalized,
+              role_level: data.roleLevel || data.role_level,
+              focus_areas: data.focusAreas || data.focus_areas,
+              generated_at: new Date().toISOString()
+            }
+          }
+        });
       }
     } catch (err) {
       console.error("Error predicting questions:", err);
@@ -221,16 +389,21 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
     } finally {
       setIsLoading(false);
     }
-  }, [jobDescription, resumeText, matchAnalysis]);
+  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData]);
 
-  // Auto-populate if matchAnalysis is available on mount or change
+  // Auto-populate if data is available on mount or change
   useEffect(() => {
-    if (matchAnalysis?.interviewPrep) {
-      setQuestions(matchAnalysis.interviewPrep.predicted_questions || []);
-      setRoleLevel(matchAnalysis.interviewPrep.roleLevel || "mid");
-      setFocusAreas(matchAnalysis.interviewPrep.focusAreas || []);
+    const existingData = extractQuestionsFromData();
+    if (existingData) {
+      const normalized = existingData.questions
+        .map((q, i) => normalizeQuestion(q, i))
+        .filter(Boolean);
+
+      setQuestions(normalized);
+      setRoleLevel(existingData.roleLevel || "mid");
+      setFocusAreas(existingData.focusAreas);
     }
-  }, [matchAnalysis]);
+  }, [extractQuestionsFromData]);
 
   const handleSaveAnswer = useCallback((questionIndex, answer) => {
     setSavedAnswers(prev => ({
@@ -254,20 +427,30 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
   }, [savedAnswers]);
 
   const exportQuestions = () => {
-    const exportData = {
-      questions,
-      roleLevel,
-      focusAreas,
-      savedAnswers,
-      jobDescription: jobDescription.substring(0, 200),
-      generatedAt: new Date().toISOString()
-    };
+    // Build CSV content for Excel compatibility
+    const headers = ["#", "Question", "Type", "Difficulty", "Category", "Answer Framework", "Your Answer"];
+    const rows = questions.map((q, idx) => [
+      idx + 1,
+      `"${(q.question || "").replace(/"/g, '""')}"`,
+      q.type || "general",
+      q.difficulty || "medium",
+      q.category || "General",
+      `"${(q.answerFramework || "").replace(/"/g, '""')}"`,
+      `"${(savedAnswers[idx] || "").replace(/"/g, '""')}"`
+    ]);
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    // Add BOM for Excel UTF-8 compatibility
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `interview-questions-${Date.now()}.json`;
+    link.download = `interview-questions-${Date.now()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -299,28 +482,21 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
 
         <div className="flex gap-2">
           {questions.length > 0 && (
-            <Button onClick={exportQuestions} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
+            <>
+              <Button onClick={exportQuestions} variant="outline">
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export to Excel
+              </Button>
+              <Button
+                onClick={() => predictQuestions(true)}
+                variant="outline"
+                disabled={isLoading}
+              >
+                <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
+                Regenerate
+              </Button>
+            </>
           )}
-          <Button
-            onClick={predictQuestions}
-            variant="primary"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                {questions.length > 0 ? "Regenerate" : "Generate Questions"}
-              </>
-            )}
-          </Button>
         </div>
       </div>
 
@@ -338,12 +514,17 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
       {isLoading && (
         <Card className="p-12">
           <div className="flex flex-col items-center justify-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-200 dark:border-emerald-800 border-t-emerald-600 dark:border-t-emerald-400"></div>
             <p className="text-gray-600 dark:text-gray-400">
               Analyzing job description and predicting interview questions...
             </p>
           </div>
         </Card>
+      )}
+
+      {/* Generate Questions CTA - Show when no questions exist */}
+      {!isLoading && questions.length === 0 && !error && (
+        <GenerateQuestionsPrompt onGenerate={predictQuestions} isLoading={isLoading} />
       )}
 
       {/* Results */}
@@ -368,15 +549,6 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
             ))}
           </div>
         </>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && questions.length === 0 && !error && (
-        <EmptyState
-          icon={MessageSquare}
-          title="No Questions Generated Yet"
-          description="Click 'Generate Questions' to get AI-predicted interview questions for this role."
-        />
       )}
     </div>
   );

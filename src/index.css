@@ -123,6 +123,85 @@
   .animation-delay-4000 {
     animation-delay: 4s;
   }
+
+  /* Floating particles animation */
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0) translateX(0) scale(1);
+      opacity: 0.3;
+    }
+
+    25% {
+      transform: translateY(-20px) translateX(10px) scale(1.2);
+      opacity: 0.5;
+    }
+
+    50% {
+      transform: translateY(-40px) translateX(-5px) scale(1);
+      opacity: 0.3;
+    }
+
+    75% {
+      transform: translateY(-20px) translateX(15px) scale(0.8);
+      opacity: 0.4;
+    }
+  }
+
+  .animate-float {
+    animation: float 10s ease-in-out infinite;
+  }
+
+  /* Cursor blink for typewriter effect */
+  @keyframes blink {
+
+    0%,
+    50% {
+      opacity: 1;
+    }
+
+    51%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .animate-blink {
+    animation: blink 1s step-end infinite;
+  }
+
+  /* Progress bar animation */
+  @keyframes progress-bar {
+    0% {
+      width: 0%;
+    }
+
+    100% {
+      width: 100%;
+    }
+  }
+
+  .animate-progress-bar {
+    animation: progress-bar 3s linear;
+  }
+
+  /* Fade in animation */
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
 }
 
 /* <-- This closes the @layer base block */
@@ -519,6 +598,33 @@
     background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.4) 50%, transparent 80%);
     animation: keywordChipShine 1.6s ease-out forwards;
     pointer-events: none;
+  }
+
+  /* KeywordBar shimmer loading animation */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* KeywordBar progress bar grow animation */
+  @keyframes growBar {
+    0% {
+      width: 0%;
+      opacity: 0.5;
+    }
+
+    100% {
+      opacity: 1;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

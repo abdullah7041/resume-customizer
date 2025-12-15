@@ -1,17 +1,26 @@
 import { processResume } from "../lib/gemini-client";
+import { withRateLimit } from "../lib/rate-limiter";
+import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas";
 
-export const handler = async (event) => {
+const baseHandler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
   try {
-    const body = JSON.parse(event.body);
-    const { resumeText, jobDesc } = body;
+    const rawBody = JSON.parse(event.body || "{}");
 
-    if (!resumeText || !jobDesc) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing resumeText or jobDesc" }) };
+    // Validate request using Zod schema
+    const parseResult = MatchRequestSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: formatZodError(parseResult.error) })
+      };
     }
+
+    const { resumeText, jobDesc } = parseResult.data;
 
     // We assume resumeText is text since the frontend sends text to this endpoint
     const analysis = await processResume(resumeText, jobDesc, false);
@@ -23,7 +32,8 @@ export const handler = async (event) => {
       coverage: match.score_0_to_100 / 100, // Approximation
       similarity: match.score_0_to_100 / 100, // Approximation
       missingKeywords: match.missingKeywords,
-      strongMatches: [], // Gemini schema didn't explicitly ask for this, but we can infer or leave empty
+      strongMatches: match.keywordsToKeep || [], // Keywords that match well
+      matched_keywords: match.keywordsToKeep || [], // Alternative field name
       recommendations: match.hardSkillsGap,
       overallAssessment: match.reasoning,
       explanation: {
@@ -48,3 +58,6 @@ export const handler = async (event) => {
     };
   }
 };
+
+// Export handler with rate limiting applied
+export const handler = withRateLimit("ai-match", baseHandler);

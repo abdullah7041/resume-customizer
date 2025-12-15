@@ -7,14 +7,6 @@ import {
   normalizeVariant,
 } from "./exportPdf";
 
-// Mock html2pdf.js
-vi.mock("html2pdf.js", () => ({
-  default: vi.fn(() => ({
-    set: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    save: vi.fn().mockResolvedValue(true),
-  })),
-}));
 
 describe("exportPdf", () => {
   const sampleResume = `John Doe
@@ -119,7 +111,7 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     vi.stubGlobal("document", undefined);
 
     try {
-      await expect(async () => 
+      await expect(async () =>
         await exportResumeToPdf({ resumeDocument: { plainText: sampleResume } })
       ).rejects.toThrow();
     } finally {

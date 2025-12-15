@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ClipboardPenLine, FileText, UploadCloud, XCircle } from "lucide-react";
+import { FileText, UploadCloud, XCircle } from "lucide-react";
 import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/cn";
 import Button from "./Button.jsx";
@@ -86,8 +86,6 @@ export default function UploadCard({
   error,
   disabled = false,
   onValidationError,
-  onViewText,
-  canViewText,
   onTextChange,
 }) {
   const inputRef = useRef(null);
@@ -178,7 +176,7 @@ export default function UploadCard({
       as="section"
       tone="glass"
       glow
-      className="mx-auto max-w-5xl space-y-5 sm:space-y-6"
+      className="mx-auto max-w-5xl space-y-5 sm:space-y-6 bg-transparent/20"
       contentClassName="space-y-5 sm:space-y-6"
       aria-live="polite"
     >
@@ -209,7 +207,7 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[calc(var(--radius-card)*0.82)] border border-[color:color-mix(in_oklab,var(--glass-border),transparent_10%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] px-6 py-9 text-center shadow-[var(--shadow-soft)] backdrop-blur-2xl transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] sm:py-12",
+          "group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[calc(var(--radius-card)*0.82)] border border-[color:color-mix(in_oklab,var(--glass-border),transparent_10%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_80%)] px-6 py-9 text-center shadow-[var(--shadow-soft)] backdrop-blur-2xl transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] sm:py-12",
           "hover:border-emerald-500/40 hover:shadow-[0_0_30px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1",
           "before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-60 before:mix-blend-screen before:transition-opacity before:duration-breathe before:content-[''] hover:before:opacity-80",
           "after:pointer-events-none after:absolute after:inset-[-35%] after:rounded-full after:bg-[radial-gradient(circle_at_top,rgba(162,255,217,0.18),transparent_65%)] after:opacity-0 after:transition-opacity after:duration-breathe hover:after:opacity-100",
@@ -314,15 +312,6 @@ export default function UploadCard({
         >
           Clear inputs
         </Button>
-        {(status === "success" || canViewText) && onViewText && (
-          <Button
-            variant="secondary"
-            onClick={onViewText}
-            icon={ClipboardPenLine}
-          >
-            View Extracted Text
-          </Button>
-        )}
       </div>
     </Card>
   );

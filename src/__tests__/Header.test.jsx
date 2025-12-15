@@ -62,19 +62,17 @@ afterEach(() => {
 
 describe("Header", () => {
   it("keeps the gradient fallback when the skyline URL is empty", () => {
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => { });
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => { });
 
     const { container } = render(<Header />);
 
+    // No bg-hero when skyline is empty
     expect(container.querySelector(".bg-hero")).toBeNull();
 
-    const fallback = Array.from(container.querySelectorAll('[aria-hidden="true"]')).find((element) =>
-      element.className.includes("bg-[radial-gradient"),
-    );
-
-    expect(fallback).toBeDefined();
-    expect(fallback).toBeTruthy();
+    // Should have glowing orbs as fallback (blur-3xl elements)
+    const glowingOrbs = container.querySelectorAll(".blur-3xl");
+    expect(glowingOrbs.length).toBeGreaterThan(0);
 
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
@@ -83,11 +81,9 @@ describe("Header", () => {
   it("renders gradient overlay even when skyline is missing", () => {
     const { container } = render(<Header />);
 
-    const gradients = Array.from(container.querySelectorAll('[aria-hidden="true"]')).filter((el) =>
-      el.className.includes("bg-[radial-gradient"),
-    );
-
-    expect(gradients.length).toBeGreaterThan(0);
+    // Should have glowing orbs with blur effect
+    const glowingOrbs = container.querySelectorAll(".blur-3xl");
+    expect(glowingOrbs.length).toBeGreaterThan(0);
   });
 
   it("provides accessible labelling for interactive controls and hides decorative icons", () => {

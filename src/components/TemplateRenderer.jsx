@@ -316,16 +316,39 @@ const DynamicTemplateRenderer = ({ template, userData }) => {
   );
 };
 
-export default function TemplateRenderer({ template, userData = {} }) {
+import { mergeResumeData } from "../utils/resumeUtils.js";
+
+import TechnicalTemplate from "./templates/TechnicalTemplate.jsx";
+
+export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult }) {
+  // MERGE: Ensure we have the full data set (Original + AI Suggestions)
+  // If aiAnalysisResult is provided, we merge. If userData is already merged (contains basics/meta),
+  // mergeResumeData will handle it gracefully or we trust it.
+  // But strictly per instructions: "const finalData = mergeResumeData(userData, aiAnalysisResult);"
+
+  // Note: if aiAnalysisResult is missing, we try to use userData.meta?.aiAnalysisResult if it exists
+  // data flow flexibility.
+  const optimization = aiAnalysisResult || userData.meta?.aiAnalysisResult || {};
+
+  // We re-merge or ensure structure. Even if no AI result, mergeResumeData helps normalize the structure
+  // (e.g. creating 'basics' from 'header' if missing).
+  const finalData = mergeResumeData(userData, { optimization });
+
   // Dispatch to specific template components
   if (template.id === "modern-professional") {
-    return <ModernTemplate userData={userData} />;
+    return <ModernTemplate userData={finalData} />;
   }
 
   if (template.id === "classic-traditional") {
-    return <ATSClassic data={userData} />;
+    // ATSClassic expects strictly structured data which mergeResumeData now enables via 'basics'
+    return <ATSClassic data={finalData} />;
+  }
+
+  if (template.id === "technical-engineer") {
+    return <TechnicalTemplate userData={finalData} />;
   }
 
   // Fallback to generic renderer for other templates
-  return <DynamicTemplateRenderer template={template} userData={userData} />;
+  // DynamicTemplateRenderer uses the Flat structure (header, sections) which mergeResumeData ALSO preserves.
+  return <DynamicTemplateRenderer template={template} userData={finalData} />;
 }

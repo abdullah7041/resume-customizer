@@ -17,14 +17,14 @@ describe('JobMatch', () => {
     };
     render(
       <JobMatch
-        onAnalyzeMatch={async () => { }}
+        onAnalyzeMatchAI={async () => { }}
         matchAnalysis={match}
         isAnalyzing={false}
         hasResume
       />
     );
 
-    expect(screen.getByRole('heading', { name: /match to a saudi job role/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /match a role/i })).toBeInTheDocument();
     expect(screen.getByText(/missing keywords/i)).toBeInTheDocument();
     expect(screen.getByText(/recognized strengths/i)).toBeInTheDocument();
     expect(screen.getByText(/add react experience/i)).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe('JobMatch', () => {
 
     render(
       <JobMatch
-        onAnalyzeMatch={async () => { }}
+        onAnalyzeMatchAI={async () => { }}
         matchAnalysis={null}
         isAnalyzing={false}
         hasResume={false}

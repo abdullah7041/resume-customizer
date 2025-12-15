@@ -5,16 +5,21 @@ vi.doMock(
   "pdfjs-dist/legacy/build/pdf.mjs",
   () => {
     const getPage = vi.fn(async () => ({
-      getTextContent: vi.fn(async () => ({ items: [{ str: "Hello" }, { str: "Riyadh" }] })),
+      getTextContent: vi.fn(async () => ({
+        items: [
+          { str: "Hello ", transform: [1, 0, 0, 1, 0, 100] },
+          { str: "Riyadh", transform: [1, 0, 0, 1, 50, 100] }
+        ]
+      })),
       cleanup: vi.fn(),
     }));
 
-  const document = {
-    numPages: 1,
-    getPage,
-    cleanup: vi.fn(),
-    destroy: vi.fn(),
-  };
+    const document = {
+      numPages: 1,
+      getPage,
+      cleanup: vi.fn(),
+      destroy: vi.fn(),
+    };
 
     return {
       getDocument: vi.fn(() => ({ promise: Promise.resolve(document) })),

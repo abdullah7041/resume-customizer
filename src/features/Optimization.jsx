@@ -57,6 +57,7 @@ export default function Optimization({
   hasMatchAnalysis = false,
   onClear,
 }) {
+  const [viewMode, setViewMode] = useState("split"); // "split" | "diff" (diff not fully implemented in card yet, using split default)
   const [chipsAnimated, setChipsAnimated] = useState(false);
   const chipsShownRef = useRef(false);
 
@@ -93,40 +94,68 @@ export default function Optimization({
         title="Polish every section"
         description="Fine-tune your resume with recommendations that resonate in Saudi financial-tech circles."
         action={
-          optimizations.length > 0 ? (
-            <button
-              onClick={onClear}
-              className="text-xs font-medium text-ink-500 hover:text-danger-500 transition-colors"
-            >
-              Clear
-            </button>
-          ) : null
+          <div className="flex items-center gap-4">
+            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setViewMode("split")}
+                className={cn(
+                  "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                  viewMode === "split"
+                    ? "bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                )}
+              >
+                Side-by-Side
+              </button>
+              <button
+                onClick={() => setViewMode("diff")}
+                className={cn(
+                  "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                  viewMode === "diff"
+                    ? "bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                )}
+              >
+                Inline Diff
+              </button>
+            </div>
+            {optimizations.length > 0 && (
+              <button
+                onClick={onClear}
+                className="text-xs font-medium text-ink-500 hover:text-danger-500 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         }
       />
 
       {showPreviewBanner && <PreviewBanner onUpgrade={onUpgrade} />}
 
-      {!hasMatchAnalysis && (
-        <Card
-          tone="translucent"
-          className="border-warning-500/30 bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)]"
-          contentClassName="space-y-3 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-warning-500/15 text-warning-500 shadow-soft">
-              <Info className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-warning-500">
-                Match analysis required
-              </p>
-              <p className="text-sm text-ink-soft">
-                Run a match analysis first to provide job context for optimization.
-              </p>
+      {
+        !hasMatchAnalysis && (
+          <Card
+            tone="translucent"
+            className="border-warning-500/30 bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)]"
+            contentClassName="space-y-3 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-warning-500/15 text-warning-500 shadow-soft">
+                <Info className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-warning-500">
+                  Match analysis required
+                </p>
+                <p className="text-sm text-ink-soft">
+                  Run a match analysis first to provide job context for optimization.
+                </p>
+              </div>
             </div>
-          </div>
-        </Card>
-      )}
+          </Card>
+        )
+      }
 
       <Button
         icon={Sparkles}
@@ -140,10 +169,12 @@ export default function Optimization({
 
       <section className="space-y-4">
         <Card tone="translucent" className="p-5" contentClassName="space-y-4 text-left">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.28em] text-emerald-500/90">
-            Keyword focus
-          </h3>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.28em] text-emerald-500/90">
+              Keyword focus
+            </h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
             {(["add", "neutral", "remove"]).map((bucket) => (
               <div key={bucket} className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft/75">
@@ -199,6 +230,7 @@ export default function Optimization({
                   index={index}
                   onCopy={onCopy}
                   disabledActions={false}
+                  viewMode={viewMode}
                 />
               ))}
             </div>
@@ -209,6 +241,6 @@ export default function Optimization({
           )}
         </div>
       </section>
-    </div>
+    </div >
   );
 }

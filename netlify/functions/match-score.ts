@@ -2,6 +2,7 @@ import type { Handler } from "@netlify/functions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
+import { withRateLimit } from "../lib/rate-limiter";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -282,7 +283,7 @@ const fetchResumeText = async (resumeText: string | undefined, resumeFileId: str
   return typeof plainText === "string" ? plainText : "";
 };
 
-const handler: Handler = async (event) => {
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -418,4 +419,6 @@ const handler: Handler = async (event) => {
   }
 };
 
+// Export handler with rate limiting applied
+const handler = withRateLimit("match-score", baseHandler);
 export { handler };

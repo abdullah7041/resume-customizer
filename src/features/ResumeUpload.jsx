@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import UploadCard from "../components/ui/UploadCard.jsx";
-import OcrBadge from "../components/ui/OcrBadge.jsx";
 import { FadeInWhenVisible } from "../components/ui/ParallaxSection.jsx";
 import { AppError, uploadResumeFile } from "../services/supabase.js";
+import { CheckCircle } from "lucide-react";
 
 const DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
@@ -77,9 +77,8 @@ const isDocumentFile = (file) => {
   return DOCUMENT_EXTENSIONS.has(extension);
 };
 
-export default function ResumeUpload({ onParseResume, resumeDocument, onToast, onClear, onViewText }) {
+export default function ResumeUpload({ onParseResume, resumeDocument, onToast, onClear }) {
   const [file, setFile] = useState(null);
-  const [ocrUsed, setOcrUsed] = useState(false);
   const [status, setStatus] = useState("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -115,7 +114,6 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast, o
     setStatus("idle");
     setProgress(0);
     setError("");
-    setOcrUsed(false);
   }, []);
 
   const handleValidationError = useCallback(
@@ -235,14 +233,9 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast, o
         file,
         storage: storageMetadata,
       };
-      const parsed = await onParseResume?.(payload);
+      await onParseResume?.(payload);
       setProgress(100);
       setStatus("success");
-
-      // Check if OCR was used
-      const wasOcrUsed = parsed?.usedOCR || false;
-      console.log('[ResumeUpload] OCR flag:', wasOcrUsed, 'Full parsed object:', parsed);
-      setOcrUsed(wasOcrUsed);
 
       // Toast removed to prevent duplicate notifications (handled by MainContent)
 
@@ -286,12 +279,11 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast, o
           disabled={status === "uploading" || status === "parsing"}
           onValidationError={handleValidationError}
           onClear={onClear}
-          onViewText={onViewText}
-          canViewText={Boolean(resumeDocument?.plainText)}
         />
-        {ocrUsed && (status === "success" || status === "idle") && (
-          <div className="flex justify-center">
-            <OcrBadge />
+        {lastUploadedFile && status === "idle" && (
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-400">
+            <CheckCircle className="h-4 w-4" aria-hidden="true" />
+            <span>Resume saved! No need to upload again unless you have a new version.</span>
           </div>
         )}
       </div>

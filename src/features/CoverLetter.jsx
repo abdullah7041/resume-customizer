@@ -2,7 +2,9 @@
 // AI-powered cover letter generator and editor
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Wand2, Download, Copy, Save, AlertCircle, CheckCircle2 } from "lucide-react";
+import { FileText, Wand2, Download, Copy, AlertCircle, CheckCircle2, Briefcase, Zap, BookOpen, Palette } from "lucide-react";
+import { saveAs } from "file-saver";
+// docx is loaded dynamically to reduce initial bundle size
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
 import Input from "../components/ui/Input.jsx";
@@ -15,36 +17,39 @@ const STORAGE_KEY = "airo:coverLetter";
 
 const ToneSelector = ({ selected, onChange }) => {
   const tones = [
-    { value: "professional", label: "Professional", emoji: "💼" },
-    { value: "enthusiastic", label: "Enthusiastic", emoji: "⚡" },
-    { value: "formal", label: "Formal", emoji: "🎩" },
-    { value: "creative", label: "Creative", emoji: "🎨" }
+    { value: "professional", label: "Professional", icon: Briefcase },
+    { value: "enthusiastic", label: "Enthusiastic", icon: Zap },
+    { value: "formal", label: "Formal", icon: BookOpen },
+    { value: "creative", label: "Creative", icon: Palette }
   ];
-  
+
   return (
     <div className="flex flex-wrap gap-2">
-      {tones.map(tone => (
-        <button
-          key={tone.value}
-          onClick={() => onChange(tone.value)}
-          className={cn(
-            "px-4 py-2 rounded-lg border-2 transition-all",
-            selected === tone.value
-              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300"
-              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-300"
-          )}
-        >
-          <span className="mr-2">{tone.emoji}</span>
-          {tone.label}
-        </button>
-      ))}
+      {tones.map(tone => {
+        const IconComponent = tone.icon;
+        return (
+          <button
+            key={tone.value}
+            onClick={() => onChange(tone.value)}
+            className={cn(
+              "px-4 py-2 rounded-lg border-2 transition-all flex items-center gap-2",
+              selected === tone.value
+                ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300"
+                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-300"
+            )}
+          >
+            <IconComponent className="w-4 h-4" />
+            {tone.label}
+          </button>
+        );
+      })}
     </div>
   );
 };
 
 const KeyHighlights = ({ highlights }) => {
   if (!highlights || highlights.length === 0) return null;
-  
+
   return (
     <div className="mb-4">
       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -72,8 +77,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
   const [wordCount, setWordCount] = useState(0);
   const [keyHighlights, setKeyHighlights] = useState([]);
   const [copied, setCopied] = useState(false);
-  const [saved, setSaved] = useState(false);
-  
+
   // Load from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -92,7 +96,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
       }
     }
   }, []);
-  
+
   // Update word count when cover letter changes
   useEffect(() => {
     if (coverLetter) {
@@ -102,16 +106,16 @@ export default function CoverLetter({ resumeText, jobDescription }) {
       setWordCount(0);
     }
   }, [coverLetter]);
-  
+
   const generateCoverLetter = useCallback(async () => {
     if (!resumeText || !jobDescription) {
       setError("Please provide both resume and job description");
       return;
     }
-    
+
     setIsGenerating(true);
     setError(null);
-    
+
     try {
       const response = await fetch(GENERATE_ENDPOINT, {
         method: "POST",
@@ -124,21 +128,21 @@ export default function CoverLetter({ resumeText, jobDescription }) {
           tone
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to generate cover letter: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-      
+
       setCoverLetter(data.coverLetter || "");
       setKeyHighlights(data.keyHighlights || []);
       setWordCount(data.wordCount || 0);
-      
+
       // Save to localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -157,22 +161,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
       setIsGenerating(false);
     }
   }, [resumeText, jobDescription, companyName, hiringManager, tone]);
-  
-  const saveCoverLetter = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        coverLetter,
-        companyName,
-        hiringManager,
-        tone,
-        keyHighlights,
-        savedAt: new Date().toISOString()
-      }));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    }
-  };
-  
+
   const copyCoverLetter = async () => {
     try {
       await navigator.clipboard.writeText(coverLetter);
@@ -182,21 +171,92 @@ export default function CoverLetter({ resumeText, jobDescription }) {
       console.error("Failed to copy:", err);
     }
   };
-  
-  const downloadCoverLetter = () => {
-    const filename = companyName 
-      ? `cover-letter-${companyName.toLowerCase().replace(/\s+/g, "-")}.txt`
-      : `cover-letter-${Date.now()}.txt`;
-    
-    const blob = new Blob([coverLetter], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
+
+  const downloadCoverLetter = async () => {
+    // Dynamic import docx to reduce initial bundle size (~336KB)
+    const { Document, Packer, Paragraph, TextRun, AlignmentType, convertInchesToTwip } = await import("docx");
+
+    // Parse cover letter content into paragraphs
+    const paragraphs = coverLetter.split(/\n\n+/).filter(p => p.trim());
+
+    // Build the document children
+    const docChildren = [];
+
+    // Add company header if provided
+    if (companyName) {
+      docChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: companyName, bold: true, size: 24 })],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 120 }
+        })
+      );
+    }
+
+    // Add date
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    docChildren.push(
+      new Paragraph({
+        children: [new TextRun({ text: currentDate, size: 22 })],
+        spacing: { after: 240 }
+      })
+    );
+
+    // Add greeting with Hiring Manager name
+    const greeting = hiringManager
+      ? `Dear ${hiringManager},`
+      : "Dear Hiring Manager,";
+    docChildren.push(
+      new Paragraph({
+        children: [new TextRun({ text: greeting, size: 24 })],
+        spacing: { after: 240 }
+      })
+    );
+
+    // Add body paragraphs - skip any existing greeting in the content
+    paragraphs.forEach((para) => {
+      const trimmedPara = para.trim();
+      // Skip if this paragraph is a greeting
+      if (trimmedPara.toLowerCase().startsWith('dear ')) return;
+
+      docChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: trimmedPara, size: 24 })],
+          spacing: { after: 200 },
+          alignment: AlignmentType.JUSTIFIED
+        })
+      );
+    });
+
+    // Create the document
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: {
+              top: convertInchesToTwip(1),
+              bottom: convertInchesToTwip(1),
+              left: convertInchesToTwip(1),
+              right: convertInchesToTwip(1)
+            }
+          }
+        },
+        children: docChildren
+      }]
+    });
+
+    // Generate and download
+    const blob = await Packer.toBlob(doc);
+    const filename = companyName
+      ? `cover-letter-${companyName.toLowerCase().replace(/\s+/g, "-")}.docx`
+      : `cover-letter-${Date.now()}.docx`;
+    saveAs(blob, filename);
   };
-  
+
   if (!resumeText || !jobDescription) {
     return (
       <div className="w-full max-w-7xl mx-auto p-6">
@@ -208,7 +268,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
       </div>
     );
   }
-  
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -220,13 +280,13 @@ export default function CoverLetter({ resumeText, jobDescription }) {
           Create a compelling, tailored cover letter using AI
         </p>
       </div>
-      
+
       {/* Configuration */}
       <Card className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Customize Your Cover Letter
         </h2>
-        
+
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -239,7 +299,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
                 placeholder="e.g., Acme Corporation"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Hiring Manager (Optional)
@@ -251,14 +311,14 @@ export default function CoverLetter({ resumeText, jobDescription }) {
               />
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tone
             </label>
             <ToneSelector selected={tone} onChange={setTone} />
           </div>
-          
+
           <Button
             onClick={generateCoverLetter}
             variant="primary"
@@ -279,7 +339,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
           </Button>
         </div>
       </Card>
-      
+
       {/* Error State */}
       {error && (
         <Card className="p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
@@ -289,7 +349,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
           </div>
         </Card>
       )}
-      
+
       {/* Loading State */}
       {isGenerating && (
         <Card className="p-12">
@@ -301,7 +361,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
           </div>
         </Card>
       )}
-      
+
       {/* Cover Letter Editor */}
       {!isGenerating && coverLetter && (
         <Card className="p-6">
@@ -314,12 +374,8 @@ export default function CoverLetter({ resumeText, jobDescription }) {
                 {wordCount} words • {tone} tone
               </p>
             </div>
-            
+
             <div className="flex gap-2">
-              <Button onClick={saveCoverLetter} variant="outline" size="sm">
-                <Save className="w-4 h-4 mr-2" />
-                {saved ? "Saved!" : "Save"}
-              </Button>
               <Button onClick={copyCoverLetter} variant="outline" size="sm">
                 <Copy className="w-4 h-4 mr-2" />
                 {copied ? "Copied!" : "Copy"}
@@ -330,9 +386,9 @@ export default function CoverLetter({ resumeText, jobDescription }) {
               </Button>
             </div>
           </div>
-          
+
           <KeyHighlights highlights={keyHighlights} />
-          
+
           <textarea
             value={coverLetter}
             onChange={(e) => setCoverLetter(e.target.value)}
@@ -344,7 +400,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
             id="cover-letter-editor"
             name="cover-letter"
           />
-          
+
           <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
             <p className="text-sm text-emerald-800 dark:text-emerald-300">
               💡 <strong>Tip:</strong> Edit the generated text to add personal touches and ensure it accurately represents your experience. Always proofread before sending!
@@ -352,7 +408,7 @@ export default function CoverLetter({ resumeText, jobDescription }) {
           </div>
         </Card>
       )}
-      
+
       {/* Empty State */}
       {!isGenerating && !coverLetter && !error && (
         <Card className="p-12">

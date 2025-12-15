@@ -1,17 +1,26 @@
 import { processResume } from "../lib/gemini-client";
+import { withRateLimit } from "../lib/rate-limiter";
+import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas";
 
-export const handler = async (event) => {
+const baseHandler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
   try {
-    const body = JSON.parse(event.body);
-    const { resumeText, jobText } = body;
+    const rawBody = JSON.parse(event.body || "{}");
 
-    if (!resumeText || !jobText) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing resumeText or jobText" }) };
+    // Validate request using Zod schema
+    const parseResult = OptimizeRequestSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: formatZodError(parseResult.error) })
+      };
     }
+
+    const { resumeText, jobText } = parseResult.data;
 
     const analysis = await processResume(resumeText, jobText, false);
     const opt = analysis.optimization;
@@ -102,3 +111,6 @@ export const handler = async (event) => {
     };
   }
 };
+
+// Export handler with rate limiting applied
+export const handler = withRateLimit("optimize", baseHandler);

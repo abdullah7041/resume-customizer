@@ -24,20 +24,35 @@ export const handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: "Invalid input" }) };
     }
 
-    // Map Gemini output to the format expected by the frontend
-    const profile = analysis.candidateProfile || {};
-
-    // Construct a "document" object that mimics the old parser output
+    // Preserve the FULL JSON Resume structure from Gemini parsing
+    // The analysis object already contains: basics, work, education, skills, projects, certificates, etc.
     const document = {
-      plainText: analysis.plainText || `Name: ${profile.name}\nEmail: ${profile.email}\nSkills: ${profile.skills?.join(", ")}`,
+      // Plain text for backward compatibility
+      plainText: analysis.plainText || analysis.meta?.raw_text || "",
+
+      // Full JSON Resume fields - these are properly parsed by Gemini
+      basics: analysis.basics || {},
+      work: analysis.work || [],
+      education: analysis.education || [],
+      skills: analysis.skills || [],
+      projects: analysis.projects || [],
+      certificates: analysis.certificates || [],
+      languages: analysis.languages || [],
+
+      // Legacy structured sections (backward compatibility)
       sections: [
-        { title: "Contact", content: [`Name: ${profile.name}`, `Email: ${profile.email}`, `Phone: ${profile.phone}`, `Location: ${profile.location}`] },
-        { title: "Summary", content: [analysis.summary] },
-        { title: "Skills", content: analysis.skills || [] },
-        { title: "Experience", content: analysis.experience?.map(exp => `${exp.title} at ${exp.company} (${exp.dates}): ${exp.description}`) || [] },
-        { title: "Education", content: analysis.education?.map(edu => `${edu.degree} from ${edu.school} (${edu.dates})`) || [] }
+        { title: "Contact", content: [`Name: ${analysis.basics?.name || ""}`, `Email: ${analysis.basics?.email || ""}`, `Phone: ${analysis.basics?.phone || ""}`] },
+        { title: "Summary", content: [analysis.basics?.summary || ""] },
+        { title: "Skills", content: (analysis.skills || []).flatMap(s => s.keywords || []) },
+        { title: "Experience", content: (analysis.work || []).map(exp => `${exp.position || ""} at ${exp.name || ""} (${exp.startDate || ""} - ${exp.endDate || ""})`) },
+        { title: "Education", content: (analysis.education || []).map(edu => `${edu.studyType || ""} ${edu.area || ""} from ${edu.institution || ""} (${edu.endDate || ""})`) },
+        { title: "Projects", content: (analysis.projects || []).map(p => p.name || "") },
+        { title: "Certifications", content: (analysis.certificates || []).map(c => c.name || "") }
       ],
-      bullets: []
+      bullets: [],
+
+      // Metadata
+      meta: analysis.meta || {}
     };
 
     return {
