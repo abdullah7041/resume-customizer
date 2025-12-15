@@ -2,6 +2,7 @@
 // Modern landing page with real interactions and compelling logic
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   FileText,
@@ -128,26 +129,27 @@ function FloatingParticles() {
 
 // Component: Live resume transformation demo
 function ResumeTransformDemo() {
+  const { t } = useTranslation();
   const [stage, setStage] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
   const stages = [
     {
-      label: "Original",
-      text: "Managed sales team and increased revenue.",
-      issues: ["Vague impact", "No metrics", "Generic phrasing"],
+      label: t("landing.demo.original"),
+      text: t("landing.demo.originalText"),
+      issues: [t("landing.demo.issues.vagueImpact"), t("landing.demo.issues.noMetrics"), t("landing.demo.issues.genericPhrasing")],
       color: "red",
     },
     {
-      label: "AI Analyzing",
-      text: "Analyzing: team size, revenue figures, location context...",
+      label: t("landing.demo.analyzing"),
+      text: t("landing.demo.analyzingText"),
       issues: [],
       color: "yellow",
     },
     {
-      label: "Optimized",
+      label: t("landing.demo.optimized"),
       text: "Spearheaded a high-performing sales unit of 15, driving SAR 12M in annual revenue and expanding market share by 18% across the Eastern Province.",
-      benefits: ["Quantifiable Impact", "Local Context", "Strong Action Verbs"],
+      benefits: [t("landing.demo.benefits.quantifiableImpact"), t("landing.demo.benefits.localContext"), t("landing.demo.benefits.strongActionVerbs")],
       color: "emerald",
     },
   ];
@@ -325,34 +327,35 @@ function StatItem({ stat }) {
 
 // Component: Statistics with animated counters
 function StatsSection() {
+  const { t } = useTranslation();
   const stats = [
     {
       icon: BarChart3,
       end: 94,
       suffix: "%",
-      label: "ATS Pass Rate",
-      description: "Resumes optimized with our AI",
+      label: t("landing.stats.atsPassRate.label"),
+      description: t("landing.stats.atsPassRate.description"),
     },
     {
       icon: Clock,
       end: 5,
       suffix: " min",
-      label: "Average Time",
-      description: "From upload to optimized PDF",
+      label: t("landing.stats.averageTime.label"),
+      description: t("landing.stats.averageTime.description"),
     },
     {
       icon: Trophy,
       end: 3,
       suffix: "x",
-      label: "More Interviews",
-      description: "Reported by our users",
+      label: t("landing.stats.moreInterviews.label"),
+      description: t("landing.stats.moreInterviews.description"),
     },
     {
       icon: Users,
       end: 50,
       suffix: "+",
-      label: "Industries",
-      description: "Templates tailored for",
+      label: t("landing.stats.industries.label"),
+      description: t("landing.stats.industries.description"),
     },
   ];
 
@@ -367,11 +370,12 @@ function StatsSection() {
 
 // Component: Job categories with real Saudi market focus
 function JobMarketSection() {
+  const { t } = useTranslation();
   const industries = [
-    { icon: Briefcase, name: "Banking & Finance", growth: "+24%" },
-    { icon: TrendingUp, name: "Technology", growth: "+47%" },
-    { icon: GraduationCap, name: "Education", growth: "+18%" },
-    { icon: Users, name: "Healthcare", growth: "+32%" },
+    { icon: Briefcase, name: t("landing.industries.banking.name"), growth: t("landing.industries.banking.growth") },
+    { icon: TrendingUp, name: t("landing.industries.technology.name"), growth: t("landing.industries.technology.growth") },
+    { icon: GraduationCap, name: t("landing.industries.education.name"), growth: t("landing.industries.education.growth") },
+    { icon: Users, name: t("landing.industries.healthcare.name"), growth: t("landing.industries.healthcare.growth") },
   ];
 
   return (
@@ -383,81 +387,94 @@ function JobMarketSection() {
         >
           <industry.icon className="w-8 h-8 text-emerald-300/70 group-hover:text-emerald-300 mb-3 transition-colors" />
           <div className="font-medium text-white">{industry.name}</div>
-          <div className="text-xs text-emerald-400 font-semibold">{industry.growth} hiring</div>
+          <div className="text-xs text-emerald-400 font-semibold">{industry.growth} {t("landing.industries.hiring")}</div>
         </div>
       ))}
     </div>
   );
 }
 
-// Features data with real capabilities
-const features = [
-  {
-    icon: FileText,
-    title: "Smart Resume Parsing",
-    description: "Upload PDF, DOCX, or paste text. AI extracts and structures your experience instantly.",
-    badge: "OCR Powered",
-    capabilities: ["Multi-format support", "Arabic & English", "Structured extraction"],
-  },
-  {
-    icon: Target,
-    title: "Job Match Scoring",
-    description: "Get instant 0-100 match scores. See exactly which keywords you're missing.",
-    capabilities: ["Real-time analysis", "Keyword gap detection", "Industry benchmarks"],
-  },
-  {
-    icon: Sparkles,
-    title: "AI Optimization",
-    description: "Rewrite sections with stronger language and better keywords—without inventing facts.",
-    capabilities: ["Context-aware rewrites", "Metric suggestions", "Tone adjustment"],
-  },
-  {
-    icon: TrendingUp,
-    title: "Keyword Analysis",
-    description: "Identify high-impact keywords and optimize your resume to beat ATS systems.",
-    capabilities: ["Frequency analysis", "Competitor comparison", "Industry trends"],
-  },
-  {
-    icon: Shield,
-    title: "ATS-Friendly Export",
-    description: "Download professionally formatted PDFs that pass applicant tracking systems.",
-    capabilities: ["Multiple templates", "Font embedding", "Section formatting"],
-  },
-  {
-    icon: Zap,
-    title: "Interview Prep",
-    description: "Generate tailored interview questions based on your resume and job requirements.",
-    badge: "New",
-    capabilities: ["Role-specific questions", "STAR format tips", "Difficulty levels"],
-  },
-];
+// Features data with real capabilities - now using translation keys
+function getFeatures(t) {
+  return [
+    {
+      icon: FileText,
+      title: t("landing.features.smartParsing.title"),
+      description: t("landing.features.smartParsing.description"),
+      badge: t("landing.features.smartParsing.badge"),
+      capabilities: t("landing.features.smartParsing.capabilities", { returnObjects: true }),
+    },
+    {
+      icon: Target,
+      title: t("landing.features.jobMatch.title"),
+      description: t("landing.features.jobMatch.description"),
+      capabilities: t("landing.features.jobMatch.capabilities", { returnObjects: true }),
+    },
+    {
+      icon: Sparkles,
+      title: t("landing.features.aiOptimization.title"),
+      description: t("landing.features.aiOptimization.description"),
+      capabilities: t("landing.features.aiOptimization.capabilities", { returnObjects: true }),
+    },
+    {
+      icon: TrendingUp,
+      title: t("landing.features.keywordAnalysis.title"),
+      description: t("landing.features.keywordAnalysis.description"),
+      capabilities: t("landing.features.keywordAnalysis.capabilities", { returnObjects: true }),
+    },
+    {
+      icon: Shield,
+      title: t("landing.features.atsExport.title"),
+      description: t("landing.features.atsExport.description"),
+      capabilities: t("landing.features.atsExport.capabilities", { returnObjects: true }),
+    },
+    {
+      icon: Zap,
+      title: t("landing.features.interviewPrep.title"),
+      description: t("landing.features.interviewPrep.description"),
+      badge: t("landing.features.interviewPrep.badge"),
+      capabilities: t("landing.features.interviewPrep.capabilities", { returnObjects: true }),
+    },
+  ];
+}
 
-const steps = [
-  {
-    title: "Upload Resume",
-    description: "Drop your PDF/DOCX or paste text. OCR handles scanned documents too.",
-    icon: FileText,
-  },
-  {
-    title: "Add Job Description",
-    description: "Paste the job posting. AI identifies skills gaps and optimization opportunities.",
-    icon: Target,
-  },
-  {
-    title: "Optimize & Download",
-    description: "Apply AI suggestions, pick a template, and export your ATS-ready PDF.",
-    icon: Sparkles,
-  },
-];
+function getSteps(t) {
+  return [
+    {
+      title: t("landing.howItWorks.step1.title"),
+      description: t("landing.howItWorks.step1.description"),
+      icon: FileText,
+    },
+    {
+      title: t("landing.howItWorks.step2.title"),
+      description: t("landing.howItWorks.step2.description"),
+      icon: Target,
+    },
+    {
+      title: t("landing.howItWorks.step3.title"),
+      description: t("landing.howItWorks.step3.description"),
+      icon: Sparkles,
+    },
+  ];
+}
 
 export default function LandingPage({ onGetStarted }) {
+  const { t } = useTranslation();
+
+  // Get translated dynamic phrases
+  const dynamicPhrases = t("landing.hero.dynamicPhrases", { returnObjects: true });
+
   // Typewriter effect for dynamic headlines
   const dynamicText = useTypewriter(
-    ["AI-Powered Resumes", "Higher Match Scores", "More Interviews", "Your Dream Job"],
+    dynamicPhrases,
     100,
     50,
     2500
   );
+
+  // Get translated features and steps
+  const features = getFeatures(t);
+  const steps = getSteps(t);
 
   return (
     <div className="w-full">
@@ -475,12 +492,12 @@ export default function LandingPage({ onGetStarted }) {
           {/* Trust Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm animate-fade-in">
             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">Built for Vision 2030 Talent</span>
+            <span className="font-medium">{t("landing.trustBadge")}</span>
           </div>
 
           {/* Main Headline with Typewriter */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
-            Land Your Dream Job with
+            {t("landing.hero.title")}
             <span className="block bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent min-h-[1.2em]">
               {dynamicText}
               <span className="animate-blink">|</span>
@@ -488,11 +505,10 @@ export default function LandingPage({ onGetStarted }) {
           </h1>
 
           {/* Subheadline */}
-          <p className="max-w-2xl mx-auto text-xl md:text-2xl text-white/90 leading-relaxed">
-            Transform your resume in <strong className="text-emerald-300">under 5 minutes</strong>.
-            Match job descriptions perfectly. Get past ATS systems.{" "}
-            <em className="text-teal-300">Land more interviews.</em>
-          </p>
+          <p
+            className="max-w-2xl mx-auto text-xl md:text-2xl text-white/90 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: t("landing.hero.subtitle") }}
+          />
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -502,7 +518,7 @@ export default function LandingPage({ onGetStarted }) {
               className="group relative overflow-hidden bg-white text-emerald-700 hover:bg-emerald-50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_-10px_rgba(16,185,129,0.6)] px-8 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95"
             >
               <span className="relative z-10 flex items-center gap-2">
-                Get Started
+                {t("landing.hero.cta")}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </Button>
@@ -512,11 +528,11 @@ export default function LandingPage({ onGetStarted }) {
           <div className="flex flex-wrap justify-center items-center gap-8 pt-8 text-white/70 text-sm">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-              <span>Works with Arabic & English</span>
+              <span>{t("landing.hero.worksWithArabicEnglish")}</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-              <span>Export unlimited PDFs</span>
+              <span>{t("landing.hero.exportUnlimitedPDFs")}</span>
             </div>
           </div>
         </div>
@@ -527,10 +543,10 @@ export default function LandingPage({ onGetStarted }) {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              See the Transformation
+              {t("landing.demo.title")}
             </h2>
             <p className="text-xl text-white/80">
-              Watch how AI turns generic bullets into impactful achievements
+              {t("landing.demo.subtitle")}
             </p>
           </div>
           <ResumeTransformDemo />
@@ -542,10 +558,10 @@ export default function LandingPage({ onGetStarted }) {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
-              Everything You Need to Stand Out
+              {t("landing.features.title")}
             </h2>
             <p className="text-xl text-white/80 max-w-2xl mx-auto">
-              Powerful AI tools designed to give you an unfair advantage in the Saudi job market
+              {t("landing.features.subtitle")}
             </p>
           </div>
 
@@ -562,7 +578,7 @@ export default function LandingPage({ onGetStarted }) {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-900/20 pointer-events-none" />
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
-            Get Results in 3 Simple Steps
+            {t("landing.howItWorks.title")}
           </h2>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -590,7 +606,7 @@ export default function LandingPage({ onGetStarted }) {
               className="group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:via-teal-400 hover:to-emerald-500 text-white shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_0_60px_-15px_rgba(16,185,129,0.6)] px-12 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105"
             >
               <span className="relative z-10 flex items-center gap-2">
-                Start Optimizing Now
+                {t("landing.howItWorks.cta")}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
               <div className="absolute inset-0 -z-10 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] bg-[position:-100%_0,0_0] bg-no-repeat transition-[background-position_0s] duration-0 group-hover:bg-[position:200%_0,0_0] group-hover:duration-[1500ms]" />
@@ -611,10 +627,10 @@ export default function LandingPage({ onGetStarted }) {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              Optimized for Saudi&apos;s Growing Industries
+              {t("landing.industries.title")}
             </h2>
             <p className="text-white/70">
-              Templates and keywords tailored for Vision 2030 job market
+              {t("landing.industries.subtitle")}
             </p>
           </div>
           <JobMarketSection />

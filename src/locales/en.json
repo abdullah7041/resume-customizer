@@ -224,6 +224,7 @@
     "industries": {
       "title": "Optimized for Saudi's Growing Industries",
       "subtitle": "Templates and keywords tailored for Vision 2030 job market",
+      "hiring": "hiring",
       "banking": { "name": "Banking & Finance", "growth": "+24%" },
       "technology": { "name": "Technology", "growth": "+47%" },
       "education": { "name": "Education", "growth": "+18%" },
