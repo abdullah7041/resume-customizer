@@ -1,0 +1,330 @@
+{
+  "common": {
+    "appName": "AI Resume Optimizer",
+    "upload": "Upload Resume",
+    "analyze": "Analyze",
+    "optimize": "Optimize",
+    "export": "Export PDF",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try Again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "byAuthor": "By Abdullah bin Ahmed"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "pricing": "Pricing",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout"
+  },
+  "header": {
+    "badge": "Designed for Saudi ambition",
+    "heroTitle": "AI Resume Optimizer",
+    "heroDescription": "Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.",
+    "workflow": {
+      "title": "Your Workflow",
+      "step1": {
+        "title": "Upload or paste your resume",
+        "desc": "Drag & drop with instant AI processing"
+      },
+      "step2": {
+        "title": "Match against Saudi job roles",
+        "desc": "Get a confidence score and missing keywords"
+      },
+      "step3": {
+        "title": "Optimize with precision",
+        "desc": "Premium suggestions for modern employers"
+      }
+    },
+    "features": {
+      "smartParsing": {
+        "label": "Smart Parsing",
+        "desc": "AI-powered extraction"
+      },
+      "matchScore": {
+        "label": "Match Score",
+        "desc": "Saudi market fit"
+      },
+      "proOutput": {
+        "label": "Pro Output",
+        "desc": "Optimized insights"
+      }
+    }
+  },
+  "tabs": {
+    "resume": "Resume",
+    "match": "Match",
+    "optimize": "Optimize",
+    "keywords": "Keywords",
+    "templates": "Templates",
+    "interview": "Interview",
+    "bulk": "Bulk Analysis",
+    "coverLetter": "Cover Letter"
+  },
+  "workspace": {
+    "howItWorks": "How it Works",
+    "gettingStarted": "Getting Started",
+    "clearAll": "Clear All",
+    "continue": "Continue",
+    "signInToUnlock": "Sign in to unlock insights",
+    "signInDescription": "Connect your account to securely upload resumes, run match analysis, and save optimization drafts.",
+    "signInViaGoogle": "Sign in via Google"
+  },
+  "toasts": {
+    "dataClearedTitle": "Data cleared",
+    "dataClearedDesc": "All resume and job data has been removed from local storage.",
+    "resumeClearedTitle": "Resume cleared",
+    "resumeClearedDesc": "Resume data removed.",
+    "matchClearedTitle": "Match analysis cleared",
+    "matchClearedDesc": "Match results and job description removed.",
+    "optimizationsClearedTitle": "Optimizations cleared",
+    "optimizationsClearedDesc": "Optimization results removed.",
+    "parsingResume": "Parsing resume",
+    "parsingResumeDesc": "AI is structuring your experience for analysis.",
+    "resumeParsed": "Resume parsed",
+    "resumeParsedDesc": "Your resume is saved locally. Use Continue to compare with a job description.",
+    "parsingFailed": "Parsing failed",
+    "resumeRequired": "Resume required",
+    "resumeRequiredDesc": "Upload your resume before running a job match.",
+    "aiAnalyzing": "AI analyzing match",
+    "aiAnalyzingDesc": "Using advanced AI for intelligent match insights…",
+    "aiMatchComplete": "AI match complete",
+    "aiMatchCompleteDesc": "Intelligent insights generated. View recommendations below.",
+    "aiMatchFailed": "AI match analysis failed",
+    "generatingOptimizations": "Generating optimizations",
+    "generatingOptimizationsDesc": "Drafting tailored rewrite suggestions…",
+    "optimizationReady": "Optimization ready",
+    "optimizationFailed": "Optimization failed",
+    "copiedToClipboard": "Copied to clipboard",
+    "copiedToClipboardDesc": "Optimized bullet ready to paste into your resume.",
+    "copyFailed": "Copy failed",
+    "unlockPremium": "Unlock premium insights",
+    "unlockPremiumDesc": "Upgrade from your dashboard to save and export optimized results.",
+    "addResume": "Add your resume",
+    "addResumeDesc": "Upload or paste your resume before exporting.",
+    "signInRequired": "Sign in required",
+    "signInRequiredDesc": "Please sign in to save your resume to your account.",
+    "savedToAccount": "Saved to your account",
+    "printDialogOpened": "Print dialog opened",
+    "printDialogOpenedDesc": "Use the print dialog to save as PDF or print your resume.",
+    "exportFailed": "Export failed",
+    "templateSelected": "Template Selected"
+  },
+  "landing": {
+    "trustBadge": "Built for Vision 2030 Talent",
+    "hero": {
+      "title": "Land Your Dream Job with",
+      "dynamicPhrases": ["AI-Powered Resumes", "Higher Match Scores", "More Interviews", "Your Dream Job"],
+      "subtitle": "Transform your resume in <strong>under 5 minutes</strong>. Match job descriptions perfectly. Get past ATS systems. <em>Land more interviews.</em>",
+      "cta": "Get Started",
+      "worksWithArabicEnglish": "Works with Arabic & English",
+      "exportUnlimitedPDFs": "Export unlimited PDFs"
+    },
+    "demo": {
+      "title": "See the Transformation",
+      "subtitle": "Watch how AI turns generic bullets into impactful achievements",
+      "original": "Original",
+      "analyzing": "AI Analyzing",
+      "optimized": "Optimized",
+      "originalText": "Managed sales team and increased revenue.",
+      "analyzingText": "Analyzing: team size, revenue figures, location context...",
+      "issues": {
+        "vagueImpact": "Vague impact",
+        "noMetrics": "No metrics",
+        "genericPhrasing": "Generic phrasing"
+      },
+      "benefits": {
+        "quantifiableImpact": "Quantifiable Impact",
+        "localContext": "Local Context",
+        "strongActionVerbs": "Strong Action Verbs"
+      }
+    },
+    "features": {
+      "title": "Everything You Need to Stand Out",
+      "subtitle": "Powerful AI tools designed to give you an unfair advantage in the Saudi job market",
+      "smartParsing": {
+        "title": "Smart Resume Parsing",
+        "description": "Upload PDF, DOCX, or paste text. AI extracts and structures your experience instantly.",
+        "badge": "OCR Powered",
+        "capabilities": ["Multi-format support", "Arabic & English", "Structured extraction"]
+      },
+      "jobMatch": {
+        "title": "Job Match Scoring",
+        "description": "Get instant 0-100 match scores. See exactly which keywords you're missing.",
+        "capabilities": ["Real-time analysis", "Keyword gap detection", "Industry benchmarks"]
+      },
+      "aiOptimization": {
+        "title": "AI Optimization",
+        "description": "Rewrite sections with stronger language and better keywords—without inventing facts.",
+        "capabilities": ["Context-aware rewrites", "Metric suggestions", "Tone adjustment"]
+      },
+      "keywordAnalysis": {
+        "title": "Keyword Analysis",
+        "description": "Identify high-impact keywords and optimize your resume to beat ATS systems.",
+        "capabilities": ["Frequency analysis", "Competitor comparison", "Industry trends"]
+      },
+      "atsExport": {
+        "title": "ATS-Friendly Export",
+        "description": "Download professionally formatted PDFs that pass applicant tracking systems.",
+        "capabilities": ["Multiple templates", "Font embedding", "Section formatting"]
+      },
+      "interviewPrep": {
+        "title": "Interview Prep",
+        "description": "Generate tailored interview questions based on your resume and job requirements.",
+        "badge": "New",
+        "capabilities": ["Role-specific questions", "STAR format tips", "Difficulty levels"]
+      }
+    },
+    "howItWorks": {
+      "title": "Get Results in 3 Simple Steps",
+      "step1": {
+        "title": "Upload Resume",
+        "description": "Drop your PDF/DOCX or paste text. OCR handles scanned documents too."
+      },
+      "step2": {
+        "title": "Add Job Description",
+        "description": "Paste the job posting. AI identifies skills gaps and optimization opportunities."
+      },
+      "step3": {
+        "title": "Optimize & Download",
+        "description": "Apply AI suggestions, pick a template, and export your ATS-ready PDF."
+      },
+      "cta": "Start Optimizing Now"
+    },
+    "stats": {
+      "atsPassRate": {
+        "value": "94%",
+        "label": "ATS Pass Rate",
+        "description": "Resumes optimized with our AI"
+      },
+      "averageTime": {
+        "value": "5 min",
+        "label": "Average Time",
+        "description": "From upload to optimized PDF"
+      },
+      "moreInterviews": {
+        "value": "3x",
+        "label": "More Interviews",
+        "description": "Reported by our users"
+      },
+      "industries": {
+        "value": "50+",
+        "label": "Industries",
+        "description": "Templates tailored for"
+      }
+    },
+    "industries": {
+      "title": "Optimized for Saudi's Growing Industries",
+      "subtitle": "Templates and keywords tailored for Vision 2030 job market",
+      "hiring": "hiring",
+      "banking": { "name": "Banking & Finance", "growth": "+24%" },
+      "technology": { "name": "Technology", "growth": "+47%" },
+      "education": { "name": "Education", "growth": "+18%" },
+      "healthcare": { "name": "Healthcare", "growth": "+32%" }
+    }
+  },
+  "upload": {
+    "title": "Upload Your Resume",
+    "dragDrop": "Drag and drop your file here",
+    "or": "or",
+    "browse": "Browse Files",
+    "supported": "Supported formats: PDF, DOCX",
+    "maxSize": "Maximum file size: 5MB",
+    "paste": "Or paste your resume text"
+  },
+  "analysis": {
+    "title": "Resume Analysis",
+    "matchScore": "Match Score",
+    "atsScore": "ATS Score",
+    "keywords": {
+      "title": "Keywords",
+      "found": "Found",
+      "missing": "Missing"
+    },
+    "skills": {
+      "title": "Skills Gap Analysis",
+      "matched": "Matched Skills",
+      "missing": "Missing Skills"
+    }
+  },
+  "optimize": {
+    "title": "AI Optimization",
+    "suggestions": "Suggestions",
+    "apply": "Apply Suggestion",
+    "applyAll": "Apply All",
+    "original": "Original",
+    "optimized": "Optimized",
+    "generating": "Generating optimizations..."
+  },
+  "export": {
+    "title": "Export Resume",
+    "styled": "Styled PDF",
+    "ats": "ATS-Friendly PDF",
+    "downloading": "Preparing download..."
+  },
+  "pricing": {
+    "title": "Simple Pricing",
+    "subtitle": "Start free, upgrade when you need more",
+    "free": {
+      "name": "Free",
+      "price": "0",
+      "period": "forever",
+      "features": [
+        "3 resume analyses per month",
+        "Basic ATS score",
+        "Keyword matching"
+      ],
+      "cta": "Get Started"
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "49",
+      "period": "per month",
+      "features": [
+        "Unlimited analyses",
+        "AI-powered optimization",
+        "PDF export",
+        "Priority support"
+      ],
+      "cta": "Start Pro Trial"
+    },
+    "currency": "SAR"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Login",
+      "noAccount": "Don't have an account?",
+      "signupLink": "Sign up"
+    },
+    "signup": {
+      "title": "Create Account",
+      "name": "Full Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "submit": "Create Account",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Login"
+    }
+  },
+  "footer": {
+    "tagline": "AI-Powered Resume Optimization for Saudi Arabia",
+    "links": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "contact": "Contact Us"
+    },
+    "copyright": "© 2024 AI Resume Optimizer. All rights reserved."
+  }
+}

@@ -7,6 +7,28 @@
     color-scheme: dark;
     --app-shell-max: 1280px;
     --app-shell-gutter: clamp(1rem, 4vw, 3rem);
+    --font-family: 'Inter', sans-serif;
+  }
+
+  /* RTL-aware spacing utilities */
+  [dir="rtl"] .ml-auto { margin-left: unset; margin-right: auto; }
+  [dir="rtl"] .mr-auto { margin-right: unset; margin-left: auto; }
+
+  /* Fix icons in RTL */
+  [dir="rtl"] .icon-flip {
+    transform: scaleX(-1);
+  }
+
+  /* Arabic text improvements */
+  [dir="rtl"] {
+    letter-spacing: 0;
+    word-spacing: 0.05em;
+  }
+
+  /* Ensure numbers remain LTR in Arabic context */
+  [dir="rtl"] .ltr-numbers {
+    direction: ltr;
+    unicode-bidi: isolate;
   }
 
   html,
@@ -50,6 +72,7 @@
   }
 
   html {
+    font-family: var(--font-family);
     background-color: var(--bg);
     transition: background-color var(--duration-breathe) var(--transition-snappy);
     overflow-x: hidden;

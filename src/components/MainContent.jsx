@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate, HelpCircle, Trash2 } from "lucide-react";
 import {
   parseResume,
@@ -27,15 +28,15 @@ import { exportResumeToPdf } from "../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../services/supabaseExport.js";
 import ViewTextModal from "./ui/ViewTextModal.jsx";
 
-const tabs = [
-  { value: "resume", label: "Resume", icon: FileText },
-  { value: "match", label: "Match", icon: Target },
-  { value: "optimize", label: "Optimize", icon: Sparkles },
-  { value: "keywords", label: "Keywords", icon: TrendingUp },
-  { value: "templates", label: "Templates", icon: LayoutTemplate },
-  { value: "interview", label: "Interview", icon: MessageSquare },
-  { value: "bulk", label: "Bulk Analysis", icon: FileText },
-  { value: "cover-letter", label: "Cover Letter", icon: Mail },
+const getTabsConfig = (t) => [
+  { value: "resume", label: t("tabs.resume"), icon: FileText },
+  { value: "match", label: t("tabs.match"), icon: Target },
+  { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
+  { value: "keywords", label: t("tabs.keywords"), icon: TrendingUp },
+  { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate },
+  { value: "interview", label: t("tabs.interview"), icon: MessageSquare },
+  { value: "bulk", label: t("tabs.bulk"), icon: FileText },
+  { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail },
 ];
 
 const containerClass = "app-shell w-full";
@@ -63,12 +64,16 @@ const scheduleTimeout = (callback, delay) => {
 };
 
 export default function MainContent() {
+  const { t } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
   const isPremium = Boolean(
     user?.user_metadata?.is_premium ||
     user?.user_metadata?.tier === "premium" ||
     user?.app_metadata?.plan === "premium"
   );
+
+  // Memoize tabs to avoid recreating on every render
+  const tabs = useMemo(() => getTabsConfig(t), [t]);
 
   const [activeTab, setActiveTab] = useState("resume");
   const [flowProgress, setFlowProgress] = useState(0);
@@ -249,10 +254,10 @@ export default function MainContent() {
 
     pushToast({
       type: "success",
-      title: "Data cleared",
-      description: "All resume and job data has been removed from local storage.",
+      title: t("toasts.dataClearedTitle"),
+      description: t("toasts.dataClearedDesc"),
     });
-  }, [pushToast]);
+  }, [pushToast, t]);
 
   const handleClearResume = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -264,21 +269,21 @@ export default function MainContent() {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
-    pushToast({ type: "success", title: "Resume cleared", description: "Resume data removed." });
-  }, [pushToast]);
+    pushToast({ type: "success", title: t("toasts.resumeClearedTitle"), description: t("toasts.resumeClearedDesc") });
+  }, [pushToast, t]);
 
   const handleClearMatch = useCallback(() => {
     setMatchAnalysis(null);
     setJobDescription("");
-    pushToast({ type: "success", title: "Match analysis cleared", description: "Match results and job description removed." });
-  }, [pushToast]);
+    pushToast({ type: "success", title: t("toasts.matchClearedTitle"), description: t("toasts.matchClearedDesc") });
+  }, [pushToast, t]);
 
   const handleClearOptimizations = useCallback(() => {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
-    pushToast({ type: "success", title: "Optimizations cleared", description: "Optimization results removed." });
-  }, [pushToast]);
+    pushToast({ type: "success", title: t("toasts.optimizationsClearedTitle"), description: t("toasts.optimizationsClearedDesc") });
+  }, [pushToast, t]);
 
   const normalizeResumePayload = useCallback((input) => {
     if (input && typeof input === "object") {
@@ -315,8 +320,8 @@ export default function MainContent() {
         pushToast(
           {
             type: "info",
-            title: "Parsing resume",
-            description: "AI is structuring your experience for analysis.",
+            title: t("toasts.parsingResume"),
+            description: t("toasts.parsingResumeDesc"),
           },
           { id: TOAST_IDS.upload }
         );
@@ -343,8 +348,8 @@ export default function MainContent() {
         pushToast(
           {
             type: "success",
-            title: "Resume parsed",
-            description: "Your resume is saved locally. Use Continue to compare with a job description.",
+            title: t("toasts.resumeParsed"),
+            description: t("toasts.resumeParsedDesc"),
           },
           { id: TOAST_IDS.upload }
         );
@@ -356,7 +361,7 @@ export default function MainContent() {
         pushToast(
           {
             type: "danger",
-            title: "Parsing failed",
+            title: t("toasts.parsingFailed"),
             description: (error?.message || "Please try again with a different file.") +
               " • Save your text before retrying.",
           },
@@ -365,7 +370,7 @@ export default function MainContent() {
         throw error;
       }
     },
-    [normalizeResumePayload, pushToast]
+    [normalizeResumePayload, pushToast, t]
   );
 
   const handleAnalyzeMatchAI = useCallback(
@@ -374,8 +379,8 @@ export default function MainContent() {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
           type: "warning",
-          title: "Resume required",
-          description: "Upload your resume before running a job match.",
+          title: t("toasts.resumeRequired"),
+          description: t("toasts.resumeRequiredDesc"),
         });
         throw error;
       }
@@ -386,8 +391,8 @@ export default function MainContent() {
         pushToast(
           {
             type: "info",
-            title: "AI analyzing match",
-            description: "Using advanced AI for intelligent match insights…",
+            title: t("toasts.aiAnalyzing"),
+            description: t("toasts.aiAnalyzingDesc"),
           },
           { id: TOAST_IDS.match }
         );
@@ -398,8 +403,8 @@ export default function MainContent() {
         pushToast(
           {
             type: "success",
-            title: "AI match complete",
-            description: "Intelligent insights generated. View recommendations below.",
+            title: t("toasts.aiMatchComplete"),
+            description: t("toasts.aiMatchCompleteDesc"),
           },
           { id: TOAST_IDS.match }
         );
@@ -411,7 +416,7 @@ export default function MainContent() {
         pushToast(
           {
             type: "danger",
-            title: "AI match analysis failed",
+            title: t("toasts.aiMatchFailed"),
             description: error?.message || "Please try again in a moment.",
           },
           { id: TOAST_IDS.match }
@@ -421,7 +426,7 @@ export default function MainContent() {
         setIsAnalyzing(false);
       }
     },
-    [pushToast, resumeData]
+    [pushToast, resumeData, t]
   );
 
   const handleOptimize = useCallback(
@@ -441,8 +446,8 @@ export default function MainContent() {
         pushToast(
           {
             type: "info",
-            title: "Generating optimizations",
-            description: withTemperature("Drafting tailored rewrite suggestions…"),
+            title: t("toasts.generatingOptimizations"),
+            description: withTemperature(t("toasts.generatingOptimizationsDesc")),
           },
           { id: TOAST_IDS.optimize }
         );
@@ -471,7 +476,7 @@ export default function MainContent() {
               pushToast(
                 {
                   type: "danger",
-                  title: "Optimization failed",
+                  title: t("toasts.optimizationFailed"),
                   description: descriptionParts.filter(Boolean).join(" • "),
                 },
                 { id: TOAST_IDS.optimize }
@@ -486,7 +491,7 @@ export default function MainContent() {
         pushToast(
           {
             type: "success",
-            title: "Optimization ready",
+            title: t("toasts.optimizationReady"),
             description:
               result.source === "openai"
                 ? "Review AI-crafted rewrites and keywords."
@@ -509,7 +514,7 @@ export default function MainContent() {
         setIsOptimizing(false);
       }
     },
-    [isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData]
+    [isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData, t]
   );
 
   const handleCopy = useCallback(
@@ -520,35 +525,35 @@ export default function MainContent() {
         }
         pushToast({
           type: "success",
-          title: "Copied to clipboard",
-          description: "Optimized bullet ready to paste into your resume.",
+          title: t("toasts.copiedToClipboard"),
+          description: t("toasts.copiedToClipboardDesc"),
         });
       } catch (error) {
         pushToast({
           type: "danger",
-          title: "Copy failed",
+          title: t("toasts.copyFailed"),
           description: error?.message || "Select the text manually to copy.",
         });
       }
     },
-    [pushToast]
+    [pushToast, t]
   );
 
   const handleUpgrade = useCallback(() => {
     pushToast({
       type: "info",
-      title: "Unlock premium insights",
-      description: "Upgrade from your dashboard to save and export optimized results.",
+      title: t("toasts.unlockPremium"),
+      description: t("toasts.unlockPremiumDesc"),
     });
-  }, [pushToast]);
+  }, [pushToast, t]);
 
   const handleExportPdf = useCallback(
     async (variant, exportMethod = "supabase") => {
       if (!resumeData?.plainText) {
         pushToast({
           type: "warning",
-          title: "Add your resume",
-          description: "Upload or paste your resume before exporting.",
+          title: t("toasts.addResume"),
+          description: t("toasts.addResumeDesc"),
         });
         return;
       }
@@ -580,8 +585,8 @@ export default function MainContent() {
           if (!user) {
             pushToast({
               type: "warning",
-              title: "Sign in required",
-              description: "Please sign in to save your resume to your account.",
+              title: t("toasts.signInRequired"),
+              description: t("toasts.signInRequiredDesc"),
             });
             return;
           }
@@ -600,7 +605,7 @@ export default function MainContent() {
 
           pushToast({
             type: "success",
-            title: "Saved to your account",
+            title: t("toasts.savedToAccount"),
             description: `Your resume "${result.fileName}" has been saved securely.`,
           });
 
@@ -621,20 +626,20 @@ export default function MainContent() {
 
           pushToast({
             type: "success",
-            title: "Print dialog opened",
-            description: "Use the print dialog to save as PDF or print your resume.",
+            title: t("toasts.printDialogOpened"),
+            description: t("toasts.printDialogOpenedDesc"),
           });
         }
       } catch (error) {
         console.error("Export error:", error);
         pushToast({
           type: "danger",
-          title: "Export failed",
+          title: t("toasts.exportFailed"),
           description: error?.message || "Unable to export resume. Please try again.",
         });
       }
     },
-    [jobDescription, matchAnalysis, optimizationData, optimizations, optimizationKeywords, pushToast, resumeData, user]
+    [jobDescription, matchAnalysis, optimizationData, optimizations, optimizationKeywords, pushToast, resumeData, user, t]
   );
 
   const renderedToasts = useMemo(
@@ -669,7 +674,7 @@ export default function MainContent() {
                 title="How this feature works"
               >
                 <HelpCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
-                <span className="hidden sm:inline">How it Works</span>
+                <span className="hidden sm:inline">{t("workspace.howItWorks")}</span>
               </button>
             )}
             {/* Welcome Modal trigger */}
@@ -679,7 +684,7 @@ export default function MainContent() {
               title="View getting started guide"
             >
               <Sparkles className="w-4 h-4 transition-transform group-hover:scale-110" />
-              <span className="hidden sm:inline">Getting Started</span>
+              <span className="hidden sm:inline">{t("workspace.gettingStarted")}</span>
             </button>
           </div>
           {resumeData?.plainText && (
@@ -690,7 +695,7 @@ export default function MainContent() {
               title="Clear all saved data"
             >
               <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
-              Clear All
+              {t("workspace.clearAll")}
             </button>
           )}
         </div>
@@ -744,7 +749,7 @@ export default function MainContent() {
               onSelectTemplate={(template) => {
                 pushToast({
                   type: "success",
-                  title: "Template Selected",
+                  title: t("toasts.templateSelected"),
                   description: `Using ${template.name} template. You can now apply it to your resume.`
                 });
               }}
@@ -774,7 +779,7 @@ export default function MainContent() {
         {hasNextTab && (
           <div className="flex justify-center sm:justify-end">
             <Button variant="secondary" icon={ArrowRight} onClick={handleContinue} className="justify-center">
-              Continue
+              {t("workspace.continue")}
             </Button>
           </div>
         )}
@@ -826,8 +831,8 @@ export default function MainContent() {
           ) : (
             <EmptyState
               icon={UserPlus}
-              title="Sign in to unlock insights"
-              description="Connect your account to securely upload resumes, run match analysis, and save optimization drafts."
+              title={t("workspace.signInToUnlock")}
+              description={t("workspace.signInDescription")}
               actions={
                 <Button
                   variant="frosted"
@@ -835,7 +840,7 @@ export default function MainContent() {
                   onClick={signInWithGoogle}
                   className="justify-center text-[15px] font-semibold"
                 >
-                  Sign in via Google
+                  {t("workspace.signInViaGoogle")}
                 </Button>
               }
             />
