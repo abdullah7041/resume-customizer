@@ -41,6 +41,12 @@ export const parseResume = async (resumeInput) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+    }).catch(err => {
+      // Handle network errors (like Connection Refused)
+      if (err.message === "Failed to fetch") {
+        throw new Error("Could not connect to the server. Please ensure the Netlify Dev server is running (npm run dev:netlify) and try again.");
+      }
+      throw err;
     });
 
     const data = await handleResponse(response);

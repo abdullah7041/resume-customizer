@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FileText, UploadCloud, XCircle } from "lucide-react";
+import { FileText, Shield, UploadCloud, XCircle } from "lucide-react";
 import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/cn";
 import Button from "./Button.jsx";
@@ -207,10 +207,10 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] px-6 py-9 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-xl transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 sm:py-12",
-          "hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)] hover:translate-y-[-2px]",
+          "group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-xl border-2 border-dashed border-white/20 px-6 py-9 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 sm:py-12 cursor-pointer",
+          "hover:border-emerald-400/40 hover:bg-white/[0.02]",
           isDragging &&
-          "border-emerald-400/40 shadow-[0_8px_32px_rgba(16,185,129,0.25)] scale-[1.01]"
+          "border-emerald-400/50 bg-emerald-500/5 scale-[1.01]"
         )}
       >
         <span className={cn("absolute right-6 top-6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]", chipClass)}>
@@ -232,7 +232,7 @@ export default function UploadCard({
           Drop your resume here or click to browse
         </p>
         <p className="text-sm text-emerald-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-          <span className="inline-flex items-center gap-1.5">🔒 We keep uploads private and secure.</span>
+          <span className="inline-flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-emerald-300" /> We keep uploads private and secure.</span>
         </p>
       </div>
 

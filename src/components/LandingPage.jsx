@@ -495,44 +495,49 @@ export default function LandingPage({ onGetStarted }) {
             <span className="font-medium">{t("landing.trustBadge")}</span>
           </div>
 
-          {/* Main Headline with Typewriter */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
-            {t("landing.hero.title")}
-            <span className="block bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent min-h-[1.2em]">
-              {dynamicText}
-              <span className="animate-blink">|</span>
-            </span>
-          </h1>
-
-          {/* Subheadline */}
-          <p
-            className="max-w-2xl mx-auto text-xl md:text-2xl text-white/90 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: t("landing.hero.subtitle") }}
-          />
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <Button
-              onClick={onGetStarted}
-              size="lg"
-              className="group relative overflow-hidden bg-white text-emerald-700 hover:bg-emerald-50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_-10px_rgba(16,185,129,0.6)] px-8 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                {t("landing.hero.cta")}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          {/* Main Hero Content Box */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 md:p-12 mx-auto max-w-4xl">
+            {/* Main Headline with Typewriter */}
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
+              {t("landing.hero.title")}
+              <span className="block bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent min-h-[1.2em]">
+                {dynamicText}
+                <span className="animate-blink">|</span>
               </span>
-            </Button>
+            </h1>
+
+            {/* Subheadline */}
+            <p
+              className="max-w-2xl mx-auto text-xl md:text-2xl text-white/90 leading-relaxed mt-6"
+              dangerouslySetInnerHTML={{ __html: t("landing.hero.subtitle") }}
+            />
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+              <Button
+                onClick={onGetStarted}
+                size="lg"
+                className="group relative overflow-hidden bg-white text-emerald-700 hover:bg-emerald-50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_-10px_rgba(16,185,129,0.6)] px-8 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95"
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  {t("landing.hero.cta")}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Button>
+            </div>
           </div>
 
-          {/* Social Proof */}
-          <div className="flex flex-wrap justify-center items-center gap-8 pt-8 text-white/70 text-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-              <span>{t("landing.hero.worksWithArabicEnglish")}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-              <span>{t("landing.hero.exportUnlimitedPDFs")}</span>
+          {/* Social Proof Box */}
+          <div className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-4 px-6 mx-auto max-w-xl">
+            <div className="flex flex-wrap justify-center items-center gap-8 text-white/70 text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                <span>{t("landing.hero.worksWithArabicEnglish")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                <span>{t("landing.hero.exportUnlimitedPDFs")}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -541,28 +546,34 @@ export default function LandingPage({ onGetStarted }) {
       {/* Live Demo Section */}
       <section className="px-4 py-20 bg-gradient-to-b from-transparent to-white/5">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              {t("landing.demo.title")}
-            </h2>
-            <p className="text-xl text-white/80">
-              {t("landing.demo.subtitle")}
-            </p>
+          {/* Glass Box Container */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 mb-8">
+            <div className="text-center">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                {t("landing.demo.title")}
+              </h2>
+              <p className="text-xl text-white/80">
+                {t("landing.demo.subtitle")}
+              </p>
+            </div>
           </div>
           <ResumeTransformDemo />
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="px-4 py-20 bg-white/5 backdrop-blur-sm">
+      <section className="px-4 py-20">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
-              {t("landing.features.title")}
-            </h2>
-            <p className="text-xl text-white/80 max-w-2xl mx-auto">
-              {t("landing.features.subtitle")}
-            </p>
+          {/* Section Header Glass Box */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 mb-16">
+            <div className="text-center">
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+                {t("landing.features.title")}
+              </h2>
+              <p className="text-xl text-white/80 max-w-2xl mx-auto">
+                {t("landing.features.subtitle")}
+              </p>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -577,9 +588,11 @@ export default function LandingPage({ onGetStarted }) {
       <section className="relative px-4 py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-900/20 pointer-events-none" />
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
-            {t("landing.howItWorks.title")}
-          </h2>
+          {/* Glass Box Container */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 md:p-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
+              {t("landing.howItWorks.title")}
+            </h2>
 
             <div className="grid md:grid-cols-3 gap-8">
               {steps.map((step, idx) => (
@@ -598,19 +611,20 @@ export default function LandingPage({ onGetStarted }) {
               ))}
             </div>
 
-          {/* Final CTA */}
-          <div className="text-center mt-16">
-            <Button
-              onClick={onGetStarted}
-              size="lg"
-              className="group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:via-teal-400 hover:to-emerald-500 text-white shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_0_60px_-15px_rgba(16,185,129,0.6)] px-12 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                {t("landing.howItWorks.cta")}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </span>
-              <div className="absolute inset-0 -z-10 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] bg-[position:-100%_0,0_0] bg-no-repeat transition-[background-position_0s] duration-0 group-hover:bg-[position:200%_0,0_0] group-hover:duration-[1500ms]" />
-            </Button>
+            {/* Final CTA */}
+            <div className="text-center mt-16">
+              <Button
+                onClick={onGetStarted}
+                size="lg"
+                className="group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:via-teal-400 hover:to-emerald-500 text-white shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_0_60px_-15px_rgba(16,185,129,0.6)] px-12 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105"
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  {t("landing.howItWorks.cta")}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+                <div className="absolute inset-0 -z-10 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] bg-[position:-100%_0,0_0] bg-no-repeat transition-[background-position_0s] duration-0 group-hover:bg-[position:200%_0,0_0] group-hover:duration-[1500ms]" />
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -628,15 +642,18 @@ export default function LandingPage({ onGetStarted }) {
       {/* Saudi Job Market Section */}
       <section className="px-4 py-16">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              {t("landing.industries.title")}
-            </h2>
-            <p className="text-white/70">
-              {t("landing.industries.subtitle")}
-            </p>
+          {/* Glass Box Container */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 md:p-12">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+                {t("landing.industries.title")}
+              </h2>
+              <p className="text-white/70">
+                {t("landing.industries.subtitle")}
+              </p>
+            </div>
+            <JobMarketSection />
           </div>
-          <JobMarketSection />
         </div>
       </section>
     </div>
