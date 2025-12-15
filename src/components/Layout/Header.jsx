@@ -3,6 +3,7 @@ import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRi
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";
+import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 
 // Floating particle component for ambient animation
 const FloatingParticle = ({ delay, duration, size, left, top }) => (
@@ -332,8 +333,9 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Auth button with modern styling */}
-            <div className="flex items-center">
+            {/* Language switcher and Auth button with modern styling */}
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               {user ? (
                 <button
                   onClick={signOut}

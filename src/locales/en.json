@@ -1,0 +1,147 @@
+{
+  "common": {
+    "appName": "AI Resume Optimizer",
+    "upload": "Upload Resume",
+    "analyze": "Analyze",
+    "optimize": "Optimize",
+    "export": "Export PDF",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try Again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "pricing": "Pricing",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout"
+  },
+  "landing": {
+    "hero": {
+      "title": "Transform Your Resume with AI",
+      "subtitle": "Get more interviews with an ATS-optimized resume tailored for the Saudi job market",
+      "cta": "Start Free Analysis"
+    },
+    "features": {
+      "ats": {
+        "title": "ATS Compliance Check",
+        "description": "Ensure your resume passes Applicant Tracking Systems"
+      },
+      "match": {
+        "title": "Job Match Score",
+        "description": "See how well your resume matches any job description"
+      },
+      "optimize": {
+        "title": "AI Optimization",
+        "description": "Get intelligent suggestions to improve your resume"
+      }
+    },
+    "trust": {
+      "resumes": "Resumes Optimized",
+      "score": "Average Score Improvement",
+      "users": "Happy Users"
+    }
+  },
+  "upload": {
+    "title": "Upload Your Resume",
+    "dragDrop": "Drag and drop your file here",
+    "or": "or",
+    "browse": "Browse Files",
+    "supported": "Supported formats: PDF, DOCX",
+    "maxSize": "Maximum file size: 5MB",
+    "paste": "Or paste your resume text"
+  },
+  "analysis": {
+    "title": "Resume Analysis",
+    "matchScore": "Match Score",
+    "atsScore": "ATS Score",
+    "keywords": {
+      "title": "Keywords",
+      "found": "Found",
+      "missing": "Missing"
+    },
+    "skills": {
+      "title": "Skills Gap Analysis",
+      "matched": "Matched Skills",
+      "missing": "Missing Skills"
+    }
+  },
+  "optimize": {
+    "title": "AI Optimization",
+    "suggestions": "Suggestions",
+    "apply": "Apply Suggestion",
+    "applyAll": "Apply All",
+    "original": "Original",
+    "optimized": "Optimized",
+    "generating": "Generating optimizations..."
+  },
+  "export": {
+    "title": "Export Resume",
+    "styled": "Styled PDF",
+    "ats": "ATS-Friendly PDF",
+    "downloading": "Preparing download..."
+  },
+  "pricing": {
+    "title": "Simple Pricing",
+    "subtitle": "Start free, upgrade when you need more",
+    "free": {
+      "name": "Free",
+      "price": "0",
+      "period": "forever",
+      "features": [
+        "3 resume analyses per month",
+        "Basic ATS score",
+        "Keyword matching"
+      ],
+      "cta": "Get Started"
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "49",
+      "period": "per month",
+      "features": [
+        "Unlimited analyses",
+        "AI-powered optimization",
+        "PDF export",
+        "Priority support"
+      ],
+      "cta": "Start Pro Trial"
+    },
+    "currency": "SAR"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Login",
+      "noAccount": "Don't have an account?",
+      "signupLink": "Sign up"
+    },
+    "signup": {
+      "title": "Create Account",
+      "name": "Full Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "submit": "Create Account",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Login"
+    }
+  },
+  "footer": {
+    "tagline": "AI-Powered Resume Optimization for Saudi Arabia",
+    "links": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "contact": "Contact Us"
+    },
+    "copyright": "© 2024 AI Resume Optimizer. All rights reserved."
+  }
+}
