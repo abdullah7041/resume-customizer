@@ -6,8 +6,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-body)"],
+        sans: ["var(--font-family)", "var(--font-body)", "sans-serif"],
         display: ["var(--font-display)"],
+        arabic: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', "sans-serif"],
       },
       colors: {
         ink: {

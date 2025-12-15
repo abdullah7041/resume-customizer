@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Header from "../components/Layout/Header";
+import { DirectionProvider } from "../components/providers/DirectionProvider.jsx";
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
@@ -14,6 +15,41 @@ vi.mock("../hooks/useAuth", () => ({
 vi.mock("../lib/assets", () => ({
   getSkylineUrl: () => "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCI+PC9zdmc+",
 }));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key) => {
+      const translations = {
+        "common.appName": "AI Resume Optimizer",
+        "common.signIn": "Sign In",
+        "common.signOut": "Sign Out",
+        "common.byAuthor": "By Abdullah bin Ahmed",
+        "header.badge": "Designed for Saudi ambition",
+        "header.heroTitle": "AI Resume Optimizer",
+        "header.heroDescription": "Transform your experience into a compelling story.",
+        "header.workflow.title": "Your Workflow",
+        "header.workflow.step1.title": "Upload or paste your resume",
+        "header.workflow.step1.desc": "Drag & drop with instant AI processing",
+        "header.workflow.step2.title": "Match against Saudi job roles",
+        "header.workflow.step2.desc": "Get a confidence score and missing keywords",
+        "header.workflow.step3.title": "Optimize with precision",
+        "header.workflow.step3.desc": "Premium suggestions for modern employers",
+        "header.features.smartParsing.label": "Smart Parsing",
+        "header.features.smartParsing.desc": "AI-powered extraction",
+        "header.features.matchScore.label": "Match Score",
+        "header.features.matchScore.desc": "Saudi market fit",
+        "header.features.proOutput.label": "Pro Output",
+        "header.features.proOutput.desc": "Optimized insights",
+      };
+      return translations[key] || key;
+    },
+    i18n: { language: "en", changeLanguage: vi.fn() },
+  }),
+}));
+
+const renderWithProviders = (ui) => {
+  return render(<DirectionProvider>{ui}</DirectionProvider>);
+};
 
 describe("Mobile Layout Polish", () => {
   let matchMedia;
@@ -39,7 +75,7 @@ describe("Mobile Layout Polish", () => {
 
   describe("Single Document Scroll", () => {
     it("should not have nested overflow-y scroll containers", () => {
-      const { container } = render(<Header />);
+      const { container } = renderWithProviders(<Header />);
 
       // Check that body doesn't have overflow-y: scroll
       const bodyStyle = window.getComputedStyle(document.body);
@@ -57,7 +93,7 @@ describe("Mobile Layout Polish", () => {
     });
 
     it("should allow natural document flow", () => {
-      render(<Header />);
+      renderWithProviders(<Header />);
 
       // The header should not restrict height
       const header = screen.getByRole("banner");
@@ -77,7 +113,7 @@ describe("Mobile Layout Polish", () => {
         value: 390,
       });
 
-      const { container } = render(<Header />);
+      const { container } = renderWithProviders(<Header />);
       const appShell = container.querySelector("header .app-shell");
 
       expect(appShell).not.toBeNull();
@@ -92,7 +128,7 @@ describe("Mobile Layout Polish", () => {
         value: 390,
       });
 
-      render(<Header />);
+      renderWithProviders(<Header />);
 
       // Check that mobile-optimized classes are present
       const mainContainer = screen.getByRole("banner").querySelector("div");
@@ -105,7 +141,7 @@ describe("Mobile Layout Polish", () => {
 
   describe("Hero Image Overlay", () => {
     it("should have overlay on background image", () => {
-      const { container } = render(<Header />);
+      const { container } = renderWithProviders(<Header />);
 
       // Find the skyline background (uses skyline-still or skyline-once class, not bg-hero)
       const skyline = container.querySelector(".skyline-still") || container.querySelector(".skyline-once");
@@ -115,7 +151,7 @@ describe("Mobile Layout Polish", () => {
     });
 
     it("should reduce opacity via overlay for better text contrast", () => {
-      const { container } = render(<Header />);
+      const { container } = renderWithProviders(<Header />);
 
       // Should have glowing orbs providing ambient background
       const glowingOrbs = container.querySelectorAll(".blur-3xl");
@@ -125,7 +161,7 @@ describe("Mobile Layout Polish", () => {
 
   describe("Responsive Typography", () => {
     it("should scale font sizes for mobile", () => {
-      render(<Header />);
+      renderWithProviders(<Header />);
 
       const heading = screen.getByRole("heading", {
         name: /AI Resume Optimizer/i,
@@ -136,7 +172,7 @@ describe("Mobile Layout Polish", () => {
     });
 
     it("should have compact spacing between elements", () => {
-      const { container } = render(<Header />);
+      const { container } = renderWithProviders(<Header />);
 
       // Check main content container has compact gaps
       const mainGrid = container.querySelector(".grid");
@@ -146,7 +182,7 @@ describe("Mobile Layout Polish", () => {
 
   describe("Touch-Friendly Targets", () => {
     it("should have adequate touch target size for mobile", () => {
-      render(<Header />);
+      renderWithProviders(<Header />);
 
       const signInButton = screen.getByRole("button", { name: /sign in/i });
 
@@ -157,7 +193,7 @@ describe("Mobile Layout Polish", () => {
 
   describe("Page Height Reduction", () => {
     it("should have reduced padding in header", () => {
-      const { container } = render(<Header />);
+      const { container } = renderWithProviders(<Header />);
 
       const headerContent = container.querySelector("header > div");
 
@@ -166,7 +202,7 @@ describe("Mobile Layout Polish", () => {
     });
 
     it("should have compact grid gaps", () => {
-      const { container } = render(<Header />);
+      const { container } = renderWithProviders(<Header />);
 
       const grid = container.querySelector(".grid");
 
