@@ -281,7 +281,7 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast, o
           onClear={onClear}
         />
         {lastUploadedFile && status === "idle" && (
-          <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-400">
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] px-4 py-3 text-sm font-medium text-emerald-300">
             <CheckCircle className="h-4 w-4" aria-hidden="true" />
             <span>Resume saved! No need to upload again unless you have a new version.</span>
           </div>

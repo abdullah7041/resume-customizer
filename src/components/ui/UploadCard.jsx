@@ -176,7 +176,7 @@ export default function UploadCard({
       as="section"
       tone="glass"
       glow
-      className="mx-auto max-w-5xl space-y-5 sm:space-y-6 bg-transparent/20"
+      className="mx-auto max-w-5xl space-y-5 sm:space-y-6 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-500"
       contentClassName="space-y-5 sm:space-y-6"
       aria-live="polite"
     >
@@ -185,8 +185,8 @@ export default function UploadCard({
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-gold-500">Step 1</p>
 
         </div>
-        <h3 className="text-2xl font-semibold text-ink">Upload or Paste Your Resume</h3>
-        <p className="text-sm text-ink-soft/85">
+        <h3 className="text-2xl font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">Upload or Paste Your Resume</h3>
+        <p className="text-sm text-emerald-100/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
           Drag a PDF or DOCX, or paste the text to let our AI optimize every line.
         </p>
       </header>
@@ -207,12 +207,10 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[calc(var(--radius-card)*0.82)] border border-[color:color-mix(in_oklab,var(--glass-border),transparent_10%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_80%)] px-6 py-9 text-center shadow-[var(--shadow-soft)] backdrop-blur-2xl transition-all duration-breathe ease-snappy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)] sm:py-12",
-          "hover:border-emerald-500/40 hover:shadow-[0_0_30px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1",
-          "before:absolute before:inset-0 before:rounded-[inherit] before:bg-[image:var(--glass-reflection)] before:opacity-60 before:mix-blend-screen before:transition-opacity before:duration-breathe before:content-[''] hover:before:opacity-80",
-          "after:pointer-events-none after:absolute after:inset-[-35%] after:rounded-full after:bg-[radial-gradient(circle_at_top,rgba(162,255,217,0.18),transparent_65%)] after:opacity-0 after:transition-opacity after:duration-breathe hover:after:opacity-100",
+          "group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] px-6 py-9 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-xl transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 sm:py-12",
+          "hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)] hover:translate-y-[-2px]",
           isDragging &&
-          "border-[color:var(--glass-border-strong)] shadow-glass before:opacity-90 after:opacity-80 scale-[1.02]"
+          "border-emerald-400/40 shadow-[0_8px_32px_rgba(16,185,129,0.25)] scale-[1.01]"
         )}
       >
         <span className={cn("absolute right-6 top-6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]", chipClass)}>
@@ -230,11 +228,11 @@ export default function UploadCard({
             <UploadCloud className="h-9 w-9 text-emerald-300/90 drop-shadow-[0_4px_12px_rgba(16,185,129,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.6)]" aria-hidden="true" />
           </span>
         </span>
-        <p className="text-base font-semibold text-ink">
+        <p className="text-base font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
           Drop your resume here or click to browse
         </p>
-        <p className="text-sm text-ink-soft/80">
-          We keep uploads private and secure.
+        <p className="text-sm text-emerald-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+          <span className="inline-flex items-center gap-1.5">🔒 We keep uploads private and secure.</span>
         </p>
       </div>
 
