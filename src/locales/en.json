@@ -12,7 +12,10 @@
     "save": "Save",
     "delete": "Delete",
     "edit": "Edit",
-    "close": "Close"
+    "close": "Close",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "byAuthor": "By Abdullah bin Ahmed"
   },
   "nav": {
     "home": "Home",
@@ -21,6 +24,40 @@
     "login": "Login",
     "signup": "Sign Up",
     "logout": "Logout"
+  },
+  "header": {
+    "badge": "Designed for Saudi ambition",
+    "heroTitle": "AI Resume Optimizer",
+    "heroDescription": "Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.",
+    "workflow": {
+      "title": "Your Workflow",
+      "step1": {
+        "title": "Upload or paste your resume",
+        "desc": "Drag & drop with instant AI processing"
+      },
+      "step2": {
+        "title": "Match against Saudi job roles",
+        "desc": "Get a confidence score and missing keywords"
+      },
+      "step3": {
+        "title": "Optimize with precision",
+        "desc": "Premium suggestions for modern employers"
+      }
+    },
+    "features": {
+      "smartParsing": {
+        "label": "Smart Parsing",
+        "desc": "AI-powered extraction"
+      },
+      "matchScore": {
+        "label": "Match Score",
+        "desc": "Saudi market fit"
+      },
+      "proOutput": {
+        "label": "Pro Output",
+        "desc": "Optimized insights"
+      }
+    }
   },
   "landing": {
     "hero": {

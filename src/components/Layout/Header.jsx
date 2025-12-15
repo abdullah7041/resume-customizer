@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";
@@ -52,6 +53,7 @@ const iconCircleClass =
   "relative inline-flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl transition-all duration-300";
 
 export default function Header() {
+  const { t } = useTranslation();
   const { user, signInWithGoogle, signOut } = useAuth();
   const skylineUrl = useMemo(() => getSkylineUrl(), []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
@@ -186,20 +188,20 @@ export default function Header() {
   const featureCards = [
     {
       icon: Zap,
-      label: "Smart Parsing",
-      desc: "AI-powered extraction",
+      label: t("header.features.smartParsing.label"),
+      desc: t("header.features.smartParsing.desc"),
       gradient: "from-yellow-400 to-orange-500",
     },
     {
       icon: Target,
-      label: "Match Score",
-      desc: "Saudi market fit",
+      label: t("header.features.matchScore.label"),
+      desc: t("header.features.matchScore.desc"),
       gradient: "from-emerald-400 to-teal-500",
     },
     {
       icon: Star,
-      label: "Pro Output",
-      desc: "Optimized insights",
+      label: t("header.features.proOutput.label"),
+      desc: t("header.features.proOutput.desc"),
       gradient: "from-purple-400 to-pink-500",
     },
   ];
@@ -207,18 +209,18 @@ export default function Header() {
   const workflowSteps = [
     {
       icon: FileText,
-      title: "Upload or paste your resume",
-      desc: "Drag & drop with instant AI processing",
+      title: t("header.workflow.step1.title"),
+      desc: t("header.workflow.step1.desc"),
     },
     {
       icon: Target,
-      title: "Match against Saudi job roles",
-      desc: "Get a confidence score and missing keywords",
+      title: t("header.workflow.step2.title"),
+      desc: t("header.workflow.step2.desc"),
     },
     {
       icon: Sparkles,
-      title: "Optimize with precision",
-      desc: "Premium suggestions for modern employers",
+      title: t("header.workflow.step3.title"),
+      desc: t("header.workflow.step3.desc"),
     },
   ];
 
@@ -302,7 +304,7 @@ export default function Header() {
               {/* Brand text */}
               <div className="flex flex-col">
                 <p className="text-sm font-bold tracking-[0.15em] bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent uppercase">
-                  AI Resume Optimizer
+                  {t("common.appName")}
                 </p>
                 {enableArabicBrand && (
                   <p
@@ -318,7 +320,7 @@ export default function Header() {
                 )}
                 <div className="flex items-center gap-2 mt-0.5">
                   <p className="text-xs font-medium text-white/60 tracking-wide">
-                    By Abdullah bin Ahmed
+                    {t("common.byAuthor")}
                   </p>
                   <a
                     href="https://www.linkedin.com/in/3binahmed/"
@@ -344,7 +346,7 @@ export default function Header() {
                   <span className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 border border-white/20 rounded-xl" />
                   <span className="absolute inset-0 bg-gradient-to-r from-red-500/0 to-red-500/0 group-hover:from-red-500/20 group-hover:to-red-400/10 transition-all duration-300 rounded-xl" />
                   <LogOut className="relative h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
-                  <span className="relative">Sign Out</span>
+                  <span className="relative">{t("common.signOut")}</span>
                 </button>
               ) : (
                 <button
@@ -355,7 +357,7 @@ export default function Header() {
                   <span className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
                   <span className="absolute inset-0 shadow-[0_0_30px_rgba(16,185,129,0.4)] group-hover:shadow-[0_0_40px_rgba(16,185,129,0.6)] transition-shadow duration-300 rounded-xl" />
                   <LogIn className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-                  <span className="relative">Sign In</span>
+                  <span className="relative">{t("common.signIn")}</span>
                 </button>
               )}
             </div>
@@ -381,7 +383,7 @@ export default function Header() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
               </span>
               <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent uppercase">
-                Designed for Saudi ambition
+                {t("header.badge")}
               </span>
             </div>
 
@@ -392,11 +394,11 @@ export default function Header() {
                 <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-white">AI Resume Optimizer</h1>
+                <h1 className="text-xl font-bold text-white">{t("header.heroTitle")}</h1>
               </div>
 
               <p className="text-white/70 leading-relaxed">
-                Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.
+                {t("header.heroDescription")}
               </p>
             </div>
 
@@ -461,7 +463,7 @@ export default function Header() {
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                 <ArrowRight className="h-5 w-5 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-white">Your Workflow</h2>
+              <h2 className="text-xl font-bold text-white">{t("header.workflow.title")}</h2>
             </div>
 
             <ul className="space-y-6">

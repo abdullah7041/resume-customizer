@@ -16,6 +16,37 @@ vi.mock("../lib/assets", () => ({
   getSkylineUrl: vi.fn(() => ""),
 }));
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key) => {
+      const translations = {
+        "common.appName": "AI Resume Optimizer",
+        "common.signIn": "Sign In",
+        "common.signOut": "Sign Out",
+        "common.byAuthor": "By Abdullah bin Ahmed",
+        "header.badge": "Designed for Saudi ambition",
+        "header.heroTitle": "AI Resume Optimizer",
+        "header.heroDescription": "Transform your experience into a compelling story.",
+        "header.workflow.title": "Your Workflow",
+        "header.workflow.step1.title": "Upload or paste your resume",
+        "header.workflow.step1.desc": "Drag & drop with instant AI processing",
+        "header.workflow.step2.title": "Match against Saudi job roles",
+        "header.workflow.step2.desc": "Get a confidence score and missing keywords",
+        "header.workflow.step3.title": "Optimize with precision",
+        "header.workflow.step3.desc": "Premium suggestions for modern employers",
+        "header.features.smartParsing.label": "Smart Parsing",
+        "header.features.smartParsing.desc": "AI-powered extraction",
+        "header.features.matchScore.label": "Match Score",
+        "header.features.matchScore.desc": "Saudi market fit",
+        "header.features.proOutput.label": "Pro Output",
+        "header.features.proOutput.desc": "Optimized insights",
+      };
+      return translations[key] || key;
+    },
+    i18n: { language: "en", changeLanguage: vi.fn() },
+  }),
+}));
+
 const renderWithProviders = (ui) => {
   return render(<DirectionProvider>{ui}</DirectionProvider>);
 };
