@@ -5,6 +5,16 @@ export const handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
+  // Check for API key before proceeding
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("[extract-resume-json] GEMINI_API_KEY is not set");
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Server configuration error: AI service not configured" }),
+    };
+  }
+
   try {
     console.log(`[extract-resume-json] Received request. Method: ${event.httpMethod}`);
     const body = JSON.parse(event.body);
@@ -43,7 +53,7 @@ export const handler = async (event) => {
       sections: [
         { title: "Contact", content: [`Name: ${analysis.basics?.name || ""}`, `Email: ${analysis.basics?.email || ""}`, `Phone: ${analysis.basics?.phone || ""}`] },
         { title: "Summary", content: [analysis.basics?.summary || ""] },
-        { title: "Skills", content: (analysis.skills || []).flatMap(s => s.keywords || []) },
+        { title: "Skills", content: Array.isArray(analysis.skills) ? analysis.skills.flatMap(s => typeof s === 'string' ? s : (s.keywords || [])) : [] },
         { title: "Experience", content: (analysis.work || []).map(exp => `${exp.position || ""} at ${exp.name || ""} (${exp.startDate || ""} - ${exp.endDate || ""})`) },
         { title: "Education", content: (analysis.education || []).map(edu => `${edu.studyType || ""} ${edu.area || ""} from ${edu.institution || ""} (${edu.endDate || ""})`) },
         { title: "Projects", content: (analysis.projects || []).map(p => p.name || "") },
@@ -62,10 +72,28 @@ export const handler = async (event) => {
     };
 
   } catch (error) {
-    console.error("Parse error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[extract-resume-json] Parse error:", errorMessage, error);
+
+    // Provide more specific error messages based on the error type
+    let userMessage = "Failed to parse resume";
+    if (errorMessage.includes("API key")) {
+      userMessage = "AI service configuration error";
+    } else if (errorMessage.includes("quota") || errorMessage.includes("rate limit")) {
+      userMessage = "AI service is currently busy. Please try again in a moment.";
+    } else if (errorMessage.includes("JSON") || errorMessage.includes("parse")) {
+      userMessage = "Failed to parse AI response. Please try again.";
+    } else if (errorMessage.includes("timeout") || errorMessage.includes("network")) {
+      userMessage = "Network error. Please check your connection and try again.";
+    }
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Failed to parse resume" }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: userMessage,
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      }),
     };
   }
 };

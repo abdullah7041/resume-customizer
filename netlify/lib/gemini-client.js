@@ -408,6 +408,31 @@ IMPORTANT: Map ALL experience entries to "work[]" with bullet points in "highlig
 
   } catch (error) {
     console.error("[Gemini] Error parsing resume:", error);
+
+    // Provide more specific error messages
+    if (!API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured. Please set the environment variable.");
+    }
+
+    if (error instanceof SyntaxError) {
+      throw new Error("Failed to parse AI response as JSON. The AI may have returned invalid data.");
+    }
+
+    // Preserve and enrich the original error message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (errorMessage.includes("API_KEY") || errorMessage.includes("permission") || errorMessage.includes("403")) {
+      throw new Error("API key error: Please verify your GEMINI_API_KEY is valid and has proper permissions.");
+    }
+
+    if (errorMessage.includes("quota") || errorMessage.includes("429")) {
+      throw new Error("API quota exceeded. Please try again later.");
+    }
+
+    if (errorMessage.includes("model") || errorMessage.includes("404")) {
+      throw new Error(`Model error: The model '${MODEL_NAME}' may not be available. Please check the model name.`);
+    }
+
     throw error;
   }
 }
