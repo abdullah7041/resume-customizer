@@ -12,6 +12,9 @@ import Button from "../components/ui/Button.jsx";
 import { mergeResumeData } from "../utils/resumeUtils.js";
 import { cn } from "../lib/cn.js";
 
+// Glass card styles matching Header.jsx
+const glassCardClass =
+  "relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)]";
 
 const categoryLabels = {
   [TEMPLATE_CATEGORIES.MODERN]: "Modern",
@@ -26,14 +29,14 @@ const TemplateThumbnail = ({ template, isSelected, onClick, resumeData }) => {
     <button
       onClick={onClick}
       className={cn(
-        "relative w-full aspect-[3/4] rounded-lg border-2 transition-all duration-200 overflow-hidden group",
+        "relative w-full aspect-[3/4] rounded-xl border-2 transition-all duration-300 overflow-hidden group",
         isSelected
-          ? "border-emerald-500 ring-2 ring-emerald-500/30 shadow-lg"
-          : "border-gray-200 dark:border-gray-700 hover:border-emerald-300 hover:shadow-md"
+          ? "border-emerald-400/50 ring-2 ring-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+          : "border-white/10 hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
       )}
     >
       {/* Miniature Preview */}
-      <div className="absolute inset-0 bg-white dark:bg-gray-100 overflow-hidden">
+      <div className="absolute inset-0 bg-white overflow-hidden">
         <div
           className="origin-top-left pointer-events-none select-none"
           style={{
@@ -49,15 +52,17 @@ const TemplateThumbnail = ({ template, isSelected, onClick, resumeData }) => {
 
       {/* Selected Checkmark */}
       {isSelected && (
-        <div className="absolute top-2 right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg z-10">
+        <div className="absolute top-2 right-2 w-6 h-6 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] z-10">
           <Check className="w-4 h-4 text-white" />
         </div>
       )}
 
       {/* Template Name Overlay */}
       <div className={cn(
-        "absolute bottom-0 left-0 right-0 p-2 transition-all z-10",
-        isSelected ? "bg-emerald-500" : "bg-gradient-to-t from-black/80 to-transparent"
+        "absolute bottom-0 left-0 right-0 p-2.5 transition-all z-10",
+        isSelected
+          ? "bg-gradient-to-r from-emerald-500 to-teal-500"
+          : "bg-gradient-to-t from-black/90 via-black/60 to-transparent"
       )}>
         <p className="text-xs font-medium text-white truncate text-center">
           {template.name}
@@ -133,32 +138,33 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
   };
 
   return (
-    <div className="flex h-[calc(100vh-200px)] min-h-[600px] -m-4 sm:-m-5 lg:-m-6">
+    <div className="flex gap-6 min-h-[600px] p-2">
       {/* Left Panel - Template Selection */}
-      <div className="w-2/5 max-w-sm border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50/50 dark:bg-gray-900/30">
+      <div className={cn(glassCardClass, "w-[340px] flex-shrink-0 flex flex-col")}>
         {/* Header with Toggle */}
-        <div className="sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-4 border-b border-gray-200 dark:border-gray-700 z-10 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Templates</h2>
+        <div className="p-5 space-y-4 border-b border-white/10">
+          {/* Title */}
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+              <Layers className="w-4 h-4 text-white" />
             </div>
+            <h2 className="text-lg font-bold text-white">Templates</h2>
           </div>
 
           {/* Original/Optimized Toggle */}
           <button
             onClick={() => setShowOptimized(!showOptimized)}
             className={cn(
-              "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer",
+              "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border",
               showOptimized
-                ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-md"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border-emerald-400/30 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20"
             )}
             title="Toggle between original and optimized versions"
           >
             {showOptimized ? (
               <>
-                <ToggleRight className="w-5 h-5" />
+                <ToggleRight className="w-5 h-5 text-emerald-400" />
                 <span>Showing Optimized</span>
               </>
             ) : (
@@ -170,14 +176,14 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
           </button>
 
           {/* Category Filters */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedCategory("all")}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
                 selectedCategory === "all"
-                  ? "bg-emerald-500 text-white"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-300"
+                  : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
               )}
             >
               All
@@ -187,10 +193,10 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
                 key={value}
                 onClick={() => setSelectedCategory(value)}
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
                   selectedCategory === value
-                    ? "bg-emerald-500 text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-300"
+                    : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
                 )}
               >
                 {label}
@@ -200,7 +206,7 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
         </div>
 
         {/* Templates Grid */}
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex-1 overflow-y-auto p-4">
           <div className="grid grid-cols-2 gap-3">
             {filteredTemplates.map(template => (
               <TemplateThumbnail
@@ -216,50 +222,48 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
       </div>
 
       {/* Right Panel - Live Preview */}
-      <div className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-800/50">
+      <div className={cn(glassCardClass, "flex-1 flex flex-col")}>
         {/* Preview Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <div className="flex items-center justify-between p-5 border-b border-white/10">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-bold text-white">
               {selectedTemplate?.name}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+            <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
               {showOptimized ? (
-                <><Sparkles className="w-4 h-4 text-emerald-500" /> Optimized Version</>
+                <><Sparkles className="w-4 h-4 text-emerald-400" /> Optimized Version</>
               ) : (
-                <><FileText className="w-4 h-4 text-gray-400" /> Original Version</>
+                <><FileText className="w-4 h-4 text-white/40" /> Original Version</>
               )}
               {selectedTemplate && <span className="ml-1">• {categoryLabels[selectedTemplate.category]}</span>}
             </p>
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              onClick={handleDownloadPdf}
-              variant="primary"
-              size="sm"
-              disabled={!resumeData?.plainText || isDownloading}
-            >
-              {isDownloading ? "Generating..." : <><Download className="w-4 h-4 mr-2" />
-                Download PDF</>}
-            </Button>
-          </div>
+          <Button
+            onClick={handleDownloadPdf}
+            variant="primary"
+            size="sm"
+            disabled={!resumeData?.plainText || isDownloading}
+            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+          >
+            {isDownloading ? "Generating..." : <><Download className="w-4 h-4 mr-2" />Download PDF</>}
+          </Button>
         </div>
 
         {/* Live Preview */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-3xl mx-auto bg-white shadow-2xl rounded-lg overflow-hidden">
-            {selectedTemplate && (
-              <TemplateRenderer
-                template={selectedTemplate}
-                userData={displayData}
-              />
-            )}
+        <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white shadow-[0_20px_60px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden ring-1 ring-white/10">
+              {selectedTemplate && (
+                <TemplateRenderer
+                  template={selectedTemplate}
+                  userData={displayData}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-
-    </div >
+    </div>
   );
 }
