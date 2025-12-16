@@ -309,17 +309,17 @@ function FeatureCard({ feature }) {
 function StatItem({ stat }) {
   const { count, ref } = useAnimatedCounter(stat.end, 2000);
   return (
-    <div ref={ref} className="text-center space-y-3 group">
-      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 mx-auto group-hover:from-emerald-500/30 group-hover:to-teal-500/30 transition-all duration-300">
-        <stat.icon className="w-7 h-7 text-emerald-300" />
+    <div ref={ref} className="text-center space-y-2 sm:space-y-3 group px-2">
+      <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 mx-auto group-hover:from-emerald-500/30 group-hover:to-teal-500/30 transition-all duration-300">
+        <stat.icon className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-300" />
       </div>
-      <div className="text-4xl md:text-5xl font-bold text-white tabular-nums">
+      <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tabular-nums">
         {count}
         {stat.suffix}
       </div>
       <div>
-        <div className="text-white font-semibold">{stat.label}</div>
-        <div className="text-white/50 text-sm">{stat.description}</div>
+        <div className="text-sm sm:text-base text-white font-semibold leading-tight">{stat.label}</div>
+        <div className="text-white/50 text-xs sm:text-sm leading-relaxed">{stat.description}</div>
       </div>
     </div>
   );
@@ -379,15 +379,15 @@ function JobMarketSection() {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
       {industries.map((industry, idx) => (
         <div
           key={idx}
-          className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-emerald-400/30 transition-all duration-300 group cursor-pointer"
+          className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:border-emerald-400/30 transition-all duration-300 group cursor-pointer"
         >
-          <industry.icon className="w-8 h-8 text-emerald-300/70 group-hover:text-emerald-300 mb-3 transition-colors" />
-          <div className="font-medium text-white">{industry.name}</div>
-          <div className="text-xs text-emerald-400 font-semibold">{industry.growth} {t("landing.industries.hiring")}</div>
+          <industry.icon className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-300/70 group-hover:text-emerald-300 mb-2 sm:mb-3 transition-colors" />
+          <div className="text-sm sm:text-base font-medium text-white leading-tight">{industry.name}</div>
+          <div className="text-[10px] sm:text-xs text-emerald-400 font-semibold mt-1">{industry.growth} {t("landing.industries.hiring")}</div>
         </div>
       ))}
     </div>
@@ -477,9 +477,9 @@ export default function LandingPage({ onGetStarted }) {
   const steps = getSteps(t);
 
   return (
-    <div className="w-full">
+    <div className="w-full overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative overflow-hidden px-4 py-20 md:py-32">
+      <section className="relative overflow-hidden px-3 sm:px-4 py-16 sm:py-20 md:py-32">
         {/* Animated background */}
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
@@ -496,9 +496,9 @@ export default function LandingPage({ onGetStarted }) {
           </div>
 
           {/* Main Hero Content Box */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 md:p-12 mx-auto max-w-4xl">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12 mx-auto max-w-4xl">
             {/* Main Headline with Typewriter */}
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
               {t("landing.hero.title")}
               <span className="block bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent min-h-[1.2em]">
                 {dynamicText}
@@ -508,16 +508,16 @@ export default function LandingPage({ onGetStarted }) {
 
             {/* Subheadline */}
             <p
-              className="max-w-2xl mx-auto text-xl md:text-2xl text-white/90 leading-relaxed mt-6"
+              className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 leading-relaxed mt-4 sm:mt-6 px-2"
               dangerouslySetInnerHTML={{ __html: t("landing.hero.subtitle") }}
             />
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center pt-6 sm:pt-8 px-2">
               <Button
                 onClick={onGetStarted}
                 size="lg"
-                className="group relative overflow-hidden bg-white text-emerald-700 hover:bg-emerald-50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_-10px_rgba(16,185,129,0.6)] px-8 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95"
+                className="w-full sm:w-auto group relative overflow-hidden bg-white text-emerald-700 hover:bg-emerald-50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_-10px_rgba(16,185,129,0.6)] px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   {t("landing.hero.cta")}
@@ -528,8 +528,8 @@ export default function LandingPage({ onGetStarted }) {
           </div>
 
           {/* Social Proof Box */}
-          <div className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-4 px-6 mx-auto max-w-xl">
-            <div className="flex flex-wrap justify-center items-center gap-8 text-white/70 text-sm">
+          <div className="relative overflow-hidden rounded-lg sm:rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-3 sm:py-4 px-4 sm:px-6 mx-auto max-w-xl">
+            <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 text-white/70 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-300" />
                 <span>{t("landing.hero.worksWithArabicEnglish")}</span>
@@ -544,15 +544,15 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* Live Demo Section */}
-      <section className="px-4 py-20 bg-gradient-to-b from-transparent to-white/5">
+      <section className="px-3 sm:px-4 py-12 sm:py-16 md:py-20 bg-gradient-to-b from-transparent to-white/5">
         <div className="max-w-4xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 mb-8">
-            <div className="text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 mb-6 sm:mb-8">
+            <div className="text-center px-2">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4 leading-tight">
                 {t("landing.demo.title")}
               </h2>
-              <p className="text-xl text-white/80">
+              <p className="text-base sm:text-lg md:text-xl text-white/80">
                 {t("landing.demo.subtitle")}
               </p>
             </div>
@@ -562,15 +562,15 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* Features Grid */}
-      <section className="px-4 py-20">
+      <section className="px-3 sm:px-4 py-12 sm:py-16 md:py-20">
         <div className="max-w-6xl mx-auto">
           {/* Section Header Glass Box */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 mb-16">
-            <div className="text-center">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 mb-10 sm:mb-12 md:mb-16">
+            <div className="text-center px-2">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 leading-tight">
                 {t("landing.features.title")}
               </h2>
-              <p className="text-xl text-white/80 max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
                 {t("landing.features.subtitle")}
               </p>
             </div>
@@ -585,38 +585,38 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* How It Works */}
-      <section className="relative px-4 py-20 overflow-hidden">
+      <section className="relative px-3 sm:px-4 py-12 sm:py-16 md:py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-900/20 pointer-events-none" />
         <div className="max-w-4xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 md:p-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white text-center mb-8 sm:mb-10 md:mb-12 px-2 leading-tight">
               {t("landing.howItWorks.title")}
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
               {steps.map((step, idx) => (
-                <div key={idx} className="text-center space-y-4 group">
+                <div key={idx} className="text-center space-y-3 sm:space-y-4 group px-2">
                   <div className="relative inline-block">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg group-hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.5)] transition-all duration-300">
-                      <step.icon className="w-8 h-8" />
+                    <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg group-hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.5)] transition-all duration-300">
+                      <step.icon className="w-6 h-6 sm:w-8 sm:h-8" />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white text-emerald-700 font-bold text-sm flex items-center justify-center shadow-md">
+                    <div className="absolute -top-1 sm:-top-2 -right-1 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white text-emerald-700 font-bold text-xs sm:text-sm flex items-center justify-center shadow-md">
                       {idx + 1}
                     </div>
                   </div>
-                  <h3 className="text-xl font-bold text-white">{step.title}</h3>
-                  <p className="text-white/70">{step.description}</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-white leading-tight">{step.title}</h3>
+                  <p className="text-sm sm:text-base text-white/70 leading-relaxed">{step.description}</p>
                 </div>
               ))}
             </div>
 
             {/* Final CTA */}
-            <div className="text-center mt-16">
+            <div className="text-center mt-10 sm:mt-12 md:mt-16 px-2">
               <Button
                 onClick={onGetStarted}
                 size="lg"
-                className="group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:via-teal-400 hover:to-emerald-500 text-white shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_0_60px_-15px_rgba(16,185,129,0.6)] px-12 py-6 text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105"
+                className="w-full sm:w-auto group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:via-teal-400 hover:to-emerald-500 text-white shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_0_60px_-15px_rgba(16,185,129,0.6)] px-8 sm:px-12 py-4 sm:py-6 text-base sm:text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   {t("landing.howItWorks.cta")}
@@ -630,25 +630,25 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* Stats Section */}
-      <section className="px-4 py-16">
+      <section className="px-3 sm:px-4 py-10 sm:py-12 md:py-16">
         <div className="max-w-5xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 md:p-12">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12">
             <StatsSection />
           </div>
         </div>
       </section>
 
       {/* Saudi Job Market Section */}
-      <section className="px-4 py-16">
+      <section className="px-3 sm:px-4 py-10 sm:py-12 md:py-16">
         <div className="max-w-4xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8 md:p-12">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12">
+            <div className="text-center mb-8 sm:mb-10 px-2">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3 leading-tight">
                 {t("landing.industries.title")}
               </h2>
-              <p className="text-white/70">
+              <p className="text-sm sm:text-base text-white/70">
                 {t("landing.industries.subtitle")}
               </p>
             </div>

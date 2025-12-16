@@ -238,7 +238,26 @@
     "browse": "Browse Files",
     "supported": "Supported formats: PDF, DOCX",
     "maxSize": "Maximum file size: 5MB",
-    "paste": "Or paste your resume text"
+    "paste": "Or paste your resume text",
+    "card": {
+      "step": "Step 1",
+      "title": "Upload or Paste Your Resume",
+      "subtitle": "Drag a PDF or DOCX, or paste the text to let our AI optimize every line.",
+      "maxSize": "Max 5MB",
+      "pdf": "PDF",
+      "docx": "DOCX",
+      "and": "&",
+      "dropText": "Drop your resume here or click to browse",
+      "securityText": "We keep uploads private and secure.",
+      "prepareButton": "Prepare Resume",
+      "clearButton": "Clear inputs",
+      "status": {
+        "uploading": "Uploading resume…",
+        "parsing": "Parsing resume with AI…",
+        "success": "Resume ready!",
+        "error": "We couldn't process that file."
+      }
+    }
   },
   "analysis": {
     "title": "Resume Analysis",
