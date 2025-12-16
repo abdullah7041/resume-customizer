@@ -494,5 +494,170 @@
     "needsImprovement": "Needs Improvement",
     "skills": "skills",
     "analysisNote": "Analysis based on Saudi Vision 2030 sector priorities"
+  },
+  "sections": {
+    "resume": {
+      "title": "Resume",
+      "upload": {
+        "title": "Upload Your Resume",
+        "subtitle": "Drag & drop or click to upload",
+        "formats": "PDF, DOCX up to 5MB",
+        "paste": "Or paste your resume text",
+        "pastePlaceholder": "Paste your resume content here...",
+        "analyzing": "Analyzing your resume...",
+        "success": "Resume uploaded successfully"
+      }
+    },
+    "match": {
+      "title": "Match",
+      "subtitle": "Compare your resume against job descriptions",
+      "jobInput": {
+        "title": "Job Description",
+        "placeholder": "Paste the job description here...",
+        "url": "Or enter job posting URL"
+      },
+      "results": {
+        "title": "Match Analysis",
+        "score": "Match Score",
+        "keywords": "Keywords Found",
+        "missing": "Missing Keywords",
+        "suggestions": "Suggestions"
+      },
+      "analyze": "Analyze Match",
+      "analyzing": "Analyzing...",
+      "noResume": "Please upload a resume first"
+    },
+    "optimize": {
+      "title": "Optimize",
+      "subtitle": "AI-powered suggestions to improve your resume",
+      "sections": {
+        "summary": "Professional Summary",
+        "experience": "Work Experience",
+        "skills": "Skills",
+        "all": "All Sections"
+      },
+      "actions": {
+        "optimize": "Optimize",
+        "apply": "Apply",
+        "applyAll": "Apply All",
+        "revert": "Revert",
+        "compare": "Compare"
+      },
+      "status": {
+        "original": "Original",
+        "optimized": "Optimized",
+        "applied": "Applied"
+      },
+      "generating": "Generating optimizations...",
+      "noChanges": "No optimizations available"
+    },
+    "keywords": {
+      "title": "Keywords",
+      "subtitle": "Analyze and optimize keywords in your resume",
+      "analysis": {
+        "title": "Keyword Analysis",
+        "density": "Keyword Density",
+        "relevance": "Relevance Score",
+        "atsScore": "ATS Score"
+      },
+      "categories": {
+        "technical": "Technical Skills",
+        "soft": "Soft Skills",
+        "industry": "Industry Terms",
+        "action": "Action Verbs"
+      },
+      "suggestions": {
+        "title": "Suggested Keywords",
+        "add": "Add to Resume",
+        "added": "Added"
+      }
+    },
+    "templates": {
+      "title": "Templates",
+      "subtitle": "Choose a professional template for your resume",
+      "categories": {
+        "all": "All",
+        "modern": "Modern",
+        "classic": "Classic",
+        "technical": "Technical"
+      },
+      "preview": {
+        "title": "Preview",
+        "showing": "Showing",
+        "original": "Original",
+        "optimized": "Optimized"
+      },
+      "export": {
+        "download": "Download PDF",
+        "ats": "ATS-Friendly",
+        "styled": "Styled"
+      }
+    },
+    "interview": {
+      "title": "Interview",
+      "subtitle": "Prepare for interviews with AI-generated questions",
+      "generate": "Generate Questions",
+      "generating": "Generating questions...",
+      "categories": {
+        "behavioral": "Behavioral",
+        "technical": "Technical",
+        "situational": "Situational",
+        "general": "General"
+      },
+      "question": {
+        "sample": "Sample Answer",
+        "tips": "Tips",
+        "practice": "Practice"
+      },
+      "settings": {
+        "difficulty": "Difficulty",
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard",
+        "count": "Number of Questions"
+      }
+    },
+    "bulkAnalysis": {
+      "title": "Bulk Analysis",
+      "subtitle": "Analyze multiple resumes or job descriptions at once",
+      "upload": {
+        "title": "Upload Files",
+        "subtitle": "Upload multiple files for batch processing",
+        "limit": "Up to 10 files at a time"
+      },
+      "results": {
+        "title": "Analysis Results",
+        "processing": "Processing",
+        "complete": "Complete",
+        "failed": "Failed"
+      },
+      "export": {
+        "csv": "Export CSV",
+        "pdf": "Export Report"
+      }
+    },
+    "coverLetter": {
+      "title": "Cover Letter",
+      "subtitle": "Generate a tailored cover letter for your application",
+      "inputs": {
+        "company": "Company Name",
+        "position": "Position",
+        "tone": "Tone",
+        "tones": {
+          "professional": "Professional",
+          "friendly": "Friendly",
+          "confident": "Confident",
+          "enthusiastic": "Enthusiastic"
+        }
+      },
+      "generate": "Generate Cover Letter",
+      "generating": "Writing your cover letter...",
+      "result": {
+        "title": "Your Cover Letter",
+        "copy": "Copy",
+        "download": "Download",
+        "regenerate": "Regenerate"
+      }
+    }
   }
 }
