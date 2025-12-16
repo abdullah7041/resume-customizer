@@ -5,28 +5,28 @@ import {
   parseResume,
   analyzeResumeWithAI,
   optimizeResume,
-} from "../services/api.js";
-import { useAuth } from "../hooks/useAuth.jsx";
-import ResumeUpload from "../features/ResumeUpload.jsx";
-import JobMatch from "./Features/JobMatch.jsx";
-import Optimization from "../features/Optimization.jsx";
-import KeywordAnalyzer from "../features/KeywordAnalyzer.jsx";
-import TemplateGallery from "../features/TemplateGallery.jsx";
-import InterviewPrep from "../features/InterviewPrep.jsx";
-import BulkAnalysis from "../features/BulkAnalysis.jsx";
-import CoverLetter from "../features/CoverLetter.jsx";
-import Tabs from "./ui/Tabs.jsx";
-import Toast, { ToastContainer } from "./ui/Toast.jsx";
-import EmptyState from "./ui/EmptyState.jsx";
-import Button from "./ui/Button.jsx";
-import HelpModal from "./ui/HelpModal.jsx";
-import LandingPage from "./LandingPage.jsx";
-import WelcomeModal from "./WelcomeModal.jsx";
-import { ParallaxContainer } from "./ui/ParallaxSection.jsx";
-import { helpContent } from "../data/helpContent.jsx";
-import { exportResumeToPdf } from "../services/exportPdf.js";
-import { exportToSupabase, isSupabaseExportAvailable } from "../services/supabaseExport.js";
-import ViewTextModal from "./ui/ViewTextModal.jsx";
+} from "../../services/api.js";
+import { useAuth } from "../../hooks/useAuth.jsx";
+import ResumeUpload from "../../features/ResumeUpload.jsx";
+import JobMatch from "../../features/JobMatch.jsx";
+import Optimization from "../../features/Optimization.jsx";
+import KeywordAnalyzer from "../../features/KeywordAnalyzer.jsx";
+import TemplateGallery from "../../features/TemplateGallery.jsx";
+import InterviewPrep from "../../features/InterviewPrep.jsx";
+import BulkAnalysis from "../../features/BulkAnalysis.jsx";
+import CoverLetter from "../../features/CoverLetter.jsx";
+import Tabs from "../ui/Tabs.jsx";
+import Toast, { ToastContainer } from "../ui/Toast.jsx";
+import EmptyState from "../ui/EmptyState.jsx";
+import Button from "../ui/Button.jsx";
+import HelpModal from "../ui/HelpModal.jsx";
+import LandingPage from "../../pages/LandingPage.tsx";
+import WelcomeModal from "../ui/WelcomeModal.tsx";
+import { ParallaxContainer } from "../ui/ParallaxSection.jsx";
+import { helpContent } from "../../lib/data/helpContent.tsx";
+import { exportResumeToPdf } from "../../services/exportPdf.js";
+import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
+import ViewTextModal from "../ui/ViewTextModal.jsx";
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
@@ -562,7 +562,7 @@ export default function MainContent() {
 
       try {
         // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
-        const { mergeResumeData } = await import("../utils/resumeUtils.js");
+        const { mergeResumeData } = await import("../../lib/utils/resumeUtils.ts");
         const mergedResume = mergeResumeData(resumeData, {
           optimization: optimizationData,
           candidateProfile: null // Add if available
@@ -937,3 +937,6 @@ function getHelpKey(tabValue) {
   };
   return mapping[tabValue] || tabValue;
 }
+
+
+

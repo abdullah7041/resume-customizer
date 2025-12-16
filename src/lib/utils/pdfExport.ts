@@ -245,3 +245,6 @@ export async function exportStyledPdf(
     fileName: `${resume.basics.name || 'Resume'} - Resume`,
   });
 }
+
+
+

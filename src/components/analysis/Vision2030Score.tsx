@@ -161,3 +161,6 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
     </div>
   );
 }
+
+
+

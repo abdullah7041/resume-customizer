@@ -130,3 +130,6 @@ export const optimizeResume = async ({ resumeText, jobDesc }) => {
 // Legacy exports to prevent breaking imports if any remain
 export const analyzeResume = analyzeResumeWithAI;
 
+
+
+

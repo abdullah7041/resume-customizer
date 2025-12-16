@@ -2,10 +2,10 @@
 // Renders resume templates with user data injection
 
 import { useMemo } from "react";
-import { cn } from "../lib/cn.js";
+import { cn } from "../../lib/utils/cn.ts";
 import { ExternalLink, Github, Linkedin, Mail, Phone, MapPin } from "lucide-react";
-import ModernTemplate from "./templates/ModernTemplate.jsx";
-import { ATSClassic } from "./templates/ATSClassic.jsx";
+import ModernTemplate from "./ModernTemplate.jsx";
+import { ATSClassic } from "./ATSClassic.jsx";
 
 // Helper to safely render a value (handles strings, objects, arrays)
 // Helper to safely render a value (handles strings, objects, arrays, and React Elements)
@@ -316,9 +316,9 @@ const DynamicTemplateRenderer = ({ template, userData }) => {
   );
 };
 
-import { mergeResumeData } from "../utils/resumeUtils.js";
+import { mergeResumeData } from "../../lib/utils/resumeUtils.ts";
 
-import TechnicalTemplate from "./templates/TechnicalTemplate.jsx";
+import TechnicalTemplate from "./TechnicalTemplate.jsx";
 
 export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult }) {
   // MERGE: Ensure we have the full data set (Original + AI Suggestions)
@@ -352,3 +352,6 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
   // DynamicTemplateRenderer uses the Flat structure (header, sections) which mergeResumeData ALSO preserves.
   return <DynamicTemplateRenderer template={template} userData={finalData} />;
 }
+
+
+

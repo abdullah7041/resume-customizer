@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Clipboard, ClipboardCheck, FileText, Sparkles, ChevronDown } from "lucide-react";
 import Button from "../ui/Button.jsx";
 import Card from "../ui/Card.jsx";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 export default function OptimizationCard({ card, onCopy, disabledActions = false, viewMode = "split" }) {
   const [copied, setCopied] = useState(false);
@@ -129,3 +129,6 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
     </Card>
   );
 }
+
+
+

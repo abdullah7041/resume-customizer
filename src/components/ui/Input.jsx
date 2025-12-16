@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useRef } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 const slugify = (value) =>
   value
@@ -106,3 +106,6 @@ export const Input = forwardRef(function Input(
 });
 
 export default Input;
+
+
+

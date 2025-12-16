@@ -1,5 +1,5 @@
 import Card from "./Card.jsx";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 export default function SectionTitle({ eyebrow, title, description, className }) {
   return (
@@ -27,3 +27,6 @@ export default function SectionTitle({ eyebrow, title, description, className })
     </Card>
   );
 }
+
+
+

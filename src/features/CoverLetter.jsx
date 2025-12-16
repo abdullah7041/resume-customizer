@@ -9,7 +9,7 @@ import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
 import Input from "../components/ui/Input.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
-import { cn } from "../lib/cn.js";
+import { cn } from "../lib/utils/cn.ts";
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const GENERATE_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-cover-letter`;
@@ -422,3 +422,6 @@ export default function CoverLetter({ resumeText, jobDescription }) {
     </div>
   );
 }
+
+
+

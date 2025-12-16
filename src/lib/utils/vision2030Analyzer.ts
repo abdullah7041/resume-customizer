@@ -142,3 +142,6 @@ export function analyzeVision2030Alignment(
     topSectors: topSectorIds,
   };
 }
+
+
+

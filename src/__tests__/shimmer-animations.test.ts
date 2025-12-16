@@ -225,3 +225,6 @@ describe("Mobile Layout CSS", () => {
     expect(cssContent).toContain("min-height: 90vh");
   });
 });
+
+
+

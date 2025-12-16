@@ -2,7 +2,7 @@
 // Reusable modal for displaying feature help and explanations
 
 import { X } from "lucide-react";
-import { cn } from "../../lib/cn.js";
+import { cn } from "../../lib/utils/cn.ts";
 import { useEffect } from "react";
 
 export default function HelpModal({ isOpen, onClose, title, children }) {
@@ -87,3 +87,6 @@ export default function HelpModal({ isOpen, onClose, title, children }) {
     </div>
   );
 }
+
+
+

@@ -29,7 +29,7 @@ vi.doMock(
   { virtual: true }
 );
 
-const { extractPlainTextFromArrayBuffer, inferMimeType } = await import("../lib/resumeText.js");
+const { extractPlainTextFromArrayBuffer, inferMimeType } = await import("../lib/utils/resumeText.ts");
 
 describe("resume text helpers", () => {
   beforeEach(() => {
@@ -193,3 +193,6 @@ const CRC_TABLE = (() => {
   }
   return table;
 })();
+
+
+

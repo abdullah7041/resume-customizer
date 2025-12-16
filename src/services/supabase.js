@@ -1,7 +1,7 @@
 // src/services/supabase.js
 import { createClient } from "@supabase/supabase-js";
 
-import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
+import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/utils/resumeText.ts";
 
 const { VITE_SUPABASE_URL: supabaseUrl, VITE_SUPABASE_ANON_KEY: supabaseAnonKey } =
   import.meta.env ?? {};
@@ -302,3 +302,6 @@ export const fetchResumePlainTextFromStorage = async (
     bucket,
   };
 };
+
+
+

@@ -270,3 +270,6 @@ export const BaseATSTemplate = ({ data, config = {} }) => {
         </div>
     );
 };
+
+
+

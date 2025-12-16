@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { FileText, Shield, UploadCloud, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AppError } from "../../services/supabase.js";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 import Button from "./Button.jsx";
 import Card from "./Card.jsx";
 
@@ -323,3 +323,6 @@ export default function UploadCard({
     </Card>
   );
 }
+
+
+

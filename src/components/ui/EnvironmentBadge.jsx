@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
-import { cn } from "../../lib/cn";
-import { subscribe } from "../../lib/apiStatus";
+import { cn } from "../../lib/utils/cn.ts";
+import { subscribe } from "../../lib/utils/apiStatus.ts";
 
 export default function EnvironmentBadge() {
     const [status, setStatus] = useState({ active: false, operation: null, source: null });
@@ -61,3 +61,6 @@ export default function EnvironmentBadge() {
 
     return null;
 }
+
+
+

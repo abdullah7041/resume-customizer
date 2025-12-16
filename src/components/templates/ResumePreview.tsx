@@ -139,3 +139,6 @@ export function ResumePreview({ onExport }: ResumePreviewProps) {
     </div>
   );
 }
+
+
+

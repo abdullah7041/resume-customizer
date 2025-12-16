@@ -194,3 +194,6 @@ export const useSelectedTemplate = () =>
 
 export const useOptimizations = () =>
   useResumeStore((state) => state.optimizations);
+
+
+

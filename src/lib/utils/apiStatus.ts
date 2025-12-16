@@ -1,4 +1,4 @@
-// src/lib/apiStatus.js
+// s../lib/utils/apiStatus.ts
 
 // Simple event emitter for API status
 // This allows non-React services to communicate with React components
@@ -29,3 +29,6 @@ export const updateStatus = (updates) => {
 };
 
 export const getStatus = () => currentStatus;
+
+
+

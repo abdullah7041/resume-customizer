@@ -21,3 +21,6 @@ describe('SectionTitle', () => {
     expect(heading.className).toContain('text-ink');
   });
 });
+
+
+

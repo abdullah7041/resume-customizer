@@ -1,4 +1,4 @@
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 /**
  * ParallaxSection - Section with simple styling (parallax removed)
@@ -84,3 +84,6 @@ export function StaggerItem({ children, className }) {
 }
 
 export default ParallaxSection;
+
+
+

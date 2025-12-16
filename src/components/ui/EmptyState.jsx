@@ -1,5 +1,5 @@
 import Card from "./Card.jsx";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 export default function EmptyState({ icon: Icon, title, description, actions, className }) {
   return (
@@ -26,3 +26,6 @@ export default function EmptyState({ icon: Icon, title, description, actions, cl
     </Card>
   );
 }
+
+
+

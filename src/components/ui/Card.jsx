@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 export const Card = forwardRef(function Card(
   {
@@ -43,3 +43,6 @@ export const Card = forwardRef(function Card(
 });
 
 export default Card;
+
+
+

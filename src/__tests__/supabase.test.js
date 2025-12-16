@@ -15,12 +15,12 @@ vi.mock("@supabase/supabase-js", () => ({
   })),
 }));
 
-vi.mock("../lib/resumeText.js", () => ({
+vi.mock("../lib/utils/resumeText.ts", () => ({
   extractPlainTextFromArrayBuffer: vi.fn(async () => "Parsed resume"),
   inferMimeType: vi.fn(({ mimeType, fileName }) => mimeType ?? (fileName?.endsWith(".pdf") ? "application/pdf" : "")),
 }));
 
-import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
+import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/utils/resumeText.ts";
 import { fetchResumePlainTextFromStorage, uploadResumeFile } from "../services/supabase.js";
 
 describe("supabase upload service", () => {
@@ -219,3 +219,6 @@ describe("fetchResumePlainTextFromStorage", () => {
     });
   });
 });
+
+
+

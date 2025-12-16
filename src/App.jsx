@@ -1,5 +1,5 @@
 import Header from "./components/Layout/Header";
-import MainContent from "./components/MainContent";
+import MainContent from "./components/Layout/MainContent";
 import EnvironmentBadge from "./components/ui/EnvironmentBadge";
 import { DirectionProvider } from "./components/providers/DirectionProvider";
 import { ConsentBanner } from "./components/compliance/ConsentBanner";
@@ -16,3 +16,6 @@ export default function App() {
     </DirectionProvider>
   );
 }
+
+
+

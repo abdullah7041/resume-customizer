@@ -203,3 +203,6 @@ export interface StoredResume {
     createdAt?: string;
     updatedAt?: string;
 }
+
+
+

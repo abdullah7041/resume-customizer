@@ -2,7 +2,7 @@
 // Tooltip component for hover-based help text
 
 import { useState } from "react";
-import { cn } from "../../lib/cn.js";
+import { cn } from "../../lib/utils/cn.ts";
 
 export default function Tooltip({ children, content, position = "top" }) {
   const [isVisible, setIsVisible] = useState(false);
@@ -52,3 +52,6 @@ export default function Tooltip({ children, content, position = "top" }) {
     </div>
   );
 }
+
+
+

@@ -1,6 +1,29 @@
 import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 
+// Mock i18n to return translation keys as-is for testing
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key) => {
+      const translations = {
+        "upload.card.prepareButton": "Prepare Resume",
+        "upload.card.clearButton": "Clear",
+        "upload.card.step": "Step 1",
+        "upload.card.title": "Upload your resume",
+        "upload.card.subtitle": "Get started with your resume",
+        "upload.card.maxSize": "Max 5MB",
+        "upload.card.pdf": "PDF",
+        "upload.card.and": "and",
+        "upload.card.docx": "DOCX",
+        "upload.card.dropText": "Drop your file here",
+        "upload.card.securityText": "Your data is secure",
+      };
+      return translations[key] || key;
+    },
+    i18n: { changeLanguage: () => { } },
+  }),
+}));
+
 const { MockAppError } = vi.hoisted(() => ({
   MockAppError: class extends Error {
     constructor({ code, message, hint }) {
@@ -44,3 +67,6 @@ describe("UploadCard", () => {
     ).toBeEnabled();
   });
 });
+
+
+

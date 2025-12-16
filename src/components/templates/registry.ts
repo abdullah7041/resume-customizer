@@ -86,3 +86,6 @@ export function getTemplatesByCategory(
   if (category === 'all') return TEMPLATE_CONFIGS;
   return TEMPLATE_CONFIGS.filter((t) => t.category === category);
 }
+
+
+

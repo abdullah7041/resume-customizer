@@ -72,3 +72,6 @@ export default function ViewTextModal({ isOpen, onClose, text }) {
         </div>
     );
 }
+
+
+

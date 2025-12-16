@@ -144,3 +144,6 @@ describe("analyzeResume", () => {
     ).rejects.toThrow("Paste the job description");
   });
 });
+
+
+

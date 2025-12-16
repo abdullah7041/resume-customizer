@@ -4,13 +4,13 @@
 import { useState, useMemo } from "react";
 import { saveAs } from "file-saver";
 import { Download, ToggleLeft, ToggleRight, Check, Layers, Sparkles, FileText } from "lucide-react";
-import { resumeTemplates, TEMPLATE_CATEGORIES } from "../data/resumeTemplates.js";
+import { resumeTemplates, TEMPLATE_CATEGORIES } from "../lib/data/resumeTemplates.ts";
 
-import TemplateRenderer from "../components/TemplateRenderer.jsx";
+import TemplateRenderer from "../components/templates/TemplateRenderer.tsx";
 // ResumePDFDocument is now loaded dynamically when needed
 import Button from "../components/ui/Button.jsx";
-import { mergeResumeData } from "../utils/resumeUtils.js";
-import { cn } from "../lib/cn.js";
+import { mergeResumeData } from "../lib/utils/resumeUtils.ts";
+import { cn } from "../lib/utils/cn.ts";
 
 // Glass card styles matching Header.jsx
 const glassCardClass =
@@ -267,3 +267,6 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
     </div>
   );
 }
+
+
+

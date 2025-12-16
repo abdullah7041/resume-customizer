@@ -6,7 +6,7 @@ import { MessageSquare, Lightbulb, Star, Save, RefreshCw, AlertCircle, Sparkles,
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
-import { cn } from "../lib/cn.js";
+import { cn } from "../lib/utils/cn.ts";
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const PREDICT_ENDPOINT = `${FUNCTION_BASE_PATH}/predict-questions`;
@@ -553,3 +553,6 @@ export default function InterviewPrep({ jobDescription, resumeText, matchAnalysi
     </div>
   );
 }
+
+
+

@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 const variantStyles = {
   primary:
@@ -65,3 +65,6 @@ export const Button = forwardRef(function Button(
 });
 
 export default Button;
+
+
+

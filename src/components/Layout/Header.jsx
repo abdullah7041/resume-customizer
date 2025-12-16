@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
@@ -570,3 +570,6 @@ export default function Header() {
     </header>
   );
 }
+
+
+

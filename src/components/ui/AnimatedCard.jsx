@@ -1,5 +1,5 @@
 import { forwardRef, useState } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 /**
  * AnimatedCard - Enhanced Card with 3D tilt and hover effects
@@ -101,3 +101,6 @@ export const AnimatedCard = forwardRef(function AnimatedCard(
 });
 
 export default AnimatedCard;
+
+
+

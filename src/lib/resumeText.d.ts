@@ -12,3 +12,6 @@ export declare const extractPlainTextFromArrayBuffer: (
 ) => Promise<string>;
 
 export declare const isPdfMimeType: (mime: string) => boolean;
+
+
+

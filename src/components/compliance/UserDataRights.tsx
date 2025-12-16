@@ -128,3 +128,6 @@ export function UserDataRights({ userId, onExportData, onDeleteAccount }: UserDa
     </div>
   );
 }
+
+
+

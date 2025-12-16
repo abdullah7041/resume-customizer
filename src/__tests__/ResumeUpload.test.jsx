@@ -1,6 +1,30 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 
+// Mock i18n to return translation keys as-is for testing
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key) => {
+      const translations = {
+        "upload.title": "Upload or paste your resume",
+        "upload.card.prepareButton": "Prepare Resume",
+        "upload.card.clearButton": "Clear",
+        "upload.card.step": "Step 1",
+        "upload.card.title": "Upload your resume",
+        "upload.card.subtitle": "Get started with your resume",
+        "upload.card.maxSize": "Max 5MB",
+        "upload.card.pdf": "PDF",
+        "upload.card.and": "and",
+        "upload.card.docx": "DOCX",
+        "upload.card.dropText": "Drop your resume here",
+        "upload.card.securityText": "Your data is secure",
+      };
+      return translations[key] || key;
+    },
+    i18n: { changeLanguage: () => { } },
+  }),
+}));
+
 const { MockAppError } = vi.hoisted(() => ({
   MockAppError: class extends Error {
     constructor({ code, message, hint }) {
@@ -27,7 +51,7 @@ describe("ResumeUpload", () => {
   it("renders the Saudi-inspired upload card", () => {
     render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
     expect(
-      screen.getByRole("heading", { name: /upload or paste your resume/i })
+      screen.getByRole("heading", { name: /upload your resume/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /prepare resume/i })
@@ -114,3 +138,6 @@ describe("ResumeUpload", () => {
     expect(screen.getByText(/file must be 5mb or smaller\./i)).toBeInTheDocument();
   });
 });
+
+
+

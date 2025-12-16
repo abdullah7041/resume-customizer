@@ -6,7 +6,7 @@ import { TrendingUp, AlertCircle, CheckCircle2, Target } from "lucide-react";
 import { useKeywordAnalysis } from "../hooks/useKeywordAnalysis.js";
 import Card from "../components/ui/Card.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
-import { cn } from "../lib/cn.js";
+import { cn } from "../lib/utils/cn.ts";
 
 const KeywordBar = ({ keyword, count, score, maxScore, variant = "default", isLoading = false }) => {
   // Calculate percentage based on count relative to max, capped at 100%
@@ -384,3 +384,6 @@ export default function KeywordAnalyzer({ resumeText, jobDescription }) {
     </div>
   );
 }
+
+
+

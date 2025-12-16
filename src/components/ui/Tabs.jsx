@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 export default function Tabs({ tabs, activeValue, onTabChange }) {
   const itemsRef = useRef([]);
@@ -105,3 +105,6 @@ export default function Tabs({ tabs, activeValue, onTabChange }) {
     </div>
   );
 }
+
+
+

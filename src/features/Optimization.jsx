@@ -3,7 +3,7 @@ import { Info, Lock, Sparkles } from "lucide-react";
 import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
-import { cn } from "../lib/cn.js";
+import { cn } from "../lib/utils/cn.ts";
 import OptimizationCard from "../components/shared/OptimizationCard.jsx";
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
@@ -244,3 +244,6 @@ export default function Optimization({
     </div >
   );
 }
+
+
+

@@ -290,3 +290,6 @@ export default function ResumeUpload({ onParseResume, resumeDocument, onToast, o
     </FadeInWhenVisible>
   );
 }
+
+
+

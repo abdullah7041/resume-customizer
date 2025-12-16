@@ -326,3 +326,6 @@ export const calculateTemplateMatch = (template, resumeData) => {
 };
 
 export default resumeTemplates;
+
+
+

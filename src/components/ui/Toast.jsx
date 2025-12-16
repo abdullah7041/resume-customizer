@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, Info, X, Loader2 } from "lucide-react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 const variants = {
   success: {
@@ -106,3 +106,6 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
     </div>
   );
 }
+
+
+

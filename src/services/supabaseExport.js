@@ -258,3 +258,6 @@ export const deleteExport = async (filePath) => {
 export const isSupabaseExportAvailable = () => {
   return Boolean(supabase && import.meta.env.VITE_SUPABASE_URL);
 };
+
+
+

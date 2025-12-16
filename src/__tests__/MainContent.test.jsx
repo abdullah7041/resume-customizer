@@ -1,7 +1,7 @@
 import React from "react";
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import MainContent from "../components/MainContent.jsx";
+import MainContent from "../components/Layout/MainContent.tsx";
 
 const {
   parseResumeMock,
@@ -34,7 +34,7 @@ vi.mock("../features/ResumeUpload.jsx", () => {
   };
 });
 
-vi.mock("../components/Features/JobMatch.jsx", () => {
+vi.mock("../features/JobMatch.jsx", () => {
   const React = require("react");
   return {
     __esModule: true,
@@ -186,3 +186,6 @@ describe("MainContent resume parsing", () => {
     removeItemSpy.mockRestore();
   });
 });
+
+
+

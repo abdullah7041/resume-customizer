@@ -8,7 +8,7 @@ import { calculateTFIDF } from "../services/keywordAnalyzer.js";
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
-import { cn } from "../lib/cn.js";
+import { cn } from "../lib/utils/cn.ts";
 
 const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -509,3 +509,6 @@ export default function BulkAnalysis({ jobDescription }) {
     </div>
   );
 }
+
+
+

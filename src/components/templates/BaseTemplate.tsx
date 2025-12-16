@@ -209,3 +209,6 @@ export function ATSResume({ resume }: { resume: ResumeSchema }) {
     </div>
   );
 }
+
+
+

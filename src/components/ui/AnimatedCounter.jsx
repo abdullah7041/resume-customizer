@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../lib/utils/cn.ts";
 
 /**
  * AnimatedCounter - Scroll-triggered counter with easing
@@ -150,3 +150,6 @@ export function AnimatedStatCard({
 }
 
 export default AnimatedCounter;
+
+
+

@@ -89,3 +89,6 @@ export const useKeywordAnalysis = (resumeText, jobDescription, options = {}) => 
 };
 
 export default useKeywordAnalysis;
+
+
+

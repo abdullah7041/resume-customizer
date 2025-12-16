@@ -1,4 +1,4 @@
-import { deriveResumeSections } from '../services/exportPdf.js';
+import { deriveResumeSections } from '../../services/exportPdf.js';
 
 /**
  * Transforms raw resume data (with plainText) into template-compatible structured format.
@@ -269,3 +269,6 @@ function addLegacyFields(data) {
 
     return data;
 }
+
+
+

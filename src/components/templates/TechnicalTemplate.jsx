@@ -15,3 +15,6 @@ const TechnicalTemplate = ({ userData }) => {
 
 export default TechnicalTemplate;
 
+
+
+

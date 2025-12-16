@@ -20,9 +20,9 @@ import {
   Briefcase,
   GraduationCap,
 } from "lucide-react";
-import Button from "./ui/Button.jsx";
-import AnimatedCard from "./ui/AnimatedCard.jsx";
-import { cn } from "../lib/cn.js";
+import Button from "../components/ui/Button.jsx";
+import AnimatedCard from "../components/ui/AnimatedCard.jsx";
+import { cn } from "../lib/utils/cn.ts";
 
 // Hook: Type writer effect for dynamic headlines
 function useTypewriter(phrases, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
@@ -659,3 +659,6 @@ export default function LandingPage({ onGetStarted }) {
     </div>
   );
 }
+
+
+
