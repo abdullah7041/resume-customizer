@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { FileText, Shield, UploadCloud, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/cn";
 import Button from "./Button.jsx";
@@ -65,12 +66,6 @@ const sanitizeTextInput = (text) => {
   return sanitized;
 };
 
-const statusCopy = {
-  uploading: "Uploading resume…",
-  parsing: "Parsing resume with AI…",
-  success: "Resume ready!",
-  error: "We couldn't process that file.",
-};
 
 const chipClass =
   "inline-flex items-center justify-center rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_22%)] text-emerald-400 shadow-soft backdrop-blur-soft";
@@ -88,8 +83,16 @@ export default function UploadCard({
   onValidationError,
   onTextChange,
 }) {
+  const { t } = useTranslation();
   const inputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const statusCopy = {
+    uploading: t("upload.card.status.uploading"),
+    parsing: t("upload.card.status.parsing"),
+    success: t("upload.card.status.success"),
+    error: t("upload.card.status.error"),
+  };
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -176,18 +179,18 @@ export default function UploadCard({
       as="section"
       tone="glass"
       glow
-      className="mx-auto max-w-5xl space-y-5 sm:space-y-6 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-500"
+      className="mx-auto w-full max-w-full sm:max-w-5xl px-2 sm:px-0 space-y-5 sm:space-y-6 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-500"
       contentClassName="space-y-5 sm:space-y-6"
       aria-live="polite"
     >
-      <header className="space-y-2 text-center sm:text-left">
+      <header className="space-y-2 text-center sm:text-left px-2 sm:px-0">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-gold-500">Step 1</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.32em] text-gold-500">{t("upload.card.step")}</p>
 
         </div>
-        <h3 className="text-2xl font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">Upload or Paste Your Resume</h3>
-        <p className="text-sm text-emerald-100/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-          Drag a PDF or DOCX, or paste the text to let our AI optimize every line.
+        <h3 className="text-xl sm:text-2xl font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] leading-tight">{t("upload.card.title")}</h3>
+        <p className="text-xs sm:text-sm text-emerald-100/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] leading-relaxed">
+          {t("upload.card.subtitle")}
         </p>
       </header>
 
@@ -207,32 +210,32 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-xl border-2 border-dashed border-white/20 px-6 py-9 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 sm:py-12 cursor-pointer",
+          "group relative flex flex-col items-center justify-center gap-3 sm:gap-4 overflow-hidden rounded-xl border-2 border-dashed border-white/20 px-4 sm:px-6 py-8 sm:py-12 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 cursor-pointer",
           "hover:border-emerald-400/40 hover:bg-white/[0.02]",
           isDragging &&
           "border-emerald-400/50 bg-emerald-500/5 scale-[1.01]"
         )}
       >
-        <span className={cn("absolute right-6 top-6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]", chipClass)}>
-          Max 5MB
+        <span className={cn("absolute right-2 sm:right-6 top-2 sm:top-6 px-2 sm:px-3 py-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.15em] sm:tracking-[0.2em]", chipClass)}>
+          {t("upload.card.maxSize")}
         </span>
         <div className="flex items-center gap-2 rounded-pill border border-[color:color-mix(in_oklab,var(--glass-border),transparent_30%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-4 py-2 text-xs font-semibold text-emerald-100 shadow-soft backdrop-blur-xl">
           <FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          <span>PDF</span>
-          <span className="text-emerald-200/70">&amp;</span>
-          <span>DOCX</span>
+          <span>{t("upload.card.pdf")}</span>
+          <span className="text-emerald-200/70">{t("upload.card.and")}</span>
+          <span>{t("upload.card.docx")}</span>
         </div>
         <span className="relative inline-flex items-center justify-center">
-          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-emerald-600/10 blur-3xl" aria-hidden="true" />
-          <span className="relative inline-flex h-20 w-20 items-center justify-center rounded-full border-2 border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 shadow-[0_12px_40px_-12px_rgba(16,185,129,0.35)] backdrop-blur-2xl transition-all duration-300 hover:border-emerald-400/40 hover:from-emerald-500/20 hover:to-emerald-600/10 hover:shadow-[0_16px_48px_-8px_rgba(16,185,129,0.45)] hover:scale-105">
-            <UploadCloud className="h-9 w-9 text-emerald-300/90 drop-shadow-[0_4px_12px_rgba(16,185,129,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.6)]" aria-hidden="true" />
+          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-emerald-600/10 blur-2xl sm:blur-3xl" aria-hidden="true" />
+          <span className="relative inline-flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full border-2 border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 shadow-[0_12px_40px_-12px_rgba(16,185,129,0.35)] backdrop-blur-2xl transition-all duration-300 hover:border-emerald-400/40 hover:from-emerald-500/20 hover:to-emerald-600/10 hover:shadow-[0_16px_48px_-8px_rgba(16,185,129,0.45)] hover:scale-105">
+            <UploadCloud className="h-7 w-7 sm:h-9 sm:w-9 text-emerald-300/90 drop-shadow-[0_4px_12px_rgba(16,185,129,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.6)]" aria-hidden="true" />
           </span>
         </span>
-        <p className="text-base font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-          Drop your resume here or click to browse
+        <p className="text-sm sm:text-base font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] px-2">
+          {t("upload.card.dropText")}
         </p>
-        <p className="text-sm text-emerald-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-          <span className="inline-flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-emerald-300" /> We keep uploads private and secure.</span>
+        <p className="text-xs sm:text-sm text-emerald-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] px-2">
+          <span className="inline-flex items-center gap-1.5"><Shield className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-300" /> {t("upload.card.securityText")}</span>
         </p>
       </div>
 
@@ -298,17 +301,23 @@ export default function UploadCard({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={onSubmit} disabled={disabled} loading={status === "uploading" || status === "parsing"}>
-          Prepare Resume
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
+        <Button
+          onClick={onSubmit}
+          disabled={disabled}
+          loading={status === "uploading" || status === "parsing"}
+          className="w-full sm:w-auto"
+        >
+          {t("upload.card.prepareButton")}
         </Button>
         <Button
           variant="secondary"
           onClick={onFileClear}
           disabled={!fileName}
           icon={XCircle}
+          className="w-full sm:w-auto"
         >
-          Clear inputs
+          {t("upload.card.clearButton")}
         </Button>
       </div>
     </Card>
