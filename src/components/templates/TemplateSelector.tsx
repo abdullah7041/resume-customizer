@@ -165,8 +165,8 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
             key={cat.value}
             onClick={() => setCategory(cat.value)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${category === cat.value
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
           >
             {isArabic ? cat.labelAr : cat.labelEn}
@@ -185,8 +185,8 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
               key={config.id}
               onClick={() => handleSelect(config.id)}
               className={`relative group rounded-xl overflow-hidden border-2 transition-all text-start ${isSelected
-                  ? 'border-emerald-500 ring-2 ring-emerald-500/50'
-                  : 'border-gray-700 hover:border-gray-500'
+                ? 'border-emerald-500 ring-2 ring-emerald-500/50'
+                : 'border-gray-700 hover:border-gray-500'
                 }`}
             >
               {/* Live Template Preview (scaled down) */}

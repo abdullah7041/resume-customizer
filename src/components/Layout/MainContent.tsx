@@ -144,7 +144,7 @@ export default function MainContent() {
   }, []);
 
   const pushToast = useCallback(
-    (toast, options = {}) => {
+    (toast, options: { id?: string } = {}) => {
       const { toastId, ...toastPayload } = toast ?? {};
       const id = options.id ?? toastId ?? getId();
       setToasts([{ id, ...toastPayload }]);
@@ -183,7 +183,7 @@ export default function MainContent() {
     if (storedTab && tabs.some((tab) => tab.value === storedTab)) {
       setActiveTab(storedTab);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [tabs]);
 
   useEffect(() => {
@@ -459,30 +459,6 @@ export default function MainContent() {
             jobDesc: jobDescription,
             mode,
             preview: !isPremium,
-          },
-          {
-            onDebug: setAiDebug,
-            onError: (error) => {
-              const status = typeof error?.status === "number" ? error.status : null;
-              const code = typeof error?.code === "string" && error.code.trim().length > 0 ? error.code : null;
-              const details = [
-                status ? `Status ${status}` : null,
-                code ? `Code ${code}` : null,
-              ].filter(Boolean);
-              const descriptionParts = [
-                error?.message || "Please try again shortly.",
-                ...details,
-                "Save your best bullets before retrying.",
-              ];
-              pushToast(
-                {
-                  type: "danger",
-                  title: t("toasts.optimizationFailed"),
-                  description: descriptionParts.filter(Boolean).join(" • "),
-                },
-                { id: TOAST_IDS.optimize }
-              );
-            },
           }
         );
 
@@ -508,8 +484,31 @@ export default function MainContent() {
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 900);
         return result;
-      } catch (error) {
+      } catch (error: any) {
         setFlowProgress(0);
+
+        // Error handling logic moved from invalid 2nd argument of optimizeResume
+        const status = typeof error?.status === "number" ? error.status : null;
+        const code = typeof error?.code === "string" && error.code.trim().length > 0 ? error.code : null;
+        const details = [
+          status ? `Status ${status}` : null,
+          code ? `Code ${code}` : null,
+        ].filter(Boolean);
+        const descriptionParts = [
+          error?.message || "Please try again shortly.",
+          ...details,
+          "Save your best bullets before retrying.",
+        ];
+
+        pushToast(
+          {
+            type: "danger",
+            title: t("toasts.optimizationFailed"),
+            description: descriptionParts.filter(Boolean).join(" • "),
+          },
+          { id: TOAST_IDS.optimize }
+        );
+
         throw error;
       } finally {
         setIsOptimizing(false);
@@ -744,7 +743,6 @@ export default function MainContent() {
           {activeTab === "templates" && (
             <TemplateGallery
               resumeData={resumeData}
-              matchAnalysis={matchAnalysis}
               optimizationData={optimizationData}
               onSelectTemplate={(template) => {
                 pushToast({

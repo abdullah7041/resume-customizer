@@ -43,20 +43,20 @@ interface OptimizeSectionProps {
   optimizations?: OptimizationCard[];
   keywords?: Keywords;
   isOptimizing?: boolean;
-  onOptimize?: () => Promise<void>;
-  onCopy?: () => Promise<void>;
+  onOptimize?: (mode: any) => Promise<any>;
+  onCopy?: (value: any) => Promise<void>;
   previewUsed?: boolean;
   onUpgrade?: () => void;
   hasMatchAnalysis?: boolean;
   onClear?: () => void;
-  onExport?: () => Promise<void>;
+  onExport?: (variant: any, exportMethod?: string) => Promise<void>;
   canExport?: boolean;
 }
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
 
 // === Preview Banner Component ===
-function PreviewBanner({ onUpgrade, t }: { onUpgrade?: () => void; t: (key: string, fallback?: string) => string }) {
+function PreviewBanner({ onUpgrade, t }: { onUpgrade?: () => void; t: any }) {
   return (
     <div className="p-4 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent">
       <div className="flex flex-wrap items-center gap-4">

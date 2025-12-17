@@ -8,7 +8,7 @@ import globals from "globals";
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
-  { ignores: ["node_modules/**","dist/**","build/**","public/**",".netlify/**","**/*.d.ts","tailwind.config.*","USAGE_EXAMPLES.tsx"] },
+  { ignores: ["node_modules/**", "dist/**", "build/**", "public/**", ".netlify/**", "**/*.d.ts", "tailwind.config.*", "USAGE_EXAMPLES.tsx"] },
 
   js.configs.recommended,
 
@@ -27,7 +27,7 @@ export default [
       vitest,
     },
     rules: {
-      "no-unused-vars": "warn",
+      "no-unused-vars": ["warn", { "args": "none", "varsIgnorePattern": "^_" }],
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
       "no-empty": "off",

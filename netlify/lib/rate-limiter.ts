@@ -224,12 +224,10 @@ export class RateLimiter {
  */
 export async function batchWithConcurrency<T, R>(
   items: T[],
-  // eslint-disable-next-line no-unused-vars
   fn: (item: T) => Promise<R>,
   options: {
     concurrency?: number;
     rateLimiter?: RateLimiter;
-    // eslint-disable-next-line no-unused-vars
     onProgress?: (completed: number, total: number) => void;
   } = {}
 ): Promise<PromiseSettledResult<R>[]> {

@@ -110,12 +110,12 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
   }
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => {
   try {
     const response = await fetch(OPTIMIZE_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resumeText, jobText: jobDesc }),
+      body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview }),
     });
 
     const data = await handleResponse(response);

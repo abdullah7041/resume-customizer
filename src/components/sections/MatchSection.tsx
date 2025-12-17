@@ -75,11 +75,11 @@ interface Toast {
 }
 
 interface MatchSectionProps {
-  onAnalyzeMatchAI: (jd: string) => Promise<MatchResult>;
+  onAnalyzeMatchAI: (jobDescription: string) => Promise<MatchResult>;
   matchAnalysis: MatchResult | null;
   isAnalyzing?: boolean;
   hasResume?: boolean;
-  onToast?: (t: Toast) => void;
+  onToast?: (toast: Toast) => void;
   onClear?: () => void;
 }
 

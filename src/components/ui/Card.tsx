@@ -1,7 +1,16 @@
 import { forwardRef } from "react";
-import { cn } from "../../lib/utils/cn.ts";
+import { cn } from "../../lib/utils/cn";
 
-export const Card = forwardRef(function Card(
+interface CardProps extends React.HTMLAttributes<HTMLElement> {
+  as?: React.ElementType;
+  className?: string;
+  children?: React.ReactNode;
+  tone?: "glass" | "solid" | "translucent";
+  glow?: boolean;
+  contentClassName?: string;
+}
+
+export const Card = forwardRef<HTMLElement, CardProps>(function Card(
   {
     as: Component = "section",
     className,

@@ -63,13 +63,13 @@ export interface ResumeState {
   selectedTemplate: TemplateId;
 
   // Actions
-  setOriginalResume: (_r: ResumeSchema) => void;
-  addOptimization: (_opt: Omit<OptimizationResult, 'timestamp'>) => void;
-  applyOptimization: (_id: string) => void;
-  revertOptimization: (_id: string) => void;
+  setOriginalResume: (resume: ResumeSchema) => void;
+  addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
+  applyOptimization: (id: string) => void;
+  revertOptimization: (id: string) => void;
   applyAllOptimizations: () => void;
   toggleShowOptimized: () => void;
-  setSelectedTemplate: (_id: TemplateId) => void;
+  setSelectedTemplate: (templateId: TemplateId) => void;
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
 }

@@ -29,7 +29,7 @@ const EmptyIcon = () => (
 );
 
 interface ResumePreviewProps {
-  onExport?: (f: 'styled' | 'ats') => void;
+  onExport?: (format: 'styled' | 'ats') => void;
 }
 
 export function ResumePreview({ onExport }: ResumePreviewProps) {

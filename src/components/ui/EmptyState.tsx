@@ -1,7 +1,15 @@
-import Card from "./Card.tsx";
-import { cn } from "../../lib/utils/cn.ts";
+import Card from "./Card";
+import { cn } from "../../lib/utils/cn";
 
-export default function EmptyState({ icon: Icon, title, description, actions, className }) {
+interface EmptyStateProps {
+  icon?: React.ElementType;
+  title: any;
+  description: any;
+  actions?: any;
+  className?: any;
+}
+
+export default function EmptyState({ icon: Icon, title, description, actions, className }: EmptyStateProps) {
   return (
     <Card
       tone="glass"

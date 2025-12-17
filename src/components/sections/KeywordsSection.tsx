@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import {
@@ -94,7 +94,6 @@ interface KeywordsSectionProps {
 export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
-  const [_activeTab, _setActiveTab] = useState<'overview' | 'matched' | 'missing'>('overview');
 
   const { analysis, isAnalyzing, hasData } = useKeywordAnalysis(
     resumeText || '',
@@ -107,8 +106,6 @@ export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionP
   // Memoized data extraction
   const topResumeKeywords = useMemo(() => analysis?.resume?.keywords || [], [analysis]);
   const topJobKeywords = useMemo(() => analysis?.job?.keywords || [], [analysis]);
-  const _matchedKeywords = useMemo(() => analysis?.tfidf?.matchedKeywords || [], [analysis]);
-  const _missingKeywords = useMemo(() => analysis?.tfidf?.missingKeywords || [], [analysis]);
   const suggestions = useMemo(() => analysis?.suggestions as Suggestions | undefined, [analysis]);
   const overallMatch = suggestions?.overallMatch ?? analysis?.tfidf?.overallMatch ?? 0;
 

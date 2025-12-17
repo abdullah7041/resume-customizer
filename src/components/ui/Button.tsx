@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
-import { cn } from "../../lib/utils/cn.ts";
+import { cn } from "../../lib/utils/cn";
 
 const variantStyles = {
   primary:
@@ -27,7 +27,16 @@ const rippleSheen =
 const focusDisabled =
   "disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none disabled:saturate-75";
 
-export const Button = forwardRef(function Button(
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  as?: React.ElementType;
+  variant?: 'primary' | 'secondary' | 'frosted' | 'ghost' | 'outline';
+  className?: string;
+  icon?: React.ElementType;
+  loading?: boolean;
+  children?: React.ReactNode;
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { as: Component = "button", variant = "primary", className, icon: Icon, loading = false, children, ...props },
   ref
 ) {

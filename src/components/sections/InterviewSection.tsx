@@ -57,7 +57,7 @@ interface InterviewSectionProps {
       focusAreas?: string[];
     };
   };
-  onUpdate?: (u: Record<string, unknown>) => void;
+  onUpdate?: (updates: Record<string, unknown>) => void;
 }
 
 // === Sub-components ===
