@@ -167,16 +167,18 @@ describe("Mobile Layout Polish", () => {
         name: /AI Resume Optimizer/i,
       });
 
-      // Current Header uses text-xl for the heading in the glass card
-      expect(heading).toHaveClass("text-xl");
+      // Current Header uses text-base sm:text-xl for the heading in the glass card (mobile-first)
+      expect(heading).toHaveClass("text-base");
+      expect(heading).toHaveClass("sm:text-xl");
     });
 
     it("should have compact spacing between elements", () => {
       const { container } = renderWithProviders(<Header />);
 
-      // Check main content container has compact gaps
+      // Check main content container has compact gaps (mobile-first: gap-6 on mobile, sm:gap-10 on larger)
       const mainGrid = container.querySelector(".grid");
-      expect(mainGrid).toHaveClass("gap-10");
+      expect(mainGrid).toHaveClass("gap-6");
+      expect(mainGrid).toHaveClass("sm:gap-10");
     });
   });
 
@@ -206,8 +208,9 @@ describe("Mobile Layout Polish", () => {
 
       const grid = container.querySelector(".grid");
 
-      // Current Header uses gap-10 and lg:gap-16
-      expect(grid).toHaveClass("gap-10");
+      // Current Header uses gap-6 sm:gap-10 lg:gap-16 (mobile-first approach)
+      expect(grid).toHaveClass("gap-6");
+      expect(grid).toHaveClass("sm:gap-10");
       expect(grid).toHaveClass("lg:gap-16");
     });
   });

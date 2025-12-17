@@ -226,7 +226,7 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate flex flex-col overflow-hidden text-white min-h-[100dvh]"
+      className="hero-bg-animate relative isolate flex flex-col overflow-hidden text-white min-h-[60dvh] sm:min-h-[100dvh]"
       onMouseMove={handleMouseMove}
     >
       {/* Animated background effects */}
@@ -303,12 +303,12 @@ export default function Header() {
 
               {/* Brand text */}
               <div className="flex flex-col">
-                <p className="text-sm font-bold tracking-[0.15em] bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent uppercase">
+                <p className="text-[10px] sm:text-sm font-bold tracking-[0.12em] sm:tracking-[0.15em] bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent uppercase">
                   {t("common.appName")}
                 </p>
                 {enableArabicBrand && (
                   <p
-                    className="text-xl font-semibold text-white/80 leading-tight"
+                    className="text-base sm:text-xl font-semibold text-white/80 leading-tight"
                     lang="ar"
                     dir="rtl"
                     style={{
@@ -365,19 +365,19 @@ export default function Header() {
         </nav>
 
         {/* Hero section */}
-        <div className={`${containerClass} flex-1 grid items-center gap-10 py-12 sm:py-16 lg:py-20 md:grid-cols-[1.5fr_1fr] lg:gap-16`}>
+        <div className={`${containerClass} flex-1 grid items-center gap-6 sm:gap-10 py-8 sm:py-16 lg:py-20 md:grid-cols-[1.5fr_1fr] lg:gap-16`}>
           {/* Left column - Main content */}
           <div
             className={cn(
-              "space-y-8 transform-gpu text-center sm:text-left",
+              "space-y-5 sm:space-y-8 transform-gpu text-center sm:text-left",
               prefersReducedMotion
                 ? "opacity-100"
                 : "transition-all duration-700 ease-out",
               heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             )}
           >
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 backdrop-blur-md">
+            {/* Badge - hidden on mobile */}
+            <div className="hidden sm:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 backdrop-blur-md">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
@@ -388,29 +388,29 @@ export default function Header() {
             </div>
 
             {/* Main heading card - matching Workflow card style */}
-            <div className={cn(glassCardClass, "p-6 lg:p-8")}>
+            <div className={cn(glassCardClass, "p-4 sm:p-6 lg:p-8")}>
               {/* Card header with icon */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                  <Sparkles className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-white">{t("header.heroTitle")}</h1>
+                <h1 className="text-base sm:text-xl font-bold text-white">{t("header.heroTitle")}</h1>
               </div>
 
-              <p className="text-white/70 leading-relaxed">
+              <p className="text-sm sm:text-base text-white/70 leading-relaxed">
                 {t("header.heroDescription")}
               </p>
             </div>
 
-            {/* Feature cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Feature cards - hidden on mobile */}
+            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               {featureCards.map((card, idx) => (
                 <div
                   key={card.label}
                   className={cn(
                     glassCardClass,
                     glassCardHoverClass,
-                    "p-5 cursor-default group",
+                    "p-3 sm:p-5 cursor-default group",
                     prefersReducedMotion
                       ? ""
                       : "transition-all duration-500 ease-out",
@@ -448,7 +448,7 @@ export default function Header() {
           <div
             className={cn(
               glassCardClass,
-              "p-6 lg:p-8 self-start",
+              "p-4 sm:p-6 lg:p-8 self-start hidden md:block",
               prefersReducedMotion
                 ? ""
                 : "transition-all duration-700 ease-out",
