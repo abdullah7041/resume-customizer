@@ -1,4 +1,5 @@
 import { parseResumeOnly } from "../lib/gemini-client";
+import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
 
 export const handler = async (event: { httpMethod: string; body: string; }) => {
   if (event.httpMethod !== "POST") {
@@ -18,27 +19,57 @@ export const handler = async (event: { httpMethod: string; body: string; }) => {
   try {
     console.log(`[extract-resume-json] Received request. Method: ${event.httpMethod}`);
     const body = JSON.parse(event.body);
-    const { data, kind } = body;
+    const { data, kind, name, mime } = body;
     console.log(`[extract-resume-json] Payload kind: ${kind}, Data length: ${data ? data.length : 'N/A'}`);
 
     let analysis;
+    let extractedPlainText = "";
+
     if (kind === "file" && data) {
+      // CRITICAL FIX: Extract text from PDF/DOCX BEFORE sending to Gemini
+      // This ensures we always have the full text regardless of Gemini's response
+      try {
+        const buffer = Buffer.from(data, "base64");
+        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+        const mimeType = inferMimeType({ mimeType: mime, fileName: name });
+        extractedPlainText = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: name });
+        console.log(`[extract-resume-json] Pre-extracted text length: ${extractedPlainText.length} chars`);
+        if (extractedPlainText.length > 0) {
+          console.log(`[extract-resume-json] Pre-extracted preview: "${extractedPlainText.slice(0, 300).replace(/\s+/g, ' ')}"`);
+        }
+      } catch (extractError) {
+        console.warn("[extract-resume-json] Pre-extraction failed, will rely on Gemini:", extractError);
+      }
+
       console.log("[extract-resume-json] Calling parseResumeOnly with PDF data...");
       analysis = await parseResumeOnly(data, true);
       console.log("[extract-resume-json] parseResumeOnly returned success.");
     } else if (kind === "text" && body.value) {
       console.log("[extract-resume-json] Calling parseResumeOnly with text...");
+      extractedPlainText = body.value;
       analysis = await parseResumeOnly(body.value, false);
     } else {
       console.warn("[extract-resume-json] Invalid input:", body);
       return { statusCode: 400, body: JSON.stringify({ error: "Invalid input" }) };
     }
 
+    // Use the best available plain text source:
+    // 1. Pre-extracted text from PDF (most reliable)
+    // 2. Gemini's plainText field
+    // 3. Gemini's meta.raw_text field
+    const geminiPlainText = analysis.plainText || analysis.meta?.raw_text || "";
+    const bestPlainText = (extractedPlainText.length > geminiPlainText.length)
+      ? extractedPlainText
+      : (geminiPlainText || extractedPlainText);
+
+    console.log(`[extract-resume-json] Final plainText length: ${bestPlainText.length} chars`);
+    console.log(`[extract-resume-json] Source: ${extractedPlainText.length > geminiPlainText.length ? 'pre-extracted' : 'gemini'}`);
+
     // Preserve the FULL JSON Resume structure from Gemini parsing
     // The analysis object already contains: basics, work, education, skills, projects, certificates, etc.
     const document = {
-      // Plain text for backward compatibility
-      plainText: analysis.plainText || analysis.meta?.raw_text || "",
+      // Plain text for backward compatibility - USE THE BEST AVAILABLE SOURCE
+      plainText: bestPlainText,
 
       // Full JSON Resume fields - these are properly parsed by Gemini
       basics: analysis.basics || {},

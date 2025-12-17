@@ -134,9 +134,13 @@ export function OptimizeSection({
   const chipsShownRef = useRef(false);
 
   // Decide which optimizations to use (props or store)
+  // BUG FIX: Was returning [] instead of propOptimizations when props were provided
   const useStoreOptimizations = !propOptimizations || propOptimizations.length === 0;
-  const optimizations = useStoreOptimizations ? storeOptimizations : [];
+  const optimizations = useStoreOptimizations ? storeOptimizations : propOptimizations;
   const isOptimizing = propIsOptimizing || isGenerating;
+
+  // Debug log to help diagnose optimization rendering issues
+  console.log('[OptimizeSection] Using', useStoreOptimizations ? 'store' : 'props', 'optimizations, count:', optimizations.length);
 
   // Check if we have match analysis (props or derived from store)
   const _hasMatchAnalysis = propHasMatchAnalysis || hasResume;

@@ -32,7 +32,14 @@ export const parseResume = async (resumeInput) => {
     let payload;
     if (resumeInput instanceof File) {
       const base64 = await fileToBase64(resumeInput);
-      payload = { kind: "file", data: base64 };
+      // Include filename and mime type for better server-side text extraction
+      payload = {
+        kind: "file",
+        data: base64,
+        name: resumeInput.name,
+        mime: resumeInput.type,
+      };
+      console.log(`[parseResume] Uploading file: ${resumeInput.name}, type: ${resumeInput.type}, size: ${resumeInput.size}`);
     } else {
       payload = { kind: "text", value: resumeInput };
     }

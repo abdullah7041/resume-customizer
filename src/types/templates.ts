@@ -59,6 +59,27 @@ export interface OptimizedWork {
 }
 
 /**
+ * Cached analysis result for consistent match scores
+ */
+export interface CachedAnalysis {
+  score: number;
+  coverage: number;
+  similarity: number;
+  missingKeywords: string[];
+  strongMatches: string[];
+  recommendations: string[];
+  overallAssessment: string;
+  timestamp: number;
+}
+
+/**
+ * Analysis cache keyed by fingerprint
+ */
+export interface AnalysisCache {
+  [key: string]: CachedAnalysis;
+}
+
+/**
  * Resume state for the store
  */
 export interface ResumeState {
@@ -67,6 +88,9 @@ export interface ResumeState {
   parsedResumeText: string | null;
   optimizations: OptimizationResult[];
   keywordSuggestions: KeywordSuggestion[];
+
+  // Analysis caching for consistent results
+  analysisCache: AnalysisCache;
 
   // View state
   showOptimized: boolean;
@@ -86,6 +110,11 @@ export interface ResumeState {
   setKeywordSuggestions: (_suggestions: KeywordSuggestion[]) => void;
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
+
+  // Cache actions
+  getCachedAnalysis: (resumeText: string, jobDescription: string) => CachedAnalysis | null;
+  setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>) => void;
+  clearAnalysisCache: () => void;
 }
 
 /**
