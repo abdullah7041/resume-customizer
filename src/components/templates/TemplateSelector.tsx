@@ -67,7 +67,7 @@ const SAMPLE_RESUME: ResumeSchema = {
 };
 
 interface TemplateSelectorProps {
-  onSelect?: (templateId: TemplateId) => void;
+  onSelect?: (id: TemplateId) => void;
 }
 
 type CategoryFilter = TemplateCategory | 'all';
@@ -146,15 +146,13 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
           </div>
           <button
             onClick={toggleShowOptimized}
-            className={`relative w-14 h-7 rounded-full transition-colors ${
-              showOptimized ? 'bg-emerald-600' : 'bg-gray-600'
-            }`}
+            className={`relative w-14 h-7 rounded-full transition-colors ${showOptimized ? 'bg-emerald-600' : 'bg-gray-600'
+              }`}
             aria-label={showOptimized ? 'Show original' : 'Show optimized'}
           >
             <span
-              className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                showOptimized ? 'start-8' : 'start-1'
-              }`}
+              className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${showOptimized ? 'start-8' : 'start-1'
+                }`}
             />
           </button>
         </div>
@@ -166,11 +164,10 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
           <button
             key={cat.value}
             onClick={() => setCategory(cat.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              category === cat.value
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${category === cat.value
                 ? 'bg-emerald-600 text-white'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
+              }`}
           >
             {isArabic ? cat.labelAr : cat.labelEn}
           </button>
@@ -187,11 +184,10 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
             <button
               key={config.id}
               onClick={() => handleSelect(config.id)}
-              className={`relative group rounded-xl overflow-hidden border-2 transition-all text-start ${
-                isSelected
+              className={`relative group rounded-xl overflow-hidden border-2 transition-all text-start ${isSelected
                   ? 'border-emerald-500 ring-2 ring-emerald-500/50'
                   : 'border-gray-700 hover:border-gray-500'
-              }`}
+                }`}
             >
               {/* Live Template Preview (scaled down) */}
               <div className="aspect-[210/297] bg-white overflow-hidden pointer-events-none">
@@ -228,6 +224,7 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
     </div>
   );
 }
+
 
 
 

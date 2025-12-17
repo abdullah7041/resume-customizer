@@ -8,7 +8,7 @@ interface UserDataRightsProps {
   onDeleteAccount: () => Promise<void>;
 }
 
-export function UserDataRights({ userId, onExportData, onDeleteAccount }: UserDataRightsProps) {
+export function UserDataRights({ userId: _userId, onExportData, onDeleteAccount }: UserDataRightsProps) {
   const { t } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -128,6 +128,7 @@ export function UserDataRights({ userId, onExportData, onDeleteAccount }: UserDa
     </div>
   );
 }
+
 
 
 

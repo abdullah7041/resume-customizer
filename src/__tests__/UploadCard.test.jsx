@@ -38,7 +38,7 @@ vi.mock("../services/supabase.js", () => ({
   AppError: MockAppError,
 }));
 
-import UploadCard from "../components/ui/UploadCard.jsx";
+import UploadCard from "../components/ui/UploadCard.tsx";
 
 describe("UploadCard", () => {
   it("matches snapshot and exposes accessible controls", () => {
@@ -67,6 +67,7 @@ describe("UploadCard", () => {
     ).toBeEnabled();
   });
 });
+
 
 
 

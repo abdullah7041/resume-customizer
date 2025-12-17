@@ -2,6 +2,11 @@ const PDF_MIME = "application/pdf";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const FALLBACK_OCTET_STREAM = "application/octet-stream";
 
+interface FileInfo {
+  mimeType?: string;
+  fileName?: string;
+}
+
 const MIME_BY_EXTENSION = new Map([
   ["pdf", PDF_MIME],
   ["docx", DOCX_MIME],
@@ -16,7 +21,7 @@ const normalizeExtension = (value) => {
   return match ? match[1] : "";
 };
 
-export const inferMimeType = ({ mimeType, fileName } = {}) => {
+export const inferMimeType = ({ mimeType, fileName }: FileInfo = {}): string => {
   if (typeof mimeType === "string" && mimeType.trim()) {
     const normalized = mimeType.trim().toLowerCase();
     const [primary] = normalized.split(";");
@@ -452,7 +457,7 @@ const extractDocxPlainText = async (arrayBuffer) => {
   }
 };
 
-export const extractPlainTextFromArrayBuffer = async (input, { mimeType, fileName } = {}) => {
+export const extractPlainTextFromArrayBuffer = async (input: ArrayBuffer | ArrayBufferView | null | undefined, { mimeType, fileName }: FileInfo = {}): Promise<string> => {
   const arrayBuffer = toArrayBuffer(input);
   if (!arrayBuffer) {
     return "";
@@ -479,6 +484,7 @@ export const __internal = {
   extractPdfTextFallback,
   arrayBufferToLatin1,
 };
+
 
 
 

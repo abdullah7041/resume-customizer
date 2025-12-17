@@ -8,7 +8,7 @@ interface Vision2030ScoreProps {
 }
 
 export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { isRTL } = useDirection();
   const isArabic = i18n.language === 'ar';
 
@@ -161,6 +161,7 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
     </div>
   );
 }
+
 
 
 

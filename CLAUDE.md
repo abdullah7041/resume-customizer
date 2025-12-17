@@ -20,9 +20,8 @@
 4. Components go in src/components/, utilities in src/lib/
 
 ## Current Focus
-- Template system refactor
-- ATS-friendly PDF export
-- Arabic resume parsing
+- Glassmorphism design system
+- Features to sections merge
 
 ## Do NOT
 - Install puppeteer (too large for Netlify)

@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ATSClassic } from '../components/templates/ATSClassic.jsx';
+import { ATSClassic } from '../components/templates/ATSClassic.tsx';
 
 // Mock data in JSON Resume format
 const mockJsonResumeData = {
@@ -235,6 +235,7 @@ describe('ATSClassic Template', () => {
         });
     });
 });
+
 
 
 

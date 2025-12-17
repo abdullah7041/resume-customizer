@@ -14,7 +14,7 @@ export interface ConsentState {
   consentVersion: string;
 
   // Actions
-  setConsent: (type: keyof Pick<ConsentState, 'analyticsConsent' | 'marketingConsent' | 'functionalConsent' | 'dataProcessingConsent'>, value: boolean) => void;
+  setConsent: (consentType: keyof Pick<ConsentState, 'analyticsConsent' | 'marketingConsent' | 'functionalConsent' | 'dataProcessingConsent'>, enabled: boolean) => void;
   acceptAll: () => void;
   rejectAll: () => void;
   hasConsented: () => boolean;
@@ -124,6 +124,7 @@ export const useConsentStore = create<ConsentState>()(
     }
   )
 );
+
 
 
 

@@ -6,27 +6,27 @@ import {
   analyzeResumeWithAI,
   optimizeResume,
 } from "../../services/api.js";
-import { useAuth } from "../../hooks/useAuth.jsx";
-import ResumeUpload from "../../features/ResumeUpload.jsx";
-import JobMatch from "../../features/JobMatch.jsx";
-import Optimization from "../../features/Optimization.jsx";
-import KeywordAnalyzer from "../../features/KeywordAnalyzer.jsx";
-import TemplateGallery from "../../features/TemplateGallery.jsx";
-import InterviewPrep from "../../features/InterviewPrep.jsx";
-import BulkAnalysis from "../../features/BulkAnalysis.jsx";
-import CoverLetter from "../../features/CoverLetter.jsx";
-import Tabs from "../ui/Tabs.jsx";
-import Toast, { ToastContainer } from "../ui/Toast.jsx";
-import EmptyState from "../ui/EmptyState.jsx";
-import Button from "../ui/Button.jsx";
-import HelpModal from "../ui/HelpModal.jsx";
-import LandingPage from "../../pages/LandingPage.tsx";
-import WelcomeModal from "../ui/WelcomeModal.tsx";
-import { ParallaxContainer } from "../ui/ParallaxSection.jsx";
-import { helpContent } from "../../lib/data/helpContent.tsx";
+import { useAuth } from "../../hooks/useAuth";
+import UploadSection from "../sections/UploadSection";
+import { MatchSection } from "../sections/MatchSection";
+import { OptimizeSection } from "../sections/OptimizeSection";
+import { KeywordsSection } from "../sections/KeywordsSection";
+import TemplateGallery from "../sections/TemplatesSection";
+import { InterviewSection } from "../sections/InterviewSection";
+import { BulkAnalysisSection } from "../sections/BulkAnalysisSection";
+import { CoverLetterSection } from "../sections/CoverLetterSection";
+import Tabs from "../ui/Tabs";
+import Toast, { ToastContainer } from "../ui/Toast";
+import EmptyState from "../ui/EmptyState";
+import Button from "../ui/Button";
+import HelpModal from "../ui/HelpModal";
+import LandingPage from "../../pages/LandingPage";
+import WelcomeModal from "../ui/WelcomeModal";
+import { ParallaxContainer } from "../ui/ParallaxSection";
+import { helpContent } from "../../lib/data/helpContent";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
-import ViewTextModal from "../ui/ViewTextModal.jsx";
+import ViewTextModal from "../ui/ViewTextModal";
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
@@ -183,7 +183,8 @@ export default function MainContent() {
     if (storedTab && tabs.some((tab) => tab.value === storedTab)) {
       setActiveTab(storedTab);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -220,14 +221,14 @@ export default function MainContent() {
   const hasNextTab = useMemo(() => {
     const index = tabs.findIndex((tab) => tab.value === activeTab);
     return index >= 0 && index < tabs.length - 1;
-  }, [activeTab]);
+  }, [activeTab, tabs]);
 
   const handleContinue = useCallback(() => {
     const index = tabs.findIndex((tab) => tab.value === activeTab);
     if (index >= 0 && index < tabs.length - 1) {
       handleTabChange(tabs[index + 1].value);
     }
-  }, [activeTab, handleTabChange]);
+  }, [activeTab, handleTabChange, tabs]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -562,7 +563,7 @@ export default function MainContent() {
 
       try {
         // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
-        const { mergeResumeData } = await import("../../lib/utils/resumeUtils.ts");
+        const { mergeResumeData } = await import("../../lib/utils/resumeUtils");
         const mergedResume = mergeResumeData(resumeData, {
           optimization: optimizationData,
           candidateProfile: null // Add if available
@@ -701,16 +702,15 @@ export default function MainContent() {
         </div>
         <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-4 sm:p-5 lg:p-6 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
           {activeTab === "resume" && (
-            <ResumeUpload
+            <UploadSection
               onParseResume={handleParseResume}
               resumeDocument={resumeData}
               onToast={handleUploadToast}
               onClear={handleClearResume}
-              onViewText={() => setViewTextModalOpen(true)}
             />
           )}
           {activeTab === "match" && (
-            <JobMatch
+            <MatchSection
               onAnalyzeMatchAI={handleAnalyzeMatchAI}
               matchAnalysis={matchAnalysis}
               isAnalyzing={isAnalyzing}
@@ -720,7 +720,7 @@ export default function MainContent() {
             />
           )}
           {activeTab === "optimize" && (
-            <Optimization
+            <OptimizeSection
               isPremium={isPremium}
               optimizations={optimizations}
               keywords={optimizationKeywords}
@@ -736,7 +736,7 @@ export default function MainContent() {
             />
           )}
           {activeTab === "keywords" && (
-            <KeywordAnalyzer
+            <KeywordsSection
               resumeText={resumeData?.plainText || ""}
               jobDescription={jobDescription}
             />
@@ -756,7 +756,7 @@ export default function MainContent() {
             />
           )}
           {activeTab === "interview" && (
-            <InterviewPrep
+            <InterviewSection
               jobDescription={jobDescription}
               resumeText={resumeData?.plainText || ""}
               matchAnalysis={matchAnalysis}
@@ -765,12 +765,12 @@ export default function MainContent() {
             />
           )}
           {activeTab === "bulk" && (
-            <BulkAnalysis
+            <BulkAnalysisSection
               jobDescription={jobDescription}
             />
           )}
           {activeTab === "cover-letter" && (
-            <CoverLetter
+            <CoverLetterSection
               resumeText={resumeData?.plainText || ""}
               jobDescription={jobDescription}
             />
@@ -937,6 +937,7 @@ function getHelpKey(tabValue) {
   };
   return mapping[tabValue] || tabValue;
 }
+
 
 
 

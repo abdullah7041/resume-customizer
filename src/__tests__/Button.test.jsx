@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import Button from "../components/ui/Button.jsx";
+import Button from "../components/ui/Button.tsx";
 
 describe("Button", () => {
   it("applies gradient styling for the primary variant", () => {
@@ -22,6 +22,7 @@ describe("Button", () => {
     expect(button.className).toContain("border");
   });
 });
+
 
 
 

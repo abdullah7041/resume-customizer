@@ -1,3 +1,4 @@
+import React from 'react';
 import { cn } from '../../lib/utils/cn';
 
 interface Tab {
@@ -10,7 +11,7 @@ interface Tab {
 interface GlassTabsProps {
   tabs: Tab[];
   activeTab: string;
-  onTabChange: (tabId: string) => void;
+  onTabChange: (id: string) => void;
   isArabic?: boolean;
 }
 
@@ -35,3 +36,4 @@ export function GlassTabs({ tabs, activeTab, onTabChange, isArabic }: GlassTabsP
     </div>
   );
 }
+

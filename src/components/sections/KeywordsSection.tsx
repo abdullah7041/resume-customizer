@@ -1,203 +1,395 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
-import { Key, Plus, Check, TrendingUp } from 'lucide-react';
+import {
+  TrendingUp,
+  AlertCircle,
+  CheckCircle2,
+  Target,
+  Loader2,
+  Key
+} from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
+import { useKeywordAnalysis } from '../../hooks/useKeywordAnalysis';
 
-interface KeywordAnalysis {
-  atsScore: number;
-  density: number;
-  categories: {
-    technical: string[];
-    soft: string[];
-    industry: string[];
-    action: string[];
-  };
-  suggestions: string[];
+// === Keyword Bar Component (from features/KeywordAnalyzer.tsx) ===
+interface KeywordBarProps {
+  keyword: string;
+  count: number;
+  score: number;
+  maxScore: number;
+  variant?: 'default' | 'matched' | 'missing' | 'emphasis';
+  isLoading?: boolean;
 }
 
-interface KeywordsSectionProps {
-  analysis: KeywordAnalysis | null;
-  onAddKeyword: (keyword: string) => void;
-  addedKeywords: string[];
-}
+const KeywordBar = ({ keyword, count, score, maxScore, variant = 'default', isLoading = false }: KeywordBarProps) => {
+  const percentage = maxScore > 0 ? Math.min((count / maxScore) * 100, 100) : 0;
+  const displayScore = Math.min(score, 100);
 
-export function KeywordsSection({
-  analysis,
-  onAddKeyword,
-  addedKeywords
-}: KeywordsSectionProps) {
-  const { t } = useTranslation();
-  const [activeCategory, setActiveCategory] = useState<keyof KeywordAnalysis['categories']>('technical');
-
-  const categories = [
-    { id: 'technical', label: t('sections.keywords.categories.technical'), color: 'blue' },
-    { id: 'soft', label: t('sections.keywords.categories.soft'), color: 'purple' },
-    { id: 'industry', label: t('sections.keywords.categories.industry'), color: 'amber' },
-    { id: 'action', label: t('sections.keywords.categories.action'), color: 'emerald' },
-  ] as const;
-
-  const getColorClasses = (color: string, filled = false) => {
-    const colors: Record<string, { bg: string; text: string; filled: string }> = {
-      blue: { bg: 'bg-blue-500/20', text: 'text-blue-400', filled: 'bg-blue-500 text-white' },
-      purple: { bg: 'bg-purple-500/20', text: 'text-purple-400', filled: 'bg-purple-500 text-white' },
-      amber: { bg: 'bg-amber-500/20', text: 'text-amber-400', filled: 'bg-amber-500 text-white' },
-      emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', filled: 'bg-emerald-500 text-white' },
-    };
-    return filled ? colors[color].filled : `${colors[color].bg} ${colors[color].text}`;
+  const colors = {
+    default: 'bg-gradient-to-r from-cyan-400 via-teal-500 to-emerald-500',
+    matched: 'bg-gradient-to-r from-emerald-400 via-green-500 to-teal-500',
+    missing: 'bg-gradient-to-r from-rose-400 via-pink-500 to-orange-400',
+    emphasis: 'bg-gradient-to-r from-violet-400 via-purple-500 to-indigo-500'
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Score Cards */}
-      <GlassCard variant="elevated" className="lg:col-span-1">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
-            <Key className="w-5 h-5 text-amber-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-white">
-            {t('sections.keywords.analysis.title')}
+    <div className="group flex items-center gap-4 py-2.5 px-3 rounded-xl transition-all duration-300 hover:bg-white/5">
+      <div className="w-28 flex-shrink-0">
+        <span className="text-sm font-semibold text-white truncate block">
+          {keyword}
+        </span>
+      </div>
+      <div className="flex-1 relative h-7 bg-white/10 rounded-full overflow-hidden border border-white/10">
+        {isLoading && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+        )}
+        <div
+          className={cn(
+            'h-full rounded-full transition-all duration-700 ease-out relative',
+            colors[variant]
+          )}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+      <div className="w-24 text-right flex items-center justify-end gap-1.5">
+        <span className="text-sm font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
+          {count}×
+        </span>
+        <span className={cn(
+          'text-xs font-semibold px-2 py-0.5 rounded-md',
+          displayScore >= 70 ? 'bg-emerald-500/20 text-emerald-400' :
+            displayScore >= 40 ? 'bg-amber-500/20 text-amber-400' :
+              'bg-rose-500/20 text-rose-400'
+        )}>
+          {displayScore}%
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// === Types ===
+interface KeywordItem {
+  term: string;
+  count?: number;
+  score?: number;
+  resumeCount?: number;
+  jobCount?: number;
+  reason?: string;
+}
+
+interface Suggestions {
+  toAdd?: KeywordItem[];
+  needEmphasis?: KeywordItem[];
+  wellRepresented?: KeywordItem[];
+  overallMatch?: number;
+}
+
+interface KeywordsSectionProps {
+  resumeText?: string;
+  jobDescription?: string;
+}
+
+export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionProps) {
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
+  const [_activeTab, _setActiveTab] = useState<'overview' | 'matched' | 'missing'>('overview');
+
+  const { analysis, isAnalyzing, hasData } = useKeywordAnalysis(
+    resumeText || '',
+    jobDescription || '',
+    { enabled: Boolean(resumeText && jobDescription) }
+  );
+
+  const isEmpty = !resumeText || !jobDescription;
+
+  // Memoized data extraction
+  const topResumeKeywords = useMemo(() => analysis?.resume?.keywords || [], [analysis]);
+  const topJobKeywords = useMemo(() => analysis?.job?.keywords || [], [analysis]);
+  const _matchedKeywords = useMemo(() => analysis?.tfidf?.matchedKeywords || [], [analysis]);
+  const _missingKeywords = useMemo(() => analysis?.tfidf?.missingKeywords || [], [analysis]);
+  const suggestions = useMemo(() => analysis?.suggestions as Suggestions | undefined, [analysis]);
+  const overallMatch = suggestions?.overallMatch ?? analysis?.tfidf?.overallMatch ?? 0;
+
+  // Match score color
+  const matchColor = overallMatch >= 70
+    ? 'text-emerald-400'
+    : overallMatch >= 50
+      ? 'text-amber-400'
+      : 'text-rose-400';
+
+  // Empty state
+  if (isEmpty) {
+    return (
+      <GlassCard variant="elevated">
+        <div className="py-12 text-center text-gray-500">
+          <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {t('sections.keywords.emptyTitle', 'No Data Available')}
           </h3>
+          <p>{t('sections.keywords.emptyDesc', 'Upload your resume and add a job description to analyze keyword density.')}</p>
+        </div>
+      </GlassCard>
+    );
+  }
+
+  // Loading state
+  if (isAnalyzing && !hasData) {
+    return (
+      <GlassCard variant="elevated">
+        <div className="py-12 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-emerald-500" />
+          <p className="text-gray-400">{t('sections.keywords.analyzing', 'Analyzing keywords...')}</p>
+        </div>
+      </GlassCard>
+    );
+  }
+
+  const maxResumeScore = topResumeKeywords.length > 0 ? Math.max(...topResumeKeywords.map(k => k.count || 0)) : 0;
+  const maxJobScore = topJobKeywords.length > 0 ? Math.max(...topJobKeywords.map(k => k.count || 0)) : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Keyword Analysis Overview */}
+      <GlassCard variant="elevated">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+              <Target className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                {t('sections.keywords.title', 'Keyword Analysis')}
+              </h3>
+              <p className="text-xs text-gray-400">
+                {t('sections.keywords.subtitle', 'Based on job description frequency')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-medium text-gray-400">
+              {t('sections.keywords.matchScore', 'Match Score')}
+            </span>
+            <span className={cn('text-3xl font-bold', matchColor)}>
+              {overallMatch}%
+            </span>
+          </div>
         </div>
 
-        {analysis ? (
-          <div className="space-y-4">
-            {/* ATS Score */}
-            <div className="p-4 bg-white/5 rounded-xl">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-400">
-                  {t('sections.keywords.analysis.atsScore')}
-                </span>
-                <span className={cn(
-                  'text-2xl font-bold',
-                  analysis.atsScore >= 80 ? 'text-emerald-400' :
-                  analysis.atsScore >= 60 ? 'text-amber-400' : 'text-red-400'
-                )}>
-                  {analysis.atsScore}%
-                </span>
+        {/* Three Column Analysis */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Critical Gaps */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-400" />
+                <h4 className="font-bold text-white">
+                  {t('sections.keywords.criticalGaps', 'Critical Gaps')}
+                </h4>
               </div>
-              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all',
-                    analysis.atsScore >= 80 ? 'bg-emerald-500' :
-                    analysis.atsScore >= 60 ? 'bg-amber-500' : 'bg-red-500'
-                  )}
-                  style={{ width: `${analysis.atsScore}%` }}
-                />
-              </div>
+              <span className="text-sm font-semibold bg-rose-500/20 text-rose-400 px-2.5 py-1 rounded-full">
+                {suggestions?.toAdd?.length || 0}
+              </span>
             </div>
-
-            {/* Keyword Density */}
-            <div className="p-4 bg-white/5 rounded-xl">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">
-                  {t('sections.keywords.analysis.density')}
-                </span>
-                <span className="text-lg font-semibold text-white">
-                  {analysis.density}%
-                </span>
-              </div>
-            </div>
-
-            {/* Category Counts */}
-            <div className="grid grid-cols-2 gap-2">
-              {categories.map(cat => (
-                <div
-                  key={cat.id}
-                  className={cn(
-                    'p-3 rounded-lg text-center cursor-pointer transition-all',
-                    activeCategory === cat.id
-                      ? getColorClasses(cat.color, true)
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            <div className="min-h-[120px] p-3">
+              {suggestions?.toAdd && suggestions.toAdd.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.toAdd.slice(0, 8).map((kw, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-sm font-medium text-rose-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/20 transition-all cursor-pointer"
+                      title={kw.reason || t('sections.keywords.addThis', 'Add this keyword')}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                      {kw.term}
+                    </span>
+                  ))}
+                  {suggestions.toAdd.length > 8 && (
+                    <span className="px-3 py-1.5 rounded-lg text-sm bg-white/10 text-gray-400">
+                      +{suggestions.toAdd.length - 8} {isArabic ? 'أكثر' : 'more'}
+                    </span>
                   )}
-                  onClick={() => setActiveCategory(cat.id)}
-                >
-                  <p className="text-lg font-bold">
-                    {analysis.categories[cat.id]?.length || 0}
-                  </p>
-                  <p className="text-xs">{cat.label}</p>
                 </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 mb-1" />
+                  <p className="text-xs text-gray-500">{t('sections.keywords.noGaps', 'No critical gaps found')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Boost Frequency */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-amber-400" />
+                <h4 className="font-bold text-white">
+                  {t('sections.keywords.boostFrequency', 'Boost Frequency')}
+                </h4>
+              </div>
+              <span className="text-sm font-semibold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full">
+                {suggestions?.needEmphasis?.length || 0}
+              </span>
+            </div>
+            <div className="min-h-[120px] p-3">
+              {suggestions?.needEmphasis && suggestions.needEmphasis.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.needEmphasis.slice(0, 8).map((kw, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all cursor-pointer"
+                      title={`${t('sections.keywords.increase', 'Increase from')} ${kw.resumeCount} ${t('sections.keywords.to', 'to')} ${kw.jobCount}`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                      {kw.term}
+                      <span className="ml-1 opacity-70 text-xs">{kw.resumeCount}→{kw.jobCount}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 mb-1" />
+                  <p className="text-xs text-gray-500">{t('sections.keywords.frequencyGood', 'Frequency looks good')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Your Strengths */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <h4 className="font-bold text-white">
+                  {t('sections.keywords.yourStrengths', 'Your Strengths')}
+                </h4>
+              </div>
+              <span className="text-sm font-semibold bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full">
+                {suggestions?.wellRepresented?.length || 0}
+              </span>
+            </div>
+            <div className="min-h-[120px] p-3">
+              {suggestions?.wellRepresented && suggestions.wellRepresented.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.wellRepresented.slice(0, 8).map((kw, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      {kw.term}
+                    </span>
+                  ))}
+                  {suggestions.wellRepresented.length > 8 && (
+                    <span className="px-3 py-1.5 rounded-lg text-sm bg-white/10 text-gray-400">
+                      +{suggestions.wellRepresented.length - 8} {isArabic ? 'أكثر' : 'more'}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <p className="text-xs text-gray-500">{t('sections.keywords.noStrengths', 'No strong matches yet')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Keyword Details Tabs */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Resume Keywords */}
+        <GlassCard variant="elevated">
+          <div className="flex items-center gap-2 mb-4">
+            <Key className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-lg font-semibold text-white">
+              {t('sections.keywords.resumeKeywords', 'Top Resume Keywords')}
+            </h3>
+            <span className="ms-auto text-sm text-gray-400">
+              {topResumeKeywords.length} {t('sections.keywords.keywords', 'keywords')}
+            </span>
+          </div>
+          {topResumeKeywords.length > 0 ? (
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {topResumeKeywords.map((kw: KeywordItem, idx: number) => (
+                <KeywordBar
+                  key={`${kw.term}-${idx}`}
+                  keyword={kw.term}
+                  count={kw.count || kw.resumeCount || 0}
+                  score={kw.score || Math.round((((kw.count || 0) / maxResumeScore) * 100))}
+                  maxScore={maxResumeScore}
+                  variant="default"
+                />
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="py-12 text-center text-gray-500">
-            <Key className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Upload a resume to analyze keywords</p>
-          </div>
-        )}
-      </GlassCard>
+          ) : (
+            <p className="text-sm text-gray-500 italic">{t('sections.keywords.noResumeKeywords', 'No keywords extracted from resume.')}</p>
+          )}
+        </GlassCard>
 
-      {/* Keywords Display */}
-      <GlassCard variant="elevated" className="lg:col-span-2">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white">
-            {categories.find(c => c.id === activeCategory)?.label}
-          </h3>
-        </div>
-
-        {analysis ? (
-          <div className="space-y-6">
-            {/* Current Keywords */}
-            <div>
-              <p className="text-sm text-gray-400 mb-3">Found in your resume</p>
-              <div className="flex flex-wrap gap-2">
-                {analysis.categories[activeCategory]?.map((keyword, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      'px-3 py-1.5 rounded-lg text-sm font-medium',
-                      getColorClasses(categories.find(c => c.id === activeCategory)?.color || 'blue')
-                    )}
-                  >
-                    {keyword}
-                  </span>
-                ))}
-              </div>
+        {/* Job Keywords */}
+        <GlassCard variant="elevated">
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="w-5 h-5 text-purple-400" />
+            <h3 className="text-lg font-semibold text-white">
+              {t('sections.keywords.jobKeywords', 'Top Job Keywords')}
+            </h3>
+            <span className="ms-auto text-sm text-gray-400">
+              {topJobKeywords.length} {t('sections.keywords.keywords', 'keywords')}
+            </span>
+          </div>
+          {topJobKeywords.length > 0 ? (
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {topJobKeywords.map((kw: KeywordItem, idx: number) => (
+                <KeywordBar
+                  key={`${kw.term}-${idx}`}
+                  keyword={kw.term}
+                  count={kw.count || 0}
+                  score={kw.score || Math.round((((kw.count || 0) / maxJobScore) * 100))}
+                  maxScore={maxJobScore}
+                  variant="default"
+                />
+              ))}
             </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">{t('sections.keywords.noJobKeywords', 'No keywords extracted from job description.')}</p>
+          )}
+        </GlassCard>
+      </div>
 
-            {/* Suggestions */}
+      {/* Stats Footer */}
+      {analysis && (
+        <GlassCard variant="subtle" padding="sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
-                <p className="text-sm text-gray-400">
-                  {t('sections.keywords.suggestions.title')}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {analysis.suggestions.map((keyword, i) => {
-                  const isAdded = addedKeywords.includes(keyword);
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => !isAdded && onAddKeyword(keyword)}
-                      disabled={isAdded}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                        isAdded
-                          ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
-                          : 'bg-white/10 text-white hover:bg-emerald-500/20 hover:text-emerald-400'
-                      )}
-                    >
-                      {isAdded ? (
-                        <Check className="w-3 h-3" />
-                      ) : (
-                        <Plus className="w-3 h-3" />
-                      )}
-                      {keyword}
-                    </button>
-                  );
-                })}
-              </div>
+              <p className="text-sm text-gray-400">{t('sections.keywords.stats.resumeWords', 'Resume Words')}</p>
+              <p className="text-2xl font-bold text-white">
+                {analysis.resume?.totalWords || 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">{t('sections.keywords.stats.uniqueKeywords', 'Unique Keywords')}</p>
+              <p className="text-2xl font-bold text-white">
+                {analysis.resume?.uniqueWords || 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">{t('sections.keywords.stats.jobKeywords', 'Job Keywords')}</p>
+              <p className="text-2xl font-bold text-white">
+                {analysis.job?.totalWords || 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">{t('sections.keywords.stats.matchRate', 'Match Rate')}</p>
+              <p className={cn('text-2xl font-bold', matchColor)}>
+                {analysis.tfidf?.overallMatch || 0}%
+              </p>
             </div>
           </div>
-        ) : (
-          <div className="py-12 text-center text-gray-500">
-            <p>No keywords to display</p>
-          </div>
-        )}
-      </GlassCard>
+        </GlassCard>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef } from 'react';
+import React, { InputHTMLAttributes, forwardRef } from 'react';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 
@@ -44,3 +44,4 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
 );
 
 GlassInput.displayName = 'GlassInput';
+

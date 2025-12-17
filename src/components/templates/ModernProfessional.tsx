@@ -1,5 +1,5 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, formatContactLine } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString } from './BaseTemplate';
 import { useDirection } from '../providers/DirectionProvider';
 
 /**
@@ -215,6 +215,7 @@ export function ModernProfessional({
 }
 
 ModernProfessional.displayName = 'Modern Professional';
+
 
 
 

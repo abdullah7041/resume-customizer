@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Header from "../components/Layout/Header";
-import { DirectionProvider } from "../components/providers/DirectionProvider.jsx";
+import { DirectionProvider } from "../components/providers/DirectionProvider.tsx";
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
@@ -212,6 +212,7 @@ describe("Mobile Layout Polish", () => {
     });
   });
 });
+
 
 
 

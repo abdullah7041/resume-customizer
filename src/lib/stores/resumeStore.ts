@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ResumeSchema, Work } from '../../types/resume';
+import type { ResumeSchema } from '../../types/resume';
 import type {
   ResumeState,
   OptimizationResult,
@@ -194,6 +194,7 @@ export const useSelectedTemplate = () =>
 
 export const useOptimizations = () =>
   useResumeStore((state) => state.optimizations);
+
 
 
 

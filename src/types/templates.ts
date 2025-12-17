@@ -63,13 +63,13 @@ export interface ResumeState {
   selectedTemplate: TemplateId;
 
   // Actions
-  setOriginalResume: (resume: ResumeSchema) => void;
-  addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
-  applyOptimization: (sectionId: string) => void;
-  revertOptimization: (sectionId: string) => void;
+  setOriginalResume: (_r: ResumeSchema) => void;
+  addOptimization: (_opt: Omit<OptimizationResult, 'timestamp'>) => void;
+  applyOptimization: (_id: string) => void;
+  revertOptimization: (_id: string) => void;
   applyAllOptimizations: () => void;
   toggleShowOptimized: () => void;
-  setSelectedTemplate: (templateId: TemplateId) => void;
+  setSelectedTemplate: (_id: TemplateId) => void;
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
 }
@@ -91,6 +91,7 @@ export interface PdfExportOptions {
   templateHtml?: string;
   fileName?: string;
 }
+
 
 
 

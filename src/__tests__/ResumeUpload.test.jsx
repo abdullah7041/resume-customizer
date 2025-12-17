@@ -40,7 +40,7 @@ vi.mock("../services/supabase.js", () => ({
   uploadResumeFile: vi.fn(),
 }));
 
-import ResumeUpload from "../features/ResumeUpload.jsx";
+import ResumeUpload from "../components/sections/UploadSection";
 import { uploadResumeFile } from "../services/supabase.js";
 
 describe("ResumeUpload", () => {
@@ -64,14 +64,8 @@ describe("ResumeUpload", () => {
   it("uploads PDFs and shows a success toast", async () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn().mockResolvedValue({});
-    uploadResumeFile.mockResolvedValueOnce({
-      path: "user-123/resumes/20240218-153045-resume.pdf",
-      fileName: "20240218-153045-resume.pdf",
-      userId: "user-123",
-      bucket: "resumes",
-    });
 
-    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} />);
+    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
 
     const fileInput = screen
       .getAllByLabelText(/upload resume file/i)
@@ -91,23 +85,14 @@ describe("ResumeUpload", () => {
       fireEvent.click(submitButton);
     });
 
-    expect(uploadResumeFile).toHaveBeenCalledWith(file, expect.any(Object));
+    // UploadSection passes { file } to onParseResume
     expect(onParseResume).toHaveBeenCalledWith(
       expect.objectContaining({
-        kind: "upload",
         file,
-        storage: expect.objectContaining({
-          bucket: "resumes",
-          path: "user-123/resumes/20240218-153045-resume.pdf",
-          fileName: "20240218-153045-resume.pdf",
-        }),
       })
     );
     expect(onToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "info", title: "Uploading resume" })
-    );
-    expect(onToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "success", title: "Upload complete" })
+      expect.objectContaining({ type: "success", title: "Resume parsed successfully" })
     );
   });
 
@@ -132,12 +117,12 @@ describe("ResumeUpload", () => {
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "warning",
-        title: expect.stringMatching(/file too large/i),
+        title: "File must be 5MB or smaller.",
       })
     );
-    expect(screen.getByText(/file must be 5mb or smaller\./i)).toBeInTheDocument();
   });
 });
+
 
 
 

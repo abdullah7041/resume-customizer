@@ -15,7 +15,7 @@ const {
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 
-vi.mock("../hooks/useAuth.jsx", () => ({
+vi.mock("../hooks/useAuth.tsx", () => ({
   useAuth: () => ({
     user: { id: "user-123", user_metadata: {}, app_metadata: {} },
     loading: false,
@@ -23,7 +23,7 @@ vi.mock("../hooks/useAuth.jsx", () => ({
   }),
 }));
 
-vi.mock("../features/ResumeUpload.jsx", () => {
+vi.mock("../components/sections/UploadSection", () => {
   const React = require("react");
   return {
     __esModule: true,
@@ -34,23 +34,23 @@ vi.mock("../features/ResumeUpload.jsx", () => {
   };
 });
 
-vi.mock("../features/JobMatch.jsx", () => {
+vi.mock("../components/sections/MatchSection", () => {
   const React = require("react");
   return {
     __esModule: true,
-    default: () => React.createElement("div", { "data-testid": "job-match-mock" }),
+    MatchSection: () => React.createElement("div", { "data-testid": "job-match-mock" }),
   };
 });
 
-vi.mock("../features/Optimization.jsx", () => {
+vi.mock("../components/sections/OptimizeSection", () => {
   const React = require("react");
   return {
     __esModule: true,
-    default: () => React.createElement("div", { "data-testid": "optimization-mock" }),
+    OptimizeSection: () => React.createElement("div", { "data-testid": "optimization-mock" }),
   };
 });
 
-vi.mock("../components/ui/Tabs.jsx", () => {
+vi.mock("../components/ui/Tabs.tsx", () => {
   const React = require("react");
   return {
     __esModule: true,
@@ -66,7 +66,7 @@ vi.mock("../components/ui/Tabs.jsx", () => {
   };
 });
 
-vi.mock("../components/ui/Toast.jsx", () => {
+vi.mock("../components/ui/Toast.tsx", () => {
   const React = require("react");
   return {
     __esModule: true,
@@ -186,6 +186,7 @@ describe("MainContent resume parsing", () => {
     removeItemSpy.mockRestore();
   });
 });
+
 
 
 

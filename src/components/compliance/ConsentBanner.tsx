@@ -6,7 +6,7 @@ import { Shield, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function ConsentBanner() {
   const { t } = useTranslation();
-  const { isRTL } = useDirection();
+  useDirection();
   const [showDetails, setShowDetails] = useState(false);
 
   const {
@@ -140,6 +140,7 @@ export function ConsentBanner() {
     </div>
   );
 }
+
 
 
 

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import JobMatch from '../features/JobMatch.jsx';
+import { MatchSection as JobMatch } from '../components/sections/MatchSection';
 
 describe('JobMatch', () => {
   beforeEach(() => {
@@ -49,6 +49,7 @@ describe('JobMatch', () => {
     expect(screen.getByText(/paste a job description to see match insights here/i)).toBeInTheDocument();
   });
 });
+
 
 
 
