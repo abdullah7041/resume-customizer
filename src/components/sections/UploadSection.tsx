@@ -105,7 +105,13 @@ export default function UploadSection({
             if (result) {
                 // Handle different response structures
                 const parsedResume = result.data || result;
-                const rawText = result.plainText || pastedText || '';
+
+                // CRITICAL FIX: Ensure rawText is always a string, never an object
+                // This prevents [object Object] being passed to setParsedResumeText
+                const plainTextValue = result.plainText ?? parsedResume?.plainText;
+                const rawText = typeof plainTextValue === 'string' && plainTextValue.length > 0
+                    ? plainTextValue
+                    : (pastedText || '');
 
                 // Save to store
                 if (parsedResume && typeof parsedResume === 'object' && 'basics' in parsedResume) {
@@ -113,9 +119,11 @@ export default function UploadSection({
                     console.log('[Upload] Resume saved to store:', (parsedResume as ResumeSchema).basics?.name);
                 }
 
-                if (rawText) {
+                if (rawText && typeof rawText === 'string') {
                     setParsedResumeText(rawText);
                     console.log('[Upload] Raw text saved to store, length:', rawText.length);
+                } else {
+                    console.warn('[Upload] Warning: No valid rawText to save. Value was:', typeof plainTextValue, plainTextValue);
                 }
             }
 
