@@ -1,196 +1,132 @@
-# 🚀 AI Resume Optimizer
+# AI Resume Optimizer
 
 > **Transform your resume into a job-winning document with AI-powered optimization**
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-success?style=for-the-badge&logo=netlify)](https://resume-optimizing.netlify.app)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Built with React](https://img.shields.io/badge/Built%20with-React%2019-61dafb?style=for-the-badge&logo=react)](https://react.dev)
-
-**Created by Abdullah** - An intelligent resume optimization platform designed specifically for Saudi Arabia's job market.
 
 ---
 
-## ✨ What is this?
+## PROPRIETARY SOFTWARE NOTICE
 
-**AI Resume Optimizer** helps job seekers create powerful, ATS-friendly resumes using artificial intelligence. The application analyzes your resume against job descriptions, calculates match scores, identifies missing keywords, and provides AI-powered rewrite suggestions—all while maintaining truthfulness and your unique voice.
+> **COPYRIGHT © 2025 ABDULLAH. ALL RIGHTS RESERVED.**
+
+This software and its source code are the exclusive intellectual property of **Abdullah**. Unauthorized copying, modification, distribution, or use of this software, in whole or in part, is strictly prohibited and may result in legal action.
+
+**You may NOT:**
+- Clone, fork, or copy this repository
+- Use any part of this code in your own projects
+- Redistribute or resell this software
+- Create derivative works based on this code
+- Remove or modify copyright notices
+
+**Violators will be subject to DMCA takedown requests and may face legal consequences.**
+
+For licensing inquiries or collaboration, please contact the author directly.
+
+---
+
+## About This Project
+
+**AI Resume Optimizer** is an intelligent resume optimization platform designed specifically for **Saudi Arabia's job market**. It helps job seekers create powerful, ATS-friendly resumes using artificial intelligence.
+
+This platform empowers Saudi professionals to align their resumes with Vision 2030 sector needs and modern hiring standards.
 
 ### Key Features
 
-- **🌟 Engaging Landing Page** - Modern hero section with animations, trust indicators, and clear value proposition
-- **📤 Smart Resume Upload** - Upload PDF/DOCX or paste text with automatic section detection
-- **🔍 Structured JSON Parsing** - NEW! Extract resumes into clean, editable JSON format with schema validation
-- **🎯 Job Match Analysis** - Get 0-100 match scores using TF-IDF similarity algorithms
-- **✨ AI Optimization** - GPT-5 Nano rewrites sections with stronger language and better keywords
-- **🧪 Postman Collection** - Complete API testing suite with 8 pre-configured endpoints
-- **📊 Bulk Comparison** - Compare multiple resume versions side-by-side
-- **📄 Professional Export** - Download styled or ATS-plain PDFs
-- **🔒 Privacy-First** - All processing happens securely; your data stays private
+| Feature | Description |
+|---------|-------------|
+| **Smart Resume Upload** | Upload PDF/DOCX with automatic section detection |
+| **Structured JSON Parsing** | Extract resumes into clean, editable JSON format |
+| **Job Match Analysis** | 0-100 match scores using TF-IDF similarity algorithms |
+| **AI Optimization** | GPT-powered rewrites with stronger language and keywords |
+| **Bulk Comparison** | Compare multiple resume versions side-by-side |
+| **Professional Export** | Download styled or ATS-optimized PDFs |
+| **Privacy-First** | Your data stays secure and private |
 
 ---
 
-## 🛠️ Tech Stack
-
-**Frontend**
-- React 19 with Vite 7
-- Tailwind CSS v4 with custom design system
-- Lucide React icons
-
-**Backend**
-- Netlify Functions (TypeScript serverless)
-- OpenAI GPT-5 Nano API
-- Supabase (auth + storage)
-
-**Key Algorithms**
-- TF-IDF similarity scoring
-- Keyword extraction and matching
-- Multi-layer anti-hallucination prompt engineering
-
----
-
-## 🎯 How It Works
-
-1. **Upload Resume** → AI extracts and normalizes text (now with structured JSON parsing!)
-2. **Match to Job** → Calculate similarity score and identify keyword gaps
-3. **AI Optimize** → Get intelligent rewrite suggestions
-4. **Export PDF** → Download in styled or ATS-plain format
-
-*For detailed step-by-step explanations, visit the [live app](https://resume-optimizing.netlify.app) and check out the new landing page with animated features showcase.*
-
----
-
-## 🆕 Recent Updates
-
-- **🌟 Modern Landing Page** - Engaging hero section with animations and trust indicators
-- **🔍 JSON Resume Extraction** - New endpoint for structured data extraction with schema validation
-- **🧪 Postman Collection** - Complete API testing suite (8 endpoints) for developers
-- **📚 Improved Documentation** - Concise copilot instructions and visual guides
-- **🎨 UI/UX Roadmap** - Comprehensive enhancement suggestions document
-
----
-
-## 🧪 API Testing
-
-Import the Postman collection for easy API testing:
-
-```bash
-# File: AI_Resume_Optimizer_API.postman_collection.json
-
-Endpoints:
-- POST /parse-resume           - Extract text from PDF/DOCX
-- POST /extract-resume-json    - NEW! Structured JSON parsing
-- POST /match-score            - Calculate match percentage
-- POST /ai-match               - AI-powered analysis
-- POST /optimize               - Optimize resume sections
-- POST /ai                     - Generic AI completion
-- POST /generate-cover-letter  - Create cover letters
-- POST /predict-questions      - Interview prep
-```
-
----
-
-## 🌍 Saudi Market Focus
+## Saudi Market Focus
 
 Unlike generic resume tools, this platform is specifically optimized for:
-- Vision 2030 skills and workforce requirements
-- Arabic and English bilingual support
+
+- **Vision 2030** skills and workforce requirements
+- **Arabic and English** bilingual support
 - Local hiring practices and ATS systems
 - Cultural considerations for the MENA region
 
 ---
 
-## � Quick Start
+## Technology Stack
 
-### Prerequisites
-
-- Node.js 22.17.0 or higher
-- Netlify CLI (`npm install -g netlify-cli`)
-- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
-- Supabase account (optional, for auth/storage features)
-
-### Setup
-
-1. **Clone and install dependencies**
-   ```bash
-   git clone <repository-url>
-   cd resume-customizer
-   npm install
-   ```
-
-2. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your API keys:
-   ```env
-   OPENAI_API_KEY=your_openai_api_key_here
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-3. **Start the development server**
-   ```bash
-   netlify dev
-   ```
-   
-   Access the app at: http://localhost:8888
-
-### Troubleshooting
-
-**503 Error on AI endpoints?**
-- Verify `OPENAI_API_KEY` is set in your `.env` file
-- Restart `netlify dev` after adding environment variables
-- Check your OpenAI API key is valid and has credits
-
-**Mock AI for testing without OpenAI:**
-```env
-VITE_USE_MOCK_AI=true
-```
+| Layer        | Technology                          |
+|--------------|-------------------------------------|
+| Frontend     | React 19, Vite 7, Tailwind CSS v4   |
+| Backend      | Netlify Functions (TypeScript)      |
+| AI           | Google Gemini API                   |
+| Database     | Supabase (Auth + Storage)           |
+| PDF Export   | @react-pdf/renderer                 |
+| Validation   | Zod Schema Validation               |
 
 ---
 
-## �📈 Performance
+## Performance
 
-- **Parse Time**: 2-3 seconds (average resume)
-- **Match Analysis**: 1-2 seconds (no AI, pure algorithm)
-- **AI Optimization**: 8-15 seconds (OpenAI API dependent)
-- **Bundle Size**: ~162KB gzipped
-
----
-
-## 🔒 Privacy & Security
-
-✅ **Server-Side API Keys** - Never exposed to clients  
-✅ **Row-Level Security** - Supabase RLS policies  
-✅ **No Tracking** - Zero analytics or third-party cookies  
-✅ **User Control** - Delete your data anytime  
-✅ **Anti-Hallucination** - AI never invents facts
+| Metric            | Value                        |
+|-------------------|------------------------------|
+| Parse Time        | 2-3 seconds (average resume) |
+| Match Analysis    | 1-2 seconds (pure algorithm) |
+| AI Optimization   | 8-15 seconds (API dependent) |
+| Bundle Size       | ~162KB gzipped               |
 
 ---
 
-## 🙏 Acknowledgments
+## Privacy & Security
 
-**Created by Abdullah** - Full-stack developer passionate about democratizing career opportunities through AI.
-
-### Technology Credits
-- **OpenAI** - GPT-5 Nano API
-- **Supabase** - Backend infrastructure
-- **Netlify** - Serverless hosting
-- **Tailwind CSS** - Design system
-- **Saudi Vision 2030** - Design inspiration
+| Feature | Status |
+|---------|--------|
+| Server-Side API Keys | Never exposed to clients |
+| Row-Level Security | Supabase RLS policies enforced |
+| No Tracking | Zero analytics or third-party cookies |
+| User Control | Delete your data anytime |
+| Anti-Hallucination | AI never invents facts about you |
 
 ---
 
-## 📄 License
+## Credits
 
-MIT License - Free to use with attribution.
+**Created by Abdullah** — Full-stack developer passionate about democratizing career opportunities through AI.
+
+### Technology Acknowledgments
+
+- Google — Gemini API
+- Supabase — Backend infrastructure
+- Netlify — Serverless hosting
+- Tailwind CSS — Design system
+- Saudi Vision 2030 — Design inspiration
+
+---
+
+## License
+
+**PROPRIETARY LICENSE — NOT OPEN SOURCE**
+
+Copyright © 2025 Abdullah. All rights reserved.
+
+This software is provided for authorized use only. No license is granted for copying, distribution, modification, or any other use without explicit written permission from the copyright holder.
+
+For licensing inquiries, please contact the author.
 
 ---
 
 <div align="center">
 
-**⭐ [Try it Live](https://resume-optimizing.netlify.app) ⭐**
+**[View Live Demo](https://resume-optimizing.netlify.app)**
 
-Made with ❤️ for the Saudi job market by **Abdullah**
+Made for the Saudi job market by **Abdullah**
+
+---
+
+*© 2025 Abdullah. All Rights Reserved. Unauthorized reproduction or distribution is prohibited.*
 
 </div>

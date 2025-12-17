@@ -1,0 +1,85 @@
+PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) 2025 Abdullah. All Rights Reserved.
+
+================================================================================
+                              TERMS AND CONDITIONS
+================================================================================
+
+1. DEFINITIONS
+
+   "Software" refers to the AI Resume Optimizer application, including all 
+   source code, documentation, designs, algorithms, and associated files 
+   contained in this repository.
+
+   "Author" refers to Abdullah, the sole copyright holder of this Software.
+
+   "User" refers to any individual or entity accessing or viewing this Software.
+
+2. OWNERSHIP
+
+   The Software is the exclusive intellectual property of the Author. All 
+   rights, title, and interest in and to the Software, including all 
+   intellectual property rights, remain with the Author.
+
+3. RESTRICTIONS
+
+   Unless expressly authorized in writing by the Author, Users may NOT:
+
+   a) Copy, reproduce, or duplicate the Software or any portion thereof;
+   b) Modify, adapt, alter, translate, or create derivative works;
+   c) Distribute, publish, display, or transmit the Software;
+   d) Sell, license, sublicense, rent, lease, or lend the Software;
+   e) Reverse engineer, decompile, or disassemble the Software;
+   f) Remove, alter, or obscure any copyright or proprietary notices;
+   g) Use the Software for commercial purposes without authorization;
+   h) Clone, fork, or otherwise duplicate this repository.
+
+4. NO LICENSE GRANTED
+
+   Viewing this repository does NOT constitute a license to use, copy, modify, 
+   or distribute the Software. No license, express or implied, is granted 
+   under any intellectual property rights of the Author.
+
+5. PERMITTED USE
+
+   The Software may only be used:
+   
+   a) By the Author for personal and commercial purposes;
+   b) By authorized parties with explicit written permission from the Author;
+   c) Through the official deployed application at https://resume-optimizing.netlify.app
+
+6. CONFIDENTIALITY
+
+   The source code, algorithms, and technical implementation details contained 
+   in this Software are confidential and proprietary. Unauthorized disclosure 
+   is strictly prohibited.
+
+7. ENFORCEMENT
+
+   The Author reserves the right to enforce these terms through:
+   
+   a) DMCA takedown requests for unauthorized copies;
+   b) Legal action for copyright infringement;
+   c) Pursuit of damages for unauthorized commercial use.
+
+8. DISCLAIMER OF WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+9. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER 
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING 
+   FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+   DEALINGS IN THE SOFTWARE.
+
+10. CONTACT
+
+    For licensing inquiries or permission requests, contact the Author directly.
+
+================================================================================
+                         © 2025 Abdullah. All Rights Reserved.
+================================================================================

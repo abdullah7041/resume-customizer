@@ -26,9 +26,10 @@ resume-customizer/
 │   ├── AI_INSTRUCTIONS.md            # AI development guidelines
 │   ├── CLAUDE.md                     # Claude-specific instructions
 │   ├── README.md                     # Project documentation
-│   ├── features-to-sections-merge.md # Feature refactoring notes
-│   └── template-system-refactor.md   # Template system documentation
+│   ├── critical-bugs-fix.md          # Critical bugs & fixes documentation
+│   └── map.md                        # File structure map (this file)
 │
+├── 📁 .claude/                       # Claude code editor artifacts
 ├── 📁 .github/                       # GitHub workflows & configs
 ├── 📁 .netlify/                      # Netlify build artifacts
 ├── 📁 .vscode/                       # VS Code settings
@@ -55,8 +56,8 @@ src/
 #### Layout Components (`components/Layout/`)
 ```
 Layout/
+├── Footer.tsx                        # Footer component
 ├── Header.tsx                        # Main header with navigation
-├── LandingPage.tsx                   # Landing page with hero section
 └── MainContent.tsx                   # Main content layout & routing
 ```
 
@@ -190,13 +191,13 @@ utils/
 ### Services (`src/services/`)
 ```
 services/
-├── aiService.ts                     # AI service integration
-├── analytics.ts                     # Analytics tracking
-├── api.ts                           # API client & endpoints
-├── errorReporting.ts                # Error tracking service
-├── localStorage.ts                  # Local storage utilities
-├── performance.ts                   # Performance monitoring
-└── privacy.ts                       # Privacy utilities
+├── api.js                           # API client & endpoints
+├── api.test.js                      # API service tests
+├── exportPdf.js                     # PDF export service
+├── exportPdf.test.js                # PDF export tests
+├── keywordAnalyzer.js               # Keyword analysis service
+├── supabase.js                      # Supabase client & utilities
+└── supabaseExport.js                # Supabase export utilities
 ```
 
 ---
@@ -236,22 +237,21 @@ types/
 #### Tests (`src/__tests__/`)
 ```
 __tests__/
-├── BulkAnalysis.test.jsx
-├── CoverLetter.test.jsx
-├── Header.test.jsx
-├── InterviewPrep.test.jsx
-├── JobMatch.test.jsx
-├── KeywordAnalyzer.test.jsx
-├── LandingPage.test.jsx
-├── MainContent.test.jsx
-├── Optimize.test.jsx
-├── ResumeUpload.test.jsx
-├── TemplateGallery.test.jsx
-├── api.test.js
-├── arabicKeywordMatcher.test.js
-├── exportPdf.test.js
-├── mobile-layout.test.jsx
-└── resumeUtils.test.js
+├── ATSClassic.test.jsx               # ATS template tests
+├── Button.test.jsx                   # Button component tests
+├── Header.test.jsx                   # Header component tests
+├── JobMatch.test.jsx                 # Job matching tests
+├── MainContent.test.jsx              # Main content tests
+├── ResumeUpload.test.jsx             # Resume upload tests
+├── SectionTitle.test.jsx             # Section title tests
+├── UploadCard.test.jsx               # Upload card tests
+├── matchScore.fixture.test.js        # Match score fixture tests
+├── mobile-layout.test.jsx            # Mobile layout tests
+├── resumeText.test.js                # Resume text utils tests
+├── shimmer-animations.test.ts        # Shimmer animation tests
+├── smoke.test.jsx                    # Smoke tests
+├── supabase.test.js                  # Supabase integration tests
+└── useAuth.test.jsx                  # Auth hook tests
 ```
 
 #### Test Utilities (`src/test/`)
@@ -369,4 +369,4 @@ scripts/
 
 ---
 
-*Last updated: December 17, 2025*
+*Last updated: December 17, 2025 at 15:13 UTC+3*
