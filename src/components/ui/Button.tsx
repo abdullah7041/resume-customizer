@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import React, { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils/cn";
 
@@ -30,6 +30,7 @@ const focusDisabled =
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   as?: React.ElementType;
   variant?: 'primary' | 'secondary' | 'frosted' | 'ghost' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
   icon?: React.ElementType;
   loading?: boolean;

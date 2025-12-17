@@ -1,8 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import Header from "../components/Layout/Header.tsx";
-import { DirectionProvider } from "../components/providers/DirectionProvider.tsx";
+import Header from "../components/Layout/Header";
+import { DirectionProvider } from "../components/providers/DirectionProvider";
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({

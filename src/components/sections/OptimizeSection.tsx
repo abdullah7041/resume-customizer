@@ -139,7 +139,7 @@ export function OptimizeSection({
   const isOptimizing = propIsOptimizing || isGenerating;
 
   // Check if we have match analysis (props or derived from store)
-  const hasMatchAnalysis = propHasMatchAnalysis || hasResume;
+  const _hasMatchAnalysis = propHasMatchAnalysis || hasResume;
 
   // Memoize keyword buckets - use store or props
   const keywordBuckets = useMemo(() => {

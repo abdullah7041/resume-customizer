@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, Info, X, Loader2 } from "lucide-react";
-import { cn } from "../../lib/utils/cn.ts";
+import { cn } from "../../lib/utils/cn";
 
 const variants = {
   success: {

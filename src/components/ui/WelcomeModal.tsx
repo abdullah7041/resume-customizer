@@ -2,7 +2,7 @@
 // First-time user onboarding modal - only shown when user clicks "How it Works"
 
 import { FileText, Target, Sparkles, Download, Check } from "lucide-react";
-import HelpModal from "./HelpModal.tsx";
+import HelpModal from "./HelpModal";
 
 export default function WelcomeModal({ isOpen, onClose }) {
   return (

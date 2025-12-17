@@ -1,16 +1,26 @@
-import { forwardRef, useEffect, useId, useImperativeHandle, useRef } from "react";
-import { cn } from "../../lib/utils/cn.ts";
+import { forwardRef, useEffect, useId, useImperativeHandle, useRef, InputHTMLAttributes, TextareaHTMLAttributes, ReactNode } from "react";
+import { cn } from "../../lib/utils/cn";
 
-const slugify = (value) =>
-  value
-    .toString()
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement> & TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {
+  label?: ReactNode;
+  description?: ReactNode;
+  helperText?: ReactNode;
+  error?: string | boolean;
+  multiline?: boolean;
+  autoSize?: boolean;
+  className?: string;
+  inputClassName?: string;
+}
+
+const slugify = (value: unknown): string =>
+  String(value)
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || "field";
 
-export const Input = forwardRef(function Input(
+export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputProps>(function Input(
   {
     label,
     description,

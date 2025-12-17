@@ -20,9 +20,9 @@ import {
   Briefcase,
   GraduationCap,
 } from "lucide-react";
-import Button from "../components/ui/Button.tsx";
-import AnimatedCard from "../components/ui/AnimatedCard.tsx";
-import { cn } from "../lib/utils/cn.ts";
+import Button from "../components/ui/Button";
+import AnimatedCard from "../components/ui/AnimatedCard";
+import { cn } from "../lib/utils/cn";
 
 // Hook: Type writer effect for dynamic headlines
 function useTypewriter(phrases, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
@@ -578,7 +578,7 @@ export default function LandingPage({ onGetStarted }) {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, idx) => (
-              <FeatureCard key={idx} feature={feature} index={idx} />
+              <FeatureCard key={idx} feature={feature} />
             ))}
           </div>
         </div>

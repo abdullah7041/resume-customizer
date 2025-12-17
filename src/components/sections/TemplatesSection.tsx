@@ -134,7 +134,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Get resume data from store
   const {
-    originalResume: storeResume,
+    originalResume: _storeResume,
     showOptimized,
     toggleShowOptimized,
     getActiveResume,
@@ -331,9 +331,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           <Button
             onClick={handleDownloadPdf}
             variant="primary"
-            size="sm"
             disabled={!hasRealResume || isDownloading}
-            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] px-4 py-2 text-sm"
           >
             {isDownloading ? "Generating..." : <><Download className="w-4 h-4 mr-2" />Download PDF</>}
           </Button>

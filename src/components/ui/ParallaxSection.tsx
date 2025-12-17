@@ -1,4 +1,4 @@
-import { cn } from "../../lib/utils/cn.ts";
+import { cn } from "../../lib/utils/cn";
 
 /**
  * ParallaxSection - Section with simple styling (parallax removed)

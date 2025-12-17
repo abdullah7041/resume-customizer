@@ -1,7 +1,6 @@
-import React from "react";
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import MainContent from "../components/Layout/MainContent.tsx";
+import MainContent from "../components/Layout/MainContent";
 
 const {
   parseResumeMock,
@@ -15,7 +14,7 @@ const {
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 
-vi.mock("../hooks/useAuth.tsx", () => ({
+vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
     user: { id: "user-123", user_metadata: {}, app_metadata: {} },
     loading: false,

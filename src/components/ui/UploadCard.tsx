@@ -2,9 +2,9 @@ import { useRef, useState } from "react";
 import { FileText, Shield, UploadCloud, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AppError } from "../../services/supabase.js";
-import { cn } from "../../lib/utils/cn.ts";
-import Button from "./Button.tsx";
-import Card from "./Card.tsx";
+import { cn } from "../../lib/utils/cn";
+import Button from "./Button";
+import Card from "./Card";
 
 
 const DOCUMENT_MIME_TYPES = new Set([

@@ -2,7 +2,7 @@ import { processResume } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas";
 
-const baseHandler = async (event) => {
+const baseHandler = async (event: { httpMethod: string; body: any; }) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }

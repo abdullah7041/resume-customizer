@@ -74,16 +74,16 @@ export interface ResumeState {
 
   // Actions
   setOriginalResume: (resume: ResumeSchema) => void;
-  setParsedResumeText: (text: string) => void;
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
-  setOptimizations: (optimizations: OptimizationResult[]) => void;
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;
+  setParsedResumeText: (text: string) => void;
+  setOptimizations: (opts: OptimizationResult[]) => void;
   applyAllOptimizations: () => void;
   toggleShowOptimized: () => void;
-  setShowOptimized: (show: boolean) => void;
-  setSelectedTemplate: (templateId: TemplateId) => void;
-  setKeywordSuggestions: (suggestions: KeywordSuggestion[]) => void;
+  setShowOptimized: (_show: boolean) => void;
+  setSelectedTemplate: (_id: TemplateId) => void;
+  setKeywordSuggestions: (_suggestions: KeywordSuggestion[]) => void;
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
 }

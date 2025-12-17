@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import SectionTitle from '../components/ui/SectionTitle.tsx';
+import SectionTitle from '../components/ui/SectionTitle';
 
 describe('SectionTitle', () => {
   it('applies the new panel stroke styling to the heading container', () => {

@@ -1,5 +1,5 @@
-import Card from "./Card.tsx";
-import { cn } from "../../lib/utils/cn.ts";
+import Card from "./Card";
+import { cn } from "../../lib/utils/cn";
 
 export default function SectionTitle({ eyebrow, title, description, className }) {
   return (

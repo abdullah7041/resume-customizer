@@ -1,11 +1,22 @@
-import { forwardRef, useState } from "react";
-import { cn } from "../../lib/utils/cn.ts";
+import { forwardRef, useState, ElementType, ReactNode, HTMLAttributes, MouseEvent } from "react";
+import { cn } from "../../lib/utils/cn";
+
+interface AnimatedCardProps extends HTMLAttributes<HTMLElement> {
+  as?: ElementType;
+  className?: string;
+  children?: ReactNode;
+  tone?: "glass" | "solid" | "translucent";
+  glow?: boolean;
+  contentClassName?: string;
+  enableTilt?: boolean;
+  tiltIntensity?: number;
+}
 
 /**
  * AnimatedCard - Enhanced Card with 3D tilt and hover effects
  * Simplified version without framer-motion
  */
-export const AnimatedCard = forwardRef(function AnimatedCard(
+export const AnimatedCard = forwardRef<HTMLElement, AnimatedCardProps>(function AnimatedCard(
   {
     as = "section",
     className,
@@ -32,7 +43,7 @@ export const AnimatedCard = forwardRef(function AnimatedCard(
       "border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] backdrop-blur-soft",
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!enableTilt || !isHovered) return;
 
     const rect = e.currentTarget.getBoundingClientRect();

@@ -2,10 +2,10 @@
 // Renders resume templates with user data injection
 
 import { useMemo } from "react";
-import { cn } from "../../lib/utils/cn.ts";
+import { cn } from "../../lib/utils/cn";
 import { ExternalLink, Github, Linkedin, Mail, Phone, MapPin } from "lucide-react";
-import ModernTemplate from "./ModernTemplate.tsx";
-import { ATSClassic } from "./ATSClassic.tsx";
+import ModernTemplate from "./ModernTemplate";
+import { ATSClassic } from "./ATSClassic";
 
 // Helper to safely render a value (handles strings, objects, arrays)
 // Helper to safely render a value (handles strings, objects, arrays, and React Elements)
@@ -316,11 +316,25 @@ const DynamicTemplateRenderer = ({ template, userData }) => {
   );
 };
 
-import { mergeResumeData } from "../../lib/utils/resumeUtils.ts";
+import { mergeResumeData } from "../../lib/utils/resumeUtils";
 
-import TechnicalTemplate from "./TechnicalTemplate.tsx";
+import TechnicalTemplate from "./TechnicalTemplate";
 
-export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult }) {
+interface UserData {
+  [key: string]: unknown;
+  meta?: {
+    aiAnalysisResult?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+}
+
+interface TemplateRendererProps {
+  template: { id: string; structure: unknown; formatting?: unknown };
+  userData?: UserData;
+  aiAnalysisResult?: Record<string, unknown> | null;
+}
+
+export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult = null }: TemplateRendererProps) {
   // MERGE: Ensure we have the full data set (Original + AI Suggestions)
   // If aiAnalysisResult is provided, we merge. If userData is already merged (contains basics/meta),
   // mergeResumeData will handle it gracefully or we trust it.

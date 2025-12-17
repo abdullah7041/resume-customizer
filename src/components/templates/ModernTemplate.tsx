@@ -1,4 +1,4 @@
-import { BaseATSTemplate } from "./BaseATSTemplate.tsx";
+import { BaseATSTemplate } from "./BaseATSTemplate";
 
 const ModernTemplate = ({ userData }) => {
     return (

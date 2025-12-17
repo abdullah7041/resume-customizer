@@ -1,21 +1,29 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
-import { cn } from "../../lib/utils/cn.ts";
-import { subscribe } from "../../lib/utils/apiStatus.ts";
+import { cn } from "../../lib/utils/cn";
+import { subscribe } from "../../lib/utils/apiStatus";
 
 export default function EnvironmentBadge() {
     const [status, setStatus] = useState({ active: false, operation: null, source: null });
     const [showResult, setShowResult] = useState(false);
 
     useEffect(() => {
-        return subscribe((newStatus) => {
+        let timer: ReturnType<typeof setTimeout> | null = null;
+
+        const unsubscribe = subscribe((newStatus) => {
             setStatus(newStatus);
             if (!newStatus.active && newStatus.source) {
                 setShowResult(true);
-                const timer = setTimeout(() => setShowResult(false), 3000);
-                return () => clearTimeout(timer);
+                // Clear any existing timer before setting a new one
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(() => setShowResult(false), 3000);
             }
         });
+
+        return () => {
+            unsubscribe();
+            if (timer) clearTimeout(timer);
+        };
     }, []);
 
     if (status.active) {

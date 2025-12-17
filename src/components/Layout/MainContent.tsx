@@ -122,9 +122,9 @@ export default function MainContent() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
-  const [aiDebug, setAiDebug] = useState(null);
+  const [aiDebug, _setAiDebug] = useState(null);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
-  const [currentHelpTopic, setCurrentHelpTopic] = useState(null);
+  const [currentHelpTopic, _setCurrentHelpTopic] = useState(null);
   const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
   const [showLanding, setShowLanding] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -899,7 +899,7 @@ export default function MainContent() {
 }
 
 // Helper function to map tab values to help content keys
-function getHelpKey(tabValue) {
+function _getHelpKey(tabValue) {
   const mapping = {
     "resume": "upload",
     "match": "match",

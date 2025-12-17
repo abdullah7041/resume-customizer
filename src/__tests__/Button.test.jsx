@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import Button from "../components/ui/Button.tsx";
+import Button from "../components/ui/Button";
 
 describe("Button", () => {
   it("applies gradient styling for the primary variant", () => {

@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ATSClassic } from '../components/templates/ATSClassic.tsx';
+import { ATSClassic } from '../components/templates/ATSClassic';
 
 // Mock data in JSON Resume format
 const mockJsonResumeData = {

@@ -1,6 +1,6 @@
 import { parseResumeOnly } from "../lib/gemini-client";
 
-export const handler = async (event) => {
+export const handler = async (event: { httpMethod: string; body: string; }) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
