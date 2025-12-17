@@ -20,8 +20,10 @@
 4. Components go in src/components/, utilities in src/lib/
 
 ## Current Focus
-- Glassmorphism design system
-- Features to sections merge
+- PDF download font error
+- Before/After toggle not working
+- Optimize section showing no content
+- Templates showing mock data instead of user resume
 
 ## Do NOT
 - Install puppeteer (too large for Netlify)
