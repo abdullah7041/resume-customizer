@@ -34,11 +34,19 @@ export interface TemplateConfig {
  */
 export interface OptimizationResult {
   sectionId: string;
-  sectionType: 'summary' | 'experience' | 'skills' | 'projects';
+  sectionType: 'summary' | 'experience' | 'skills' | 'projects' | 'headline';
   original: string | string[];
   optimized: string | string[];
   applied: boolean;
-  timestamp: string;
+  timestamp?: string;
+}
+
+/**
+ * Keyword suggestion for optimization
+ */
+export interface KeywordSuggestion {
+  keyword: string;
+  category: 'add' | 'keep' | 'deemphasize';
 }
 
 /**
@@ -56,7 +64,9 @@ export interface OptimizedWork {
 export interface ResumeState {
   // Core data
   originalResume: ResumeSchema | null;
+  parsedResumeText: string | null;
   optimizations: OptimizationResult[];
+  keywordSuggestions: KeywordSuggestion[];
 
   // View state
   showOptimized: boolean;
@@ -64,12 +74,16 @@ export interface ResumeState {
 
   // Actions
   setOriginalResume: (_r: ResumeSchema) => void;
+  setParsedResumeText: (_text: string) => void;
   addOptimization: (_opt: Omit<OptimizationResult, 'timestamp'>) => void;
+  setOptimizations: (_opts: OptimizationResult[]) => void;
   applyOptimization: (_id: string) => void;
   revertOptimization: (_id: string) => void;
   applyAllOptimizations: () => void;
   toggleShowOptimized: () => void;
+  setShowOptimized: (_show: boolean) => void;
   setSelectedTemplate: (_id: TemplateId) => void;
+  setKeywordSuggestions: (_suggestions: KeywordSuggestion[]) => void;
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
 }
