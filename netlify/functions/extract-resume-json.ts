@@ -58,12 +58,63 @@ export const handler = async (event: { httpMethod: string; body: string; }) => {
     // 2. Gemini's plainText field
     // 3. Gemini's meta.raw_text field
     const geminiPlainText = analysis.plainText || analysis.meta?.raw_text || "";
-    const bestPlainText = (extractedPlainText.length > geminiPlainText.length)
-      ? extractedPlainText
-      : (geminiPlainText || extractedPlainText);
+
+    // CRITICAL: Detect Gemini placeholder responses that indicate it couldn't read the PDF
+    // These placeholders mean Gemini didn't receive valid PDF content
+    const PLACEHOLDER_PATTERNS = [
+      "please provide",
+      "i cannot",
+      "i'm unable",
+      "no resume",
+      "no content",
+      "cannot extract",
+      "unable to extract",
+      "provide the resume",
+    ];
+    const geminiTextLower = geminiPlainText.toLowerCase();
+    const isGeminiPlaceholder = PLACEHOLDER_PATTERNS.some(pattern => geminiTextLower.includes(pattern));
+
+    if (isGeminiPlaceholder) {
+      console.warn(`[extract-resume-json] ⚠️ Gemini returned placeholder response: "${geminiPlainText.slice(0, 100)}"`);
+    }
+
+    // Choose the best available text, excluding Gemini placeholders
+    let bestPlainText: string;
+    let textSource: string;
+
+    if (extractedPlainText.length > 200) {
+      // Pre-extracted text is substantial, use it
+      bestPlainText = extractedPlainText;
+      textSource = "pre-extracted";
+    } else if (!isGeminiPlaceholder && geminiPlainText.length > 200) {
+      // Gemini returned valid content (not a placeholder)
+      bestPlainText = geminiPlainText;
+      textSource = "gemini";
+    } else if (extractedPlainText.length > 0) {
+      // Fall back to whatever pre-extraction got
+      bestPlainText = extractedPlainText;
+      textSource = "pre-extracted-fallback";
+    } else if (!isGeminiPlaceholder && geminiPlainText.length > 0) {
+      // Use Gemini as last resort if not placeholder
+      bestPlainText = geminiPlainText;
+      textSource = "gemini-fallback";
+    } else {
+      // Both methods failed - return error
+      console.error("[extract-resume-json] ❌ Both PDF extraction methods failed");
+      console.error(`[extract-resume-json] Pre-extracted: ${extractedPlainText.length} chars`);
+      console.error(`[extract-resume-json] Gemini: ${geminiPlainText.length} chars (placeholder: ${isGeminiPlaceholder})`);
+      return {
+        statusCode: 422,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Could not extract text from the uploaded file. Please try a different PDF or paste your resume text directly.",
+          details: "Both PDF parsing and AI extraction failed to extract meaningful content."
+        }),
+      };
+    }
 
     console.log(`[extract-resume-json] Final plainText length: ${bestPlainText.length} chars`);
-    console.log(`[extract-resume-json] Source: ${extractedPlainText.length > geminiPlainText.length ? 'pre-extracted' : 'gemini'}`);
+    console.log(`[extract-resume-json] Source: ${textSource}`);
 
     // Preserve the FULL JSON Resume structure from Gemini parsing
     // The analysis object already contains: basics, work, education, skills, projects, certificates, etc.
