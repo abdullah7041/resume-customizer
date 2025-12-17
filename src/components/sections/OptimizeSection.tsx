@@ -33,7 +33,7 @@ interface OptimizationCard {
   // Support both API response format and store format
   section?: string;
   sectionId?: string;
-  sectionType?: string;
+  sectionType?: 'headline' | 'summary' | 'experience' | 'skills' | 'projects' | string;
   label?: string;
   before?: string;
   after?: string;
@@ -41,12 +41,6 @@ interface OptimizationCard {
   optimized?: string | string[];
   applied?: boolean;
   index?: number;
-  // OptimizationResult format (from store)
-  sectionId?: string;
-  sectionType?: 'headline' | 'summary' | 'experience' | 'skills' | 'projects';
-  original?: string | string[];
-  optimized?: string | string[];
-  applied?: boolean;
   timestamp?: string;
 }
 
