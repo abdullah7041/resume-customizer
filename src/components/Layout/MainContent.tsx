@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate, HelpCircle, Trash2 } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate, Trash2 } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
@@ -659,43 +659,20 @@ export default function MainContent() {
   const workspace = (
     <ParallaxContainer enableLayers={true} className="py-1">
       <div className="space-y-3 sm:space-y-5 text-ink-700 dark:text-surface-50">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        {/* Tab navigation - full width on mobile */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
             <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
-            {/* Help button for current tab */}
-            {/* Help button for current tab */}
-            {helpContent[getHelpKey(activeTab)] && (
-              <button
-                onClick={() => {
-                  setCurrentHelpTopic(getHelpKey(activeTab));
-                  setHelpModalOpen(true);
-                }}
-                className="group flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-white/50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded-full backdrop-blur-sm hover:bg-white/80 dark:hover:bg-emerald-900/40 transition-all shadow-sm hover:shadow-md"
-                title="How this feature works"
-              >
-                <HelpCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
-                <span className="hidden sm:inline">{t("workspace.howItWorks")}</span>
-              </button>
-            )}
-            {/* Welcome Modal trigger */}
-            <button
-              onClick={() => setWelcomeModalOpen(true)}
-              className="group flex items-center gap-2 px-4 py-2 text-sm font-medium text-teal-700 dark:text-teal-300 bg-white/50 dark:bg-teal-900/20 border border-teal-200/50 dark:border-teal-800/30 rounded-full backdrop-blur-sm hover:bg-white/80 dark:hover:bg-teal-900/40 transition-all shadow-sm hover:shadow-md"
-              title="View getting started guide"
-            >
-              <Sparkles className="w-4 h-4 transition-transform group-hover:scale-110" />
-              <span className="hidden sm:inline">{t("workspace.gettingStarted")}</span>
-            </button>
           </div>
           {resumeData?.plainText && (
             <button
               type="button"
               onClick={handleClearAllData}
-              className="group flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-ink-500/70 hover:bg-danger-500/10 hover:text-danger-600 transition-all duration-200 dark:text-surface-50/60 dark:hover:bg-danger-400/10 dark:hover:text-danger-400"
+              className="flex-shrink-0 group flex items-center gap-1 sm:gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-500/70 hover:bg-danger-500/10 hover:text-danger-600 transition-all duration-200 dark:text-surface-50/60 dark:hover:bg-danger-400/10 dark:hover:text-danger-400"
               title="Clear all saved data"
             >
-              <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
-              {t("workspace.clearAll")}
+              <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform group-hover:scale-110" />
+              <span className="hidden sm:inline">{t("workspace.clearAll")}</span>
             </button>
           )}
         </div>
@@ -788,7 +765,7 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-32 sm:-mt-30 lg:-mt-30"
+      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-28 sm:-mt-30 lg:-mt-30"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <ViewTextModal
@@ -796,8 +773,8 @@ export default function MainContent() {
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
       />
-      <div className={`${containerClass} space-y-6 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="card-glow rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-5 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
+      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
+        <div className="card-glow rounded-xl sm:rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-3 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div

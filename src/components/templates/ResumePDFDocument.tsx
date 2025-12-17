@@ -11,15 +11,32 @@ import {
     Link,
 } from "@react-pdf/renderer";
 
-// Register a clean font (fallback to Helvetica which is built-in)
+// Register Inter font family with all variants needed
+// Using Google Fonts CDN for reliability
 Font.register({
     family: "Inter",
     fonts: [
-        { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2", fontWeight: 400 },
-        { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2", fontWeight: 600 },
-        { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff2", fontWeight: 700 },
+        {
+            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2",
+            fontWeight: 400,
+        },
+        {
+            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hjp-Ek-_EeA.woff2",
+            fontWeight: 500,
+        },
+        {
+            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hjp-Ek-_EeA.woff2",
+            fontWeight: 600,
+        },
+        {
+            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hjp-Ek-_EeA.woff2",
+            fontWeight: 700,
+        },
     ],
 });
+
+// Disable hyphenation (can cause issues)
+Font.registerHyphenationCallback(word => [word]);
 
 const styles = StyleSheet.create({
     page: {
@@ -93,7 +110,6 @@ const styles = StyleSheet.create({
     dateRange: {
         fontSize: 9,
         color: "#6b7280",
-        fontStyle: "italic",
     },
     bulletList: {
         marginLeft: 12,

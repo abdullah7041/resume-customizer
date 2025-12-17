@@ -179,17 +179,16 @@ export default function UploadCard({
       as="section"
       tone="glass"
       glow
-      className="mx-auto w-full max-w-full sm:max-w-5xl px-2 sm:px-0 space-y-5 sm:space-y-6 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-500"
-      contentClassName="space-y-5 sm:space-y-6"
+      className="mx-auto w-full max-w-full sm:max-w-5xl space-y-4 sm:space-y-6 relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-500"
+      contentClassName="space-y-4 sm:space-y-6"
       aria-live="polite"
     >
-      <header className="space-y-2 text-center sm:text-left px-2 sm:px-0">
+      <header className="space-y-1.5 sm:space-y-2 text-center sm:text-left">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.32em] text-gold-500">{t("upload.card.step")}</p>
-
+          <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.15em] sm:tracking-[0.32em] text-gold-500">{t("upload.card.step")}</p>
         </div>
-        <h3 className="text-xl sm:text-2xl font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] leading-tight">{t("upload.card.title")}</h3>
-        <p className="text-xs sm:text-sm text-emerald-100/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] leading-relaxed">
+        <h3 className="text-lg sm:text-2xl font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] leading-tight">{t("upload.card.title")}</h3>
+        <p className="text-[11px] sm:text-sm text-emerald-100/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] leading-relaxed">
           {t("upload.card.subtitle")}
         </p>
       </header>
@@ -210,7 +209,7 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-3 sm:gap-4 overflow-hidden rounded-xl border-2 border-dashed border-white/20 px-4 sm:px-6 py-8 sm:py-12 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 cursor-pointer",
+          "group relative flex flex-col items-center justify-center gap-2.5 sm:gap-4 overflow-hidden rounded-lg sm:rounded-xl border-2 border-dashed border-white/20 px-3 sm:px-6 py-6 sm:py-12 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 cursor-pointer",
           "hover:border-emerald-400/40 hover:bg-white/[0.02]",
           isDragging &&
           "border-emerald-400/50 bg-emerald-500/5 scale-[1.01]"

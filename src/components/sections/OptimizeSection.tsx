@@ -2,13 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
+import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
 import {
   Sparkles,
   Copy,
   Info,
   Lock,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Check,
+  RotateCcw,
+  ArrowLeftRight,
+  AlertCircle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 
@@ -37,7 +42,6 @@ interface Keywords {
   neutral: string[];
 }
 
-
 interface OptimizeSectionProps {
   isPremium?: boolean;
   optimizations?: OptimizationCard[];
@@ -51,6 +55,8 @@ interface OptimizeSectionProps {
   onClear?: () => void;
   onExport?: (variant: any, exportMethod?: string) => Promise<void>;
   canExport?: boolean;
+  // Optional: can pass resume text directly or use store
+  resumeText?: string | null;
 }
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
@@ -87,36 +93,168 @@ function PreviewBanner({ onUpgrade, t }: { onUpgrade?: () => void; t: any }) {
 
 export function OptimizeSection({
   isPremium = false,
-  optimizations = [],
+  optimizations: propOptimizations,
   keywords = emptyKeywords,
-  isOptimizing = false,
-  onOptimize,
+  isOptimizing: propIsOptimizing = false,
+  onOptimize: propOnOptimize,
   onCopy,
   previewUsed = false,
   onUpgrade,
-  hasMatchAnalysis = false,
+  hasMatchAnalysis: propHasMatchAnalysis = false,
   onClear,
+  resumeText: propResumeText,
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
 
+  // Get data from store
+  const {
+    originalResume,
+    parsedResumeText,
+    optimizations: storeOptimizations,
+    setOptimizations,
+    applyOptimization,
+    revertOptimization,
+    applyAllOptimizations,
+    showOptimized,
+    toggleShowOptimized,
+    keywordSuggestions,
+  } = useResumeStore();
+
+  // Use props or store
+  const resumeText = propResumeText || parsedResumeText;
+  const hasResume = Boolean(originalResume || resumeText);
+
   const [viewMode, setViewMode] = useState<'split' | 'diff'>('split');
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
   const [chipsAnimated, setChipsAnimated] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState<string | null>(null);
   const chipsShownRef = useRef(false);
 
-  // Memoize keyword buckets
-  const keywordBuckets = useMemo(() => ({
-    add: keywords?.add ?? [],
-    remove: keywords?.remove ?? [],
-    neutral: keywords?.neutral ?? [],
-  }), [keywords]);
+  // Decide which optimizations to use (props or store)
+  const useStoreOptimizations = !propOptimizations || propOptimizations.length === 0;
+  const optimizations = useStoreOptimizations ? storeOptimizations : [];
+  const isOptimizing = propIsOptimizing || isGenerating;
+
+  // Check if we have match analysis (props or derived from store)
+  const hasMatchAnalysis = propHasMatchAnalysis || hasResume;
+
+  // Memoize keyword buckets - use store or props
+  const keywordBuckets = useMemo(() => {
+    // If store has keyword suggestions, transform them
+    if (keywordSuggestions.length > 0) {
+      return {
+        add: keywordSuggestions.filter(k => k.category === 'add').map(k => k.keyword),
+        neutral: keywordSuggestions.filter(k => k.category === 'keep').map(k => k.keyword),
+        remove: keywordSuggestions.filter(k => k.category === 'deemphasize').map(k => k.keyword),
+      };
+    }
+    return {
+      add: keywords?.add ?? [],
+      remove: keywords?.remove ?? [],
+      neutral: keywords?.neutral ?? [],
+    };
+  }, [keywords, keywordSuggestions]);
 
   // Conditions
   const watermarkVisible = !isPremium && previewUsed;
   const showPreviewBanner = !isPremium && !previewUsed;
 
-  const handleRun = () => onOptimize?.("auto");
+  // Generate optimizations from API
+  const handleGenerate = async () => {
+    // If parent provided handler, use that
+    if (propOnOptimize) {
+      return propOnOptimize('auto');
+    }
+
+    if (!resumeText && !originalResume) {
+      setError(isArabic ? 'يرجى رفع سيرة ذاتية أولاً' : 'Please upload a resume first');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/.netlify/functions/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeText: resumeText || JSON.stringify(originalResume),
+          sections: ['headline', 'summary', 'experience', 'skills'],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Optimization failed');
+      }
+
+      const data = await response.json();
+
+      // Transform API response to OptimizationResult format
+      const newOptimizations: OptimizationResult[] = [];
+
+      if (data.headline) {
+        newOptimizations.push({
+          sectionId: 'headline',
+          sectionType: 'headline',
+          original: originalResume?.basics?.label || 'No headline',
+          optimized: data.headline,
+          applied: false,
+        });
+      }
+
+      if (data.summary) {
+        newOptimizations.push({
+          sectionId: 'summary',
+          sectionType: 'summary',
+          original: originalResume?.basics?.summary || 'No summary',
+          optimized: data.summary,
+          applied: false,
+        });
+      }
+
+      if (data.experience && Array.isArray(data.experience)) {
+        data.experience.forEach((exp: { bullets?: string[]; description?: string[]; highlights?: string[] }, index: number) => {
+          newOptimizations.push({
+            sectionId: `work-${index}`,
+            sectionType: 'experience',
+            original: originalResume?.work?.[index]?.highlights || [],
+            optimized: exp.bullets || exp.description || exp.highlights || [],
+            applied: false,
+          });
+        });
+      }
+
+      if (data.skills) {
+        newOptimizations.push({
+          sectionId: 'skills',
+          sectionType: 'skills',
+          original: originalResume?.skills?.flatMap(s => s.keywords) || [],
+          optimized: data.skills,
+          applied: false,
+        });
+      }
+
+      setOptimizations(newOptimizations);
+
+    } catch (err) {
+      console.error('Optimization error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate optimizations');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      setOptimizations([]);
+    }
+  };
 
   const toggleCard = (index: number) => {
     setExpandedCards(prev => {
@@ -145,6 +283,25 @@ export function OptimizeSection({
     return undefined;
   }, [keywordBuckets]);
 
+  // Get applied count
+  const appliedCount = optimizations.filter(o => o.applied).length;
+
+  // Section tabs for filtering
+  const tabs = [
+    { id: 'all', label: 'All Sections', labelAr: 'جميع الأقسام' },
+    { id: 'headline', label: 'Headline', labelAr: 'العنوان' },
+    { id: 'summary', label: 'Summary', labelAr: 'الملخص' },
+    { id: 'experience', label: 'Experience', labelAr: 'الخبرة' },
+    { id: 'skills', label: 'Skills', labelAr: 'المهارات' },
+  ];
+
+  const [activeSection, setActiveSection] = useState<'all' | 'headline' | 'summary' | 'experience' | 'skills'>('all');
+
+  // Filter optimizations by section
+  const filteredOptimizations = activeSection === 'all'
+    ? optimizations
+    : optimizations.filter(o => o.sectionType === activeSection);
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -164,6 +321,22 @@ export function OptimizeSection({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Applied Counter */}
+            {optimizations.length > 0 && (
+              <>
+                <span className="text-sm text-gray-400">
+                  {appliedCount}/{optimizations.length} {isArabic ? 'مُطبّق' : 'Applied'}
+                </span>
+                <GlassButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={applyAllOptimizations}
+                  disabled={appliedCount === optimizations.length}
+                >
+                  {isArabic ? 'تطبيق الكل' : 'Apply All'}
+                </GlassButton>
+              </>
+            )}
             {/* View Mode Toggle */}
             <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
               <button
@@ -191,7 +364,7 @@ export function OptimizeSection({
             </div>
             {optimizations.length > 0 && (
               <button
-                onClick={onClear}
+                onClick={handleClear}
                 className="text-xs font-medium text-gray-400 hover:text-red-400 transition-colors"
               >
                 {t('common.clear', 'Clear')}
@@ -200,39 +373,94 @@ export function OptimizeSection({
           </div>
         </div>
 
+        {/* Show Original/Optimized Toggle */}
+        <div className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              showOptimized ? "bg-emerald-400" : "bg-gray-400"
+            )} />
+            <div>
+              <p className="font-medium text-white">
+                {showOptimized
+                  ? (isArabic ? 'عرض المحسّن' : 'Showing Optimized')
+                  : (isArabic ? 'عرض الأصلي' : 'Showing Original')
+                }
+              </p>
+              <p className="text-sm text-gray-400">
+                {showOptimized
+                  ? (isArabic ? 'التغييرات المطبقة مرئية' : 'Applied changes are visible')
+                  : (isArabic ? 'إصدار السيرة الذاتية الأصلي' : 'Original resume version')
+                }
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={toggleShowOptimized}
+            className={cn(
+              "relative w-14 h-7 rounded-full transition-colors",
+              showOptimized ? 'bg-emerald-600' : 'bg-gray-600'
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-1 w-5 h-5 bg-white rounded-full transition-transform",
+                showOptimized ? 'left-8' : 'left-1'
+              )}
+            />
+          </button>
+        </div>
+
+        {/* Section Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6 p-1 bg-white/5 rounded-xl">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSection(tab.id as typeof activeSection)}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                activeSection === tab.id
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-white/10'
+              )}
+            >
+              {isArabic ? tab.labelAr : tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Preview Banner for non-premium users */}
         {showPreviewBanner && <PreviewBanner onUpgrade={onUpgrade} t={t} />}
 
-        {/* Match Analysis Required Warning */}
-        {!hasMatchAnalysis && (
-          <div className="my-4 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20 text-amber-400">
-                <Info className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">
-                  {t('sections.optimize.matchRequired', 'Match analysis required')}
-                </p>
-                <p className="text-sm text-gray-300">
-                  {t('sections.optimize.matchRequiredDesc', 'Run a match analysis first to provide job context for optimization.')}
-                </p>
-              </div>
-            </div>
+        {/* Error Message */}
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
+            <AlertCircle className="w-5 h-5 text-red-400" />
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* No Resume Warning */}
+        {!hasResume && (
+          <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
+            <AlertCircle className="w-5 h-5 text-amber-400" />
+            <p className="text-sm text-amber-400">
+              {isArabic ? 'يرجى رفع سيرة ذاتية أولاً' : 'Please upload a resume first'}
+            </p>
           </div>
         )}
 
         {/* Optimize Button */}
         <GlassButton
-          onClick={handleRun}
+          onClick={handleGenerate}
           isLoading={isOptimizing}
-          disabled={isOptimizing || !hasMatchAnalysis}
+          disabled={isOptimizing || !hasResume}
           className="w-full"
         >
           <Sparkles className="w-4 h-4 me-2" />
-          {hasMatchAnalysis
+          {hasResume
             ? t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')
-            : t('sections.optimize.runMatchFirst', 'Run Match Analysis First')
+            : t('sections.optimize.runMatchFirst', 'Upload Resume First')
           }
         </GlassButton>
       </GlassCard>
@@ -293,27 +521,66 @@ export function OptimizeSection({
               />
             ))}
           </div>
-        ) : optimizations.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {optimizations.map((card, index) => (
-              <GlassCard key={`${card.section}-${index}`} variant="subtle" padding="sm">
+        ) : filteredOptimizations.length > 0 ? (
+          <div className="space-y-4">
+            {filteredOptimizations.map((opt, index) => (
+              <GlassCard
+                key={opt.sectionId}
+                variant="subtle"
+                padding="sm"
+                className={cn(
+                  'transition-all',
+                  opt.applied && 'ring-1 ring-emerald-500/30'
+                )}
+              >
                 {/* Card Header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400">
-                      {card.section || card.label || `Section ${index + 1}`}
+                    {opt.applied && (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    )}
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 capitalize">
+                      {opt.sectionType === 'experience'
+                        ? `${isArabic ? 'الخبرة' : 'Experience'} ${opt.sectionId.split('-')[1] ? Number(opt.sectionId.split('-')[1]) + 1 : ''}`
+                        : isArabic
+                          ? tabs.find(t => t.id === opt.sectionType)?.labelAr
+                          : opt.sectionType
+                      }
+                    </span>
+                    <span className={cn(
+                      'px-2 py-0.5 rounded text-xs',
+                      opt.applied
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-white/10 text-gray-400'
+                    )}>
+                      {opt.applied
+                        ? (isArabic ? 'مُطبّق' : 'Applied')
+                        : (isArabic ? 'معلق' : 'Pending')
+                      }
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {onCopy && card.after && (
+                    {onCopy && (
                       <button
-                        onClick={() => onCopy(card.after!)}
+                        onClick={() => onCopy(Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized)}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                         title={t('common.copy', 'Copy')}
                       >
                         <Copy className="w-4 h-4 text-gray-400" />
                       </button>
                     )}
+                    <button
+                      onClick={() => setCompareMode(compareMode === opt.sectionId ? null : opt.sectionId)}
+                      className={cn(
+                        "p-2 rounded-lg transition-colors",
+                        compareMode === opt.sectionId
+                          ? "bg-purple-500/20 text-purple-400"
+                          : "hover:bg-white/10 text-gray-400"
+                      )}
+                      title={isArabic ? 'مقارنة' : 'Compare'}
+                    >
+                      <ArrowLeftRight className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => toggleCard(index)}
                       className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -326,44 +593,103 @@ export function OptimizeSection({
                   </div>
                 </div>
 
-                {/* Card Content */}
-                {viewMode === 'split' ? (
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Compare Mode */}
+                {compareMode === opt.sectionId && (
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="p-3 bg-white/5 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-2">
-                        {t('sections.optimize.original', 'Original')}
-                      </p>
-                      <p className={cn(
-                        'text-sm text-gray-300 transition-all',
-                        !expandedCards.has(index) && 'line-clamp-3'
-                      )}>
-                        {card.before || t('sections.optimize.noOriginal', 'No original text')}
+                      <p className="text-xs text-gray-500 mb-2">{isArabic ? 'الأصلي' : 'Original'}</p>
+                      <p className="text-sm text-gray-300">
+                        {Array.isArray(opt.original)
+                          ? opt.original.map((item, i) => <span key={i} className="block">• {item}</span>)
+                          : opt.original || 'No content'
+                        }
                       </p>
                     </div>
                     <div className="p-3 bg-emerald-500/10 rounded-lg">
-                      <p className="text-xs text-emerald-400 mb-2">
-                        {t('sections.optimize.optimized', 'Optimized')}
-                      </p>
-                      <p className={cn(
-                        'text-sm text-white transition-all',
-                        !expandedCards.has(index) && 'line-clamp-3'
-                      )}>
-                        {card.after || t('sections.optimize.noOptimized', 'No optimized text')}
+                      <p className="text-xs text-emerald-400 mb-2">{isArabic ? 'المحسّن' : 'Optimized'}</p>
+                      <p className="text-sm text-white">
+                        {Array.isArray(opt.optimized)
+                          ? opt.optimized.map((item, i) => <span key={i} className="block">• {item}</span>)
+                          : opt.optimized || 'No content'
+                        }
                       </p>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-3 bg-white/5 rounded-lg">
-                    <p className={cn(
-                      'text-sm text-gray-300 transition-all',
-                      !expandedCards.has(index) && 'line-clamp-4'
-                    )}>
-                      <span className="line-through text-rose-400/70">{card.before}</span>
-                      {' → '}
-                      <span className="text-emerald-400">{card.after}</span>
-                    </p>
-                  </div>
                 )}
+
+                {/* Card Content */}
+                {compareMode !== opt.sectionId && (
+                  viewMode === 'split' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-white/5 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-2">
+                          {t('sections.optimize.original', 'Original')}
+                        </p>
+                        <p className={cn(
+                          'text-sm text-gray-300 transition-all',
+                          !expandedCards.has(index) && 'line-clamp-3'
+                        )}>
+                          {Array.isArray(opt.original)
+                            ? opt.original.join(', ')
+                            : opt.original || t('sections.optimize.noOriginal', 'No original text')
+                          }
+                        </p>
+                      </div>
+                      <div className="p-3 bg-emerald-500/10 rounded-lg">
+                        <p className="text-xs text-emerald-400 mb-2">
+                          {t('sections.optimize.optimized', 'Optimized')}
+                        </p>
+                        <p className={cn(
+                          'text-sm text-white transition-all',
+                          !expandedCards.has(index) && 'line-clamp-3'
+                        )}>
+                          {Array.isArray(opt.optimized)
+                            ? opt.optimized.join(', ')
+                            : opt.optimized || t('sections.optimize.noOptimized', 'No optimized text')
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className={cn(
+                        'text-sm text-gray-300 transition-all',
+                        !expandedCards.has(index) && 'line-clamp-4'
+                      )}>
+                        <span className="line-through text-rose-400/70">
+                          {Array.isArray(opt.original) ? opt.original.join(', ') : opt.original}
+                        </span>
+                        {' → '}
+                        <span className="text-emerald-400">
+                          {Array.isArray(opt.optimized) ? opt.optimized.join(', ') : opt.optimized}
+                        </span>
+                      </p>
+                    </div>
+                  )
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-3">
+                  {opt.applied ? (
+                    <GlassButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => revertOptimization(opt.sectionId)}
+                      leftIcon={<RotateCcw className="w-3 h-3" />}
+                    >
+                      {isArabic ? 'التراجع' : 'Revert'}
+                    </GlassButton>
+                  ) : (
+                    <GlassButton
+                      variant="primary"
+                      size="sm"
+                      onClick={() => applyOptimization(opt.sectionId)}
+                      leftIcon={<Check className="w-3 h-3" />}
+                    >
+                      {isArabic ? 'تطبيق' : 'Apply'}
+                    </GlassButton>
+                  )}
+                </div>
               </GlassCard>
             ))}
           </div>
@@ -379,3 +705,5 @@ export function OptimizeSection({
     </div>
   );
 }
+
+export default OptimizeSection;
