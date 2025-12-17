@@ -30,11 +30,16 @@ const CHIP_LABELS = {
 // === Types ===
 // Extended interface that supports both legacy format and new OptimizationResult format
 interface OptimizationCard {
-  // Legacy format (from props)
+  // Support both API response format and store format
   section?: string;
+  sectionId?: string;
+  sectionType?: string;
   label?: string;
   before?: string;
   after?: string;
+  original?: string | string[];
+  optimized?: string | string[];
+  applied?: boolean;
   index?: number;
   // OptimizationResult format (from store)
   sectionId?: string;
@@ -69,6 +74,18 @@ interface OptimizeSectionProps {
 }
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
+
+// Normalize optimization data to handle both API formats (before/after) and store format (original/optimized)
+const normalizeOptimization = (opt: OptimizationCard, index: number): OptimizationResult => {
+  return {
+    sectionId: opt.sectionId || opt.section || `opt-${index}`,
+    sectionType: (opt.sectionType || opt.section || 'general') as OptimizationResult['sectionType'],
+    original: opt.original ?? opt.before ?? '',
+    optimized: opt.optimized ?? opt.after ?? '',
+    applied: opt.applied ?? false,
+    timestamp: new Date().toISOString(),
+  };
+};
 
 // === Preview Banner Component ===
 function PreviewBanner({ onUpgrade, t }: { onUpgrade?: () => void; t: any }) {
@@ -143,13 +160,21 @@ export function OptimizeSection({
   const chipsShownRef = useRef(false);
 
   // Decide which optimizations to use (props or store)
-  // BUG FIX: Was returning [] instead of propOptimizations when props were provided
+  // Normalize prop optimizations to match the expected OptimizationResult format
   const useStoreOptimizations = !propOptimizations || propOptimizations.length === 0;
-  const optimizations = useStoreOptimizations ? storeOptimizations : propOptimizations;
+  const normalizedPropOptimizations = useMemo(() => {
+    if (!propOptimizations || propOptimizations.length === 0) return [];
+    return propOptimizations.map((opt, index) => normalizeOptimization(opt, index));
+  }, [propOptimizations]);
+
+  const optimizations = useStoreOptimizations ? storeOptimizations : normalizedPropOptimizations;
   const isOptimizing = propIsOptimizing || isGenerating;
 
   // Debug log to help diagnose optimization rendering issues
   console.log('[OptimizeSection] Using', useStoreOptimizations ? 'store' : 'props', 'optimizations, count:', optimizations.length);
+  if (optimizations.length > 0) {
+    console.log('[OptimizeSection] First optimization structure:', JSON.stringify(optimizations[0], null, 2));
+  }
 
   // Check if we have match analysis (props or derived from store)
   const _hasMatchAnalysis = propHasMatchAnalysis || hasResume;

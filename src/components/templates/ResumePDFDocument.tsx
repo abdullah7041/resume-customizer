@@ -12,24 +12,39 @@ import {
 } from "@react-pdf/renderer";
 
 // Register Inter font family with all variants needed
-// Using Google Fonts CDN for reliability
+// Using jsDelivr CDN which serves raw font files compatible with @react-pdf/renderer
 Font.register({
     family: "Inter",
     fonts: [
         {
-            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2",
+            src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff",
             fontWeight: 400,
         },
         {
-            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hjp-Ek-_EeA.woff2",
+            src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-500-normal.woff",
             fontWeight: 500,
         },
         {
-            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hjp-Ek-_EeA.woff2",
+            src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-600-normal.woff",
             fontWeight: 600,
         },
         {
-            src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hjp-Ek-_EeA.woff2",
+            src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-700-normal.woff",
+            fontWeight: 700,
+        },
+    ],
+});
+
+// Register Noto Sans Arabic for Arabic text support
+Font.register({
+    family: "Noto Sans Arabic",
+    fonts: [
+        {
+            src: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-arabic@5.0.8/files/noto-sans-arabic-arabic-400-normal.woff",
+            fontWeight: 400,
+        },
+        {
+            src: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-arabic@5.0.8/files/noto-sans-arabic-arabic-700-normal.woff",
             fontWeight: 700,
         },
     ],
@@ -157,6 +172,20 @@ const styles = StyleSheet.create({
     link: {
         color: "#059669",
         textDecoration: "none",
+    },
+    // Arabic text styles
+    arabicText: {
+        fontFamily: "Noto Sans Arabic",
+        textAlign: "right",
+        direction: "rtl",
+    },
+    arabicPage: {
+        padding: 40,
+        fontFamily: "Noto Sans Arabic",
+        fontSize: 10,
+        lineHeight: 1.5,
+        color: "#1f2937",
+        direction: "rtl",
     },
 });
 
