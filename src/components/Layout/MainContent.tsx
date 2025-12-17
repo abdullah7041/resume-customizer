@@ -795,7 +795,7 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-32 sm:-mt-30 lg:-mt-30"
+      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-16 sm:-mt-30 lg:-mt-30"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <ViewTextModal
@@ -803,8 +803,8 @@ export default function MainContent() {
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
       />
-      <div className={`${containerClass} space-y-6 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="card-glow rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-5 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
+      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
+        <div className="card-glow rounded-xl sm:rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-3 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
