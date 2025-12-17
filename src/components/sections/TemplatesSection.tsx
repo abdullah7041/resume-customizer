@@ -98,7 +98,7 @@ const TemplateThumbnail = ({ template, isSelected, onClick, resumeData, isArabic
             direction: isArabic ? 'rtl' : 'ltr',
           }}
         >
-          <TemplateRenderer template={template} userData={resumeData || {}} />
+          <TemplateRenderer template={template} userData={(resumeData || {}) as any} />
         </div>
       </div>
 
@@ -139,7 +139,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Get resume data from store
   const {
-    originalResume: _storeResume,
+    originalResume: storeOriginalResume,
     showOptimized,
     toggleShowOptimized,
     getActiveResume,
@@ -150,8 +150,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const hasPropsData = Boolean(propResumeData);
   const storeActiveResume = getActiveResume();
 
-  // Determine which resume to use
-  const resumeData = hasPropsData ? propResumeData : storeActiveResume;
+  // Determine which resume to use - check originalResume directly since 
+  // getActiveResume might return null in edge cases
+  const resumeData = hasPropsData ? propResumeData : (storeActiveResume || storeOriginalResume);
   const hasRealResume = Boolean(resumeData);
 
   // Download PDF using @react-pdf/renderer (loaded dynamically to reduce initial bundle)
@@ -207,9 +208,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       return original;
     }
 
-    // Using store - getActiveResume already handles optimization merging
-    return storeActiveResume || SAMPLE_RESUME;
-  }, [hasPropsData, propResumeData, optimizationData, showOptimized, storeActiveResume]);
+    // Using store - prefer activeResume, then originalResume, then sample
+    return storeActiveResume || storeOriginalResume || SAMPLE_RESUME;
+  }, [hasPropsData, propResumeData, optimizationData, showOptimized, storeActiveResume, storeOriginalResume]);
 
   // Data for PDF download (always use merged)
   const mergedDownloadData = useMemo(() => {
@@ -219,9 +220,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       return merged || propResumeData;
     }
 
-    // Use store's active resume
-    return storeActiveResume || {};
-  }, [hasPropsData, propResumeData, optimizationData, storeActiveResume]);
+    // Use store's active resume or original
+    return storeActiveResume || storeOriginalResume || {};
+  }, [hasPropsData, propResumeData, optimizationData, storeActiveResume, storeOriginalResume]);
 
   const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
     setSelectedTemplate(template);

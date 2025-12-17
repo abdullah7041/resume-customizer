@@ -189,24 +189,19 @@ export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionP
                 {suggestions?.toAdd?.length || 0}
               </span>
             </div>
-            <div className="min-h-[120px] p-3">
+            <div className="min-h-[80px] max-h-[150px] overflow-y-auto p-3">
               {suggestions?.toAdd && suggestions.toAdd.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.toAdd.slice(0, 8).map((kw, idx) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestions.toAdd.map((kw, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-sm font-medium text-rose-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/20 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/20 transition-all cursor-pointer"
                       title={kw.reason || t('sections.keywords.addThis', 'Add this keyword')}
                     >
-                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
                       {kw.term}
                     </span>
                   ))}
-                  {suggestions.toAdd.length > 8 && (
-                    <span className="px-3 py-1.5 rounded-lg text-sm bg-white/10 text-gray-400">
-                      +{suggestions.toAdd.length - 8} {isArabic ? 'أكثر' : 'more'}
-                    </span>
-                  )}
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center">
@@ -230,18 +225,18 @@ export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionP
                 {suggestions?.needEmphasis?.length || 0}
               </span>
             </div>
-            <div className="min-h-[120px] p-3">
+            <div className="min-h-[80px] max-h-[150px] overflow-y-auto p-3">
               {suggestions?.needEmphasis && suggestions.needEmphasis.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.needEmphasis.slice(0, 8).map((kw, idx) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestions.needEmphasis.map((kw, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-400 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all cursor-pointer"
                       title={`${t('sections.keywords.increase', 'Increase from')} ${kw.resumeCount} ${t('sections.keywords.to', 'to')} ${kw.jobCount}`}
                     >
-                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                       {kw.term}
-                      <span className="ml-1 opacity-70 text-xs">{kw.resumeCount}→{kw.jobCount}</span>
+                      <span className="opacity-70 text-[10px]">{kw.resumeCount}→{kw.jobCount}</span>
                     </span>
                   ))}
                 </div>
@@ -267,23 +262,18 @@ export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionP
                 {suggestions?.wellRepresented?.length || 0}
               </span>
             </div>
-            <div className="min-h-[120px] p-3">
+            <div className="min-h-[80px] max-h-[150px] overflow-y-auto p-3">
               {suggestions?.wellRepresented && suggestions.wellRepresented.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.wellRepresented.slice(0, 8).map((kw, idx) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestions.wellRepresented.map((kw, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400"
                     >
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                       {kw.term}
                     </span>
                   ))}
-                  {suggestions.wellRepresented.length > 8 && (
-                    <span className="px-3 py-1.5 rounded-lg text-sm bg-white/10 text-gray-400">
-                      +{suggestions.wellRepresented.length - 8} {isArabic ? 'أكثر' : 'more'}
-                    </span>
-                  )}
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center">

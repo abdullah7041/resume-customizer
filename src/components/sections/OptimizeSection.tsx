@@ -28,6 +28,7 @@ const CHIP_LABELS = {
 };
 
 // === Types ===
+// Extended interface that supports both legacy format and new OptimizationResult format
 interface OptimizationCard {
   // Support both API response format and store format
   section?: string;
@@ -40,6 +41,13 @@ interface OptimizationCard {
   optimized?: string | string[];
   applied?: boolean;
   index?: number;
+  // OptimizationResult format (from store)
+  sectionId?: string;
+  sectionType?: 'headline' | 'summary' | 'experience' | 'skills' | 'projects';
+  original?: string | string[];
+  optimized?: string | string[];
+  applied?: boolean;
+  timestamp?: string;
 }
 
 interface Keywords {
@@ -213,7 +221,7 @@ export function OptimizeSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resumeText: resumeText || JSON.stringify(originalResume),
-          sections: ['headline', 'summary', 'experience', 'skills'],
+          jobText: '', // Job text is optional for optimization
         }),
       });
 
@@ -224,55 +232,69 @@ export function OptimizeSection({
       const data = await response.json();
 
       // Transform API response to OptimizationResult format
+      // API returns: { cards: [{section, issue, suggestion, exampleBefore, exampleAfter}], keywords: {add, neutral, remove} }
       const newOptimizations: OptimizationResult[] = [];
 
-      if (data.headline) {
-        newOptimizations.push({
-          sectionId: 'headline',
-          sectionType: 'headline',
-          original: originalResume?.basics?.label || 'No headline',
-          optimized: data.headline,
-          applied: false,
-        });
-      }
+      if (data.cards && Array.isArray(data.cards)) {
+        data.cards.forEach((card: { section?: string; exampleBefore?: string; exampleAfter?: string; issue?: string; suggestion?: string }, index: number) => {
+          const sectionType = (card.section || 'general').toLowerCase() as 'headline' | 'summary' | 'experience' | 'skills' | 'projects';
 
-      if (data.summary) {
-        newOptimizations.push({
-          sectionId: 'summary',
-          sectionType: 'summary',
-          original: originalResume?.basics?.summary || 'No summary',
-          optimized: data.summary,
-          applied: false,
-        });
-      }
-
-      if (data.experience && Array.isArray(data.experience)) {
-        data.experience.forEach((exp: { bullets?: string[]; description?: string[]; highlights?: string[] }, index: number) => {
           newOptimizations.push({
-            sectionId: `work-${index}`,
-            sectionType: 'experience',
-            original: originalResume?.work?.[index]?.highlights || [],
-            optimized: exp.bullets || exp.description || exp.highlights || [],
+            sectionId: `${sectionType}-${index}`,
+            sectionType: sectionType,
+            original: card.exampleBefore || (isArabic ? 'لا يوجد نص أصلي' : 'No original text'),
+            optimized: card.exampleAfter || (isArabic ? 'لا يوجد اقتراح' : 'No suggestion'),
             applied: false,
           });
         });
       }
 
-      if (data.skills) {
-        newOptimizations.push({
-          sectionId: 'skills',
-          sectionType: 'skills',
-          original: originalResume?.skills?.flatMap(s => s.keywords) || [],
-          optimized: data.skills,
-          applied: false,
-        });
+      // If no cards but we have API data, try legacy format
+      if (newOptimizations.length === 0) {
+        if (data.headline) {
+          newOptimizations.push({
+            sectionId: 'headline',
+            sectionType: 'headline',
+            original: originalResume?.basics?.label || (isArabic ? 'لا يوجد عنوان' : 'No headline'),
+            optimized: data.headline,
+            applied: false,
+          });
+        }
+
+        if (data.summary) {
+          newOptimizations.push({
+            sectionId: 'summary',
+            sectionType: 'summary',
+            original: originalResume?.basics?.summary || (isArabic ? 'لا يوجد ملخص' : 'No summary'),
+            optimized: data.summary,
+            applied: false,
+          });
+        }
       }
 
       setOptimizations(newOptimizations);
 
+      // Also update keyword suggestions from API response
+      if (data.keywords) {
+        const suggestions: { keyword: string; category: 'add' | 'keep' | 'deemphasize' }[] = [];
+
+        if (data.keywords.add) {
+          data.keywords.add.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'add' }));
+        }
+        if (data.keywords.neutral) {
+          data.keywords.neutral.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'keep' }));
+        }
+        if (data.keywords.remove) {
+          data.keywords.remove.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'deemphasize' }));
+        }
+
+        // Update store with keyword suggestions
+        useResumeStore.getState().setKeywordSuggestions(suggestions);
+      }
+
     } catch (err) {
       console.error('Optimization error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate optimizations');
+      setError(err instanceof Error ? err.message : (isArabic ? 'فشل في توليد التحسينات' : 'Failed to generate optimizations'));
     } finally {
       setIsGenerating(false);
     }
