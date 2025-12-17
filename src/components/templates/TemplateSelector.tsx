@@ -82,7 +82,13 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
     showOptimized,
     toggleShowOptimized,
     optimizations,
+    getActiveResume,
+    originalResume,
   } = useResumeStore();
+
+  // Use actual user resume if available, otherwise fall back to sample data
+  const activeResume = getActiveResume();
+  const displayResume = activeResume || originalResume || SAMPLE_RESUME;
 
   const [category, setCategory] = useState<CategoryFilter>('all');
 
@@ -192,14 +198,15 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
               {/* Live Template Preview (scaled down) */}
               <div className="aspect-[210/297] bg-white overflow-hidden pointer-events-none">
                 <div
-                  className="origin-top-left"
+                  className={isArabic ? "origin-top-right" : "origin-top-left"}
                   style={{
                     width: '210mm',
                     height: '297mm',
                     transform: 'scale(0.15)',
+                    direction: isArabic ? 'rtl' : 'ltr',
                   }}
                 >
-                  <Template resume={SAMPLE_RESUME} scale={1} />
+                  <Template resume={displayResume} scale={1} />
                 </div>
               </div>
 

@@ -495,6 +495,69 @@
     "skills": "مهارات",
     "analysisNote": "التحليل مبني على أولويات القطاعات في رؤية المملكة 2030"
   },
+  "templates": {
+    "title": "قوالب السيرة الذاتية",
+    "select": "اختر القالب",
+    "preview": "معاينة",
+    "download": "تحميل PDF",
+    "downloading": "جاري التحميل...",
+    "atsOptimized": "محسّن لنظام ATS",
+    "modern": "عصري",
+    "classic": "كلاسيكي",
+    "technical": "تقني",
+    "professional": "احترافي"
+  },
+  "interview": {
+    "title": "التحضير للمقابلة",
+    "predictedQuestions": "الأسئلة المتوقعة",
+    "generateQuestions": "إنشاء أسئلة",
+    "questionType": "نوع السؤال",
+    "behavioral": "سلوكي",
+    "technical": "تقني",
+    "situational": "موقفي",
+    "sampleAnswer": "إجابة نموذجية",
+    "tips": "نصائح للإجابة",
+    "difficulty": "مستوى الصعوبة",
+    "easy": "سهل",
+    "medium": "متوسط",
+    "hard": "صعب"
+  },
+  "bulkAnalysis": {
+    "title": "التحليل المجمع",
+    "uploadMultiple": "رفع سير ذاتية متعددة",
+    "comparing": "جاري المقارنة...",
+    "compareResults": "نتائج المقارنة",
+    "bestMatch": "أفضل تطابق",
+    "ranking": "الترتيب",
+    "selectAll": "تحديد الكل",
+    "clearAll": "مسح الكل"
+  },
+  "coverLetter": {
+    "title": "خطاب التقديم",
+    "generate": "إنشاء خطاب",
+    "generating": "جاري الإنشاء...",
+    "tone": "نبرة الخطاب",
+    "formal": "رسمي",
+    "friendly": "ودي",
+    "confident": "واثق",
+    "jobDescription": "وصف الوظيفة",
+    "pasteJob": "الصق وصف الوظيفة هنا",
+    "copyToClipboard": "نسخ للحافظة",
+    "copied": "تم النسخ!",
+    "downloadWord": "تحميل Word"
+  },
+  "optimization": {
+    "title": "تحسين السيرة الذاتية",
+    "original": "النص الأصلي",
+    "optimized": "النص المحسّن",
+    "apply": "تطبيق",
+    "applied": "تم التطبيق",
+    "pending": "قيد الانتظار",
+    "revert": "تراجع",
+    "applyAll": "تطبيق الكل",
+    "noSuggestions": "لا توجد اقتراحات",
+    "analyzing": "جاري التحليل..."
+  },
   "sections": {
     "resume": {
       "title": "السيرة الذاتية",

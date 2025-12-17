@@ -2,6 +2,7 @@
 // Resume template gallery with resume.io style split-panel layout
 
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
 import { Download, ToggleLeft, ToggleRight, Check, Layers, Sparkles, FileText, AlertCircle } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
@@ -71,9 +72,10 @@ interface TemplateThumbnailProps {
   isSelected: boolean;
   onClick: () => void;
   resumeData: ResumeSchema | Partial<ResumeSchema> | null;
+  isArabic?: boolean;
 }
 
-const TemplateThumbnail = ({ template, isSelected, onClick, resumeData }: TemplateThumbnailProps) => {
+const TemplateThumbnail = ({ template, isSelected, onClick, resumeData, isArabic = false }: TemplateThumbnailProps) => {
   return (
     <button
       onClick={onClick}
@@ -87,12 +89,13 @@ const TemplateThumbnail = ({ template, isSelected, onClick, resumeData }: Templa
       {/* Miniature Preview */}
       <div className="absolute inset-0 bg-white overflow-hidden">
         <div
-          className="origin-top-left pointer-events-none select-none"
+          className={`${isArabic ? 'origin-top-right' : 'origin-top-left'} pointer-events-none select-none`}
           style={{
             transform: 'scale(0.22)',
-            transformOrigin: 'top left',
+            transformOrigin: isArabic ? 'top right' : 'top left',
             width: '454%',
-            height: '454%'
+            height: '454%',
+            direction: isArabic ? 'rtl' : 'ltr',
           }}
         >
           <TemplateRenderer template={template} userData={resumeData || {}} />
@@ -128,6 +131,8 @@ interface TemplateGalleryProps {
 }
 
 export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate }: TemplateGalleryProps) {
+  const { i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -304,6 +309,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 isSelected={selectedTemplate?.id === template.id}
                 onClick={() => handleSelectTemplate(template)}
                 resumeData={displayData}
+                isArabic={isArabic}
               />
             ))}
           </div>

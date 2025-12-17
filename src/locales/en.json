@@ -495,6 +495,69 @@
     "skills": "skills",
     "analysisNote": "Analysis based on Saudi Vision 2030 sector priorities"
   },
+  "templates": {
+    "title": "Resume Templates",
+    "select": "Select Template",
+    "preview": "Preview",
+    "download": "Download PDF",
+    "downloading": "Downloading...",
+    "atsOptimized": "ATS Optimized",
+    "modern": "Modern",
+    "classic": "Classic",
+    "technical": "Technical",
+    "professional": "Professional"
+  },
+  "interview": {
+    "title": "Interview Preparation",
+    "predictedQuestions": "Predicted Questions",
+    "generateQuestions": "Generate Questions",
+    "questionType": "Question Type",
+    "behavioral": "Behavioral",
+    "technical": "Technical",
+    "situational": "Situational",
+    "sampleAnswer": "Sample Answer",
+    "tips": "Answer Tips",
+    "difficulty": "Difficulty Level",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
+  "bulkAnalysis": {
+    "title": "Bulk Analysis",
+    "uploadMultiple": "Upload Multiple Resumes",
+    "comparing": "Comparing...",
+    "compareResults": "Comparison Results",
+    "bestMatch": "Best Match",
+    "ranking": "Ranking",
+    "selectAll": "Select All",
+    "clearAll": "Clear All"
+  },
+  "coverLetter": {
+    "title": "Cover Letter",
+    "generate": "Generate Letter",
+    "generating": "Generating...",
+    "tone": "Letter Tone",
+    "formal": "Formal",
+    "friendly": "Friendly",
+    "confident": "Confident",
+    "jobDescription": "Job Description",
+    "pasteJob": "Paste job description here",
+    "copyToClipboard": "Copy to Clipboard",
+    "copied": "Copied!",
+    "downloadWord": "Download Word"
+  },
+  "optimization": {
+    "title": "Resume Optimization",
+    "original": "Original Text",
+    "optimized": "Optimized Text",
+    "apply": "Apply",
+    "applied": "Applied",
+    "pending": "Pending",
+    "revert": "Revert",
+    "applyAll": "Apply All",
+    "noSuggestions": "No suggestions",
+    "analyzing": "Analyzing..."
+  },
   "sections": {
     "resume": {
       "title": "Resume",
