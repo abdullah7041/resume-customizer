@@ -3,14 +3,16 @@
 
 import { useState, useMemo } from "react";
 import { saveAs } from "file-saver";
-import { Download, ToggleLeft, ToggleRight, Check, Layers, Sparkles, FileText } from "lucide-react";
+import { Download, ToggleLeft, ToggleRight, Check, Layers, Sparkles, FileText, AlertCircle } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
+import { useResumeStore } from "../../lib/stores/resumeStore";
 
 import TemplateRenderer from "../templates/TemplateRenderer";
 // ResumePDFDocument is now loaded dynamically when needed
 import Button from "../ui/Button";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
 import { cn } from "../../lib/utils/cn";
+import type { ResumeSchema } from "../../types/resume";
 
 // Glass card styles matching Header.jsx
 const glassCardClass =
@@ -23,8 +25,55 @@ const categoryLabels = {
   // Removed Creative and Executive per user request
 };
 
+// Fallback sample data - ONLY used when no resume is uploaded
+const SAMPLE_RESUME: Partial<ResumeSchema> = {
+  basics: {
+    name: 'Your Name',
+    label: 'Your Job Title',
+    email: 'email@example.com',
+    phone: '+966 5X XXX XXXX',
+    summary: 'Upload your resume to see your professional summary here.',
+    location: {
+      city: 'Riyadh',
+      countryCode: 'SA',
+      region: 'Riyadh',
+    },
+    profiles: [],
+  },
+  work: [
+    {
+      name: 'Company Name',
+      position: 'Job Title',
+      startDate: '2020',
+      endDate: '',
+      summary: '',
+      highlights: ['Upload your resume to see your experience here.'],
+    },
+  ],
+  education: [
+    {
+      institution: 'University Name',
+      area: 'Field of Study',
+      studyType: 'Degree Name',
+      startDate: '2016',
+      endDate: '2020',
+    },
+  ],
+  skills: [
+    { name: 'Skills', keywords: ['Skill 1', 'Skill 2', 'Skill 3'] },
+  ],
+  languages: [{ language: 'English', fluency: 'Fluent' }],
+};
+
 // Template thumbnail card with miniature preview
-const TemplateThumbnail = ({ template, isSelected, onClick, resumeData }) => {
+interface TemplateThumbnailProps {
+  template: typeof resumeTemplates[0];
+  isSelected: boolean;
+  onClick: () => void;
+  resumeData: ResumeSchema | Partial<ResumeSchema> | null;
+}
+
+const TemplateThumbnail = ({ template, isSelected, onClick, resumeData }: TemplateThumbnailProps) => {
   return (
     <button
       onClick={onClick}
@@ -72,15 +121,43 @@ const TemplateThumbnail = ({ template, isSelected, onClick, resumeData }) => {
   );
 };
 
-export default function TemplateGallery({ resumeData, optimizationData, onSelectTemplate }) {
+interface TemplateGalleryProps {
+  resumeData?: ResumeSchema | null;
+  optimizationData?: unknown;
+  onSelectTemplate?: (template: typeof resumeTemplates[0]) => void;
+}
+
+export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate }: TemplateGalleryProps) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
-  const [showOptimized, setShowOptimized] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Get resume data from store
+  const {
+    originalResume: storeResume,
+    showOptimized,
+    toggleShowOptimized,
+    getActiveResume,
+    setSelectedTemplate: setStoreTemplate,
+  } = useResumeStore();
+
+  // Use prop data or store data
+  const hasPropsData = Boolean(propResumeData);
+  const storeActiveResume = getActiveResume();
+
+  // Determine which resume to use
+  const resumeData = hasPropsData ? propResumeData : storeActiveResume;
+  const hasRealResume = Boolean(resumeData);
 
   // Download PDF using @react-pdf/renderer (loaded dynamically to reduce initial bundle)
   const handleDownloadPdf = async () => {
     if (isDownloading) return;
+
+    if (!hasRealResume) {
+      console.warn('Cannot download PDF: No resume data available');
+      return;
+    }
+
     setIsDownloading(true);
 
     const filename = `resume-${selectedTemplate.id}-${new Date().toISOString().split('T')[0]}.pdf`;
@@ -112,26 +189,38 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
     return baseTemplates.filter(t => t.category === selectedCategory);
   }, [selectedCategory]);
 
-  // Merged data for display
+  // Merged data for display - use store active resume or props
   const displayData = useMemo(() => {
-    const original = resumeData || {};
-    const merged = mergeResumeData(resumeData, { optimization: optimizationData });
+    if (hasPropsData) {
+      // Using props - apply mergeResumeData for backwards compatibility
+      const original = propResumeData || {};
+      const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
 
-    if (showOptimized && merged) {
-      return merged;
+      if (showOptimized && merged) {
+        return merged;
+      }
+      return original;
     }
-    return original;
-  }, [resumeData, optimizationData, showOptimized]);
+
+    // Using store - getActiveResume already handles optimization merging
+    return storeActiveResume || SAMPLE_RESUME;
+  }, [hasPropsData, propResumeData, optimizationData, showOptimized, storeActiveResume]);
 
   // Data for PDF download (always use merged)
   const mergedDownloadData = useMemo(() => {
-    if (!resumeData) return {};
-    const merged = mergeResumeData(resumeData, { optimization: optimizationData });
-    return merged || resumeData;
-  }, [resumeData, optimizationData]);
+    if (hasPropsData) {
+      if (!propResumeData) return {};
+      const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
+      return merged || propResumeData;
+    }
 
-  const handleSelectTemplate = (template) => {
+    // Use store's active resume
+    return storeActiveResume || {};
+  }, [hasPropsData, propResumeData, optimizationData, storeActiveResume]);
+
+  const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
     setSelectedTemplate(template);
+    setStoreTemplate(template.id as any);
     if (onSelectTemplate) {
       onSelectTemplate(template);
     }
@@ -153,7 +242,7 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
 
           {/* Original/Optimized Toggle */}
           <button
-            onClick={() => setShowOptimized(!showOptimized)}
+            onClick={toggleShowOptimized}
             className={cn(
               "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border",
               showOptimized
@@ -214,7 +303,7 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
                 template={template}
                 isSelected={selectedTemplate?.id === template.id}
                 onClick={() => handleSelectTemplate(template)}
-                resumeData={resumeData}
+                resumeData={displayData}
               />
             ))}
           </div>
@@ -235,7 +324,7 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
               ) : (
                 <><FileText className="w-4 h-4 text-white/40" /> Original Version</>
               )}
-              {selectedTemplate && <span className="ml-1">• {categoryLabels[selectedTemplate.category]}</span>}
+              {selectedTemplate && <span className="ml-1">• {categoryLabels[selectedTemplate.category as keyof typeof categoryLabels]}</span>}
             </p>
           </div>
 
@@ -243,12 +332,22 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
             onClick={handleDownloadPdf}
             variant="primary"
             size="sm"
-            disabled={!resumeData?.plainText || isDownloading}
+            disabled={!hasRealResume || isDownloading}
             className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
           >
             {isDownloading ? "Generating..." : <><Download className="w-4 h-4 mr-2" />Download PDF</>}
           </Button>
         </div>
+
+        {/* No Resume Warning */}
+        {!hasRealResume && (
+          <div className="mx-4 mt-4 flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-amber-400" />
+            <p className="text-sm text-amber-400">
+              This is a preview. Upload your resume to see your data.
+            </p>
+          </div>
+        )}
 
         {/* Live Preview */}
         <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30">
@@ -267,7 +366,3 @@ export default function TemplateGallery({ resumeData, optimizationData, onSelect
     </div>
   );
 }
-
-
-
-

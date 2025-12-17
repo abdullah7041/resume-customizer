@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import UploadCard from '../ui/UploadCard';
 import { AppError } from '../../services/supabase.js';
+import { useResumeStore } from '../../lib/stores/resumeStore';
+import type { ResumeSchema } from '../../types/resume';
 
 interface Toast {
     type: 'success' | 'warning' | 'danger' | 'info';
@@ -14,8 +16,14 @@ interface ResumeDocument {
     plainText?: string;
 }
 
+interface ParsedResumeResult {
+    data?: ResumeSchema;
+    plainText?: string;
+    [key: string]: unknown;
+}
+
 interface UploadSectionProps {
-    onParseResume: (resumeInput: { file?: File; plainText?: string }) => Promise<any>;
+    onParseResume: (resumeInput: { file?: File; plainText?: string }) => Promise<ParsedResumeResult>;
     resumeDocument: ResumeDocument | null;
     onToast: (toast: Toast) => void;
     onClear: () => void;
@@ -33,6 +41,9 @@ export default function UploadSection({
     const [error, setError] = useState<string | null>(null);
     const [pastedText, setPastedText] = useState('');
 
+    // Get store actions
+    const { setOriginalResume, setParsedResumeText, clearAll } = useResumeStore();
+
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
         setError(null);
@@ -45,8 +56,10 @@ export default function UploadSection({
         setError(null);
         setStatus('idle');
         setProgress(0);
+        // Clear store data as well
+        clearAll();
         onClear();
-    }, [onClear]);
+    }, [onClear, clearAll]);
 
     const handleTextChange = useCallback((text: string) => {
         setPastedText(text);
@@ -83,10 +96,29 @@ export default function UploadSection({
             setStatus('parsing');
             setProgress(60);
 
-            await onParseResume(input);
+            const result = await onParseResume(input);
 
             setProgress(100);
             setStatus('success');
+
+            // Save to store if we got parsed data
+            if (result) {
+                // Handle different response structures
+                const parsedResume = result.data || result;
+                const rawText = result.plainText || pastedText || '';
+
+                // Save to store
+                if (parsedResume && typeof parsedResume === 'object' && 'basics' in parsedResume) {
+                    setOriginalResume(parsedResume as ResumeSchema);
+                    console.log('[Upload] Resume saved to store:', (parsedResume as ResumeSchema).basics?.name);
+                }
+
+                if (rawText) {
+                    setParsedResumeText(rawText);
+                    console.log('[Upload] Raw text saved to store, length:', rawText.length);
+                }
+            }
+
             onToast({
                 type: 'success',
                 title: 'Resume parsed successfully',
@@ -102,7 +134,7 @@ export default function UploadSection({
                 description: message,
             });
         }
-    }, [file, pastedText, onParseResume, onToast]);
+    }, [file, pastedText, onParseResume, onToast, setOriginalResume, setParsedResumeText]);
 
     const fileName = file?.name || resumeDocument?.fileName || '';
     const disabled = !file && !pastedText && !resumeDocument?.plainText;
