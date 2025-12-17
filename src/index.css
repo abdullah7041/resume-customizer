@@ -231,12 +231,20 @@
 
 @media (max-width: 480px) {
   :root {
-    --radius-card: 1.1rem;
-    --app-shell-gutter: clamp(0.75rem, 3vw, 1rem);
+    --radius-card: 1rem;
+    --app-shell-gutter: clamp(0.75rem, 4vw, 1.25rem);
   }
 
   .hero-mobile-compact {
     min-height: 90vh;
+  }
+}
+
+/* Improve mobile layout for small screens */
+@media (max-width: 390px) {
+  :root {
+    --app-shell-gutter: 0.75rem;
+    --radius-card: 0.875rem;
   }
 }
 
