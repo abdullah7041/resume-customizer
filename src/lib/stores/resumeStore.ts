@@ -6,7 +6,27 @@ import type {
   OptimizationResult,
   KeywordSuggestion,
   TemplateId,
+  CachedAnalysis,
 } from '../../types/templates';
+
+// Cache validity duration: 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Generate a cache key from resume and job description
+ * Uses first 100 chars + length as fingerprint
+ */
+const generateCacheKey = (resumeText: string, jobDescription: string): string => {
+  const resumeFingerprint = (resumeText || '').substring(0, 100) + (resumeText || '').length;
+  const jobFingerprint = (jobDescription || '').substring(0, 100) + (jobDescription || '').length;
+  // Simple hash using btoa
+  try {
+    return btoa(resumeFingerprint + '|' + jobFingerprint).substring(0, 32);
+  } catch {
+    // Fallback for non-ASCII characters
+    return `${resumeFingerprint.length}-${jobFingerprint.length}-${Date.now()}`;
+  }
+};
 
 /**
  * Resume store with optimization merge logic
@@ -20,17 +40,30 @@ export const useResumeStore = create<ResumeState>()(
       parsedResumeText: null,
       optimizations: [],
       keywordSuggestions: [],
+      analysisCache: {},
       showOptimized: false, // Start with original
       selectedTemplate: 'modern-professional',
 
       // Actions
       setOriginalResume: (resume: ResumeSchema) => {
         console.log('[ResumeStore] Setting original resume:', resume?.basics?.name);
+        console.log('[ResumeStore] Resume has basics:', !!resume?.basics);
+        console.log('[ResumeStore] Resume has work:', resume?.work?.length || 0, 'entries');
         set({ originalResume: resume });
       },
 
       setParsedResumeText: (text: string) => {
-        console.log('[ResumeStore] Setting parsed text, length:', text?.length);
+        const length = text?.length || 0;
+        console.log('[ResumeStore] Setting parsed text, length:', length);
+
+        // Warn if text seems too short
+        if (length > 0 && length < 100) {
+          console.warn('[ResumeStore] ⚠️ WARNING: Parsed text is very short! This may indicate a PDF extraction issue.');
+          console.warn('[ResumeStore] Text preview:', text?.substring(0, 200));
+        } else if (length >= 100) {
+          console.log('[ResumeStore] ✓ Text looks valid. Preview:', text?.substring(0, 150).replace(/\s+/g, ' '));
+        }
+
         set({ parsedResumeText: text });
       },
 
@@ -207,6 +240,48 @@ export const useResumeStore = create<ResumeState>()(
         return merged;
       },
 
+      // Analysis caching methods
+      getCachedAnalysis: (resumeText: string, jobDescription: string): CachedAnalysis | null => {
+        const state = get();
+        const cacheKey = generateCacheKey(resumeText, jobDescription);
+        const cached = state.analysisCache[cacheKey];
+
+        if (!cached) {
+          console.log('[ResumeStore] Cache miss for analysis');
+          return null;
+        }
+
+        // Check if cache is still valid
+        const age = Date.now() - cached.timestamp;
+        if (age > CACHE_TTL_MS) {
+          console.log('[ResumeStore] Cache expired (age:', Math.round(age / 1000), 'seconds)');
+          return null;
+        }
+
+        console.log('[ResumeStore] Cache hit! Using cached analysis (age:', Math.round(age / 1000), 'seconds)');
+        return cached;
+      },
+
+      setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>) => {
+        const cacheKey = generateCacheKey(resumeText, jobDescription);
+        console.log('[ResumeStore] Caching analysis result, score:', analysis.score);
+
+        set((state) => ({
+          analysisCache: {
+            ...state.analysisCache,
+            [cacheKey]: {
+              ...analysis,
+              timestamp: Date.now(),
+            },
+          },
+        }));
+      },
+
+      clearAnalysisCache: () => {
+        console.log('[ResumeStore] Clearing analysis cache');
+        set({ analysisCache: {} });
+      },
+
       clearAll: () => {
         console.log('[ResumeStore] Clearing all data');
         set({
@@ -214,6 +289,7 @@ export const useResumeStore = create<ResumeState>()(
           parsedResumeText: null,
           optimizations: [],
           keywordSuggestions: [],
+          analysisCache: {},
           showOptimized: false,
         });
       },
@@ -227,6 +303,7 @@ export const useResumeStore = create<ResumeState>()(
         optimizations: state.optimizations,
         selectedTemplate: state.selectedTemplate,
         showOptimized: state.showOptimized,
+        // Note: Not persisting analysisCache to localStorage to avoid stale data
       }),
     }
   )
