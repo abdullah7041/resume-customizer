@@ -1,6 +1,9 @@
 import { processResume } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { CoverLetterRequestSchema, formatZodError } from "../lib/resume-schemas";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 const baseHandler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -30,7 +33,12 @@ const baseHandler = async (event) => {
       body: JSON.stringify({ coverLetter: analysis.coverLetter.draft_text }),
     };
 
-  } catch {
+  } catch (error) {
+    console.error("Cover letter error:", error);
+    captureError(error, {
+      function: 'generate-cover-letter',
+      payload: JSON.parse(event.body || '{}'),
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Failed to generate cover letter" }),

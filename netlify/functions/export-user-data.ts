@@ -1,5 +1,8 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import { initSentry, captureError } from '../lib/sentry';
+
+initSentry();
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -52,6 +55,9 @@ export const handler: Handler = async (event) => {
     };
   } catch (error) {
     console.error('Export error:', error);
+    captureError(error, {
+      function: 'export-user-data',
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Export failed' }),

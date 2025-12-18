@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
+import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { cn } from "../../lib/utils/cn.ts";
+import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
@@ -69,6 +69,8 @@ export default function Header() {
   const heroAnimatedRef = useRef(initialReducedMotion);
   const workflowAnimatedRef = useRef(initialReducedMotion);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
 
   // Mouse tracking for interactive gradient
   const handleMouseMove = useCallback((e) => {
@@ -79,6 +81,34 @@ export default function Header() {
       y: ((e.clientY - rect.top) / rect.height) * 100,
     });
   }, [prefersReducedMotion]);
+
+  // Mobile nav body scroll lock
+  useEffect(() => {
+    if (mobileNavOpen) {
+      document.body.classList.add('mobile-nav-open');
+    } else {
+      document.body.classList.remove('mobile-nav-open');
+    }
+    return () => document.body.classList.remove('mobile-nav-open');
+  }, [mobileNavOpen]);
+
+  // Close mobile nav on ESC key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileNavOpen) {
+        setMobileNavOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [mobileNavOpen]);
+
+  // Close mobile nav on outside click
+  const handleMobileNavOutsideClick = useCallback((e: MouseEvent) => {
+    if (mobileNavRef.current && !mobileNavRef.current.contains(e.target as Node)) {
+      setMobileNavOpen(false);
+    }
+  }, []);
 
   // Preload skyline image
   useEffect(() => {
@@ -335,8 +365,8 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Language switcher and Auth button with modern styling */}
-            <div className="flex items-center gap-3">
+            {/* Desktop: Language switcher and Auth button */}
+            <div className="hidden md:flex items-center gap-3">
               <LanguageSwitcher />
               {user ? (
                 <button
@@ -361,6 +391,16 @@ export default function Header() {
                 </button>
               )}
             </div>
+
+            {/* Mobile: Hamburger menu button */}
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+              aria-label="Open navigation menu"
+              aria-expanded={mobileNavOpen}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
           </div>
         </nav>
 
@@ -501,6 +541,94 @@ export default function Header() {
         </div>
       </div>
 
+      {/* Mobile Navigation Overlay */}
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-50 md:hidden"
+          onClick={handleMobileNavOutsideClick}
+          aria-modal="true"
+          role="dialog"
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" />
+
+          {/* Nav Panel - slides in from right */}
+          <div
+            ref={mobileNavRef}
+            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 border-l border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right"
+          >
+            {/* Header with close button */}
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-sm font-bold text-white">{t("common.appName")}</span>
+              </div>
+              <button
+                onClick={() => setMobileNavOpen(false)}
+                className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+                aria-label="Close navigation menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Nav content */}
+            <div className="flex flex-col p-5 space-y-4">
+              {/* Language Switcher */}
+              <div className="pb-4 border-b border-white/10">
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">{t("common.language") || "Language"}</p>
+                <LanguageSwitcher />
+              </div>
+
+              {/* Auth Section */}
+              <div className="pt-2 space-y-3">
+                {user ? (
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setMobileNavOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-white/5 border border-white/10 transition-all duration-300 hover:bg-white/10 active:scale-[0.98]"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>{t("common.signOut")}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      signInWithGoogle();
+                      setMobileNavOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300 hover:from-emerald-400 hover:to-teal-400 active:scale-[0.98]"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    <span>{t("common.signIn")}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="absolute bottom-0 left-0 right-0 p-5 border-t border-white/10">
+              <div className="flex items-center justify-center gap-2 text-xs text-white/40">
+                <span>{t("common.byAuthor")}</span>
+                <a
+                  href="https://www.linkedin.com/in/3binahmed/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/60 hover:text-[#0A66C2] transition-colors"
+                  aria-label="LinkedIn"
+                >
+                  <Linkedin className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Custom CSS for animations */}
       <style>{`
         @keyframes float {
@@ -550,6 +678,16 @@ export default function Header() {
             transform: translateY(-8px);
           }
         }
+
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slide-in-right {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
         
         .animate-float {
           animation: float 20s ease-in-out infinite;
@@ -565,6 +703,21 @@ export default function Header() {
         
         .animate-bounce-slow {
           animation: bounce-slow 3s ease-in-out infinite;
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out forwards;
+        }
+
+        .animate-slide-in-right {
+          animation: slide-in-right 0.3s ease-out forwards;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-fade-in,
+          .animate-slide-in-right {
+            animation: none;
+          }
         }
       `}</style>
     </header>

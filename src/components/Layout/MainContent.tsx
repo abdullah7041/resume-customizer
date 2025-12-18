@@ -15,6 +15,7 @@ import TemplateGallery from "../sections/TemplatesSection";
 import { InterviewSection } from "../sections/InterviewSection";
 import { BulkAnalysisSection } from "../sections/BulkAnalysisSection";
 import { CoverLetterSection } from "../sections/CoverLetterSection";
+import { PricingSection } from "../sections/PricingSection";
 import Tabs from "../ui/Tabs";
 import Toast, { ToastContainer } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
@@ -467,12 +468,12 @@ export default function MainContent() {
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
         pushToast(
           {
-            type: "success",
+            type: result.source === "gemini" && result.cards?.length > 0 ? "success" : "warning",
             title: t("toasts.optimizationReady"),
             description:
-              result.source === "openai"
+              result.source === "gemini" && result.cards?.length > 0
                 ? "Review AI-crafted rewrites and keywords."
-                : "Preview mode generated realistic guidance.",
+                : "No optimizations were generated. Please try again with more context.",
           },
           { id: TOAST_IDS.optimize }
         );
@@ -691,6 +692,7 @@ export default function MainContent() {
               matchAnalysis={matchAnalysis}
               isAnalyzing={isAnalyzing}
               hasResume={Boolean(resumeData?.plainText)}
+              resumeText={resumeData?.plainText || ''}
               onToast={pushToast}
               onClear={handleClearMatch}
             />
@@ -876,6 +878,11 @@ export default function MainContent() {
             </div>
           </section>
         )}
+      </div>
+
+      {/* Pricing Section - shown for all users */}
+      <div className={`${containerClass} mt-8`}>
+        <PricingSection />
       </div>
 
       {/* Welcome Modal - shown on button click */}

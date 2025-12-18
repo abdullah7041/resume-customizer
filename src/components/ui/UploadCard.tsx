@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FileText, Shield, UploadCloud, XCircle } from "lucide-react";
+import { FileText, Shield, UploadCloud, XCircle, Camera } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/utils/cn";
@@ -85,6 +85,7 @@ export default function UploadCard({
 }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const statusCopy = {
@@ -248,6 +249,39 @@ export default function UploadCard({
         title="Upload resume file"
         onChange={handleFileChange}
       />
+
+      {/* Camera capture input for mobile - scan physical resumes */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        name="resume-camera"
+        aria-label="Take photo of resume"
+        title="Take photo of resume"
+        onChange={handleFileChange}
+      />
+
+      {/* Mobile: Prominent upload buttons */}
+      <div className="flex flex-col sm:hidden gap-2 w-full">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex items-center justify-center gap-2 w-full min-h-[48px] rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300 active:scale-[0.98]"
+        >
+          <UploadCloud className="h-5 w-5" />
+          <span>{t("upload.card.selectFile") || "Select File"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          className="flex items-center justify-center gap-2 w-full min-h-[48px] rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm transition-all duration-300 hover:bg-white/10 active:scale-[0.98]"
+        >
+          <Camera className="h-5 w-5 text-emerald-400" />
+          <span>{t("upload.card.scanResume") || "Scan Resume"}</span>
+        </button>
+      </div>
 
       {fileName && (
         <div className="flex items-center justify-between rounded-lg border border-[color:color-mix(in_oklab,var(--glass-border),transparent_32%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_16%)] px-4 py-3 text-sm text-ink shadow-soft backdrop-blur-xl">

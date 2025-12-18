@@ -8,6 +8,16 @@ export const AI_DEFAULT_TEMPERATURE = 0.4;
 
 // Helper to handle responses
 const handleResponse = async (response) => {
+  // Handle rate limiting (429 Too Many Requests)
+  if (response.status === 429) {
+    const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+    throw {
+      type: 'RATE_LIMITED',
+      retryAfter,
+      message: `Too many requests. Please wait ${retryAfter} seconds.`,
+    };
+  }
+
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.error || "Request failed");

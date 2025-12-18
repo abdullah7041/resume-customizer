@@ -4,9 +4,10 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, ToggleLeft, ToggleRight, Check, Layers, Sparkles, FileText, AlertCircle } from "lucide-react";
+import { Download, ToggleLeft, ToggleRight, Check, Layers, Sparkles, FileText, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
+import { analytics } from "../../services/analytics";
 
 import TemplateRenderer from "../templates/TemplateRenderer";
 // ResumePDFDocument is now loaded dynamically when needed
@@ -177,6 +178,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       const blob = await pdf(<ResumePDFDocument userData={mergedDownloadData} />).toBlob();
       saveAs(blob, filename);
+
+      // Track PDF export
+      analytics.trackExport(selectedTemplate.id, 'pdf');
     } catch (err) {
       console.error("PDF Download failed:", err);
     } finally {
@@ -227,17 +231,21 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
     setSelectedTemplate(template);
     setStoreTemplate(template.id as any);
+
+    // Track template selection
+    analytics.trackTemplateSelected(template.id);
+
     if (onSelectTemplate) {
       onSelectTemplate(template);
     }
   };
 
   return (
-    <div className="flex gap-6 min-h-[600px] p-2">
-      {/* Left Panel - Template Selection */}
-      <div className={cn(glassCardClass, "w-[340px] flex-shrink-0 flex flex-col")}>
+    <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[600px] md:min-h-[600px] p-2">
+      {/* Left Panel - Template Selection (responsive) */}
+      <div className={cn(glassCardClass, "w-full md:w-[340px] flex-shrink-0 flex flex-col")}>
         {/* Header with Toggle */}
-        <div className="p-5 space-y-4 border-b border-white/10">
+        <div className="p-4 md:p-5 space-y-4 border-b border-white/10">
           {/* Title */}
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
@@ -300,9 +308,31 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
         </div>
 
-        {/* Templates Grid */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-2 gap-3">
+        {/* Templates Grid - horizontal scroll on mobile, grid on desktop */}
+        <div className="flex-1 overflow-hidden p-4">
+          {/* Mobile: Horizontal scroll carousel */}
+          <div className="flex md:hidden overflow-x-auto gap-3 pb-2 snap-x snap-mandatory scroll-smooth -mx-2 px-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {filteredTemplates.map(template => (
+              <div key={template.id} className="flex-shrink-0 w-[140px] snap-center">
+                <TemplateThumbnail
+                  template={template}
+                  isSelected={selectedTemplate?.id === template.id}
+                  onClick={() => handleSelectTemplate(template)}
+                  resumeData={displayData}
+                  isArabic={isArabic}
+                />
+              </div>
+            ))}
+          </div>
+          {/* Mobile swipe hint */}
+          <div className="flex md:hidden items-center justify-center gap-1 mt-3 text-xs text-white/40">
+            <ChevronLeft className="w-4 h-4" />
+            <span>Swipe to browse</span>
+            <ChevronRight className="w-4 h-4" />
+          </div>
+
+          {/* Desktop: Grid layout */}
+          <div className="hidden md:grid grid-cols-2 gap-3">
             {filteredTemplates.map(template => (
               <TemplateThumbnail
                 key={template.id}
@@ -318,14 +348,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       </div>
 
       {/* Right Panel - Live Preview */}
-      <div className={cn(glassCardClass, "flex-1 flex flex-col")}>
+      <div className={cn(glassCardClass, "flex-1 flex flex-col min-h-[400px] md:min-h-0")}>
         {/* Preview Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 md:p-5 border-b border-white/10">
           <div>
-            <h3 className="text-lg font-bold text-white">
+            <h3 className="text-base md:text-lg font-bold text-white">
               {selectedTemplate?.name}
             </h3>
-            <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
+            <p className="text-xs sm:text-sm text-white/60 flex items-center gap-1.5 mt-1">
               {showOptimized ? (
                 <><Sparkles className="w-4 h-4 text-emerald-400" /> Optimized Version</>
               ) : (
@@ -339,7 +369,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             onClick={handleDownloadPdf}
             variant="primary"
             disabled={!hasRealResume || isDownloading}
-            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] px-4 py-2 text-sm"
+            className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] px-4 py-2 text-sm min-h-[44px]"
           >
             {isDownloading ? "Generating..." : <><Download className="w-4 h-4 mr-2" />Download PDF</>}
           </Button>

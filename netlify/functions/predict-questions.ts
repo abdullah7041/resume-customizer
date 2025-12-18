@@ -1,6 +1,9 @@
 import { processResume } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 const baseHandler = async (event: { httpMethod: string; body: any; }) => {
   if (event.httpMethod !== "POST") {
@@ -34,7 +37,12 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       }),
     };
 
-  } catch {
+  } catch (error) {
+    console.error("Predict questions error:", error);
+    captureError(error, {
+      function: 'predict-questions',
+      payload: JSON.parse(event.body || '{}'),
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Failed to predict questions" }),

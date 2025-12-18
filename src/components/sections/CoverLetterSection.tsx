@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { cn } from '../../lib/utils/cn';
+import { analytics } from '../../services/analytics';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
 const GENERATE_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-cover-letter`;
@@ -103,6 +104,10 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
       setCoverLetter(data.coverLetter || '');
       setKeyHighlights(data.keyHighlights || []);
       setWordCount(data.wordCount || 0);
+
+      // Track cover letter generation
+      const generatedWordCount = data.wordCount || (data.coverLetter?.trim().split(/\s+/).length || 0);
+      analytics.trackCoverLetter(generatedWordCount);
 
       // Save to localStorage
       if (typeof window !== 'undefined') {

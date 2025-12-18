@@ -1,6 +1,9 @@
 import { processResume } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 const baseHandler = async (event: { httpMethod: string; body: any; }) => {
   if (event.httpMethod !== "POST") {
@@ -105,6 +108,10 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
 
   } catch (error) {
     console.error("Optimization error:", error);
+    captureError(error, {
+      function: 'optimize',
+      payload: JSON.parse(event.body || '{}'),
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Failed to optimize resume" }),

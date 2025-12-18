@@ -122,7 +122,12 @@
     "trustBadge": "Built for Vision 2030 Talent",
     "hero": {
       "title": "Land Your Dream Job with",
-      "dynamicPhrases": ["AI-Powered Resumes", "Higher Match Scores", "More Interviews", "Your Dream Job"],
+      "dynamicPhrases": [
+        "AI-Powered Resumes",
+        "Higher Match Scores",
+        "More Interviews",
+        "Your Dream Job"
+      ],
       "subtitle": "Transform your resume in <strong>under 5 minutes</strong>. Match job descriptions perfectly. Get past ATS systems. <em>Land more interviews.</em>",
       "cta": "Get Started",
       "worksWithArabicEnglish": "Works with Arabic & English",
@@ -154,33 +159,57 @@
         "title": "Smart Resume Parsing",
         "description": "Upload PDF, DOCX, or paste text. AI extracts and structures your experience instantly.",
         "badge": "OCR Powered",
-        "capabilities": ["Multi-format support", "Arabic & English", "Structured extraction"]
+        "capabilities": [
+          "Multi-format support",
+          "Arabic & English",
+          "Structured extraction"
+        ]
       },
       "jobMatch": {
         "title": "Job Match Scoring",
         "description": "Get instant 0-100 match scores. See exactly which keywords you're missing.",
-        "capabilities": ["Real-time analysis", "Keyword gap detection", "Industry benchmarks"]
+        "capabilities": [
+          "Real-time analysis",
+          "Keyword gap detection",
+          "Industry benchmarks"
+        ]
       },
       "aiOptimization": {
         "title": "AI Optimization",
         "description": "Rewrite sections with stronger language and better keywords—without inventing facts.",
-        "capabilities": ["Context-aware rewrites", "Metric suggestions", "Tone adjustment"]
+        "capabilities": [
+          "Context-aware rewrites",
+          "Metric suggestions",
+          "Tone adjustment"
+        ]
       },
       "keywordAnalysis": {
         "title": "Keyword Analysis",
         "description": "Identify high-impact keywords and optimize your resume to beat ATS systems.",
-        "capabilities": ["Frequency analysis", "Competitor comparison", "Industry trends"]
+        "capabilities": [
+          "Frequency analysis",
+          "Competitor comparison",
+          "Industry trends"
+        ]
       },
       "atsExport": {
         "title": "ATS-Friendly Export",
         "description": "Download professionally formatted PDFs that pass applicant tracking systems.",
-        "capabilities": ["Multiple templates", "Font embedding", "Section formatting"]
+        "capabilities": [
+          "Multiple templates",
+          "Font embedding",
+          "Section formatting"
+        ]
       },
       "interviewPrep": {
         "title": "Interview Prep",
         "description": "Generate tailored interview questions based on your resume and job requirements.",
         "badge": "New",
-        "capabilities": ["Role-specific questions", "STAR format tips", "Difficulty levels"]
+        "capabilities": [
+          "Role-specific questions",
+          "STAR format tips",
+          "Difficulty levels"
+        ]
       }
     },
     "howItWorks": {
@@ -225,10 +254,22 @@
       "title": "Optimized for Saudi's Growing Industries",
       "subtitle": "Templates and keywords tailored for Vision 2030 job market",
       "hiring": "hiring",
-      "banking": { "name": "Banking & Finance", "growth": "+24%" },
-      "technology": { "name": "Technology", "growth": "+47%" },
-      "education": { "name": "Education", "growth": "+18%" },
-      "healthcare": { "name": "Healthcare", "growth": "+32%" }
+      "banking": {
+        "name": "Banking & Finance",
+        "growth": "+24%"
+      },
+      "technology": {
+        "name": "Technology",
+        "growth": "+47%"
+      },
+      "education": {
+        "name": "Education",
+        "growth": "+18%"
+      },
+      "healthcare": {
+        "name": "Healthcare",
+        "growth": "+32%"
+      }
     }
   },
   "upload": {
@@ -290,32 +331,49 @@
     "downloading": "Preparing download..."
   },
   "pricing": {
-    "title": "Simple Pricing",
-    "subtitle": "Start free, upgrade when you need more",
-    "free": {
-      "name": "Free",
-      "price": "0",
-      "period": "forever",
-      "features": [
-        "3 resume analyses per month",
-        "Basic ATS score",
-        "Keyword matching"
-      ],
-      "cta": "Get Started"
-    },
-    "pro": {
-      "name": "Pro",
-      "price": "49",
-      "period": "per month",
-      "features": [
-        "Unlimited analyses",
-        "AI-powered optimization",
-        "PDF export",
-        "Priority support"
-      ],
-      "cta": "Start Pro Trial"
-    },
-    "currency": "SAR"
+    "title": "Pricing",
+    "subtitle": "Simple, transparent pricing for everyone",
+    "comingSoon": "Coming Soon",
+    "comingSoonDescription": "We're working on flexible pricing plans to serve job seekers at every stage of their career.",
+    "notifyMe": "Notify Me When Available",
+    "emailPlaceholder": "Enter your email",
+    "plans": {
+      "free": {
+        "name": "Free",
+        "price": "0",
+        "description": "Perfect for getting started",
+        "features": [
+          "3 resume uploads per month",
+          "Basic keyword analysis",
+          "1 AI optimization",
+          "Standard templates"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "TBA",
+        "description": "For serious job seekers",
+        "features": [
+          "Unlimited resume uploads",
+          "Advanced AI optimization",
+          "Cover letter generation",
+          "Interview preparation",
+          "Priority support"
+        ]
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "TBA",
+        "description": "For teams and organizations",
+        "features": [
+          "Everything in Pro",
+          "Team management",
+          "Custom branding",
+          "API access",
+          "Dedicated support"
+        ]
+      }
+    }
   },
   "auth": {
     "login": {
@@ -493,7 +551,37 @@
     "good": "Good",
     "needsImprovement": "Needs Improvement",
     "skills": "skills",
-    "analysisNote": "Analysis based on Saudi Vision 2030 sector priorities"
+    "analysisNote": "Analysis based on Saudi Vision 2030 sector priorities",
+    "modal": {
+      "title": "🇸🇦 Understanding Vision 2030",
+      "whatIs": "What is Vision 2030?",
+      "description": "Saudi Vision 2030 is the Kingdom's ambitious plan to diversify its economy and reduce dependence on oil. It focuses on developing key sectors including technology, tourism, entertainment, healthcare, and renewable energy to create millions of new jobs for Saudi citizens and residents.",
+      "sectors": "Key Growth Sectors",
+      "alignment": "How We Help You Align",
+      "help1": "Analyze your resume for Vision 2030 sector keywords",
+      "help2": "Identify skills gaps in high-demand areas",
+      "help3": "Suggest relevant keywords to boost your profile",
+      "help4": "Match you with jobs in growing sectors",
+      "learnMore": "Learn More on vision2030.gov.sa"
+    },
+    "badge": {
+      "ready": "Vision 2030 Ready",
+      "aligned": "Vision 2030 Aligned"
+    },
+    "landing": {
+      "title": "Aligned with Saudi Vision 2030",
+      "subtitle": "Position yourself for the jobs of tomorrow in Saudi Arabia's fastest-growing sectors",
+      "cta": "Analyze Your V2030 Fit",
+      "techJobs": "Tech Jobs by 2030",
+      "tourismJobs": "Tourism Jobs",
+      "healthcareGrowth": "Healthcare Growth",
+      "renewableEnergy": "Renewable Energy Investment"
+    },
+    "matchSection": {
+      "title": "Vision 2030 Alignment",
+      "viewDetails": "View Details",
+      "learnMore": "Learn about Vision 2030"
+    }
   },
   "templates": {
     "title": "Resume Templates",
@@ -722,5 +810,11 @@
         "regenerate": "Regenerate"
       }
     }
+  },
+  "rateLimit": {
+    "title": "Slow down there!",
+    "message": "You've made too many requests. Please wait before trying again.",
+    "retry": "Try Again",
+    "dismiss": "Dismiss"
   }
 }

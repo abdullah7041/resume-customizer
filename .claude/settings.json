@@ -1,0 +1,16 @@
+{
+    "files": {
+        "read": [
+            "CLAUDE.md"
+        ]
+    },
+    "postTask": {
+        "commands": [
+            {
+                "command": "npm run quality:check",
+                "description": "Run linting and TypeScript checks after every code modification",
+                "enabled": true
+            }
+        ]
+    }
+}

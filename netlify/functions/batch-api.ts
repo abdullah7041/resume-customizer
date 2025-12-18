@@ -1,5 +1,8 @@
 import type { Handler } from "@netlify/functions";
 import { RateLimiter, batchWithConcurrency } from "../lib/rate-limiter";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -52,7 +55,7 @@ const rateLimiter = new RateLimiter({
  */
 async function executeTask(task: BatchTask): Promise<BatchResponse> {
   const endpoint = INTERNAL_ENDPOINTS[task.type];
-  
+
   if (!endpoint) {
     return {
       id: task.id,
@@ -64,7 +67,7 @@ async function executeTask(task: BatchTask): Promise<BatchResponse> {
 
   try {
     const url = `${NETLIFY_BASE}${endpoint}`;
-    
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -123,7 +126,7 @@ function validateBatchRequest(body: any): { valid: boolean; error?: string } {
 
   for (let i = 0; i < body.tasks.length; i++) {
     const task = body.tasks[i];
-    
+
     if (!task || typeof task !== "object") {
       return { valid: false, error: `Task at index ${i} must be an object` };
     }
@@ -166,7 +169,7 @@ const handler: Handler = async (event) => {
 
   try {
     const body: BatchRequest = event.body ? JSON.parse(event.body) : {};
-    
+
     // Validate request
     const validation = validateBatchRequest(body);
     if (!validation.valid) {
@@ -187,12 +190,12 @@ const handler: Handler = async (event) => {
       tasks,
       async (task) => {
         const result = await executeTask(task);
-        
+
         // If continueOnError is false and we hit an error, throw to stop batch
         if (!continueOnError && result.status === "error") {
           throw new Error(result.error || "Task failed");
         }
-        
+
         return result;
       },
       {
@@ -240,11 +243,15 @@ const handler: Handler = async (event) => {
   } catch (error) {
     console.error("[batch-api] Fatal error:", error);
     const message = error instanceof Error ? error.message : "Batch processing failed";
-    
+    captureError(error, {
+      function: 'batch-api',
+      errorMessage: message,
+    });
+
     return {
       statusCode: 500,
       headers: HEADERS,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: message,
         hint: "Check that all task payloads are valid for their respective endpoints",
       }),

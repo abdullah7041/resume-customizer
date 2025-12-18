@@ -13,6 +13,9 @@ const model = genAI.getGenerativeModel({
   model: MODEL_NAME,
   generationConfig: {
     responseMimeType: "application/json",
+    temperature: 0,  // Deterministic output - no randomness
+    topP: 1,         // No nucleus sampling
+    topK: 1,         // Greedy decoding - always pick the most likely token
   },
 });
 

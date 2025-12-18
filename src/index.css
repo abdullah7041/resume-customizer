@@ -8,11 +8,65 @@
     --app-shell-max: 1280px;
     --app-shell-gutter: clamp(1rem, 4vw, 3rem);
     --font-family: 'Inter', sans-serif;
+
+    /* Fluid typography scale for mobile-first responsive design */
+    --font-size-base: clamp(0.875rem, 0.8rem + 0.4vw, 1rem);
+    --font-size-lg: clamp(1.125rem, 1rem + 0.6vw, 1.25rem);
+    --font-size-xl: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+    --font-size-2xl: clamp(2rem, 1.5rem + 2.5vw, 3rem);
+
+    /* Mobile touch targets - Apple HIG recommends 44x44px minimum */
+    --touch-target-min: 44px;
+  }
+
+  /* Touch-friendly defaults - prevent double-tap zoom */
+  input,
+  select,
+  textarea,
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  /* Prevent iOS zoom on form inputs - requires 16px minimum */
+  @media (max-width: 767px) {
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="number"],
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Off-screen content performance optimization */
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
+
+  /* Mobile nav overlay - body scroll lock */
+  body.mobile-nav-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
   }
 
   /* RTL-aware spacing utilities */
-  [dir="rtl"] .ml-auto { margin-left: unset; margin-right: auto; }
-  [dir="rtl"] .mr-auto { margin-right: unset; margin-left: auto; }
+  [dir="rtl"] .ml-auto {
+    margin-left: unset;
+    margin-right: auto;
+  }
+
+  [dir="rtl"] .mr-auto {
+    margin-right: unset;
+    margin-left: auto;
+  }
 
   /* Fix icons in RTL */
   [dir="rtl"] .icon-flip {
@@ -646,6 +700,29 @@
     animation: shimmer 1.5s ease-in-out infinite;
   }
 
+  /* Skeleton wave animation for loading states */
+  @keyframes skeleton-wave {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .skeleton-wave::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.08),
+        transparent);
+    animation: skeleton-wave 1.5s ease-in-out infinite;
+  }
+
   /* KeywordBar progress bar grow animation */
   @keyframes growBar {
     0% {
@@ -695,6 +772,15 @@
 
     .card-glow,
     .skyline-float {
+      animation: none;
+    }
+
+    /* Skeleton loader reduced motion */
+    .skeleton-wave::after {
+      animation: none;
+    }
+
+    .animate-pulse {
       animation: none;
     }
   }

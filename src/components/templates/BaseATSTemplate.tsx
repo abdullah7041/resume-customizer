@@ -1,14 +1,27 @@
 // 🛡️ Base ATS Engine - The core logic for all exportable templates
 // Uses strict JSON Resume schema + props for styling.
 
-export const BaseATSTemplate = ({ data, config = {} }) => {
+interface BaseATSTemplateConfig {
+    fontFamily?: string;
+    accentColor?: string;
+    headerAlignment?: 'left' | 'center';
+    vision2030Score?: number;
+}
+
+interface BaseATSTemplateProps {
+    data: Record<string, any> | null;
+    config?: BaseATSTemplateConfig;
+}
+
+export const BaseATSTemplate = ({ data, config = {} }: BaseATSTemplateProps) => {
     if (!data) return null;
 
     // Config Defaults
     const {
         fontFamily = "Arial, Helvetica, sans-serif",
         accentColor = "#000000",
-        headerAlignment = "center", // 'left' | 'center'
+        headerAlignment = "center",
+        vision2030Score = 0,
         // hideIcons option reserved for future use
     } = config;
 
@@ -54,23 +67,23 @@ export const BaseATSTemplate = ({ data, config = {} }) => {
         },
         name: {
             fontSize: '24pt',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
+            fontWeight: 'bold' as const,
+            textTransform: 'uppercase' as const,
             marginBottom: '8px',
             letterSpacing: '0.5px',
             color: accentColor !== '#000000' ? accentColor : '#000000',
         },
         title: {
             fontSize: '11pt',
-            fontWeight: 'bold',
+            fontWeight: 'bold' as const,
             marginBottom: '6px',
             color: '#000000',
         },
         contact: {
             fontSize: '10pt',
             color: '#000000',
-            display: 'flex',
-            flexWrap: 'wrap',
+            display: 'flex' as const,
+            flexWrap: 'wrap' as const,
             justifyContent: headerAlignment === 'left' ? 'flex-start' : 'center',
             gap: '8px 16px',
         },
@@ -105,6 +118,18 @@ export const BaseATSTemplate = ({ data, config = {} }) => {
         bulletItem: {
             marginBottom: '3px',
         },
+        vision2030Badge: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            backgroundColor: '#006C35',
+            color: '#ffffff',
+            fontSize: '8pt',
+            fontWeight: 'bold',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            marginTop: '6px',
+        },
     };
 
     // Helper for safe strings
@@ -132,6 +157,13 @@ export const BaseATSTemplate = ({ data, config = {} }) => {
                         </span>
                     ))}
                 </div>
+                {/* Vision 2030 Badge - shown when score >= 60 */}
+                {vision2030Score >= 60 && (
+                    <div style={styles.vision2030Badge}>
+                        <span>✓</span>
+                        <span>Vision 2030 Ready</span>
+                    </div>
+                )}
             </header>
 
             {/* SUMMARY */}

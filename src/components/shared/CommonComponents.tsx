@@ -1,5 +1,5 @@
-import Button from "../ui/Button.tsx";
-import Card from "../ui/Card.tsx";
+import Button from "../ui/Button";
+import Card from "../ui/Card";
 
 export { Button, Card };
 

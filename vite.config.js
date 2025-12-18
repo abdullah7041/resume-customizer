@@ -14,6 +14,7 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: true, // Generate source maps for Sentry
     rollupOptions: {
       external: ["path2d"],
       output: {

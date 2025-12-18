@@ -23,6 +23,7 @@ import {
 import Button from "../components/ui/Button";
 import AnimatedCard from "../components/ui/AnimatedCard";
 import { cn } from "../lib/utils/cn";
+import { VISION_2030_SECTORS } from "../lib/data/vision2030Skills";
 
 // Hook: Type writer effect for dynamic headlines
 function useTypewriter(phrases, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
@@ -653,6 +654,80 @@ export default function LandingPage({ onGetStarted }) {
               </p>
             </div>
             <JobMarketSection />
+          </div>
+        </div>
+      </section>
+
+      {/* Vision 2030 Section */}
+      <section className="px-3 sm:px-4 py-10 sm:py-12 md:py-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-[#006C35]/30 bg-gradient-to-br from-[#006C35]/10 to-emerald-900/20 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,108,53,0.15)] p-6 sm:p-8 md:p-12">
+            {/* Header */}
+            <div className="text-center mb-8 sm:mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#006C35] text-white text-sm font-bold mb-4">
+                <span>🇸🇦</span>
+                <span>2030</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3">
+                {t("vision2030.landing.title", "Aligned with Saudi Vision 2030")}
+              </h2>
+              <p className="text-sm sm:text-base text-white/70 max-w-2xl mx-auto">
+                {t("vision2030.landing.subtitle", "Position yourself for the jobs of tomorrow in Saudi Arabia's fastest-growing sectors")}
+              </p>
+            </div>
+
+            {/* Sector Icons Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+              {VISION_2030_SECTORS.map((sector, idx) => (
+                <div
+                  key={sector.id}
+                  className="group relative p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#006C35]/50 hover:bg-[#006C35]/10 transition-all duration-300 text-center"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
+                  <div className="text-3xl mb-2 group-hover:scale-110 transition-transform duration-300">
+                    {sector.icon}
+                  </div>
+                  <p className="text-xs sm:text-sm font-medium text-white/90">
+                    {sector.nameEn}
+                  </p>
+                  <p className="text-[10px] text-white/50 mt-1">
+                    {sector.skills.length} {t("vision2030.skills", "skills")}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              <div className="text-center p-4 rounded-lg bg-white/5">
+                <div className="text-2xl sm:text-3xl font-bold text-[#4ade80]">500K+</div>
+                <div className="text-xs sm:text-sm text-white/60">{t("vision2030.landing.techJobs", "Tech Jobs by 2030")}</div>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-white/5">
+                <div className="text-2xl sm:text-3xl font-bold text-[#4ade80]">1M+</div>
+                <div className="text-xs sm:text-sm text-white/60">{t("vision2030.landing.tourismJobs", "Tourism Jobs")}</div>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-white/5">
+                <div className="text-2xl sm:text-3xl font-bold text-[#4ade80]">64%</div>
+                <div className="text-xs sm:text-sm text-white/60">{t("vision2030.landing.healthcareGrowth", "Healthcare Growth")}</div>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-white/5">
+                <div className="text-2xl sm:text-3xl font-bold text-[#4ade80]">$50B</div>
+                <div className="text-xs sm:text-sm text-white/60">{t("vision2030.landing.renewableEnergy", "Renewable Energy")}</div>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="text-center">
+              <Button
+                onClick={onGetStarted}
+                className="px-8 py-4 font-bold text-white transition-all hover:scale-105"
+                style={{ backgroundColor: '#006C35' }}
+              >
+                {t("vision2030.landing.cta", "Analyze Your V2030 Fit")}
+                <ArrowRight className="w-5 h-5 ml-2 inline" />
+              </Button>
+            </div>
           </div>
         </div>
       </section>

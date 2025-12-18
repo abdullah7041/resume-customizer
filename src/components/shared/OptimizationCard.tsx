@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Clipboard, ClipboardCheck, FileText, Sparkles, ChevronDown } from "lucide-react";
-import Button from "../ui/Button.tsx";
-import Card from "../ui/Card.tsx";
-import { cn } from "../../lib/utils/cn.ts";
+import Button from "../ui/Button";
+import Card from "../ui/Card";
+import { cn } from "../../lib/utils/cn";
 
 export default function OptimizationCard({ card, onCopy, disabledActions = false, viewMode = "split" }) {
   const [copied, setCopied] = useState(false);

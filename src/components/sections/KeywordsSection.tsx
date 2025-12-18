@@ -93,7 +93,7 @@ interface KeywordsSectionProps {
 
 export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionProps) {
   const { t, i18n } = useTranslation();
-  const isArabic = i18n.language === 'ar';
+  const _isArabic = i18n.language === 'ar';
 
   const { analysis, isAnalyzing, hasData } = useKeywordAnalysis(
     resumeText || '',

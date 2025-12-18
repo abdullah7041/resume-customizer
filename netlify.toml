@@ -38,3 +38,11 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Sentry build plugin for source maps
+[[plugins]]
+  package = "@sentry/netlify-build-plugin"
+  
+  [plugins.inputs]
+    sentryOrg = "your-org"
+    sentryProject = "resume-customizer"

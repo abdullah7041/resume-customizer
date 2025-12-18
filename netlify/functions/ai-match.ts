@@ -1,6 +1,9 @@
 import { processResume } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 const baseHandler = async (event: { httpMethod: string; body: any; }) => {
   if (event.httpMethod !== "POST") {
@@ -51,7 +54,10 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
 
   } catch (error) {
     console.error("Match error details:", error);
-    console.error("Match error stack:", error.stack);
+    captureError(error, {
+      function: 'ai-match',
+      payload: JSON.parse(event.body || '{}'),
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Failed to analyze match" }),

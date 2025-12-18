@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConsentStore } from '../../lib/stores/consentStore';
 import { useDirection } from '../providers/DirectionProvider';
+import { analytics } from '../../services/analytics';
 import { Shield, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function ConsentBanner() {
@@ -113,7 +114,11 @@ export function ConsentBanner() {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
           <button
-            onClick={acceptAll}
+            onClick={() => {
+              acceptAll();
+              // Initialize analytics after user consents
+              analytics.init();
+            }}
             className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
           >
             {t('consent.acceptAll')}

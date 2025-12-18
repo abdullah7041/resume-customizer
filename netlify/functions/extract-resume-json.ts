@@ -1,5 +1,8 @@
 import { parseResumeOnly } from "../lib/gemini-client";
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 export const handler = async (event: { httpMethod: string; body: string; }) => {
   if (event.httpMethod !== "POST") {
@@ -156,6 +159,11 @@ export const handler = async (event: { httpMethod: string; body: string; }) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("[extract-resume-json] Parse error:", errorMessage, error);
+
+    captureError(error, {
+      function: 'extract-resume-json',
+      errorMessage,
+    });
 
     // Provide more specific error messages based on the error type
     let userMessage = "Failed to parse resume";

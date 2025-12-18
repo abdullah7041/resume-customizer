@@ -1,5 +1,8 @@
 import { Handler } from '@netlify/functions';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { initSentry, captureError } from '../lib/sentry';
+
+initSentry();
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -94,6 +97,9 @@ Return JSON with this structure:
     };
   } catch (error) {
     console.error('Parse error:', error);
+    captureError(error, {
+      function: 'parse-arabic-resume',
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Failed to parse resume' }),

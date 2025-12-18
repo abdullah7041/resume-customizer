@@ -2,6 +2,9 @@ import type { Handler } from "@netlify/functions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
 import { withRateLimit } from "../lib/rate-limiter";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -410,6 +413,10 @@ const baseHandler: Handler = async (event) => {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to compute match score";
+    captureError(error, {
+      function: 'match-score',
+      errorMessage: message,
+    });
     return {
       statusCode: 500,
       headers: HEADERS,

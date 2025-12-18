@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
+import { analytics } from '../../services/analytics';
+import { useRateLimit } from '../../hooks/useRateLimit';
+import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
   Sparkles,
   Copy,
@@ -16,6 +19,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
+import { OptimizeSkeleton } from './OptimizeSection.skeleton';
 
 // === Keyword bucket labels ===
 const CHIP_LABELS = {
@@ -126,6 +130,7 @@ export function OptimizeSection({
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
+  const { isRateLimited, retryAfter, handleError: handleRateLimitError, clearRateLimit } = useRateLimit();
 
   // Get data from store
   const {
@@ -206,6 +211,11 @@ export function OptimizeSection({
       return;
     }
 
+    const startTime = performance.now();
+
+    // Track optimization started
+    analytics.trackOptimization('started', { has_job_description: false });
+
     setIsGenerating(true);
     setError(null);
 
@@ -224,6 +234,9 @@ export function OptimizeSection({
       }
 
       const data = await response.json();
+
+      // Debug log the raw API response
+      console.log('[OptimizeSection] Raw API response:', JSON.stringify(data, null, 2));
 
       // Transform API response to OptimizationResult format
       // API returns: { cards: [{section, issue, suggestion, exampleBefore, exampleAfter}], keywords: {add, neutral, remove} }
@@ -266,7 +279,31 @@ export function OptimizeSection({
         }
       }
 
+      // Validate that we have meaningful optimizations
+      if (newOptimizations.length === 0) {
+        throw new Error(isArabic ? 'لم يتم إنشاء تحسينات. قد يحتاج الذكاء الاصطناعي إلى مزيد من السياق.' : 'No optimizations were generated. The AI may need more context.');
+      }
+
+      // Check if any optimizations have valid content
+      const hasValidContent = newOptimizations.some(opt => {
+        const original = Array.isArray(opt.original) ? opt.original.join('') : opt.original;
+        const optimized = Array.isArray(opt.optimized) ? opt.optimized.join('') : opt.optimized;
+        return (original && original.trim().length > 0) || (optimized && optimized.trim().length > 0);
+      });
+
+      if (!hasValidContent) {
+        console.warn('[OptimizeSection] All optimizations have empty content:', newOptimizations);
+        throw new Error(isArabic ? 'حصل الذكاء الاصطناعي على اقتراحات فارغة. يرجى المحاولة مرة أخرى.' : 'The AI returned empty suggestions. Please try again.');
+      }
+
+      console.log('[OptimizeSection] Valid optimizations generated:', newOptimizations.length);
       setOptimizations(newOptimizations);
+
+      // Track optimization completed
+      analytics.trackOptimization('completed', {
+        optimization_count: newOptimizations.length,
+        time_ms: performance.now() - startTime,
+      });
 
       // Also update keyword suggestions from API response
       if (data.keywords) {
@@ -288,7 +325,10 @@ export function OptimizeSection({
 
     } catch (err) {
       console.error('Optimization error:', err);
-      setError(err instanceof Error ? err.message : (isArabic ? 'فشل في توليد التحسينات' : 'Failed to generate optimizations'));
+      // Check if this is a rate limit error
+      if (!handleRateLimitError(err)) {
+        setError(err instanceof Error ? err.message : (isArabic ? 'فشل في توليد التحسينات' : 'Failed to generate optimizations'));
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -559,14 +599,7 @@ export function OptimizeSection({
         )}
 
         {isOptimizing ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, index) => (
-              <div
-                key={index}
-                className="h-40 animate-pulse rounded-xl border border-white/10 bg-white/5"
-              />
-            ))}
-          </div>
+          <OptimizeSkeleton />
         ) : filteredOptimizations.length > 0 ? (
           <div className="space-y-4">
             {filteredOptimizations.map((opt, index) => (
@@ -729,7 +762,10 @@ export function OptimizeSection({
                     <GlassButton
                       variant="primary"
                       size="sm"
-                      onClick={() => applyOptimization(opt.sectionId)}
+                      onClick={() => {
+                        analytics.trackOptimization('applied', { section_type: opt.sectionType });
+                        applyOptimization(opt.sectionId);
+                      }}
                       leftIcon={<Check className="w-3 h-3" />}
                     >
                       {isArabic ? 'تطبيق' : 'Apply'}
@@ -748,6 +784,18 @@ export function OptimizeSection({
           </GlassCard>
         )}
       </div>
+
+      {/* Rate Limit Banner */}
+      {isRateLimited && (
+        <RateLimitBanner
+          retryAfter={retryAfter}
+          onRetry={() => {
+            clearRateLimit();
+            handleGenerate();
+          }}
+          onDismiss={clearRateLimit}
+        />
+      )}
     </div>
   );
 }

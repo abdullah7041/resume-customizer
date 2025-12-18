@@ -25,8 +25,8 @@ resume-customizer/
 ├── 📄 Documentation
 │   ├── AI_INSTRUCTIONS.md            # AI development guidelines
 │   ├── CLAUDE.md                     # Claude-specific instructions
+│   ├── LICENSE                       # MIT License
 │   ├── README.md                     # Project documentation
-│   ├── critical-bugs-fix.md          # Critical bugs & fixes documentation
 │   └── map.md                        # File structure map (this file)
 │
 ├── 📁 .claude/                       # Claude code editor artifacts
@@ -70,6 +70,7 @@ sections/
 ├── KeywordsSection.tsx              # Keyword analysis & suggestions
 ├── MatchSection.tsx                 # Job-resume matching analysis
 ├── OptimizeSection.tsx              # Resume optimization
+├── PricingSection.tsx               # Pricing plans & features
 ├── TemplatesSection.tsx             # Template gallery & export
 └── UploadSection.tsx                # Resume upload interface
 ```
@@ -79,6 +80,7 @@ sections/
 ui/
 ├── AnimatedCard.tsx                 # Animated card with glass effect
 ├── AnimatedCounter.tsx              # Animated number counter
+├── BottomSheet.tsx                  # Mobile bottom sheet component
 ├── Button.tsx                       # Reusable button component
 ├── Card.tsx                         # Basic card component
 ├── EmptyState.tsx                   # Empty state placeholder
@@ -90,6 +92,7 @@ ui/
 ├── HelpModal.tsx                    # Help/info modal
 ├── Input.tsx                        # Reusable input component
 ├── LanguageSwitcher.tsx             # Language toggle (EN/AR)
+├── OfflineIndicator.tsx             # Offline status indicator
 ├── ParallaxSection.tsx              # Parallax scroll section
 ├── ProgressBar.tsx                  # Progress indicator
 ├── SectionTitle.tsx                 # Section header component
@@ -98,6 +101,7 @@ ui/
 ├── Tooltip.tsx                      # Tooltip component
 ├── UploadCard.tsx                   # Resume upload card
 ├── ViewTextModal.tsx                # Text viewer modal
+├── Vision2030Modal.tsx              # Vision 2030 info modal
 └── WelcomeModal.tsx                 # Welcome/onboarding modal
 ```
 
@@ -191,6 +195,7 @@ utils/
 ### Services (`src/services/`)
 ```
 services/
+├── analytics.ts                     # Analytics tracking service
 ├── api.js                           # API client & endpoints
 ├── api.test.js                      # API service tests
 ├── exportPdf.js                     # PDF export service
@@ -369,4 +374,4 @@ scripts/
 
 ---
 
-*Last updated: December 17, 2025 at 15:13 UTC+3*
+*Last updated: December 18, 2025 at 20:14 UTC+3*

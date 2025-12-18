@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import UploadCard from '../ui/UploadCard';
 import { AppError } from '../../services/supabase.js';
 import { useResumeStore } from '../../lib/stores/resumeStore';
+import { analytics } from '../../services/analytics';
 import type { ResumeSchema } from '../../types/resume';
 
 interface Toast {
@@ -87,6 +88,12 @@ export default function UploadSection({
             return;
         }
 
+        const startTime = performance.now();
+        const fileType = file?.type || 'text/plain';
+
+        // Track upload started
+        analytics.track('resume_upload_started', { file_type: fileType });
+
         try {
             setStatus('uploading');
             setProgress(30);
@@ -108,7 +115,7 @@ export default function UploadSection({
 
                 // CRITICAL FIX: Ensure rawText is always a string, never an object
                 // This prevents [object Object] being passed to setParsedResumeText
-                const plainTextValue = result.plainText ?? parsedResume?.plainText;
+                const plainTextValue = result.plainText;
                 const rawText = typeof plainTextValue === 'string' && plainTextValue.length > 0
                     ? plainTextValue
                     : (pastedText || '');
@@ -127,6 +134,10 @@ export default function UploadSection({
                 }
             }
 
+            // Track successful upload
+            const parseTime = performance.now() - startTime;
+            analytics.trackUpload(fileType, true, parseTime);
+
             onToast({
                 type: 'success',
                 title: 'Resume parsed successfully',
@@ -136,6 +147,10 @@ export default function UploadSection({
             setProgress(0);
             const message = err instanceof Error ? err.message : 'Failed to parse resume';
             setError(message);
+
+            // Track failed upload
+            analytics.trackUpload(fileType, false, undefined, message);
+
             onToast({
                 type: 'danger',
                 title: 'Parse failed',

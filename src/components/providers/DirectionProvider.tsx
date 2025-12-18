@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { analytics } from '../../services/analytics';
 
 const DirectionContext = createContext(undefined);
 
@@ -24,11 +25,17 @@ export function DirectionProvider({ children }) {
   }, [i18n.language]);
 
   const toggleLanguage = () => {
-    const newLang = i18n.language === 'ar' ? 'en' : 'ar';
+    const currentLang = i18n.language;
+    const newLang = currentLang === 'ar' ? 'en' : 'ar';
+    analytics.trackLanguageChange(currentLang, newLang);
     i18n.changeLanguage(newLang);
   };
 
   const setLanguage = (lang) => {
+    const currentLang = i18n.language;
+    if (currentLang !== lang) {
+      analytics.trackLanguageChange(currentLang, lang);
+    }
     i18n.changeLanguage(lang);
   };
 

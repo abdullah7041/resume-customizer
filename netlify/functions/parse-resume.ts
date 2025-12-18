@@ -5,6 +5,9 @@ import {
   inferMimeType,
 } from "../lib/resumeText.js";
 import { withRateLimit } from "../lib/rate-limiter";
+import { initSentry, captureError } from "../lib/sentry";
+
+initSentry();
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -560,6 +563,10 @@ const baseHandler: Handler = async (event) => {
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to parse resume.";
+    captureError(error, {
+      function: 'parse-resume',
+      errorMessage: message,
+    });
     const userMessage = message.includes("Unsupported")
       ? "Unsupported file type. Please upload a PDF or DOCX file, or paste your resume text directly."
       : message.includes("exceeds")
