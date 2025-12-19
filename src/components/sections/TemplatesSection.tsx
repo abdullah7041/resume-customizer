@@ -132,7 +132,7 @@ interface TemplateGalleryProps {
 }
 
 export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate }: TemplateGalleryProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
@@ -251,7 +251,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
               <Layers className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-lg font-bold text-white">Templates</h2>
+            <h2 className="text-lg font-bold text-white">{t('sections.templates.title', 'Templates')}</h2>
           </div>
 
           {/* Original/Optimized Toggle */}
@@ -268,12 +268,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             {showOptimized ? (
               <>
                 <ToggleRight className="w-5 h-5 text-emerald-400" />
-                <span>Showing Optimized</span>
+                <span>{t('sections.templates.showingOptimized', 'Showing Optimized')}</span>
               </>
             ) : (
               <>
                 <ToggleLeft className="w-5 h-5" />
-                <span>Showing Original</span>
+                <span>{t('sections.templates.showingOriginal', 'Showing Original')}</span>
               </>
             )}
           </button>
@@ -289,7 +289,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                   : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
               )}
             >
-              All
+              {t('sections.templates.categories.all', 'All')}
             </button>
             {Object.entries(categoryLabels).map(([value, label]) => (
               <button
@@ -302,7 +302,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                     : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
                 )}
               >
-                {label}
+                {t(`sections.templates.categories.${value.toLowerCase()}`, label)}
               </button>
             ))}
           </div>
@@ -327,7 +327,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           {/* Mobile swipe hint */}
           <div className="flex md:hidden items-center justify-center gap-1 mt-3 text-xs text-white/40">
             <ChevronLeft className="w-4 h-4" />
-            <span>Swipe to browse</span>
+            <span>{t('sections.templates.swipeToBrowse', 'Swipe to browse')}</span>
             <ChevronRight className="w-4 h-4" />
           </div>
 
@@ -357,11 +357,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             </h3>
             <p className="text-xs sm:text-sm text-white/60 flex items-center gap-1.5 mt-1">
               {showOptimized ? (
-                <><Sparkles className="w-4 h-4 text-emerald-400" /> Optimized Version</>
+                <><Sparkles className="w-4 h-4 text-emerald-400" /> {t('sections.templates.optimizedVersion', 'Optimized Version')}</>
               ) : (
-                <><FileText className="w-4 h-4 text-white/40" /> Original Version</>
+                <><FileText className="w-4 h-4 text-white/40" /> {t('sections.templates.originalVersion', 'Original Version')}</>
               )}
-              {selectedTemplate && <span className="ml-1">• {categoryLabels[selectedTemplate.category as keyof typeof categoryLabels]}</span>}
+              {selectedTemplate && <span className="ml-1">• {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, categoryLabels[selectedTemplate.category as keyof typeof categoryLabels])}</span>}
             </p>
           </div>
 
@@ -371,7 +371,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             disabled={!hasRealResume || isDownloading}
             className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] px-4 py-2 text-sm min-h-[44px]"
           >
-            {isDownloading ? "Generating..." : <><Download className="w-4 h-4 mr-2" />Download PDF</>}
+            {isDownloading ? t('sections.templates.generating', 'Generating...') : <><Download className="w-4 h-4 mr-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>}
           </Button>
         </div>
 
@@ -380,7 +380,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           <div className="mx-4 mt-4 flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
             <AlertCircle className="w-5 h-5 text-amber-400" />
             <p className="text-sm text-amber-400">
-              This is a preview. Upload your resume to see your data.
+              {t('sections.templates.noResumeWarning', 'This is a preview. Upload your resume to see your data.')}
             </p>
           </div>
         )}

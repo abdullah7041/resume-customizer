@@ -19,11 +19,13 @@ import {
   Users,
   Briefcase,
   GraduationCap,
+  Info,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import AnimatedCard from "../components/ui/AnimatedCard";
 import { cn } from "../lib/utils/cn";
 import { VISION_2030_SECTORS } from "../lib/data/vision2030Skills";
+import Vision2030Modal from "../components/ui/Vision2030Modal";
 
 // Hook: Type writer effect for dynamic headlines
 function useTypewriter(phrases, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
@@ -461,6 +463,7 @@ function getSteps(t) {
 
 export default function LandingPage({ onGetStarted }) {
   const { t } = useTranslation();
+  const [v2030ModalOpen, setV2030ModalOpen] = useState(false);
 
   // Get translated dynamic phrases
   const dynamicPhrases = t("landing.hero.dynamicPhrases", { returnObjects: true });
@@ -671,9 +674,17 @@ export default function LandingPage({ onGetStarted }) {
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3">
                 {t("vision2030.landing.title", "Aligned with Saudi Vision 2030")}
               </h2>
-              <p className="text-sm sm:text-base text-white/70 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base text-white/70 max-w-2xl mx-auto mb-4">
                 {t("vision2030.landing.subtitle", "Position yourself for the jobs of tomorrow in Saudi Arabia's fastest-growing sectors")}
               </p>
+              <button
+                type="button"
+                onClick={() => setV2030ModalOpen(true)}
+                className="inline-flex items-center gap-2 text-sm font-medium text-[#4ade80] hover:text-white transition-colors"
+              >
+                <Info className="w-4 h-4" />
+                {t('vision2030.matchSection.learnMore', 'Learn about Vision 2030')}
+              </button>
             </div>
 
             {/* Sector Icons Grid */}
@@ -731,6 +742,12 @@ export default function LandingPage({ onGetStarted }) {
           </div>
         </div>
       </section>
+
+      {/* Vision 2030 Info Modal */}
+      <Vision2030Modal
+        isOpen={v2030ModalOpen}
+        onClose={() => setV2030ModalOpen(false)}
+      />
     </div>
   );
 }

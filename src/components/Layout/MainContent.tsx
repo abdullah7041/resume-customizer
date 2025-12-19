@@ -20,11 +20,8 @@ import Tabs from "../ui/Tabs";
 import Toast, { ToastContainer } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
 import Button from "../ui/Button";
-import HelpModal from "../ui/HelpModal";
 import LandingPage from "../../pages/LandingPage";
-import WelcomeModal from "../ui/WelcomeModal";
 import { ParallaxContainer } from "../ui/ParallaxSection";
-import { helpContent } from "../../lib/data/helpContent";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
 import ViewTextModal from "../ui/ViewTextModal";
@@ -124,9 +121,6 @@ export default function MainContent() {
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, _setAiDebug] = useState(null);
-  const [helpModalOpen, setHelpModalOpen] = useState(false);
-  const [currentHelpTopic, _setCurrentHelpTopic] = useState(null);
-  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
   const [showLanding, setShowLanding] = useState(() => {
     if (typeof window === "undefined") return true;
     return !window.localStorage.getItem("airo:landingSeen");
@@ -884,23 +878,6 @@ export default function MainContent() {
       <div className={`${containerClass} mt-8`}>
         <PricingSection />
       </div>
-
-      {/* Welcome Modal - shown on button click */}
-      <WelcomeModal
-        isOpen={welcomeModalOpen}
-        onClose={() => setWelcomeModalOpen(false)}
-      />
-
-      {/* Help Modal */}
-      {currentHelpTopic && (
-        <HelpModal
-          isOpen={helpModalOpen}
-          onClose={() => setHelpModalOpen(false)}
-          title={helpContent[currentHelpTopic]?.title || "Help"}
-        >
-          {helpContent[currentHelpTopic]?.content}
-        </HelpModal>
-      )}
     </main>
   );
 }
