@@ -1,16 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Mail, Sparkles, Building2, Crown } from 'lucide-react';
+import { Check, Mail, Sparkles, Crown } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassInput } from '../ui/GlassInput';
 import { cn } from '../../lib/utils/cn';
 
 interface PlanConfig {
-    key: 'free' | 'pro' | 'enterprise';
+    key: 'free' | 'pro';
     icon: typeof Sparkles;
     gradient: string;
-    popular?: boolean;
+    active?: boolean;
     comingSoon?: boolean;
 }
 
@@ -19,18 +19,12 @@ const plans: PlanConfig[] = [
         key: 'free',
         icon: Sparkles,
         gradient: 'from-emerald-500 to-teal-500',
+        active: true,
     },
     {
         key: 'pro',
         icon: Crown,
         gradient: 'from-purple-500 to-pink-500',
-        popular: true,
-        comingSoon: true,
-    },
-    {
-        key: 'enterprise',
-        icon: Building2,
-        gradient: 'from-blue-500 to-cyan-500',
         comingSoon: true,
     },
 ];
@@ -77,75 +71,49 @@ export function PricingSection() {
                     </p>
                 </div>
 
-                {/* Coming Soon Banner */}
-                <GlassCard variant="subtle" padding="md" className="text-center max-w-2xl mx-auto">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-4">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
-                        </span>
-                        <span className="text-sm font-semibold text-amber-400">{t('pricing.comingSoon')}</span>
-                    </div>
-                    <p className="text-white/60">
-                        {t('pricing.comingSoonDescription')}
-                    </p>
-                </GlassCard>
-
-                {/* Pricing Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                {/* Pricing Cards Grid - 2 columns for Free and Pro */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
                     {plans.map((plan) => {
                         const features = t(`pricing.plans.${plan.key}.features`, { returnObjects: true }) as string[];
 
                         return (
                             <div key={plan.key} className="relative group">
-                                {/* Popular Badge */}
-                                {plan.popular && (
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                                        <span className={cn(
-                                            "px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide",
-                                            "bg-gradient-to-r", plan.gradient, "text-white shadow-lg"
-                                        )}>
-                                            Popular
-                                        </span>
-                                    </div>
-                                )}
-
                                 <GlassCard
-                                    variant={plan.popular ? 'elevated' : 'default'}
+                                    variant={plan.active ? 'elevated' : 'default'}
                                     padding="lg"
                                     className={cn(
                                         "h-full transition-all duration-500 relative overflow-hidden",
                                         "hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)] hover:-translate-y-1",
-                                        plan.popular && "border-purple-500/30 shadow-[0_8px_32px_rgba(168,85,247,0.15)]"
+                                        plan.active && "border-emerald-500/50 shadow-[0_8px_32px_rgba(16,185,129,0.2)]",
+                                        plan.comingSoon && "opacity-90"
                                     )}
                                 >
-                                    {/* Coming Soon Overlay */}
-                                    {plan.comingSoon && (
-                                        <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl">
-                                            <div className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40">
-                                                <span className="text-lg font-bold text-amber-400">{t('pricing.comingSoon')}</span>
-                                            </div>
-                                        </div>
-                                    )}
-
                                     <div className="space-y-6">
                                         {/* Plan Icon & Name */}
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn(
-                                                "w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br",
-                                                plan.gradient,
-                                                "shadow-lg"
-                                            )}>
-                                                <plan.icon className="w-6 h-6 text-white" />
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br",
+                                                    plan.gradient,
+                                                    "shadow-lg"
+                                                )}>
+                                                    <plan.icon className="w-6 h-6 text-white" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-white">
+                                                        {t(`pricing.plans.${plan.key}.name`)}
+                                                    </h3>
+                                                    <p className="text-sm text-white/50">
+                                                        {t(`pricing.plans.${plan.key}.description`)}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="text-xl font-bold text-white">
-                                                    {t(`pricing.plans.${plan.key}.name`)}
-                                                </h3>
-                                                <p className="text-sm text-white/50">
-                                                    {t(`pricing.plans.${plan.key}.description`)}
-                                                </p>
-                                            </div>
+                                            {/* Coming Soon Badge for Pro */}
+                                            {plan.comingSoon && (
+                                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                                    {t('pricing.comingSoon')}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* Price */}
@@ -153,11 +121,11 @@ export function PricingSection() {
                                             {plan.key === 'free' ? (
                                                 <>
                                                     <span className="text-4xl font-bold text-white">$0</span>
-                                                    <span className="text-white/50">/forever</span>
+                                                    <span className="text-white/50">{t('pricing.forever')}</span>
                                                 </>
                                             ) : (
-                                                <span className="text-2xl font-bold text-white/50">
-                                                    {t(`pricing.plans.${plan.key}.price`)}
+                                                <span className="text-xl font-medium text-white/60">
+                                                    {t('pricing.proPrice')}
                                                 </span>
                                             )}
                                         </div>
@@ -172,20 +140,33 @@ export function PricingSection() {
                                                     )}>
                                                         <Check className="w-3 h-3 text-white" />
                                                     </div>
-                                                    <span className="text-white/80 text-sm">{feature}</span>
+                                                    <span className={cn(
+                                                        "text-sm",
+                                                        plan.comingSoon ? "text-white/60" : "text-white/80"
+                                                    )}>{feature}</span>
                                                 </li>
                                             ))}
                                         </ul>
 
                                         {/* CTA Button */}
-                                        <GlassButton
-                                            variant={plan.key === 'free' ? 'primary' : 'secondary'}
-                                            size="lg"
-                                            className="w-full"
-                                            disabled={plan.comingSoon}
-                                        >
-                                            {plan.comingSoon ? t('pricing.comingSoon') : 'Get Started'}
-                                        </GlassButton>
+                                        {plan.active ? (
+                                            <GlassButton
+                                                variant="primary"
+                                                size="lg"
+                                                className="w-full"
+                                            >
+                                                {t('pricing.getStarted')}
+                                            </GlassButton>
+                                        ) : (
+                                            <GlassButton
+                                                variant="secondary"
+                                                size="lg"
+                                                className="w-full"
+                                                disabled
+                                            >
+                                                {t('pricing.joinWaitlist')}
+                                            </GlassButton>
+                                        )}
                                     </div>
                                 </GlassCard>
                             </div>
@@ -198,7 +179,7 @@ export function PricingSection() {
                     <form onSubmit={handleNotifyMe} className="space-y-4">
                         <div className="text-center mb-6">
                             <h3 className="text-xl font-bold text-white mb-2">{t('pricing.notifyMe')}</h3>
-                            <p className="text-sm text-white/60">{t('pricing.comingSoonDescription')}</p>
+                            <p className="text-sm text-white/60">{t('pricing.notifyDescription')}</p>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3">
@@ -220,7 +201,7 @@ export function PricingSection() {
                                 disabled={!email.trim() || submitted}
                                 className="sm:w-auto"
                             >
-                                {submitted ? '✓ Subscribed!' : t('pricing.notifyMe')}
+                                {submitted ? t('pricing.subscribed') : t('pricing.notify')}
                             </GlassButton>
                         </div>
                     </form>

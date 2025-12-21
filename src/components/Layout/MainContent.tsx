@@ -25,6 +25,7 @@ import { ParallaxContainer } from "../ui/ParallaxSection";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
 import ViewTextModal from "../ui/ViewTextModal";
+import Vision2030Summary from "../ui/Vision2030Summary";
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
@@ -283,6 +284,7 @@ export default function MainContent() {
 
   const normalizeResumePayload = useCallback((input) => {
     if (input && typeof input === "object") {
+      // Handle legacy format with kind property
       if (input.kind === "upload") {
         const { file, storage } = input;
         return {
@@ -297,6 +299,27 @@ export default function MainContent() {
           storage: null,
         };
       }
+
+      // Handle input from UploadSection.tsx which passes { file } or { plainText }
+      // This is the CRITICAL FIX for the [object Object] bug
+      if (input.file instanceof File) {
+        console.log('[MainContent] Normalized input: File detected');
+        return {
+          parseInput: input.file,
+          storage: null,
+        };
+      }
+
+      if (typeof input.plainText === "string") {
+        console.log('[MainContent] Normalized input: plainText string detected, length:', input.plainText.length);
+        return {
+          parseInput: input.plainText,
+          storage: null,
+        };
+      }
+
+      // If we get here, log a warning for debugging
+      console.warn('[MainContent] ⚠️ normalizeResumePayload received unexpected object shape:', Object.keys(input));
     }
 
     return { parseInput: input, storage: null };
@@ -653,7 +676,7 @@ export default function MainContent() {
 
   const workspace = (
     <ParallaxContainer enableLayers={true} className="py-1">
-      <div className="space-y-3 sm:space-y-5 text-ink-700 dark:text-surface-50">
+      <div className="space-y-3 sm:space-y-3 text-ink-700 dark:text-surface-50">
         {/* Tab navigation - full width on mobile */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -747,13 +770,17 @@ export default function MainContent() {
             />
           )}
         </div>
+
         {hasNextTab && (
-          <div className="flex justify-center sm:justify-end">
+          <div className="flex justify-center sm:justify-end mt-4">
             <Button variant="secondary" icon={ArrowRight} onClick={handleContinue} className="justify-center">
               {t("workspace.continue")}
             </Button>
           </div>
         )}
+
+        {/* Vision 2030 Quick Access Summary */}
+        <Vision2030Summary resumeText={resumeData?.plainText} className="mt-4" />
       </div>
     </ParallaxContainer>
   );
@@ -761,7 +788,7 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-28 sm:-mt-30 lg:-mt-30"
+      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-16 sm:-mt-20 lg:-mt-24"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <ViewTextModal

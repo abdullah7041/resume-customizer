@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X } from "lucide-react";
+import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -200,9 +200,6 @@ export default function Header() {
     };
   }, []);
 
-  const enableArabicBrand = (import.meta.env.VITE_FEATURE_ARABIC_BRAND ?? "true") !== "false";
-  const arabicBrandName = "مُحَسِّنُ السِّيرَةِ الذَّاتِيَّةِ السُّعُودِيُّ";
-
   // Generate floating particles
   const particles = useMemo(() =>
     Array.from({ length: 15 }, (_, i) => ({
@@ -229,10 +226,47 @@ export default function Header() {
       gradient: "from-emerald-400 to-teal-500",
     },
     {
-      icon: Star,
-      label: t("header.features.proOutput.label"),
-      desc: t("header.features.proOutput.desc"),
+      icon: Sparkles,
+      label: t("header.features.aiOptimization.label"),
+      desc: t("header.features.aiOptimization.desc"),
       gradient: "from-purple-400 to-pink-500",
+    },
+    {
+      icon: TrendingUp,
+      label: t("header.features.keywords.label"),
+      desc: t("header.features.keywords.desc"),
+      gradient: "from-blue-400 to-indigo-500",
+    },
+    {
+      icon: FileText,
+      label: t("header.features.templates.label"),
+      desc: t("header.features.templates.desc"),
+      gradient: "from-cyan-400 to-blue-500",
+    },
+    {
+      icon: MessageSquare,
+      label: t("header.features.interview.label"),
+      desc: t("header.features.interview.desc"),
+      gradient: "from-rose-400 to-red-500",
+    },
+    {
+      icon: BarChart3,
+      label: t("header.features.bulk.label"),
+      desc: t("header.features.bulk.desc"),
+      gradient: "from-amber-400 to-orange-500",
+    },
+    {
+      icon: Mail,
+      label: t("header.features.coverLetter.label"),
+      desc: t("header.features.coverLetter.desc"),
+      gradient: "from-violet-400 to-purple-500",
+    },
+    {
+      icon: Star,
+      label: t("header.features.vision2030.label"),
+      desc: t("header.features.vision2030.desc"),
+      gradient: "from-[#006C35] to-emerald-500",
+      highlight: true,
     },
   ];
 
@@ -251,6 +285,21 @@ export default function Header() {
       icon: Sparkles,
       title: t("header.workflow.step3.title"),
       desc: t("header.workflow.step3.desc"),
+    },
+    {
+      icon: TrendingUp,
+      title: t("header.workflow.step4.title"),
+      desc: t("header.workflow.step4.desc"),
+    },
+    {
+      icon: MessageSquare,
+      title: t("header.workflow.step5.title"),
+      desc: t("header.workflow.step5.desc"),
+    },
+    {
+      icon: Mail,
+      title: t("header.workflow.step6.title"),
+      desc: t("header.workflow.step6.desc"),
     },
   ];
 
@@ -336,18 +385,6 @@ export default function Header() {
                 <p className="text-[10px] sm:text-sm font-bold tracking-[0.12em] sm:tracking-[0.15em] bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent uppercase">
                   {t("common.appName")}
                 </p>
-                {enableArabicBrand && (
-                  <p
-                    className="text-base sm:text-xl font-semibold text-white/80 leading-tight"
-                    lang="ar"
-                    dir="rtl"
-                    style={{
-                      fontFamily: '"Scheherazade New", "Amiri", serif',
-                    }}
-                  >
-                    {arabicBrandName}
-                  </p>
-                )}
                 <div className="flex items-center gap-2 mt-0.5">
                   <p className="text-xs font-medium text-white/60 tracking-wide">
                     {t("common.byAuthor")}
@@ -405,7 +442,7 @@ export default function Header() {
         </nav>
 
         {/* Hero section */}
-        <div className={`${containerClass} flex-1 grid items-center gap-6 sm:gap-10 py-8 sm:py-16 lg:py-20 md:grid-cols-[1.5fr_1fr] lg:gap-16`}>
+        <div className={`${containerClass} flex-1 grid items-center gap-4 sm:gap-8 py-4 sm:py-10 lg:py-12 md:grid-cols-[1.5fr_1fr] lg:gap-12`}>
           {/* Left column - Main content */}
           <div
             className={cn(
@@ -443,23 +480,29 @@ export default function Header() {
             </div>
 
             {/* Feature cards - hidden on mobile */}
-            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 gap-3">
               {featureCards.map((card, idx) => (
                 <div
                   key={card.label}
                   className={cn(
                     glassCardClass,
                     glassCardHoverClass,
-                    "p-3 sm:p-5 cursor-default group",
+                    "p-3 sm:p-5 cursor-default group relative",
                     prefersReducedMotion
                       ? ""
                       : "transition-all duration-500 ease-out",
-                    heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+                    heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
+                    card.highlight && "border-[#006C35]/50 shadow-[0_0_20px_rgba(0,108,53,0.2)]"
                   )}
                   style={{
-                    transitionDelay: !prefersReducedMotion ? `${150 + idx * 100}ms` : undefined,
+                    transitionDelay: !prefersReducedMotion ? `${150 + idx * 50}ms` : undefined,
                   }}
                 >
+                  {/* Vision 2030 badge */}
+                  {card.highlight && (
+                    <span className="absolute top-2 right-2 text-xs">🇸🇦</span>
+                  )}
+
                   {/* Hover glow effect */}
                   <div className={cn(
                     "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
@@ -473,7 +516,10 @@ export default function Header() {
                     <card.icon className="h-5 w-5 text-white" />
                   </div>
 
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/80">
+                  <p className={cn(
+                    "text-[11px] font-bold uppercase tracking-[0.2em]",
+                    card.highlight ? "text-[#4ade80]" : "text-emerald-300/80"
+                  )}>
                     {card.label}
                   </p>
                   <p className="mt-1 text-base font-semibold text-white">

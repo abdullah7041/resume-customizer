@@ -129,10 +129,10 @@ Return the response in the following JSON Resume format:
     "lastModified": "string (ISO 8601 date)",
     "match_score": "number (0-100, job match score - BE PRECISE, use specific numbers like 73, 41, 88, 56 - AVOID round numbers like 50, 60, 70, 80, 85, 90, 100)",
     "ai_suggestions": {
-      "original_headline": "string (extracted current headline)",
-      "suggested_headline": "string (optimized headline for this job)",
-      "original_summary": "string (extracted current summary)",
-      "summary_rewrite": "string (action-oriented rewrite)",
+      "original_headline": "string (REQUIRED - extract the EXACT current headline from resume)",
+      "suggested_headline": "string (REQUIRED - optimized headline tailored for this specific job)",
+      "original_summary": "string (REQUIRED - extract the EXACT current summary from resume)",
+      "summary_rewrite": "string (REQUIRED - action-oriented rewrite targeting the job)",
       "reasoning": "string (2-3 sentences explaining WHY this exact match score was given - cite specific matching skills and experience that contribute positively and specific gaps that reduce the score)",
       "missing_keywords": ["string (skills to add)"],
       "hard_skills_gap": ["string (technical gaps)"],
@@ -141,22 +141,22 @@ Return the response in the following JSON Resume format:
       "bullet_improvements": [{
         "work_index": "number (index in work array)",
         "highlight_index": "number (index in highlights array)",
-        "original": "string",
-        "improved": "string",
+        "original": "string (REQUIRED - the EXACT original bullet text from resume)",
+        "improved": "string (REQUIRED - the improved version with metrics and action verbs)",
         "issue": "string (e.g. 'Passive voice', 'Lack of metrics')",
         "rationale": "string"
       }],
       "education_improvements": [{
         "education_index": "number",
-        "original": "string",
-        "improved": "string",
+        "original": "string (REQUIRED - exact original text)",
+        "improved": "string (REQUIRED - improved version)",
         "issue": "string",
         "rationale": "string"
       }],
       "project_improvements": [{
         "project_index": "number",
-        "original": "string",
-        "improved": "string",
+        "original": "string (REQUIRED - exact original text)",
+        "improved": "string (REQUIRED - improved version)",
         "issue": "string",
         "rationale": "string"
       }]
@@ -170,11 +170,15 @@ Return the response in the following JSON Resume format:
   }
 }
 
-IMPORTANT:
+CRITICAL REQUIREMENTS:
 - Map ALL experience entries to "work" array with "highlights" for bullet points
 - Map ALL education entries to "education" array
 - Categorize skills into logical groups in "skills" array
 - Store AI optimizations ONLY in "meta.ai_suggestions" to preserve standard schema
+- ALWAYS populate "original" fields with EXACT text from resume
+- ALWAYS populate "improved" fields with your enhanced version
+- NEVER leave original or improved fields empty - if no improvement needed, copy original to improved
+- Provide at least 3-5 bullet_improvements suggestions
 `;
 
     const parts = [
@@ -387,8 +391,32 @@ IMPORTANT: Map ALL experience entries to "work[]" with bullet points in "highlig
     const text = response.text();
     const parsed = JSON.parse(text);
 
-    // Backwards compatibility: expose legacy fields
-    parsed.plainText = parsed.meta?.raw_text || "";
+    // CRITICAL FIX: Safely extract plainText as string
+    // Gemini may return raw_text as an object in some cases
+    const rawTextValue = parsed.meta?.raw_text;
+
+    // DEBUG: Log what we're receiving
+    console.log("[Gemini] DEBUG: parsed.meta exists:", !!parsed.meta);
+    console.log("[Gemini] DEBUG: typeof rawTextValue:", typeof rawTextValue);
+    console.log("[Gemini] DEBUG: rawTextValue preview:",
+      typeof rawTextValue === 'string' ? rawTextValue.substring(0, 100) : JSON.stringify(rawTextValue)?.substring(0, 200));
+
+    let extractedPlainText = "";
+    if (typeof rawTextValue === "string") {
+      extractedPlainText = rawTextValue;
+    } else if (rawTextValue && typeof rawTextValue === "object") {
+      // Try to extract from object if it has a text-like property
+      if (typeof rawTextValue.text === "string") extractedPlainText = rawTextValue.text;
+      else if (typeof rawTextValue.content === "string") extractedPlainText = rawTextValue.content;
+      else {
+        console.warn("[Gemini] ⚠️ meta.raw_text is an object, not string:", JSON.stringify(rawTextValue).substring(0, 200));
+      }
+    } else {
+      console.warn("[Gemini] ⚠️ meta.raw_text is empty/undefined, type:", typeof rawTextValue);
+    }
+
+    console.log("[Gemini] DEBUG: extractedPlainText length:", extractedPlainText.length);
+    parsed.plainText = extractedPlainText;
     parsed.candidateProfile = {
       name: parsed.basics?.name || "",
       email: parsed.basics?.email || "",

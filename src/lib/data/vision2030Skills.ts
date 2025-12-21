@@ -49,15 +49,24 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
       {
         nameEn: 'Data Science & Analytics',
         nameAr: 'علوم البيانات والتحليلات',
-        keywords: ['data science', 'data analytics', 'big data', 'hadoop', 'spark', 'tableau', 'power bi', 'sql', 'python', 'r'],
-        keywordsAr: ['علوم البيانات', 'تحليل البيانات', 'البيانات الضخمة'],
+        keywords: [
+          'data science', 'data analytics', 'data analyst', 'analyst', 'analytics', 'data analysis',
+          'big data', 'hadoop', 'spark', 'tableau', 'power bi', 'powerbi', 'dax',
+          'data visualization', 'visualization', 'visualizations', 'visualizing',
+          'dashboard', 'dashboards', 'kpi reporting', 'etl', 'data cleaning',
+          'pandas', 'numpy', 'jupyter', 'statistical analysis', 'predictive analytics',
+          'business intelligence', 'forecasting', 'forecast', 'trend analysis',
+          'exploratory analysis', 'exploratory data analysis', 'eda',
+          'data extraction', 'data transformation', 'data pipeline'
+        ],
+        keywordsAr: ['علوم البيانات', 'تحليل البيانات', 'البيانات الضخمة', 'محلل بيانات', 'لوحة معلومات'],
         weight: 3,
       },
       {
         nameEn: 'Software Development',
         nameAr: 'تطوير البرمجيات',
-        keywords: ['software development', 'programming', 'coding', 'javascript', 'python', 'java', 'react', 'node', 'mobile development'],
-        keywordsAr: ['تطوير برمجيات', 'برمجة', 'تطبيقات'],
+        keywords: ['software development', 'software engineer', 'software developer', 'full stack', 'frontend developer', 'backend developer', 'web development', 'mobile development', 'react developer', 'node.js developer'],
+        keywordsAr: ['تطوير برمجيات', 'مهندس برمجيات', 'مطور برمجيات'],
         weight: 2,
       },
       {
@@ -65,6 +74,66 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
         nameAr: 'البلوك تشين',
         keywords: ['blockchain', 'web3', 'smart contracts', 'solidity', 'ethereum', 'crypto'],
         keywordsAr: ['بلوك تشين', 'عقود ذكية', 'العملات الرقمية'],
+        weight: 2,
+      },
+      {
+        nameEn: 'Business Intelligence & Reporting',
+        nameAr: 'ذكاء الأعمال والتقارير',
+        keywords: [
+          'business intelligence', 'bi', 'reporting', 'report', 'reports',
+          'kpi', 'kpis', 'key performance indicator', 'metrics', 'analytics dashboard',
+          'executive reporting', 'management reporting', 'performance reporting',
+          'data reporting', 'automated reporting', 'real-time reporting',
+          'decision support', 'data-driven decision', 'decision making'
+        ],
+        keywordsAr: ['ذكاء أعمال', 'تقارير', 'مؤشرات أداء', 'لوحة تحكم'],
+        weight: 3,
+      },
+      {
+        nameEn: 'Process Automation',
+        nameAr: 'أتمتة العمليات',
+        keywords: [
+          'process automation', 'automate', 'automating', 'automated',
+          'workflow automation', 'rpa', 'robotic process automation',
+          'efficiency improvement', 'process improvement', 'process optimization',
+          'reducing manual', 'manual errors', 'streamline', 'streamlining',
+          'operational efficiency', 'productivity improvement'
+        ],
+        keywordsAr: ['أتمتة', 'أتمتة العمليات', 'تحسين العمليات', 'كفاءة تشغيلية'],
+        weight: 3,
+      },
+      {
+        nameEn: 'Advanced Excel & Spreadsheets',
+        nameAr: 'إكسل المتقدم وجداول البيانات',
+        keywords: [
+          'excel', 'advanced excel', 'spreadsheet', 'spreadsheets',
+          'power query', 'powerquery', 'pivot table', 'pivot tables',
+          'vlookup', 'xlookup', 'macros', 'vba', 'excel formulas',
+          'google sheets', 'data modeling'
+        ],
+        keywordsAr: ['إكسل', 'جداول بيانات', 'إكسل متقدم'],
+        weight: 2,
+      },
+      {
+        nameEn: 'SQL & Database Management',
+        nameAr: 'SQL وإدارة قواعد البيانات',
+        keywords: [
+          'sql', 'mysql', 'postgresql', 'postgres', 'oracle', 'sql server',
+          'database', 'databases', 'data extraction', 'query', 'queries',
+          'stored procedure', 'data warehouse', 'data lake'
+        ],
+        keywordsAr: ['قواعد بيانات', 'استعلام', 'مستودع بيانات'],
+        weight: 2,
+      },
+      {
+        nameEn: 'Python Programming',
+        nameAr: 'برمجة بايثون',
+        keywords: [
+          'python', 'pandas', 'numpy', 'scipy', 'matplotlib', 'seaborn',
+          'jupyter', 'jupyter notebook', 'jupyter notebooks', 'scripting',
+          'data analysis python', 'python automation'
+        ],
+        keywordsAr: ['بايثون', 'برمجة بايثون'],
         weight: 2,
       },
     ],
@@ -236,8 +305,8 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
       {
         nameEn: 'Risk & Compliance',
         nameAr: 'المخاطر والامتثال',
-        keywords: ['risk management', 'compliance', 'aml', 'kyc', 'regulatory', 'audit', 'sama'],
-        keywordsAr: ['إدارة مخاطر', 'امتثال', 'مكافحة غسيل الأموال'],
+        keywords: ['risk management', 'compliance officer', 'aml specialist', 'kyc analyst', 'regulatory compliance', 'internal audit', 'sama regulations', 'financial risk', 'credit risk'],
+        keywordsAr: ['إدارة مخاطر', 'مسؤول امتثال', 'مكافحة غسيل الأموال'],
         weight: 2,
       },
     ],
@@ -260,15 +329,15 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
       {
         nameEn: 'Supply Chain Management',
         nameAr: 'إدارة سلسلة الإمداد',
-        keywords: ['supply chain', 'logistics', 'procurement', 'inventory', 'warehouse', 'distribution'],
-        keywordsAr: ['سلسلة إمداد', 'لوجستيات', 'مشتريات', 'مخازن'],
+        keywords: ['supply chain management', 'supply chain manager', 'logistics manager', 'procurement manager', 'inventory management', 'warehouse management', 'distribution center', 'supply chain analyst'],
+        keywordsAr: ['سلسلة إمداد', 'إدارة لوجستيات', 'مدير مشتريات', 'إدارة مخازن'],
         weight: 3,
       },
       {
         nameEn: 'Quality Management',
         nameAr: 'إدارة الجودة',
-        keywords: ['quality management', 'iso', 'six sigma', 'lean', 'quality assurance', 'quality control'],
-        keywordsAr: ['إدارة جودة', 'ضمان جودة', 'آيزو'],
+        keywords: ['quality management system', 'iso 9001', 'iso certified', 'six sigma black belt', 'six sigma green belt', 'lean manufacturing', 'quality manager', 'qa manager', 'quality engineer'],
+        keywordsAr: ['إدارة جودة', 'نظام إدارة الجودة', 'آيزو 9001', 'مهندس جودة'],
         weight: 2,
       },
       {
@@ -316,6 +385,30 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
         keywordsAr: ['تدريب مؤسسي', 'تطوير مواهب', 'تدريب قيادة'],
         weight: 2,
       },
+      {
+        nameEn: 'Training & Knowledge Transfer',
+        nameAr: 'التدريب ونقل المعرفة',
+        keywords: [
+          'training', 'trainer', 'coaching', 'mentoring', 'mentor',
+          'knowledge transfer', 'upskilling', 'reskilling', 'onboarding',
+          'workshop', 'workshops', 'facilitator', 'train the trainer',
+          'capability building', 'skill development', 'employee development',
+          'delivering training', 'conducted training', 'training programs'
+        ],
+        keywordsAr: ['تدريب', 'توجيه', 'نقل المعرفة', 'تطوير الموظفين', 'ورش عمل'],
+        weight: 3,
+      },
+      {
+        nameEn: 'Data-Driven Culture',
+        nameAr: 'ثقافة البيانات',
+        keywords: [
+          'data-driven', 'data driven', 'analytics culture', 'data culture',
+          'evidence-based', 'fostering', 'adoption', 'change management',
+          'digital adoption', 'transformation'
+        ],
+        keywordsAr: ['ثقافة البيانات', 'قائم على البيانات', 'تبني التحول'],
+        weight: 2,
+      },
     ],
   },
   {
@@ -356,6 +449,119 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
       },
     ],
   },
+  {
+    id: 'retail-ecommerce',
+    nameEn: 'Retail & E-Commerce',
+    nameAr: 'التجزئة والتجارة الإلكترونية',
+    description: 'Transforming retail and growing e-commerce',
+    descriptionAr: 'تحويل قطاع التجزئة ونمو التجارة الإلكترونية',
+    icon: '🛒',
+    skills: [
+      {
+        nameEn: 'E-Commerce Management',
+        nameAr: 'إدارة التجارة الإلكترونية',
+        keywords: [
+          'ecommerce', 'e-commerce', 'online store', 'online sales',
+          'shopify', 'magento', 'woocommerce', 'amazon seller',
+          'digital commerce', 'marketplace', 'omnichannel'
+        ],
+        keywordsAr: ['تجارة إلكترونية', 'متجر إلكتروني', 'بيع عبر الإنترنت'],
+        weight: 3,
+      },
+      {
+        nameEn: 'Inventory & Stock Management',
+        nameAr: 'إدارة المخزون',
+        keywords: [
+          'inventory', 'inventory management', 'stock management',
+          'warehouse', 'warehousing', 'stock control', 'stock optimization',
+          'inventory optimization', 'inventory tracking', 'inventory tracker',
+          'product waste', 'waste reduction', 'expiration', 'shelf life',
+          'sku management', 'reorder point'
+        ],
+        keywordsAr: ['مخزون', 'إدارة المخزون', 'تحكم بالمخزون', 'مستودع'],
+        weight: 3,
+      },
+      {
+        nameEn: 'Sales Analytics & Revenue Growth',
+        nameAr: 'تحليلات المبيعات ونمو الإيرادات',
+        keywords: [
+          'sales analytics', 'sales analysis', 'sales dashboard',
+          'revenue growth', 'revenue increase', 'sales growth',
+          'sales performance', 'sales kpi', 'sales metrics',
+          'customer retention', 'conversion rate', 'sales forecast',
+          'sales forecasting', 'sales optimization', 'sales specialist',
+          'increasing revenue', 'revenue by'
+        ],
+        keywordsAr: ['تحليل مبيعات', 'نمو الإيرادات', 'أداء المبيعات'],
+        weight: 3,
+      },
+      {
+        nameEn: 'Retail Operations',
+        nameAr: 'عمليات التجزئة',
+        keywords: [
+          'retail', 'retail management', 'store management',
+          'point of sale', 'pos', 'merchandising', 'visual merchandising',
+          'customer experience', 'retail operations'
+        ],
+        keywordsAr: ['تجزئة', 'إدارة متجر', 'عمليات التجزئة'],
+        weight: 2,
+      },
+      {
+        nameEn: 'Digital Marketing & CRM',
+        nameAr: 'التسويق الرقمي وإدارة علاقات العملاء',
+        keywords: [
+          'digital marketing', 'crm', 'customer relationship',
+          'marketing automation', 'email marketing', 'social media marketing',
+          'seo', 'sem', 'google ads', 'facebook ads', 'hubspot', 'salesforce'
+        ],
+        keywordsAr: ['تسويق رقمي', 'إدارة علاقات العملاء'],
+        weight: 2,
+      },
+    ],
+  },
+  {
+    id: 'logistics',
+    nameEn: 'Logistics & Transportation',
+    nameAr: 'الخدمات اللوجستية والنقل',
+    description: 'Building regional logistics hub',
+    descriptionAr: 'بناء مركز لوجستي إقليمي',
+    icon: '🚚',
+    skills: [
+      {
+        nameEn: 'Supply Chain Analytics',
+        nameAr: 'تحليلات سلسلة الإمداد',
+        keywords: [
+          'supply chain analytics', 'logistics analytics',
+          'demand forecasting', 'demand planning', 'supply planning',
+          'distribution', 'distribution center', 'fulfillment'
+        ],
+        keywordsAr: ['تحليلات سلسلة الإمداد', 'تخطيط الطلب'],
+        weight: 3,
+      },
+      {
+        nameEn: 'Fleet & Transportation Management',
+        nameAr: 'إدارة الأسطول والنقل',
+        keywords: [
+          'fleet management', 'transportation', 'logistics',
+          'shipping', 'freight', 'last mile', 'delivery management',
+          'route optimization'
+        ],
+        keywordsAr: ['إدارة أسطول', 'نقل', 'شحن'],
+        weight: 2,
+      },
+      {
+        nameEn: 'Procurement & Vendor Management',
+        nameAr: 'المشتريات وإدارة الموردين',
+        keywords: [
+          'procurement', 'purchasing', 'vendor management',
+          'supplier management', 'sourcing', 'contract negotiation',
+          'cost reduction', 'cost optimization'
+        ],
+        keywordsAr: ['مشتريات', 'إدارة موردين', 'توريد'],
+        weight: 2,
+      },
+    ],
+  },
 ];
 
 // Flat list of all skills for quick lookup
@@ -367,6 +573,249 @@ export const ALL_VISION_2030_SKILLS = VISION_2030_SECTORS.flatMap(sector =>
     sectorNameAr: sector.nameAr,
   }))
 );
+
+/**
+ * Career archetypes with their primary skills and adjacent skill recommendations
+ * Used to make contextually relevant suggestions
+ */
+export interface CareerArchetype {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  /** Skills that indicate this career path */
+  primarySkills: string[];
+  /** Skills that naturally complement this career (in priority order) */
+  adjacentSkills: string[];
+  /** Sectors most relevant to this career */
+  relevantSectors: string[];
+}
+
+export const CAREER_ARCHETYPES: CareerArchetype[] = [
+  {
+    id: 'data-analytics',
+    nameEn: 'Data & Analytics Professional',
+    nameAr: 'متخصص البيانات والتحليلات',
+    primarySkills: [
+      'Data Science & Analytics',
+      'Business Intelligence & Reporting',
+      'Advanced Excel & Spreadsheets',
+      'SQL & Database Management',
+      'Python Programming',
+    ],
+    adjacentSkills: [
+      'Process Automation',
+      'Advanced Excel & Spreadsheets',
+      'SQL & Database Management',
+      'Python Programming',
+      'Business Intelligence & Reporting',
+      'Data-Driven Culture',
+      'Training & Knowledge Transfer',
+      'Sales Analytics & Revenue Growth',
+      'Inventory & Stock Management',
+      'Supply Chain Analytics',
+    ],
+    relevantSectors: ['technology', 'retail-ecommerce', 'finance', 'logistics', 'manufacturing'],
+  },
+  {
+    id: 'software-engineering',
+    nameEn: 'Software & Technology Professional',
+    nameAr: 'متخصص البرمجيات والتقنية',
+    primarySkills: [
+      'Software Development',
+      'Cloud Computing',
+      'Artificial Intelligence',
+      'Cybersecurity',
+      'Blockchain',
+    ],
+    adjacentSkills: [
+      'Cloud Computing',
+      'Cybersecurity',
+      'Artificial Intelligence',
+      'Software Development',
+      'Data Science & Analytics',
+      'BIM & Digital Construction',
+      'Digital Health',
+      'Educational Technology',
+      'Fintech',
+    ],
+    relevantSectors: ['technology', 'finance', 'healthcare', 'education'],
+  },
+  {
+    id: 'project-management',
+    nameEn: 'Project & Operations Professional',
+    nameAr: 'متخصص المشاريع والعمليات',
+    primarySkills: [
+      'Project Management',
+      'Quality Management',
+      'Supply Chain Management',
+      'Industrial Automation',
+    ],
+    adjacentSkills: [
+      'Quality Management',
+      'Supply Chain Management',
+      'Process Automation',
+      'Project Management',
+      'Civil Engineering',
+      'Architecture & Urban Planning',
+      'BIM & Digital Construction',
+      'Procurement & Vendor Management',
+    ],
+    relevantSectors: ['mega-projects', 'manufacturing', 'logistics', 'renewable-energy'],
+  },
+  {
+    id: 'finance-professional',
+    nameEn: 'Finance & Banking Professional',
+    nameAr: 'متخصص المالية والمصرفية',
+    primarySkills: [
+      'Fintech',
+      'Islamic Finance',
+      'Investment Management',
+      'Risk & Compliance',
+    ],
+    adjacentSkills: [
+      'Risk & Compliance',
+      'Investment Management',
+      'Islamic Finance',
+      'Fintech',
+      'Data Science & Analytics',
+      'Process Automation',
+      'Business Intelligence & Reporting',
+    ],
+    relevantSectors: ['finance', 'technology'],
+  },
+  {
+    id: 'healthcare-professional',
+    nameEn: 'Healthcare Professional',
+    nameAr: 'متخصص الرعاية الصحية',
+    primarySkills: [
+      'Healthcare Administration',
+      'Biotechnology',
+      'Medical Research',
+      'Digital Health',
+      'Nursing & Clinical Care',
+    ],
+    adjacentSkills: [
+      'Digital Health',
+      'Healthcare Administration',
+      'Medical Research',
+      'Biotechnology',
+      'Data Science & Analytics',
+      'Project Management',
+    ],
+    relevantSectors: ['healthcare', 'technology', 'education'],
+  },
+  {
+    id: 'education-training',
+    nameEn: 'Education & Training Professional',
+    nameAr: 'متخصص التعليم والتدريب',
+    primarySkills: [
+      'Educational Technology',
+      'Curriculum Development',
+      'STEM Education',
+      'Corporate Training',
+      'Training & Knowledge Transfer',
+    ],
+    adjacentSkills: [
+      'Educational Technology',
+      'Training & Knowledge Transfer',
+      'Corporate Training',
+      'Data-Driven Culture',
+      'Curriculum Development',
+      'STEM Education',
+    ],
+    relevantSectors: ['education', 'technology'],
+  },
+  {
+    id: 'sales-retail',
+    nameEn: 'Sales & Retail Professional',
+    nameAr: 'متخصص المبيعات والتجزئة',
+    primarySkills: [
+      'Sales Analytics & Revenue Growth',
+      'Inventory & Stock Management',
+      'E-Commerce Management',
+      'Retail Operations',
+      'Digital Marketing & CRM',
+    ],
+    adjacentSkills: [
+      'Sales Analytics & Revenue Growth',
+      'Inventory & Stock Management',
+      'E-Commerce Management',
+      'Digital Marketing & CRM',
+      'Data Science & Analytics',
+      'Business Intelligence & Reporting',
+      'Process Automation',
+      'Supply Chain Analytics',
+    ],
+    relevantSectors: ['retail-ecommerce', 'logistics', 'technology'],
+  },
+  {
+    id: 'energy-sustainability',
+    nameEn: 'Energy & Sustainability Professional',
+    nameAr: 'متخصص الطاقة والاستدامة',
+    primarySkills: [
+      'Solar Energy',
+      'Wind Energy',
+      'Hydrogen & Green Fuels',
+      'Sustainability & ESG',
+      'Energy Engineering',
+    ],
+    adjacentSkills: [
+      'Sustainability & ESG',
+      'Energy Engineering',
+      'Project Management',
+      'Data Science & Analytics',
+      'Solar Energy',
+      'Wind Energy',
+      'Hydrogen & Green Fuels',
+    ],
+    relevantSectors: ['renewable-energy', 'mega-projects', 'manufacturing'],
+  },
+  {
+    id: 'tourism-hospitality',
+    nameEn: 'Tourism & Hospitality Professional',
+    nameAr: 'متخصص السياحة والضيافة',
+    primarySkills: [
+      'Hospitality Management',
+      'Event Management',
+      'Tourism Marketing',
+      'Cultural Heritage',
+      'Sports & Recreation',
+    ],
+    adjacentSkills: [
+      'Event Management',
+      'Hospitality Management',
+      'Tourism Marketing',
+      'Digital Marketing & CRM',
+      'Project Management',
+      'Cultural Heritage',
+    ],
+    relevantSectors: ['tourism', 'retail-ecommerce', 'mega-projects'],
+  },
+];
+
+/**
+ * Detect career archetype from matched skills
+ */
+export function detectCareerArchetype(matchedSkillNames: string[]): CareerArchetype | null {
+  let bestMatch: CareerArchetype | null = null;
+  let bestScore = 0;
+
+  for (const archetype of CAREER_ARCHETYPES) {
+    const matchCount = archetype.primarySkills.filter(skill =>
+      matchedSkillNames.includes(skill)
+    ).length;
+
+    // Score = matches / total primary skills (weighted)
+    const score = matchCount > 0 ? matchCount + (matchCount / archetype.primarySkills.length) : 0;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = archetype;
+    }
+  }
+
+  return bestScore >= 0.5 ? bestMatch : null; // Require at least some meaningful match
+}
 
 
 

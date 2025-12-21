@@ -2,28 +2,16 @@
 // Educational modal explaining Vision 2030 and how resume optimization aligns with Saudi national priorities
 
 import { useEffect } from 'react';
-import { ExternalLink, Target, TrendingUp, Zap, Building2, Heart, Sun, Landmark, GraduationCap, Factory, X } from "lucide-react";
-import { type ComponentType } from 'react';
+import { ExternalLink, Target, TrendingUp, X } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { VISION_2030_SECTORS } from "../../lib/data/vision2030Skills";
 import { cn } from "../../lib/utils/cn";
+import { SectorIcon } from "../../lib/utils/vision2030Icons";
 
 interface Vision2030ModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-// Map sector IDs to icons
-const SECTOR_ICONS: Record<string, ComponentType<{ className?: string }>> = {
-    technology: Zap,
-    tourism: Landmark,
-    healthcare: Heart,
-    'renewable-energy': Sun,
-    finance: TrendingUp,
-    manufacturing: Factory,
-    education: GraduationCap,
-    'mega-projects': Building2,
-};
 
 export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProps) {
     const { t, i18n } = useTranslation();
@@ -115,25 +103,22 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                                 {t('vision2030.modal.sectors', 'Key Growth Sectors')}
                             </h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {VISION_2030_SECTORS.map((sector) => {
-                                    const IconComponent = SECTOR_ICONS[sector.id] || Target;
-                                    return (
+                                {VISION_2030_SECTORS.map((sector) => (
+                                    <div
+                                        key={sector.id}
+                                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200/50 dark:border-emerald-700/50 hover:border-emerald-400 transition-colors"
+                                    >
                                         <div
-                                            key={sector.id}
-                                            className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200/50 dark:border-emerald-700/50 hover:border-emerald-400 transition-colors"
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                                            style={{ backgroundColor: '#006C35' }}
                                         >
-                                            <div
-                                                className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
-                                                style={{ backgroundColor: '#006C35' }}
-                                            >
-                                                <IconComponent className="w-5 h-5" />
-                                            </div>
-                                            <span className="text-xs font-medium text-center text-gray-700 dark:text-gray-300 leading-tight">
-                                                {isArabic ? sector.nameAr : sector.nameEn}
-                                            </span>
+                                            <SectorIcon sectorId={sector.id} className="w-5 h-5" />
                                         </div>
-                                    );
-                                })}
+                                        <span className="text-xs font-medium text-center text-gray-700 dark:text-gray-300 leading-tight">
+                                            {isArabic ? sector.nameAr : sector.nameEn}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </section>
 

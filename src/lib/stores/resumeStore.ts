@@ -8,6 +8,11 @@ import type {
   TemplateId,
   CachedAnalysis,
 } from '../../types/templates';
+import {
+  validateResume,
+  validateParsedText,
+  validateOptimization,
+} from '../validation/store-schemas';
 
 // Cache validity duration: 5 minutes
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -46,32 +51,63 @@ export const useResumeStore = create<ResumeState>()(
 
       // Actions
       setOriginalResume: (resume: ResumeSchema) => {
-        console.log('[ResumeStore] Setting original resume:', resume?.basics?.name);
-        console.log('[ResumeStore] Resume has basics:', !!resume?.basics);
-        console.log('[ResumeStore] Resume has work:', resume?.work?.length || 0, 'entries');
-        set({ originalResume: resume });
+        // Zod validation at store boundary
+        const validation = validateResume(resume);
+        if (!validation.success) {
+          console.warn('[ResumeStore] ⚠️ Resume validation issues:', validation.error);
+          // Still allow storage but log the issues for debugging
+        } else {
+          console.log('[ResumeStore] ✓ Resume passed Zod validation');
+        }
+
+        // Use validated data if available, otherwise fallback to original
+        const validatedResume = (validation.data ?? resume) as ResumeSchema;
+
+        console.log('[ResumeStore] Setting original resume:', validatedResume?.basics?.name);
+        console.log('[ResumeStore] Resume has basics:', !!validatedResume?.basics);
+        console.log('[ResumeStore] Resume has work:', validatedResume?.work?.length || 0, 'entries');
+        set({ originalResume: validatedResume });
       },
 
-      setParsedResumeText: (text: string) => {
-        const length = text?.length || 0;
+      setParsedResumeText: (text: unknown) => {
+        // Zod validation at store boundary with automatic object extraction
+        const validation = validateParsedText(text);
+
+        if (!validation.success) {
+          console.error('[ResumeStore] ❌ Parsed text validation failed:', validation.error);
+          console.error('[ResumeStore] Received type:', typeof text, 'preview:', String(text).substring(0, 100));
+          return; // Don't store invalid data
+        }
+
+        const resolvedText = validation.data!;
+        const length = resolvedText.length;
+
         console.log('[ResumeStore] Setting parsed text, length:', length);
 
         // Warn if text seems too short
         if (length > 0 && length < 100) {
           console.warn('[ResumeStore] ⚠️ WARNING: Parsed text is very short! This may indicate a PDF extraction issue.');
-          console.warn('[ResumeStore] Text preview:', text?.substring(0, 200));
+          console.warn('[ResumeStore] Text preview:', resolvedText.substring(0, 200));
         } else if (length >= 100) {
-          console.log('[ResumeStore] ✓ Text looks valid. Preview:', text?.substring(0, 150).replace(/\s+/g, ' '));
+          console.log('[ResumeStore] ✓ Text looks valid. Preview:', resolvedText.substring(0, 150).replace(/\s+/g, ' '));
         }
 
-        set({ parsedResumeText: text });
+        set({ parsedResumeText: resolvedText });
       },
+
 
       addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => {
         const fullOptimization: OptimizationResult = {
           ...optimization,
           timestamp: new Date().toISOString(),
         };
+
+        // Zod validation at store boundary
+        const validation = validateOptimization(fullOptimization);
+        if (!validation.success) {
+          console.warn('[ResumeStore] ⚠️ Optimization validation issues:', validation.error);
+          // Still allow storage but log the issues
+        }
 
         console.log('[ResumeStore] Adding optimization:', optimization.sectionId);
         set((state) => ({
@@ -84,6 +120,7 @@ export const useResumeStore = create<ResumeState>()(
           ],
         }));
       },
+
 
       setOptimizations: (optimizations: OptimizationResult[]) => {
         console.log('[ResumeStore] Setting optimizations:', optimizations.length);

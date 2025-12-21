@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { OptimizeSkeleton } from './OptimizeSection.skeleton';
+import { FeedbackButtons } from '../ui/FeedbackButtons';
+import type { SuggestionType } from '../../services/feedback';
 
 // === Keyword bucket labels ===
 const CHIP_LABELS = {
@@ -75,9 +77,12 @@ const emptyKeywords = { add: [], remove: [], neutral: [] };
 
 // Normalize optimization data to handle both API formats (before/after) and store format (original/optimized)
 const normalizeOptimization = (opt: OptimizationCard, index: number): OptimizationResult => {
+  // Always include index in sectionId to prevent duplicate React keys
+  // when multiple optimizations have the same section name (e.g., "Experience")
+  const baseSection = opt.sectionType || opt.section || 'general';
   return {
-    sectionId: opt.sectionId || opt.section || `opt-${index}`,
-    sectionType: (opt.sectionType || opt.section || 'general') as OptimizationResult['sectionType'],
+    sectionId: opt.sectionId || `${baseSection.toLowerCase()}-${index}`,
+    sectionType: baseSection.toLowerCase() as OptimizationResult['sectionType'],
     original: opt.original ?? opt.before ?? '',
     optimized: opt.optimized ?? opt.after ?? '',
     applied: opt.applied ?? false,
@@ -156,6 +161,7 @@ export function OptimizeSection({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const chipsShownRef = useRef(false);
 
   // Decide which optimizations to use (props or store)
@@ -218,6 +224,10 @@ export function OptimizeSection({
 
     setIsGenerating(true);
     setError(null);
+
+    // Generate a session ID for feedback tracking
+    const newSessionId = crypto.randomUUID();
+    setSessionId(newSessionId);
 
     try {
       const response = await fetch('/.netlify/functions/optimize', {
@@ -745,6 +755,17 @@ export function OptimizeSection({
                       </p>
                     </div>
                   )
+                )}
+
+                {/* Feedback Buttons */}
+                {sessionId && (
+                  <div className="mt-3 pt-3 border-t border-white/5">
+                    <FeedbackButtons
+                      suggestionType={(['summary', 'experience', 'skills', 'keywords'].includes(opt.sectionType) ? opt.sectionType : 'summary') as SuggestionType}
+                      sectionIndex={index}
+                      sessionId={sessionId}
+                    />
+                  </div>
                 )}
 
                 {/* Actions */}

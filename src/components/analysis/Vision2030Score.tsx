@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useDirection } from '../providers/DirectionProvider';
 import { Vision2030Analysis } from '../../lib/utils/vision2030Analyzer';
 import { TrendingUp, Target, Lightbulb, ChevronRight } from 'lucide-react';
+import { SectorIcon } from '../../lib/utils/vision2030Icons';
 
 interface Vision2030ScoreProps {
   analysis: Vision2030Analysis;
@@ -78,7 +79,9 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
             <div key={sector.sectorId} className="bg-white rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{sector.icon}</span>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <SectorIcon sectorId={sector.sectorId} className="w-4 h-4 text-emerald-600" />
+                  </div>
                   <span className="font-medium text-gray-800">
                     {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
                   </span>

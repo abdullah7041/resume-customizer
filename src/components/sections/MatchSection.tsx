@@ -22,6 +22,7 @@ import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { analyzeVision2030Alignment, Vision2030Analysis } from '../../lib/utils/vision2030Analyzer';
 import Vision2030Modal from '../ui/Vision2030Modal';
 import { MatchSkeleton } from './MatchSection.skeleton';
+import { SectorIcon } from '../../lib/utils/vision2030Icons';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 const resolveVariant = (score: number) => {
@@ -521,7 +522,9 @@ export function MatchSection({
                                 className="p-3 rounded-lg bg-white/5 border border-white/10"
                               >
                                 <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-lg">{sector.icon}</span>
+                                  <div className="w-7 h-7 rounded-lg bg-[#006C35]/20 flex items-center justify-center">
+                                    <SectorIcon sectorId={sector.sectorId} className="w-4 h-4 text-[#4ade80]" />
+                                  </div>
                                   <span className="text-sm text-white truncate">
                                     {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
                                   </span>
@@ -551,7 +554,7 @@ export function MatchSection({
                             {t('vision2030.matchedSkills', 'Matched Vision 2030 Skills')}
                           </h5>
                           <div className="flex flex-wrap gap-2">
-                            {v2030Analysis.matchedSkills.slice(0, 6).map((skill, i) => (
+                            {v2030Analysis.matchedSkills.map((skill, i) => (
                               <span
                                 key={i}
                                 className="px-2 py-1 text-xs rounded-full border"

@@ -26,6 +26,7 @@ import AnimatedCard from "../components/ui/AnimatedCard";
 import { cn } from "../lib/utils/cn";
 import { VISION_2030_SECTORS } from "../lib/data/vision2030Skills";
 import Vision2030Modal from "../components/ui/Vision2030Modal";
+import { SectorIcon } from "../lib/utils/vision2030Icons";
 
 // Hook: Type writer effect for dynamic headlines
 function useTypewriter(phrases, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
@@ -695,8 +696,8 @@ export default function LandingPage({ onGetStarted }) {
                   className="group relative p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#006C35]/50 hover:bg-[#006C35]/10 transition-all duration-300 text-center"
                   style={{ animationDelay: `${idx * 100}ms` }}
                 >
-                  <div className="text-3xl mb-2 group-hover:scale-110 transition-transform duration-300">
-                    {sector.icon}
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-[#006C35]/20 flex items-center justify-center group-hover:bg-[#006C35]/30 group-hover:scale-110 transition-all duration-300">
+                    <SectorIcon sectorId={sector.id} className="w-6 h-6 text-[#4ade80]" />
                   </div>
                   <p className="text-xs sm:text-sm font-medium text-white/90">
                     {sector.nameEn}

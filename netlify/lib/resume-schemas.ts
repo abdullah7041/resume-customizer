@@ -208,7 +208,7 @@ export function validateResume(data: unknown): { success: true; data: Resume } |
     if (result.success) {
         return { success: true, data: result.data };
     }
-    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    const errors = result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
     return { success: false, error: errors };
 }
 
@@ -216,7 +216,7 @@ export function validateResume(data: unknown): { success: true; data: Resume } |
  * Format Zod errors into a user-friendly string
  */
 export function formatZodError(error: z.ZodError): string {
-    return error.errors
+    return error.issues
         .map(e => `${e.path.length > 0 ? e.path.join('.') + ': ' : ''}${e.message}`)
         .join('; ');
 }

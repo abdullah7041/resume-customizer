@@ -56,11 +56,40 @@ export const handler = async (event: { httpMethod: string; body: string; }) => {
       return { statusCode: 400, body: JSON.stringify({ error: "Invalid input" }) };
     }
 
+
+    // CRITICAL FIX: Safely extract string from potentially object values
+    // This prevents [object Object] being used as plainText (15 chars bug)
+    const safeStringify = (value: unknown): string => {
+      if (typeof value === 'string') return value;
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'object') {
+        // Try to extract text from object if it has a text-like property
+        const obj = value as Record<string, unknown>;
+        if (typeof obj.text === 'string') return obj.text;
+        if (typeof obj.plainText === 'string') return obj.plainText;
+        if (typeof obj.raw_text === 'string') return obj.raw_text;
+        if (typeof obj.content === 'string') return obj.content;
+        // Log warning for debugging
+        console.warn('[extract-resume-json] ⚠️ Received object instead of string for plainText:', JSON.stringify(value).substring(0, 200));
+        return ''; // Don't coerce object to "[object Object]"
+      }
+      return String(value); // For primitives like number, boolean
+    };
+
+
+    // DEBUG: Log what analysis contains
+    console.log('[extract-resume-json] DEBUG: typeof analysis.plainText:', typeof analysis.plainText);
+    console.log('[extract-resume-json] DEBUG: analysis.plainText preview:',
+      typeof analysis.plainText === 'string' ? analysis.plainText.substring(0, 100) : JSON.stringify(analysis.plainText)?.substring(0, 200));
+    console.log('[extract-resume-json] DEBUG: typeof analysis.meta?.raw_text:', typeof analysis.meta?.raw_text);
+
     // Use the best available plain text source:
     // 1. Pre-extracted text from PDF (most reliable)
     // 2. Gemini's plainText field
     // 3. Gemini's meta.raw_text field
-    const geminiPlainText = analysis.plainText || analysis.meta?.raw_text || "";
+    const geminiPlainText = safeStringify(analysis.plainText) || safeStringify(analysis.meta?.raw_text) || "";
+    console.log('[extract-resume-json] DEBUG: geminiPlainText length after safeStringify:', geminiPlainText.length);
+
 
     // CRITICAL: Detect Gemini placeholder responses that indicate it couldn't read the PDF
     // These placeholders mean Gemini didn't receive valid PDF content

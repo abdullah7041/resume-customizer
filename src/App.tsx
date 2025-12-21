@@ -1,5 +1,6 @@
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
+import FeaturesShowcase from "./components/sections/FeaturesShowcase";
 import EnvironmentBadge from "./components/ui/EnvironmentBadge";
 import OfflineIndicator from "./components/ui/OfflineIndicator";
 import { DirectionProvider } from "./components/providers/DirectionProvider";
@@ -12,6 +13,7 @@ export default function App() {
         <OfflineIndicator />
         <EnvironmentBadge />
         <Header />
+        <FeaturesShowcase />
         <MainContent />
         <ConsentBanner />
       </div>

@@ -101,7 +101,7 @@ export interface ResumeState {
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;
-  setParsedResumeText: (text: string) => void;
+  setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;
   applyAllOptimizations: () => void;
   toggleShowOptimized: () => void;

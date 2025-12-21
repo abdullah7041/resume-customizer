@@ -31,6 +31,7 @@ resume-customizer/
 │
 ├── 📁 .claude/                       # Claude code editor artifacts
 ├── 📁 .github/                       # GitHub workflows & configs
+├── 📁 .husky/                        # Git hooks configuration
 ├── 📁 .netlify/                      # Netlify build artifacts
 ├── 📁 .vscode/                       # VS Code settings
 ├── 📁 dist/                          # Production build output
@@ -68,9 +69,12 @@ sections/
 ├── CoverLetterSection.tsx           # Cover letter generation
 ├── InterviewSection.tsx             # Interview prep & questions
 ├── KeywordsSection.tsx              # Keyword analysis & suggestions
+├── MatchSection.skeleton.tsx        # Match section loading skeleton
 ├── MatchSection.tsx                 # Job-resume matching analysis
+├── OptimizeSection.skeleton.tsx     # Optimize section loading skeleton
 ├── OptimizeSection.tsx              # Resume optimization
 ├── PricingSection.tsx               # Pricing plans & features
+├── TemplatesSection.skeleton.tsx    # Templates section loading skeleton
 ├── TemplatesSection.tsx             # Template gallery & export
 └── UploadSection.tsx                # Resume upload interface
 ```
@@ -85,24 +89,26 @@ ui/
 ├── Card.tsx                         # Basic card component
 ├── EmptyState.tsx                   # Empty state placeholder
 ├── EnvironmentBadge.tsx             # Environment indicator badge
+├── FeedbackButtons.tsx              # User feedback buttons component
 ├── GlassButton.tsx                  # Glass morphism button
 ├── GlassCard.tsx                    # Glass morphism card
 ├── GlassInput.tsx                   # Glass morphism input
 ├── GlassTabs.tsx                    # Glass morphism tabs
-├── HelpModal.tsx                    # Help/info modal
 ├── Input.tsx                        # Reusable input component
 ├── LanguageSwitcher.tsx             # Language toggle (EN/AR)
 ├── OfflineIndicator.tsx             # Offline status indicator
 ├── ParallaxSection.tsx              # Parallax scroll section
 ├── ProgressBar.tsx                  # Progress indicator
+├── RateLimitBanner.tsx              # Rate limit warning banner
 ├── SectionTitle.tsx                 # Section header component
+├── Skeleton.tsx                     # Loading skeleton component
 ├── Tabs.tsx                         # Tab navigation component
 ├── Toast.tsx                        # Toast notification system
 ├── Tooltip.tsx                      # Tooltip component
 ├── UploadCard.tsx                   # Resume upload card
 ├── ViewTextModal.tsx                # Text viewer modal
 ├── Vision2030Modal.tsx              # Vision 2030 info modal
-└── WelcomeModal.tsx                 # Welcome/onboarding modal
+└── Vision2030Summary.tsx            # Vision 2030 summary display
 ```
 
 #### Template Components (`components/templates/`)
@@ -132,12 +138,16 @@ compliance/
 ├── ConsentBanner.tsx                # GDPR/privacy consent banner
 └── PrivacySettings.tsx              # Privacy settings panel
 
+demo/
+└── Vision2030Demo.tsx               # Vision 2030 interactive demo
+
 providers/
 └── AnalyticsProvider.tsx            # Analytics context provider
 
 shared/
+├── CommonComponents.tsx             # Shared common components
 ├── ErrorBoundary.tsx                # Error boundary wrapper
-└── LoadingSpinner.tsx               # Loading spinner component
+└── OptimizationCard.tsx             # Optimization suggestion card
 ```
 
 ---
@@ -156,15 +166,15 @@ lib/
 #### Data (`lib/data/`)
 ```
 data/
-├── industries.ts                    # Saudi industry categories
-├── keywords.ts                      # Job keyword database
-└── vision2030.ts                    # Vision 2030 data & sectors
+├── resumeTemplates.ts               # Resume template configurations
+└── vision2030Skills.ts              # Vision 2030 skills & competencies
 ```
 
 #### Stores (`lib/stores/`)
 ```
 stores/
 ├── consentStore.ts                  # User consent state management
+├── feedbackStore.ts                 # User feedback state management
 └── resumeStore.ts                   # Resume data state management
 ```
 
@@ -190,6 +200,11 @@ utils/
 └── vision2030Analyzer.ts            # Vision 2030 analysis
 ```
 
+#### Validation (`lib/validation/`)
+```
+validation/
+└── store-schemas.ts                 # Zod schemas for state validation
+
 ---
 
 ### Services (`src/services/`)
@@ -200,6 +215,7 @@ services/
 ├── api.test.js                      # API service tests
 ├── exportPdf.js                     # PDF export service
 ├── exportPdf.test.js                # PDF export tests
+├── feedback.ts                      # User feedback service
 ├── keywordAnalyzer.js               # Keyword analysis service
 ├── supabase.js                      # Supabase client & utilities
 └── supabaseExport.js                # Supabase export utilities
@@ -212,10 +228,11 @@ services/
 #### Hooks (`src/hooks/`)
 ```
 hooks/
-├── useApi.ts                        # API call hook
-├── useInView.ts                     # Intersection observer hook
-├── useLocalStorage.ts               # Local storage hook
-└── useToast.tsx                     # Toast notification hook
+├── useAuth.tsx                      # Authentication hook
+├── useKeywordAnalysis.js            # Keyword analysis hook
+├── useRateLimit.ts                  # Rate limiting hook
+├── useTheme.js                      # Theme management hook
+└── useTheme.test.jsx                # Theme hook tests
 ```
 
 #### Pages (`src/pages/`)
@@ -236,7 +253,8 @@ locales/
 ```
 types/
 ├── index.ts                         # Shared TypeScript types
-└── resume.ts                        # Resume-specific types
+├── resume.d.ts                      # Resume type definitions
+└── templates.ts                     # Template type definitions
 ```
 
 #### Tests (`src/__tests__/`)
@@ -374,4 +392,4 @@ scripts/
 
 ---
 
-*Last updated: December 18, 2025 at 20:14 UTC+3*
+*Last updated: December 21, 2025 at 15:48 UTC+3*

@@ -1,6 +1,7 @@
 {
   "common": {
-    "appName": "AI Resume Optimizer",
+    "appName": "Watheq",
+    "appTagline": "Confident Resumes for Saudi Careers",
     "upload": "Upload Resume",
     "analyze": "Analyze",
     "optimize": "Optimize",
@@ -27,21 +28,33 @@
   },
   "header": {
     "badge": "Designed for Saudi ambition",
-    "heroTitle": "AI Resume Optimizer",
+    "heroTitle": "Watheq - AI Resume Optimizer",
     "heroDescription": "Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.",
     "workflow": {
       "title": "Your Workflow",
       "step1": {
         "title": "Upload or paste your resume",
-        "desc": "Drag & drop with instant AI processing"
+        "desc": "AI-powered parsing for PDF, DOCX"
       },
       "step2": {
         "title": "Match against Saudi job roles",
-        "desc": "Get a confidence score and missing keywords"
+        "desc": "Get match score and missing keywords"
       },
       "step3": {
-        "title": "Optimize with precision",
-        "desc": "Premium suggestions for modern employers"
+        "title": "Optimize with AI precision",
+        "desc": "Premium suggestions for employers"
+      },
+      "step4": {
+        "title": "Analyze keywords for ATS",
+        "desc": "Beat applicant tracking systems"
+      },
+      "step5": {
+        "title": "Prepare for interviews",
+        "desc": "AI-generated questions and tips"
+      },
+      "step6": {
+        "title": "Generate cover letters",
+        "desc": "Tailored letters for each role"
       }
     },
     "features": {
@@ -53,9 +66,33 @@
         "label": "Match Score",
         "desc": "Saudi market fit"
       },
-      "proOutput": {
-        "label": "Pro Output",
-        "desc": "Optimized insights"
+      "aiOptimization": {
+        "label": "AI Optimization",
+        "desc": "Intelligent improvements"
+      },
+      "keywords": {
+        "label": "Keyword Analysis",
+        "desc": "ATS optimization"
+      },
+      "templates": {
+        "label": "Pro Templates",
+        "desc": "Multiple formats"
+      },
+      "interview": {
+        "label": "Interview Prep",
+        "desc": "AI-generated Q&A"
+      },
+      "bulk": {
+        "label": "Bulk Analysis",
+        "desc": "Compare versions"
+      },
+      "coverLetter": {
+        "label": "Cover Letters",
+        "desc": "AI-generated letters"
+      },
+      "vision2030": {
+        "label": "Vision 2030",
+        "desc": "Saudi priority alignment"
       }
     }
   },
@@ -334,24 +371,29 @@
     "title": "Pricing",
     "subtitle": "Simple, transparent pricing for everyone",
     "comingSoon": "Coming Soon",
-    "comingSoonDescription": "We're working on flexible pricing plans to serve job seekers at every stage of their career.",
-    "notifyMe": "Notify Me When Available",
+    "forever": "/forever",
+    "proPrice": "Price coming soon",
+    "getStarted": "Get Started Free",
+    "joinWaitlist": "Join Waitlist",
+    "notifyMe": "Get Notified for Pro",
+    "notifyDescription": "Be the first to know when Pro features launch.",
     "emailPlaceholder": "Enter your email",
+    "notify": "Notify Me",
+    "subscribed": "✓ Subscribed!",
     "plans": {
       "free": {
         "name": "Free",
-        "price": "0",
         "description": "Perfect for getting started",
         "features": [
           "3 resume uploads per month",
           "Basic keyword analysis",
           "1 AI optimization",
-          "Standard templates"
+          "Standard templates",
+          "Vision 2030 alignment"
         ]
       },
       "pro": {
         "name": "Pro",
-        "price": "TBA",
         "description": "For serious job seekers",
         "features": [
           "Unlimited resume uploads",
@@ -359,18 +401,6 @@
           "Cover letter generation",
           "Interview preparation",
           "Priority support"
-        ]
-      },
-      "enterprise": {
-        "name": "Enterprise",
-        "price": "TBA",
-        "description": "For teams and organizations",
-        "features": [
-          "Everything in Pro",
-          "Team management",
-          "Custom branding",
-          "API access",
-          "Dedicated support"
         ]
       }
     }
@@ -402,7 +432,7 @@
       "terms": "Terms of Service",
       "contact": "Contact Us"
     },
-    "copyright": "© 2024 AI Resume Optimizer. All rights reserved."
+    "copyright": "© 2024 Watheq. All rights reserved."
   },
   "consent": {
     "title": "We Value Your Privacy",
@@ -581,7 +611,10 @@
       "title": "Vision 2030 Alignment",
       "viewDetails": "View Details",
       "learnMore": "Learn about Vision 2030"
-    }
+    },
+    "demoMode": "Example Analysis",
+    "demoBanner": "This shows how a well-optimized resume aligns with Vision 2030. Upload yours to see your personal score!",
+    "uploadPrompt": "Upload your resume to see your alignment"
   },
   "templates": {
     "title": "Resume Templates",
@@ -816,5 +849,72 @@
     "message": "You've made too many requests. Please wait before trying again.",
     "retry": "Try Again",
     "dismiss": "Dismiss"
+  },
+  "feedback": {
+    "helpful": "Was this helpful?",
+    "thankYou": "Thanks for your feedback!",
+    "thumbsUp": "Yes, helpful",
+    "thumbsDown": "Not helpful"
+  },
+  "showcase": {
+    "eyebrow": "Complete Toolkit",
+    "title": "Everything You Need to Land Your Dream Job",
+    "subtitle": "Powerful AI tools designed specifically for the Saudi job market",
+    "parsing": {
+      "title": "Smart Resume Parsing",
+      "description": "Upload PDF or DOCX files and our AI extracts your information instantly with advanced OCR technology.",
+      "benefit1": "Automatic section detection",
+      "benefit2": "Supports Arabic and English",
+      "benefit3": "Preserves formatting accuracy"
+    },
+    "matching": {
+      "title": "Job Match Scoring",
+      "description": "Get instant 0-100 match scores against any job description. See exactly where you stand.",
+      "benefit1": "Real-time analysis",
+      "benefit2": "Keyword gap detection",
+      "benefit3": "Industry benchmarks"
+    },
+    "optimization": {
+      "title": "AI-Powered Optimization",
+      "description": "Rewrite sections with stronger language and better keywords—without inventing facts.",
+      "benefit1": "Context-aware rewrites",
+      "benefit2": "Metric suggestions",
+      "benefit3": "Tone adjustment"
+    },
+    "keywords": {
+      "title": "Keyword Analysis",
+      "description": "Identify high-impact keywords and optimize your resume to beat ATS systems.",
+      "benefit1": "Frequency analysis",
+      "benefit2": "Competitor comparison",
+      "benefit3": "Industry trend insights"
+    },
+    "templates": {
+      "title": "Professional Templates",
+      "description": "Download professionally formatted PDFs that pass applicant tracking systems.",
+      "benefit1": "Multiple modern designs",
+      "benefit2": "Font embedding",
+      "benefit3": "ATS-optimized formatting"
+    },
+    "interview": {
+      "title": "Interview Preparation",
+      "description": "Generate tailored interview questions based on your resume and job requirements.",
+      "benefit1": "Role-specific questions",
+      "benefit2": "STAR format tips",
+      "benefit3": "Difficulty levels"
+    },
+    "coverLetter": {
+      "title": "Cover Letter Generator",
+      "description": "Create compelling, personalized cover letters tailored to each job application.",
+      "benefit1": "AI-powered writing",
+      "benefit2": "Multiple tone options",
+      "benefit3": "Company personalization"
+    },
+    "vision2030": {
+      "title": "Vision 2030 Alignment",
+      "description": "Position yourself for Saudi Arabia's fastest-growing sectors with targeted optimization.",
+      "benefit1": "Sector-specific keywords",
+      "benefit2": "Priority industry focus",
+      "benefit3": "National goals alignment"
+    }
   }
 }

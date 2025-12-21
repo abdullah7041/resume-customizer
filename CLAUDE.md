@@ -31,6 +31,14 @@ npm run lint          # Check linting
 npm run lint:fix      # Fix linting issues
 npm run type:check    # Check TypeScript
 ```
+## Key Technical Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Matching algorithm | TF-IDF + cosine similarity | Fast, free, no API costs |
+| PDF export | @react-pdf/renderer | Works client-side, no server needed |
+| State management | Zustand | Simpler than Redux, good for this scale |
+| Auth | Supabase Auth | Already using Supabase, reduces vendors |
 
 ## Enforcement Rules
 
