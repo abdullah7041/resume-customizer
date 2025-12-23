@@ -286,9 +286,33 @@ const ExperienceSection = ({ work }) => {
     );
 };
 
-// Education Section
+// Education Section - Enhanced with courses, highlights, and smart date handling
 const EducationSection = ({ education }) => {
     if (!education || education.length === 0) return null;
+
+    // Helper to format date display - handles single dates gracefully
+    const formatDateRange = (startDate, endDate) => {
+        const start = safeText(startDate);
+        const end = safeText(endDate);
+
+        // If both dates are the same, show single date
+        if (start && end && start === end) {
+            return start;
+        }
+        // If only end date (completion date)
+        if (!start && end) {
+            return `Completed: ${end}`;
+        }
+        // If only start date (ongoing)
+        if (start && !end) {
+            return `${start} - Present`;
+        }
+        // Normal range
+        if (start && end) {
+            return `${start} - ${end}`;
+        }
+        return '';
+    };
 
     return (
         <View style={styles.section}>
@@ -296,17 +320,47 @@ const EducationSection = ({ education }) => {
             {education.map((edu, idx) => (
                 <View key={idx} style={styles.educationItem}>
                     <View style={styles.experienceHeader}>
-                        <View>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.degree}>
-                                {safeText(edu.studyType)} in {safeText(edu.area)}
+                                {[safeText(edu.studyType), safeText(edu.area)]
+                                    .filter(Boolean)
+                                    .join(' in ') || safeText(edu.institution)}
                             </Text>
                             <Text style={styles.institution}>{safeText(edu.institution)}</Text>
                         </View>
                         <Text style={styles.dateRange}>
-                            {safeText(edu.startDate)} - {safeText(edu.endDate, "Present")}
+                            {formatDateRange(edu.startDate, edu.endDate)}
                         </Text>
                     </View>
-                    {edu.score && <Text style={styles.paragraph}>GPA: {edu.score}</Text>}
+
+                    {/* GPA/Score */}
+                    {edu.score && (
+                        <Text style={styles.paragraph}>GPA: {safeText(edu.score)}</Text>
+                    )}
+
+                    {/* Courses - render if present */}
+                    {edu.courses && edu.courses.length > 0 && (
+                        <View style={styles.bulletList}>
+                            <Text style={[styles.paragraph, { fontWeight: 500, marginBottom: 2 }]}>
+                                Relevant Coursework:
+                            </Text>
+                            <Text style={styles.paragraph}>
+                                {edu.courses.join(' • ')}
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Highlights - render if present */}
+                    {edu.highlights && edu.highlights.length > 0 && (
+                        <View style={styles.bulletList}>
+                            {edu.highlights.map((highlight, i) => (
+                                <View key={i} style={styles.bulletItem}>
+                                    <Text style={styles.bullet}>•</Text>
+                                    <Text style={styles.bulletText}>{safeText(highlight)}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
                 </View>
             ))}
         </View>

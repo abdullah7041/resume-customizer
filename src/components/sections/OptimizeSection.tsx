@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
@@ -9,8 +9,6 @@ import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
   Sparkles,
   Copy,
-  Info,
-  Lock,
   ChevronDown,
   ChevronUp,
   Check,
@@ -45,6 +43,9 @@ interface OptimizationCard {
   after?: string;
   original?: string | string[];
   optimized?: string | string[];
+  // API response format from backend
+  exampleBefore?: string;
+  exampleAfter?: string;
   applied?: boolean;
   index?: number;
   timestamp?: string;
@@ -75,50 +76,41 @@ interface OptimizeSectionProps {
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
 
-// Normalize optimization data to handle both API formats (before/after) and store format (original/optimized)
+// Normalize optimization data to handle all API formats:
+// - Backend returns: exampleBefore/exampleAfter
+// - Legacy format: before/after  
+// - Store format: original/optimized
 const normalizeOptimization = (opt: OptimizationCard, index: number): OptimizationResult => {
   // Always include index in sectionId to prevent duplicate React keys
   // when multiple optimizations have the same section name (e.g., "Experience")
   const baseSection = opt.sectionType || opt.section || 'general';
+
+  // Extract original content - check all possible field names
+  const originalContent = opt.original ?? opt.exampleBefore ?? opt.before ?? '';
+  const optimizedContent = opt.optimized ?? opt.exampleAfter ?? opt.after ?? '';
+
+  console.log('[normalizeOptimization] Card', index, ':', {
+    section: baseSection,
+    hasOriginal: !!opt.original,
+    hasExampleBefore: !!opt.exampleBefore,
+    hasBefore: !!opt.before,
+    finalOriginal: typeof originalContent === 'string' ? originalContent.substring(0, 30) : originalContent,
+    hasOptimized: !!opt.optimized,
+    hasExampleAfter: !!opt.exampleAfter,
+    hasAfter: !!opt.after,
+    finalOptimized: typeof optimizedContent === 'string' ? optimizedContent.substring(0, 30) : optimizedContent,
+  });
+
   return {
     sectionId: opt.sectionId || `${baseSection.toLowerCase()}-${index}`,
     sectionType: baseSection.toLowerCase() as OptimizationResult['sectionType'],
-    original: opt.original ?? opt.before ?? '',
-    optimized: opt.optimized ?? opt.after ?? '',
+    original: originalContent,
+    optimized: optimizedContent,
     applied: opt.applied ?? false,
     timestamp: new Date().toISOString(),
   };
 };
 
-// === Preview Banner Component ===
-function PreviewBanner({ onUpgrade, t }: { onUpgrade?: () => void; t: any }) {
-  return (
-    <div className="p-4 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent">
-      <div className="flex flex-wrap items-center gap-4">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20 text-amber-400">
-          <Lock className="h-5 w-5" />
-        </span>
-        <div className="space-y-1 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">
-            {t('sections.optimize.previewMode', 'Preview mode')}
-          </p>
-          <p className="text-sm text-gray-300">
-            {t('sections.optimize.previewDesc', 'Free preview run—results will not be saved until you upgrade.')}
-          </p>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/85">
-            <Info className="h-3.5 w-3.5" />
-            <span>{t('sections.optimize.previewHint', 'Preview lets you test the flow. Upgrade to save/export.')}</span>
-          </div>
-        </div>
-      </div>
-      <div className="mt-4">
-        <GlassButton onClick={onUpgrade} className="w-full sm:w-auto">
-          {t('sections.optimize.unlockPremium', 'Unlock premium insights')}
-        </GlassButton>
-      </div>
-    </div>
-  );
-}
 
 export function OptimizeSection({
   isPremium = false,
@@ -146,8 +138,7 @@ export function OptimizeSection({
     applyOptimization,
     revertOptimization,
     applyAllOptimizations,
-    showOptimized,
-    toggleShowOptimized,
+    revertAllOptimizations,
     keywordSuggestions,
   } = useResumeStore();
 
@@ -156,27 +147,26 @@ export function OptimizeSection({
   const hasResume = Boolean(originalResume || resumeText);
 
   const [viewMode, setViewMode] = useState<'split' | 'diff'>('split');
-  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
-  const [chipsAnimated, setChipsAnimated] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const chipsShownRef = useRef(false);
 
-  // Decide which optimizations to use (props or store)
-  // Normalize prop optimizations to match the expected OptimizationResult format
-  const useStoreOptimizations = !propOptimizations || propOptimizations.length === 0;
-  const normalizedPropOptimizations = useMemo(() => {
-    if (!propOptimizations || propOptimizations.length === 0) return [];
-    return propOptimizations.map((opt, index) => normalizeOptimization(opt, index));
-  }, [propOptimizations]);
+  // Sync prop optimizations to store when they change
+  useEffect(() => {
+    if (propOptimizations && propOptimizations.length > 0) {
+      const normalized = propOptimizations.map((opt, index) => normalizeOptimization(opt, index));
+      setOptimizations(normalized);
+    }
+  }, [propOptimizations, setOptimizations]);
 
-  const optimizations = useStoreOptimizations ? storeOptimizations : normalizedPropOptimizations;
+  // Always use store optimizations (props are synced to store via useEffect above)
+  const optimizations = storeOptimizations;
   const isOptimizing = propIsOptimizing || isGenerating;
 
   // Debug log to help diagnose optimization rendering issues
-  console.log('[OptimizeSection] Using', useStoreOptimizations ? 'store' : 'props', 'optimizations, count:', optimizations.length);
+  console.log('[OptimizeSection] Using store optimizations, count:', optimizations.length);
   if (optimizations.length > 0) {
     console.log('[OptimizeSection] First optimization structure:', JSON.stringify(optimizations[0], null, 2));
   }
@@ -202,8 +192,7 @@ export function OptimizeSection({
   }, [keywords, keywordSuggestions]);
 
   // Conditions
-  const watermarkVisible = !isPremium && previewUsed;
-  const showPreviewBanner = !isPremium && !previewUsed;
+  const _showPreviewBanner = !isPremium && !previewUsed;
 
   // Generate optimizations from API
   const handleGenerate = async () => {
@@ -253,17 +242,37 @@ export function OptimizeSection({
       const newOptimizations: OptimizationResult[] = [];
 
       if (data.cards && Array.isArray(data.cards)) {
+        console.log('[OptimizeSection] Processing', data.cards.length, 'cards from API');
+
         data.cards.forEach((card: { section?: string; exampleBefore?: string; exampleAfter?: string; issue?: string; suggestion?: string }, index: number) => {
           const sectionType = (card.section || 'general').toLowerCase() as 'headline' | 'summary' | 'experience' | 'skills' | 'projects';
+
+          // Debug log each card's content
+          console.log(`[OptimizeSection] Card ${index}:`, {
+            section: card.section,
+            exampleBefore: card.exampleBefore ? card.exampleBefore.substring(0, 50) + '...' : 'MISSING',
+            exampleAfter: card.exampleAfter ? card.exampleAfter.substring(0, 50) + '...' : 'MISSING',
+            hasExampleBefore: typeof card.exampleBefore,
+            hasExampleAfter: typeof card.exampleAfter,
+          });
+
+          const originalContent = card.exampleBefore || '';
+          const optimizedContent = card.exampleAfter || '';
 
           newOptimizations.push({
             sectionId: `${sectionType}-${index}`,
             sectionType: sectionType,
-            original: card.exampleBefore || (isArabic ? 'لا يوجد نص أصلي' : 'No original text'),
-            optimized: card.exampleAfter || (isArabic ? 'لا يوجد اقتراح' : 'No suggestion'),
+            original: originalContent,
+            optimized: optimizedContent,
             applied: false,
           });
         });
+
+        console.log('[OptimizeSection] Created optimizations:', newOptimizations.map(o => ({
+          sectionId: o.sectionId,
+          originalLength: typeof o.original === 'string' ? o.original.length : 0,
+          optimizedLength: typeof o.optimized === 'string' ? o.optimized.length : 0,
+        })));
       }
 
       // If no cards but we have API data, try legacy format
@@ -352,32 +361,17 @@ export function OptimizeSection({
     }
   };
 
-  const toggleCard = (index: number) => {
+  const toggleCard = (sectionId: string) => {
     setExpandedCards(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
       } else {
-        newSet.add(index);
+        newSet.add(sectionId);
       }
       return newSet;
     });
   };
-
-  // Animate chips when they first appear
-  useEffect(() => {
-    const total =
-      (keywordBuckets.add?.length ?? 0) +
-      (keywordBuckets.neutral?.length ?? 0) +
-      (keywordBuckets.remove?.length ?? 0);
-    if (total > 0 && !chipsShownRef.current) {
-      chipsShownRef.current = true;
-      setChipsAnimated(true);
-      const timer = setTimeout(() => setChipsAnimated(false), 2200);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [keywordBuckets]);
 
   // Get applied count
   const appliedCount = optimizations.filter(o => o.applied).length;
@@ -389,9 +383,12 @@ export function OptimizeSection({
     { id: 'summary', label: 'Summary', labelAr: 'الملخص' },
     { id: 'experience', label: 'Experience', labelAr: 'الخبرة' },
     { id: 'skills', label: 'Skills', labelAr: 'المهارات' },
+    { id: 'projects', label: 'Projects', labelAr: 'المشاريع' },
+    { id: 'education', label: 'Education', labelAr: 'التعليم' },
+    { id: 'certifications', label: 'Certifications', labelAr: 'الشهادات' },
   ];
 
-  const [activeSection, setActiveSection] = useState<'all' | 'headline' | 'summary' | 'experience' | 'skills'>('all');
+  const [activeSection, setActiveSection] = useState<'all' | 'headline' | 'summary' | 'experience' | 'skills' | 'projects' | 'education' | 'certifications'>('all');
 
   // Filter optimizations by section
   const filteredOptimizations = activeSection === 'all'
@@ -423,6 +420,15 @@ export function OptimizeSection({
                 <span className="text-sm text-gray-400">
                   {appliedCount}/{optimizations.length} {isArabic ? 'مُطبّق' : 'Applied'}
                 </span>
+                {appliedCount > 0 && (
+                  <GlassButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={revertAllOptimizations}
+                  >
+                    {isArabic ? 'التراجع عن الكل' : 'Revert All'}
+                  </GlassButton>
+                )}
                 <GlassButton
                   variant="secondary"
                   size="sm"
@@ -469,43 +475,7 @@ export function OptimizeSection({
           </div>
         </div>
 
-        {/* Show Original/Optimized Toggle */}
-        <div className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-2 h-2 rounded-full",
-              showOptimized ? "bg-emerald-400" : "bg-gray-400"
-            )} />
-            <div>
-              <p className="font-medium text-white">
-                {showOptimized
-                  ? (isArabic ? 'عرض المحسّن' : 'Showing Optimized')
-                  : (isArabic ? 'عرض الأصلي' : 'Showing Original')
-                }
-              </p>
-              <p className="text-sm text-gray-400">
-                {showOptimized
-                  ? (isArabic ? 'التغييرات المطبقة مرئية' : 'Applied changes are visible')
-                  : (isArabic ? 'إصدار السيرة الذاتية الأصلي' : 'Original resume version')
-                }
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={toggleShowOptimized}
-            className={cn(
-              "relative w-14 h-7 rounded-full transition-colors",
-              showOptimized ? 'bg-emerald-600' : 'bg-gray-600'
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-1 w-5 h-5 bg-white rounded-full transition-transform",
-                showOptimized ? 'left-8' : 'left-1'
-              )}
-            />
-          </button>
-        </div>
+
 
         {/* Section Tabs */}
         <div className="flex flex-wrap gap-2 mb-6 p-1 bg-white/5 rounded-xl">
@@ -525,8 +495,7 @@ export function OptimizeSection({
           ))}
         </div>
 
-        {/* Preview Banner for non-premium users */}
-        {showPreviewBanner && <PreviewBanner onUpgrade={onUpgrade} t={t} />}
+
 
         {/* Error Message */}
         {error && (
@@ -581,8 +550,7 @@ export function OptimizeSection({
                         'relative overflow-hidden rounded-full border px-3 py-1 text-xs font-semibold transition-all',
                         bucket === 'add' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
                         bucket === 'neutral' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
-                        bucket === 'remove' && 'border-rose-500/30 bg-rose-500/10 text-rose-400',
-                        chipsAnimated && 'animate-pulse'
+                        bucket === 'remove' && 'border-rose-500/30 bg-rose-500/10 text-rose-400'
                       )}
                     >
                       {token}
@@ -601,12 +569,6 @@ export function OptimizeSection({
 
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
-        {/* Preview Watermark */}
-        {watermarkVisible && (
-          <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center text-6xl font-black uppercase tracking-[0.4em] text-emerald-500/10">
-            {t('sections.optimize.preview', 'Preview')}
-          </div>
-        )}
 
         {isOptimizing ? (
           <OptimizeSkeleton />
@@ -671,10 +633,10 @@ export function OptimizeSection({
                       <ArrowLeftRight className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => toggleCard(index)}
+                      onClick={() => toggleCard(opt.sectionId)}
                       className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                     >
-                      {expandedCards.has(index)
+                      {expandedCards.has(opt.sectionId)
                         ? <ChevronUp className="w-4 h-4 text-gray-400" />
                         : <ChevronDown className="w-4 h-4 text-gray-400" />
                       }
@@ -716,7 +678,7 @@ export function OptimizeSection({
                         </p>
                         <p className={cn(
                           'text-sm text-gray-300 transition-all',
-                          !expandedCards.has(index) && 'line-clamp-3'
+                          !expandedCards.has(opt.sectionId) && 'line-clamp-3'
                         )}>
                           {Array.isArray(opt.original)
                             ? opt.original.join(', ')
@@ -730,7 +692,7 @@ export function OptimizeSection({
                         </p>
                         <p className={cn(
                           'text-sm text-white transition-all',
-                          !expandedCards.has(index) && 'line-clamp-3'
+                          !expandedCards.has(opt.sectionId) && 'line-clamp-3'
                         )}>
                           {Array.isArray(opt.optimized)
                             ? opt.optimized.join(', ')
@@ -743,7 +705,7 @@ export function OptimizeSection({
                     <div className="p-3 bg-white/5 rounded-lg">
                       <p className={cn(
                         'text-sm text-gray-300 transition-all',
-                        !expandedCards.has(index) && 'line-clamp-4'
+                        !expandedCards.has(opt.sectionId) && 'line-clamp-4'
                       )}>
                         <span className="line-through text-rose-400/70">
                           {Array.isArray(opt.original) ? opt.original.join(', ') : opt.original}

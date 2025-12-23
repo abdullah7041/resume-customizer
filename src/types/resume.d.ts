@@ -62,6 +62,7 @@ export interface Education {
     endDate: string;
     score?: string; // GPA or grade
     courses?: string[]; // Relevant coursework
+    highlights?: string[]; // Achievements / descriptions
 }
 
 /**

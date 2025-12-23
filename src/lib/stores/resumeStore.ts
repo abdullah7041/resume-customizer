@@ -156,6 +156,17 @@ export const useResumeStore = create<ResumeState>()(
         }));
       },
 
+      revertAllOptimizations: () => {
+        console.log('[ResumeStore] Reverting all optimizations');
+        set((state) => ({
+          optimizations: state.optimizations.map((o) => ({
+            ...o,
+            applied: false,
+          })),
+          showOptimized: false,
+        }));
+      },
+
       toggleShowOptimized: () => {
         const current = get().showOptimized;
         console.log('[ResumeStore] Toggling showOptimized:', !current);
@@ -197,6 +208,25 @@ export const useResumeStore = create<ResumeState>()(
           JSON.stringify(state.originalResume)
         ) as ResumeSchema;
 
+        // Type-safe value extraction
+        const getStringValue = (val: unknown): string => {
+          if (typeof val === 'string') return val;
+          if (Array.isArray(val)) return val.join(' ');
+          return String(val || '');
+        };
+
+        const getArrayValue = (val: unknown): string[] => {
+          if (Array.isArray(val)) return val;
+          if (typeof val === 'string' && val.trim()) return [val];
+          return [];
+        };
+
+        // Extract index from sectionId (e.g., "experience-0" → 0, "headline-0" → 0)
+        const extractIndex = (sectionId: string): number => {
+          const match = sectionId.match(/-(\d+)$/);
+          return match ? parseInt(match[1], 10) : -1;
+        };
+
         // Apply each optimization
         for (const opt of state.optimizations) {
           if (!opt.applied) continue;
@@ -204,75 +234,117 @@ export const useResumeStore = create<ResumeState>()(
           switch (opt.sectionType) {
             case 'summary':
               if (merged.basics) {
-                merged.basics.summary = opt.optimized as string;
+                merged.basics.summary = getStringValue(opt.optimized);
               }
               break;
 
             case 'headline':
               if (merged.basics) {
-                merged.basics.label = opt.optimized as string;
+                merged.basics.label = getStringValue(opt.optimized);
               }
               break;
 
             case 'experience': {
-              const workIndex = merged.work?.findIndex(
-                (w, i) => `work-${i}` === opt.sectionId || w.name === opt.sectionId
-              );
-              if (workIndex !== undefined && workIndex !== -1 && merged.work) {
+              // sectionId is "experience-0", "experience-1", etc.
+              const workIndex = extractIndex(opt.sectionId);
+
+              if (workIndex >= 0 && merged.work && merged.work[workIndex]) {
+                const newBullet = getStringValue(opt.optimized);
+                const originalBullet = getStringValue(opt.original);
+                const currentHighlights = [...(merged.work[workIndex].highlights || [])];
+
+                // Find and replace the original bullet, or prepend if not found
+                if (originalBullet && newBullet) {
+                  const matchIdx = currentHighlights.findIndex(h =>
+                    h.toLowerCase().trim() === originalBullet.toLowerCase().trim() ||
+                    h.toLowerCase().includes(originalBullet.toLowerCase().substring(0, 50))
+                  );
+
+                  if (matchIdx >= 0) {
+                    currentHighlights[matchIdx] = newBullet;
+                  } else {
+                    // Original not found, prepend the optimized version
+                    currentHighlights.unshift(newBullet);
+                  }
+                } else if (newBullet) {
+                  currentHighlights.unshift(newBullet);
+                }
+
                 merged.work[workIndex] = {
                   ...merged.work[workIndex],
-                  highlights: opt.optimized as string[],
+                  highlights: currentHighlights,
                 };
               }
               break;
             }
 
             case 'skills': {
-              // Skills optimization replaces keywords or adds new skills
-              const optimizedSkills = opt.optimized as string[];
-              if (merged.skills && merged.skills.length > 0) {
-                // Add optimized skills to first skill group or create new
-                const existingKeywords = merged.skills.flatMap(
-                  (s) => s.keywords || []
-                );
-                const newSkills = optimizedSkills.filter(
-                  (s) => !existingKeywords.includes(s)
-                );
-                if (newSkills.length > 0) {
+              const optimizedSkills = getArrayValue(opt.optimized);
+              if (optimizedSkills.length === 0) break;
+
+              if (!merged.skills) merged.skills = [];
+
+              const existingKeywords = merged.skills.flatMap(s => s.keywords || []);
+              const newSkills = optimizedSkills.filter(
+                skill => !existingKeywords.some(
+                  existing => existing.toLowerCase() === skill.toLowerCase()
+                )
+              );
+
+              if (newSkills.length > 0) {
+                const recommendedGroup = merged.skills.find(s => s.name === 'Recommended Skills');
+                if (recommendedGroup) {
+                  recommendedGroup.keywords = [...(recommendedGroup.keywords || []), ...newSkills];
+                } else {
                   merged.skills.push({
                     name: 'Recommended Skills',
                     keywords: newSkills,
                   });
                 }
-              } else {
-                merged.skills = [
-                  {
-                    name: 'Skills',
-                    keywords: optimizedSkills,
-                  },
-                ];
               }
               break;
             }
 
             case 'projects': {
-              const projectIndex = merged.projects?.findIndex(
-                (p, i) => `project-${i}` === opt.sectionId || p.name === opt.sectionId
-              );
-              if (
-                projectIndex !== undefined &&
-                projectIndex !== -1 &&
-                merged.projects
-              ) {
-                merged.projects[projectIndex] = {
-                  ...merged.projects[projectIndex],
-                  highlights: opt.optimized as string[],
-                };
+              // sectionId is "projects-0", "projects-1", etc.
+              const projectIndex = extractIndex(opt.sectionId);
+
+              if (projectIndex >= 0 && merged.projects && merged.projects[projectIndex]) {
+                const newDescription = getStringValue(opt.optimized);
+                if (newDescription) {
+                  merged.projects[projectIndex] = {
+                    ...merged.projects[projectIndex],
+                    description: newDescription,
+                  };
+                }
               }
               break;
             }
+
+            case 'education': {
+              // sectionId is "education-0", "education-1", etc.
+              const eduIndex = extractIndex(opt.sectionId);
+
+              if (eduIndex >= 0 && merged.education && merged.education[eduIndex]) {
+                const improved = getStringValue(opt.optimized);
+                if (improved) {
+                  merged.education[eduIndex] = {
+                    ...merged.education[eduIndex],
+                    area: improved,
+                  };
+                }
+              }
+              break;
+            }
+
+            default:
+              console.warn(`[ResumeStore] Unknown sectionType: ${opt.sectionType}`);
           }
         }
+
+        // DEBUG: Verify merge is working (remove after confirming fix)
+        console.log('[ResumeStore] Merged headline:', merged.basics?.label);
+        console.log('[ResumeStore] Merged summary preview:', merged.basics?.summary?.substring(0, 50));
 
         return merged;
       },

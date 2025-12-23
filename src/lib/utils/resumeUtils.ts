@@ -215,12 +215,24 @@ export const mergeResumeData = (original, aiResult) => {
     if (mergedData.education && optimization.education_improvements) {
         mergedData.education = mergedData.education.map((edu, eduIndex) => {
             const improvement = optimization.education_improvements.find(imp =>
-                imp.education_index === eduIndex
+                imp.education_index === eduIndex ||
+                (imp.institution && edu.institution?.toLowerCase().includes(imp.institution.toLowerCase()))
             );
-            if (improvement?.improved) {
-                return { ...edu, area: improvement.improved };
-            }
-            return edu;
+
+            if (!improvement) return edu;
+
+            // Merge all available improvement fields
+            return {
+                ...edu,
+                area: improvement.improved_area || improvement.improved || edu.area,
+                studyType: improvement.improved_studyType || edu.studyType,
+                // Add highlights if AI provided them
+                highlights: improvement.highlights || edu.highlights || [],
+                // Add courses if AI provided them
+                courses: improvement.courses || edu.courses || [],
+                // Preserve score
+                score: improvement.score || edu.score,
+            };
         });
     }
 

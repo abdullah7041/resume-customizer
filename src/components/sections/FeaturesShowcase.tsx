@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     FileSearch,
@@ -10,6 +10,9 @@ import {
     Mail,
     Star,
     Check,
+    ChevronDown,
+    ChevronUp,
+    Crown,
 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import SectionTitle from "../ui/SectionTitle";
@@ -125,8 +128,83 @@ const features: Feature[] = [
     },
 ];
 
+// Hero feature IDs - always visible
+const heroFeatureIds = ["keyword-analysis", "interview-prep", "vision-2030"];
+const heroFeatures = features.filter((f) => heroFeatureIds.includes(f.id));
+const additionalFeatures = features.filter((f) => !heroFeatureIds.includes(f.id));
+
+function FeatureCard({ feature }: { feature: Feature }) {
+    const { t } = useTranslation();
+
+    return (
+        <GlassCard
+            variant={feature.highlight ? "elevated" : "default"}
+            className={cn(
+                "p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+                feature.highlight &&
+                "border-[#006C35]/50 shadow-[0_0_30px_rgba(0,108,53,0.2)]"
+            )}
+        >
+            <div className="flex items-start gap-4">
+                {/* Icon with gradient background */}
+                <div
+                    className={cn(
+                        "flex-shrink-0 inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br shadow-lg",
+                        feature.gradient
+                    )}
+                >
+                    <span className="text-white">{feature.icon}</span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    {/* Title with optional highlight badge */}
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-semibold text-white">
+                            {t(feature.titleKey)}
+                        </h3>
+                        {feature.highlight && (
+                            <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-gray-900 text-xs font-bold shadow-lg animate-pulse"
+                                aria-label="Vision 2030 Featured"
+                            >
+                                <Crown className="w-3 h-3" />
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-gray-400 mt-2 leading-relaxed">
+                        {t(feature.descriptionKey)}
+                    </p>
+
+                    {/* Benefits list */}
+                    <ul className="mt-4 space-y-2">
+                        {feature.benefitKeys.map((benefitKey, index) => (
+                            <li
+                                key={`${feature.id}-benefit-${index}`}
+                                className="flex items-center gap-2 text-sm text-gray-300"
+                            >
+                                <Check
+                                    className={cn(
+                                        "w-4 h-4 flex-shrink-0",
+                                        feature.highlight
+                                            ? "text-[#4ade80]"
+                                            : "text-emerald-400"
+                                    )}
+                                />
+                                <span>{t(benefitKey)}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        </GlassCard>
+    );
+}
+
 export default function FeaturesShowcase() {
     const { t } = useTranslation();
+    const [showAllFeatures, setShowAllFeatures] = useState(false);
 
     return (
         <section className="py-16 px-4 sm:px-6 lg:px-8">
@@ -138,68 +216,48 @@ export default function FeaturesShowcase() {
                     className="text-center mb-12"
                 />
 
-                <div className="grid md:grid-cols-2 gap-6 lg:gap-8 mt-12">
-                    {features.map((feature) => (
-                        <GlassCard
-                            key={feature.id}
-                            variant={feature.highlight ? "elevated" : "default"}
-                            className={cn(
-                                "p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
-                                feature.highlight &&
-                                "border-[#006C35]/50 shadow-[0_0_30px_rgba(0,108,53,0.2)]"
-                            )}
-                        >
-                            <div className="flex items-start gap-4">
-                                {/* Icon with gradient background */}
-                                <div
-                                    className={cn(
-                                        "flex-shrink-0 inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br shadow-lg",
-                                        feature.gradient
-                                    )}
-                                >
-                                    <span className="text-white">{feature.icon}</span>
-                                </div>
+                {/* Hero Features - Always visible (3-column grid) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+                    {heroFeatures.map((feature) => (
+                        <FeatureCard key={feature.id} feature={feature} />
+                    ))}
+                </div>
 
-                                <div className="flex-1 min-w-0">
-                                    {/* Title with optional highlight badge */}
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-xl font-semibold text-white">
-                                            {t(feature.titleKey)}
-                                        </h3>
-                                        {feature.highlight && (
-                                            <span className="text-lg" aria-label="Saudi Arabia flag">
-                                                🇸🇦
-                                            </span>
-                                        )}
-                                    </div>
+                {/* Expand/Collapse Button */}
+                <div className="flex justify-center mt-8 relative z-10">
+                    <button
+                        onClick={() => setShowAllFeatures(!showAllFeatures)}
+                        className="flex items-center gap-2 px-6 py-3 bg-gray-800/80 border border-emerald-500/50 rounded-xl text-emerald-400 hover:bg-gray-700/80 hover:text-emerald-300 hover:border-emerald-400 transition-all font-medium shadow-lg backdrop-blur-sm cursor-pointer"
+                        aria-expanded={showAllFeatures}
+                        aria-controls="additional-features"
+                        type="button"
+                    >
+                        {showAllFeatures ? (
+                            <>
+                                <span>{t("showcase.showLess")}</span>
+                                <ChevronUp className="w-5 h-5" />
+                            </>
+                        ) : (
+                            <>
+                                <span>{t("showcase.viewAllFeatures")}</span>
+                                <ChevronDown className="w-5 h-5" />
+                            </>
+                        )}
+                    </button>
+                </div>
 
-                                    {/* Description */}
-                                    <p className="text-gray-400 mt-2 leading-relaxed">
-                                        {t(feature.descriptionKey)}
-                                    </p>
-
-                                    {/* Benefits list */}
-                                    <ul className="mt-4 space-y-2">
-                                        {feature.benefitKeys.map((benefitKey, index) => (
-                                            <li
-                                                key={`${feature.id}-benefit-${index}`}
-                                                className="flex items-center gap-2 text-sm text-gray-300"
-                                            >
-                                                <Check
-                                                    className={cn(
-                                                        "w-4 h-4 flex-shrink-0",
-                                                        feature.highlight
-                                                            ? "text-[#4ade80]"
-                                                            : "text-emerald-400"
-                                                    )}
-                                                />
-                                                <span>{t(benefitKey)}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </GlassCard>
+                {/* Additional Features - Expandable */}
+                <div
+                    id="additional-features"
+                    className={cn(
+                        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 overflow-hidden transition-all duration-500 ease-in-out",
+                        showAllFeatures
+                            ? "max-h-[2000px] opacity-100"
+                            : "max-h-0 opacity-0"
+                    )}
+                >
+                    {additionalFeatures.map((feature) => (
+                        <FeatureCard key={feature.id} feature={feature} />
                     ))}
                 </div>
             </div>

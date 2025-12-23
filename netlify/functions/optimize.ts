@@ -43,14 +43,22 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
     }, null, 2));
 
     // Also log meta.ai_suggestions if present
-    if (analysis.meta?.ai_suggestions) {
+    const aiSuggestions = analysis.meta?.ai_suggestions;
+    if (aiSuggestions) {
       console.log('[optimize] meta.ai_suggestions:', JSON.stringify({
-        suggested_headline: analysis.meta.ai_suggestions.suggested_headline,
-        original_headline: analysis.meta.ai_suggestions.original_headline,
-        summary_rewrite: analysis.meta.ai_suggestions.summary_rewrite ?
-          analysis.meta.ai_suggestions.summary_rewrite.substring(0, 100) + '...' : null,
-        bullet_improvements_count: analysis.meta.ai_suggestions.bullet_improvements?.length || 0,
+        suggested_headline: aiSuggestions.suggested_headline,
+        original_headline: aiSuggestions.original_headline,
+        summary_rewrite: aiSuggestions.summary_rewrite ?
+          aiSuggestions.summary_rewrite.substring(0, 100) + '...' : null,
+        original_summary: aiSuggestions.original_summary ?
+          aiSuggestions.original_summary.substring(0, 100) + '...' : null,
+        bullet_improvements_count: aiSuggestions.bullet_improvements?.length || 0,
       }, null, 2));
+
+      // Log first bullet improvement to see actual structure
+      if (aiSuggestions.bullet_improvements?.length > 0) {
+        console.log('[optimize] First bullet improvement sample:', JSON.stringify(aiSuggestions.bullet_improvements[0], null, 2));
+      }
     }
 
     // Map to frontend expected format (Cards)
@@ -62,109 +70,184 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       exampleAfter: string;
     }> = [];
 
-    // Helper to validate content exists
-    const hasContent = (value: any): boolean => {
+    // Helper to validate content exists and extract string value
+    const hasContent = (value: unknown): boolean => {
       if (!value) return false;
       if (typeof value === 'string') return value.trim().length > 0;
       return true;
     };
 
+    // Helper to safely get string value
+    const getString = (value: unknown, fallback: string): string => {
+      if (typeof value === 'string' && value.trim().length > 0) return value;
+      return fallback;
+    };
+
     // Card 1: Headline - try both optimization and meta.ai_suggestions
-    const suggestedHeadline = opt?.suggested_headline || analysis.meta?.ai_suggestions?.suggested_headline;
-    const originalHeadline = opt?.original_headline || analysis.meta?.ai_suggestions?.original_headline || analysis.basics?.label;
+    const suggestedHeadline = opt?.suggested_headline || aiSuggestions?.suggested_headline;
+    const originalHeadline = opt?.original_headline || aiSuggestions?.original_headline || analysis.basics?.label;
+
+    console.log('[optimize] Headline extraction:', { suggestedHeadline, originalHeadline });
 
     if (hasContent(suggestedHeadline)) {
       cards.push({
         section: "Headline",
         issue: "Headline could be more targeted.",
         suggestion: "Align headline with the job title and key requirements.",
-        exampleBefore: originalHeadline || "Current headline not available",
-        exampleAfter: suggestedHeadline
+        exampleBefore: getString(originalHeadline, "Current headline not available"),
+        exampleAfter: getString(suggestedHeadline, "")
       });
     }
 
     // Card 2: Summary - try both optimization and meta.ai_suggestions
-    const summaryRewrite = opt?.summary_rewrite || analysis.meta?.ai_suggestions?.summary_rewrite;
-    const originalSummary = opt?.original_summary || analysis.meta?.ai_suggestions?.original_summary || analysis.basics?.summary;
+    const summaryRewrite = opt?.summary_rewrite || aiSuggestions?.summary_rewrite;
+    const originalSummary = opt?.original_summary || aiSuggestions?.original_summary || analysis.basics?.summary;
+
+    console.log('[optimize] Summary extraction:', {
+      summaryRewrite: summaryRewrite ? summaryRewrite.substring(0, 50) + '...' : null,
+      originalSummary: originalSummary ? originalSummary.substring(0, 50) + '...' : null
+    });
 
     if (hasContent(summaryRewrite)) {
       cards.push({
         section: "Summary",
         issue: "Summary could be more action-oriented.",
         suggestion: "Rewrite summary to better align with the job description.",
-        exampleBefore: originalSummary || "Original summary not available",
-        exampleAfter: summaryRewrite
+        exampleBefore: getString(originalSummary, "Original summary not available"),
+        exampleAfter: getString(summaryRewrite, "")
       });
     }
 
     // Cards for bullets (Experience) - try both locations
+    // Note: gemini-client maps to bullet_point_improvements, but ai_suggestions has bullet_improvements
     const bulletImprovements = opt?.bullet_point_improvements ||
-      (analysis.meta?.ai_suggestions?.bullet_improvements || []).map((b: any) => ({
-        original: b.original,
-        improved: b.improved,
-        issue: b.issue,
-        rationale: b.rationale
-      }));
+      aiSuggestions?.bullet_improvements ||
+      [];
+
+    console.log('[optimize] Bullet improvements count:', bulletImprovements.length);
 
     if (bulletImprovements && bulletImprovements.length > 0) {
-      bulletImprovements.forEach((item: any) => {
+      bulletImprovements.forEach((item: { original?: string; improved?: string; suggestion?: string; issue?: string; rationale?: string }, idx: number) => {
+        // The AI may return 'improved' or 'suggestion' for the optimized version
+        const originalText = item.original;
+        const improvedText = item.improved || item.suggestion;
+
+        console.log(`[optimize] Bullet ${idx}:`, {
+          originalText: originalText ? originalText.substring(0, 30) + '...' : null,
+          improvedText: improvedText ? improvedText.substring(0, 30) + '...' : null
+        });
+
         // Only add card if we have actual content
-        if (hasContent(item.original) || hasContent(item.improved)) {
+        if (hasContent(originalText) || hasContent(improvedText)) {
           cards.push({
             section: "Experience",
             issue: item.issue || "Bullet point lacks impact.",
             suggestion: item.rationale || "Use stronger action verbs and metrics.",
-            exampleBefore: item.original || "Original not provided",
-            exampleAfter: item.improved || "Improvement not provided"
+            exampleBefore: getString(originalText, "Original not provided"),
+            exampleAfter: getString(improvedText, "Improvement not provided")
           });
         }
       });
     }
 
     // Cards for Education
-    const educationImprovements = opt?.education_improvements ||
-      (analysis.meta?.ai_suggestions?.education_improvements || []);
+    const educationImprovements = opt?.education_improvements || aiSuggestions?.education_improvements || [];
 
     if (educationImprovements && educationImprovements.length > 0) {
-      educationImprovements.forEach((item: any) => {
-        if (hasContent(item.original) || hasContent(item.improved)) {
+      educationImprovements.forEach((item: { original?: string; improved?: string; suggestion?: string; issue?: string; rationale?: string }) => {
+        const originalText = item.original;
+        const improvedText = item.improved || item.suggestion;
+
+        if (hasContent(originalText) || hasContent(improvedText)) {
           cards.push({
             section: "Education",
             issue: item.issue || "Education detail could be optimized.",
             suggestion: item.rationale || "Highlight relevant coursework or achievements.",
-            exampleBefore: item.original || "Original not provided",
-            exampleAfter: item.improved || "Improvement not provided"
+            exampleBefore: getString(originalText, "Original not provided"),
+            exampleAfter: getString(improvedText, "Improvement not provided")
           });
         }
       });
     }
 
     // Cards for Projects
-    const projectsImprovements = opt?.projects_improvements ||
-      (analysis.meta?.ai_suggestions?.project_improvements || []);
+    const projectsImprovements = opt?.projects_improvements || aiSuggestions?.project_improvements || [];
 
     if (projectsImprovements && projectsImprovements.length > 0) {
-      projectsImprovements.forEach((item: any) => {
-        if (hasContent(item.original) || hasContent(item.improved)) {
+      projectsImprovements.forEach((item: { original?: string; improved?: string; suggestion?: string; issue?: string; rationale?: string }) => {
+        const originalText = item.original;
+        const improvedText = item.improved || item.suggestion;
+
+        if (hasContent(originalText) || hasContent(improvedText)) {
           cards.push({
             section: "Projects",
             issue: item.issue || "Project description lacks depth.",
             suggestion: item.rationale || "Focus on outcomes and technologies used.",
-            exampleBefore: item.original || "Original not provided",
-            exampleAfter: item.improved || "Improvement not provided"
+            exampleBefore: getString(originalText, "Original not provided"),
+            exampleAfter: getString(improvedText, "Improvement not provided")
           });
         }
       });
     }
 
-    // Log final cards count
+    // Cards for Skills
+    const skillsToAdd = opt?.skills_gap_analysis?.missing_keywords_to_add ||
+      aiSuggestions?.skills_gap_analysis?.missing_keywords_to_add ||
+      [];
+    const currentSkills = analysis.skills || [];
+
+    // Flatten current skills for display
+    const currentSkillsList = Array.isArray(currentSkills)
+      ? currentSkills.flatMap((s: { name?: string; keywords?: string[]; } | string) => typeof s === 'string' ? s : (s.keywords || [s.name])).filter(Boolean).slice(0, 5)
+      : [];
+
+    if (skillsToAdd.length > 0) {
+      cards.push({
+        section: "Skills",
+        issue: "Missing key skills for this role.",
+        suggestion: "Add these high-impact keywords to improve ATS matching.",
+        exampleBefore: currentSkillsList.length > 0
+          ? `Current: ${currentSkillsList.join(', ')}`
+          : "No skills detected",
+        exampleAfter: `Add: ${skillsToAdd.slice(0, 8).join(', ')}${skillsToAdd.length > 8 ? '...' : ''}`
+      });
+    }
+
+    // Cards for Certifications
+    const certificationImprovements = opt?.certification_improvements || aiSuggestions?.certification_improvements || [];
+
+    if (certificationImprovements && certificationImprovements.length > 0) {
+      certificationImprovements.forEach((item: { original?: string; improved?: string; suggestion?: string; issue?: string; rationale?: string }) => {
+        const originalText = item.original;
+        const improvedText = item.improved || item.suggestion;
+
+        if (hasContent(originalText) || hasContent(improvedText)) {
+          cards.push({
+            section: "Certifications",
+            issue: item.issue || "Certification details could be improved.",
+            suggestion: item.rationale || "Highlight relevance to target role.",
+            exampleBefore: getString(originalText, "Original not provided"),
+            exampleAfter: getString(improvedText, "Improvement not provided")
+          });
+        }
+      });
+    }
+
+    // Log final cards with content samples
     console.log('[optimize] Generated cards:', cards.length,
       'Headline:', cards.filter(c => c.section === 'Headline').length,
       'Summary:', cards.filter(c => c.section === 'Summary').length,
       'Experience:', cards.filter(c => c.section === 'Experience').length,
       'Education:', cards.filter(c => c.section === 'Education').length,
-      'Projects:', cards.filter(c => c.section === 'Projects').length
+      'Projects:', cards.filter(c => c.section === 'Projects').length,
+      'Skills:', cards.filter(c => c.section === 'Skills').length,
+      'Certifications:', cards.filter(c => c.section === 'Certifications').length
     );
+
+    // Log first card to verify content
+    if (cards.length > 0) {
+      console.log('[optimize] First card sample:', JSON.stringify(cards[0], null, 2));
+    }
 
     // If still no cards, check if we have missing keywords to at least show something
     if (cards.length === 0) {

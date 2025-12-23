@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail } from "lucide-react";
+import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -500,7 +500,12 @@ export default function Header() {
                 >
                   {/* Vision 2030 badge */}
                   {card.highlight && (
-                    <span className="absolute top-2 right-2 text-xs">🇸🇦</span>
+                    <span
+                      className="absolute top-2 end-2 inline-flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 shadow-lg animate-pulse"
+                      aria-label="Vision 2030 Featured"
+                    >
+                      <Crown className="w-3 h-3 text-gray-900" />
+                    </span>
                   )}
 
                   {/* Hover glow effect */}

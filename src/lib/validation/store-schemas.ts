@@ -54,6 +54,7 @@ export const EducationSchema = z.object({
     endDate: z.string().optional().default(''),
     score: z.string().optional(),
     courses: z.array(z.string()).optional().default([]),
+    highlights: z.array(z.string()).optional().default([]),
 });
 
 export const SkillSchema = z.object({
@@ -134,7 +135,7 @@ export const ParsedTextSchema = z.string().min(1, 'Parsed text cannot be empty')
  */
 export const OptimizationResultSchema = z.object({
     sectionId: z.string(),
-    sectionType: z.enum(['summary', 'experience', 'skills', 'projects', 'headline']),
+    sectionType: z.enum(['summary', 'experience', 'skills', 'projects', 'headline', 'education']),
     original: z.union([z.string(), z.array(z.string())]),
     optimized: z.union([z.string(), z.array(z.string())]),
     applied: z.boolean(),

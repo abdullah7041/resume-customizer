@@ -67,6 +67,7 @@ Layout/
 sections/
 ├── BulkAnalysisSection.tsx          # Bulk resume analysis feature
 ├── CoverLetterSection.tsx           # Cover letter generation
+├── FeaturesShowcase.tsx             # Features showcase/landing section
 ├── InterviewSection.tsx             # Interview prep & questions
 ├── KeywordsSection.tsx              # Keyword analysis & suggestions
 ├── MatchSection.skeleton.tsx        # Match section loading skeleton
@@ -166,6 +167,7 @@ lib/
 #### Data (`lib/data/`)
 ```
 data/
+├── exampleResume.ts                 # Example resume data for demos
 ├── resumeTemplates.ts               # Resume template configurations
 └── vision2030Skills.ts              # Vision 2030 skills & competencies
 ```
@@ -189,7 +191,6 @@ styles/
 utils/
 ├── apiStatus.ts                     # API health check utilities
 ├── arabicKeywordMatcher.ts          # Arabic keyword matching
-├── arabicPdfExtractor.ts            # Arabic PDF text extraction
 ├── arabicResumeParser.ts            # Arabic resume parsing
 ├── arabicTextUtils.ts               # Arabic text utilities
 ├── cn.ts                            # Class name utilities
@@ -197,7 +198,8 @@ utils/
 ├── resumeText.ts                    # Resume text processing
 ├── resumeUtils.ts                   # Resume data transformation
 ├── templatePreviews.ts              # Template preview generation
-└── vision2030Analyzer.ts            # Vision 2030 analysis
+├── vision2030Analyzer.ts            # Vision 2030 analysis
+└── vision2030Icons.tsx              # Vision 2030 sector icons
 ```
 
 #### Validation (`lib/validation/`)
@@ -392,4 +394,4 @@ scripts/
 
 ---
 
-*Last updated: December 21, 2025 at 15:48 UTC+3*
+*Last updated: December 22, 2025 at 14:57 UTC+3*

@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, ToggleLeft, ToggleRight, Check, Layers, Sparkles, FileText, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Check, Layers, Sparkles, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -141,8 +141,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   // Get resume data from store
   const {
     originalResume: storeOriginalResume,
-    showOptimized,
-    toggleShowOptimized,
     getActiveResume,
     setSelectedTemplate: setStoreTemplate,
   } = useResumeStore();
@@ -201,31 +199,50 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Merged data for display - use store active resume or props
   const displayData = useMemo(() => {
-    if (hasPropsData) {
-      // Using props - apply mergeResumeData for backwards compatibility
-      const original = propResumeData || {};
-      const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
-
-      if (showOptimized && merged) {
-        return merged;
+    try {
+      if (hasPropsData) {
+        const original = propResumeData || {};
+        const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
+        return merged || original;
       }
-      return original;
-    }
 
-    // Using store - prefer activeResume, then originalResume, then sample
-    return storeActiveResume || storeOriginalResume || SAMPLE_RESUME;
-  }, [hasPropsData, propResumeData, optimizationData, showOptimized, storeActiveResume, storeOriginalResume]);
+      // Using store - add null safety
+      const activeResume = storeActiveResume || storeOriginalResume;
+      if (!activeResume) return SAMPLE_RESUME;
+
+      // Validate critical fields to prevent crashes
+      if (!activeResume.basics) {
+        console.warn('[TemplatesSection] Resume missing basics, using sample');
+        return { ...SAMPLE_RESUME, ...activeResume, basics: SAMPLE_RESUME.basics };
+      }
+
+      return activeResume;
+    } catch (err) {
+      console.error('[TemplatesSection] Error computing displayData:', err);
+      return SAMPLE_RESUME;
+    }
+  }, [hasPropsData, propResumeData, optimizationData, storeActiveResume, storeOriginalResume]);
 
   // Data for PDF download (always use merged)
   const mergedDownloadData = useMemo(() => {
-    if (hasPropsData) {
-      if (!propResumeData) return {};
-      const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
-      return merged || propResumeData;
-    }
+    try {
+      if (hasPropsData) {
+        if (!propResumeData) return SAMPLE_RESUME;
+        const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
+        return merged || propResumeData;
+      }
 
-    // Use store's active resume or original
-    return storeActiveResume || storeOriginalResume || {};
+      const activeResume = storeActiveResume || storeOriginalResume;
+      if (!activeResume || !activeResume.basics) {
+        console.warn('[TemplatesSection] No valid resume for PDF export');
+        return SAMPLE_RESUME;
+      }
+
+      return activeResume;
+    } catch (err) {
+      console.error('[TemplatesSection] Error computing mergedDownloadData:', err);
+      return SAMPLE_RESUME;
+    }
   }, [hasPropsData, propResumeData, optimizationData, storeActiveResume, storeOriginalResume]);
 
   const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
@@ -244,7 +261,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[600px] md:min-h-[600px] p-2">
       {/* Left Panel - Template Selection (responsive) */}
       <div className={cn(glassCardClass, "w-full md:w-[340px] flex-shrink-0 flex flex-col")}>
-        {/* Header with Toggle */}
+        {/* Header with Title */}
         <div className="p-4 md:p-5 space-y-4 border-b border-white/10">
           {/* Title */}
           <div className="flex items-center gap-3">
@@ -253,30 +270,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             </div>
             <h2 className="text-lg font-bold text-white">{t('sections.templates.title', 'Templates')}</h2>
           </div>
-
-          {/* Original/Optimized Toggle */}
-          <button
-            onClick={toggleShowOptimized}
-            className={cn(
-              "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border",
-              showOptimized
-                ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border-emerald-400/30 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20"
-            )}
-            title="Toggle between original and optimized versions"
-          >
-            {showOptimized ? (
-              <>
-                <ToggleRight className="w-5 h-5 text-emerald-400" />
-                <span>{t('sections.templates.showingOptimized', 'Showing Optimized')}</span>
-              </>
-            ) : (
-              <>
-                <ToggleLeft className="w-5 h-5" />
-                <span>{t('sections.templates.showingOriginal', 'Showing Original')}</span>
-              </>
-            )}
-          </button>
 
           {/* Category Filters */}
           <div className="flex flex-wrap gap-2">
@@ -356,12 +349,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               {selectedTemplate?.name}
             </h3>
             <p className="text-xs sm:text-sm text-white/60 flex items-center gap-1.5 mt-1">
-              {showOptimized ? (
-                <><Sparkles className="w-4 h-4 text-emerald-400" /> {t('sections.templates.optimizedVersion', 'Optimized Version')}</>
-              ) : (
-                <><FileText className="w-4 h-4 text-white/40" /> {t('sections.templates.originalVersion', 'Original Version')}</>
-              )}
-              {selectedTemplate && <span className="ml-1">• {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, categoryLabels[selectedTemplate.category as keyof typeof categoryLabels])}</span>}
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              {selectedTemplate && <span>{t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, categoryLabels[selectedTemplate.category as keyof typeof categoryLabels])}</span>}
             </p>
           </div>
 

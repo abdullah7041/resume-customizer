@@ -34,7 +34,7 @@ export interface TemplateConfig {
  */
 export interface OptimizationResult {
   sectionId: string;
-  sectionType: 'summary' | 'experience' | 'skills' | 'projects' | 'headline';
+  sectionType: 'summary' | 'experience' | 'skills' | 'projects' | 'headline' | 'education';
   original: string | string[];
   optimized: string | string[];
   applied: boolean;
@@ -104,6 +104,7 @@ export interface ResumeState {
   setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;
   applyAllOptimizations: () => void;
+  revertAllOptimizations: () => void;
   toggleShowOptimized: () => void;
   setShowOptimized: (_show: boolean) => void;
   setSelectedTemplate: (_id: TemplateId) => void;
