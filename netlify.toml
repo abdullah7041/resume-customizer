@@ -40,9 +40,10 @@
   status = 200
 
 # Sentry build plugin for source maps
+# Requires SENTRY_ORG, SENTRY_PROJECT, and SENTRY_AUTH_TOKEN env vars in Netlify
 [[plugins]]
   package = "@sentry/netlify-build-plugin"
   
   [plugins.inputs]
-    sentryOrg = "your-org"
-    sentryProject = "resume-customizer"
+    # Set commits to false to skip GitHub integration requirement
+    setCommits = false
