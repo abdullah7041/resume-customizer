@@ -45,5 +45,5 @@
   package = "@sentry/netlify-build-plugin"
   
   [plugins.inputs]
-    # Set commits to false to skip GitHub integration requirement
-    setCommits = false
+    # Skip commit association (requires GitHub integration in Sentry)
+    skipSetCommits = true
