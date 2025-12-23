@@ -5,7 +5,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
+  # These VITE_ keys are public client-side keys (safe to expose in browser)
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_SENTRY_DSN,VITE_MIXPANEL_TOKEN"
 
 [functions]
   directory = "netlify/functions"
