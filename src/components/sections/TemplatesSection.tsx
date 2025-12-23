@@ -1,7 +1,7 @@
 // src/components/sections/TemplatesSection.tsx
 // Resume template gallery with resume.io style split-panel layout
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
 import { Download, Check, Layers, Sparkles, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
@@ -138,16 +138,30 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Get resume data from store
+  // Get resume data from store - subscribe to all relevant state for reactivity
   const {
     originalResume: storeOriginalResume,
+    optimizations,  // Subscribe to optimizations - triggers re-render when optimizations change
+    showOptimized,
     getActiveResume,
     setSelectedTemplate: setStoreTemplate,
   } = useResumeStore();
 
   // Use prop data or store data
   const hasPropsData = Boolean(propResumeData);
-  const storeActiveResume = getActiveResume();
+
+  // Memoize getActiveResume to ensure stable reference
+  const memoizedGetActiveResume = useCallback(() => {
+    return getActiveResume();
+  }, [getActiveResume]);
+
+  // Compute active resume reactively - depends on optimizations and showOptimized
+  const storeActiveResume = useMemo(() => {
+    // This will recompute when optimizations or showOptimized changes
+    const result = memoizedGetActiveResume();
+    console.log('[TemplatesSection] Computing activeResume, showOptimized:', showOptimized, 'hasOptimizations:', optimizations.filter(o => o.applied).length);
+    return result;
+  }, [memoizedGetActiveResume, showOptimized, optimizations]);
 
   // Determine which resume to use - check originalResume directly since 
   // getActiveResume might return null in edge cases
@@ -197,33 +211,30 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     return baseTemplates.filter(t => t.category === selectedCategory);
   }, [selectedCategory]);
 
-  // Merged data for display - use store active resume or props
+  // Merged data for display - reactive to all state changes
   const displayData = useMemo(() => {
     try {
       if (hasPropsData) {
         const original = propResumeData || {};
-        const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
-        return merged || original;
+        if (showOptimized) {
+          const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
+          console.log('[TemplatesSection] Using merged prop data');
+          return merged || original;
+        }
+        return original;
       }
 
-      // Using store - add null safety
-      const activeResume = storeActiveResume || storeOriginalResume;
-      if (!activeResume) return SAMPLE_RESUME;
-
-      // Validate critical fields to prevent crashes
-      if (!activeResume.basics) {
-        console.warn('[TemplatesSection] Resume missing basics, using sample');
-        return { ...SAMPLE_RESUME, ...activeResume, basics: SAMPLE_RESUME.basics };
-      }
-
-      return activeResume;
+      // Using store - storeActiveResume is already computed with merge logic
+      const result = storeActiveResume || storeOriginalResume || SAMPLE_RESUME;
+      console.log('[TemplatesSection] displayData using:', showOptimized ? 'optimized' : 'original', 'headline:', result?.basics?.label);
+      return result;
     } catch (err) {
       console.error('[TemplatesSection] Error computing displayData:', err);
       return SAMPLE_RESUME;
     }
-  }, [hasPropsData, propResumeData, optimizationData, storeActiveResume, storeOriginalResume]);
+  }, [hasPropsData, propResumeData, optimizationData, showOptimized, storeActiveResume, storeOriginalResume]);
 
-  // Data for PDF download (always use merged)
+  // Data for PDF download - always use the active (potentially merged) resume
   const mergedDownloadData = useMemo(() => {
     try {
       if (hasPropsData) {
@@ -232,13 +243,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         return merged || propResumeData;
       }
 
-      const activeResume = storeActiveResume || storeOriginalResume;
-      if (!activeResume || !activeResume.basics) {
-        console.warn('[TemplatesSection] No valid resume for PDF export');
-        return SAMPLE_RESUME;
-      }
-
-      return activeResume;
+      // Use store's active resume (already merged if showOptimized is true)
+      const result = storeActiveResume || storeOriginalResume || SAMPLE_RESUME;
+      console.log('[TemplatesSection] PDF download data headline:', result?.basics?.label);
+      return result;
     } catch (err) {
       console.error('[TemplatesSection] Error computing mergedDownloadData:', err);
       return SAMPLE_RESUME;

@@ -342,7 +342,9 @@ export const useResumeStore = create<ResumeState>()(
           }
         }
 
-        // DEBUG: Verify merge is working (remove after confirming fix)
+        // Debug: Log what sections were updated
+        const appliedCount = state.optimizations.filter(o => o.applied).length;
+        console.log('[ResumeStore] Applied', appliedCount, 'optimizations');
         console.log('[ResumeStore] Merged headline:', merged.basics?.label);
         console.log('[ResumeStore] Merged summary preview:', merged.basics?.summary?.substring(0, 50));
 
