@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 12,
-        color: "#059669",
+        color: "#374151",
         fontWeight: 600,
         marginBottom: 8,
     },
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
         fontWeight: 700,
         color: "#111827",
         borderBottomWidth: 1,
-        borderBottomColor: "#059669",
+        borderBottomColor: "#374151",
         paddingBottom: 4,
         marginBottom: 8,
     },
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     },
     company: {
         fontSize: 10,
-        color: "#059669",
+        color: "#374151",
     },
     dateRange: {
         fontSize: 9,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     bullet: {
         width: 8,
         fontSize: 10,
-        color: "#059669",
+        color: "#374151",
     },
     bulletText: {
         flex: 1,
@@ -150,12 +150,12 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     skillTag: {
-        backgroundColor: "#d1fae5",
+        backgroundColor: "#f3f4f6",
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 4,
         fontSize: 9,
-        color: "#047857",
+        color: "#1f2937",
     },
     educationItem: {
         marginBottom: 10,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
         color: "#4b5563",
     },
     link: {
-        color: "#059669",
+        color: "#374151",
         textDecoration: "none",
     },
     // Arabic text styles
