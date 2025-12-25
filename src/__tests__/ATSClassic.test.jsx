@@ -175,34 +175,61 @@ describe('ATSClassic Template', () => {
         });
     });
 
-    describe('Backwards Compatibility', () => {
-        it('renders legacy header format (data.header)', () => {
+    describe('Legacy Format Handling (No Longer Supported)', () => {
+        // After schema consolidation, templates now require JSON Resume format.
+        // Legacy format data (data.header, data.experience) is no longer converted.
+        // This is intentional to simplify the architecture.
+
+        it('shows "No resume data available" for legacy header format', () => {
             render(<ATSClassic data={mockLegacyData} />);
 
+            // Legacy format no longer supported - should show fallback message
+            expect(screen.getByText("No resume data available")).toBeInTheDocument();
+        });
+
+        it('requires basics object for rendering', () => {
+            const legacyOnlyData = {
+                header: { name: "Test" },
+                experience: [{ company: "TestCo" }]
+            };
+
+            render(<ATSClassic data={legacyOnlyData} />);
+            expect(screen.getByText("No resume data available")).toBeInTheDocument();
+        });
+
+        it('renders correctly when legacy data is converted to JSON Resume format', () => {
+            // If legacy data is converted upstream to JSON Resume format, it works
+            const convertedData = {
+                basics: {
+                    name: "Jane Smith",
+                    label: "Product Manager",
+                    email: "jane@example.com",
+                    phone: "555-0123",
+                    summary: "Strategic product manager with a passion for user-centric design.",
+                    location: { address: "New York, NY" },
+                    profiles: [{ network: "LinkedIn", url: "linkedin.com/in/janesmith" }]
+                },
+                work: [{
+                    name: "BigCo",
+                    position: "Product Manager",
+                    startDate: "2019",
+                    endDate: "Present",
+                    highlights: ["Launched 3 products", "Grew revenue 25%"]
+                }],
+                education: [{
+                    institution: "Harvard Business School",
+                    studyType: "MBA",
+                    endDate: "2018"
+                }],
+                skills: [
+                    { name: "Skills", keywords: ["Roadmapping", "User Research", "Agile"] }
+                ]
+            };
+
+            render(<ATSClassic data={convertedData} />);
             expect(screen.getByText("Jane Smith")).toBeInTheDocument();
-            // "Product Manager" appears twice: as title and as experience position
+            // "Product Manager" appears as both label and work position
             expect(screen.getAllByText("Product Manager").length).toBeGreaterThanOrEqual(1);
-        });
-
-        it('renders legacy experience format (data.experience with description)', () => {
-            render(<ATSClassic data={mockLegacyData} />);
-
-            expect(screen.getByText(/BigCo/)).toBeInTheDocument();
-            expect(screen.getByText("Launched 3 products")).toBeInTheDocument();
-        });
-
-        it('renders legacy skills as string array', () => {
-            render(<ATSClassic data={mockLegacyData} />);
-
-            expect(screen.getByText("Roadmapping")).toBeInTheDocument();
-            expect(screen.getByText("User Research")).toBeInTheDocument();
-        });
-
-        it('renders legacy education format (degree/school/year)', () => {
-            render(<ATSClassic data={mockLegacyData} />);
-
-            expect(screen.getByText("MBA")).toBeInTheDocument();
-            expect(screen.getByText(/Harvard Business School/)).toBeInTheDocument();
         });
     });
 

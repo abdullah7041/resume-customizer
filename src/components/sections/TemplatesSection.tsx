@@ -1,7 +1,7 @@
 // src/components/sections/TemplatesSection.tsx
 // Resume template gallery with resume.io style split-panel layout
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
 import { Download, Check, Layers, Sparkles, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
@@ -12,7 +12,7 @@ import { analytics } from "../../services/analytics";
 import TemplateRenderer from "../templates/TemplateRenderer";
 // ResumePDFDocument is now loaded dynamically when needed
 import Button from "../ui/Button";
-import { mergeResumeData } from "../../lib/utils/resumeUtils";
+
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
 
@@ -147,26 +147,32 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     setSelectedTemplate: setStoreTemplate,
   } = useResumeStore();
 
-  // Use prop data or store data
-  const hasPropsData = Boolean(propResumeData);
+  // Determine if store has applied optimizations - THIS TAKES PRIORITY
+  const hasAppliedOptimizations = optimizations.some(o => o.applied);
 
-  // Memoize getActiveResume to ensure stable reference
-  const memoizedGetActiveResume = useCallback(() => {
-    return getActiveResume();
-  }, [getActiveResume]);
+  // Use store data when:
+  // 1. Store has applied optimizations (user clicked Apply All)
+  // 2. OR when showOptimized is true
+  // Use prop data only as fallback when store is empty
+  const useStoreData = hasAppliedOptimizations || showOptimized || !propResumeData;
 
-  // Compute active resume reactively - depends on optimizations and showOptimized
+  // Compute active resume reactively
   const storeActiveResume = useMemo(() => {
-    // This will recompute when optimizations or showOptimized changes
-    const result = memoizedGetActiveResume();
-    console.log('[TemplatesSection] Computing activeResume, showOptimized:', showOptimized, 'hasOptimizations:', optimizations.filter(o => o.applied).length);
-    return result;
-  }, [memoizedGetActiveResume, showOptimized, optimizations]);
+    if (!useStoreData) return null;
 
-  // Determine which resume to use - check originalResume directly since 
-  // getActiveResume might return null in edge cases
-  const resumeData = hasPropsData ? propResumeData : (storeActiveResume || storeOriginalResume);
-  const hasRealResume = Boolean(resumeData);
+    const result = getActiveResume();
+    console.log('[TemplatesSection] Computing activeResume from STORE, showOptimized:', showOptimized, 'appliedCount:', optimizations.filter(o => o.applied).length);
+    return result;
+  }, [getActiveResume, showOptimized, optimizations, useStoreData]);
+
+  // Determine which resume to use
+  const resumeData = useStoreData
+    ? (storeActiveResume || storeOriginalResume)
+    : propResumeData;
+  const hasRealResume = Boolean(resumeData?.basics?.name);
+
+  // Debug log the data source
+  console.log('[TemplatesSection] Data source:', useStoreData ? 'STORE' : 'PROPS', 'hasRealResume:', hasRealResume);
 
   // Download PDF using @react-pdf/renderer (loaded dynamically to reduce initial bundle)
   const handleDownloadPdf = async () => {
@@ -212,46 +218,21 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   }, [selectedCategory]);
 
   // Merged data for display - reactive to all state changes
-  const displayData = useMemo(() => {
-    try {
-      if (hasPropsData) {
-        const original = propResumeData || {};
-        if (showOptimized) {
-          const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
-          console.log('[TemplatesSection] Using merged prop data');
-          return merged || original;
-        }
-        return original;
-      }
+  const displayData = useMemo((): Partial<ResumeSchema> => {
+    const data = useStoreData
+      ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
+      : (propResumeData || SAMPLE_RESUME);
 
-      // Using store - storeActiveResume is already computed with merge logic
-      const result = storeActiveResume || storeOriginalResume || SAMPLE_RESUME;
-      console.log('[TemplatesSection] displayData using:', showOptimized ? 'optimized' : 'original', 'headline:', result?.basics?.label);
-      return result;
-    } catch (err) {
-      console.error('[TemplatesSection] Error computing displayData:', err);
-      return SAMPLE_RESUME;
-    }
-  }, [hasPropsData, propResumeData, optimizationData, showOptimized, storeActiveResume, storeOriginalResume]);
+    console.log('[TemplatesSection] displayData headline:', data?.basics?.label);
+    return data;
+  }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
 
-  // Data for PDF download - always use the active (potentially merged) resume
-  const mergedDownloadData = useMemo(() => {
-    try {
-      if (hasPropsData) {
-        if (!propResumeData) return SAMPLE_RESUME;
-        const merged = mergeResumeData(propResumeData, { optimization: optimizationData });
-        return merged || propResumeData;
-      }
-
-      // Use store's active resume (already merged if showOptimized is true)
-      const result = storeActiveResume || storeOriginalResume || SAMPLE_RESUME;
-      console.log('[TemplatesSection] PDF download data headline:', result?.basics?.label);
-      return result;
-    } catch (err) {
-      console.error('[TemplatesSection] Error computing mergedDownloadData:', err);
-      return SAMPLE_RESUME;
-    }
-  }, [hasPropsData, propResumeData, optimizationData, storeActiveResume, storeOriginalResume]);
+  // Data for PDF download - simplified, uses determined source
+  const mergedDownloadData = useMemo((): Partial<ResumeSchema> => {
+    return useStoreData
+      ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
+      : (propResumeData || SAMPLE_RESUME);
+  }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
 
   const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
     setSelectedTemplate(template);
@@ -349,7 +330,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       </div>
 
       {/* Right Panel - Live Preview */}
-      <div className={cn(glassCardClass, "flex-1 flex flex-col min-h-[400px] md:min-h-0")}>
+      <div className={cn(glassCardClass, "flex-1 flex flex-col max-h-[700px] md:max-h-[800px]")}>
         {/* Preview Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 md:p-5 border-b border-white/10">
           <div>
@@ -382,14 +363,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
         )}
 
-        {/* Live Preview */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30">
+        {/* Live Preview - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30">
           <div className="max-w-3xl mx-auto">
             <div className="bg-white shadow-[0_20px_60px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden ring-1 ring-white/10">
               {selectedTemplate && (
                 <TemplateRenderer
                   template={selectedTemplate}
-                  userData={displayData}
+                  userData={displayData as unknown as Record<string, unknown>}
                 />
               )}
             </div>

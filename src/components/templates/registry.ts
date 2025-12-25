@@ -2,6 +2,7 @@ import type { TemplateComponent } from './BaseTemplate';
 import type { TemplateConfig, TemplateId } from '../../types/templates';
 import { ModernProfessional } from './ModernProfessional';
 import { ClassicTraditional } from './ClassicTraditional';
+import { TechnicalEngineer } from './TechnicalEngineer';
 
 /**
  * Template component registry
@@ -10,8 +11,8 @@ import { ClassicTraditional } from './ClassicTraditional';
 export const TEMPLATES: Record<TemplateId, TemplateComponent> = {
   'modern-professional': ModernProfessional as TemplateComponent,
   'classic-traditional': ClassicTraditional as TemplateComponent,
-  'technical-minimal': ModernProfessional as TemplateComponent, // TODO: Create dedicated template
-  'executive-bold': ClassicTraditional as TemplateComponent, // TODO: Create dedicated template
+  'technical-minimal': TechnicalEngineer as TemplateComponent,
+  'executive-bold': ClassicTraditional as TemplateComponent,
 };
 
 /**
@@ -24,7 +25,7 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
     name: 'Modern Professional',
     nameAr: 'احترافي عصري',
     category: 'modern',
-    description: 'Clean, contemporary design with accent colors',
+    description: 'Clean & minimal, perfect for any industry',
     descriptionAr: 'تصميم عصري ونظيف مع ألوان مميزة',
     isAtsOptimized: true,
     previewColor: '#10b981', // emerald-500
@@ -34,18 +35,18 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
     name: 'Classic Traditional',
     nameAr: 'كلاسيكي تقليدي',
     category: 'classic',
-    description: 'Timeless two-column layout with elegant typography',
+    description: 'Elegant serif style for traditional sectors',
     descriptionAr: 'تخطيط كلاسيكي بعمودين مع طباعة أنيقة',
     isAtsOptimized: true,
     previewColor: '#6b7280', // gray-500
   },
   {
     id: 'technical-minimal',
-    name: 'Technical Minimal',
-    nameAr: 'تقني بسيط',
+    name: 'Technical Engineer',
+    nameAr: 'مهندس تقني',
     category: 'technical',
-    description: 'Stripped-down format for technical roles',
-    descriptionAr: 'تنسيق مبسط للأدوار التقنية',
+    description: 'Skills-first layout for technical roles',
+    descriptionAr: 'تخطيط يركز على المهارات للأدوار التقنية',
     isAtsOptimized: true,
     previewColor: '#3b82f6', // blue-500
   },

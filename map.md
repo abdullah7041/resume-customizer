@@ -197,7 +197,6 @@ utils/
 ├── pdfExport.ts                     # PDF export utilities
 ├── resumeText.ts                    # Resume text processing
 ├── resumeUtils.ts                   # Resume data transformation
-├── templatePreviews.ts              # Template preview generation
 ├── vision2030Analyzer.ts            # Vision 2030 analysis
 └── vision2030Icons.tsx              # Vision 2030 sector icons
 ```
@@ -394,4 +393,4 @@ scripts/
 
 ---
 
-*Last updated: December 22, 2025 at 14:57 UTC+3*
+*Last updated: December 25, 2025 at 15:06 UTC+3*

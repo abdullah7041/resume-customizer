@@ -34,7 +34,7 @@ export interface TemplateConfig {
  */
 export interface OptimizationResult {
   sectionId: string;
-  sectionType: 'summary' | 'experience' | 'skills' | 'projects' | 'headline' | 'education';
+  sectionType: 'summary' | 'experience' | 'skills' | 'projects' | 'headline' | 'education' | 'certifications';
   original: string | string[];
   optimized: string | string[];
   applied: boolean;
@@ -111,6 +111,7 @@ export interface ResumeState {
   setKeywordSuggestions: (_suggestions: KeywordSuggestion[]) => void;
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
+  resetForNewUpload: () => void;
 
   // Cache actions
   getCachedAnalysis: (resumeText: string, jobDescription: string) => CachedAnalysis | null;

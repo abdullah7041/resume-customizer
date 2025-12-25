@@ -43,7 +43,7 @@ export default function UploadSection({
     const [pastedText, setPastedText] = useState('');
 
     // Get store actions
-    const { setOriginalResume, setParsedResumeText, clearAll } = useResumeStore();
+    const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload } = useResumeStore();
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
@@ -95,6 +95,9 @@ export default function UploadSection({
         analytics.track('resume_upload_started', { file_type: fileType });
 
         try {
+            // CRITICAL: Reset previous resume data before processing new upload
+            resetForNewUpload();
+
             setStatus('uploading');
             setProgress(30);
 
@@ -157,7 +160,7 @@ export default function UploadSection({
                 description: message,
             });
         }
-    }, [file, pastedText, onParseResume, onToast, setOriginalResume, setParsedResumeText]);
+    }, [file, pastedText, onParseResume, onToast, setOriginalResume, setParsedResumeText, resetForNewUpload]);
 
     const fileName = file?.name || resumeDocument?.fileName || '';
     const disabled = !file && !pastedText && !resumeDocument?.plainText;

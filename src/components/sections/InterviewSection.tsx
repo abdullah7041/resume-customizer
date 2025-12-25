@@ -90,6 +90,83 @@ const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
   );
 };
 
+// STAR Method Tip component
+const STARMethodTip = () => (
+  <div className="mb-6 p-5 bg-emerald-900/80 border border-emerald-500/40 rounded-xl backdrop-blur-sm shadow-lg">
+    <div className="flex items-start gap-4">
+      <div className="w-10 h-10 rounded-xl bg-emerald-500/30 flex items-center justify-center flex-shrink-0">
+        <Lightbulb className="w-5 h-5 text-emerald-300" />
+      </div>
+      <div>
+        <h4 className="text-base font-bold text-emerald-200 mb-2">
+          Use the STAR Method
+        </h4>
+        <p className="text-sm text-white/80 leading-relaxed mb-3">
+          Structure your answers for maximum impact:
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-emerald-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="font-bold text-emerald-300 text-lg">S</span>
+              <span className="text-white/90 text-sm font-medium">ituation</span>
+            </div>
+            <span className="text-white/70 text-xs block">Set the context</span>
+          </div>
+          <div className="bg-emerald-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="font-bold text-emerald-300 text-lg">T</span>
+              <span className="text-white/90 text-sm font-medium">ask</span>
+            </div>
+            <span className="text-white/70 text-xs block">Your responsibility</span>
+          </div>
+          <div className="bg-emerald-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="font-bold text-emerald-300 text-lg">A</span>
+              <span className="text-white/90 text-sm font-medium">ction</span>
+            </div>
+            <span className="text-white/70 text-xs block">What you did</span>
+          </div>
+          <div className="bg-emerald-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="font-bold text-emerald-300 text-lg">R</span>
+              <span className="text-white/90 text-sm font-medium">esult</span>
+            </div>
+            <span className="text-white/70 text-xs block">Measurable outcome</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Get contextual STAR tips based on question type
+const getSTARTips = (q: string) => {
+  const lower = q.toLowerCase();
+  if (lower.includes('describe') || lower.includes('tell me about')) {
+    return {
+      situation: 'Briefly describe the project/challenge context',
+      task: "Explain your specific role and what was expected",
+      action: "Detail the steps YOU took (use 'I', not 'we')",
+      result: 'Quantify the outcome: %, $, time saved, etc.'
+    };
+  }
+  if (lower.includes('how do you') || lower.includes('how would you')) {
+    return {
+      situation: 'Reference a specific instance when you did this',
+      task: 'What problem were you solving?',
+      action: 'Walk through your methodology step-by-step',
+      result: 'What was the measurable improvement?'
+    };
+  }
+  // Default tips
+  return {
+    situation: 'Set the scene with relevant context',
+    task: 'Define what you needed to accomplish',
+    action: 'Describe your specific contributions',
+    result: 'Share concrete, quantifiable outcomes'
+  };
+};
+
 // Normalize question - handles different data formats
 const normalizeQuestion = (question: unknown, index: number): Question | null => {
   if (typeof question === 'object' && question !== null) {
@@ -380,6 +457,9 @@ export function InterviewSection({
       {/* Questions List */}
       {!isLoading && questions.length > 0 && (
         <div className="space-y-4">
+          {/* STAR Method Tip */}
+          <STARMethodTip />
+
           <h3 className="text-lg font-semibold text-white">
             {t('sections.interview.questionsTitle', 'Predicted Questions')} ({questions.length})
           </h3>
@@ -414,11 +494,39 @@ export function InterviewSection({
                   {/* Expanded Content */}
                   {expandedQuestions.has(index) && (
                     <div className="mt-4 space-y-3">
+                      {/* STAR Guidance for this question */}
+                      <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Lightbulb className="w-4 h-4 text-emerald-400" />
+                          <span className="text-sm font-medium text-emerald-400">
+                            How to answer using STAR:
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <span className="font-semibold text-emerald-400">S: </span>
+                            <span className="text-white/50">{getSTARTips(question.question).situation}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-emerald-400">T: </span>
+                            <span className="text-white/50">{getSTARTips(question.question).task}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-emerald-400">A: </span>
+                            <span className="text-white/50">{getSTARTips(question.question).action}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-emerald-400">R: </span>
+                            <span className="text-white/50">{getSTARTips(question.question).result}</span>
+                          </div>
+                        </div>
+                      </div>
+
                       {question.answerFramework && (
-                        <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                        <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                           <div className="flex items-center gap-2 mb-2">
-                            <Lightbulb className="w-4 h-4 text-emerald-400" />
-                            <span className="text-sm font-medium text-emerald-400">
+                            <Lightbulb className="w-4 h-4 text-blue-400" />
+                            <span className="text-sm font-medium text-blue-400">
                               {t('sections.interview.framework', 'Answer Framework')}
                             </span>
                           </div>

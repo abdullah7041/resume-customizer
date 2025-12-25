@@ -175,10 +175,10 @@ describe("Mobile Layout Polish", () => {
     it("should have compact spacing between elements", () => {
       const { container } = renderWithProviders(<Header />);
 
-      // Check main content container has compact gaps (mobile-first: gap-6 on mobile, sm:gap-10 on larger)
+      // Check main content container has compact gaps (mobile-first: gap-4 on mobile, sm:gap-8 on larger)
       const mainGrid = container.querySelector(".grid");
-      expect(mainGrid).toHaveClass("gap-6");
-      expect(mainGrid).toHaveClass("sm:gap-10");
+      expect(mainGrid).toHaveClass("gap-4");
+      expect(mainGrid).toHaveClass("sm:gap-8");
     });
   });
 
@@ -208,10 +208,10 @@ describe("Mobile Layout Polish", () => {
 
       const grid = container.querySelector(".grid");
 
-      // Current Header uses gap-6 sm:gap-10 lg:gap-16 (mobile-first approach)
-      expect(grid).toHaveClass("gap-6");
-      expect(grid).toHaveClass("sm:gap-10");
-      expect(grid).toHaveClass("lg:gap-16");
+      // Current Header uses gap-4 sm:gap-8 lg:gap-12 (mobile-first approach)
+      expect(grid).toHaveClass("gap-4");
+      expect(grid).toHaveClass("sm:gap-8");
+      expect(grid).toHaveClass("lg:gap-12");
     });
   });
 });

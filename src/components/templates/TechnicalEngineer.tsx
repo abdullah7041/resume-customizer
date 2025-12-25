@@ -1,0 +1,339 @@
+import type { TemplateProps } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString } from './BaseTemplate';
+import { useDirection } from '../providers/DirectionProvider';
+
+/**
+ * Technical Engineer Template
+ * Skills-first layout with monospace-inspired typography
+ * Emphasizes technical competencies, clean data presentation
+ * Supports RTL for Arabic
+ */
+export function TechnicalEngineer({
+    resume,
+    isAtsMode = false,
+    scale = 1,
+}: TemplateProps) {
+    const { isRTL } = useDirection();
+
+    // ATS mode returns pure semantic HTML
+    if (isAtsMode) {
+        return <ATSResume resume={resume} />;
+    }
+
+    const { basics, work = [], education = [], skills = [], projects = [], languages = [] } = resume;
+
+    return (
+        <div
+            className="bg-white text-gray-900"
+            style={{
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+                width: A4_STYLES.width,
+                minHeight: A4_STYLES.minHeight,
+                padding: '18mm 20mm',
+                fontFamily: "'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace",
+                fontSize: '9pt',
+                lineHeight: '1.5',
+            }}
+            dir={isRTL ? 'rtl' : 'ltr'}
+        >
+            {/* Header */}
+            <header className="mb-5 pb-4" style={{ borderBottom: '2px dashed #d1d5db' }}>
+                <h1
+                    className="text-gray-900 mb-1"
+                    style={{
+                        fontSize: '20pt',
+                        fontWeight: '700',
+                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                    }}
+                >
+                    {safeString(basics.name)}
+                </h1>
+                {basics.label && (
+                    <p
+                        className="text-gray-500 mb-2"
+                        style={{
+                            fontSize: '10pt',
+                            fontFamily: "'Inter', -apple-system, sans-serif",
+                        }}
+                    >
+                        {basics.label}
+                    </p>
+                )}
+                <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                    {basics.email && <span>{basics.email}</span>}
+                    {basics.phone && <span>{basics.phone}</span>}
+                    {basics.location?.city && <span>{basics.location.city}</span>}
+                    {basics.profiles?.map((profile, i) => (
+                        <span key={i}>
+                            {profile.url?.replace('https://', '').replace('www.', '') || profile.username}
+                        </span>
+                    ))}
+                </div>
+            </header>
+
+            {/* SKILLS FIRST - Technical emphasis */}
+            {skills.length > 0 && (
+                <section
+                    className="mb-5 p-3 rounded"
+                    style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}
+                >
+                    <h2
+                        className="text-gray-700 mb-3 pb-1"
+                        style={{
+                            fontSize: '9pt',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: 'none',
+                        }}
+                    >
+                        {isRTL ? 'المهارات التقنية' : 'Technical Skills'}
+                    </h2>
+                    <div className="space-y-2">
+                        {skills.map((skillGroup, i) => (
+                            <div key={i}>
+                                {skillGroup.name && skillGroup.name.toLowerCase() !== 'skills' && (
+                                    <p
+                                        className="text-gray-500 mb-1"
+                                        style={{
+                                            fontSize: '8pt',
+                                            fontWeight: '600',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em',
+                                        }}
+                                    >
+                                        {skillGroup.name}
+                                    </p>
+                                )}
+                                <div className="flex flex-wrap gap-1">
+                                    {(skillGroup.keywords || [skillGroup.name]).map((skill, j) => (
+                                        <span
+                                            key={j}
+                                            className="px-2 py-0.5 text-gray-700 rounded"
+                                            style={{
+                                                fontSize: '8.5pt',
+                                                backgroundColor: '#ffffff',
+                                                border: '1px solid #d1d5db',
+                                            }}
+                                        >
+                                            {skill}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Summary */}
+            {basics.summary && (
+                <section className="mb-5">
+                    <h2
+                        className="text-gray-700 mb-2 pb-1"
+                        style={{
+                            fontSize: '9pt',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px dashed #e5e7eb',
+                        }}
+                    >
+                        {isRTL ? 'الملخص' : 'Summary'}
+                    </h2>
+                    <p
+                        className="text-gray-600"
+                        style={{
+                            fontFamily: "'Inter', -apple-system, sans-serif",
+                            fontSize: '9pt',
+                        }}
+                    >
+                        {basics.summary}
+                    </p>
+                </section>
+            )}
+
+            {/* Experience */}
+            {work.length > 0 && (
+                <section className="mb-5">
+                    <h2
+                        className="text-gray-700 mb-3 pb-1"
+                        style={{
+                            fontSize: '9pt',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px dashed #e5e7eb',
+                        }}
+                    >
+                        {isRTL ? 'الخبرة' : 'Experience'}
+                    </h2>
+                    <div className="space-y-4">
+                        {work.map((job, i) => (
+                            <div key={i}>
+                                <div className="flex justify-between items-baseline mb-1">
+                                    <h3
+                                        className="text-gray-900"
+                                        style={{
+                                            fontSize: '10pt',
+                                            fontWeight: '600',
+                                            fontFamily: "'Inter', -apple-system, sans-serif",
+                                        }}
+                                    >
+                                        {safeString(job.position)}
+                                    </h3>
+                                    <span className="text-gray-500" style={{ fontSize: '8.5pt' }}>
+                                        {job.startDate} → {job.endDate || 'Present'}
+                                    </span>
+                                </div>
+                                <p className="text-gray-500 mb-2" style={{ fontSize: '9pt' }}>
+                                    {safeString(job.name)}
+                                </p>
+                                {job.highlights && job.highlights.length > 0 && (
+                                    <ul className="space-y-1 ps-4">
+                                        {job.highlights.map((h, j) => (
+                                            <li
+                                                key={j}
+                                                className="text-gray-600 relative"
+                                                style={{
+                                                    fontSize: '8.5pt',
+                                                    listStyleType: 'disc',
+                                                }}
+                                            >
+                                                {h}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Projects */}
+            {projects.length > 0 && (
+                <section className="mb-5">
+                    <h2
+                        className="text-gray-700 mb-3 pb-1"
+                        style={{
+                            fontSize: '9pt',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px dashed #e5e7eb',
+                        }}
+                    >
+                        {isRTL ? 'المشاريع' : 'Projects'}
+                    </h2>
+                    <div className="space-y-3">
+                        {projects.map((project, i) => (
+                            <div key={i}>
+                                <h3
+                                    className="text-gray-900"
+                                    style={{
+                                        fontSize: '10pt',
+                                        fontWeight: '600',
+                                        fontFamily: "'Inter', -apple-system, sans-serif",
+                                    }}
+                                >
+                                    {safeString(project.name)}
+                                </h3>
+                                {project.description && (
+                                    <p className="text-gray-600 text-xs mb-1">{project.description}</p>
+                                )}
+                                {project.highlights && project.highlights.length > 0 && (
+                                    <ul className="space-y-1 ps-4">
+                                        {project.highlights.map((h, j) => (
+                                            <li
+                                                key={j}
+                                                className="text-gray-600"
+                                                style={{
+                                                    fontSize: '8.5pt',
+                                                    listStyleType: 'disc',
+                                                }}
+                                            >
+                                                {h}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Education */}
+            {education.length > 0 && (
+                <section className="mb-5">
+                    <h2
+                        className="text-gray-700 mb-3 pb-1"
+                        style={{
+                            fontSize: '9pt',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px dashed #e5e7eb',
+                        }}
+                    >
+                        {isRTL ? 'التعليم' : 'Education'}
+                    </h2>
+                    <div className="space-y-2">
+                        {education.map((edu, i) => (
+                            <div key={i} className="flex justify-between items-baseline">
+                                <div>
+                                    <h3
+                                        className="text-gray-900"
+                                        style={{
+                                            fontSize: '10pt',
+                                            fontWeight: '600',
+                                            fontFamily: "'Inter', -apple-system, sans-serif",
+                                        }}
+                                    >
+                                        {safeString(edu.institution)}
+                                    </h3>
+                                    <p className="text-gray-500" style={{ fontSize: '9pt' }}>
+                                        {safeString(edu.studyType)}
+                                        {edu.area && ` — ${edu.area}`}
+                                    </p>
+                                </div>
+                                <span className="text-gray-500" style={{ fontSize: '8.5pt' }}>
+                                    {edu.endDate || edu.startDate}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Languages */}
+            {languages.length > 0 && (
+                <section>
+                    <h2
+                        className="text-gray-700 mb-2 pb-1"
+                        style={{
+                            fontSize: '9pt',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px dashed #e5e7eb',
+                        }}
+                    >
+                        {isRTL ? 'اللغات' : 'Languages'}
+                    </h2>
+                    <div className="flex flex-wrap gap-3">
+                        {languages.map((lang, i) => (
+                            <span key={i} className="text-gray-600" style={{ fontSize: '9pt' }}>
+                                <strong>{lang.language}</strong>: {lang.fluency}
+                            </span>
+                        ))}
+                    </div>
+                </section>
+            )}
+        </div>
+    );
+}
+
+TechnicalEngineer.displayName = 'Technical Engineer';

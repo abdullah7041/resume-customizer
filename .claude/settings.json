@@ -8,7 +8,7 @@
         "commands": [
             {
                 "command": "npm run quality:check",
-                "description": "Run linting and TypeScript checks after every code modification",
+                "description": "Run linting, TypeScript checks, and tests after every code modification",
                 "enabled": true
             }
         ]

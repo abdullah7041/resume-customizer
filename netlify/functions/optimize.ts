@@ -190,7 +190,7 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       });
     }
 
-    // Cards for Skills
+    // Cards for Skills - IMPORTANT: These are SUGGESTIONS, not auto-additions
     const skillsToAdd = opt?.skills_gap_analysis?.missing_keywords_to_add ||
       aiSuggestions?.skills_gap_analysis?.missing_keywords_to_add ||
       [];
@@ -201,15 +201,16 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       ? currentSkills.flatMap((s: { name?: string; keywords?: string[]; } | string) => typeof s === 'string' ? s : (s.keywords || [s.name])).filter(Boolean).slice(0, 5)
       : [];
 
+    // Only show skills card if there are meaningful suggestions
     if (skillsToAdd.length > 0) {
       cards.push({
         section: "Skills",
-        issue: "Missing key skills for this role.",
-        suggestion: "Add these high-impact keywords to improve ATS matching.",
+        issue: "Consider adding these skills if you have them.",
+        suggestion: "If you have experience with these skills, consider adding them to improve ATS matching. Only add skills you actually possess.",
         exampleBefore: currentSkillsList.length > 0
           ? `Current: ${currentSkillsList.join(', ')}`
           : "No skills detected",
-        exampleAfter: `Add: ${skillsToAdd.slice(0, 8).join(', ')}${skillsToAdd.length > 8 ? '...' : ''}`
+        exampleAfter: `Consider: ${skillsToAdd.slice(0, 8).join(', ')}${skillsToAdd.length > 8 ? '...' : ''}`
       });
     }
 

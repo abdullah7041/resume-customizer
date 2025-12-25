@@ -9,7 +9,7 @@
 
 **1. Post-Task Hook (Automatic)**
 - `.claude/settings.json` is configured to automatically run `npm run quality:check` after every task
-- This check runs ESLint and TypeScript compiler
+- This check runs ESLint, TypeScript compiler, and unit tests
 - Task is NOT complete until this passes with zero errors
 
 **2. Pre-Commit Hook (Automatic)**
@@ -20,16 +20,18 @@
 ### Manual Quality Commands
 
 ```bash
-# Run full quality check (lint + types)
+# Run full quality check (lint + types + tests)
 npm run quality:check
 
-# Auto-fix linting issues + check types
+# Auto-fix linting issues + check types + run tests
 npm run quality:fix
 
 # Individual checks
 npm run lint          # Check linting
 npm run lint:fix      # Fix linting issues
 npm run type:check    # Check TypeScript
+npm run test          # Run unit tests
+npm run test:watch    # Run tests in watch mode
 ```
 ## Key Technical Decisions
 
@@ -64,6 +66,7 @@ npm run type:check    # Check TypeScript
 Before completing ANY code task, ensure:
 - [ ] `npm run lint` passes with 0 warnings
 - [ ] `npm run type:check` passes with 0 errors
+- [ ] `npm run test` passes with 0 failures
 - [ ] All new interfaces added to `src/types/`
 - [ ] No `any` types used anywhere
 - [ ] All imports are actually used

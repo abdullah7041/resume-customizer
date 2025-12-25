@@ -42,6 +42,7 @@ export const WorkSchema = z.object({
     startDate: z.string().optional().default(''),
     endDate: z.string().optional().default(''),
     summary: z.string().optional().default(''),
+    location: z.string().optional().default(''),
     highlights: z.array(z.string()).optional().default([]),
 });
 
@@ -135,7 +136,7 @@ export const ParsedTextSchema = z.string().min(1, 'Parsed text cannot be empty')
  */
 export const OptimizationResultSchema = z.object({
     sectionId: z.string(),
-    sectionType: z.enum(['summary', 'experience', 'skills', 'projects', 'headline', 'education']),
+    sectionType: z.enum(['summary', 'experience', 'skills', 'projects', 'headline', 'education', 'certifications']),
     original: z.union([z.string(), z.array(z.string())]),
     optimized: z.union([z.string(), z.array(z.string())]),
     applied: z.boolean(),

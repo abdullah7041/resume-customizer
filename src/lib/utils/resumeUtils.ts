@@ -1,142 +1,46 @@
-import { deriveResumeSections } from '../../services/exportPdf';
+/**
+ * Resume Utilities - JSON Resume Schema Only
+ * 
+ * This module handles merging resume data with AI optimizations.
+ * All data is expected to be in JSON Resume format (https://jsonresume.org/schema).
+ */
 
 /**
- * Transforms raw resume data (with plainText) into template-compatible structured format.
- * This bridges the gap between parsed resume data and what templates expect.
- * 
- * @param {Object} resumeData - The raw resume data with plainText property
- * @returns {Object} - Structured data with header, summary, experience, skills, education
+ * Deduplicates an array of objects by their name property.
+ * Used to prevent duplicate projects/work entries.
  */
-export const transformResumeForTemplate = (resumeData) => {
-    if (!resumeData?.plainText) {
-        return null;
-    }
-
-    // Use the existing parser to extract sections
-    const sections = deriveResumeSections(resumeData.plainText);
-
-    // Parse contact information from first lines
-    const contactLines = sections.contactLines || [];
-    const name = contactLines[0] || "Your Name";
-
-    // Try to extract email, phone, location from contact lines
-    let email = "", phone = "", location = "", linkedin = "";
-    for (const line of contactLines.slice(1)) {
-        if (/@/.test(line) && !email) {
-            email = line.match(/[\w.+-]+@[\w.-]+/)?.[0] || line;
-        } else if (/\+?\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\+?\d{10,}/.test(line) && !phone) {
-            phone = line.match(/[\d+().\s-]+/)?.[0]?.trim() || line;
-        } else if (/linkedin/i.test(line) && !linkedin) {
-            linkedin = line;
-        } else if (!location && line.length < 50) {
-            location = line;
-        }
-    }
-
-    // Transform experience lines into structured job objects
-    // This is a heuristic approach - experience lines are typically bullet points
-    const experience = sections.experience.length > 0 ? [{
-        company: "Company",
-        position: "Position",
-        date: "",
-        description: sections.experience
-    }] : [];
-
-    // Transform education lines into structured education objects
-    const education = sections.education.map((line) => ({
-        institution: line,
-        degree: "",
-        date: ""
-    }));
-
-    return {
-        header: {
-            name,
-            email,
-            phone,
-            location,
-            linkedin,
-            title: "" // Will be filled by AI optimization
-        },
-        summary: sections.summary.join(" "),
-        experience,
-        skills: sections.skills,
-        education,
-        projects: sections.projects
-    };
+export const deduplicateByName = <T extends { name?: string }>(arr: T[]): T[] => {
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set<string>();
+    return arr.filter(item => {
+        const key = item.name?.toLowerCase().trim();
+        if (!key) return true; // Keep items without names
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 };
 
 /**
  * Merges Original User Data with AI Optimizations.
- * Preserves full JSON Resume structure and applies AI improvements.
+ * Expects JSON Resume format input.
  * 
  * @param {Object} original - The original resume data object (JSON Resume format with basics, work, etc.)
  * @param {Object} aiResult - The AI optimization result object containing optimization and candidateProfile
  * @returns {Object} - A new resume object with merged data ready for templates
  */
 export const mergeResumeData = (original, aiResult) => {
-    if (!original) return null;
-
-    // Check if the data is already in JSON Resume format (has 'basics')
-    const isJsonResume = !!(original.basics || original.work);
-
-    let mergedData;
-
-    if (isJsonResume) {
-        // Data is already in JSON Resume format - use it directly
-        mergedData = JSON.parse(JSON.stringify(original)); // Deep clone
-    } else if (original.plainText && !original.basics) {
-        // Legacy format with plainText - transform to JSON Resume
-        const structured = transformResumeForTemplate(original);
-        if (!structured) return null;
-
-        // Convert legacy format to JSON Resume
-        mergedData = {
-            basics: {
-                name: structured.header?.name || "",
-                label: structured.header?.title || "",
-                email: structured.header?.email || "",
-                phone: structured.header?.phone || "",
-                summary: structured.summary || "",
-                location: {
-                    address: structured.header?.location || ""
-                },
-                profiles: structured.header?.linkedin ? [{
-                    network: "LinkedIn",
-                    url: structured.header.linkedin
-                }] : []
-            },
-            work: (structured.experience || []).map(job => ({
-                name: job.company,
-                position: job.position,
-                startDate: job.date?.split("-")[0]?.trim(),
-                endDate: job.date?.split("-")[1]?.trim() || "Present",
-                highlights: Array.isArray(job.description) ? job.description : [job.description].filter(Boolean)
-            })),
-            education: (structured.education || []).map(edu => ({
-                institution: edu.institution || edu,
-                area: edu.degree || "",
-                studyType: "",
-                startDate: edu.date || "",
-                endDate: ""
-            })),
-            skills: (structured.skills || []).map(skill =>
-                typeof skill === 'string'
-                    ? { name: "Skills", keywords: [skill] }
-                    : skill
-            ),
-            projects: structured.projects || [],
-            plainText: original.plainText
-        };
-    } else {
-        // Unknown format, return as-is
-        return original;
+    if (!original?.basics) {
+        console.error('[mergeResumeData] Invalid input - missing basics');
+        return null;
     }
+
+    // Deep clone - data is always JSON Resume format now
+    const mergedData = JSON.parse(JSON.stringify(original));
 
     // If no AI result, return the data as-is
     if (!aiResult || !aiResult.optimization) {
-        // Still add backward compatibility fields
-        return addLegacyFields(mergedData);
+        return mergedData;
     }
 
     const { optimization, candidateProfile } = aiResult;
@@ -254,34 +158,5 @@ export const mergeResumeData = (original, aiResult) => {
         });
     }
 
-    return addLegacyFields(mergedData);
+    return mergedData;
 };
-
-/**
- * Adds backward compatibility fields for legacy components
- */
-function addLegacyFields(data) {
-    if (!data) return data;
-
-    data.header = {
-        name: data.basics?.name,
-        title: data.basics?.label,
-        email: data.basics?.email,
-        phone: data.basics?.phone,
-        location: data.basics?.location?.address || data.basics?.location?.city,
-        linkedin: data.basics?.profiles?.find(p => p.network?.toLowerCase() === 'linkedin')?.url
-    };
-    data.summary = data.basics?.summary;
-    data.experience = (data.work || []).map(job => ({
-        company: job.name,
-        position: job.position,
-        date: `${job.startDate || ""} - ${job.endDate || ""}`.trim(),
-        description: job.highlights || []
-    }));
-
-    return data;
-}
-
-
-
-

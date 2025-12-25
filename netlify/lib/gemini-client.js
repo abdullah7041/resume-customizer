@@ -76,6 +76,7 @@ Return the response in the following JSON Resume format:
       "name": "string (Company name)",
       "position": "string (Job title)",
       "url": "string (optional, company website)",
+      "location": "string (City, State/Region - extract if present in resume)",
       "startDate": "string (YYYY-MM-DD or YYYY-MM)",
       "endDate": "string (YYYY-MM-DD, YYYY-MM, or 'Present')",
       "summary": "string (role description)",
@@ -87,11 +88,12 @@ Return the response in the following JSON Resume format:
       "institution": "string",
       "url": "string (optional)",
       "area": "string (Major / Field of study)",
-      "studyType": "string (Degree type: Bachelor, Master, PhD, etc.)",
+      "studyType": "string (Degree type: Bachelor, Master, PhD, Diploma, etc.)",
       "startDate": "string",
       "endDate": "string",
       "score": "string (optional, GPA)",
-      "courses": ["string (optional, relevant coursework)"]
+      "courses": ["string (optional, relevant coursework)"],
+      "highlights": ["string (achievements, year-by-year details like 'First Year: coursework focused on...', 'Second Year: hands-on workshops...')"]
     }
   ],
   "skills": [
@@ -103,9 +105,9 @@ Return the response in the following JSON Resume format:
   ],
   "projects": [
     {
-      "name": "string",
-      "description": "string",
-      "highlights": ["string"],
+      "name": "string (REQUIRED - The actual descriptive project title from resume. NEVER use generic 'Project' or 'Project 1'. Extract the real name like 'Automated Inventory Tracker', 'Market Research Initiative', etc.)",
+      "description": "string (Brief 1-2 sentence summary, separate from name)",
+      "highlights": ["string (bullet point achievements - do not duplicate description)"],
       "keywords": ["string (technologies used)"],
       "url": "string (optional)"
     }
@@ -284,15 +286,53 @@ export async function parseResumeOnly(inputData, isPdf = true) {
 Your goal is to extract the FULL text verbatim and structure the data.
 You MUST output JSON strictly adhering to the JSONResume.org schema standard.
 
-CRITICAL MAPPING RULES:
-- "Experience" sections MUST map to "work" array
-- Bullet points MUST map to "work[].highlights" array
-- "Education" sections MUST map to "education" array
-- "Skills" MUST map to "skills" array with categorized keywords`;
+CRITICAL EXTRACTION REQUIREMENTS:
+
+1. WORK EXPERIENCE - For each job, extract:
+   - name: Company name (REQUIRED)
+   - position: Job title (REQUIRED)
+   - location: City/Region (e.g., "Alahsa, Saudi Arabia", "Dammam, Saudi Arabia") - REQUIRED if present
+   - startDate: Start date
+   - endDate: End date or "Present"
+   - highlights: Array of ALL bullet points/achievements - DO NOT OMIT ANY
+
+2. EDUCATION - For each entry, extract:
+   - institution: School/University name (REQUIRED)
+   - area: Field of study/Major
+   - studyType: Degree type (Diploma, Bachelor, Master, PhD, etc.)
+   - startDate: Start date
+   - endDate: End date
+   - score: GPA if mentioned
+   - highlights: Array of ALL bullet points describing the education (REQUIRED if present)
+     (e.g., "First Year: Focused on academic coursework...", "Second Year: Hands-on workshop courses...")
+   - courses: Array of relevant coursework if mentioned
+
+3. PROJECTS - For each project:
+   - name: Project name
+   - description: Brief description
+   - highlights: Array of ALL bullet points
+   - keywords: Technologies used
+
+4. SKILLS - Group by category if present:
+   - Technical Skills, Programming Languages, Soft Skills, etc.
+   Each group should have name and keywords array.
+
+5. CERTIFICATIONS - Extract all certifications with:
+   - name: Certificate name
+   - issuer: Issuing organization
+   - date: Date obtained
+
+6. LANGUAGES - Extract language proficiencies
+
+DO NOT OMIT any bullet points or details. Include EVERY piece of information from the resume.
+Location is REQUIRED for each work entry if mentioned in the resume.
+Education highlights (bullet points describing coursework/achievements) are REQUIRED if present.`;
 
     const prompt = `
 Extract the following information from the resume.
 IMPORTANT: "meta.raw_text" must contain the COMPLETE text of the resume, preserving line breaks and structure. Do not summarize; extract fully.
+
+CRITICAL: Extract LOCATION for each work experience and HIGHLIGHTS for education entries.
 
 Return the response in JSON Resume format:
 {
@@ -312,36 +352,39 @@ Return the response in JSON Resume format:
   },
   "work": [
     {
-      "name": "string (Company)",
-      "position": "string (Title)",
-      "startDate": "string",
-      "endDate": "string",
-      "summary": "string",
-      "highlights": ["string (bullet points)"]
+      "name": "string (Company name)",
+      "position": "string (Job Title)",
+      "location": "string (City, Country - REQUIRED if present in resume, e.g. 'Alahsa, Saudi Arabia')",
+      "startDate": "string (YYYY-MM format)",
+      "endDate": "string (YYYY-MM or 'Present')",
+      "summary": "string (optional role overview)",
+      "highlights": ["string (EVERY bullet point - do not skip any)"]
     }
   ],
   "education": [
     {
-      "institution": "string",
-      "area": "string (Major)",
-      "studyType": "string (Degree)",
+      "institution": "string (School/University name)",
+      "area": "string (Major/Field of Study)",
+      "studyType": "string (Degree: Diploma, Bachelor, Master, PhD, etc.)",
       "startDate": "string",
       "endDate": "string",
-      "score": "string (optional, GPA)"
+      "score": "string (GPA if mentioned)",
+      "courses": ["string (relevant coursework if listed)"],
+      "highlights": ["string (EVERY bullet point about the education, year-by-year details like 'First Year: ...', 'Second Year: ...', achievements, etc.)"]
     }
   ],
   "skills": [
     {
-      "name": "string (Category)",
-      "keywords": ["string (individual skills)"]
+      "name": "string (Category: Technical Skills, Soft Skills, etc.)",
+      "keywords": ["string (individual skills in this category)"]
     }
   ],
   "projects": [
     {
-      "name": "string",
-      "description": "string",
-      "highlights": ["string"],
-      "keywords": ["string"]
+      "name": "string (REQUIRED - The actual project title. NEVER use generic names like 'Project' or 'Project 1'. Extract real names like 'Sales Dashboard', 'Inventory Tracker', etc.)",
+      "description": "string (Brief summary, separate from name)",
+      "highlights": ["string (EVERY bullet point - do not duplicate description)"],
+      "keywords": ["string (technologies used)"]
     }
   ],
   "certificates": [
@@ -354,7 +397,7 @@ Return the response in JSON Resume format:
   "languages": [
     {
       "language": "string",
-      "fluency": "string"
+      "fluency": "string (Native, Fluent, Upper Intermediate, Intermediate, Basic)"
     }
   ],
   "meta": {
@@ -364,7 +407,11 @@ Return the response in JSON Resume format:
   }
 }
 
-IMPORTANT: Map ALL experience entries to "work[]" with bullet points in "highlights[]".
+CRITICAL REMINDERS:
+- Extract LOCATION for each work experience (e.g., "Dammam, Saudi Arabia")
+- Extract ALL education highlights/bullet points (e.g., "First Year: focused on academic coursework...")
+- Map ALL experience entries to "work[]" with every bullet point in "highlights[]"
+- DO NOT skip or summarize any content
 `;
 
     const parts = [

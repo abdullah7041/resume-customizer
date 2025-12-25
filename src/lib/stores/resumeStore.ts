@@ -13,6 +13,7 @@ import {
   validateParsedText,
   validateOptimization,
 } from '../validation/store-schemas';
+import { deduplicateByName } from '../utils/resumeUtils';
 
 // Cache validity duration: 5 minutes
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -62,6 +63,14 @@ export const useResumeStore = create<ResumeState>()(
 
         // Use validated data if available, otherwise fallback to original
         const validatedResume = (validation.data ?? resume) as ResumeSchema;
+
+        // Deduplicate arrays to prevent duplicate entries
+        if (validatedResume.projects) {
+          validatedResume.projects = deduplicateByName(validatedResume.projects);
+        }
+        if (validatedResume.work) {
+          validatedResume.work = deduplicateByName(validatedResume.work);
+        }
 
         console.log('[ResumeStore] Setting original resume:', validatedResume?.basics?.name);
         console.log('[ResumeStore] Resume has basics:', !!validatedResume?.basics);
@@ -204,134 +213,224 @@ export const useResumeStore = create<ResumeState>()(
         console.log('[ResumeStore] getActiveResume: Merging optimizations');
 
         // Deep clone to avoid mutating original
-        const merged = JSON.parse(
-          JSON.stringify(state.originalResume)
-        ) as ResumeSchema;
+        const merged = JSON.parse(JSON.stringify(state.originalResume)) as ResumeSchema;
 
-        // Type-safe value extraction
+        // Type-safe value extraction helpers
         const getStringValue = (val: unknown): string => {
           if (typeof val === 'string') return val;
           if (Array.isArray(val)) return val.join(' ');
           return String(val || '');
         };
 
-        const getArrayValue = (val: unknown): string[] => {
-          if (Array.isArray(val)) return val;
-          if (typeof val === 'string' && val.trim()) return [val];
-          return [];
+
+        // Fuzzy text matching - finds if text A is contained in or similar to text B
+        const textMatches = (needle: string, haystack: string): boolean => {
+          if (!needle || !haystack) return false;
+          const n = needle.toLowerCase().trim();
+          const h = haystack.toLowerCase().trim();
+
+          // Exact match
+          if (n === h) return true;
+
+          // Substring match (first 40 chars to handle truncation)
+          const nShort = n.substring(0, 40);
+          const hShort = h.substring(0, 40);
+          if (h.includes(nShort) || n.includes(hShort)) return true;
+
+          // Word overlap match (at least 60% of words match)
+          const nWords = n.split(/\s+/).filter(w => w.length > 3);
+          const hWords = h.split(/\s+/).filter(w => w.length > 3);
+          if (nWords.length === 0 || hWords.length === 0) return false;
+
+          const matches = nWords.filter(w => hWords.some(hw => hw.includes(w) || w.includes(hw)));
+          return matches.length / Math.min(nWords.length, hWords.length) >= 0.5;
         };
 
-        // Extract index from sectionId (e.g., "experience-0" → 0, "headline-0" → 0)
-        const extractIndex = (sectionId: string): number => {
-          const match = sectionId.match(/-(\d+)$/);
-          return match ? parseInt(match[1], 10) : -1;
-        };
+        // Track which optimizations were successfully applied
+        let appliedCount = 0;
 
-        // Apply each optimization
+        // Apply each optimization using CONTENT-BASED MATCHING
         for (const opt of state.optimizations) {
           if (!opt.applied) continue;
+
+          const optimizedValue = getStringValue(opt.optimized);
+          const originalValue = getStringValue(opt.original);
+
+          if (!optimizedValue) continue;
 
           switch (opt.sectionType) {
             case 'summary':
               if (merged.basics) {
-                merged.basics.summary = getStringValue(opt.optimized);
+                merged.basics.summary = optimizedValue;
+                appliedCount++;
+                console.log('[ResumeStore] Applied summary optimization');
               }
               break;
 
             case 'headline':
               if (merged.basics) {
-                merged.basics.label = getStringValue(opt.optimized);
+                merged.basics.label = optimizedValue;
+                appliedCount++;
+                console.log('[ResumeStore] Applied headline optimization');
               }
               break;
 
             case 'experience': {
-              // sectionId is "experience-0", "experience-1", etc.
-              const workIndex = extractIndex(opt.sectionId);
+              // CONTENT-BASED MATCHING: Search ALL work entries for the original text
+              let found = false;
 
-              if (workIndex >= 0 && merged.work && merged.work[workIndex]) {
-                const newBullet = getStringValue(opt.optimized);
-                const originalBullet = getStringValue(opt.original);
-                const currentHighlights = [...(merged.work[workIndex].highlights || [])];
+              if (merged.work) {
+                for (let workIdx = 0; workIdx < merged.work.length; workIdx++) {
+                  const workEntry = merged.work[workIdx];
+                  const highlights = workEntry.highlights || [];
 
-                // Find and replace the original bullet, or prepend if not found
-                if (originalBullet && newBullet) {
-                  const matchIdx = currentHighlights.findIndex(h =>
-                    h.toLowerCase().trim() === originalBullet.toLowerCase().trim() ||
-                    h.toLowerCase().includes(originalBullet.toLowerCase().substring(0, 50))
-                  );
-
-                  if (matchIdx >= 0) {
-                    currentHighlights[matchIdx] = newBullet;
-                  } else {
-                    // Original not found, prepend the optimized version
-                    currentHighlights.unshift(newBullet);
+                  // Search each highlight for the original text
+                  for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
+                    if (textMatches(originalValue, highlights[hlIdx])) {
+                      // Found a match - replace this highlight
+                      merged.work[workIdx].highlights![hlIdx] = optimizedValue;
+                      found = true;
+                      appliedCount++;
+                      console.log(`[ResumeStore] Applied experience optimization to work[${workIdx}].highlights[${hlIdx}]`);
+                      break; // Move to next optimization
+                    }
                   }
-                } else if (newBullet) {
-                  currentHighlights.unshift(newBullet);
-                }
 
-                merged.work[workIndex] = {
-                  ...merged.work[workIndex],
-                  highlights: currentHighlights,
-                };
+                  // Also check summary field
+                  if (!found && workEntry.summary && textMatches(originalValue, workEntry.summary)) {
+                    merged.work[workIdx].summary = optimizedValue;
+                    found = true;
+                    appliedCount++;
+                    console.log(`[ResumeStore] Applied experience optimization to work[${workIdx}].summary`);
+                  }
+
+                  if (found) break;
+                }
+              }
+
+              if (!found) {
+                console.warn('[ResumeStore] Could not find match for experience optimization:', originalValue.substring(0, 50));
               }
               break;
             }
 
-            case 'skills': {
-              const optimizedSkills = getArrayValue(opt.optimized);
-              if (optimizedSkills.length === 0) break;
+            case 'education': {
+              // CONTENT-BASED MATCHING for education
+              let found = false;
 
-              if (!merged.skills) merged.skills = [];
+              if (merged.education) {
+                for (let eduIdx = 0; eduIdx < merged.education.length; eduIdx++) {
+                  const eduEntry = merged.education[eduIdx];
 
-              const existingKeywords = merged.skills.flatMap(s => s.keywords || []);
-              const newSkills = optimizedSkills.filter(
-                skill => !existingKeywords.some(
-                  existing => existing.toLowerCase() === skill.toLowerCase()
-                )
-              );
+                  // Check area, studyType, and highlights
+                  if (eduEntry.area && textMatches(originalValue, eduEntry.area)) {
+                    merged.education[eduIdx].area = optimizedValue;
+                    found = true;
+                    appliedCount++;
+                    console.log(`[ResumeStore] Applied education optimization to education[${eduIdx}].area`);
+                    break;
+                  }
 
-              if (newSkills.length > 0) {
-                const recommendedGroup = merged.skills.find(s => s.name === 'Recommended Skills');
-                if (recommendedGroup) {
-                  recommendedGroup.keywords = [...(recommendedGroup.keywords || []), ...newSkills];
-                } else {
-                  merged.skills.push({
-                    name: 'Recommended Skills',
-                    keywords: newSkills,
-                  });
+                  // Check highlights array if present
+                  const highlights = eduEntry.highlights || [];
+                  for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
+                    if (textMatches(originalValue, highlights[hlIdx])) {
+                      merged.education[eduIdx].highlights![hlIdx] = optimizedValue;
+                      found = true;
+                      appliedCount++;
+                      console.log(`[ResumeStore] Applied education optimization to education[${eduIdx}].highlights[${hlIdx}]`);
+                      break;
+                    }
+                  }
+
+                  if (found) break;
                 }
               }
               break;
             }
 
             case 'projects': {
-              // sectionId is "projects-0", "projects-1", etc.
-              const projectIndex = extractIndex(opt.sectionId);
+              // CONTENT-BASED MATCHING for projects
+              let found = false;
 
-              if (projectIndex >= 0 && merged.projects && merged.projects[projectIndex]) {
-                const newDescription = getStringValue(opt.optimized);
-                if (newDescription) {
-                  merged.projects[projectIndex] = {
-                    ...merged.projects[projectIndex],
-                    description: newDescription,
-                  };
+              if (merged.projects) {
+                for (let projIdx = 0; projIdx < merged.projects.length; projIdx++) {
+                  const projEntry = merged.projects[projIdx];
+
+                  // Check name and description
+                  if (projEntry.name && textMatches(originalValue, projEntry.name)) {
+                    merged.projects[projIdx].name = optimizedValue;
+                    found = true;
+                    appliedCount++;
+                    break;
+                  }
+
+                  if (projEntry.description && textMatches(originalValue, projEntry.description)) {
+                    merged.projects[projIdx].description = optimizedValue;
+                    found = true;
+                    appliedCount++;
+                    break;
+                  }
+
+                  // Check highlights
+                  const highlights = projEntry.highlights || [];
+                  for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
+                    if (textMatches(originalValue, highlights[hlIdx])) {
+                      merged.projects[projIdx].highlights![hlIdx] = optimizedValue;
+                      found = true;
+                      appliedCount++;
+                      break;
+                    }
+                  }
+
+                  if (found) break;
                 }
               }
               break;
             }
 
-            case 'education': {
-              // sectionId is "education-0", "education-1", etc.
-              const eduIndex = extractIndex(opt.sectionId);
+            case 'skills': {
+              // IMPORTANT: We do NOT auto-inject skills the user doesn't have
+              // This would be misleading to employers
+              // Instead, we just log that these are recommended skills to consider
 
-              if (eduIndex >= 0 && merged.education && merged.education[eduIndex]) {
-                const improved = getStringValue(opt.optimized);
-                if (improved) {
-                  merged.education[eduIndex] = {
-                    ...merged.education[eduIndex],
-                    area: improved,
-                  };
+              const optimizedValue = opt.optimized;
+              let suggestedSkills: string[] = [];
+
+              if (typeof optimizedValue === 'string') {
+                let cleanedValue = optimizedValue;
+                if (cleanedValue.toLowerCase().startsWith('add:')) {
+                  cleanedValue = cleanedValue.substring(4).trim();
+                }
+                if (cleanedValue.toLowerCase().startsWith('current:')) {
+                  // This is the "before" value, skip
+                  break;
+                }
+                suggestedSkills = cleanedValue.split(',').map(s => s.trim()).filter(Boolean);
+              } else if (Array.isArray(optimizedValue)) {
+                suggestedSkills = optimizedValue.map(s => typeof s === 'string' ? s.trim() : String(s)).filter(Boolean);
+              }
+
+              // Log the suggestions but DO NOT add to resume
+              // The user should manually add skills they actually have
+              console.log('[ResumeStore] Skills suggestions (not auto-added):', suggestedSkills);
+              console.log('[ResumeStore] Note: Skills are shown as recommendations only, not injected into resume');
+
+              // Mark as "applied" for tracking but don't modify resume
+              appliedCount++;
+              break;
+            }
+
+            case 'certifications': {
+              // Handle certification optimizations similarly
+              if (merged.certificates) {
+                for (let certIdx = 0; certIdx < merged.certificates.length; certIdx++) {
+                  const cert = merged.certificates[certIdx];
+                  if (cert.name && textMatches(originalValue, cert.name)) {
+                    merged.certificates[certIdx].name = optimizedValue;
+                    appliedCount++;
+                    break;
+                  }
                 }
               }
               break;
@@ -342,11 +441,17 @@ export const useResumeStore = create<ResumeState>()(
           }
         }
 
-        // Debug: Log what sections were updated
-        const appliedCount = state.optimizations.filter(o => o.applied).length;
-        console.log('[ResumeStore] Applied', appliedCount, 'optimizations');
+        console.log('[ResumeStore] Applied', appliedCount, 'of', state.optimizations.filter(o => o.applied).length, 'optimizations');
         console.log('[ResumeStore] Merged headline:', merged.basics?.label);
         console.log('[ResumeStore] Merged summary preview:', merged.basics?.summary?.substring(0, 50));
+
+        // Log experience highlights for debugging
+        if (merged.work && merged.work[0]) {
+          console.log('[ResumeStore] First work entry highlights count:', merged.work[0].highlights?.length || 0);
+          if (merged.work[0].highlights?.[0]) {
+            console.log('[ResumeStore] First highlight preview:', merged.work[0].highlights[0].substring(0, 50));
+          }
+        }
 
         return merged;
       },
@@ -404,6 +509,18 @@ export const useResumeStore = create<ResumeState>()(
           showOptimized: false,
         });
       },
+
+      resetForNewUpload: () => {
+        console.log('[ResumeStore] Resetting for new upload (preserving template)');
+        set({
+          originalResume: null,
+          parsedResumeText: null,
+          optimizations: [],
+          keywordSuggestions: [],
+          analysisCache: {},
+          showOptimized: false,
+        });
+      },
     }),
     {
       name: 'resume-storage',
@@ -414,6 +531,7 @@ export const useResumeStore = create<ResumeState>()(
         optimizations: state.optimizations,
         selectedTemplate: state.selectedTemplate,
         showOptimized: state.showOptimized,
+        keywordSuggestions: state.keywordSuggestions,
         // Note: Not persisting analysisCache to localStorage to avoid stale data
       }),
     }
