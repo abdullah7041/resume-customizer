@@ -7,7 +7,8 @@ import { Target, TrendingUp, Sparkles, Award, ChevronRight, CheckCircle2, Star }
 import { SectorIcon } from '../../lib/utils/vision2030Icons';
 import { VISION_2030_SECTORS } from '../../lib/data/vision2030Skills';
 import Vision2030Modal from '../ui/Vision2030Modal';
-import Button from '../ui/Button';
+import { GlassButton } from '../ui/GlassButton';
+import { GlassCircle } from '../ui/GlassCircle';
 
 interface Vision2030DemoProps {
     onGetStarted?: () => void;
@@ -87,9 +88,9 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                     <div className="relative">
                         <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/20 p-6 backdrop-blur-xl">
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="w-12 h-12 rounded-xl bg-[#006C35] flex items-center justify-center">
-                                    <Target className="w-6 h-6 text-white" />
-                                </div>
+                                <GlassCircle size="lg" variant="success">
+                                    <Target className="w-6 h-6 text-emerald-400" />
+                                </GlassCircle>
                                 <div>
                                     <h3 className="font-bold text-white">{t('vision2030.title', 'Vision 2030 Alignment')}</h3>
                                     <p className="text-xs text-white/60">{isArabic ? 'تحليل سيرتك الذاتية' : 'Your Resume Analysis'}</p>
@@ -198,16 +199,15 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                     </div>
                 </div>
 
-                {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <Button
+                    <GlassButton
                         onClick={onGetStarted}
                         className="px-8 py-4 text-lg font-bold"
                         style={{ backgroundColor: '#006C35' }}
                     >
                         {isArabic ? 'حلل سيرتك الذاتية الآن' : 'Analyze Your Resume Now'}
                         <ChevronRight className={`w-5 h-5 ${isArabic ? 'rotate-180' : ''}`} />
-                    </Button>
+                    </GlassButton>
                     <button
                         type="button"
                         onClick={() => setModalOpen(true)}
