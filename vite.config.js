@@ -34,7 +34,7 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes("node_modules")) {
             // React core - loads immediately
-            if (id.includes("/react-dom/") || id.includes("/react/")) {
+            if (id.includes("/react-dom/") || id.includes("/react/") || id.includes("react-i18next")) {
               return "vendor-react";
             }
             // Zustand state management
