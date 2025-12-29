@@ -1,6 +1,6 @@
 import { X, Copy, Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import Button from "./Button";
+import { GlassButton } from "./GlassButton";
 
 export default function ViewTextModal({ isOpen, onClose, text }) {
     const [copied, setCopied] = useState(false);
@@ -54,19 +54,19 @@ export default function ViewTextModal({ isOpen, onClose, text }) {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 border-t border-ink-200/50 dark:border-white/10 bg-white/50 dark:bg-ink-800/50 px-6 py-4 backdrop-blur-md">
-                    <Button
+                    <GlassButton
                         variant="secondary"
                         onClick={onClose}
                     >
                         Close
-                    </Button>
-                    <Button
+                    </GlassButton>
+                    <GlassButton
                         variant="primary"
-                        icon={copied ? Check : Copy}
                         onClick={handleCopy}
                     >
+                        {copied ? <Check className="w-4 h-4 me-2" /> : <Copy className="w-4 h-4 me-2" />}
                         {copied ? "Copied!" : "Copy Text"}
-                    </Button>
+                    </GlassButton>
                 </div>
             </div>
         </div>

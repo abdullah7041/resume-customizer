@@ -30,9 +30,25 @@ export const deduplicateByName = <T extends { name?: string }>(arr: T[]): T[] =>
  * @returns {Object} - A new resume object with merged data ready for templates
  */
 export const mergeResumeData = (original, aiResult) => {
-    if (!original?.basics) {
-        console.error('[mergeResumeData] Invalid input - missing basics');
+    // Handle null/undefined original
+    if (!original) {
+        console.warn('[mergeResumeData] No original data provided');
         return null;
+    }
+
+    // Handle case where original doesn't have basics - create minimal structure
+    if (!original.basics) {
+        console.warn('[mergeResumeData] Missing basics, using original data as-is');
+        // Return original with minimal basics structure
+        return {
+            ...original,
+            basics: original.basics || { name: '', label: '', summary: '' },
+            work: original.work || [],
+            education: original.education || [],
+            skills: original.skills || [],
+            projects: original.projects || [],
+            languages: original.languages || [],
+        };
     }
 
     // Deep clone - data is always JSON Resume format now

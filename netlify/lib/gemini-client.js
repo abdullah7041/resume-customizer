@@ -304,7 +304,11 @@ CRITICAL EXTRACTION REQUIREMENTS:
    - endDate: End date
    - score: GPA if mentioned
    - highlights: Array of ALL bullet points describing the education (REQUIRED if present)
-     (e.g., "First Year: Focused on academic coursework...", "Second Year: Hands-on workshop courses...")
+     Examples to look for:
+     - "First Year: Focused on academic coursework..."
+     - "Second Year: Hands-on workshop courses..."
+     - "Dean's List 2020-2022"
+     - "Senior project: Developed a..."
    - courses: Array of relevant coursework if mentioned
 
 3. PROJECTS - For each project:
@@ -315,18 +319,22 @@ CRITICAL EXTRACTION REQUIREMENTS:
 
 4. SKILLS - Group by category if present:
    - Technical Skills, Programming Languages, Soft Skills, etc.
-   Each group should have name and keywords array.
+   each group should have name and keywords array.
 
-5. CERTIFICATIONS - Extract all certifications with:
-   - name: Certificate name
-   - issuer: Issuing organization
-   - date: Date obtained
+5. CERTIFICATIONS - Extract all certifications/licenses/trainings:
+   - Look for headers like: "Certifications", "Licenses", "Training", "Credentials", "Professional Development"
+   - Also look for "Certified..." or "License..." mentions in text.
+   - For each, extract:
+     - name: Certificate name (REQUIRED)
+     - issuer: Issuing organization (e.g., Coursera, AWS, SCOPA)
+     - date: Date obtained
 
 6. LANGUAGES - Extract language proficiencies
 
 DO NOT OMIT any bullet points or details. Include EVERY piece of information from the resume.
 Location is REQUIRED for each work entry if mentioned in the resume.
-Education highlights (bullet points describing coursework/achievements) are REQUIRED if present.`;
+Education highlights (bullet points describing coursework/achievements) are REQUIRED if present.
+If you are unsure if a section exists but see text that looks like it (e.g. a list of courses under specific years), extract it as best interpretation.`;
 
     const prompt = `
 Extract the following information from the resume.
@@ -481,6 +489,33 @@ CRITICAL REMINDERS:
       description: [w.summary, ...(w.highlights || [])].filter(Boolean).join("\n• ")
     }));
     parsed.certifications = (parsed.certificates || []).map(c => c.name);
+
+    // Validation & Fallbacks
+    if (!parsed.work) {
+      console.warn("[Gemini] ⚠️ 'work' array missing in response, defaulting to []");
+      parsed.work = [];
+    }
+    if (!parsed.education) {
+      console.warn("[Gemini] ⚠️ 'education' array missing in response, defaulting to []");
+      parsed.education = [];
+    }
+    if (!parsed.skills || parsed.skills.length === 0) {
+      console.warn("[Gemini] ⚠️ 'skills' array empty or missing");
+      parsed.skills = []; // Keep as array
+    }
+    if (!parsed.certificates) {
+      // Not critical, but good to have
+      parsed.certificates = [];
+    }
+
+    // Log finding summary
+    console.log(`[Gemini] Extraction Summary:
+      - Work: ${parsed.work.length} entries
+      - Education: ${parsed.education.length} entries
+      - Skills: ${parsed.skills.length} keywords
+      - Certificates: ${parsed.certificates.length} entries
+      - Projects: ${parsed.projects?.length || 0} entries
+    `);
 
     return parsed;
 

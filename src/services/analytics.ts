@@ -15,29 +15,36 @@ class Analytics {
      * Only initializes if the user has consented to analytics.
      */
     init() {
+        console.log('[Analytics] Init called. Token present:', !!MIXPANEL_TOKEN, '| Already initialized:', this.initialized);
+
         if (this.initialized || !MIXPANEL_TOKEN) {
             if (!MIXPANEL_TOKEN) {
-                console.warn('[Analytics] VITE_MIXPANEL_TOKEN is not set. Analytics disabled.');
+                console.warn('[Analytics] ⚠️ VITE_MIXPANEL_TOKEN is not set. Analytics disabled.');
             }
             return;
         }
 
         // Check if user has consented to analytics
         const consent = useConsentStore.getState();
+        console.log('[Analytics] Consent state:', { analytics: consent.analyticsConsent, hasConsented: consent.consentTimestamp !== null });
+
         if (!consent.analyticsConsent) {
-            console.log('[Analytics] User has not consented to analytics. Skipping init.');
+            console.log('[Analytics] ❌ User has not consented to analytics. Skipping init.');
             return;
         }
 
         mixpanel.init(MIXPANEL_TOKEN, {
-            debug: import.meta.env.DEV,
+            debug: false, // Disable debug mode to prevent mutex lock spam
             track_pageview: true,
             persistence: 'localStorage',
             ignore_dnt: false, // Respect Do Not Track
+            opt_out_tracking_by_default: false,
+            loaded: () => {
+                console.log('[Analytics] Mixpanel loaded successfully.');
+            },
         });
 
         this.initialized = true;
-        console.log('[Analytics] Mixpanel initialized successfully.');
     }
 
     /**
@@ -45,13 +52,24 @@ class Analytics {
      * Automatically adds timestamp and language.
      */
     track(event: string, properties?: Record<string, unknown>) {
-        if (!this.initialized) return;
+        if (!this.initialized) {
+            if (import.meta.env.DEV) {
+                console.log(`[Analytics] Skipped (not initialized): ${event}`, properties);
+            }
+            return;
+        }
 
-        mixpanel.track(event, {
+        const eventData = {
             ...properties,
             timestamp: new Date().toISOString(),
             language: document.documentElement.lang || 'en',
-        });
+        };
+
+        if (import.meta.env.DEV) {
+            console.log(`[Analytics] 📊 Tracking: ${event}`, eventData);
+        }
+
+        mixpanel.track(event, eventData);
     }
 
     /**

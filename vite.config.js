@@ -84,12 +84,27 @@ export default defineConfig({
 
   // Optimize dev server
   optimizeDeps: {
-    include: ["react", "react-dom", "zustand", "base64-js"],
-    exclude: ["@react-pdf/renderer"], // Don't pre-bundle, too heavy
+    include: [
+      "react",
+      "react-dom",
+      "zustand",
+      "base64-js",
+      // CommonJS dependencies for @react-pdf/renderer
+      "unicode-trie",
+      "pako",
+      "fontkit",
+      "restructure",
+      "brotli",
+      "crypto-js",
+      "png-js",
+      "dfa",
+      // Include react-pdf for stable dynamic imports
+      "@react-pdf/renderer",
+    ],
     esbuildOptions: {
       // Handle CommonJS modules for react-pdf dependencies
       define: {
-        global: 'globalThis',
+        global: "globalThis",
       },
     },
   },

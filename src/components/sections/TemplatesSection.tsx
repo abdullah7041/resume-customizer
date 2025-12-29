@@ -1,31 +1,19 @@
 // src/components/sections/TemplatesSection.tsx
-// Resume template gallery with resume.io style split-panel layout
+// Resume template gallery with floating overlay template selector
 
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Layers, Sparkles, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
 
 import TemplateRenderer from "../templates/TemplateRenderer";
-// ResumePDFDocument is now loaded dynamically when needed
-import Button from "../ui/Button";
+import { GlassButton } from "../ui/GlassButton";
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
-
-// Glass card styles matching Header.jsx
-const glassCardClass =
-  "relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)]";
-
-const categoryLabels = {
-  [TEMPLATE_CATEGORIES.MODERN]: "Modern",
-  [TEMPLATE_CATEGORIES.CLASSIC]: "Classic",
-  [TEMPLATE_CATEGORIES.TECHNICAL]: "Technical"
-  // Removed Creative and Executive per user request
-};
 
 // Fallback sample data - ONLY used when no resume is uploaded
 const SAMPLE_RESUME: Partial<ResumeSchema> = {
@@ -67,64 +55,6 @@ const SAMPLE_RESUME: Partial<ResumeSchema> = {
   languages: [{ language: 'English', fluency: 'Fluent' }],
 };
 
-// Template thumbnail card with miniature preview
-interface TemplateThumbnailProps {
-  template: typeof resumeTemplates[0];
-  isSelected: boolean;
-  onClick: () => void;
-  resumeData: ResumeSchema | Partial<ResumeSchema> | null;
-  isArabic?: boolean;
-}
-
-const TemplateThumbnail = ({ template, isSelected, onClick, resumeData, isArabic = false }: TemplateThumbnailProps) => {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "relative w-full aspect-[3/4] rounded-xl border-2 transition-all duration-300 overflow-hidden group",
-        isSelected
-          ? "border-emerald-400/50 ring-2 ring-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
-          : "border-white/10 hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
-      )}
-    >
-      {/* Miniature Preview */}
-      <div className="absolute inset-0 bg-white overflow-hidden">
-        <div
-          className={`${isArabic ? 'origin-top-right' : 'origin-top-left'} pointer-events-none select-none`}
-          style={{
-            transform: 'scale(0.22)',
-            transformOrigin: isArabic ? 'top right' : 'top left',
-            width: '454%',
-            height: '454%',
-            direction: isArabic ? 'rtl' : 'ltr',
-          }}
-        >
-          <TemplateRenderer template={template} userData={(resumeData || {}) as any} />
-        </div>
-      </div>
-
-      {/* Selected Checkmark */}
-      {isSelected && (
-        <div className="absolute top-2 right-2 w-6 h-6 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] z-10">
-          <Check className="w-4 h-4 text-white" />
-        </div>
-      )}
-
-      {/* Template Name Overlay */}
-      <div className={cn(
-        "absolute bottom-0 left-0 right-0 p-2.5 transition-all z-10",
-        isSelected
-          ? "bg-gradient-to-r from-emerald-500 to-teal-500"
-          : "bg-gradient-to-t from-black/90 via-black/60 to-transparent"
-      )}>
-        <p className="text-xs font-medium text-white truncate text-center">
-          {template.name}
-        </p>
-      </div>
-    </button>
-  );
-};
-
 interface TemplateGalleryProps {
   resumeData?: ResumeSchema | null;
   optimizationData?: unknown;
@@ -132,11 +62,10 @@ interface TemplateGalleryProps {
 }
 
 export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate }: TemplateGalleryProps) {
-  const { t, i18n } = useTranslation();
-  const isArabic = i18n.language === 'ar';
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const { t } = useTranslation();
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isHoveringSelector, setIsHoveringSelector] = useState(false);
 
   // Get resume data from store - subscribe to all relevant state for reactivity
   const {
@@ -174,48 +103,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   // Debug log the data source
   console.log('[TemplatesSection] Data source:', useStoreData ? 'STORE' : 'PROPS', 'hasRealResume:', hasRealResume);
 
-  // Download PDF using @react-pdf/renderer (loaded dynamically to reduce initial bundle)
-  const handleDownloadPdf = async () => {
-    if (isDownloading) return;
-
-    if (!hasRealResume) {
-      console.warn('Cannot download PDF: No resume data available');
-      return;
-    }
-
-    setIsDownloading(true);
-
-    const filename = `resume-${selectedTemplate.id}-${new Date().toISOString().split('T')[0]}.pdf`;
-
-    try {
-      // Dynamic imports to avoid loading ~1.5MB PDF library until needed
-      const [{ pdf }, { default: ResumePDFDocument }] = await Promise.all([
-        import("@react-pdf/renderer"),
-        import("../templates/ResumePDFDocument")
-      ]);
-
-      const blob = await pdf(<ResumePDFDocument userData={mergedDownloadData} />).toBlob();
-      saveAs(blob, filename);
-
-      // Track PDF export
-      analytics.trackExport(selectedTemplate.id, 'pdf');
-    } catch (err) {
-      console.error("PDF Download failed:", err);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  // Filter templates - exclude Creative and Executive categories
-  const filteredTemplates = useMemo(() => {
+  // Filter to only active templates (Modern, Classic, Technical)
+  const activeTemplates = useMemo(() => {
     const allowedCategories = [TEMPLATE_CATEGORIES.MODERN, TEMPLATE_CATEGORIES.CLASSIC, TEMPLATE_CATEGORIES.TECHNICAL];
-    const baseTemplates = resumeTemplates.filter(t => allowedCategories.includes(t.category));
-
-    if (selectedCategory === "all") {
-      return baseTemplates;
-    }
-    return baseTemplates.filter(t => t.category === selectedCategory);
-  }, [selectedCategory]);
+    return resumeTemplates.filter(t => allowedCategories.includes(t.category));
+  }, []);
 
   // Merged data for display - reactive to all state changes
   const displayData = useMemo((): Partial<ResumeSchema> => {
@@ -234,6 +126,50 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       : (propResumeData || SAMPLE_RESUME);
   }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
 
+  // Download PDF using @react-pdf/renderer (loaded dynamically to reduce initial bundle)
+  const handleDownloadPdf = async () => {
+    if (isDownloading) return;
+
+    if (!hasRealResume) {
+      console.warn('Cannot download PDF: No resume data available');
+      return;
+    }
+
+    setIsDownloading(true);
+
+    const filename = `resume-${selectedTemplate.id}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+    try {
+      // Dynamic import @react-pdf/renderer
+      const { pdf } = await import("@react-pdf/renderer");
+
+      // Dynamic import based on selected template
+      let PDFComponent;
+      switch (selectedTemplate.id) {
+        case 'classic-traditional':
+          PDFComponent = (await import('../templates/pdf/ClassicTraditionalPDF')).default;
+          break;
+        case 'technical-engineer':
+          PDFComponent = (await import('../templates/pdf/TechnicalEngineerPDF')).default;
+          break;
+        case 'modern-professional':
+        default:
+          PDFComponent = (await import('../templates/pdf/ModernProfessionalPDF')).default;
+          break;
+      }
+
+      const blob = await pdf(<PDFComponent userData={mergedDownloadData} />).toBlob();
+      saveAs(blob, filename);
+
+      // Track PDF export
+      analytics.trackExport(selectedTemplate.id, 'pdf');
+    } catch (err) {
+      console.error("PDF Download failed:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
     setSelectedTemplate(template);
     setStoreTemplate(template.id as any);
@@ -247,110 +183,30 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[600px] md:min-h-[600px] p-2">
-      {/* Left Panel - Template Selection (responsive) */}
-      <div className={cn(glassCardClass, "w-full md:w-[340px] flex-shrink-0 flex flex-col")}>
-        {/* Header with Title */}
-        <div className="p-4 md:p-5 space-y-4 border-b border-white/10">
-          {/* Title */}
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-              <Layers className="w-4 h-4 text-white" />
-            </div>
-            <h2 className="text-lg font-bold text-white">{t('sections.templates.title', 'Templates')}</h2>
-          </div>
+    <div className="relative flex flex-col h-[700px] md:h-[800px]">
+      {/* Full-Width Preview */}
+      <div className="flex-1 flex flex-col bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0">
 
-          {/* Category Filters */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedCategory("all")}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-                selectedCategory === "all"
-                  ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-300"
-                  : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
-              )}
-            >
-              {t('sections.templates.categories.all', 'All')}
-            </button>
-            {Object.entries(categoryLabels).map(([value, label]) => (
-              <button
-                key={value}
-                onClick={() => setSelectedCategory(value)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-                  selectedCategory === value
-                    ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-300"
-                    : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
-                )}
-              >
-                {t(`sections.templates.categories.${value.toLowerCase()}`, label)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Templates Grid - horizontal scroll on mobile, grid on desktop */}
-        <div className="flex-1 overflow-hidden p-4">
-          {/* Mobile: Horizontal scroll carousel */}
-          <div className="flex md:hidden overflow-x-auto gap-3 pb-2 snap-x snap-mandatory scroll-smooth -mx-2 px-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {filteredTemplates.map(template => (
-              <div key={template.id} className="flex-shrink-0 w-[140px] snap-center">
-                <TemplateThumbnail
-                  template={template}
-                  isSelected={selectedTemplate?.id === template.id}
-                  onClick={() => handleSelectTemplate(template)}
-                  resumeData={displayData}
-                  isArabic={isArabic}
-                />
-              </div>
-            ))}
-          </div>
-          {/* Mobile swipe hint */}
-          <div className="flex md:hidden items-center justify-center gap-1 mt-3 text-xs text-white/40">
-            <ChevronLeft className="w-4 h-4" />
-            <span>{t('sections.templates.swipeToBrowse', 'Swipe to browse')}</span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-
-          {/* Desktop: Grid layout */}
-          <div className="hidden md:grid grid-cols-2 gap-3">
-            {filteredTemplates.map(template => (
-              <TemplateThumbnail
-                key={template.id}
-                template={template}
-                isSelected={selectedTemplate?.id === template.id}
-                onClick={() => handleSelectTemplate(template)}
-                resumeData={displayData}
-                isArabic={isArabic}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel - Live Preview */}
-      <div className={cn(glassCardClass, "flex-1 flex flex-col max-h-[700px] md:max-h-[800px]")}>
-        {/* Preview Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 md:p-5 border-b border-white/10">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between p-4 md:p-5 border-b border-white/10">
           <div>
-            <h3 className="text-base md:text-lg font-bold text-white">
-              {selectedTemplate?.name}
-            </h3>
-            <p className="text-xs sm:text-sm text-white/60 flex items-center gap-1.5 mt-1">
+            <h3 className="text-lg font-bold text-white">{selectedTemplate.name}</h3>
+            <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
               <Sparkles className="w-4 h-4 text-emerald-400" />
-              {selectedTemplate && <span>{t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, categoryLabels[selectedTemplate.category as keyof typeof categoryLabels])}</span>}
+              {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`)}
             </p>
           </div>
 
-          <Button
+          <GlassButton
             onClick={handleDownloadPdf}
             variant="primary"
             disabled={!hasRealResume || isDownloading}
-            className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] px-4 py-2 text-sm min-h-[44px]"
+            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-lg"
           >
-            {isDownloading ? t('sections.templates.generating', 'Generating...') : <><Download className="w-4 h-4 mr-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>}
-          </Button>
+            {isDownloading ? t('sections.templates.generating', 'Generating...') : (
+              <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
+            )}
+          </GlassButton>
         </div>
 
         {/* No Resume Warning */}
@@ -363,17 +219,86 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
         )}
 
-        {/* Live Preview - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white shadow-[0_20px_60px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden ring-1 ring-white/10">
-              {selectedTemplate && (
-                <TemplateRenderer
-                  template={selectedTemplate}
-                  userData={displayData as unknown as Record<string, unknown>}
-                />
-              )}
+        {/* Preview Area with Floating Selector */}
+        <div className="relative flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30 min-h-0">
+
+          {/* Resume Preview */}
+          <div className="w-full flex justify-center pb-20">
+            <div
+              dir="ltr"
+              className="bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/10 w-full max-w-[210mm] transition-all duration-500"
+            >
+              <TemplateRenderer
+                template={selectedTemplate}
+                userData={displayData as unknown as Record<string, unknown>}
+              />
             </div>
+          </div>
+
+          {/* Floating Template Selector - Sticky at bottom of scroll container */}
+          <div
+            className={cn(
+              "sticky bottom-4 left-1/2 -translate-x-1/2 z-50 w-fit mx-auto",
+              "transition-all duration-300 ease-out",
+              isHoveringSelector ? "opacity-100 scale-100" : "opacity-40 scale-95 hover:opacity-100 hover:scale-100"
+            )}
+            onMouseEnter={() => setIsHoveringSelector(true)}
+            onMouseLeave={() => setIsHoveringSelector(false)}
+          >
+            {/* Desktop Pills */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-black/80 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
+              {activeTemplates.map((template) => {
+                const isSelected = selectedTemplate.id === template.id;
+                return (
+                  <button
+                    key={template.id}
+                    onClick={() => handleSelectTemplate(template)}
+                    className={cn(
+                      "relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200",
+                      isSelected
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
+                        : "text-white/70 hover:text-white hover:bg-white/10"
+                    )}
+                  >
+                    {isSelected && (
+                      <Check className="w-4 h-4" />
+                    )}
+                    <span className="text-sm font-medium whitespace-nowrap">
+                      {template.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mobile Chips - horizontal scrollable */}
+            <div className="md:hidden overflow-x-auto pb-2">
+              <div className="flex gap-2 px-4 min-w-max bg-black/80 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl py-2">
+                {activeTemplates.map(template => (
+                  <button
+                    key={template.id}
+                    onClick={() => handleSelectTemplate(template)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all duration-200",
+                      selectedTemplate.id === template.id
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                        : "bg-white/10 text-white/70 hover:text-white"
+                    )}
+                  >
+                    {selectedTemplate.id === template.id && <Check className="w-3.5 h-3.5" />}
+                    {template.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Subtle hint text */}
+            <p className={cn(
+              "text-center text-xs text-white/40 mt-2 transition-opacity",
+              isHoveringSelector ? "opacity-100" : "opacity-0"
+            )}>
+              {t('sections.templates.selectHint', 'Choose your style')}
+            </p>
           </div>
         </div>
       </div>

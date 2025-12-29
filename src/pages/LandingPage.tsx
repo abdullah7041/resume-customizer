@@ -21,7 +21,7 @@ import {
   GraduationCap,
   Info,
 } from "lucide-react";
-import Button from "../components/ui/Button";
+import { GlassButton } from "../components/ui/GlassButton";
 import AnimatedCard from "../components/ui/AnimatedCard";
 import { cn } from "../lib/utils/cn";
 import { VISION_2030_SECTORS } from "../lib/data/vision2030Skills";
@@ -274,8 +274,8 @@ function FeatureCard({ feature }) {
   return (
     <AnimatedCard
       tone="translucent"
-      enableTilt={true}
-      tiltIntensity={30}
+      enableTilt={false}
+      tiltIntensity={0}
       className={cn(
         "p-8 cursor-pointer group",
         "hover:border-emerald-400/50 hover:shadow-[0_0_30px_-5px_rgba(52,211,153,0.15)]"
@@ -501,7 +501,7 @@ export default function LandingPage({ onGetStarted }) {
           </div>
 
           {/* Main Hero Content Box */}
-          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12 mx-auto max-w-4xl">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-6 sm:p-8 md:p-12 mx-auto max-w-4xl">
             {/* Main Headline with Typewriter */}
             <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
               {t("landing.hero.title")}
@@ -519,21 +519,20 @@ export default function LandingPage({ onGetStarted }) {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center pt-6 sm:pt-8 px-2">
-              <Button
+              <GlassButton
                 onClick={onGetStarted}
-                size="lg"
                 className="w-full sm:w-auto group relative overflow-hidden bg-white text-emerald-700 hover:bg-emerald-50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_-10px_rgba(16,185,129,0.6)] px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   {t("landing.hero.cta")}
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
-              </Button>
+              </GlassButton>
             </div>
           </div>
 
           {/* Social Proof Box */}
-          <div className="relative overflow-hidden rounded-lg sm:rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-3 sm:py-4 px-4 sm:px-6 mx-auto max-w-xl">
+          <div className="relative overflow-hidden rounded-lg sm:rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl py-3 sm:py-4 px-4 sm:px-6 mx-auto max-w-xl">
             <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 text-white/70 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-300" />
@@ -548,11 +547,12 @@ export default function LandingPage({ onGetStarted }) {
         </div>
       </section>
 
+
       {/* Live Demo Section */}
       <section className="px-3 sm:px-4 py-12 sm:py-16 md:py-20 bg-gradient-to-b from-transparent to-white/5">
         <div className="max-w-4xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 mb-6 sm:mb-8">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
             <div className="text-center px-2">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4 leading-tight">
                 {t("landing.demo.title")}
@@ -570,7 +570,7 @@ export default function LandingPage({ onGetStarted }) {
       <section className="px-3 sm:px-4 py-12 sm:py-16 md:py-20">
         <div className="max-w-6xl mx-auto">
           {/* Section Header Glass Box */}
-          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 mb-10 sm:mb-12 md:mb-16">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-6 sm:p-8 mb-10 sm:mb-12 md:mb-16">
             <div className="text-center px-2">
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 leading-tight">
                 {t("landing.features.title")}
@@ -594,7 +594,7 @@ export default function LandingPage({ onGetStarted }) {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-900/20 pointer-events-none" />
         <div className="max-w-4xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-6 sm:p-8 md:p-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white text-center mb-8 sm:mb-10 md:mb-12 px-2 leading-tight">
               {t("landing.howItWorks.title")}
             </h2>
@@ -618,9 +618,8 @@ export default function LandingPage({ onGetStarted }) {
 
             {/* Final CTA */}
             <div className="text-center mt-10 sm:mt-12 md:mt-16 px-2">
-              <Button
+              <GlassButton
                 onClick={onGetStarted}
-                size="lg"
                 className="w-full sm:w-auto group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:via-teal-400 hover:to-emerald-500 text-white shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_0_60px_-15px_rgba(16,185,129,0.6)] px-8 sm:px-12 py-4 sm:py-6 text-base sm:text-lg font-bold tracking-wide transition-all duration-300 hover:scale-105"
               >
                 <span className="relative z-10 flex items-center gap-2">
@@ -628,7 +627,7 @@ export default function LandingPage({ onGetStarted }) {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
                 <div className="absolute inset-0 -z-10 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] bg-[position:-100%_0,0_0] bg-no-repeat transition-[background-position_0s] duration-0 group-hover:bg-[position:200%_0,0_0] group-hover:duration-[1500ms]" />
-              </Button>
+              </GlassButton>
             </div>
           </div>
         </div>
@@ -638,7 +637,7 @@ export default function LandingPage({ onGetStarted }) {
       <section className="px-3 sm:px-4 py-10 sm:py-12 md:py-16">
         <div className="max-w-5xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-6 sm:p-8 md:p-12">
             <StatsSection />
           </div>
         </div>
@@ -648,7 +647,7 @@ export default function LandingPage({ onGetStarted }) {
       <section className="px-3 sm:px-4 py-10 sm:py-12 md:py-16">
         <div className="max-w-4xl mx-auto">
           {/* Glass Box Container */}
-          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 sm:p-8 md:p-12">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-6 sm:p-8 md:p-12">
             <div className="text-center mb-8 sm:mb-10 px-2">
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3 leading-tight">
                 {t("landing.industries.title")}
@@ -669,8 +668,7 @@ export default function LandingPage({ onGetStarted }) {
             {/* Header */}
             <div className="text-center mb-8 sm:mb-10">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#006C35] text-white text-sm font-bold mb-4">
-                <span>🇸🇦</span>
-                <span>2030</span>
+                <span>Vision 2030 Alignment</span>
               </div>
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3">
                 {t("vision2030.landing.title", "Aligned with Saudi Vision 2030")}
@@ -731,14 +729,14 @@ export default function LandingPage({ onGetStarted }) {
 
             {/* CTA */}
             <div className="text-center">
-              <Button
+              <GlassButton
                 onClick={onGetStarted}
                 className="px-8 py-4 font-bold text-white transition-all hover:scale-105"
                 style={{ backgroundColor: '#006C35' }}
               >
-                {t("vision2030.landing.cta", "Analyze Your V2030 Fit")}
-                <ArrowRight className="w-5 h-5 ml-2 inline" />
-              </Button>
+                {t("vision2030.landing.cta", "Analyze Your Vision 2030 Fit")}
+                <ArrowRight className="w-5 h-5 ms-2 inline" />
+              </GlassButton>
             </div>
           </div>
         </div>

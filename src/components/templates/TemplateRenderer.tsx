@@ -4,10 +4,9 @@
 import { useMemo } from "react";
 import { cn } from "../../lib/utils/cn";
 import { ExternalLink, Github, Linkedin, Mail, Phone, MapPin } from "lucide-react";
-import ModernTemplate from "./ModernTemplate";
-import { ATSClassic } from "./ATSClassic";
+import { getTemplate } from "./registry";
+import type { TemplateId } from "../../types/templates";
 
-// Helper to safely render a value (handles strings, objects, arrays)
 // Helper to safely render a value (handles strings, objects, arrays, and React Elements)
 import { isValidElement } from "react";
 
@@ -318,8 +317,6 @@ const DynamicTemplateRenderer = ({ template, userData }) => {
 
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
 
-import TechnicalTemplate from "./TechnicalTemplate";
-
 interface UserData {
   [key: string]: unknown;
   meta?: {
@@ -336,36 +333,32 @@ interface TemplateRendererProps {
 
 export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult = null }: TemplateRendererProps) {
   // MERGE: Ensure we have the full data set (Original + AI Suggestions)
-  // If aiAnalysisResult is provided, we merge. If userData is already merged (contains basics/meta),
-  // mergeResumeData will handle it gracefully or we trust it.
-  // But strictly per instructions: "const finalData = mergeResumeData(userData, aiAnalysisResult);"
-
-  // Note: if aiAnalysisResult is missing, we try to use userData.meta?.aiAnalysisResult if it exists
-  // data flow flexibility.
   const optimization = aiAnalysisResult || userData.meta?.aiAnalysisResult || {};
+  const mergedData = mergeResumeData(userData, { optimization });
 
-  // We re-merge or ensure structure. Even if no AI result, mergeResumeData helps normalize the structure
-  // (e.g. creating 'basics' from 'header' if missing).
-  const finalData = mergeResumeData(userData, { optimization });
+  // Fallback to userData if merge failed (e.g., missing basics)
+  const finalData = mergedData || userData;
 
-  // Dispatch to specific template components
-  if (template.id === "modern-professional") {
-    return <ModernTemplate userData={finalData} />;
+  // Debug: Log data structure for template
+  console.log('[TemplateRenderer] Template:', template.id);
+  console.log('[TemplateRenderer] finalData has skills:', (finalData as any)?.skills?.length || 0);
+  console.log('[TemplateRenderer] finalData.basics:', !!(finalData as any)?.basics);
+
+  // Use registry to get the correct component by template ID
+  const templateId = template.id as TemplateId;
+  const TemplateComponent = getTemplate(templateId);
+
+  // Check if this is a known template from the registry
+  // If so, use the proper component with the resume prop structure
+  if (['modern-professional', 'classic-traditional', 'technical-engineer'].includes(template.id)) {
+    // Registry templates expect { resume } prop
+    return <TemplateComponent resume={finalData} />;
   }
 
-  if (template.id === "classic-traditional") {
-    // ATSClassic expects strictly structured data which mergeResumeData now enables via 'basics'
-    return <ATSClassic data={finalData} />;
-  }
-
-  if (template.id === "technical-engineer") {
-    return <TechnicalTemplate userData={finalData} />;
-  }
-
-  // Fallback to generic renderer for other templates
-  // DynamicTemplateRenderer uses the Flat structure (header, sections) which mergeResumeData ALSO preserves.
+  // Fallback to generic dynamic renderer for custom/unknown templates
   return <DynamicTemplateRenderer template={template} userData={finalData} />;
 }
+
 
 
 

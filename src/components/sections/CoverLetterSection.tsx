@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
+import { GlassCircle } from '../ui/GlassCircle';
 import {
   FileText,
   Wand2,
@@ -219,9 +220,9 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
       {/* Configuration */}
       <GlassCard variant="elevated">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center">
+          <GlassCircle size="md" variant="indigo">
             <FileText className="w-5 h-5 text-indigo-400" />
-          </div>
+          </GlassCircle>
           <div>
             <h3 className="text-lg font-semibold text-white">
               {t('sections.coverLetter.title', 'Cover Letter Generator')}

@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
-import { FileText, Shield, UploadCloud, XCircle, Camera } from "lucide-react";
+import { FileText, Shield, UploadCloud, XCircle, Camera, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/utils/cn";
-import Button from "./Button";
-import Card from "./Card";
+import { GlassButton } from "./GlassButton";
+import { GlassCard } from "./GlassCard";
 
 
 const DOCUMENT_MIME_TYPES = new Set([
@@ -176,13 +176,10 @@ export default function UploadCard({
   const showProgress = status === "uploading" || status === "parsing";
 
   return (
-    <Card
-      as="section"
-      tone="glass"
-      glow
-      className="mx-auto w-full max-w-full sm:max-w-5xl space-y-4 sm:space-y-6 relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-500"
-      contentClassName="space-y-4 sm:space-y-6"
-      aria-live="polite"
+    <GlassCard
+      variant="elevated"
+      padding="lg"
+      className="mx-auto w-full max-w-full sm:max-w-5xl"
     >
       <header className="space-y-1.5 sm:space-y-2 text-center sm:text-left">
         <div className="flex items-center justify-between gap-2">
@@ -335,25 +332,26 @@ export default function UploadCard({
       )}
 
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
-        <Button
+        <GlassButton
           onClick={onSubmit}
-          disabled={disabled}
-          loading={status === "uploading" || status === "parsing"}
+          disabled={disabled || status === "uploading" || status === "parsing"}
+          variant="primary"
           className="w-full sm:w-auto"
         >
+          {(status === "uploading" || status === "parsing") && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
           {t("upload.card.prepareButton")}
-        </Button>
-        <Button
+        </GlassButton>
+        <GlassButton
           variant="secondary"
           onClick={onFileClear}
           disabled={!fileName}
-          icon={XCircle}
           className="w-full sm:w-auto"
         >
+          <XCircle className="w-4 h-4 me-2" />
           {t("upload.card.clearButton")}
-        </Button>
+        </GlassButton>
       </div>
-    </Card>
+    </GlassCard>
   );
 }
 

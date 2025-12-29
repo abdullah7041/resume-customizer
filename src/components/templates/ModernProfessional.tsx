@@ -20,7 +20,11 @@ export function ModernProfessional({
     return <ATSResume resume={resume} />;
   }
 
-  const { basics, work = [], education = [], skills = [], projects = [], languages = [] } = resume;
+  const { basics, work = [], education = [], skills = [], projects = [], languages = [], certificates = [] } = resume;
+
+  // Get profile links - prevent duplicates
+  const linkedInUrl = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url;
+  const portfolioUrl = basics.url || basics.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website')?.url;
 
   return (
     <div
@@ -52,7 +56,7 @@ export function ModernProfessional({
         {basics.label && (
           <p
             className="text-gray-500 mb-3"
-            style={{ fontSize: '10.5pt', fontWeight: '400' }}
+            style={{ fontSize: '10.5pt', fontWeight: '500' }}
           >
             {basics.label}
           </p>
@@ -74,14 +78,19 @@ export function ModernProfessional({
               <span>{basics.phone}</span>
             </>
           )}
-          {basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url && (
+          {linkedInUrl && (
             <>
               <span className="text-gray-300">·</span>
               <span>
-                {basics.profiles
-                  .find((p) => p.network?.toLowerCase() === 'linkedin')
-                  ?.url?.replace('https://', '')
-                  .replace('www.', '')}
+                {linkedInUrl.replace('https://', '').replace('www.', '')}
+              </span>
+            </>
+          )}
+          {portfolioUrl && (
+            <>
+              <span className="text-gray-300">·</span>
+              <span>
+                {portfolioUrl.replace('https://', '').replace('www.', '')}
               </span>
             </>
           )}
@@ -250,23 +259,66 @@ export function ModernProfessional({
               letterSpacing: '0.12em',
             }}
           >
-            {isRTL ? 'المهارات' : 'Skills'}
+            Skills
           </h2>
-          <div className="space-y-1">
-            {skills
-              .filter((s) => s.name?.toLowerCase() !== 'recommended skills')
-              .map((skillGroup, i) => (
-                <div key={i} style={{ fontSize: '9pt' }}>
-                  {skillGroup.name && skillGroup.name.toLowerCase() !== 'skills' && (
-                    <span className="text-gray-500 font-semibold">{skillGroup.name}: </span>
-                  )}
-                  <span className="text-gray-500">
-                    {Array.isArray(skillGroup.keywords)
-                      ? skillGroup.keywords.join('  ·  ')
-                      : skillGroup.name}
+          <div className="flex flex-wrap gap-2">
+            {skills.map((skillItem, i) => {
+              // Handle both string and object formats
+              if (typeof skillItem === 'string') {
+                return (
+                  <span key={i} className="text-gray-500" style={{ fontSize: '9pt' }}>
+                    {skillItem}
+                    {i < skills.length - 1 && <span className="mx-2">·</span>}
                   </span>
+                );
+              }
+              // Object format
+              const keywords = skillItem.keywords || [skillItem.name];
+              return keywords.map((skill: string, j: number) => (
+                <span key={`${i}-${j}`} className="text-gray-500" style={{ fontSize: '9pt' }}>
+                  {skill}
+                  {(i < skills.length - 1 || j < keywords.length - 1) && <span className="mx-2">·</span>}
+                </span>
+              ));
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Certificates */}
+      {certificates.length > 0 && (
+        <section className="mb-5">
+          <h2
+            className="text-gray-400 mb-3"
+            style={{
+              fontSize: '7.5pt',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+            }}
+          >
+            {isRTL ? 'الشهادات' : 'Certifications'}
+          </h2>
+          <div className="space-y-2">
+            {certificates.map((cert, i) => (
+              <div key={i} className="flex justify-between items-baseline">
+                <div>
+                  <h3 className="text-gray-900" style={{ fontSize: '10pt', fontWeight: '600' }}>
+                    {safeString(cert.name)}
+                  </h3>
+                  {cert.issuer && (
+                    <p className="text-gray-500" style={{ fontSize: '9pt' }}>
+                      {cert.issuer}
+                    </p>
+                  )}
                 </div>
-              ))}
+                {cert.date && (
+                  <span className="text-gray-400" style={{ fontSize: '8.5pt' }}>
+                    {cert.date}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         </section>
       )}

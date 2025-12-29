@@ -4,10 +4,7 @@
 // Templates
 export { ModernProfessional } from './ModernProfessional';
 export { ClassicTraditional } from './ClassicTraditional';
-
-// Base components and utilities
-export { ATSResume, A4_STYLES, ATS_STYLES, safeString, formatContactLine } from './BaseTemplate';
-export type { TemplateProps, TemplateComponent } from './BaseTemplate';
+export { TechnicalEngineer } from './TechnicalEngineer';
 
 // Registry
 export {
@@ -18,10 +15,5 @@ export {
   getTemplatesByCategory,
 } from './registry';
 
-// UI Components
-export { TemplateSelector } from './TemplateSelector';
-export { ResumePreview } from './ResumePreview';
-
-
-
-
+// Template types
+export type { TemplateProps, TemplateComponent } from './BaseTemplate';

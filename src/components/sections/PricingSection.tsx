@@ -4,6 +4,7 @@ import { Check, Mail, Sparkles, Crown } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassInput } from '../ui/GlassInput';
+import { GlassCircle } from '../ui/GlassCircle';
 import { cn } from '../../lib/utils/cn';
 
 interface PlanConfig {
@@ -92,13 +93,9 @@ export function PricingSection() {
                                         {/* Plan Icon & Name */}
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className={cn(
-                                                    "w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br",
-                                                    plan.gradient,
-                                                    "shadow-lg"
-                                                )}>
+                                                <GlassCircle size="lg" variant={plan.key === 'free' ? 'success' : 'purple'}>
                                                     <plan.icon className="w-6 h-6 text-white" />
-                                                </div>
+                                                </GlassCircle>
                                                 <div>
                                                     <h3 className="text-xl font-bold text-white">
                                                         {t(`pricing.plans.${plan.key}.name`)}
@@ -134,12 +131,9 @@ export function PricingSection() {
                                         <ul className="space-y-3">
                                             {Array.isArray(features) && features.map((feature, idx) => (
                                                 <li key={idx} className="flex items-start gap-3">
-                                                    <div className={cn(
-                                                        "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
-                                                        "bg-gradient-to-br", plan.gradient
-                                                    )}>
+                                                    <GlassCircle size="sm" variant={plan.key === 'free' ? 'success' : 'purple'} className="mt-0.5 shrink-0">
                                                         <Check className="w-3 h-3 text-white" />
-                                                    </div>
+                                                    </GlassCircle>
                                                     <span className={cn(
                                                         "text-sm",
                                                         plan.comingSoon ? "text-white/60" : "text-white/80"

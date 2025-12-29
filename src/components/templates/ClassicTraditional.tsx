@@ -21,7 +21,11 @@ export function ClassicTraditional({
     return <ATSResume resume={resume} />;
   }
 
-  const { basics, work = [], education = [], skills = [], projects = [], languages = [] } = resume;
+  const { basics, work = [], education = [], skills = [], projects = [], languages = [], certificates = [] } = resume;
+
+  // Get profile links
+  const linkedInUrl = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url;
+  const portfolioUrl = basics.url || basics.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website')?.url;
 
   return (
     <div
@@ -41,7 +45,7 @@ export function ClassicTraditional({
       {/* Centered Header with bold divider */}
       <header className="text-center mb-5 pb-4" style={{ borderBottom: '2px solid #1a1a1a' }}>
         <h1
-          className="text-gray-900 mb-2"
+          className="text-gray-900 mb-1"
           style={{
             fontSize: '22pt',
             fontWeight: '700',
@@ -52,13 +56,21 @@ export function ClassicTraditional({
           {safeString(basics.name)}
         </h1>
         {basics.label && (
-          <p className="text-gray-600 italic mb-2" style={{ fontSize: '11pt' }}>
+          <p className="text-gray-600 mb-2" style={{ fontSize: '11pt', fontWeight: '500' }}>
             {basics.label}
           </p>
         )}
-        <p className="text-gray-500" style={{ fontSize: '9pt' }}>
+        <p className="text-gray-500 mb-1" style={{ fontSize: '9pt' }}>
           {[basics.email, basics.phone, basics.location?.city].filter(Boolean).join('  |  ')}
         </p>
+        {(linkedInUrl || portfolioUrl) && (
+          <p className="text-gray-400" style={{ fontSize: '8.5pt' }}>
+            {[
+              linkedInUrl?.replace('https://', '').replace('www.', ''),
+              portfolioUrl?.replace('https://', '').replace('www.', ''),
+            ].filter(Boolean).join('  |  ')}
+          </p>
+        )}
       </header>
 
       {/* Professional Summary */}
@@ -195,31 +207,28 @@ export function ClassicTraditional({
               borderBottom: '1px solid #1a1a1a',
             }}
           >
-            {isRTL ? 'المهارات والخبرات' : 'Skills & Expertise'}
+            Skills & Expertise
           </h2>
-          <div className="space-y-1">
-            {skills
-              .filter((s) => s.name?.toLowerCase() !== 'recommended skills')
-              .map((skillGroup, i) => (
-                <div
-                  key={i}
-                  className="grid"
-                  style={{
-                    gridTemplateColumns: '120px 1fr',
-                    gap: '4px 12px',
-                    fontSize: '9.5pt',
-                  }}
-                >
-                  <span className="font-semibold text-gray-700">
-                    {skillGroup.name || 'Skills'}:
+          <div className="text-gray-600" style={{ fontSize: '9.5pt', lineHeight: '1.6' }}>
+            {skills.map((skillItem, i) => {
+              // Handle both string and object formats
+              if (typeof skillItem === 'string') {
+                return (
+                  <span key={i}>
+                    {skillItem}
+                    {i < skills.length - 1 && ', '}
                   </span>
-                  <span className="text-gray-600">
-                    {Array.isArray(skillGroup.keywords)
-                      ? skillGroup.keywords.join(', ')
-                      : skillGroup.name}
-                  </span>
-                </div>
-              ))}
+                );
+              }
+              // Object format
+              const keywords = skillItem.keywords || [skillItem.name];
+              return keywords.map((skill: string, j: number) => (
+                <span key={`${i}-${j}`}>
+                  {skill}
+                  {(i < skills.length - 1 || j < keywords.length - 1) && ', '}
+                </span>
+              ));
+            })}
           </div>
         </section>
       )}
@@ -270,6 +279,45 @@ export function ClassicTraditional({
                       </li>
                     ))}
                   </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Certificates */}
+      {certificates.length > 0 && (
+        <section className="mb-4">
+          <h2
+            className="text-gray-900 mb-3 pb-1"
+            style={{
+              fontSize: '11pt',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              borderBottom: '1px solid #1a1a1a',
+            }}
+          >
+            {isRTL ? 'الشهادات' : 'Certifications'}
+          </h2>
+          <div className="space-y-2">
+            {certificates.map((cert, i) => (
+              <div key={i} className="flex justify-between">
+                <div>
+                  <h3 className="text-gray-900" style={{ fontSize: '10.5pt', fontWeight: '700' }}>
+                    {safeString(cert.name)}
+                  </h3>
+                  {cert.issuer && (
+                    <p className="text-gray-600" style={{ fontSize: '9.5pt' }}>
+                      {cert.issuer}
+                    </p>
+                  )}
+                </div>
+                {cert.date && (
+                  <span className="text-gray-500 italic" style={{ fontSize: '9pt' }}>
+                    {cert.date}
+                  </span>
                 )}
               </div>
             ))}

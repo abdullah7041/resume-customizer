@@ -47,6 +47,16 @@ export const useResumeStore = create<ResumeState>()(
       optimizations: [],
       keywordSuggestions: [],
       analysisCache: {},
+      optimizationMetrics: {
+        beforeScore: null,
+        afterScore: null,
+        improvement: null,
+        jdKeywords: [],
+        matchedKeywords: [],
+        reasoning: null,
+        hasJobDescription: false,
+        vision2030: null,
+      },
       showOptimized: false, // Start with original
       selectedTemplate: 'modern-professional',
 
@@ -498,6 +508,25 @@ export const useResumeStore = create<ResumeState>()(
         set({ analysisCache: {} });
       },
 
+      // Optimization metrics actions
+      setOptimizationMetrics: (metrics) =>
+        set((state) => ({
+          optimizationMetrics: { ...state.optimizationMetrics, ...metrics }
+        })),
+
+      resetOptimizationMetrics: () => set({
+        optimizationMetrics: {
+          beforeScore: null,
+          afterScore: null,
+          improvement: null,
+          jdKeywords: [],
+          matchedKeywords: [],
+          reasoning: null,
+          hasJobDescription: false,
+          vision2030: null,
+        }
+      }),
+
       clearAll: () => {
         console.log('[ResumeStore] Clearing all data');
         set({
@@ -506,6 +535,16 @@ export const useResumeStore = create<ResumeState>()(
           optimizations: [],
           keywordSuggestions: [],
           analysisCache: {},
+          optimizationMetrics: {
+            beforeScore: null,
+            afterScore: null,
+            improvement: null,
+            jdKeywords: [],
+            matchedKeywords: [],
+            reasoning: null,
+            hasJobDescription: false,
+            vision2030: null,
+          },
           showOptimized: false,
         });
       },
@@ -518,6 +557,16 @@ export const useResumeStore = create<ResumeState>()(
           optimizations: [],
           keywordSuggestions: [],
           analysisCache: {},
+          optimizationMetrics: {
+            beforeScore: null,
+            afterScore: null,
+            improvement: null,
+            jdKeywords: [],
+            matchedKeywords: [],
+            reasoning: null,
+            hasJobDescription: false,
+            vision2030: null,
+          },
           showOptimized: false,
         });
       },

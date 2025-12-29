@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Clipboard, ClipboardCheck, FileText, Sparkles, ChevronDown } from "lucide-react";
-import Button from "../ui/Button";
-import Card from "../ui/Card";
+import { GlassButton } from "../ui/GlassButton";
+import { GlassCard } from "../ui/GlassCard";
 import { cn } from "../../lib/utils/cn";
 
 export default function OptimizationCard({ card, onCopy, disabledActions = false, viewMode = "split" }) {
@@ -17,10 +17,10 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
   };
 
   return (
-    <Card
-      tone="translucent"
+    <GlassCard
+      variant="subtle"
+      padding="none"
       className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-500/30 dark:hover:border-emerald-400/30"
-      contentClassName="space-y-0"
     >
       <header
         className="flex cursor-pointer items-start justify-between gap-4 p-4"
@@ -94,16 +94,15 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">
                     {viewMode === "split" ? "After" : "Optimized View"}
                   </p>
-                  <Button
+                  <GlassButton
                     variant="secondary"
-                    icon={copied ? ClipboardCheck : Clipboard}
                     onClick={handleCopy}
                     disabled={disabledActions}
                     className="text-xs h-7 px-3"
-                    title={disabledActions ? "Upgrade to copy directly." : "Copy optimized bullet"}
                   >
+                    {copied ? <ClipboardCheck className="w-3 h-3 me-1" /> : <Clipboard className="w-3 h-3 me-1" />}
                     {copied ? "Copied" : "Copy"}
-                  </Button>
+                  </GlassButton>
                 </div>
                 <div className="relative h-full overflow-hidden rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm leading-relaxed text-ink shadow-[0_0_15px_-3px_rgba(16,185,129,0.1)] dark:border-emerald-400/20 dark:bg-emerald-400/5">
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-50" />
@@ -126,7 +125,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
           </div>
         </div>
       </div>
-    </Card>
+    </GlassCard>
   );
 }
 

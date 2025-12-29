@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
+import { GlassCircle } from '../ui/GlassCircle';
 import {
   MessageSquare,
   Lightbulb,
@@ -71,9 +72,9 @@ const QuestionTypeIcon = ({ type }: { type: string }) => {
     general: <HelpCircle className={iconClass} />
   };
   return (
-    <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/20">
+    <GlassCircle size="md" variant="success">
       {icons[type] || icons.general}
-    </span>
+    </GlassCircle>
   );
 };
 
@@ -94,9 +95,9 @@ const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
 const STARMethodTip = () => (
   <div className="mb-6 p-5 bg-emerald-900/80 border border-emerald-500/40 rounded-xl backdrop-blur-sm shadow-lg">
     <div className="flex items-start gap-4">
-      <div className="w-10 h-10 rounded-xl bg-emerald-500/30 flex items-center justify-center flex-shrink-0">
+      <GlassCircle size="md" variant="success">
         <Lightbulb className="w-5 h-5 text-emerald-300" />
-      </div>
+      </GlassCircle>
       <div>
         <h4 className="text-base font-bold text-emerald-200 mb-2">
           Use the STAR Method
@@ -364,9 +365,9 @@ export function InterviewSection({
       <GlassCard variant="elevated">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+            <GlassCircle size="md" variant="blue">
               <MessageSquare className="w-5 h-5 text-blue-400" />
-            </div>
+            </GlassCircle>
             <div>
               <h3 className="text-lg font-semibold text-white">
                 {t('sections.interview.title', 'Interview Preparation')}

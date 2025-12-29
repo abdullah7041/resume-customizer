@@ -6,6 +6,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 
+
 // Floating particle component for ambient animation
 const FloatingParticle = ({ delay, duration, size, left, top }) => (
   <div
@@ -41,9 +42,9 @@ const getPrefersReducedMotion = () => {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 };
 
-// Modern glass card styles
+// Modern glass card styles - transparent black
 const glassCardClass =
-  "relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-500";
+  "relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl transition-all duration-500";
 
 const glassCardHoverClass =
   "hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)] hover:translate-y-[-2px]";
@@ -408,23 +409,18 @@ export default function Header() {
               {user ? (
                 <button
                   onClick={signOut}
-                  className="group relative inline-flex items-center gap-2.5 rounded-xl px-5 py-2.5 min-h-[44px] text-sm font-semibold text-white overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  className="group relative inline-flex items-center gap-2.5 rounded-xl px-5 py-2.5 min-h-[44px] text-sm font-semibold text-white bg-black/40 backdrop-blur-xl border border-white/10 hover:bg-white/15 hover:border-red-400/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 border border-white/20 rounded-xl" />
-                  <span className="absolute inset-0 bg-gradient-to-r from-red-500/0 to-red-500/0 group-hover:from-red-500/20 group-hover:to-red-400/10 transition-all duration-300 rounded-xl" />
-                  <LogOut className="relative h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
-                  <span className="relative">{t("common.signOut")}</span>
+                  <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
+                  <span>{t("common.signOut")}</span>
                 </button>
               ) : (
                 <button
                   onClick={signInWithGoogle}
-                  className="group relative inline-flex items-center gap-2.5 rounded-xl px-6 py-2.5 min-h-[44px] text-sm font-semibold text-white overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  className="group relative inline-flex items-center gap-2.5 rounded-xl px-6 py-2.5 min-h-[44px] text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl" />
-                  <span className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-                  <span className="absolute inset-0 shadow-[0_0_30px_rgba(16,185,129,0.4)] group-hover:shadow-[0_0_40px_rgba(16,185,129,0.6)] transition-shadow duration-300 rounded-xl" />
-                  <LogIn className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-                  <span className="relative">{t("common.signIn")}</span>
+                  <LogIn className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                  <span>{t("common.signIn")}</span>
                 </button>
               )}
             </div>
@@ -454,7 +450,7 @@ export default function Header() {
             )}
           >
             {/* Badge - hidden on mobile */}
-            <div className="hidden sm:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 backdrop-blur-md">
+            <div className="hidden sm:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />

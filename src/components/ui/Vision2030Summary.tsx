@@ -3,12 +3,13 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, ChevronDown, ChevronUp, Info, TrendingUp, Sparkles, Upload, Crosshair } from 'lucide-react';
+import { Target, ChevronDown, ChevronUp, Info, TrendingUp, Sparkles, Upload, Crosshair, Star, Zap, ThumbsUp, Rocket } from 'lucide-react';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import { SectorIcon } from '../../lib/utils/vision2030Icons';
 import { EXAMPLE_RESUME_TEXT } from '../../lib/data/exampleResume';
 import Vision2030Modal from './Vision2030Modal';
 import { GlassCard } from './GlassCard';
+import { GlassCircle } from './GlassCircle';
 
 interface Vision2030SummaryProps {
     resumeText?: string;
@@ -44,6 +45,38 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
         return 'bg-red-500/20';
     };
 
+    // Get encouragement message based on score
+    const getEncouragementMessage = (score: number): { message: string; icon: 'star' | 'zap' | 'thumbsUp' | 'rocket' } => {
+        if (score >= 80) return {
+            message: t('vision2030.summary.excellent', 'Excellent Vision 2030 alignment!'),
+            icon: 'star'
+        };
+        if (score >= 70) return {
+            message: t('vision2030.summary.strong', 'Strong alignment with Vision 2030!'),
+            icon: 'zap'
+        };
+        if (score >= 60) return {
+            message: t('vision2030.summary.good', 'Good foundation for Vision 2030!'),
+            icon: 'thumbsUp'
+        };
+        return {
+            message: t('vision2030.summary.building', 'Building your Vision 2030 profile!'),
+            icon: 'rocket'
+        };
+    };
+
+    // Render icon based on type
+    const renderEncouragementIcon = (iconType: string) => {
+        const iconClass = "w-4 h-4 text-emerald-400";
+        switch (iconType) {
+            case 'star': return <Star className={iconClass} />;
+            case 'zap': return <Zap className={iconClass} />;
+            case 'thumbsUp': return <ThumbsUp className={iconClass} />;
+            case 'rocket': return <Rocket className={iconClass} />;
+            default: return <Star className={iconClass} />;
+        }
+    };
+
     // Demo mode banner component
     const DemoBanner = () => (
         <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
@@ -64,10 +97,10 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
         <GlassCard className={`p-4 ${className}`}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#006C35] flex items-center justify-center">
+                <div className="flex items-center gap-3 rtl:flex-row-reverse">
+                    <GlassCircle size="lg" variant="success" className="shrink-0">
                         <Target className="w-5 h-5 text-white" />
-                    </div>
+                    </GlassCircle>
                     <div>
                         <h3 className="font-bold text-white">
                             {t('vision2030.title', 'Vision 2030 Alignment')}
@@ -97,6 +130,13 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                             className="h-full bg-gradient-to-r from-[#006C35] to-[#4ade80] transition-all duration-500"
                             style={{ width: `${analysis.overallScore}%` }}
                         />
+                    </div>
+                    {/* Encouragement Message */}
+                    <div className="mt-2 flex items-center gap-2">
+                        {renderEncouragementIcon(getEncouragementMessage(analysis.overallScore).icon)}
+                        <span className="text-xs text-emerald-300 font-medium">
+                            {getEncouragementMessage(analysis.overallScore).message}
+                        </span>
                     </div>
                 </div>
             )}
@@ -179,21 +219,25 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                         </div>
                     )}
 
-                    {/* Suggestions */}
-                    {analysis.missingSuggestions.length > 0 && (
+                    {/* Suggested Keywords from Top Sectors */}
+                    {analysis.sectorBreakdown.slice(0, 3).some(s => s.suggestedKeywords.length > 0) && (
                         <div>
                             <span className="text-sm font-medium text-white/80">
                                 {t('vision2030.suggestions', 'Suggested Skills to Add')}:
                             </span>
                             <div className="flex flex-wrap gap-1.5 mt-1">
-                                {analysis.missingSuggestions.slice(0, 3).map((sug, index) => (
-                                    <span
-                                        key={index}
-                                        className="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-400"
-                                    >
-                                        {isArabic ? sug.skillNameAr : sug.skillNameEn}
-                                    </span>
-                                ))}
+                                {analysis.sectorBreakdown
+                                    .slice(0, 3)
+                                    .flatMap(s => s.suggestedKeywords)
+                                    .slice(0, 6)
+                                    .map((skill, index) => (
+                                        <span
+                                            key={index}
+                                            className="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-400"
+                                        >
+                                            {skill}
+                                        </span>
+                                    ))}
                             </div>
                         </div>
                     )}
@@ -237,3 +281,4 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
 }
 
 export default Vision2030Summary;
+

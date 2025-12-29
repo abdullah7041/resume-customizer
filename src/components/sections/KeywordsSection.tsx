@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
+import { GlassCircle } from '../ui/GlassCircle';
 import {
   TrendingUp,
   AlertCircle,
@@ -152,9 +153,9 @@ export function KeywordsSection({ resumeText, jobDescription }: KeywordsSectionP
       <GlassCard variant="elevated">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+            <GlassCircle size="md" variant="success">
               <Target className="w-5 h-5 text-emerald-400" />
-            </div>
+            </GlassCircle>
             <div>
               <h3 className="text-lg font-semibold text-white">
                 {t('sections.keywords.title', 'Keyword Analysis')}

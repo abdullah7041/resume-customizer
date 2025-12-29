@@ -7,8 +7,7 @@ import type { ResumeSchema } from './resume';
 export type TemplateId =
   | 'modern-professional'
   | 'classic-traditional'
-  | 'technical-minimal'
-  | 'executive-bold';
+  | 'technical-engineer';
 
 /**
  * Template category for filtering
@@ -80,6 +79,29 @@ export interface AnalysisCache {
 }
 
 /**
+ * Optimization metrics for Results Summary
+ * Tracks scoring data from the API for displaying match improvements
+ */
+export interface OptimizationMetrics {
+  beforeScore: number | null;
+  afterScore: number | null;
+  improvement: number | null;
+  jdKeywords: string[];
+  matchedKeywords: string[];
+  reasoning: string | null;
+  hasJobDescription: boolean;
+  // Vision 2030 alignment data
+  vision2030: {
+    overallScore: number;
+    primarySector: { id: string; nameEn: string; nameAr: string; icon: string } | null;
+    secondarySectors: { id: string; nameEn: string; nameAr: string; icon: string }[];
+    matchedSkillsCount: number;
+    topMatchedSkills: string[];
+    detectedCareer: { nameEn: string; nameAr: string } | null;
+  } | null;
+}
+
+/**
  * Resume state for the store
  */
 export interface ResumeState {
@@ -91,6 +113,9 @@ export interface ResumeState {
 
   // Analysis caching for consistent results
   analysisCache: AnalysisCache;
+
+  // Optimization metrics for Results Summary
+  optimizationMetrics: OptimizationMetrics;
 
   // View state
   showOptimized: boolean;
@@ -112,6 +137,10 @@ export interface ResumeState {
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
   resetForNewUpload: () => void;
+
+  // Optimization metrics actions
+  setOptimizationMetrics: (metrics: Partial<OptimizationMetrics>) => void;
+  resetOptimizationMetrics: () => void;
 
   // Cache actions
   getCachedAnalysis: (resumeText: string, jobDescription: string) => CachedAnalysis | null;

@@ -57,9 +57,11 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
           'pandas', 'numpy', 'jupyter', 'statistical analysis', 'predictive analytics',
           'business intelligence', 'forecasting', 'forecast', 'trend analysis',
           'exploratory analysis', 'exploratory data analysis', 'eda',
-          'data extraction', 'data transformation', 'data pipeline'
+          'data extraction', 'data transformation', 'data pipeline',
+          'metrics', 'kpi', 'sap', 'erp', 'crm', 'reporting dashboard', 'data-driven',
+          'machine learning', 'ai', 'artificial intelligence', 'iot', 'digital transformation'
         ],
-        keywordsAr: ['علوم البيانات', 'تحليل البيانات', 'البيانات الضخمة', 'محلل بيانات', 'لوحة معلومات'],
+        keywordsAr: ['علوم البيانات', 'تحليل البيانات', 'البيانات الضخمة', 'محلل بيانات', 'لوحة معلومات', 'مؤشرات الأداء', 'التحول الرقمي'],
         weight: 3,
       },
       {
@@ -393,9 +395,11 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
           'knowledge transfer', 'upskilling', 'reskilling', 'onboarding',
           'workshop', 'workshops', 'facilitator', 'train the trainer',
           'capability building', 'skill development', 'employee development',
-          'delivering training', 'conducted training', 'training programs'
+          'delivering training', 'conducted training', 'training programs',
+          'cross-functional', 'collaboration', 'workforce development', 'capacity building',
+          'skills transfer', 'presentation', 'stakeholder management', 'team leadership'
         ],
-        keywordsAr: ['تدريب', 'توجيه', 'نقل المعرفة', 'تطوير الموظفين', 'ورش عمل'],
+        keywordsAr: ['تدريب', 'توجيه', 'نقل المعرفة', 'تطوير الموظفين', 'ورش عمل', 'تعاون', 'تطوير القوى العاملة', 'قيادة الفريق'],
         weight: 3,
       },
       {
@@ -422,8 +426,13 @@ export const VISION_2030_SECTORS: Vision2030Sector[] = [
       {
         nameEn: 'Project Management',
         nameAr: 'إدارة المشاريع',
-        keywords: ['project management', 'pmp', 'prince2', 'agile', 'scrum', 'construction management'],
-        keywordsAr: ['إدارة مشاريع', 'إدارة البناء'],
+        keywords: [
+          'project management', 'pmp', 'prince2', 'agile', 'scrum', 'construction management',
+          'neom', 'red sea', 'qiddiya', 'diriyah', 'pipefitting', 'field reporting',
+          'traceability', 'procurement', 'supply chain', 'logistics', 'contract management',
+          'quality control', 'compliance', 'infrastructure', 'engineering'
+        ],
+        keywordsAr: ['إدارة مشاريع', 'إدارة البناء', 'نيوم', 'البحر الأحمر', 'القدية', 'الدرعية', 'مشتريات', 'سلسلة الإمداد'],
         weight: 3,
       },
       {

@@ -23,6 +23,7 @@ Sentry.init({
     'ResizeObserver loop limit exceeded',
     'Network request failed',
     /Loading chunk \d+ failed/,
+    /Timeout waiting for mutex/,  // Ignore Mixpanel mutex errors
   ],
 
   beforeSend(event) {

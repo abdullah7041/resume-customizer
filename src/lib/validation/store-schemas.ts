@@ -36,26 +36,26 @@ export const BasicsSchema = z.object({
 });
 
 export const WorkSchema = z.object({
-    name: z.string(),
-    position: z.string(),
-    url: z.string().optional(),
-    startDate: z.string().optional().default(''),
-    endDate: z.string().optional().default(''),
-    summary: z.string().optional().default(''),
-    location: z.string().optional().default(''),
-    highlights: z.array(z.string()).optional().default([]),
+    name: z.string().nullable().transform(val => val ?? ''),
+    position: z.string().nullable().transform(val => val ?? ''),
+    url: z.string().nullable().optional().transform(val => val ?? ''),
+    startDate: z.string().nullable().optional().transform(val => val ?? ''),
+    endDate: z.string().nullable().optional().transform(val => val ?? ''),
+    summary: z.string().nullable().optional().transform(val => val ?? ''),
+    location: z.string().nullable().optional().transform(val => val ?? ''),
+    highlights: z.array(z.string()).nullable().optional().transform(val => val ?? []),
 });
 
 export const EducationSchema = z.object({
-    institution: z.string(),
-    url: z.string().optional(),
-    area: z.string().optional().default(''),
-    studyType: z.string().optional().default(''),
-    startDate: z.string().optional().default(''),
-    endDate: z.string().optional().default(''),
-    score: z.string().optional(),
-    courses: z.array(z.string()).optional().default([]),
-    highlights: z.array(z.string()).optional().default([]),
+    institution: z.string().nullable().transform(val => val ?? ''),
+    url: z.string().nullable().optional().transform(val => val ?? ''),
+    area: z.string().nullable().optional().transform(val => val ?? ''),
+    studyType: z.string().nullable().optional().transform(val => val ?? ''),
+    startDate: z.string().nullable().optional().transform(val => val ?? ''),
+    endDate: z.string().nullable().optional().transform(val => val ?? ''),
+    score: z.string().nullable().optional().transform(val => val ?? ''),
+    courses: z.array(z.string()).nullable().optional().transform(val => val ?? []),
+    highlights: z.array(z.string()).nullable().optional().transform(val => val ?? []),
 });
 
 export const SkillSchema = z.object({
@@ -78,18 +78,18 @@ export const SkillsArraySchema = z.union([
 ]).optional().default([]);
 
 export const ProjectSchema = z.object({
-    name: z.string(),
-    description: z.string().optional().default(''),
-    highlights: z.array(z.string()).optional().default([]),
-    keywords: z.array(z.string()).optional().default([]),
-    url: z.string().optional(),
+    name: z.string().nullable().transform(val => val ?? ''),
+    description: z.string().nullable().optional().transform(val => val ?? ''),
+    highlights: z.array(z.string()).nullable().optional().transform(val => val ?? []),
+    keywords: z.array(z.string()).nullable().optional().transform(val => val ?? []),
+    url: z.string().nullable().optional().transform(val => val ?? ''),
 });
 
 export const CertificateSchema = z.object({
-    name: z.string(),
-    date: z.string().optional().default(''),
-    issuer: z.string().optional().default(''),
-    url: z.string().optional(),
+    name: z.string().nullable().transform(val => val ?? ''),
+    date: z.string().nullable().optional().transform(val => val ?? ''),
+    issuer: z.string().nullable().optional().transform(val => val ?? ''),
+    url: z.string().nullable().optional().transform(val => val ?? ''),
 });
 
 export const LanguageSchema = z.object({

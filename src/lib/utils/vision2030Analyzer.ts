@@ -47,6 +47,7 @@ export interface SectorScore {
   score: number;
   matchedCount: number;
   totalSkills: number;
+  suggestedKeywords: string[]; // Top missing keywords for this sector
 }
 
 /**
@@ -135,34 +136,40 @@ export function analyzeVision2030Alignment(
     }
   });
 
-  // Calculate sector breakdown
+  // Calculate sector breakdown with encouragement curve
   const sectorBreakdown: SectorScore[] = VISION_2030_SECTORS.map(sector => {
     const score = sectorScores.get(sector.id)!;
+    const rawScore = score.maxWeight > 0 ? (score.totalWeight / score.maxWeight) * 100 : 0;
+    // Apply encouragement curve: sqrt mapping makes low scores higher
+    const encouragedScore = Math.min(100, Math.sqrt(rawScore / 100) * 100 * 1.2);
+
+    // Get top 3 missing keywords for suggestions
+    const matchedSkillNames = new Set(matchedSkills.filter(s => s.sectorId === sector.id).map(s => s.skillNameEn));
+    const missingSkills = sector.skills
+      .filter(s => !matchedSkillNames.has(s.nameEn))
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 3)
+      .map(s => s.nameEn);
+
     return {
       sectorId: sector.id,
       sectorNameEn: sector.nameEn,
       sectorNameAr: sector.nameAr,
       icon: sector.icon,
-      score: score.maxWeight > 0 ? Math.round((score.totalWeight / score.maxWeight) * 100) : 0,
+      score: Math.round(encouragedScore),
       matchedCount: score.matches,
       totalSkills: sector.skills.length,
+      suggestedKeywords: missingSkills,
     };
   }).sort((a, b) => b.score - a.score);
 
-  // Calculate score based on top 3 relevant sectors only (not all sectors)
+  // Calculate score with weighted average: 70% top sectors, 30% overall
   const top3Sectors = sectorBreakdown.slice(0, 3);
-  const top3MaxWeight = top3Sectors.reduce((sum, s) => {
-    const sector = VISION_2030_SECTORS.find(sec => sec.id === s.sectorId);
-    return sum + (sector?.skills.reduce((w, skill) => w + skill.weight, 0) || 0);
-  }, 0);
-  const top3MatchedWeight = matchedSkills
-    .filter(s => top3Sectors.some(t => t.sectorId === s.sectorId))
-    .reduce((sum, s) => sum + s.weight, 0);
-
-  // Use weighted average: 70% from sector depth, 30% from breadth bonus
-  const sectorDepthScore = top3MaxWeight > 0 ? (top3MatchedWeight / top3MaxWeight) * 100 : 0;
-  const breadthBonus = Math.min(30, matchedSkills.length * 3); // Up to 30% bonus for skill variety
-  const overallScore = Math.min(100, Math.round(sectorDepthScore * 0.7 + breadthBonus));
+  const top3Avg = top3Sectors.reduce((sum, s) => sum + s.score, 0) / 3;
+  const overallAvg = sectorBreakdown.reduce((sum, s) => sum + s.score, 0) / sectorBreakdown.length;
+  const weightedScore = Math.round(top3Avg * 0.7 + overallAvg * 0.3);
+  // Apply minimum floor of 60% for any resume
+  const overallScore = Math.max(weightedScore, 60);
 
   // Get all sectors with any matches (not just top 3)
   const allSectorsWithMatches = sectorBreakdown

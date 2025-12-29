@@ -207,17 +207,17 @@ export default function FeaturesShowcase() {
     const [showAllFeatures, setShowAllFeatures] = useState(false);
 
     return (
-        <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <section className="py-22 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 <SectionTitle
                     eyebrow={t("showcase.eyebrow")}
                     title={t("showcase.title")}
                     description={t("showcase.subtitle")}
-                    className="text-center mb-12"
+                    className="text-center mb-6"
                 />
 
                 {/* Hero Features - Always visible (3-column grid) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                     {heroFeatures.map((feature) => (
                         <FeatureCard key={feature.id} feature={feature} />
                     ))}
@@ -252,7 +252,7 @@ export default function FeaturesShowcase() {
                     className={cn(
                         "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 overflow-hidden transition-all duration-500 ease-in-out",
                         showAllFeatures
-                            ? "max-h-[2000px] opacity-100"
+                            ? "max-h-[2000px] opacity-100 pb-4"
                             : "max-h-0 opacity-0"
                     )}
                 >

@@ -20,7 +20,15 @@ export function TechnicalEngineer({
         return <ATSResume resume={resume} />;
     }
 
-    const { basics, work = [], education = [], skills = [], projects = [], languages = [] } = resume;
+    const { basics, work = [], education = [], skills = [], projects = [], languages = [], certificates = [] } = resume;
+
+    // Get profile links
+    const linkedInUrl = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url;
+    const portfolioUrl = basics.url || basics.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website')?.url;
+
+    // Debug: Log skills data to understand structure
+    console.log('[TechnicalEngineer] Skills count:', skills.length);
+    console.log('[TechnicalEngineer] Skills sample:', skills[0]);
 
     return (
         <div
@@ -55,6 +63,7 @@ export function TechnicalEngineer({
                         style={{
                             fontSize: '10pt',
                             fontFamily: "'Inter', -apple-system, sans-serif",
+                            fontWeight: '500',
                         }}
                     >
                         {basics.label}
@@ -64,65 +73,63 @@ export function TechnicalEngineer({
                     {basics.email && <span>{basics.email}</span>}
                     {basics.phone && <span>{basics.phone}</span>}
                     {basics.location?.city && <span>{basics.location.city}</span>}
-                    {basics.profiles?.map((profile, i) => (
-                        <span key={i}>
-                            {profile.url?.replace('https://', '').replace('www.', '') || profile.username}
-                        </span>
-                    ))}
+                    {linkedInUrl && <span>{linkedInUrl.replace('https://', '').replace('www.', '')}</span>}
+                    {portfolioUrl && <span>{portfolioUrl.replace('https://', '').replace('www.', '')}</span>}
                 </div>
             </header>
 
             {/* SKILLS FIRST - Technical emphasis */}
             {skills.length > 0 && (
                 <section
-                    className="mb-5 p-3 rounded"
+                    className="mb-5 p-4 rounded"
                     style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}
                 >
                     <h2
                         className="text-gray-700 mb-3 pb-1"
                         style={{
-                            fontSize: '9pt',
+                            fontSize: '11pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                             borderBottom: 'none',
                         }}
                     >
-                        {isRTL ? 'المهارات التقنية' : 'Technical Skills'}
+                        Technical Skills
                     </h2>
-                    <div className="space-y-2">
-                        {skills.map((skillGroup, i) => (
-                            <div key={i}>
-                                {skillGroup.name && skillGroup.name.toLowerCase() !== 'skills' && (
-                                    <p
-                                        className="text-gray-500 mb-1"
+                    <div className="flex flex-wrap gap-2">
+                        {skills.map((skillItem, i) => {
+                            // Handle both string and object formats
+                            if (typeof skillItem === 'string') {
+                                return (
+                                    <span
+                                        key={i}
+                                        className="px-3 py-1 text-gray-700 rounded"
                                         style={{
-                                            fontSize: '8pt',
-                                            fontWeight: '600',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.05em',
+                                            fontSize: '10pt',
+                                            backgroundColor: '#ffffff',
+                                            border: '1px solid #d1d5db',
                                         }}
                                     >
-                                        {skillGroup.name}
-                                    </p>
-                                )}
-                                <div className="flex flex-wrap gap-1">
-                                    {(skillGroup.keywords || [skillGroup.name]).map((skill, j) => (
-                                        <span
-                                            key={j}
-                                            className="px-2 py-0.5 text-gray-700 rounded"
-                                            style={{
-                                                fontSize: '8.5pt',
-                                                backgroundColor: '#ffffff',
-                                                border: '1px solid #d1d5db',
-                                            }}
-                                        >
-                                            {skill}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                                        {skillItem}
+                                    </span>
+                                );
+                            }
+                            // Object format with keywords
+                            const keywords = skillItem.keywords || [skillItem.name];
+                            return keywords.map((skill: string, j: number) => (
+                                <span
+                                    key={`${i}-${j}`}
+                                    className="px-3 py-1 text-gray-700 rounded"
+                                    style={{
+                                        fontSize: '10pt',
+                                        backgroundColor: '#ffffff',
+                                        border: '1px solid #d1d5db',
+                                    }}
+                                >
+                                    {skill}
+                                </span>
+                            ));
+                        })}
                     </div>
                 </section>
             )}
@@ -302,6 +309,52 @@ export function TechnicalEngineer({
                                 <span className="text-gray-500" style={{ fontSize: '8.5pt' }}>
                                     {edu.endDate || edu.startDate}
                                 </span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Certificates */}
+            {certificates.length > 0 && (
+                <section className="mb-5">
+                    <h2
+                        className="text-gray-700 mb-3 pb-1"
+                        style={{
+                            fontSize: '9pt',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px dashed #e5e7eb',
+                        }}
+                    >
+                        {isRTL ? 'الشهادات' : 'Certifications'}
+                    </h2>
+                    <div className="space-y-2">
+                        {certificates.map((cert, i) => (
+                            <div key={i} className="flex justify-between items-baseline">
+                                <div>
+                                    <h3
+                                        className="text-gray-900"
+                                        style={{
+                                            fontSize: '10pt',
+                                            fontWeight: '600',
+                                            fontFamily: "'Inter', -apple-system, sans-serif",
+                                        }}
+                                    >
+                                        {safeString(cert.name)}
+                                    </h3>
+                                    {cert.issuer && (
+                                        <p className="text-gray-500" style={{ fontSize: '9pt' }}>
+                                            {cert.issuer}
+                                        </p>
+                                    )}
+                                </div>
+                                {cert.date && (
+                                    <span className="text-gray-500" style={{ fontSize: '8.5pt' }}>
+                                        {cert.date}
+                                    </span>
+                                )}
                             </div>
                         ))}
                     </div>

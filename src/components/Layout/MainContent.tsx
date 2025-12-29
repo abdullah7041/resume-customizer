@@ -16,10 +16,10 @@ import { InterviewSection } from "../sections/InterviewSection";
 import { BulkAnalysisSection } from "../sections/BulkAnalysisSection";
 import { CoverLetterSection } from "../sections/CoverLetterSection";
 import { PricingSection } from "../sections/PricingSection";
-import Tabs from "../ui/Tabs";
+import { GlassTabs } from "../ui/GlassTabs";
 import Toast, { ToastContainer } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
-import Button from "../ui/Button";
+import { GlassButton } from "../ui/GlassButton";
 import LandingPage from "../../pages/LandingPage";
 import { ParallaxContainer } from "../ui/ParallaxSection";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
@@ -680,7 +680,7 @@ export default function MainContent() {
         {/* Tab navigation - full width on mobile */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <Tabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
+            <GlassTabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
           </div>
           {resumeData?.plainText && (
             <button
@@ -694,7 +694,7 @@ export default function MainContent() {
             </button>
           )}
         </div>
-        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-4 sm:p-5 lg:p-6 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_22px_65px_-40px_rgba(15,15,18,0.55)]">
+        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-5 lg:p-6 transition-shadow duration-300 hover:shadow-2xl">
           {activeTab === "resume" && (
             <UploadSection
               onParseResume={handleParseResume}
@@ -773,9 +773,10 @@ export default function MainContent() {
 
         {hasNextTab && (
           <div className="flex justify-center sm:justify-end mt-4">
-            <Button variant="secondary" icon={ArrowRight} onClick={handleContinue} className="justify-center">
+            <GlassButton variant="secondary" onClick={handleContinue} className="justify-center">
+              <ArrowRight className="w-4 h-4 me-2" />
               {t("workspace.continue")}
-            </Button>
+            </GlassButton>
           </div>
         )}
 
@@ -797,7 +798,7 @@ export default function MainContent() {
         text={resumeData?.plainText || ""}
       />
       <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="card-glow rounded-xl sm:rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_90%)] p-3 sm:p-7 lg:p-8 shadow-card backdrop-blur-glass transition-shadow duration-[var(--duration-breathe)] ease-[var(--transition-snappy)] hover:shadow-[0_24px_70px_-42px_rgba(15,15,18,0.58)]">
+        <div className="rounded-2xl bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-7 lg:p-8 transition-shadow duration-300 hover:shadow-2xl">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
@@ -832,21 +833,21 @@ export default function MainContent() {
               title={t("workspace.signInToUnlock")}
               description={t("workspace.signInDescription")}
               actions={
-                <Button
-                  variant="frosted"
-                  icon={LogIn}
+                <GlassButton
+                  variant="secondary"
                   onClick={signInWithGoogle}
                   className="justify-center text-[15px] font-semibold"
                 >
+                  <LogIn className="w-4 h-4 me-2" />
                   {t("workspace.signInViaGoogle")}
-                </Button>
+                </GlassButton>
               }
             />
           )}
         </div>
         {isDev && aiDebug && (
           <section className="text-xs text-ink-500 dark:text-surface-50/70">
-            <div className="rounded-card border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_12%)] p-4 shadow-soft backdrop-blur-glass sm:p-5">
+            <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-5">
               <p className="font-semibold uppercase tracking-[0.24em] text-emerald-500">AI Debug</p>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-7">
                 <div>

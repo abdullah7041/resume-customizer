@@ -1,8 +1,4 @@
-import Button from "../ui/Button";
-import Card from "../ui/Card";
+import { GlassButton } from "../ui/GlassButton";
+import { GlassCard } from "../ui/GlassCard";
 
-export { Button, Card };
-
-
-
-
+export { GlassButton as Button, GlassCard as Card };

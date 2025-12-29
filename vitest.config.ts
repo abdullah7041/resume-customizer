@@ -16,6 +16,10 @@ export default defineConfig({
     globals: true,
     environment: "happy-dom",
     setupFiles: "./src/test/setup.ts",
+    include: [
+      "src/**/*.{test,spec}.{js,jsx,ts,tsx}",
+      "netlify/functions/__tests__/**/*.test.ts"
+    ],
     css: true,
     env: {
       VITE_ASSETS_BASE_URL: "",

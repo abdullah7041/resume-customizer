@@ -36,11 +36,11 @@ export const AnimatedCard = forwardRef<HTMLElement, AnimatedCardProps>(function 
 
   const toneStyles = {
     glass:
-      "border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] backdrop-blur-glass",
+      "border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl",
     solid:
-      "border border-[color:color-mix(in_oklab,var(--ink),transparent_80%)] bg-[color:var(--surface-strong)]",
+      "border border-white/15 bg-black/60 backdrop-blur-xl shadow-xl",
     translucent:
-      "border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] backdrop-blur-soft",
+      "border border-white/10 bg-black/30 backdrop-blur-lg shadow-lg",
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
@@ -80,7 +80,6 @@ export const AnimatedCard = forwardRef<HTMLElement, AnimatedCardProps>(function 
         className={cn(
           "relative overflow-hidden rounded-card p-6 shadow-card transition-all duration-300 ease-out",
           "before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:transition-all before:duration-300 before:content-[''] before:bg-[image:var(--glass-reflection)] hover:before:opacity-90 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100",
-          "after:pointer-events-none after:absolute after:bottom-[-40%] after:left-[-20%] after:h-[140%] after:w-[160%] after:rounded-full after:bg-[image:var(--gradient-halo)] after:opacity-0 after:transition-opacity after:duration-300 hover:after:opacity-70",
           "hover:shadow-[var(--shadow-hover)] hover:border-[color:var(--glass-border-hover)] hover:scale-[1.02] hover:-translate-y-0.5",
           glow ? "shadow-glass" : "",
           toneStyles[tone] ?? toneStyles.glass,

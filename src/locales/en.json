@@ -335,6 +335,12 @@
         "success": "Resume ready!",
         "error": "We couldn't process that file."
       }
+    },
+    "stage": {
+      "uploading": "Uploading...",
+      "parsing": "Parsing...",
+      "analyzing": "AI Analyzing...",
+      "complete": "Complete!"
     }
   },
   "analysis": {
@@ -435,13 +441,15 @@
     "copyright": "© 2024 Watheq. All rights reserved."
   },
   "consent": {
+    "pill": "We Value Your Privacy",
     "title": "We Value Your Privacy",
     "description": "We use cookies and process your data to provide and improve our services. In compliance with Saudi PDPL, we need your consent.",
     "managePreferences": "Manage preferences",
     "acceptAll": "Accept All",
-    "rejectOptional": "Reject Optional",
+    "rejectOptional": "Reject",
     "privacyPolicy": "Privacy Policy",
     "required": "Required",
+    "compliance": "Compliant with Saudi Personal Data Protection Law (PDPL) - Royal Decree M/19",
     "pdplReference": "Compliant with Saudi Personal Data Protection Law (PDPL) - Royal Decree M/19",
     "functional": {
       "title": "Functional Cookies",
@@ -572,6 +580,14 @@
   },
   "vision2030": {
     "title": "Vision 2030 Alignment",
+    "resultsAlignment": "Vision 2030 Alignment",
+    "targetSectors": "Target Sectors",
+    "primary": "Primary",
+    "strong": "Strong",
+    "basic": "Basic",
+    "detectedCareerPath": "Detected Career Path",
+    "skillsDetected": "Vision 2030 Skills Detected",
+    "sectors": "2030 Sectors",
     "subtitle": "How your skills align with Saudi national priorities",
     "overallScore": "Overall Score",
     "sectorBreakdown": "Sector Breakdown",
@@ -611,6 +627,13 @@
       "title": "Vision 2030 Alignment",
       "viewDetails": "View Details",
       "learnMore": "Learn about Vision 2030"
+    },
+    "summary": {
+      "excellent": "Excellent Vision 2030 alignment!",
+      "strong": "Strong alignment with Vision 2030!",
+      "good": "Good foundation for Vision 2030!",
+      "building": "Building your Vision 2030 profile!",
+      "suggestedSkills": "Suggested Skills to Add:"
     },
     "demoMode": "Example Analysis",
     "demoBanner": "This shows how a well-optimized resume aligns with Vision 2030. Upload yours to see your personal score!",

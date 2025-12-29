@@ -23,7 +23,6 @@ resume-customizer/
 │   └── vitest.config.ts              # Vitest test configuration
 │
 ├── 📄 Documentation
-│   ├── AI_INSTRUCTIONS.md            # AI development guidelines
 │   ├── CLAUDE.md                     # Claude-specific instructions
 │   ├── LICENSE                       # MIT License
 │   ├── README.md                     # Project documentation
@@ -72,6 +71,8 @@ sections/
 ├── KeywordsSection.tsx              # Keyword analysis & suggestions
 ├── MatchSection.skeleton.tsx        # Match section loading skeleton
 ├── MatchSection.tsx                 # Job-resume matching analysis
+├── OptimizationImpactSummary.tsx    # Optimization impact metrics display
+├── OptimizationResultsSummary.tsx   # Optimization results summary view
 ├── OptimizeSection.skeleton.tsx     # Optimize section loading skeleton
 ├── OptimizeSection.tsx              # Resume optimization
 ├── PricingSection.tsx               # Pricing plans & features
@@ -86,16 +87,14 @@ ui/
 ├── AnimatedCard.tsx                 # Animated card with glass effect
 ├── AnimatedCounter.tsx              # Animated number counter
 ├── BottomSheet.tsx                  # Mobile bottom sheet component
-├── Button.tsx                       # Reusable button component
-├── Card.tsx                         # Basic card component
 ├── EmptyState.tsx                   # Empty state placeholder
 ├── EnvironmentBadge.tsx             # Environment indicator badge
 ├── FeedbackButtons.tsx              # User feedback buttons component
 ├── GlassButton.tsx                  # Glass morphism button
 ├── GlassCard.tsx                    # Glass morphism card
+├── GlassCircle.tsx                  # Glass morphism circular component
 ├── GlassInput.tsx                   # Glass morphism input
 ├── GlassTabs.tsx                    # Glass morphism tabs
-├── Input.tsx                        # Reusable input component
 ├── LanguageSwitcher.tsx             # Language toggle (EN/AR)
 ├── OfflineIndicator.tsx             # Offline status indicator
 ├── ParallaxSection.tsx              # Parallax scroll section
@@ -103,7 +102,6 @@ ui/
 ├── RateLimitBanner.tsx              # Rate limit warning banner
 ├── SectionTitle.tsx                 # Section header component
 ├── Skeleton.tsx                     # Loading skeleton component
-├── Tabs.tsx                         # Tab navigation component
 ├── Toast.tsx                        # Toast notification system
 ├── Tooltip.tsx                      # Tooltip component
 ├── UploadCard.tsx                   # Resume upload card
@@ -115,19 +113,19 @@ ui/
 #### Template Components (`components/templates/`)
 ```
 templates/
-├── ATSClassic.tsx                   # ATS-optimized classic template
-├── BaseATSTemplate.tsx              # Base ATS template logic
 ├── BaseTemplate.tsx                 # Base template foundation
 ├── ClassicTraditional.tsx           # Classic professional template
 ├── ModernProfessional.tsx           # Modern professional template
-├── ModernTemplate.tsx               # Modern design template
-├── ResumePDFDocument.tsx            # PDF export using @react-pdf
-├── ResumePreview.tsx                # Resume preview component
-├── TechnicalTemplate.tsx            # Technical resume template
+├── TechnicalEngineer.tsx            # Technical engineer resume template
 ├── TemplateRenderer.tsx             # Template rendering logic
-├── TemplateSelector.tsx             # Template selection UI
 ├── index.ts                         # Template exports
-└── registry.ts                      # Template registry & metadata
+├── registry.ts                      # Template registry & metadata
+└── pdf/                             # PDF export templates
+    ├── ClassicTraditionalPDF.tsx    # Classic template PDF version
+    ├── ModernProfessionalPDF.tsx    # Modern template PDF version
+    ├── TechnicalEngineerPDF.tsx     # Technical template PDF version
+    ├── index.ts                     # PDF template exports
+    └── shared.ts                    # Shared PDF styles & utilities
 ```
 
 #### Other Component Directories
@@ -232,8 +230,7 @@ hooks/
 ├── useAuth.tsx                      # Authentication hook
 ├── useKeywordAnalysis.js            # Keyword analysis hook
 ├── useRateLimit.ts                  # Rate limiting hook
-├── useTheme.js                      # Theme management hook
-└── useTheme.test.jsx                # Theme hook tests
+└── useTheme.js                      # Theme management hook
 ```
 
 #### Pages (`src/pages/`)
@@ -261,18 +258,13 @@ types/
 #### Tests (`src/__tests__/`)
 ```
 __tests__/
-├── ATSClassic.test.jsx               # ATS template tests
-├── Button.test.jsx                   # Button component tests
-├── Header.test.jsx                   # Header component tests
 ├── JobMatch.test.jsx                 # Job matching tests
 ├── MainContent.test.jsx              # Main content tests
+├── OptimizeSection.test.jsx          # Optimize section tests
 ├── ResumeUpload.test.jsx             # Resume upload tests
-├── SectionTitle.test.jsx             # Section title tests
-├── UploadCard.test.jsx               # Upload card tests
+├── TemplatesSection.test.jsx         # Templates section tests
 ├── matchScore.fixture.test.js        # Match score fixture tests
-├── mobile-layout.test.jsx            # Mobile layout tests
 ├── resumeText.test.js                # Resume text utils tests
-├── shimmer-animations.test.ts        # Shimmer animation tests
 ├── smoke.test.jsx                    # Smoke tests
 ├── supabase.test.js                  # Supabase integration tests
 └── useAuth.test.jsx                  # Auth hook tests
@@ -320,8 +312,9 @@ lib/
 ## Public Assets (`public/`)
 ```
 public/
-├── favicon.ico                      # Site favicon
-└── logo.png                         # Application logo
+├── _headers                         # HTTP headers configuration
+├── favicon.svg                      # Site favicon (SVG)
+└── og-image.png                     # Open Graph social media image
 ```
 
 ---
@@ -393,4 +386,4 @@ scripts/
 
 ---
 
-*Last updated: December 25, 2025 at 15:06 UTC+3*
+*Last updated: December 29, 2025 at 23:56 UTC+3*

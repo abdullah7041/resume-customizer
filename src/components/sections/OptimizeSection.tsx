@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
+import { GlassCircle } from '../ui/GlassCircle';
 import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
 import { useRateLimit } from '../../hooks/useRateLimit';
@@ -15,10 +16,15 @@ import {
   RotateCcw,
   ArrowLeftRight,
   AlertCircle,
+  Info,
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { OptimizeSkeleton } from './OptimizeSection.skeleton';
 import { FeedbackButtons } from '../ui/FeedbackButtons';
+import { OptimizationImpactSummary } from './OptimizationImpactSummary';
+import { OptimizationResultsSummary } from './OptimizationResultsSummary';
+import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
+import { VISION_2030_SECTORS } from '../../lib/data/vision2030Skills';
 import type { SuggestionType } from '../../services/feedback';
 
 // === Keyword bucket labels ===
@@ -140,6 +146,8 @@ export function OptimizeSection({
     applyAllOptimizations,
     revertAllOptimizations,
     keywordSuggestions,
+    optimizationMetrics,
+    setOptimizationMetrics,
   } = useResumeStore();
 
   // Use props or store
@@ -152,6 +160,9 @@ export function OptimizeSection({
   const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showImpactSummary, setShowImpactSummary] = useState(false);
+  // Use -1 as sentinel to distinguish first render (loaded from storage) vs fresh generation
+  const [previousOptCount, setPreviousOptCount] = useState(-1);
 
   // Sync prop optimizations to store when they change
   useEffect(() => {
@@ -164,6 +175,33 @@ export function OptimizeSection({
   // Always use store optimizations (props are synced to store via useEffect above)
   const optimizations = storeOptimizations;
   const isOptimizing = propIsOptimizing || isGenerating;
+
+  // Generate sessionId if we have optimizations but no sessionId yet
+  // This ensures feedback buttons appear for optimizations loaded from storage
+  useEffect(() => {
+    if (optimizations.length > 0 && !sessionId) {
+      setSessionId(crypto.randomUUID());
+    }
+  }, [optimizations.length, sessionId]);
+
+  // Detect when optimization completes and show impact summary
+  // Only show when user just generated new optimizations, not on page load
+  useEffect(() => {
+    // First render: initialize previousOptCount without showing summary
+    if (previousOptCount === -1) {
+      setPreviousOptCount(optimizations.length);
+      return;
+    }
+
+    // Fresh optimization: went from 0 to having some
+    if (previousOptCount === 0 && optimizations.length > 0 && !isOptimizing) {
+      setShowImpactSummary(true);
+      // Auto-hide after 8 seconds
+      const timer = setTimeout(() => setShowImpactSummary(false), 8000);
+      return () => clearTimeout(timer);
+    }
+    setPreviousOptCount(optimizations.length);
+  }, [optimizations.length, isOptimizing, previousOptCount]);
 
   // Debug log to help diagnose optimization rendering issues
   console.log('[OptimizeSection] Using store optimizations, count:', optimizations.length);
@@ -190,6 +228,51 @@ export function OptimizeSection({
       neutral: keywords?.neutral ?? [],
     };
   }, [keywords, keywordSuggestions]);
+
+  // Calculate results summary data using API-provided metrics
+  const resultsSummaryData = useMemo(() => {
+    const appliedCount = optimizations.filter(o => o.applied).length;
+
+    // Group by section
+    const bySection = optimizations.reduce((acc, opt) => {
+      const section = opt.sectionType || 'general';
+      if (!acc[section]) {
+        acc[section] = { section, count: 0, applied: 0 };
+      }
+      acc[section].count++;
+      if (opt.applied) acc[section].applied++;
+      return acc;
+    }, {} as Record<string, { section: string; count: number; applied: number }>);
+
+    // Use API-provided scores if available, otherwise calculate locally
+    const beforeScore = optimizationMetrics.beforeScore ??
+      ((originalResume?.meta as Record<string, unknown> | undefined)?.match_score as number) ?? 55;
+
+    // Recalculate after score based on applied optimizations
+    // API gives us the "potential" score, but we adjust based on what's actually applied
+    const appliedRatio = optimizations.length > 0
+      ? appliedCount / optimizations.length
+      : 0;
+
+    const maxImprovement = optimizationMetrics.improvement ?? 15;
+    const actualImprovement = Math.round(maxImprovement * appliedRatio);
+    const afterScore = Math.min(beforeScore + actualImprovement, 95);
+
+    return {
+      beforeScore,
+      afterScore,
+      potentialScore: optimizationMetrics.afterScore ?? afterScore,
+      totalOptimizations: optimizations.length,
+      appliedOptimizations: appliedCount,
+      optimizationsBySection: Object.values(bySection),
+      keywordsAdded: keywordBuckets.add,
+      keywordsFromJD: optimizationMetrics.jdKeywords,
+      matchedKeywords: optimizationMetrics.matchedKeywords,
+      reasoning: optimizationMetrics.reasoning,
+      hasJobDescription: optimizationMetrics.hasJobDescription,
+      vision2030: optimizationMetrics.vision2030,
+    };
+  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume]);
 
   // Conditions
   const _showPreviewBanner = !isPremium && !previewUsed;
@@ -342,6 +425,67 @@ export function OptimizeSection({
         useResumeStore.getState().setKeywordSuggestions(suggestions);
       }
 
+      // Capture match scoring data for Results Summary
+      if (data.matchScoring) {
+        setOptimizationMetrics({
+          beforeScore: data.matchScoring.beforeScore,
+          afterScore: data.matchScoring.afterScore,
+          improvement: data.matchScoring.improvement,
+          jdKeywords: data.matchScoring.jdKeywords || [],
+          matchedKeywords: data.matchScoring.matchedKeywords || [],
+          reasoning: data.matchScoring.reasoning,
+          hasJobDescription: data.debug?.hasJobDescription || false,
+        });
+      }
+
+      // Run Vision 2030 analysis on resume text
+      const textToAnalyze = resumeText || JSON.stringify(originalResume);
+      if (textToAnalyze) {
+        const vision2030Analysis = analyzeVision2030Alignment(
+          textToAnalyze,
+          isArabic ? 'ar' : 'en'
+        );
+
+        // Get primary sector info
+        const primarySectorData = vision2030Analysis.sectorBreakdown.find(
+          s => s.matchedCount > 0
+        );
+        const primarySector = primarySectorData ? {
+          id: primarySectorData.sectorId,
+          nameEn: primarySectorData.sectorNameEn,
+          nameAr: primarySectorData.sectorNameAr,
+          icon: primarySectorData.icon,
+        } : null;
+
+        // Get secondary sectors (next 2 with matches)
+        const secondarySectors = vision2030Analysis.sectorBreakdown
+          .filter(s => s.matchedCount > 0 && s.sectorId !== primarySectorData?.sectorId)
+          .slice(0, 2)
+          .map(s => ({
+            id: s.sectorId,
+            nameEn: s.sectorNameEn,
+            nameAr: s.sectorNameAr,
+            icon: s.icon,
+          }));
+
+        // Get detected career
+        const detectedCareer = vision2030Analysis.detectedCareer ? {
+          nameEn: vision2030Analysis.detectedCareer.archetypeNameEn,
+          nameAr: vision2030Analysis.detectedCareer.archetypeNameAr,
+        } : null;
+
+        setOptimizationMetrics({
+          vision2030: {
+            overallScore: vision2030Analysis.overallScore,
+            primarySector,
+            secondarySectors,
+            matchedSkillsCount: vision2030Analysis.matchedSkills.length,
+            topMatchedSkills: vision2030Analysis.matchedSkills.slice(0, 6).map(s => s.skillNameEn),
+            detectedCareer,
+          },
+        });
+      }
+
     } catch (err) {
       console.error('Optimization error:', err);
       // Check if this is a rate limit error
@@ -401,9 +545,9 @@ export function OptimizeSection({
       <GlassCard variant="elevated">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+            <GlassCircle size="md" variant="purple">
               <Sparkles className="w-5 h-5 text-purple-400" />
-            </div>
+            </GlassCircle>
             <div>
               <h3 className="text-lg font-semibold text-white">
                 {t('sections.optimize.title', 'Polish Every Section')}
@@ -475,7 +619,13 @@ export function OptimizeSection({
           </div>
         </div>
 
-
+        {/* Impact Summary - shows after optimization completes */}
+        <OptimizationImpactSummary
+          sectionsOptimized={optimizations.length}
+          keywordsToAdd={keywordBuckets.add.length}
+          isVisible={showImpactSummary}
+          onDismiss={() => setShowImpactSummary(false)}
+        />
 
         {/* Section Tabs */}
         <div className="flex flex-wrap gap-2 mb-6 p-1 bg-white/5 rounded-xl">
@@ -598,6 +748,24 @@ export function OptimizeSection({
                           : opt.sectionType
                       }
                     </span>
+                    {/* Info icon for Skills section - recommendations only */}
+                    {opt.sectionType === 'skills' && (
+                      <span
+                        className="group relative cursor-help"
+                        title={isArabic
+                          ? 'هذه توصيات فقط ولن تُضاف تلقائياً إلى سيرتك الذاتية'
+                          : 'These are recommendations only and will not be added to your resume'
+                        }
+                      >
+                        <Info className="w-4 h-4 text-amber-400/70 hover:text-amber-400 transition-colors" />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 border border-white/10 text-xs text-gray-300 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                          {isArabic
+                            ? '💡 توصيات فقط - لن تُضاف للسيرة الذاتية'
+                            : '💡 Recommendations only - not added to resume'
+                          }
+                        </span>
+                      </span>
+                    )}
                     <span className={cn(
                       'px-2 py-0.5 rounded text-xs',
                       opt.applied
@@ -767,6 +935,23 @@ export function OptimizeSection({
           </GlassCard>
         )}
       </div>
+
+      {/* Results Summary Section - appears at bottom after optimizations */}
+      <OptimizationResultsSummary
+        beforeScore={resultsSummaryData.beforeScore}
+        afterScore={resultsSummaryData.afterScore}
+        potentialScore={resultsSummaryData.potentialScore}
+        totalOptimizations={resultsSummaryData.totalOptimizations}
+        appliedOptimizations={resultsSummaryData.appliedOptimizations}
+        optimizationsBySection={resultsSummaryData.optimizationsBySection}
+        keywordsAdded={resultsSummaryData.keywordsAdded}
+        keywordsFromJD={resultsSummaryData.keywordsFromJD}
+        matchedKeywords={resultsSummaryData.matchedKeywords}
+        isVisible={optimizations.length > 0 && !isOptimizing}
+        hasJobDescription={resultsSummaryData.hasJobDescription}
+        onApplyAll={applyAllOptimizations}
+        onExport={undefined}
+      />
 
       {/* Rate Limit Banner */}
       {isRateLimited && (

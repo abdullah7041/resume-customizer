@@ -1,28 +1,29 @@
 /**
  * Glassmorphism Design System
  * Consistent glass effects across all components
+ * Using neutral transparent backgrounds for clean glass look
  */
 
 export const glass = {
-  // Primary glass card (dark background) - increased opacity from /60 to /85
-  card: 'bg-gray-900/85 backdrop-blur-xl border border-white/15 shadow-xl',
+  // Primary glass card - neutral transparent background
+  card: 'bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl',
 
-  // Light glass card (for contrast) - increased opacity from /10 to /20
-  cardLight: 'bg-white/20 backdrop-blur-xl border border-white/25 shadow-xl',
+  // Light glass card (for contrast)
+  cardLight: 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl',
 
-  // Elevated glass (more prominent) - increased opacity from /80 to /90
-  elevated: 'bg-gray-900/90 backdrop-blur-2xl border border-white/20 shadow-2xl',
+  // Elevated glass (more prominent)
+  elevated: 'bg-black/50 backdrop-blur-2xl border border-white/15 shadow-2xl',
 
-  // Subtle glass (less prominent) - increased opacity from /40 to /70
-  subtle: 'bg-gray-900/70 backdrop-blur-lg border border-white/10 shadow-lg',
+  // Subtle glass (less prominent)
+  subtle: 'bg-black/30 backdrop-blur-lg border border-white/10 shadow-lg',
 
-  // Input fields - increased opacity from /5 to /10
-  input: 'bg-white/10 backdrop-blur-sm border border-white/15 focus:border-emerald-500/50 focus:bg-white/15',
+  // Input fields
+  input: 'bg-white/5 backdrop-blur-sm border border-white/10 focus:border-emerald-500/50 focus:bg-white/10',
 
   // Buttons
   button: {
     primary: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25',
-    secondary: 'bg-white/10 hover:bg-white/20 text-white border border-white/10',
+    secondary: 'bg-white/10 hover:bg-white/15 text-white border border-white/10',
     ghost: 'hover:bg-white/10 text-gray-300 hover:text-white',
   },
 

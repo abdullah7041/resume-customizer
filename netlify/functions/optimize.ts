@@ -255,21 +255,56 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       console.warn('[optimize] No cards generated! Full optimization object:', JSON.stringify(opt, null, 2));
     }
 
+    // Calculate projected score improvement
+    const beforeScore = analysis.meta?.match_score || analysis.matchAnalysis?.score_0_to_100 || 55;
+
+    // Score improvement logic:
+    // - Base: +3% per optimization card (capped at +20%)
+    // - Keywords: +1% per added keyword (capped at +8%)
+    // - Max improvement: +25%, Max score: 95%
+    const cardBonus = Math.min(cards.length * 3, 20);
+    const addKeywords = opt?.skills_gap_analysis?.missing_keywords_to_add ||
+      analysis.matchAnalysis?.missingKeywords || [];
+    const keywordBonus = Math.min(addKeywords.length * 1, 8);
+    const totalImprovement = Math.min(cardBonus + keywordBonus, 25);
+    const afterScore = Math.min(beforeScore + totalImprovement, 95);
+
+    // Extract JD-matched keywords (keywords resume already has that match JD)
+    const matchedKeywords = opt?.keywords_to_keep ||
+      analysis.matchAnalysis?.keywordsToKeep ||
+      [];
+
+    // Extract all keywords the JD is looking for (matched + missing)
+    const jdKeywords = [
+      ...matchedKeywords,
+      ...addKeywords
+    ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         cards: cards,
         keywords: {
-          add: opt?.skills_gap_analysis?.missing_keywords_to_add || analysis.matchAnalysis?.missingKeywords || [],
+          add: addKeywords,
           neutral: opt?.keywords_to_keep || [],
           remove: opt?.skills_gap_analysis?.irrelevant_skills_to_remove || opt?.keywords_to_avoid || []
+        },
+        // NEW: Match scoring for Results Summary
+        matchScoring: {
+          beforeScore: Math.round(beforeScore),
+          afterScore: Math.round(afterScore),
+          improvement: Math.round(totalImprovement),
+          jdKeywords: jdKeywords.slice(0, 20), // Cap at 20 for UI
+          matchedKeywords: matchedKeywords.slice(0, 15),
+          reasoning: analysis.matchAnalysis?.reasoning || analysis.meta?.ai_suggestions?.reasoning || null,
         },
         source: "gemini",
         debug: {
           totalCards: cards.length,
           hasOptimization: !!opt,
-          hadBulletImprovements: bulletImprovements?.length > 0
+          hadBulletImprovements: bulletImprovements?.length > 0,
+          hasJobDescription: Boolean(jobText && jobText.trim().length > 0),
         }
       }),
     };

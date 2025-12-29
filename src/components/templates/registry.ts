@@ -11,8 +11,7 @@ import { TechnicalEngineer } from './TechnicalEngineer';
 export const TEMPLATES: Record<TemplateId, TemplateComponent> = {
   'modern-professional': ModernProfessional as TemplateComponent,
   'classic-traditional': ClassicTraditional as TemplateComponent,
-  'technical-minimal': TechnicalEngineer as TemplateComponent,
-  'executive-bold': ClassicTraditional as TemplateComponent,
+  'technical-engineer': TechnicalEngineer as TemplateComponent,
 };
 
 /**
@@ -41,7 +40,7 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
     previewColor: '#6b7280', // gray-500
   },
   {
-    id: 'technical-minimal',
+    id: 'technical-engineer',
     name: 'Technical Engineer',
     nameAr: 'مهندس تقني',
     category: 'technical',
@@ -50,16 +49,7 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
     isAtsOptimized: true,
     previewColor: '#3b82f6', // blue-500
   },
-  {
-    id: 'executive-bold',
-    name: 'Executive Bold',
-    nameAr: 'تنفيذي جريء',
-    category: 'classic',
-    description: 'Commanding presence for senior positions',
-    descriptionAr: 'حضور قوي للمناصب القيادية',
-    isAtsOptimized: true,
-    previewColor: '#1f2937', // gray-800
-  },
+
 ];
 
 /**
