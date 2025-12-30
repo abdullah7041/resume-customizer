@@ -79,10 +79,9 @@ export default defineConfig({
               return "vendor-pdfjs";
             }
 
-            // ===== SENTRY - split core from integrations =====
-            if (id.includes("@sentry/browser") || id.includes("@sentry/core")) {
-              return "vendor-sentry-core";
-            }
+            // ===== SENTRY - Keep all in one chunk =====
+            // IMPORTANT: @sentry packages have circular dependencies
+            // Splitting them causes "Cannot access before initialization" errors
             if (id.includes("@sentry")) {
               return "vendor-sentry";
             }
