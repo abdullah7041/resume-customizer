@@ -31,47 +31,83 @@ export default defineConfig({
     rollupOptions: {
       external: ["path2d"],
       output: {
-        manualChunks(id) {
+        manualChunks(id, { getModuleInfo }) {
           if (id.includes("node_modules")) {
-            // React core - loads immediately
-            if (id.includes("/react-dom/") || id.includes("/react/") || id.includes("react-i18next")) {
+            // ===== REACT CORE (loads immediately) =====
+            if (id.includes("/react-dom/") || id.includes("/react/")) {
               return "vendor-react";
             }
-            // Zustand state management
+
+            // ===== STATE MANAGEMENT =====
             if (id.includes("/zustand/")) {
               return "vendor-state";
             }
-            // PDF rendering - LAZY LOAD ONLY
-            if (id.includes("@react-pdf")) {
+
+            // ===== PDF RENDERING - Keep all @react-pdf in one chunk =====
+            // IMPORTANT: @react-pdf packages have circular dependencies
+            // Splitting them causes "Cannot access before initialization" errors
+            if (
+              id.includes("@react-pdf") ||
+              id.includes("fontkit") ||
+              id.includes("restructure") ||
+              id.includes("unicode-trie") ||
+              id.includes("dfa")
+            ) {
               return "vendor-pdf";
             }
-            // Supabase - lazy load for auth
+            if (id.includes("pako") || id.includes("brotli") || id.includes("crypto-js")) {
+              return "vendor-compression";
+            }
+
+            // ===== SUPABASE - lazy load for auth =====
             if (id.includes("@supabase")) {
               return "vendor-supabase";
             }
-            // Icons - tree-shake aggressively
+
+            // ===== ICONS - tree-shake aggressively =====
             if (id.includes("lucide-react")) {
               return "vendor-icons";
             }
-            // Google AI - backend only, shouldn't be in frontend
-            if (id.includes("@google/generative-ai")) {
-              return "vendor-ai";
-            }
-            // Document generation
+
+            // ===== DOCUMENT GENERATION - lazy load =====
             if (id.includes("/docx/")) {
               return "vendor-docs";
             }
-            // PDF.js for parsing
+
+            // ===== PDF.js for parsing =====
             if (id.includes("pdfjs-dist")) {
               return "vendor-pdfjs";
             }
-            // Sentry
+
+            // ===== SENTRY - split core from integrations =====
+            if (id.includes("@sentry/browser") || id.includes("@sentry/core")) {
+              return "vendor-sentry-core";
+            }
             if (id.includes("@sentry")) {
               return "vendor-sentry";
             }
-            // i18n
-            if (id.includes("i18next")) {
+
+            // ===== I18N =====
+            if (id.includes("i18next") || id.includes("react-i18next")) {
               return "vendor-i18n";
+            }
+
+            // ===== OTHER COMMON DEPS =====
+            // Date formatting
+            if (id.includes("date-fns")) {
+              return "vendor-date";
+            }
+
+            // Form validation
+            if (id.includes("zod")) {
+              return "vendor-validation";
+            }
+
+            // Shared utilities that are dynamically imported
+            const info = getModuleInfo(id);
+            if (info && info.dynamicImporters && info.dynamicImporters.length > 0) {
+              // Module is only used via dynamic import - keep it lazy
+              return undefined; // Let Rollup decide the best chunk
             }
           }
         },
