@@ -10,7 +10,7 @@ import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import { MatchSection } from "../sections/MatchSection";
 import { OptimizeSection } from "../sections/OptimizeSection";
-import { KeywordsSection } from "../sections/KeywordsSection";
+// KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 import TemplateGallery from "../sections/TemplatesSection";
 import { InterviewSection } from "../sections/InterviewSection";
 import { BulkAnalysisSection } from "../sections/BulkAnalysisSection";
@@ -26,12 +26,13 @@ import { exportResumeToPdf } from "../../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
 import ViewTextModal from "../ui/ViewTextModal";
 import Vision2030Summary from "../ui/Vision2030Summary";
+import { useResumeStore } from "../../lib/stores/resumeStore";
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
   { value: "match", label: t("tabs.match"), icon: Target },
   { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
-  { value: "keywords", label: t("tabs.keywords"), icon: TrendingUp },
+
   { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate },
   { value: "interview", label: t("tabs.interview"), icon: MessageSquare },
   { value: "bulk", label: t("tabs.bulk"), icon: FileText },
@@ -419,6 +420,21 @@ export default function MainContent() {
         const result = await analyzeResumeWithAI(resumeData.plainText, trimmedJob);
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
+
+        // Cache the match analysis score so OptimizeSection can read it
+        // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
+        if (result && typeof result.score === 'number') {
+          const { setCachedAnalysis } = useResumeStore.getState();
+          setCachedAnalysis(resumeData.plainText, trimmedJob, {
+            score: result.score,
+            matchedKeywords: result.matchedKeywords || result.topHits || [],
+            missingKeywords: result.missingKeywords || [],
+            suggestions: result.suggestions || [],
+            reasoning: result.reasoning || '',
+          });
+          console.log('[MainContent] Cached match analysis score:', result.score);
+        }
+
         pushToast(
           {
             type: "success",
@@ -730,12 +746,7 @@ export default function MainContent() {
               onClear={handleClearOptimizations}
             />
           )}
-          {activeTab === "keywords" && (
-            <KeywordsSection
-              resumeText={resumeData?.plainText || ""}
-              jobDescription={jobDescription}
-            />
-          )}
+
           {activeTab === "templates" && (
             <TemplateGallery
               resumeData={resumeData}

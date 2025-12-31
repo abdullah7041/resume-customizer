@@ -13,6 +13,8 @@ import {
 import {
     registerPDFFonts,
     safeText,
+    areSimilar,
+    PDF_SPACING,
     type PDFTemplateProps,
     type Basics,
     type WorkEntry,
@@ -29,7 +31,7 @@ registerPDFFonts();
 // Classic Traditional Styles - Serif-inspired feel with bold dividers
 const styles = StyleSheet.create({
     page: {
-        padding: "48 56",
+        padding: `${PDF_SPACING.page.paddingVertical} ${PDF_SPACING.page.paddingHorizontal}`,
         fontFamily: "Inter",
         fontSize: 9.5,
         lineHeight: 1.45,
@@ -38,8 +40,8 @@ const styles = StyleSheet.create({
 
     // Header - Centered with prominent name
     header: {
-        marginBottom: 20,
-        paddingBottom: 16,
+        marginBottom: PDF_SPACING.header.marginBottom,
+        paddingBottom: PDF_SPACING.header.paddingBottom,
         borderBottomWidth: 2,
         borderBottomColor: "#1a1a1a",
         textAlign: "center",
@@ -72,7 +74,7 @@ const styles = StyleSheet.create({
 
     // Sections
     section: {
-        marginBottom: 16,
+        marginBottom: PDF_SPACING.section.marginBottom,
     },
     sectionTitle: {
         fontSize: 11,
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
         letterSpacing: 1.5,
         color: "#1a1a1a",
-        marginBottom: 10,
+        marginBottom: PDF_SPACING.section.titleMarginBottom,
         paddingBottom: 4,
         borderBottomWidth: 1,
         borderBottomColor: "#1a1a1a",
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
 
     // Experience entries
     entryBlock: {
-        marginBottom: 14,
+        marginBottom: PDF_SPACING.entry.marginBottom,
     },
     entryHeader: {
         flexDirection: "row",
@@ -128,7 +130,7 @@ const styles = StyleSheet.create({
     },
     bulletItem: {
         flexDirection: "row",
-        marginBottom: 3,
+        marginBottom: PDF_SPACING.bullet.marginBottom,
         paddingLeft: 4,
     },
     bullet: {
@@ -297,23 +299,36 @@ const ProjectsSection = ({ projects }: { projects?: Project[] }) => {
     if (!projects || projects.length === 0) return null;
 
     return (
-        <View style={styles.section}>
+        <View style={styles.section} wrap={false}>
             <Text style={styles.sectionTitle}>Key Projects</Text>
-            {projects.map((project, idx) => (
-                <View key={idx} style={styles.entryBlock} wrap={false}>
-                    <Text style={styles.entryTitle}>{safeText(project.name)}</Text>
-                    {project.highlights && project.highlights.length > 0 && (
-                        <View style={styles.bulletList}>
-                            {project.highlights.map((highlight, i) => (
-                                <View key={i} style={styles.bulletItem}>
-                                    <Text style={styles.bullet}>–</Text>
-                                    <Text style={styles.bulletText}>{safeText(highlight)}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-                </View>
-            ))}
+            {projects.map((project, idx) => {
+                const projectName = safeText(project.name) || `Project ${idx + 1}`;
+                const description = safeText(project.description);
+
+                // Filter highlights that are too similar to description or name
+                const filteredHighlights = (project.highlights || []).filter(h =>
+                    !areSimilar(h, description) && !areSimilar(h, projectName)
+                );
+
+                return (
+                    <View key={idx} style={[styles.entryBlock, { marginBottom: 10 }]} wrap={false}>
+                        <Text style={styles.entryTitle}>{projectName}</Text>
+                        {description && !areSimilar(description, projectName) && (
+                            <Text style={styles.entrySubtitle}>{description}</Text>
+                        )}
+                        {filteredHighlights.length > 0 && (
+                            <View style={styles.bulletList}>
+                                {filteredHighlights.map((highlight, i) => (
+                                    <View key={i} style={styles.bulletItem}>
+                                        <Text style={styles.bullet}>–</Text>
+                                        <Text style={styles.bulletText}>{safeText(highlight)}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                );
+            })}
         </View>
     );
 };

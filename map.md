@@ -13,6 +13,7 @@ resume-customizer/
 │   ├── .env                          # Environment variables
 │   ├── .gitattributes                # Git attributes
 │   ├── .gitignore                    # Git ignore patterns
+│   ├── .mcp.json                     # MCP configuration
 │   ├── eslint.config.js              # ESLint configuration
 │   ├── netlify.toml                  # Netlify deployment config
 │   ├── package.json                  # Node dependencies & scripts
@@ -68,10 +69,8 @@ sections/
 ├── CoverLetterSection.tsx           # Cover letter generation
 ├── FeaturesShowcase.tsx             # Features showcase/landing section
 ├── InterviewSection.tsx             # Interview prep & questions
-├── KeywordsSection.tsx              # Keyword analysis & suggestions
 ├── MatchSection.skeleton.tsx        # Match section loading skeleton
 ├── MatchSection.tsx                 # Job-resume matching analysis
-├── OptimizationImpactSummary.tsx    # Optimization impact metrics display
 ├── OptimizationResultsSummary.tsx   # Optimization results summary view
 ├── OptimizeSection.skeleton.tsx     # Optimize section loading skeleton
 ├── OptimizeSection.tsx              # Resume optimization
@@ -187,9 +186,12 @@ styles/
 #### Utilities (`lib/utils/`)
 ```
 utils/
+├── __tests__/                       # Utility tests
+│   ├── normalize-resume.test.ts     # Resume normalization tests
+│   ├── resumeUtils.test.ts          # Resume utilities tests
+│   └── vision2030Analyzer.test.ts   # Vision 2030 analyzer tests
 ├── apiStatus.ts                     # API health check utilities
 ├── arabicKeywordMatcher.ts          # Arabic keyword matching
-├── arabicResumeParser.ts            # Arabic resume parsing
 ├── arabicTextUtils.ts               # Arabic text utilities
 ├── cn.ts                            # Class name utilities
 ├── pdfExport.ts                     # PDF export utilities
@@ -202,6 +204,7 @@ utils/
 #### Validation (`lib/validation/`)
 ```
 validation/
+├── parsingWarnings.ts               # Resume parsing warning utilities
 └── store-schemas.ts                 # Zod schemas for state validation
 
 ---
@@ -290,7 +293,6 @@ functions/
 ├── export-user-data.ts              # GDPR data export
 ├── extract-resume-json.ts           # Resume JSON extraction
 ├── generate-cover-letter.ts         # Cover letter generation
-├── match-score.ts                   # Resume-job match scoring
 ├── optimize.ts                      # Resume optimization
 ├── parse-arabic-resume.ts           # Arabic resume parsing
 ├── parse-resume.ts                  # Resume parsing (OCR)
@@ -300,11 +302,22 @@ functions/
 ### Shared Libraries (`netlify/lib/`)
 ```
 lib/
-├── rateLimit.ts                     # Rate limiting middleware
-├── rateLimitMiddleware.ts           # Rate limit wrapper
-├── resumeSchema.ts                  # Zod resume validation schema
-├── upstashClient.ts                 # Upstash Redis client
-└── validation.ts                    # Input validation utilities
+├── gemini-client.js                 # Google Gemini AI client
+├── normalize-resume.js              # Resume normalization utilities
+├── rate-limiter.ts                  # Rate limiting middleware
+├── resume-schemas.ts                # Zod resume validation schemas
+├── resumeText.js                    # Resume text processing
+└── sentry.ts                        # Sentry error tracking
+```
+
+### Netlify Function Tests (`netlify/functions/__tests__/`)
+```
+__tests__/
+├── ai-integration.test.ts           # AI integration tests
+├── extract-resume-json.test.ts      # Resume extraction tests
+├── optimize.test.ts                 # Optimization function tests
+├── parse-resume.test.ts             # Resume parsing tests
+└── resume-schemas.test.ts           # Schema validation tests
 ```
 
 ---
@@ -378,7 +391,7 @@ scripts/
 - **Build Tool**: Vite
 - **Testing**: Vitest + Testing Library
 - **Backend**: Netlify Functions (Serverless)
-- **AI**: OpenAI API
+- **AI**: Gemini API
 - **PDF**: @react-pdf/renderer
 - **State**: Zustand
 - **i18n**: Custom implementation
@@ -386,4 +399,4 @@ scripts/
 
 ---
 
-*Last updated: December 29, 2025 at 23:56 UTC+3*
+*Last updated: December 31, 2025 at 10:05 UTC+3*

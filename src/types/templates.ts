@@ -62,12 +62,15 @@ export interface OptimizedWork {
  */
 export interface CachedAnalysis {
   score: number;
-  coverage: number;
-  similarity: number;
+  coverage?: number;
+  similarity?: number;
   missingKeywords: string[];
-  strongMatches: string[];
-  recommendations: string[];
-  overallAssessment: string;
+  matchedKeywords?: string[];
+  strongMatches?: string[];
+  recommendations?: string[];
+  suggestions?: string[];
+  reasoning?: string;
+  overallAssessment?: string;
   timestamp: number;
 }
 

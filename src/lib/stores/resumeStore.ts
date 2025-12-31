@@ -581,7 +581,9 @@ export const useResumeStore = create<ResumeState>()(
         selectedTemplate: state.selectedTemplate,
         showOptimized: state.showOptimized,
         keywordSuggestions: state.keywordSuggestions,
-        // Note: Not persisting analysisCache to localStorage to avoid stale data
+        optimizationMetrics: state.optimizationMetrics,
+        // Persist analysisCache so match analysis score survives refresh
+        analysisCache: state.analysisCache,
       }),
     }
   )

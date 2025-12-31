@@ -315,7 +315,6 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
 
   // AI endpoints call external APIs (Gemini/DeepSeek)
   "ai-match": { maxRequests: 15 },
-  "match-score": { maxRequests: 20 },
   "optimize": { maxRequests: 15 },
 
   // Generation endpoints

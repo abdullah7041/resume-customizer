@@ -220,10 +220,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         )}
 
         {/* Preview Area with Floating Selector */}
-        <div className="relative flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30 min-h-0">
+        <div className="relative flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30 min-h-0">
 
           {/* Resume Preview */}
-          <div className="w-full flex justify-center pb-20">
+          <div className="w-full flex justify-center pb-28 md:pb-20">
             <div
               dir="ltr"
               className="bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/10 w-full max-w-[210mm] transition-all duration-500"
@@ -238,9 +238,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           {/* Floating Template Selector - Sticky at bottom of scroll container */}
           <div
             className={cn(
-              "sticky bottom-4 left-1/2 -translate-x-1/2 z-50 w-fit mx-auto",
+              "sticky bottom-4 md:bottom-4 left-1/2 -translate-x-1/2 z-50 w-fit mx-auto",
               "transition-all duration-300 ease-out",
-              isHoveringSelector ? "opacity-100 scale-100" : "opacity-40 scale-95 hover:opacity-100 hover:scale-100"
+              isHoveringSelector ? "opacity-100 scale-100" : "opacity-60 md:opacity-40 scale-100 md:scale-95 hover:opacity-100 hover:scale-100"
             )}
             onMouseEnter={() => setIsHoveringSelector(true)}
             onMouseLeave={() => setIsHoveringSelector(false)}
@@ -271,30 +271,28 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               })}
             </div>
 
-            {/* Mobile Chips - horizontal scrollable */}
-            <div className="md:hidden overflow-x-auto pb-2">
-              <div className="flex gap-2 px-4 min-w-max bg-black/80 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl py-2">
-                {activeTemplates.map(template => (
-                  <button
-                    key={template.id}
-                    onClick={() => handleSelectTemplate(template)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all duration-200",
-                      selectedTemplate.id === template.id
-                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-                        : "bg-white/10 text-white/70 hover:text-white"
-                    )}
-                  >
-                    {selectedTemplate.id === template.id && <Check className="w-3.5 h-3.5" />}
-                    {template.name}
-                  </button>
-                ))}
-              </div>
+            {/* Mobile Chips - Simplified and compact */}
+            <div className="md:hidden flex items-center justify-center gap-1.5 px-2 py-1.5 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
+              {activeTemplates.map(template => (
+                <button
+                  key={template.id}
+                  onClick={() => handleSelectTemplate(template)}
+                  className={cn(
+                    "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200",
+                    selectedTemplate.id === template.id
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                      : "text-white/60 active:bg-white/10"
+                  )}
+                >
+                  {selectedTemplate.id === template.id && <Check className="w-3 h-3" />}
+                  {template.name.split(' ')[0]}
+                </button>
+              ))}
             </div>
 
-            {/* Subtle hint text */}
+            {/* Subtle hint text - desktop only */}
             <p className={cn(
-              "text-center text-xs text-white/40 mt-2 transition-opacity",
+              "hidden md:block text-center text-xs text-white/40 mt-2 transition-opacity",
               isHoveringSelector ? "opacity-100" : "opacity-0"
             )}>
               {t('sections.templates.selectHint', 'Choose your style')}

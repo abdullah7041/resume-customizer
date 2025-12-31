@@ -14,6 +14,7 @@ import {
     registerPDFFonts,
     safeText,
     areSimilar,
+    PDF_SPACING,
     type PDFTemplateProps,
     type Basics,
     type WorkEntry,
@@ -30,7 +31,7 @@ registerPDFFonts();
 // Premium Minimalist Styles
 const styles = StyleSheet.create({
     page: {
-        padding: "56 52",
+        padding: `${PDF_SPACING.page.paddingVertical} ${PDF_SPACING.page.paddingHorizontal}`,
         fontFamily: "Inter",
         fontSize: 9.5,
         lineHeight: 1.5,
@@ -39,8 +40,8 @@ const styles = StyleSheet.create({
 
     // Header
     header: {
-        marginBottom: 32,
-        paddingBottom: 24,
+        marginBottom: PDF_SPACING.header.marginBottom,
+        paddingBottom: PDF_SPACING.header.paddingBottom,
         borderBottomWidth: 1,
         borderBottomColor: "#e5e5e5",
     },
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
 
     // Sections
     section: {
-        marginBottom: 24,
+        marginBottom: PDF_SPACING.section.marginBottom,
     },
     sectionTitle: {
         fontSize: 8,
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
         letterSpacing: 1,
         color: "#a3a3a3",
-        marginBottom: 14,
+        marginBottom: PDF_SPACING.section.titleMarginBottom,
     },
 
     // Summary
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
 
     // Experience entries
     entryBlock: {
-        marginBottom: 18,
+        marginBottom: PDF_SPACING.entry.marginBottom,
     },
     entryHeader: {
         flexDirection: "row",
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     },
     bulletItem: {
         flexDirection: "row",
-        marginBottom: 4,
+        marginBottom: PDF_SPACING.bullet.marginBottom,
         paddingLeft: 8,
     },
     bullet: {

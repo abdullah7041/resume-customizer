@@ -21,11 +21,13 @@ import {
 import { cn } from '../../lib/utils/cn';
 import { OptimizeSkeleton } from './OptimizeSection.skeleton';
 import { FeedbackButtons } from '../ui/FeedbackButtons';
-import { OptimizationImpactSummary } from './OptimizationImpactSummary';
 import { OptimizationResultsSummary } from './OptimizationResultsSummary';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import { VISION_2030_SECTORS } from '../../lib/data/vision2030Skills';
 import type { SuggestionType } from '../../services/feedback';
+
+// Key for job description in localStorage (shared with MatchSection)
+const LAST_JOB_KEY = 'airo:lastJobDescription';
 
 // === Keyword bucket labels ===
 const CHIP_LABELS = {
@@ -108,7 +110,7 @@ const normalizeOptimization = (opt: OptimizationCard, index: number): Optimizati
   });
 
   return {
-    sectionId: opt.sectionId || `${baseSection.toLowerCase()}-${index}`,
+    sectionId: opt.sectionId || `${baseSection.toLowerCase()} -${index} `,
     sectionType: baseSection.toLowerCase() as OptimizationResult['sectionType'],
     original: originalContent,
     optimized: optimizedContent,
@@ -148,6 +150,7 @@ export function OptimizeSection({
     keywordSuggestions,
     optimizationMetrics,
     setOptimizationMetrics,
+    getCachedAnalysis,
   } = useResumeStore();
 
   // Use props or store
@@ -160,17 +163,48 @@ export function OptimizeSection({
   const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [showImpactSummary, setShowImpactSummary] = useState(false);
-  // Use -1 as sentinel to distinguish first render (loaded from storage) vs fresh generation
-  const [previousOptCount, setPreviousOptCount] = useState(-1);
 
   // Sync prop optimizations to store when they change
+  // IMPORTANT: Merge with existing store state to preserve applied flags
   useEffect(() => {
     if (propOptimizations && propOptimizations.length > 0) {
-      const normalized = propOptimizations.map((opt, index) => normalizeOptimization(opt, index));
-      setOptimizations(normalized);
+      const existingOptimizations = storeOptimizations;
+
+      const normalized = propOptimizations.map((opt, index) => {
+        const normalizedOpt = normalizeOptimization(opt, index);
+
+        // Check if this optimization already exists in store
+        const existingOpt = existingOptimizations.find(
+          (e) => e.sectionId === normalizedOpt.sectionId ||
+            (e.sectionType === normalizedOpt.sectionType &&
+              e.original === normalizedOpt.original)
+        );
+
+        // Preserve applied state if exists
+        if (existingOpt) {
+          return {
+            ...normalizedOpt,
+            applied: existingOpt.applied,
+          };
+        }
+
+        return normalizedOpt;
+      });
+
+      // Only update if there are actual differences to avoid infinite loops
+      const hasChanges = normalized.some((opt, i) => {
+        const existing = existingOptimizations[i];
+        if (!existing) return true;
+        return opt.sectionId !== existing.sectionId ||
+          opt.original !== existing.original ||
+          opt.optimized !== existing.optimized;
+      }) || normalized.length !== existingOptimizations.length;
+
+      if (hasChanges) {
+        setOptimizations(normalized);
+      }
     }
-  }, [propOptimizations, setOptimizations]);
+  }, [propOptimizations]); // Remove setOptimizations and storeOptimizations from deps to prevent infinite loop
 
   // Always use store optimizations (props are synced to store via useEffect above)
   const optimizations = storeOptimizations;
@@ -184,24 +218,50 @@ export function OptimizeSection({
     }
   }, [optimizations.length, sessionId]);
 
-  // Detect when optimization completes and show impact summary
-  // Only show when user just generated new optimizations, not on page load
+  // Rerun Vision 2030 analysis on mount if optimizations exist but vision2030 data is missing
+  // This happens when the user refreshes the page and optimizationMetrics is restored but vision2030 was calculated client-side
   useEffect(() => {
-    // First render: initialize previousOptCount without showing summary
-    if (previousOptCount === -1) {
-      setPreviousOptCount(optimizations.length);
-      return;
-    }
+    if (optimizations.length > 0 && !optimizationMetrics.vision2030 && (resumeText || originalResume)) {
+      const textToAnalyze = resumeText || JSON.stringify(originalResume);
+      if (textToAnalyze) {
+        const vision2030Analysis = analyzeVision2030Alignment(textToAnalyze, isArabic ? 'ar' : 'en');
 
-    // Fresh optimization: went from 0 to having some
-    if (previousOptCount === 0 && optimizations.length > 0 && !isOptimizing) {
-      setShowImpactSummary(true);
-      // Auto-hide after 8 seconds
-      const timer = setTimeout(() => setShowImpactSummary(false), 8000);
-      return () => clearTimeout(timer);
+        const primarySectorData = vision2030Analysis.sectorBreakdown.find(s => s.matchedCount > 0);
+        const primarySector = primarySectorData ? {
+          id: primarySectorData.sectorId,
+          nameEn: primarySectorData.sectorNameEn,
+          nameAr: primarySectorData.sectorNameAr,
+          icon: primarySectorData.icon,
+        } : null;
+
+        const secondarySectors = vision2030Analysis.sectorBreakdown
+          .filter(s => s.matchedCount > 0 && s.sectorId !== primarySectorData?.sectorId)
+          .slice(0, 2)
+          .map(s => ({
+            id: s.sectorId,
+            nameEn: s.sectorNameEn,
+            nameAr: s.sectorNameAr,
+            icon: s.icon,
+          }));
+
+        const detectedCareer = vision2030Analysis.detectedCareer ? {
+          nameEn: vision2030Analysis.detectedCareer.archetypeNameEn,
+          nameAr: vision2030Analysis.detectedCareer.archetypeNameAr,
+        } : null;
+
+        setOptimizationMetrics({
+          vision2030: {
+            overallScore: vision2030Analysis.overallScore,
+            primarySector,
+            secondarySectors,
+            matchedSkillsCount: vision2030Analysis.matchedSkills.length,
+            topMatchedSkills: vision2030Analysis.matchedSkills.slice(0, 5).map(s => s.skillNameEn),
+            detectedCareer,
+          },
+        });
+      }
     }
-    setPreviousOptCount(optimizations.length);
-  }, [optimizations.length, isOptimizing, previousOptCount]);
+  }, [optimizations.length, optimizationMetrics.vision2030, resumeText, originalResume, isArabic, setOptimizationMetrics]);
 
   // Debug log to help diagnose optimization rendering issues
   console.log('[OptimizeSection] Using store optimizations, count:', optimizations.length);
@@ -244,9 +304,21 @@ export function OptimizeSection({
       return acc;
     }, {} as Record<string, { section: string; count: number; applied: number }>);
 
-    // Use API-provided scores if available, otherwise calculate locally
-    const beforeScore = optimizationMetrics.beforeScore ??
-      ((originalResume?.meta as Record<string, unknown> | undefined)?.match_score as number) ?? 55;
+    // Get the job description from localStorage (same as MatchSection)
+    const jobDescription = typeof window !== 'undefined'
+      ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+      : '';
+
+    // Try to get the cached match analysis score first (this is the 78% from Match section)
+    const cachedAnalysis = resumeText && jobDescription
+      ? getCachedAnalysis(resumeText, jobDescription)
+      : null;
+
+    // Priority: 1. Cached match analysis score, 2. API-provided score, 3. Resume meta, 4. Default 55
+    const beforeScore = cachedAnalysis?.score ??
+      optimizationMetrics.beforeScore ??
+      ((originalResume?.meta as Record<string, unknown> | undefined)?.match_score as number) ??
+      55;
 
     // Recalculate after score based on applied optimizations
     // API gives us the "potential" score, but we adjust based on what's actually applied
@@ -258,10 +330,13 @@ export function OptimizeSection({
     const actualImprovement = Math.round(maxImprovement * appliedRatio);
     const afterScore = Math.min(beforeScore + actualImprovement, 95);
 
+    // Potential score is also adjusted to use the correct base
+    const potentialAfterScore = Math.min(beforeScore + (optimizationMetrics.improvement ?? maxImprovement), 95);
+
     return {
       beforeScore,
       afterScore,
-      potentialScore: optimizationMetrics.afterScore ?? afterScore,
+      potentialScore: potentialAfterScore,
       totalOptimizations: optimizations.length,
       appliedOptimizations: appliedCount,
       optimizationsBySection: Object.values(bySection),
@@ -269,10 +344,11 @@ export function OptimizeSection({
       keywordsFromJD: optimizationMetrics.jdKeywords,
       matchedKeywords: optimizationMetrics.matchedKeywords,
       reasoning: optimizationMetrics.reasoning,
-      hasJobDescription: optimizationMetrics.hasJobDescription,
+      // Check if job description exists from API or localStorage
+      hasJobDescription: optimizationMetrics.hasJobDescription || Boolean(jobDescription.trim()),
       vision2030: optimizationMetrics.vision2030,
     };
-  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume]);
+  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis]);
 
   // Conditions
   const _showPreviewBanner = !isPremium && !previewUsed;
@@ -307,7 +383,10 @@ export function OptimizeSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resumeText: resumeText || JSON.stringify(originalResume),
-          jobText: '', // Job text is optional for optimization
+          // Get job description from localStorage (shared with MatchSection)
+          jobText: typeof window !== 'undefined'
+            ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+            : '',
         }),
       });
 
@@ -331,7 +410,7 @@ export function OptimizeSection({
           const sectionType = (card.section || 'general').toLowerCase() as 'headline' | 'summary' | 'experience' | 'skills' | 'projects';
 
           // Debug log each card's content
-          console.log(`[OptimizeSection] Card ${index}:`, {
+          console.log(`[OptimizeSection] Card ${index}: `, {
             section: card.section,
             exampleBefore: card.exampleBefore ? card.exampleBefore.substring(0, 50) + '...' : 'MISSING',
             exampleAfter: card.exampleAfter ? card.exampleAfter.substring(0, 50) + '...' : 'MISSING',
@@ -343,7 +422,7 @@ export function OptimizeSection({
           const optimizedContent = card.exampleAfter || '';
 
           newOptimizations.push({
-            sectionId: `${sectionType}-${index}`,
+            sectionId: `${sectionType} -${index} `,
             sectionType: sectionType,
             original: originalContent,
             optimized: optimizedContent,
@@ -619,14 +698,6 @@ export function OptimizeSection({
           </div>
         </div>
 
-        {/* Impact Summary - shows after optimization completes */}
-        <OptimizationImpactSummary
-          sectionsOptimized={optimizations.length}
-          keywordsToAdd={keywordBuckets.add.length}
-          isVisible={showImpactSummary}
-          onDismiss={() => setShowImpactSummary(false)}
-        />
-
         {/* Section Tabs */}
         <div className="flex flex-wrap gap-2 mb-6 p-1 bg-white/5 rounded-xl">
           {tabs.map((tab) => (
@@ -689,7 +760,7 @@ export function OptimizeSection({
           {(['add', 'neutral', 'remove'] as const).map((bucket) => (
             <div key={bucket} className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                {isArabic ? CHIP_LABELS[`${bucket}Ar` as keyof typeof CHIP_LABELS] : CHIP_LABELS[bucket]}
+                {isArabic ? CHIP_LABELS[`${bucket} Ar` as keyof typeof CHIP_LABELS] : CHIP_LABELS[bucket]}
               </p>
               <div className="flex flex-wrap gap-2">
                 {(keywordBuckets[bucket] ?? []).length > 0 ? (
@@ -742,7 +813,7 @@ export function OptimizeSection({
                     )}
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 capitalize">
                       {opt.sectionType === 'experience'
-                        ? `${isArabic ? 'الخبرة' : 'Experience'} ${opt.sectionId.split('-')[1] ? Number(opt.sectionId.split('-')[1]) + 1 : ''}`
+                        ? `${isArabic ? 'الخبرة' : 'Experience'} ${opt.sectionId.split('-')[1] ? Number(opt.sectionId.split('-')[1]) + 1 : ''} `
                         : isArabic
                           ? tabs.find(t => t.id === opt.sectionType)?.labelAr
                           : opt.sectionType
@@ -949,6 +1020,7 @@ export function OptimizeSection({
         matchedKeywords={resultsSummaryData.matchedKeywords}
         isVisible={optimizations.length > 0 && !isOptimizing}
         hasJobDescription={resultsSummaryData.hasJobDescription}
+        vision2030={resultsSummaryData.vision2030}
         onApplyAll={applyAllOptimizations}
         onExport={undefined}
       />

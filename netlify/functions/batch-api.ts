@@ -11,7 +11,7 @@ const HEADERS = {
   "Content-Type": "application/json",
 } as const;
 
-type TaskType = "parse" | "match" | "optimize" | "predict-questions" | "generate-cover-letter";
+type TaskType = "parse" | "optimize" | "predict-questions" | "generate-cover-letter";
 
 type BatchTask = {
   id: string; // Client-provided ID to match responses
@@ -38,7 +38,6 @@ type BatchRequest = {
 const NETLIFY_BASE = process.env.URL || "http://localhost:8888";
 const INTERNAL_ENDPOINTS: Record<TaskType, string> = {
   parse: "/.netlify/functions/parse-resume",
-  match: "/.netlify/functions/match-score",
   optimize: "/.netlify/functions/optimize",
   "predict-questions": "/.netlify/functions/predict-questions",
   "generate-cover-letter": "/.netlify/functions/generate-cover-letter",

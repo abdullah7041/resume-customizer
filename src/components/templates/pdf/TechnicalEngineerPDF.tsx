@@ -13,6 +13,8 @@ import {
 import {
     registerPDFFonts,
     safeText,
+    areSimilar,
+    PDF_SPACING,
     type PDFTemplateProps,
     type Basics,
     type WorkEntry,
@@ -29,7 +31,7 @@ registerPDFFonts();
 // Technical Engineer Styles - Skills-first, compact, tech-focused
 const styles = StyleSheet.create({
     page: {
-        padding: "44 48",
+        padding: `${PDF_SPACING.page.paddingVertical} ${PDF_SPACING.page.paddingHorizontal}`,
         fontFamily: "Inter",
         fontSize: 9,
         lineHeight: 1.5,
@@ -38,8 +40,8 @@ const styles = StyleSheet.create({
 
     // Header
     header: {
-        marginBottom: 18,
-        paddingBottom: 14,
+        marginBottom: PDF_SPACING.header.marginBottom,
+        paddingBottom: PDF_SPACING.header.paddingBottom,
         borderBottomWidth: 2,
         borderBottomStyle: "dashed",
         borderBottomColor: "#d1d5db",
@@ -70,7 +72,7 @@ const styles = StyleSheet.create({
 
     // Skills Section - Prominent box
     skillsBox: {
-        marginBottom: 18,
+        marginBottom: PDF_SPACING.section.marginBottom,
         padding: 12,
         backgroundColor: "#f9fafb",
         borderWidth: 1,
@@ -103,7 +105,7 @@ const styles = StyleSheet.create({
 
     // Sections
     section: {
-        marginBottom: 16,
+        marginBottom: PDF_SPACING.section.marginBottom,
     },
     sectionTitle: {
         fontSize: 9,
@@ -111,7 +113,7 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
         letterSpacing: 1,
         color: "#374151",
-        marginBottom: 10,
+        marginBottom: PDF_SPACING.section.titleMarginBottom,
         paddingBottom: 4,
         borderBottomWidth: 1,
         borderBottomStyle: "dashed",
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
 
     // Experience entries
     entryBlock: {
-        marginBottom: 12,
+        marginBottom: PDF_SPACING.entry.marginBottom,
     },
     entryHeader: {
         flexDirection: "row",
@@ -157,7 +159,7 @@ const styles = StyleSheet.create({
     },
     bulletItem: {
         flexDirection: "row",
-        marginBottom: 2,
+        marginBottom: PDF_SPACING.bullet.marginBottom,
     },
     bullet: {
         width: 8,
@@ -290,28 +292,38 @@ const ProjectsSection = ({ projects }: { projects?: Project[] }) => {
     if (!projects || projects.length === 0) return null;
 
     return (
-        <View style={styles.section}>
+        <View style={styles.section} wrap={false}>
             <Text style={styles.sectionTitle}>Projects</Text>
-            {projects.map((project, idx) => (
-                <View key={idx} style={styles.entryBlock}>
-                    <Text style={styles.entryTitle}>{safeText(project.name)}</Text>
-                    {project.description && (
-                        <Text style={[styles.entrySubtitle, { marginBottom: 2 }]}>
-                            {project.description}
-                        </Text>
-                    )}
-                    {project.highlights && project.highlights.length > 0 && (
-                        <View style={styles.bulletList}>
-                            {project.highlights.map((highlight, i) => (
-                                <View key={i} style={styles.bulletItem}>
-                                    <Text style={styles.bullet}>•</Text>
-                                    <Text style={styles.bulletText}>{safeText(highlight)}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-                </View>
-            ))}
+            {projects.map((project, idx) => {
+                const projectName = safeText(project.name) || `Project ${idx + 1}`;
+                const description = safeText(project.description);
+
+                // Filter highlights similar to description or name
+                const filteredHighlights = (project.highlights || []).filter(h =>
+                    !areSimilar(h, description) && !areSimilar(h, projectName)
+                );
+
+                return (
+                    <View key={idx} style={[styles.entryBlock, { marginBottom: 10 }]} wrap={false}>
+                        <Text style={styles.entryTitle}>{projectName}</Text>
+                        {description && !areSimilar(description, projectName) && (
+                            <Text style={[styles.entrySubtitle, { marginBottom: 2 }]}>
+                                {description}
+                            </Text>
+                        )}
+                        {filteredHighlights.length > 0 && (
+                            <View style={styles.bulletList}>
+                                {filteredHighlights.map((highlight, i) => (
+                                    <View key={i} style={styles.bulletItem}>
+                                        <Text style={styles.bullet}>•</Text>
+                                        <Text style={styles.bulletText}>{safeText(highlight)}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                );
+            })}
         </View>
     );
 };

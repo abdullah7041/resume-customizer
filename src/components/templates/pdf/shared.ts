@@ -101,6 +101,35 @@ export const areSimilar = (text1: string, text2: string): boolean => {
 };
 
 // ============================================
+// PDF SPACING CONSTANTS (Industry Standard)
+// ============================================
+// Based on professional resume builder research
+// Margins: 0.5"-1" = 36-72pt
+// Section spacing: 12-18pt
+// Entry spacing: 10-14pt
+
+export const PDF_SPACING = {
+    page: {
+        paddingVertical: 40,    // ~0.55" top/bottom
+        paddingHorizontal: 48,  // ~0.67" left/right
+    },
+    header: {
+        marginBottom: 20,       // Space after header
+        paddingBottom: 16,      // Padding above border
+    },
+    section: {
+        marginBottom: 16,       // Between sections
+        titleMarginBottom: 10,  // After section title
+    },
+    entry: {
+        marginBottom: 12,       // Between entries (jobs, schools)
+    },
+    bullet: {
+        marginBottom: 3,        // Between bullet points
+    },
+} as const;
+
+// ============================================
 // Type Definitions
 // ============================================
 
