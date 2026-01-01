@@ -255,6 +255,22 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       console.warn('[optimize] No cards generated! Full optimization object:', JSON.stringify(opt, null, 2));
     }
 
+    // Log new gap analysis fields
+    console.log('[optimize] Gap analysis:', {
+      count: (opt?.gap_analysis || aiSuggestions?.gap_analysis || []).length,
+      criticalGaps: (opt?.gap_analysis || aiSuggestions?.gap_analysis || [])
+        .filter((g: any) => g.gap_severity === 'critical').length,
+      firstGap: (opt?.gap_analysis || aiSuggestions?.gap_analysis || [])[0]
+    });
+
+    console.log('[optimize] Keyword strategy:', {
+      mirroredCount: (opt?.keyword_strategy?.mirrored_phrases || aiSuggestions?.keyword_strategy?.mirrored_phrases || []).length,
+      structuralCount: (opt?.keyword_strategy?.structural_changes || aiSuggestions?.keyword_strategy?.structural_changes || []).length,
+      hiddenMatchCount: (opt?.keyword_strategy?.hidden_matches || aiSuggestions?.keyword_strategy?.hidden_matches || []).length
+    });
+
+    console.log('[optimize] Score breakdown:', opt?.score_breakdown || aiSuggestions?.score_breakdown);
+
     // Calculate projected score improvement
     const beforeScore = analysis.meta?.match_score || analysis.matchAnalysis?.score_0_to_100 || 55;
 
@@ -299,6 +315,28 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
           matchedKeywords: matchedKeywords.slice(0, 15),
           reasoning: analysis.matchAnalysis?.reasoning || analysis.meta?.ai_suggestions?.reasoning || null,
         },
+        // Gap Analysis - NEW
+        gapAnalysis: (opt?.gap_analysis || aiSuggestions?.gap_analysis || []).map((gap: any) => ({
+          requirement: gap.requirement || '',
+          currentState: gap.current_state || '',
+          severity: gap.gap_severity || 'minor',
+          recommendation: gap.recommendation || ''
+        })),
+        // Keyword Strategy - NEW
+        keywordStrategy: {
+          mirroredPhrases: opt?.keyword_strategy?.mirrored_phrases ||
+            aiSuggestions?.keyword_strategy?.mirrored_phrases || [],
+          structuralChanges: opt?.keyword_strategy?.structural_changes ||
+            aiSuggestions?.keyword_strategy?.structural_changes || [],
+          hiddenMatches: (opt?.keyword_strategy?.hidden_matches ||
+            aiSuggestions?.keyword_strategy?.hidden_matches || []).map((match: any) => ({
+              resumeTerm: match.resume_term || '',
+              jdRequirement: match.jd_requirement || '',
+              insight: match.insight || ''
+            }))
+        },
+        // Score Breakdown - NEW
+        scoreBreakdown: opt?.score_breakdown || aiSuggestions?.score_breakdown || null,
         source: "gemini",
         debug: {
           totalCards: cards.length,

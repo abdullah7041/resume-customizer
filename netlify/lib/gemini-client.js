@@ -161,7 +161,38 @@ Return the response in the following JSON Resume format:
         "improved": "string (REQUIRED - improved version)",
         "issue": "string",
         "rationale": "string"
-      }]
+      }],
+      "gap_analysis": [
+        {
+          "requirement": "string (EXACT requirement phrase from JD, e.g. 'PostgreSQL with complex queries and window functions')",
+          "current_state": "string (what resume currently shows for this requirement, e.g. 'SQL listed generically without PostgreSQL specifics')",
+          "gap_severity": "string (critical | moderate | minor)",
+          "recommendation": "string (specific actionable fix, e.g. 'Add to skills: PostgreSQL, window functions, CTEs, schema design')"
+        }
+      ],
+      "keyword_strategy": {
+        "mirrored_phrases": [
+          "string (exact multi-word phrases from JD that were injected into optimized content, e.g. 'consolidate data from disparate sources')"
+        ],
+        "structural_changes": [
+          "string (explain reorganization with WHY, e.g. 'Moved PostgreSQL to headline because JD lists it as primary requirement')"
+        ],
+        "hidden_matches": [
+          {
+            "resume_term": "string (skill/tech on resume, e.g. 'Supabase')",
+            "jd_requirement": "string (what JD asks for, e.g. 'PostgreSQL database')",
+            "insight": "string (the connection, e.g. 'Supabase uses PostgreSQL as its database engine - explicitly mention this to satisfy the PostgreSQL requirement')"
+          }
+        ]
+      },
+      "score_breakdown": {
+        "base_score": "number (starting score based on experience match)",
+        "skill_match_bonus": "number (points added for matching skills)",
+        "keyword_coverage_bonus": "number (points for JD keyword coverage)",
+        "gap_penalties": "number (points deducted for critical/moderate gaps)",
+        "final_score": "number (the match_score value)",
+        "score_explanation": "string (2-3 sentences explaining the math)"
+      }
     },
     "interview_prep": {
       "predicted_questions": ["string"],
@@ -171,6 +202,29 @@ Return the response in the following JSON Resume format:
     "cover_letter_draft": "string"
   }
 }
+
+GAP ANALYSIS REQUIREMENTS (MANDATORY):
+1. Create a gap_analysis entry for EACH major requirement in the job description (minimum 5, maximum 10)
+2. Order gaps by severity: critical gaps first, then moderate, then minor
+3. Be SPECIFIC in current_state - quote or reference actual resume content
+4. Be ACTIONABLE in recommendation - tell user exactly what to add/change
+5. Severity guide:
+   - critical: Core job requirement completely missing or severely underrepresented
+   - moderate: Requirement partially met but needs enhancement
+   - minor: Nice-to-have or easily fixable formatting issue
+
+KEYWORD STRATEGY REQUIREMENTS (MANDATORY):
+1. mirrored_phrases: List 5-10 exact multi-word phrases from the JD that appear in your optimized content
+2. structural_changes: Explain 2-4 reorganization decisions with reasoning
+3. hidden_matches: Identify ANY resume skills that map to JD requirements using different terminology (minimum 1 if any exist)
+
+SCORE BREAKDOWN REQUIREMENTS (MANDATORY):
+1. Show your math - how did you arrive at the final score?
+2. base_score: Start with experience years match (0-40 points)
+3. skill_match_bonus: Add points for each matching skill category (0-30 points)
+4. keyword_coverage_bonus: Add points for JD keyword presence (0-20 points)
+5. gap_penalties: Subtract for gaps (critical: -10 each, moderate: -5 each, minor: -2 each)
+6. final_score = base_score + bonuses - penalties (cap at 0-100)
 
 CRITICAL REQUIREMENTS:
 - Map ALL experience entries to "work" array with "highlights" for bullet points

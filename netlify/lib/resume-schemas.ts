@@ -120,6 +120,38 @@ export const MetaSchema = z.object({
 });
 
 // ============================================
+// Gap Analysis Schemas
+// ============================================
+
+export const GapAnalysisItemSchema = z.object({
+    requirement: z.string(),
+    current_state: z.string(),
+    gap_severity: z.enum(['critical', 'moderate', 'minor']),
+    recommendation: z.string()
+});
+
+export const HiddenMatchSchema = z.object({
+    resume_term: z.string(),
+    jd_requirement: z.string(),
+    insight: z.string()
+});
+
+export const KeywordStrategySchema = z.object({
+    mirrored_phrases: z.array(z.string()).default([]),
+    structural_changes: z.array(z.string()).default([]),
+    hidden_matches: z.array(HiddenMatchSchema).default([])
+});
+
+export const ScoreBreakdownSchema = z.object({
+    base_score: z.number(),
+    skill_match_bonus: z.number(),
+    keyword_coverage_bonus: z.number(),
+    gap_penalties: z.number(),
+    final_score: z.number(),
+    score_explanation: z.string()
+});
+
+// ============================================
 // Complete Resume Schema
 // ============================================
 
@@ -195,6 +227,12 @@ export type Project = z.infer<typeof ProjectSchema>;
 export type ParseResumeRequest = z.infer<typeof ParseResumeRequestSchema>;
 export type MatchRequest = z.infer<typeof MatchRequestSchema>;
 export type OptimizeRequest = z.infer<typeof OptimizeRequestSchema>;
+
+// Gap Analysis Types
+export type GapAnalysisItem = z.infer<typeof GapAnalysisItemSchema>;
+export type HiddenMatch = z.infer<typeof HiddenMatchSchema>;
+export type KeywordStrategy = z.infer<typeof KeywordStrategySchema>;
+export type ScoreBreakdown = z.infer<typeof ScoreBreakdownSchema>;
 
 // ============================================
 // Validation Helpers
