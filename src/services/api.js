@@ -1,10 +1,28 @@
 // src/services/api.js
+import { supabase } from './supabase';
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
 const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/extract-resume-json`;
 const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
+
+// Helper to get auth headers
+const getAuthHeaders = async () => {
+  const headers = { "Content-Type": "application/json" };
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+  } catch (error) {
+    // Silent fail - auth is optional for most endpoints
+    void error;
+  }
+
+  return headers;
+};
 
 // Helper to handle responses
 const handleResponse = async (response) => {
@@ -49,7 +67,6 @@ export const parseResume = async (resumeInput) => {
         name: resumeInput.name,
         mime: resumeInput.type,
       };
-      console.log(`[parseResume] Uploading file: ${resumeInput.name}, type: ${resumeInput.type}, size: ${resumeInput.size}`);
     } else {
       payload = { kind: "text", value: resumeInput };
     }
@@ -90,9 +107,10 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
   }
 
   try {
+    const headers = await getAuthHeaders();
     const response = await fetch(MATCH_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ resumeText, jobDesc: jobDescription }),
     });
 
@@ -129,9 +147,10 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 
 export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => {
   try {
+    const headers = await getAuthHeaders();
     const response = await fetch(OPTIMIZE_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview }),
     });
 

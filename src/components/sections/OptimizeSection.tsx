@@ -19,12 +19,14 @@ import {
   Info,
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
-import { OptimizeSkeleton } from './OptimizeSection.skeleton';
 import { FeedbackButtons } from '../ui/FeedbackButtons';
-import { OptimizationResultsSummary } from './OptimizationResultsSummary';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
-import { VISION_2030_SECTORS } from '../../lib/data/vision2030Skills';
 import type { SuggestionType } from '../../services/feedback';
+import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
+import { ScoreBreakdown, ScoreBreakdownData } from '../ScoreBreakdown';
+import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
+import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
+import { LoadingMessages } from '../LoadingMessages';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'airo:lastJobDescription';
@@ -93,21 +95,8 @@ const normalizeOptimization = (opt: OptimizationCard, index: number): Optimizati
   // when multiple optimizations have the same section name (e.g., "Experience")
   const baseSection = opt.sectionType || opt.section || 'general';
 
-  // Extract original content - check all possible field names
   const originalContent = opt.original ?? opt.exampleBefore ?? opt.before ?? '';
   const optimizedContent = opt.optimized ?? opt.exampleAfter ?? opt.after ?? '';
-
-  console.log('[normalizeOptimization] Card', index, ':', {
-    section: baseSection,
-    hasOriginal: !!opt.original,
-    hasExampleBefore: !!opt.exampleBefore,
-    hasBefore: !!opt.before,
-    finalOriginal: typeof originalContent === 'string' ? originalContent.substring(0, 30) : originalContent,
-    hasOptimized: !!opt.optimized,
-    hasExampleAfter: !!opt.exampleAfter,
-    hasAfter: !!opt.after,
-    finalOptimized: typeof optimizedContent === 'string' ? optimizedContent.substring(0, 30) : optimizedContent,
-  });
 
   return {
     sectionId: opt.sectionId || `${baseSection.toLowerCase()} -${index} `,
@@ -204,7 +193,8 @@ export function OptimizeSection({
         setOptimizations(normalized);
       }
     }
-  }, [propOptimizations]); // Remove setOptimizations and storeOptimizations from deps to prevent infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propOptimizations]); // setOptimizations and storeOptimizations intentionally excluded to prevent infinite loop
 
   // Always use store optimizations (props are synced to store via useEffect above)
   const optimizations = storeOptimizations;
@@ -263,14 +253,6 @@ export function OptimizeSection({
     }
   }, [optimizations.length, optimizationMetrics.vision2030, resumeText, originalResume, isArabic, setOptimizationMetrics]);
 
-  // Debug log to help diagnose optimization rendering issues
-  console.log('[OptimizeSection] Using store optimizations, count:', optimizations.length);
-  if (optimizations.length > 0) {
-    console.log('[OptimizeSection] First optimization structure:', JSON.stringify(optimizations[0], null, 2));
-  }
-
-  // Check if we have match analysis (props or derived from store)
-  const _hasMatchAnalysis = propHasMatchAnalysis || hasResume;
 
   // Memoize keyword buckets - use store or props
   const keywordBuckets = useMemo(() => {
@@ -350,8 +332,6 @@ export function OptimizeSection({
     };
   }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis]);
 
-  // Conditions
-  const _showPreviewBanner = !isPremium && !previewUsed;
 
   // Generate optimizations from API
   const handleGenerate = async () => {
@@ -396,27 +376,13 @@ export function OptimizeSection({
 
       const data = await response.json();
 
-      // Debug log the raw API response
-      console.log('[OptimizeSection] Raw API response:', JSON.stringify(data, null, 2));
-
       // Transform API response to OptimizationResult format
       // API returns: { cards: [{section, issue, suggestion, exampleBefore, exampleAfter}], keywords: {add, neutral, remove} }
       const newOptimizations: OptimizationResult[] = [];
 
       if (data.cards && Array.isArray(data.cards)) {
-        console.log('[OptimizeSection] Processing', data.cards.length, 'cards from API');
-
         data.cards.forEach((card: { section?: string; exampleBefore?: string; exampleAfter?: string; issue?: string; suggestion?: string }, index: number) => {
           const sectionType = (card.section || 'general').toLowerCase() as 'headline' | 'summary' | 'experience' | 'skills' | 'projects';
-
-          // Debug log each card's content
-          console.log(`[OptimizeSection] Card ${index}: `, {
-            section: card.section,
-            exampleBefore: card.exampleBefore ? card.exampleBefore.substring(0, 50) + '...' : 'MISSING',
-            exampleAfter: card.exampleAfter ? card.exampleAfter.substring(0, 50) + '...' : 'MISSING',
-            hasExampleBefore: typeof card.exampleBefore,
-            hasExampleAfter: typeof card.exampleAfter,
-          });
 
           const originalContent = card.exampleBefore || '';
           const optimizedContent = card.exampleAfter || '';
@@ -429,12 +395,6 @@ export function OptimizeSection({
             applied: false,
           });
         });
-
-        console.log('[OptimizeSection] Created optimizations:', newOptimizations.map(o => ({
-          sectionId: o.sectionId,
-          originalLength: typeof o.original === 'string' ? o.original.length : 0,
-          optimizedLength: typeof o.optimized === 'string' ? o.optimized.length : 0,
-        })));
       }
 
       // If no cards but we have API data, try legacy format
@@ -473,11 +433,9 @@ export function OptimizeSection({
       });
 
       if (!hasValidContent) {
-        console.warn('[OptimizeSection] All optimizations have empty content:', newOptimizations);
         throw new Error(isArabic ? 'حصل الذكاء الاصطناعي على اقتراحات فارغة. يرجى المحاولة مرة أخرى.' : 'The AI returned empty suggestions. Please try again.');
       }
 
-      console.log('[OptimizeSection] Valid optimizations generated:', newOptimizations.length);
       setOptimizations(newOptimizations);
 
       // Track optimization completed
@@ -514,6 +472,27 @@ export function OptimizeSection({
           matchedKeywords: data.matchScoring.matchedKeywords || [],
           reasoning: data.matchScoring.reasoning,
           hasJobDescription: data.debug?.hasJobDescription || false,
+        });
+      }
+
+      // Capture gap analysis from API response
+      if (data.gapAnalysis && Array.isArray(data.gapAnalysis)) {
+        setOptimizationMetrics({
+          gapAnalysis: data.gapAnalysis,
+        });
+      }
+
+      // Capture keyword strategy from API response
+      if (data.keywordStrategy) {
+        setOptimizationMetrics({
+          keywordStrategy: data.keywordStrategy,
+        });
+      }
+
+      // Capture score breakdown from API response
+      if (data.scoreBreakdown) {
+        setOptimizationMetrics({
+          scoreBreakdown: data.scoreBreakdown,
         });
       }
 
@@ -788,11 +767,69 @@ export function OptimizeSection({
         </div>
       </GlassCard>
 
+      {/* Score Breakdown */}
+      {optimizations.length > 0 && (
+        <ScoreBreakdown
+          data={optimizationMetrics.scoreBreakdown as ScoreBreakdownData | null}
+          beforeScore={resultsSummaryData.beforeScore}
+          afterScore={resultsSummaryData.potentialScore}
+          className="mb-2"
+        />
+      )}
+
+      {/* Gap Analysis */}
+      {optimizations.length > 0 && (
+        optimizationMetrics.gapAnalysis &&
+          Array.isArray(optimizationMetrics.gapAnalysis) &&
+          optimizationMetrics.gapAnalysis.length > 0 ? (
+          <GapAnalysisCard
+            gaps={optimizationMetrics.gapAnalysis as GapItem[]}
+            className="mb-2"
+          />
+        ) : (
+          <GlassCard variant="subtle" padding="md" className="mb-2">
+            <div className="flex items-center gap-3 text-gray-400">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <Check className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">
+                  {isArabic ? 'لم يتم اكتشاف فجوات حرجة' : 'No Critical Gaps Detected'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {isArabic
+                    ? 'سيرتك الذاتية تتوافق جيدًا مع المتطلبات الأساسية. استمر في إضافة الكلمات المفتاحية المقترحة.'
+                    : 'Your resume aligns well with core requirements. Consider adding the suggested keywords above.'}
+                </p>
+              </div>
+            </div>
+          </GlassCard>
+        )
+      )}
+
+      {/* Hidden Matches */}
+      {optimizationMetrics.keywordStrategy?.hiddenMatches &&
+        (optimizationMetrics.keywordStrategy.hiddenMatches as HiddenMatch[]).length > 0 && (
+          <HiddenMatchesCard
+            matches={optimizationMetrics.keywordStrategy.hiddenMatches as HiddenMatch[]}
+            className="mb-2"
+          />
+        )}
+
+      {/* Mirrored Keywords */}
+      {optimizationMetrics.keywordStrategy && (
+        <MirroredKeywordsCard
+          mirroredPhrases={(optimizationMetrics.keywordStrategy.mirroredPhrases as string[]) || []}
+          structuralChanges={(optimizationMetrics.keywordStrategy.structuralChanges as string[]) || []}
+          className="mb-2"
+        />
+      )}
+
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
 
         {isOptimizing ? (
-          <OptimizeSkeleton />
+          <LoadingMessages type="optimize" estimatedTime={25000} />
         ) : filteredOptimizations.length > 0 ? (
           <div className="space-y-4">
             {filteredOptimizations.map((opt, index) => (
@@ -1006,24 +1043,6 @@ export function OptimizeSection({
           </GlassCard>
         )}
       </div>
-
-      {/* Results Summary Section - appears at bottom after optimizations */}
-      <OptimizationResultsSummary
-        beforeScore={resultsSummaryData.beforeScore}
-        afterScore={resultsSummaryData.afterScore}
-        potentialScore={resultsSummaryData.potentialScore}
-        totalOptimizations={resultsSummaryData.totalOptimizations}
-        appliedOptimizations={resultsSummaryData.appliedOptimizations}
-        optimizationsBySection={resultsSummaryData.optimizationsBySection}
-        keywordsAdded={resultsSummaryData.keywordsAdded}
-        keywordsFromJD={resultsSummaryData.keywordsFromJD}
-        matchedKeywords={resultsSummaryData.matchedKeywords}
-        isVisible={optimizations.length > 0 && !isOptimizing}
-        hasJobDescription={resultsSummaryData.hasJobDescription}
-        vision2030={resultsSummaryData.vision2030}
-        onApplyAll={applyAllOptimizations}
-        onExport={undefined}
-      />
 
       {/* Rate Limit Banner */}
       {isRateLimited && (

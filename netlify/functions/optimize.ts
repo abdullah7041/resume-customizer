@@ -25,7 +25,9 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
 
     const { resumeText, jobText } = parseResult.data;
 
-    const analysis = await processResume(resumeText, jobText, false);
+    // Use 'flash' model for higher quality analysis (target: 20-25s response time)
+    // Optimized prompt + maxOutputTokens keeps execution under 25 seconds
+    const analysis = await processResume(resumeText, jobText, false, 'flash');
     const opt = analysis.optimization;
 
     // Debug logging to diagnose empty results
@@ -315,13 +317,15 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
           matchedKeywords: matchedKeywords.slice(0, 15),
           reasoning: analysis.matchAnalysis?.reasoning || analysis.meta?.ai_suggestions?.reasoning || null,
         },
-        // Gap Analysis - NEW
-        gapAnalysis: (opt?.gap_analysis || aiSuggestions?.gap_analysis || []).map((gap: any) => ({
-          requirement: gap.requirement || '',
-          currentState: gap.current_state || '',
-          severity: gap.gap_severity || 'minor',
-          recommendation: gap.recommendation || ''
-        })),
+        // Gap Analysis - NEW (filter out invalid items before mapping)
+        gapAnalysis: (opt?.gap_analysis || aiSuggestions?.gap_analysis || [])
+          .filter((gap: any) => gap.requirement && gap.current_state && gap.recommendation)
+          .map((gap: any) => ({
+            requirement: gap.requirement || '',
+            currentState: gap.current_state || '',
+            severity: gap.gap_severity || 'minor',
+            recommendation: gap.recommendation || ''
+          })),
         // Keyword Strategy - NEW
         keywordStrategy: {
           mirroredPhrases: opt?.keyword_strategy?.mirrored_phrases ||

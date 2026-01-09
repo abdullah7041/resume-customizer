@@ -1,6 +1,18 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { analyzeResume } from "../services/api";
 
+// Mock supabase
+vi.mock('../services/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: null },
+        error: null
+      })
+    }
+  }
+}));
+
 const mockResponse = (payload) => ({
   ok: true,
   json: vi.fn().mockResolvedValue(payload),

@@ -306,7 +306,7 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate flex flex-col overflow-hidden text-white min-h-[60dvh] sm:min-h-[100dvh]"
+      className="hero-bg-animate relative isolate flex flex-col overflow-hidden text-white h-auto pb-4"
       onMouseMove={handleMouseMove}
     >
       {/* Animated background effects */}
@@ -403,6 +403,17 @@ export default function Header() {
               </div>
             </div>
 
+            {/* Badge - moved from Hero */}
+            <div className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg ml-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+              <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent uppercase">
+                {t("header.badge")}
+              </span>
+            </div>
+
             {/* Desktop: Language switcher and Auth button */}
             <div className="hidden md:flex items-center gap-3">
               <LanguageSwitcher />
@@ -438,7 +449,7 @@ export default function Header() {
         </nav>
 
         {/* Hero section */}
-        <div className={`${containerClass} flex-1 grid items-center gap-4 sm:gap-8 py-4 sm:py-10 lg:py-12 md:grid-cols-[1.5fr_1fr] lg:gap-12`}>
+        <div className={`${containerClass} flex-1 grid items-start gap-4 sm:gap-8 py-4 sm:py-10 lg:py-8 md:grid-cols-[1.5fr_1fr] lg:gap-12`}>
           {/* Left column - Main content */}
           <div
             className={cn(
@@ -449,16 +460,7 @@ export default function Header() {
               heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             )}
           >
-            {/* Badge - hidden on mobile */}
-            <div className="hidden sm:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-              </span>
-              <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent uppercase">
-                {t("header.badge")}
-              </span>
-            </div>
+            {/* Badge - moved to Header */}
 
             {/* Main heading card - matching Workflow card style */}
             <div className={cn(glassCardClass, "p-4 sm:p-6 lg:p-8")}>

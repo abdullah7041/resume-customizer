@@ -3,7 +3,8 @@ import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/fun
 
 // Mock dependencies
 const mockGeminiClient = {
-    processResume: vi.fn()
+    processResume: vi.fn(),
+    processMatchOnly: vi.fn()
 };
 
 const mockRateLimiter = {
@@ -15,9 +16,21 @@ const mockSentry = {
     captureError: vi.fn()
 };
 
+const mockSupabase = {
+    createClient: vi.fn(() => ({
+        auth: {
+            getUser: vi.fn().mockResolvedValue({ data: { user: null } })
+        },
+        from: vi.fn(() => ({
+            insert: vi.fn().mockResolvedValue({ data: null, error: null })
+        }))
+    }))
+};
+
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/sentry', () => mockSentry);
+vi.mock('@supabase/supabase-js', () => mockSupabase);
 
 // Helper to create mock context
 const createMockContext = (): HandlerContext => ({
@@ -52,6 +65,7 @@ describe('AI Integration Functions', () => {
         it('validates input schema', async () => {
             const event = {
                 httpMethod: 'POST',
+                headers: {},
                 body: JSON.stringify({ resumeText: 'test' }) // Missing jobDesc
             } as Partial<HandlerEvent>;
 
@@ -61,19 +75,16 @@ describe('AI Integration Functions', () => {
         });
 
         it('returns formatted match analysis', async () => {
-            mockGeminiClient.processResume.mockResolvedValue({
-                matchAnalysis: {
-                    score_0_to_100: 85,
-                    missingKeywords: ['react'],
-                    keywordsToKeep: ['typescript'],
-                    hardSkillsGap: ['learn react'],
-                    reasoning: 'Good match'
-                },
-                interviewPrep: []
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 85,
+                strongMatches: ['typescript'],
+                missingKeywords: ['react'],
+                reasoning: 'Good match'
             });
 
             const event = {
                 httpMethod: 'POST',
+                headers: {},
                 body: JSON.stringify({ resumeText: 'resume', jobDesc: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -82,7 +93,7 @@ describe('AI Integration Functions', () => {
 
             const body = JSON.parse(result.body);
             expect(body.score).toBe(85);
-            expect(body.recommendations).toContain('learn react');
+            expect(body.strongMatches).toContain('typescript');
         });
     });
 

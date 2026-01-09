@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/functions';
+import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
 
 // Mock dependencies
 const mockGeminiClient = {
@@ -28,22 +28,6 @@ vi.mock('../../lib/sentry', () => mockSentry);
 // Import handler
 const { handler } = await import('../extract-resume-json');
 
-// Helper to create mock context
-const createMockContext = (): HandlerContext => ({
-    callbackWaitsForEmptyEventLoop: true,
-    functionName: 'extract-resume-json',
-    functionVersion: '$LATEST',
-    invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789:function:extract-resume-json',
-    memoryLimitInMB: '128',
-    awsRequestId: 'test-request-id',
-    logGroupName: '/aws/lambda/extract-resume-json',
-    logStreamName: '2024/01/01/[$LATEST]test',
-    getRemainingTimeInMillis: () => 30000,
-    done: () => { },
-    fail: () => { },
-    succeed: () => { },
-    clientContext: undefined
-});
 
 describe('extract-resume-json function', () => {
     beforeEach(() => {

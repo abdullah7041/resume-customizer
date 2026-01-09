@@ -217,13 +217,10 @@ export function validateParsedText(data: unknown): ValidationResult<string> {
     if (data && typeof data === 'object') {
         const obj = data as Record<string, unknown>;
         if (typeof obj.plainText === 'string') {
-            console.log('[StoreValidation] Extracted plainText from object');
             textToValidate = obj.plainText;
         } else if (typeof obj.text === 'string') {
-            console.log('[StoreValidation] Extracted text from object');
             textToValidate = obj.text;
         } else if (typeof obj.data === 'string') {
-            console.log('[StoreValidation] Extracted data from object');
             textToValidate = obj.data;
         }
     }
@@ -233,8 +230,6 @@ export function validateParsedText(data: unknown): ValidationResult<string> {
         return { success: true, data: result.data };
     }
     const errorMessage = formatZodError(result.error);
-    console.error('[StoreValidation] ❌ Parsed text validation failed:', errorMessage);
-    console.error('[StoreValidation] Received type:', typeof data, 'preview:', String(data).substring(0, 100));
     return { success: false, error: errorMessage, issues: result.error.issues };
 }
 
@@ -294,12 +289,10 @@ export function safeCoerceToString(value: unknown): string | null {
         // Try common text properties
         for (const key of ['plainText', 'text', 'data', 'content', 'raw_text']) {
             if (typeof obj[key] === 'string' && obj[key].length > 0) {
-                console.log(`[StoreValidation] Coerced object.${key} to string`);
                 return obj[key] as string;
             }
         }
         // Don't coerce objects to "[object Object]"
-        console.warn('[StoreValidation] Unable to coerce object to string:', Object.keys(obj).slice(0, 5));
         return null;
     }
 

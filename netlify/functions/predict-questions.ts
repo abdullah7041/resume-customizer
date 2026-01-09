@@ -25,7 +25,8 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
 
     const { resumeText, jobDescription } = parseResult.data;
 
-    const analysis = await processResume(resumeText, jobDescription, false);
+    // Use 'lite' model for fast interview question prediction (structured extraction task)
+    const analysis = await processResume(resumeText, jobDescription, false, 'lite');
 
     return {
       statusCode: 200,

@@ -56,9 +56,19 @@ export const useResumeStore = create<ResumeState>()(
         reasoning: null,
         hasJobDescription: false,
         vision2030: null,
+        gapAnalysis: null, // null = not loaded yet, [] = AI returned no gaps
+        keywordStrategy: {
+          mirroredPhrases: [],
+          structuralChanges: [],
+          hiddenMatches: []
+        },
+        scoreBreakdown: null,
       },
       showOptimized: false, // Start with original
       selectedTemplate: 'modern-professional',
+      displayOptions: {
+        fontSize: 1, // 100% scale by default
+      },
 
       // Actions
       setOriginalResume: (resume: ResumeSchema) => {
@@ -67,8 +77,6 @@ export const useResumeStore = create<ResumeState>()(
         if (!validation.success) {
           console.warn('[ResumeStore] ⚠️ Resume validation issues:', validation.error);
           // Still allow storage but log the issues for debugging
-        } else {
-          console.log('[ResumeStore] ✓ Resume passed Zod validation');
         }
 
         // Use validated data if available, otherwise fallback to original
@@ -82,9 +90,6 @@ export const useResumeStore = create<ResumeState>()(
           validatedResume.work = deduplicateByName(validatedResume.work);
         }
 
-        console.log('[ResumeStore] Setting original resume:', validatedResume?.basics?.name);
-        console.log('[ResumeStore] Resume has basics:', !!validatedResume?.basics);
-        console.log('[ResumeStore] Resume has work:', validatedResume?.work?.length || 0, 'entries');
         set({ originalResume: validatedResume });
       },
 
@@ -101,14 +106,9 @@ export const useResumeStore = create<ResumeState>()(
         const resolvedText = validation.data!;
         const length = resolvedText.length;
 
-        console.log('[ResumeStore] Setting parsed text, length:', length);
-
         // Warn if text seems too short
         if (length > 0 && length < 100) {
           console.warn('[ResumeStore] ⚠️ WARNING: Parsed text is very short! This may indicate a PDF extraction issue.');
-          console.warn('[ResumeStore] Text preview:', resolvedText.substring(0, 200));
-        } else if (length >= 100) {
-          console.log('[ResumeStore] ✓ Text looks valid. Preview:', resolvedText.substring(0, 150).replace(/\s+/g, ' '));
         }
 
         set({ parsedResumeText: resolvedText });
@@ -128,7 +128,6 @@ export const useResumeStore = create<ResumeState>()(
           // Still allow storage but log the issues
         }
 
-        console.log('[ResumeStore] Adding optimization:', optimization.sectionId);
         set((state) => ({
           optimizations: [
             // Remove existing optimization for same section
@@ -142,12 +141,10 @@ export const useResumeStore = create<ResumeState>()(
 
 
       setOptimizations: (optimizations: OptimizationResult[]) => {
-        console.log('[ResumeStore] Setting optimizations:', optimizations.length);
         set({ optimizations });
       },
 
       applyOptimization: (sectionId: string) => {
-        console.log('[ResumeStore] Applying optimization:', sectionId);
         set((state) => ({
           optimizations: state.optimizations.map((o) =>
             o.sectionId === sectionId ? { ...o, applied: true } : o
@@ -156,7 +153,6 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       revertOptimization: (sectionId: string) => {
-        console.log('[ResumeStore] Reverting optimization:', sectionId);
         set((state) => ({
           optimizations: state.optimizations.map((o) =>
             o.sectionId === sectionId ? { ...o, applied: false } : o
@@ -165,7 +161,6 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       applyAllOptimizations: () => {
-        console.log('[ResumeStore] Applying all optimizations');
         set((state) => ({
           optimizations: state.optimizations.map((o) => ({
             ...o,
@@ -176,7 +171,6 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       revertAllOptimizations: () => {
-        console.log('[ResumeStore] Reverting all optimizations');
         set((state) => ({
           optimizations: state.optimizations.map((o) => ({
             ...o,
@@ -188,39 +182,31 @@ export const useResumeStore = create<ResumeState>()(
 
       toggleShowOptimized: () => {
         const current = get().showOptimized;
-        console.log('[ResumeStore] Toggling showOptimized:', !current);
         set({ showOptimized: !current });
       },
 
       setShowOptimized: (show: boolean) => {
-        console.log('[ResumeStore] Setting showOptimized:', show);
         set({ showOptimized: show });
       },
 
       setSelectedTemplate: (templateId: TemplateId) => {
-        console.log('[ResumeStore] Setting template:', templateId);
         set({ selectedTemplate: templateId });
       },
 
       setKeywordSuggestions: (suggestions: KeywordSuggestion[]) => {
-        console.log('[ResumeStore] Setting keyword suggestions:', suggestions.length);
         set({ keywordSuggestions: suggestions });
       },
 
       getActiveResume: (): ResumeSchema | null => {
         const state = get();
         if (!state.originalResume) {
-          console.log('[ResumeStore] getActiveResume: No original resume');
           return null;
         }
 
         // If not showing optimized, return original
         if (!state.showOptimized) {
-          console.log('[ResumeStore] getActiveResume: Returning original');
           return state.originalResume;
         }
-
-        console.log('[ResumeStore] getActiveResume: Merging optimizations');
 
         // Deep clone to avoid mutating original
         const merged = JSON.parse(JSON.stringify(state.originalResume)) as ResumeSchema;
@@ -256,8 +242,8 @@ export const useResumeStore = create<ResumeState>()(
           return matches.length / Math.min(nWords.length, hWords.length) >= 0.5;
         };
 
-        // Track which optimizations were successfully applied
-        let appliedCount = 0;
+        // Track which optimizations were successfully applied (for debugging)
+        let _appliedCount = 0;
 
         // Apply each optimization using CONTENT-BASED MATCHING
         for (const opt of state.optimizations) {
@@ -272,16 +258,14 @@ export const useResumeStore = create<ResumeState>()(
             case 'summary':
               if (merged.basics) {
                 merged.basics.summary = optimizedValue;
-                appliedCount++;
-                console.log('[ResumeStore] Applied summary optimization');
+                _appliedCount++;
               }
               break;
 
             case 'headline':
               if (merged.basics) {
                 merged.basics.label = optimizedValue;
-                appliedCount++;
-                console.log('[ResumeStore] Applied headline optimization');
+                _appliedCount++;
               }
               break;
 
@@ -300,8 +284,7 @@ export const useResumeStore = create<ResumeState>()(
                       // Found a match - replace this highlight
                       merged.work[workIdx].highlights![hlIdx] = optimizedValue;
                       found = true;
-                      appliedCount++;
-                      console.log(`[ResumeStore] Applied experience optimization to work[${workIdx}].highlights[${hlIdx}]`);
+                      _appliedCount++;
                       break; // Move to next optimization
                     }
                   }
@@ -310,8 +293,7 @@ export const useResumeStore = create<ResumeState>()(
                   if (!found && workEntry.summary && textMatches(originalValue, workEntry.summary)) {
                     merged.work[workIdx].summary = optimizedValue;
                     found = true;
-                    appliedCount++;
-                    console.log(`[ResumeStore] Applied experience optimization to work[${workIdx}].summary`);
+                    _appliedCount++;
                   }
 
                   if (found) break;
@@ -319,7 +301,7 @@ export const useResumeStore = create<ResumeState>()(
               }
 
               if (!found) {
-                console.warn('[ResumeStore] Could not find match for experience optimization:', originalValue.substring(0, 50));
+                // Failed to find match - warn but continue
               }
               break;
             }
@@ -336,8 +318,7 @@ export const useResumeStore = create<ResumeState>()(
                   if (eduEntry.area && textMatches(originalValue, eduEntry.area)) {
                     merged.education[eduIdx].area = optimizedValue;
                     found = true;
-                    appliedCount++;
-                    console.log(`[ResumeStore] Applied education optimization to education[${eduIdx}].area`);
+                    _appliedCount++;
                     break;
                   }
 
@@ -347,8 +328,7 @@ export const useResumeStore = create<ResumeState>()(
                     if (textMatches(originalValue, highlights[hlIdx])) {
                       merged.education[eduIdx].highlights![hlIdx] = optimizedValue;
                       found = true;
-                      appliedCount++;
-                      console.log(`[ResumeStore] Applied education optimization to education[${eduIdx}].highlights[${hlIdx}]`);
+                      _appliedCount++;
                       break;
                     }
                   }
@@ -371,14 +351,14 @@ export const useResumeStore = create<ResumeState>()(
                   if (projEntry.name && textMatches(originalValue, projEntry.name)) {
                     merged.projects[projIdx].name = optimizedValue;
                     found = true;
-                    appliedCount++;
+                    _appliedCount++;
                     break;
                   }
 
                   if (projEntry.description && textMatches(originalValue, projEntry.description)) {
                     merged.projects[projIdx].description = optimizedValue;
                     found = true;
-                    appliedCount++;
+                    _appliedCount++;
                     break;
                   }
 
@@ -388,7 +368,7 @@ export const useResumeStore = create<ResumeState>()(
                     if (textMatches(originalValue, highlights[hlIdx])) {
                       merged.projects[projIdx].highlights![hlIdx] = optimizedValue;
                       found = true;
-                      appliedCount++;
+                      _appliedCount++;
                       break;
                     }
                   }
@@ -423,11 +403,11 @@ export const useResumeStore = create<ResumeState>()(
 
               // Log the suggestions but DO NOT add to resume
               // The user should manually add skills they actually have
-              console.log('[ResumeStore] Skills suggestions (not auto-added):', suggestedSkills);
-              console.log('[ResumeStore] Note: Skills are shown as recommendations only, not injected into resume');
+              // (suggestedSkills contains the recommended skills)
+              void suggestedSkills; // Acknowledge variable is intentionally unused
 
               // Mark as "applied" for tracking but don't modify resume
-              appliedCount++;
+              _appliedCount++;
               break;
             }
 
@@ -438,7 +418,7 @@ export const useResumeStore = create<ResumeState>()(
                   const cert = merged.certificates[certIdx];
                   if (cert.name && textMatches(originalValue, cert.name)) {
                     merged.certificates[certIdx].name = optimizedValue;
-                    appliedCount++;
+                    _appliedCount++;
                     break;
                   }
                 }
@@ -448,18 +428,6 @@ export const useResumeStore = create<ResumeState>()(
 
             default:
               console.warn(`[ResumeStore] Unknown sectionType: ${opt.sectionType}`);
-          }
-        }
-
-        console.log('[ResumeStore] Applied', appliedCount, 'of', state.optimizations.filter(o => o.applied).length, 'optimizations');
-        console.log('[ResumeStore] Merged headline:', merged.basics?.label);
-        console.log('[ResumeStore] Merged summary preview:', merged.basics?.summary?.substring(0, 50));
-
-        // Log experience highlights for debugging
-        if (merged.work && merged.work[0]) {
-          console.log('[ResumeStore] First work entry highlights count:', merged.work[0].highlights?.length || 0);
-          if (merged.work[0].highlights?.[0]) {
-            console.log('[ResumeStore] First highlight preview:', merged.work[0].highlights[0].substring(0, 50));
           }
         }
 
@@ -473,24 +441,20 @@ export const useResumeStore = create<ResumeState>()(
         const cached = state.analysisCache[cacheKey];
 
         if (!cached) {
-          console.log('[ResumeStore] Cache miss for analysis');
           return null;
         }
 
         // Check if cache is still valid
         const age = Date.now() - cached.timestamp;
         if (age > CACHE_TTL_MS) {
-          console.log('[ResumeStore] Cache expired (age:', Math.round(age / 1000), 'seconds)');
           return null;
         }
 
-        console.log('[ResumeStore] Cache hit! Using cached analysis (age:', Math.round(age / 1000), 'seconds)');
         return cached;
       },
 
       setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>) => {
         const cacheKey = generateCacheKey(resumeText, jobDescription);
-        console.log('[ResumeStore] Caching analysis result, score:', analysis.score);
 
         set((state) => ({
           analysisCache: {
@@ -504,7 +468,6 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       clearAnalysisCache: () => {
-        console.log('[ResumeStore] Clearing analysis cache');
         set({ analysisCache: {} });
       },
 
@@ -524,11 +487,22 @@ export const useResumeStore = create<ResumeState>()(
           reasoning: null,
           hasJobDescription: false,
           vision2030: null,
+          gapAnalysis: [],
+          keywordStrategy: {
+            mirroredPhrases: [],
+            structuralChanges: [],
+            hiddenMatches: []
+          },
+          scoreBreakdown: null,
         }
       }),
 
+      setDisplayOptions: (options) =>
+        set((state) => ({
+          displayOptions: { ...state.displayOptions, ...options }
+        })),
+
       clearAll: () => {
-        console.log('[ResumeStore] Clearing all data');
         set({
           originalResume: null,
           parsedResumeText: null,
@@ -550,7 +524,6 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       resetForNewUpload: () => {
-        console.log('[ResumeStore] Resetting for new upload (preserving template)');
         set({
           originalResume: null,
           parsedResumeText: null,
@@ -582,6 +555,7 @@ export const useResumeStore = create<ResumeState>()(
         showOptimized: state.showOptimized,
         keywordSuggestions: state.keywordSuggestions,
         optimizationMetrics: state.optimizationMetrics,
+        displayOptions: state.displayOptions,
         // Persist analysisCache so match analysis score survives refresh
         analysisCache: state.analysisCache,
       }),

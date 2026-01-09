@@ -3,6 +3,7 @@ import type { TemplateConfig, TemplateId } from '../../types/templates';
 import { ModernProfessional } from './ModernProfessional';
 import { ClassicTraditional } from './ClassicTraditional';
 import { TechnicalEngineer } from './TechnicalEngineer';
+import { ATSOptimized } from './ATSOptimized';
 
 /**
  * Template component registry
@@ -12,6 +13,7 @@ export const TEMPLATES: Record<TemplateId, TemplateComponent> = {
   'modern-professional': ModernProfessional as TemplateComponent,
   'classic-traditional': ClassicTraditional as TemplateComponent,
   'technical-engineer': TechnicalEngineer as TemplateComponent,
+  'ats-optimized': ATSOptimized as TemplateComponent,
 };
 
 /**
@@ -49,7 +51,16 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
     isAtsOptimized: true,
     previewColor: '#3b82f6', // blue-500
   },
-
+  {
+    id: 'ats-optimized',
+    name: 'ATS Optimized',
+    nameAr: 'مُحسَّن للنظام الآلي',
+    category: 'modern',
+    description: 'Single-column layout optimized for Applicant Tracking Systems',
+    descriptionAr: 'تنسيق عمود واحد محسّن لأنظمة تتبع المتقدمين',
+    isAtsOptimized: true,
+    previewColor: '#059669', // emerald-600
+  },
 ];
 
 /**

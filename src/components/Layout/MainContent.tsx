@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, TrendingUp, MessageSquare, Mail, LayoutTemplate, Trash2 } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, MessageSquare, Mail, LayoutTemplate, Trash2 } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
@@ -751,13 +751,6 @@ export default function MainContent() {
             <TemplateGallery
               resumeData={resumeData}
               optimizationData={optimizationData}
-              onSelectTemplate={(template) => {
-                pushToast({
-                  type: "success",
-                  title: t("toasts.templateSelected"),
-                  description: `Using ${template.name} template. You can now apply it to your resume.`
-                });
-              }}
             />
           )}
           {activeTab === "interview" && (
@@ -921,20 +914,6 @@ export default function MainContent() {
   );
 }
 
-// Helper function to map tab values to help content keys
-function _getHelpKey(tabValue) {
-  const mapping = {
-    "resume": "upload",
-    "match": "match",
-    "optimize": "optimize",
-    "keywords": "keywords",
-    "templates": "templates",
-    "interview": "interview",
-    "bulk": "bulk",
-    "cover-letter": "cover",
-  };
-  return mapping[tabValue] || tabValue;
-}
 
 
 

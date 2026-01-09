@@ -24,6 +24,9 @@ import { analyzeVision2030Alignment, Vision2030Analysis } from '../../lib/utils/
 import Vision2030Modal from '../ui/Vision2030Modal';
 import { MatchSkeleton } from './MatchSection.skeleton';
 import { SectorIcon } from '../../lib/utils/vision2030Icons';
+import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
+import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
+import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 const resolveVariant = (score: number) => {
@@ -74,6 +77,18 @@ interface MatchResult {
   topHits?: string[];
   suggestions?: string[];
   reasoning?: string;
+  categoryScores?: {
+    hard_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
+    experience: { score: number; max: number; matched?: string[]; gaps?: string[]; reasoning?: string };
+    education: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
+    soft_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
+  } | null;
+  gapAnalysis?: GapItem[];
+  keywordStrategy?: {
+    mirroredPhrases?: string[];
+    structuralChanges?: string[];
+    hiddenMatches?: HiddenMatch[];
+  } | null;
 }
 
 interface Toast {
@@ -390,18 +405,41 @@ export function MatchSection({
                   </div>
                 </div>
 
-                {/* Popover */}
+                {/* Popover - Category Breakdown */}
                 {whyOpen && (
                   <div
                     ref={popoverRef}
                     className="absolute left-4 right-4 bottom-4 z-50 rounded-xl border border-white/20 bg-slate-900/95 p-4 backdrop-blur-xl"
                   >
-                    <p className="text-xs font-semibold uppercase tracking-wider text-white/70 mb-2">
-                      {t('sections.match.results.howItWorks', 'How It Works')}
+                    <p className="text-xs font-semibold uppercase tracking-wider text-white/70 mb-3">
+                      {t('sections.match.results.howItWorks', 'Score Breakdown')}
                     </p>
-                    <p className="text-sm text-white/90">
-                      <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
-                    </p>
+                    {matchAnalysis?.categoryScores ? (
+                      <div className="space-y-2">
+                        {[
+                          { key: 'hard_skills', label: isArabic ? 'المهارات التقنية' : 'Hard Skills', color: 'bg-blue-500' },
+                          { key: 'experience', label: isArabic ? 'الخبرة' : 'Experience', color: 'bg-purple-500' },
+                          { key: 'education', label: isArabic ? 'التعليم' : 'Education', color: 'bg-amber-500' },
+                          { key: 'soft_skills', label: isArabic ? 'المهارات الشخصية' : 'Soft Skills', color: 'bg-emerald-500' }
+                        ].map(cat => {
+                          const data = matchAnalysis.categoryScores?.[cat.key as keyof typeof matchAnalysis.categoryScores];
+                          if (!data) return null;
+                          return (
+                            <div key={cat.key} className="flex items-center gap-2">
+                              <span className="text-xs text-white/70 w-24 truncate">{cat.label}</span>
+                              <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${cat.color}`} style={{ width: `${(data.score / data.max) * 100}%` }} />
+                              </div>
+                              <span className="text-xs text-white/90 w-10 text-end">{data.score}/{data.max}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-white/90">
+                        <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -467,6 +505,26 @@ export function MatchSection({
                   </ul>
                 </div>
               )}
+
+              {/* Gap Analysis Section */}
+              {matchAnalysis?.gapAnalysis && matchAnalysis.gapAnalysis.length > 0 && (
+                <GapAnalysisCard gaps={matchAnalysis.gapAnalysis} />
+              )}
+
+              {/* Hidden Matches - Skills that match using different terminology */}
+              {matchAnalysis?.keywordStrategy?.hiddenMatches && matchAnalysis.keywordStrategy.hiddenMatches.length > 0 && (
+                <HiddenMatchesCard matches={matchAnalysis.keywordStrategy.hiddenMatches} />
+              )}
+
+              {/* Mirrored Keywords - JD phrases injected into optimized content */}
+              {matchAnalysis?.keywordStrategy && (
+                matchAnalysis.keywordStrategy.mirroredPhrases?.length || matchAnalysis.keywordStrategy.structuralChanges?.length
+              ) ? (
+                <MirroredKeywordsCard
+                  mirroredPhrases={matchAnalysis.keywordStrategy.mirroredPhrases || []}
+                  structuralChanges={matchAnalysis.keywordStrategy.structuralChanges || []}
+                />
+              ) : null}
 
               {/* Vision 2030 Alignment Section */}
               {v2030Analysis && (

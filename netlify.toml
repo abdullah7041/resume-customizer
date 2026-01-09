@@ -12,7 +12,7 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
   # External modules to avoid bundling large dependencies
-  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions"]
+  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium"]
   # Included files for shared modules (now in netlify/lib/)
   included_files = ["netlify/lib/**"]
 
@@ -24,7 +24,7 @@
   timeout = 30
 
 [functions."optimize"]
-  timeout = 30
+  timeout = 45  # Increased for complex resumes (was 30s)
 
 [functions."generate-cover-letter"]
   timeout = 30
@@ -34,6 +34,10 @@
 
 [functions."extract-resume-json"]
   timeout = 30
+
+[functions."generate-pdf"]
+  timeout = 45  # PDF generation: Target <10s, buffer for edge cases
+  memory = 1024
 
 [[redirects]]
   from = "/*"

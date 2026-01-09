@@ -263,6 +263,108 @@ export const resumeTemplates = [
         text: "#111827"
       }
     }
+  },
+
+  {
+    id: "ats-optimized",
+    name: "ATS Optimized",
+    category: TEMPLATE_CATEGORIES.MODERN,
+    description: "Maximum ATS compatibility with clean, parseable single-column format. Keyword-rich design optimized for applicant tracking systems.",
+    atsScore: 100,
+    preview: {
+      layout: "single-column",
+      colorScheme: "minimal",
+      font: "sans-serif"
+    },
+    structure: {
+      header: {
+        includePhoto: false,
+        layout: "centered",
+        fields: ["name", "title", "contact", "phone", "email", "linkedin"]
+      },
+      sections: [
+        {
+          id: "summary",
+          title: "Professional Summary",
+          type: "paragraph",
+          placeholder: "Achievement-focused professional summary highlighting key qualifications and measurable results.",
+          maxLength: 300,
+          required: true
+        },
+        {
+          id: "skills",
+          title: "Core Competencies",
+          type: "keywords",
+          placeholder: "Skill 1 • Skill 2 • Skill 3 • Skill 4",
+          required: true,
+          format: {
+            separator: "bullet",
+            showProficiency: false
+          }
+        },
+        {
+          id: "experience",
+          title: "Professional Experience",
+          type: "timeline",
+          placeholder: "Job Title | Company Name | Start Date - End Date\n• Achievement with quantified result\n• Impact statement with metrics",
+          required: true,
+          format: {
+            showDuration: true,
+            bulletStyle: "circle"
+          }
+        },
+        {
+          id: "projects",
+          title: "Key Projects",
+          type: "showcase",
+          placeholder: "Project Name\nDescription of project and key achievements.",
+          optional: true,
+          format: {
+            showTechStack: false
+          }
+        },
+        {
+          id: "education",
+          title: "Education",
+          type: "timeline",
+          placeholder: "Degree | Major | University | Year",
+          required: true,
+          format: {
+            showGPA: true
+          }
+        },
+        {
+          id: "certifications",
+          title: "Certifications & Training",
+          type: "keywords",
+          placeholder: "Certification 1 • Certification 2 • Certification 3",
+          optional: true
+        },
+        {
+          id: "languages",
+          title: "Languages",
+          type: "proficiency",
+          placeholder: "English (Native) • Spanish (Professional)",
+          optional: true
+        }
+      ]
+    },
+    formatting: {
+      fontSize: {
+        name: "20pt",
+        sectionTitle: "10pt",
+        body: "10pt"
+      },
+      spacing: {
+        sectionGap: "12px",
+        lineHeight: "1.4"
+      },
+      colors: {
+        primary: "#000000",
+        secondary: "#444444",
+        text: "#1a1a1a"
+      }
+    }
   }
 ];
 

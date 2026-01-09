@@ -307,19 +307,22 @@ export type EndpointRateLimitConfig = {
 
 /**
  * Default rate limits for different endpoint types
+ * Stricter limits for "Flash" model endpoints to prevent quota exhaustion and timeouts
  */
 export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
-  // File processing is expensive (OCR, parsing)
+  // File processing is expensive (OCR, parsing) - uses 'lite' model
   "parse-resume": { maxRequests: 10 },
   "extract-resume-json": { maxRequests: 10 },
 
-  // AI endpoints call external APIs (Gemini/DeepSeek)
-  "ai-match": { maxRequests: 15 },
-  "optimize": { maxRequests: 15 },
+  // AI endpoints using "Flash" model (slower, higher quality)
+  "ai-match": { maxRequests: 10 },        // Flash model for matching
+  "generate-cover-letter": { maxRequests: 5 },  // Flash model
 
-  // Generation endpoints
-  "predict-questions": { maxRequests: 10 },
-  "generate-cover-letter": { maxRequests: 10 },
+  // AI endpoints using "Flash" model (higher quality, slower - 20-25s response)
+  "optimize": { maxRequests: 5 },         // Flash model - prevent timeout cascades, ensure quality
+
+  // Generation endpoints using "Lite" model (faster)
+  "predict-questions": { maxRequests: 10 },  // Uses 'lite' model - can handle more traffic
 
   // Batch processing (very expensive)
   "batch-api": { maxRequests: 5 },

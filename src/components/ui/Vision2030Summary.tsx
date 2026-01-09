@@ -8,6 +8,7 @@ import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import { SectorIcon } from '../../lib/utils/vision2030Icons';
 import { EXAMPLE_RESUME_TEXT } from '../../lib/data/exampleResume';
 import Vision2030Modal from './Vision2030Modal';
+import { Vision2030CalculationModal } from './Vision2030CalculationModal';
 import { GlassCard } from './GlassCard';
 import { GlassCircle } from './GlassCircle';
 
@@ -21,6 +22,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
     const isArabic = i18n.language === 'ar';
     const [expanded, setExpanded] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
+    const [calculationModalOpen, setCalculationModalOpen] = useState(false);
 
     // Determine if we're in demo mode (no resume uploaded)
     const isDemo = !resumeText;
@@ -102,8 +104,17 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                         <Target className="w-5 h-5 text-white" />
                     </GlassCircle>
                     <div>
-                        <h3 className="font-bold text-white">
+                        <h3 className="font-bold text-white flex items-center gap-2">
                             {t('vision2030.title', 'Vision 2030 Alignment')}
+                            <button
+                                type="button"
+                                onClick={() => setCalculationModalOpen(true)}
+                                className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-emerald-700 bg-emerald-100 rounded-full hover:bg-emerald-200 hover:text-emerald-900 transition-colors ring-1 ring-emerald-300"
+                                title={isArabic ? 'كيف يتم حساب النتيجة؟' : 'How is this score calculated?'}
+                                aria-label={isArabic ? 'عرض تفاصيل الحساب' : 'Show calculation details'}
+                            >
+                                ?
+                            </button>
                         </h3>
                         <p className="text-xs text-white/60">
                             {t('vision2030.subtitle', 'How your skills align with Saudi priorities')}
@@ -276,6 +287,11 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
             </div>
 
             <Vision2030Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+            <Vision2030CalculationModal
+                isOpen={calculationModalOpen}
+                onClose={() => setCalculationModalOpen(false)}
+                isArabic={isArabic}
+            />
         </GlassCard>
     );
 }

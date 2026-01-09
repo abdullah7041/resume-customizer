@@ -1,6 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { analyzeResume, optimizeResume, parseResume } from './api.js';
 
+// Mock supabase
+vi.mock('./supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: null },
+        error: null
+      })
+    }
+  }
+}));
+
 beforeEach(() => {
   global.fetch = vi.fn();
 });

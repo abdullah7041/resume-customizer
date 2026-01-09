@@ -7,17 +7,188 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY || "");
-const MODEL_NAME = "gemini-2.5-flash-lite";
 
-const model = genAI.getGenerativeModel({
-  model: MODEL_NAME,
-  generationConfig: {
-    responseMimeType: "application/json",
-    temperature: 0,  // Deterministic output - no randomness
-    topP: 1,         // No nucleus sampling
-    topK: 1,         // Greedy decoding - always pick the most likely token
-  },
-});
+// Dual model configuration
+const MODELS = {
+  lite: "gemini-2.5-flash-lite",  // Fast, lower cost - for parsing
+  flash: "gemini-2.5-flash"       // Higher quality - for matching/optimization
+};
+
+const generationConfig = {
+  // Removed responseMimeType - JSON mode has hidden length constraints that cause truncation
+  // Instead, we'll request JSON in markdown code blocks for longer responses
+  temperature: 0,  // Deterministic output - no randomness
+  topP: 0.95,      // Slightly more focused (was 1)
+  topK: 1,         // Greedy decoding - always pick the most likely token
+  maxOutputTokens: 8192,  // Increased to allow complete JSON responses (was 4096, caused truncation)
+};
+
+/**
+ * Sanitize and parse JSON response from Gemini.
+ * Handles common issues: markdown code blocks, unescaped characters, truncation.
+ * @param {string} text - Raw response text from Gemini
+ * @returns {object} - Parsed JSON object
+ */
+function sanitizeAndParseJSON(text) {
+  let cleaned = text;
+
+  // 1. Strip markdown code blocks if present (```json ... ``` or ``` ... ```)
+  cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+
+  // 2. Trim whitespace
+  cleaned = cleaned.trim();
+
+  // 3. Try to parse as-is first
+  try {
+    return JSON.parse(cleaned);
+  } catch (parseError) {
+    console.warn('[Gemini] First JSON parse attempt failed:', parseError.message);
+    console.warn('[Gemini] Trying sanitization...');
+
+    // 4. Fix common issues: control characters in strings
+    // Replace unescaped control characters (except \n, \r, \t which are valid in JSON)
+    // Using character class with explicit ranges to avoid ESLint no-control-regex
+    // eslint-disable-next-line no-control-regex
+    cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' ');
+
+    // 5. Try to fix truncated JSON by finding a valid truncation point
+    console.warn('[Gemini] Response appears truncated, attempting to repair JSON...');
+
+    // Strategy: Find the last complete property or array element by looking for
+    // the last occurrence of }, ], or a complete "key": "value" pair
+
+    // First, find if we're in the middle of a string by counting quotes
+    let quoteCount = 0;
+    let lastValidEnd = -1;
+    let escaped = false;
+
+    for (let i = 0; i < cleaned.length; i++) {
+      const char = cleaned[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        quoteCount++;
+      }
+
+      // Track positions of complete structures (outside strings)
+      if (quoteCount % 2 === 0) {
+        if (char === '}' || char === ']') {
+          lastValidEnd = i;
+        }
+      }
+    }
+
+    // If we found a valid end point, truncate there
+    if (lastValidEnd > 0 && lastValidEnd < cleaned.length - 1) {
+      console.warn(`[Gemini] Truncating at position ${lastValidEnd} to find valid JSON end`);
+      cleaned = cleaned.substring(0, lastValidEnd + 1);
+    }
+
+    // Count remaining open braces/brackets
+    let braceCount = 0;
+    let bracketCount = 0;
+    let inString = false;
+    escaped = false;
+
+    for (const char of cleaned) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        else if (char === '[') bracketCount++;
+        else if (char === ']') bracketCount--;
+      }
+    }
+
+    // If we're still in a string, close it
+    if (inString) {
+      cleaned += '"';
+      // Remove trailing incomplete property after closing the string
+      // This handles cases like: "url": "https://incomplete
+      cleaned = cleaned.replace(/,?\s*"[^"]*":\s*"[^"]*"\s*$/g, (match) => {
+        // Only remove if it looks incomplete (doesn't end with proper structure)
+        return match;
+      });
+    }
+
+    // Remove any trailing commas
+    cleaned = cleaned.replace(/,\s*$/, '');
+
+    // Close arrays then objects
+    while (bracketCount > 0) {
+      cleaned += ']';
+      bracketCount--;
+    }
+    while (braceCount > 0) {
+      cleaned += '}';
+      braceCount--;
+    }
+
+    // 6. Second parse attempt
+    try {
+      const result = JSON.parse(cleaned);
+      console.log('[Gemini] JSON repair successful');
+      return result;
+    } catch (secondError) {
+      // 7. Last resort: try to extract just the basics object if it exists
+      console.warn('[Gemini] Standard repair failed, trying to extract partial data...');
+
+      try {
+        // Look for a complete "basics" section at minimum
+        const basicsMatch = cleaned.match(/"basics"\s*:\s*\{[^}]+\}/);
+        if (basicsMatch) {
+          // Try to build a minimal valid response
+          const minimalJSON = `{"basics": ${basicsMatch[0].replace('"basics":', '').trim()}}`;
+          const minimal = JSON.parse(minimalJSON);
+          console.log('[Gemini] Extracted minimal basics object');
+          return minimal;
+        }
+      } catch (e) {
+        // Ignore extraction errors
+      }
+
+      console.error('[Gemini] JSON sanitization failed. Raw text preview:', text.substring(0, 500));
+      throw new Error(`Failed to parse AI response: ${secondError.message}. Response preview: ${text.substring(0, 200)}...`);
+    }
+  }
+}
+
+/**
+ * Get a Gemini model instance by type
+ * @param {'lite' | 'flash'} modelType - Model type to use
+ * @returns {object} - Gemini model instance
+ */
+function getModel(modelType = 'lite') {
+  const modelName = MODELS[modelType] || MODELS.lite;
+  console.log(`[Gemini] Using model: ${modelName}`);
+  return genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig,
+  });
+}
+
+// Default model for backwards compatibility
+const model = getModel('lite');
 
 /**
  * JSON Resume Schema System Prompt
@@ -37,204 +208,79 @@ CRITICAL MAPPING RULES:
 AI optimization suggestions should be stored in "meta.ai_suggestions" to preserve schema integrity.`;
 
 /**
- * Processes a resume against a job description using Gemini Flash 2.5.
+ * Processes a resume against a job description using Gemini.
  * Returns JSON Resume format with AI optimization metadata.
  * @param {string} inputData - Base64 encoded PDF data OR plain text resume.
  * @param {string} jobDescription - Job description text.
  * @param {boolean} isPdf - True if inputData is base64 PDF, false if text.
+ * @param {'lite' | 'flash'} modelType - Model to use: 'lite' for fast/cheap, 'flash' for quality.
  * @returns {Promise<object>} - JSON Resume schema with meta.ai_suggestions.
  */
-export async function processResume(inputData, jobDescription, isPdf = true) {
+export async function processResume(inputData, jobDescription, isPdf = true, modelType = 'flash') {
+  const selectedModel = getModel(modelType);
   try {
-    console.log(`[Gemini] Processing resume with ${MODEL_NAME}. Input type: ${isPdf ? "PDF" : "Text"}`);
+    console.log(`[Gemini] Processing resume with ${MODELS[modelType]}. Input type: ${isPdf ? "PDF" : "Text"}`);
 
+    // OPTIMIZED PROMPT: Reduced from 238 lines to ~120 lines for faster processing
     const prompt = `
+CRITICAL INSTRUCTION: Return ONLY valid JSON wrapped in markdown code blocks like this:
+
+\`\`\`json
+{
+  "basics": {...},
+  "work": [...],
+  "meta": {"ai_suggestions": {...}}
+}
+\`\`\`
+
+Do not include explanatory text before or after the JSON.
+
 Job Description:
 ${jobDescription}
 
-Analyze the provided resume against this job description.
-You MUST output JSON strictly adhering to the JSONResume.org schema.
+OUTPUT: JSON Resume schema (jsonresume.org) with the resume content plus AI optimization metadata in meta.ai_suggestions.
 
-Return the response in the following JSON Resume format:
-{
-  "basics": {
-    "name": "string",
-    "label": "string (Job Title / Professional Headline)",
-    "email": "string",
-    "phone": "string",
-    "url": "string (optional, personal website)",
-    "summary": "string (professional summary)",
-    "location": {
-      "city": "string",
-      "countryCode": "string (ISO 3166-1 alpha-2)",
-      "region": "string (state/province)"
-    },
-    "profiles": [{ "network": "string", "username": "string", "url": "string" }]
-  },
-  "work": [
-    {
-      "name": "string (Company name)",
-      "position": "string (Job title)",
-      "url": "string (optional, company website)",
-      "location": "string (City, State/Region - extract if present in resume)",
-      "startDate": "string (YYYY-MM-DD or YYYY-MM)",
-      "endDate": "string (YYYY-MM-DD, YYYY-MM, or 'Present')",
-      "summary": "string (role description)",
-      "highlights": ["string (bullet point achievements)"]
-    }
-  ],
-  "education": [
-    {
-      "institution": "string",
-      "url": "string (optional)",
-      "area": "string (Major / Field of study)",
-      "studyType": "string (Degree type: Bachelor, Master, PhD, Diploma, etc.)",
-      "startDate": "string",
-      "endDate": "string",
-      "score": "string (optional, GPA)",
-      "courses": ["string (optional, relevant coursework)"],
-      "highlights": ["string (achievements, year-by-year details like 'First Year: coursework focused on...', 'Second Year: hands-on workshops...')"]
-    }
-  ],
-  "skills": [
-    {
-      "name": "string (Category: Frontend, Backend, DevOps, etc.)",
-      "level": "string (optional: Expert, Intermediate, Beginner)",
-      "keywords": ["string (individual skills: React, TypeScript, etc.)"]
-    }
-  ],
-  "projects": [
-    {
-      "name": "string (REQUIRED - The actual descriptive project title from resume. NEVER use generic 'Project' or 'Project 1'. Extract the real name like 'Automated Inventory Tracker', 'Market Research Initiative', etc.)",
-      "description": "string (Brief 1-2 sentence summary, separate from name)",
-      "highlights": ["string (bullet point achievements - do not duplicate description)"],
-      "keywords": ["string (technologies used)"],
-      "url": "string (optional)"
-    }
-  ],
-  "certificates": [
-    {
-      "name": "string",
-      "date": "string",
-      "issuer": "string",
-      "url": "string (optional)"
-    }
-  ],
-  "languages": [
-    {
-      "language": "string",
-      "fluency": "string (Native, Fluent, Intermediate, Basic)"
-    }
-  ],
-  "meta": {
-    "version": "1.0.0",
-    "lastModified": "string (ISO 8601 date)",
-    "match_score": "number (0-100, job match score - BE PRECISE, use specific numbers like 73, 41, 88, 56 - AVOID round numbers like 50, 60, 70, 80, 85, 90, 100)",
-    "ai_suggestions": {
-      "original_headline": "string (REQUIRED - extract the EXACT current headline from resume)",
-      "suggested_headline": "string (REQUIRED - optimized headline tailored for this specific job)",
-      "original_summary": "string (REQUIRED - extract the EXACT current summary from resume)",
-      "summary_rewrite": "string (REQUIRED - action-oriented rewrite targeting the job)",
-      "reasoning": "string (2-3 sentences explaining WHY this exact match score was given - cite specific matching skills and experience that contribute positively and specific gaps that reduce the score)",
-      "missing_keywords": ["string (skills to add)"],
-      "hard_skills_gap": ["string (technical gaps)"],
-      "keywords_to_keep": ["string (strong matches)"],
-      "keywords_to_avoid": ["string (clichés to remove)"],
-      "bullet_improvements": [{
-        "work_index": "number (index in work array)",
-        "highlight_index": "number (index in highlights array)",
-        "original": "string (REQUIRED - the EXACT original bullet text from resume)",
-        "improved": "string (REQUIRED - the improved version with metrics and action verbs)",
-        "issue": "string (e.g. 'Passive voice', 'Lack of metrics')",
-        "rationale": "string"
-      }],
-      "education_improvements": [{
-        "education_index": "number",
-        "original": "string (REQUIRED - exact original text)",
-        "improved": "string (REQUIRED - improved version)",
-        "issue": "string",
-        "rationale": "string"
-      }],
-      "project_improvements": [{
-        "project_index": "number",
-        "original": "string (REQUIRED - exact original text)",
-        "improved": "string (REQUIRED - improved version)",
-        "issue": "string",
-        "rationale": "string"
-      }],
-      "gap_analysis": [
-        {
-          "requirement": "string (EXACT requirement phrase from JD, e.g. 'PostgreSQL with complex queries and window functions')",
-          "current_state": "string (what resume currently shows for this requirement, e.g. 'SQL listed generically without PostgreSQL specifics')",
-          "gap_severity": "string (critical | moderate | minor)",
-          "recommendation": "string (specific actionable fix, e.g. 'Add to skills: PostgreSQL, window functions, CTEs, schema design')"
-        }
-      ],
-      "keyword_strategy": {
-        "mirrored_phrases": [
-          "string (exact multi-word phrases from JD that were injected into optimized content, e.g. 'consolidate data from disparate sources')"
-        ],
-        "structural_changes": [
-          "string (explain reorganization with WHY, e.g. 'Moved PostgreSQL to headline because JD lists it as primary requirement')"
-        ],
-        "hidden_matches": [
-          {
-            "resume_term": "string (skill/tech on resume, e.g. 'Supabase')",
-            "jd_requirement": "string (what JD asks for, e.g. 'PostgreSQL database')",
-            "insight": "string (the connection, e.g. 'Supabase uses PostgreSQL as its database engine - explicitly mention this to satisfy the PostgreSQL requirement')"
-          }
-        ]
-      },
-      "score_breakdown": {
-        "base_score": "number (starting score based on experience match)",
-        "skill_match_bonus": "number (points added for matching skills)",
-        "keyword_coverage_bonus": "number (points for JD keyword coverage)",
-        "gap_penalties": "number (points deducted for critical/moderate gaps)",
-        "final_score": "number (the match_score value)",
-        "score_explanation": "string (2-3 sentences explaining the math)"
-      }
-    },
-    "interview_prep": {
-      "predicted_questions": ["string"],
-      "role_level": "string (Junior, Mid, Senior, Lead)",
-      "focus_areas": ["string (System Design, Algorithms, etc.)"]
-    },
-    "cover_letter_draft": "string"
-  }
-}
+CRITICAL ANALYSIS REQUIREMENTS:
 
-GAP ANALYSIS REQUIREMENTS (MANDATORY):
-1. Create a gap_analysis entry for EACH major requirement in the job description (minimum 5, maximum 10)
-2. Order gaps by severity: critical gaps first, then moderate, then minor
-3. Be SPECIFIC in current_state - quote or reference actual resume content
-4. Be ACTIONABLE in recommendation - tell user exactly what to add/change
-5. Severity guide:
-   - critical: Core job requirement completely missing or severely underrepresented
-   - moderate: Requirement partially met but needs enhancement
-   - minor: Nice-to-have or easily fixable formatting issue
+1. GAP ANALYSIS (REQUIRED - minimum 5 items, severity-ordered):
+   CRITICAL: You MUST generate at least 5 gap analysis items. Do not return an empty array.
+   Example: {"requirement": "3+ years experience with React", "current_state": "2 years React mentioned", "gap_severity": "moderate", "recommendation": "Highlight JavaScript framework experience to bridge gap"}
+   - requirement: Exact JD phrase requiring something
+   - current_state: What the resume currently shows
+   - gap_severity: critical|moderate|minor (ordered by importance)
+   - recommendation: Specific actionable advice
 
-KEYWORD STRATEGY REQUIREMENTS (MANDATORY):
-1. mirrored_phrases: List 5-10 exact multi-word phrases from the JD that appear in your optimized content
-2. structural_changes: Explain 2-4 reorganization decisions with reasoning
-3. hidden_matches: Identify ANY resume skills that map to JD requirements using different terminology (minimum 1 if any exist)
+2. KEYWORD STRATEGY:
+   - mirrored_phrases: 5-10 exact JD phrases used in optimizations
+   - structural_changes: 2-4 reorganization decisions with rationale
+   - hidden_matches: Resume skills mapping to JD (different terminology)
 
-SCORE BREAKDOWN REQUIREMENTS (MANDATORY):
-1. Show your math - how did you arrive at the final score?
-2. base_score: Start with experience years match (0-40 points)
-3. skill_match_bonus: Add points for each matching skill category (0-30 points)
-4. keyword_coverage_bonus: Add points for JD keyword presence (0-20 points)
-5. gap_penalties: Subtract for gaps (critical: -10 each, moderate: -5 each, minor: -2 each)
-6. final_score = base_score + bonuses - penalties (cap at 0-100)
+3. CATEGORY SCORING (must sum to match_score):
+   hard_skills (0-40): Technical skill alignment
+   experience (0-30): Relevance & impact
+   education (0-10): Degree/cert match
+   soft_skills (0-20): Communication/leadership evidence
 
-CRITICAL REQUIREMENTS:
-- Map ALL experience entries to "work" array with "highlights" for bullet points
-- Map ALL education entries to "education" array
-- Categorize skills into logical groups in "skills" array
-- Store AI optimizations ONLY in "meta.ai_suggestions" to preserve standard schema
-- ALWAYS populate "original" fields with EXACT text from resume
-- ALWAYS populate "improved" fields with your enhanced version
-- NEVER leave original or improved fields empty - if no improvement needed, copy original to improved
-- Provide at least 3-5 bullet_improvements suggestions
+4. OPTIMIZATIONS (3-5 minimum):
+   - bullet_improvements: [{work_index, highlight_index, original, improved, issue, rationale}]
+   - original_headline & suggested_headline (EXACT text required)
+   - original_summary & summary_rewrite (EXACT text required)
+   - education_improvements, project_improvements (if applicable)
+
+MATCH SCORE RULES:
+- Use precise numbers (73, 41, 88) - avoid round numbers (50, 60, 70, 80, 90)
+- Provide reasoning citing specific skills/gaps
+- Include score_breakdown showing calculation
+
+SCHEMA: JSON Resume (jsonresume.org) with meta.ai_suggestions containing:
+- original_headline/suggested_headline, original_summary/summary_rewrite (EXACT current text required)
+- reasoning, missing_keywords, keywords_to_keep/avoid
+- bullet_improvements[{work_index, highlight_index, original, improved, issue, rationale}]
+- gap_analysis[] (5-10 items), keyword_strategy{mirrored_phrases, structural_changes, hidden_matches}
+- category_scores{hard_skills, experience, education, soft_skills} (must sum to match_score)
+- score_breakdown{base_score, bonuses, penalties, final_score, explanation}
+
+Map experience→"work" with highlights[]. Use real project names. Never leave original/improved empty.
 `;
 
     const parts = [
@@ -253,13 +299,13 @@ CRITICAL REQUIREMENTS:
       parts.push({ text: `RESUME CONTENT:\n${inputData}` });
     }
 
-    const result = await model.generateContent({
+    const result = await selectedModel.generateContent({
       contents: [{ role: "user", parts }],
     });
 
     const response = await result.response;
     const text = response.text();
-    const parsed = JSON.parse(text);
+    const parsed = sanitizeAndParseJSON(text);
 
     // Backwards compatibility: also expose optimization in legacy format
     if (parsed.meta?.ai_suggestions) {
@@ -300,7 +346,25 @@ CRITICAL REQUIREMENTS:
         reasoning: parsed.meta.ai_suggestions.reasoning,
         missingKeywords: parsed.meta.ai_suggestions.missing_keywords || [],
         hardSkillsGap: parsed.meta.ai_suggestions.hard_skills_gap || [],
-        keywordsToKeep: parsed.meta.ai_suggestions.keywords_to_keep || []
+        keywordsToKeep: parsed.meta.ai_suggestions.keywords_to_keep || [],
+        categoryScores: parsed.meta.ai_suggestions.category_scores || null,
+        // Gap analysis - map from snake_case to camelCase
+        gapAnalysis: (parsed.meta.ai_suggestions.gap_analysis || []).map(g => ({
+          requirement: g.requirement,
+          currentState: g.current_state,
+          severity: g.gap_severity,
+          recommendation: g.recommendation
+        })),
+        // Keyword strategy - map from snake_case to camelCase
+        keywordStrategy: parsed.meta.ai_suggestions.keyword_strategy ? {
+          mirroredPhrases: parsed.meta.ai_suggestions.keyword_strategy.mirrored_phrases || [],
+          structuralChanges: parsed.meta.ai_suggestions.keyword_strategy.structural_changes || [],
+          hiddenMatches: (parsed.meta.ai_suggestions.keyword_strategy.hidden_matches || []).map(h => ({
+            resumeTerm: h.resume_term,
+            jdRequirement: h.jd_requirement,
+            insight: h.insight
+          }))
+        } : null
       };
       parsed.candidateProfile = {
         name: parsed.basics?.name || "",
@@ -334,7 +398,7 @@ CRITICAL REQUIREMENTS:
  */
 export async function parseResumeOnly(inputData, isPdf = true) {
   try {
-    console.log(`[Gemini] Parsing resume with ${MODEL_NAME}. Input type: ${isPdf ? "PDF" : "Text"}`);
+    console.log(`[Gemini] Parsing resume with ${MODELS.lite}. Input type: ${isPdf ? "PDF" : "Text"}`);
 
     const systemInstruction = `You are a highly accurate OCR and resume parser.
 Your goal is to extract the FULL text verbatim and structure the data.
@@ -498,7 +562,7 @@ CRITICAL REMINDERS:
 
     const response = await result.response;
     const text = response.text();
-    const parsed = JSON.parse(text);
+    const parsed = sanitizeAndParseJSON(text);
 
     // CRITICAL FIX: Safely extract plainText as string
     // Gemini may return raw_text as an object in some cases
@@ -597,9 +661,68 @@ CRITICAL REMINDERS:
     }
 
     if (errorMessage.includes("model") || errorMessage.includes("404")) {
-      throw new Error(`Model error: The model '${MODEL_NAME}' may not be available. Please check the model name.`);
+      throw new Error(`Model error: The model '${MODELS.lite}' may not be available. Please check the model name.`);
     }
 
+    throw error;
+  }
+}
+
+/**
+ * Fast match-only analysis - lightweight prompt for quick scoring.
+ * Returns only essential match data without detailed improvements.
+ * @param {string} resumeText - Plain text resume content.
+ * @param {string} jobDescription - Job description text.
+ * @returns {Promise<object>} - Match score, keywords, and reasoning.
+ */
+export async function processMatchOnly(resumeText, jobDescription) {
+  const selectedModel = getModel('flash');
+  try {
+    console.log(`[Gemini] Fast match analysis with ${MODELS.flash}`);
+
+    const prompt = `
+Analyze this resume against the job description and return a match score.
+
+Job Description:
+${jobDescription}
+
+Resume:
+${resumeText}
+
+Return ONLY this JSON structure (no other text):
+{
+  "score": <number 0-100, be precise like 73, 41, 88 - avoid round numbers>,
+  "strongMatches": [<up to 10 skills/keywords from resume that match JD requirements>],
+  "missingKeywords": [<up to 10 important skills/keywords from JD missing in resume>],
+  "reasoning": "<1-2 sentences explaining the score>"
+}
+
+SCORING GUIDE:
+- 80-100: Strong match - most required skills present, relevant experience
+- 60-79: Good match - core skills present, some gaps
+- 40-59: Partial match - transferable skills, significant gaps
+- 0-39: Weak match - few relevant skills/experience
+
+Be specific and precise. Focus on the most important requirements.`;
+
+    const result = await selectedModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
+    const response = await result.response;
+    const text = response.text();
+    const parsed = sanitizeAndParseJSON(text);
+
+    // Ensure all fields exist with defaults
+    return {
+      score: parsed.score || 50,
+      strongMatches: parsed.strongMatches || [],
+      missingKeywords: parsed.missingKeywords || [],
+      reasoning: parsed.reasoning || "Unable to determine match score."
+    };
+
+  } catch (error) {
+    console.error("[Gemini] Error in fast match analysis:", error);
     throw error;
   }
 }

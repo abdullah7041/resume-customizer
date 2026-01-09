@@ -18,6 +18,10 @@ build
 # Environment files
 .env*
 
+# Local configuration files
+.mcp.json
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -40,7 +40,7 @@ export function TechnicalEngineer({
                 minHeight: A4_STYLES.minHeight,
                 padding: '18mm 20mm',
                 fontFamily: "'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace",
-                fontSize: '9pt',
+                fontSize: '10.5pt',
                 lineHeight: '1.5',
             }}
             dir={isRTL ? 'rtl' : 'ltr'}
@@ -50,7 +50,7 @@ export function TechnicalEngineer({
                 <h1
                     className="text-gray-900 mb-1"
                     style={{
-                        fontSize: '20pt',
+                        fontSize: '24pt',
                         fontWeight: '700',
                         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
@@ -61,15 +61,15 @@ export function TechnicalEngineer({
                     <p
                         className="text-gray-500 mb-2"
                         style={{
-                            fontSize: '10pt',
+                            fontSize: '12pt',
                             fontFamily: "'Inter', -apple-system, sans-serif",
-                            fontWeight: '500',
+                            fontWeight: '600',
                         }}
                     >
                         {basics.label}
                     </p>
                 )}
-                <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                <div className="flex flex-wrap gap-4 text-gray-500" style={{ fontSize: '10pt' }}>
                     {basics.email && <span>{basics.email}</span>}
                     {basics.phone && <span>{basics.phone}</span>}
                     {basics.location?.city && <span>{basics.location.city}</span>}
@@ -87,7 +87,7 @@ export function TechnicalEngineer({
                     <h2
                         className="text-gray-700 mb-3 pb-1"
                         style={{
-                            fontSize: '11pt',
+                            fontSize: '14pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -105,7 +105,7 @@ export function TechnicalEngineer({
                                         key={i}
                                         className="px-3 py-1 text-gray-700 rounded"
                                         style={{
-                                            fontSize: '10pt',
+                                            fontSize: '10.5pt',
                                             backgroundColor: '#ffffff',
                                             border: '1px solid #d1d5db',
                                         }}
@@ -121,7 +121,7 @@ export function TechnicalEngineer({
                                     key={`${i}-${j}`}
                                     className="px-3 py-1 text-gray-700 rounded"
                                     style={{
-                                        fontSize: '10pt',
+                                        fontSize: '10.5pt',
                                         backgroundColor: '#ffffff',
                                         border: '1px solid #d1d5db',
                                     }}
@@ -140,7 +140,7 @@ export function TechnicalEngineer({
                     <h2
                         className="text-gray-700 mb-2 pb-1"
                         style={{
-                            fontSize: '9pt',
+                            fontSize: '14pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -153,7 +153,7 @@ export function TechnicalEngineer({
                         className="text-gray-600"
                         style={{
                             fontFamily: "'Inter', -apple-system, sans-serif",
-                            fontSize: '9pt',
+                            fontSize: '10.5pt',
                         }}
                     >
                         {basics.summary}
@@ -167,7 +167,7 @@ export function TechnicalEngineer({
                     <h2
                         className="text-gray-700 mb-3 pb-1"
                         style={{
-                            fontSize: '9pt',
+                            fontSize: '14pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -183,18 +183,18 @@ export function TechnicalEngineer({
                                     <h3
                                         className="text-gray-900"
                                         style={{
-                                            fontSize: '10pt',
+                                            fontSize: '12pt',
                                             fontWeight: '600',
                                             fontFamily: "'Inter', -apple-system, sans-serif",
                                         }}
                                     >
                                         {safeString(job.position)}
                                     </h3>
-                                    <span className="text-gray-500" style={{ fontSize: '8.5pt' }}>
+                                    <span className="text-gray-500" style={{ fontSize: '10pt' }}>
                                         {job.startDate} → {job.endDate || 'Present'}
                                     </span>
                                 </div>
-                                <p className="text-gray-500 mb-2" style={{ fontSize: '9pt' }}>
+                                <p className="text-gray-500 mb-2" style={{ fontSize: '11pt' }}>
                                     {safeString(job.name)}
                                 </p>
                                 {job.highlights && job.highlights.length > 0 && (
@@ -204,7 +204,7 @@ export function TechnicalEngineer({
                                                 key={j}
                                                 className="text-gray-600 relative"
                                                 style={{
-                                                    fontSize: '8.5pt',
+                                                    fontSize: '10.5pt',
                                                     listStyleType: 'disc',
                                                 }}
                                             >
@@ -225,7 +225,7 @@ export function TechnicalEngineer({
                     <h2
                         className="text-gray-700 mb-3 pb-1"
                         style={{
-                            fontSize: '9pt',
+                            fontSize: '14pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -240,7 +240,7 @@ export function TechnicalEngineer({
                                 <h3
                                     className="text-gray-900"
                                     style={{
-                                        fontSize: '10pt',
+                                        fontSize: '11pt',
                                         fontWeight: '600',
                                         fontFamily: "'Inter', -apple-system, sans-serif",
                                     }}
@@ -248,7 +248,7 @@ export function TechnicalEngineer({
                                     {safeString(project.name)}
                                 </h3>
                                 {project.description && (
-                                    <p className="text-gray-600 text-xs mb-1">{project.description}</p>
+                                    <p className="text-gray-600 mb-1" style={{ fontSize: '10.5pt' }}>{project.description}</p>
                                 )}
                                 {project.highlights && project.highlights.length > 0 && (
                                     <ul className="space-y-1 ps-4">
@@ -257,7 +257,7 @@ export function TechnicalEngineer({
                                                 key={j}
                                                 className="text-gray-600"
                                                 style={{
-                                                    fontSize: '8.5pt',
+                                                    fontSize: '10.5pt',
                                                     listStyleType: 'disc',
                                                 }}
                                             >
@@ -278,7 +278,7 @@ export function TechnicalEngineer({
                     <h2
                         className="text-gray-700 mb-3 pb-1"
                         style={{
-                            fontSize: '9pt',
+                            fontSize: '14pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -287,28 +287,56 @@ export function TechnicalEngineer({
                     >
                         {isRTL ? 'التعليم' : 'Education'}
                     </h2>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         {education.map((edu, i) => (
-                            <div key={i} className="flex justify-between items-baseline">
-                                <div>
-                                    <h3
-                                        className="text-gray-900"
-                                        style={{
-                                            fontSize: '10pt',
-                                            fontWeight: '600',
-                                            fontFamily: "'Inter', -apple-system, sans-serif",
-                                        }}
-                                    >
-                                        {safeString(edu.institution)}
-                                    </h3>
-                                    <p className="text-gray-500" style={{ fontSize: '9pt' }}>
-                                        {safeString(edu.studyType)}
-                                        {edu.area && ` — ${edu.area}`}
-                                    </p>
+                            <div key={i}>
+                                <div className="flex justify-between items-baseline">
+                                    <div>
+                                        <h3
+                                            className="text-gray-900"
+                                            style={{
+                                                fontSize: '10.5pt',
+                                                fontWeight: '600',
+                                                fontFamily: "'Inter', -apple-system, sans-serif",
+                                            }}
+                                        >
+                                            {safeString(edu.institution)}
+                                        </h3>
+                                        <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                                            {safeString(edu.studyType)}
+                                            {edu.area && ` — ${edu.area}`}
+                                        </p>
+                                        {edu.score && (
+                                            <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                                                GPA: {edu.score}
+                                            </p>
+                                        )}
+                                        {edu.courses && edu.courses.length > 0 && (
+                                            <p className="text-gray-500" style={{ fontSize: '10.5pt', marginTop: '2px' }}>
+                                                Relevant Coursework: {edu.courses.join(' · ')}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <span className="text-gray-500" style={{ fontSize: '10pt' }}>
+                                        {edu.endDate || edu.startDate}
+                                    </span>
                                 </div>
-                                <span className="text-gray-500" style={{ fontSize: '8.5pt' }}>
-                                    {edu.endDate || edu.startDate}
-                                </span>
+                                {edu.highlights && edu.highlights.length > 0 && (
+                                    <ul className="space-y-1 ps-4 mt-1">
+                                        {edu.highlights.map((h, j) => (
+                                            <li
+                                                key={j}
+                                                className="text-gray-600"
+                                                style={{
+                                                    fontSize: '10.5pt',
+                                                    listStyleType: 'disc',
+                                                }}
+                                            >
+                                                {h}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -321,7 +349,7 @@ export function TechnicalEngineer({
                     <h2
                         className="text-gray-700 mb-3 pb-1"
                         style={{
-                            fontSize: '9pt',
+                            fontSize: '14pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -337,7 +365,7 @@ export function TechnicalEngineer({
                                     <h3
                                         className="text-gray-900"
                                         style={{
-                                            fontSize: '10pt',
+                                            fontSize: '10.5pt',
                                             fontWeight: '600',
                                             fontFamily: "'Inter', -apple-system, sans-serif",
                                         }}
@@ -345,13 +373,13 @@ export function TechnicalEngineer({
                                         {safeString(cert.name)}
                                     </h3>
                                     {cert.issuer && (
-                                        <p className="text-gray-500" style={{ fontSize: '9pt' }}>
+                                        <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
                                             {cert.issuer}
                                         </p>
                                     )}
                                 </div>
                                 {cert.date && (
-                                    <span className="text-gray-500" style={{ fontSize: '8.5pt' }}>
+                                    <span className="text-gray-500" style={{ fontSize: '10pt' }}>
                                         {cert.date}
                                     </span>
                                 )}
@@ -367,7 +395,7 @@ export function TechnicalEngineer({
                     <h2
                         className="text-gray-700 mb-2 pb-1"
                         style={{
-                            fontSize: '9pt',
+                            fontSize: '14pt',
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -378,7 +406,7 @@ export function TechnicalEngineer({
                     </h2>
                     <div className="flex flex-wrap gap-3">
                         {languages.map((lang, i) => (
-                            <span key={i} className="text-gray-600" style={{ fontSize: '9pt' }}>
+                            <span key={i} className="text-gray-600" style={{ fontSize: '10.5pt' }}>
                                 <strong>{lang.language}</strong>: {lang.fluency}
                             </span>
                         ))}

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     ResumeSchema,
     OptimizeRequestSchema,
-    MatchRequestSchema,
+    MatchRequestSchema as _MatchRequestSchema,
     ParseResumeRequestSchema,
     validateResume,
     formatZodError

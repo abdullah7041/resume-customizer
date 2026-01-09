@@ -71,7 +71,6 @@ vi.mock('../../data/vision2030Skills', () => ({
 }));
 
 import { analyzeVision2030Alignment } from '../vision2030Analyzer';
-import type { Vision2030Analysis } from '../vision2030Analyzer';
 
 describe('Vision 2030 Analyzer', () => {
     beforeEach(() => {

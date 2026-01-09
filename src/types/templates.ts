@@ -7,7 +7,8 @@ import type { ResumeSchema } from './resume';
 export type TemplateId =
   | 'modern-professional'
   | 'classic-traditional'
-  | 'technical-engineer';
+  | 'technical-engineer'
+  | 'ats-optimized';
 
 /**
  * Template category for filtering
@@ -102,6 +103,39 @@ export interface OptimizationMetrics {
     topMatchedSkills: string[];
     detectedCareer: { nameEn: string; nameAr: string } | null;
   } | null;
+  // Gap analysis data from API
+  gapAnalysis?: {
+    requirement: string;
+    currentState: string;
+    severity: 'critical' | 'moderate' | 'minor';
+    recommendation: string;
+  }[];
+  // Keyword strategy from API
+  keywordStrategy?: {
+    mirroredPhrases?: string[];
+    structuralChanges?: string[];
+    hiddenMatches?: {
+      resumeTerm: string;
+      jdRequirement: string;
+      insight: string;
+    }[];
+  };
+  // Score breakdown from API
+  scoreBreakdown?: {
+    base_score: number;
+    skill_match_bonus: number;
+    keyword_coverage_bonus: number;
+    gap_penalties: number;
+    final_score: number;
+    score_explanation: string;
+  };
+}
+
+/**
+ * Display options for template rendering (user-adjustable)
+ */
+export interface DisplayOptions {
+  fontSize: number; // Scale factor: 1 = 100%, 0.9 = 90%, 1.1 = 110%
 }
 
 /**
@@ -123,6 +157,7 @@ export interface ResumeState {
   // View state
   showOptimized: boolean;
   selectedTemplate: TemplateId;
+  displayOptions: DisplayOptions;
 
   // Actions
   setOriginalResume: (resume: ResumeSchema) => void;
@@ -149,6 +184,9 @@ export interface ResumeState {
   getCachedAnalysis: (resumeText: string, jobDescription: string) => CachedAnalysis | null;
   setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>) => void;
   clearAnalysisCache: () => void;
+
+  // Display options actions
+  setDisplayOptions: (options: Partial<DisplayOptions>) => void;
 }
 
 /**

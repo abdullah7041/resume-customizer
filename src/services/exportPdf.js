@@ -291,7 +291,26 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
       }) : [],
       education: resumeDocument.education ? resumeDocument.education.map(edu => {
         if (typeof edu === 'string') return edu;
-        return `${edu.institution || ""} ${edu.date || ""}`;
+
+        // Build education entry with all fields
+        let entry = `${edu.institution || ""}`;
+        if (edu.studyType || edu.area) {
+          entry += ` - ${edu.studyType || ""}${edu.area ? ` in ${edu.area}` : ""}`;
+        }
+        if (edu.score) {
+          entry += ` | GPA: ${edu.score}`;
+        }
+        if (edu.date || edu.endDate) {
+          entry += ` (${edu.date || edu.endDate})`;
+        }
+        if (edu.courses && edu.courses.length > 0) {
+          entry += `\nCoursework: ${edu.courses.join(', ')}`;
+        }
+        if (edu.highlights && edu.highlights.length > 0) {
+          entry += `\n• ${edu.highlights.join('\n• ')}`;
+        }
+
+        return entry;
       }) : [],
       projects: resumeDocument.projects || [],
       contactLines: [] // We'll build contact manually

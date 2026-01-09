@@ -207,7 +207,7 @@ export default function FeaturesShowcase() {
     const [showAllFeatures, setShowAllFeatures] = useState(false);
 
     return (
-        <section className="py-22 px-4 sm:px-6 lg:px-8">
+        <section className="pt-0 pb-24 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 <SectionTitle
                     eyebrow={t("showcase.eyebrow")}

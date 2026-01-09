@@ -15,21 +15,14 @@ class Analytics {
      * Only initializes if the user has consented to analytics.
      */
     init() {
-        console.log('[Analytics] Init called. Token present:', !!MIXPANEL_TOKEN, '| Already initialized:', this.initialized);
-
         if (this.initialized || !MIXPANEL_TOKEN) {
-            if (!MIXPANEL_TOKEN) {
-                console.warn('[Analytics] ⚠️ VITE_MIXPANEL_TOKEN is not set. Analytics disabled.');
-            }
             return;
         }
 
         // Check if user has consented to analytics
         const consent = useConsentStore.getState();
-        console.log('[Analytics] Consent state:', { analytics: consent.analyticsConsent, hasConsented: consent.consentTimestamp !== null });
 
         if (!consent.analyticsConsent) {
-            console.log('[Analytics] ❌ User has not consented to analytics. Skipping init.');
             return;
         }
 
@@ -39,9 +32,6 @@ class Analytics {
             persistence: 'localStorage',
             ignore_dnt: false, // Respect Do Not Track
             opt_out_tracking_by_default: false,
-            loaded: () => {
-                console.log('[Analytics] Mixpanel loaded successfully.');
-            },
         });
 
         this.initialized = true;
@@ -53,9 +43,6 @@ class Analytics {
      */
     track(event: string, properties?: Record<string, unknown>) {
         if (!this.initialized) {
-            if (import.meta.env.DEV) {
-                console.log(`[Analytics] Skipped (not initialized): ${event}`, properties);
-            }
             return;
         }
 
@@ -64,10 +51,6 @@ class Analytics {
             timestamp: new Date().toISOString(),
             language: document.documentElement.lang || 'en',
         };
-
-        if (import.meta.env.DEV) {
-            console.log(`[Analytics] 📊 Tracking: ${event}`, eventData);
-        }
 
         mixpanel.track(event, eventData);
     }

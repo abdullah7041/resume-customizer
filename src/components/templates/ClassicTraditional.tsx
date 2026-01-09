@@ -37,7 +37,7 @@ export function ClassicTraditional({
         minHeight: A4_STYLES.minHeight,
         padding: '20mm 24mm',
         fontFamily: "'Georgia', 'Times New Roman', serif",
-        fontSize: '10pt',
+        fontSize: '10.5pt',
         lineHeight: '1.45',
       }}
       dir={isRTL ? 'rtl' : 'ltr'}
@@ -47,7 +47,7 @@ export function ClassicTraditional({
         <h1
           className="text-gray-900 mb-1"
           style={{
-            fontSize: '22pt',
+            fontSize: '24pt',
             fontWeight: '700',
             textTransform: 'uppercase',
             letterSpacing: '0.15em',
@@ -56,15 +56,15 @@ export function ClassicTraditional({
           {safeString(basics.name)}
         </h1>
         {basics.label && (
-          <p className="text-gray-600 mb-2" style={{ fontSize: '11pt', fontWeight: '500' }}>
+          <p className="text-gray-600 mb-2" style={{ fontSize: '12pt', fontWeight: '600' }}>
             {basics.label}
           </p>
         )}
-        <p className="text-gray-500 mb-1" style={{ fontSize: '9pt' }}>
+        <p className="text-gray-500 mb-1" style={{ fontSize: '10pt' }}>
           {[basics.email, basics.phone, basics.location?.city].filter(Boolean).join('  |  ')}
         </p>
         {(linkedInUrl || portfolioUrl) && (
-          <p className="text-gray-400" style={{ fontSize: '8.5pt' }}>
+          <p className="text-gray-400" style={{ fontSize: '10pt' }}>
             {[
               linkedInUrl?.replace('https://', '').replace('www.', ''),
               portfolioUrl?.replace('https://', '').replace('www.', ''),
@@ -79,7 +79,7 @@ export function ClassicTraditional({
           <h2
             className="text-gray-900 mb-2 pb-1"
             style={{
-              fontSize: '11pt',
+              fontSize: '14pt',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -90,7 +90,7 @@ export function ClassicTraditional({
           </h2>
           <p
             className="text-gray-700 italic text-justify"
-            style={{ lineHeight: '1.55' }}
+            style={{ fontSize: '10.5pt', lineHeight: '1.55' }}
           >
             {basics.summary}
           </p>
@@ -103,7 +103,7 @@ export function ClassicTraditional({
           <h2
             className="text-gray-900 mb-3 pb-1"
             style={{
-              fontSize: '11pt',
+              fontSize: '14pt',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -116,14 +116,14 @@ export function ClassicTraditional({
             {work.map((job, i) => (
               <div key={i}>
                 <div className="flex justify-between items-baseline mb-1">
-                  <h3 className="text-gray-900" style={{ fontSize: '10.5pt', fontWeight: '700' }}>
+                  <h3 className="text-gray-900" style={{ fontSize: '12pt', fontWeight: '700' }}>
                     {safeString(job.position)}
                   </h3>
-                  <span className="text-gray-500 italic" style={{ fontSize: '9pt' }}>
+                  <span className="text-gray-500 italic" style={{ fontSize: '10pt' }}>
                     {job.startDate} – {job.endDate || 'Present'}
                   </span>
                 </div>
-                <p className="text-gray-600 italic mb-2" style={{ fontSize: '10pt' }}>
+                <p className="text-gray-600 italic mb-2" style={{ fontSize: '11pt' }}>
                   {safeString(job.name)}
                 </p>
                 {job.highlights && job.highlights.length > 0 && (
@@ -133,7 +133,7 @@ export function ClassicTraditional({
                         key={j}
                         className="text-gray-700"
                         style={{
-                          fontSize: '9.5pt',
+                          fontSize: '10.5pt',
                           listStyleType: 'none',
                           position: 'relative',
                           paddingInlineStart: '12px',
@@ -164,7 +164,7 @@ export function ClassicTraditional({
           <h2
             className="text-gray-900 mb-3 pb-1"
             style={{
-              fontSize: '11pt',
+              fontSize: '14pt',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -173,21 +173,59 @@ export function ClassicTraditional({
           >
             {isRTL ? 'التعليم' : 'Education'}
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {education.map((edu, i) => (
-              <div key={i} className="flex justify-between">
-                <div>
-                  <h3 className="text-gray-900" style={{ fontSize: '10.5pt', fontWeight: '700' }}>
-                    {safeString(edu.studyType)}
-                    {edu.area && ` in ${edu.area}`}
-                  </h3>
-                  <p className="text-gray-600 italic" style={{ fontSize: '10pt' }}>
-                    {safeString(edu.institution)}
-                  </p>
+              <div key={i}>
+                <div className="flex justify-between">
+                  <div>
+                    <h3 className="text-gray-900" style={{ fontSize: '10.5pt', fontWeight: '700' }}>
+                      {safeString(edu.studyType)}
+                      {edu.area && ` in ${edu.area}`}
+                    </h3>
+                    <p className="text-gray-600 italic" style={{ fontSize: '10.5pt' }}>
+                      {safeString(edu.institution)}
+                    </p>
+                    {edu.score && (
+                      <p className="text-gray-600" style={{ fontSize: '10.5pt' }}>
+                        GPA: {edu.score}
+                      </p>
+                    )}
+                    {edu.courses && edu.courses.length > 0 && (
+                      <p className="text-gray-600 italic" style={{ fontSize: '10.5pt', marginTop: '2px' }}>
+                        Relevant Coursework: {edu.courses.join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-gray-500 italic" style={{ fontSize: '10pt' }}>
+                    {edu.endDate || edu.startDate}
+                  </span>
                 </div>
-                <span className="text-gray-500 italic" style={{ fontSize: '9pt' }}>
-                  {edu.endDate || edu.startDate}
-                </span>
+                {edu.highlights && edu.highlights.length > 0 && (
+                  <ul className="space-y-1 ps-4 mt-1">
+                    {edu.highlights.map((h, j) => (
+                      <li
+                        key={j}
+                        className="text-gray-700"
+                        style={{
+                          fontSize: '10.5pt',
+                          listStyleType: 'none',
+                          position: 'relative',
+                          paddingInlineStart: '12px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: 'absolute',
+                            insetInlineStart: '0',
+                          }}
+                        >
+                          –
+                        </span>
+                        {h}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>
@@ -200,7 +238,7 @@ export function ClassicTraditional({
           <h2
             className="text-gray-900 mb-3 pb-1"
             style={{
-              fontSize: '11pt',
+              fontSize: '14pt',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -209,7 +247,7 @@ export function ClassicTraditional({
           >
             Skills & Expertise
           </h2>
-          <div className="text-gray-600" style={{ fontSize: '9.5pt', lineHeight: '1.6' }}>
+          <div className="text-gray-600" style={{ fontSize: '10.5pt', lineHeight: '1.6' }}>
             {skills.map((skillItem, i) => {
               // Handle both string and object formats
               if (typeof skillItem === 'string') {
@@ -239,7 +277,7 @@ export function ClassicTraditional({
           <h2
             className="text-gray-900 mb-3 pb-1"
             style={{
-              fontSize: '11pt',
+              fontSize: '14pt',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -251,7 +289,7 @@ export function ClassicTraditional({
           <div className="space-y-3">
             {projects.map((project, i) => (
               <div key={i}>
-                <h3 className="text-gray-900" style={{ fontSize: '10.5pt', fontWeight: '700' }}>
+                <h3 className="text-gray-900" style={{ fontSize: '11pt', fontWeight: '700' }}>
                   {safeString(project.name)}
                 </h3>
                 {project.highlights && project.highlights.length > 0 && (
@@ -261,7 +299,7 @@ export function ClassicTraditional({
                         key={j}
                         className="text-gray-700"
                         style={{
-                          fontSize: '9.5pt',
+                          fontSize: '10.5pt',
                           listStyleType: 'none',
                           position: 'relative',
                           paddingInlineStart: '12px',
@@ -292,7 +330,7 @@ export function ClassicTraditional({
           <h2
             className="text-gray-900 mb-3 pb-1"
             style={{
-              fontSize: '11pt',
+              fontSize: '14pt',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -309,13 +347,13 @@ export function ClassicTraditional({
                     {safeString(cert.name)}
                   </h3>
                   {cert.issuer && (
-                    <p className="text-gray-600" style={{ fontSize: '9.5pt' }}>
+                    <p className="text-gray-600" style={{ fontSize: '10.5pt' }}>
                       {cert.issuer}
                     </p>
                   )}
                 </div>
                 {cert.date && (
-                  <span className="text-gray-500 italic" style={{ fontSize: '9pt' }}>
+                  <span className="text-gray-500 italic" style={{ fontSize: '10pt' }}>
                     {cert.date}
                   </span>
                 )}
@@ -331,7 +369,7 @@ export function ClassicTraditional({
           <h2
             className="text-gray-900 mb-2 pb-1"
             style={{
-              fontSize: '11pt',
+              fontSize: '14pt',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -340,7 +378,7 @@ export function ClassicTraditional({
           >
             {isRTL ? 'اللغات' : 'Languages'}
           </h2>
-          <p className="text-gray-600" style={{ fontSize: '9.5pt' }}>
+          <p className="text-gray-600" style={{ fontSize: '10.5pt' }}>
             {languages.map((lang) => `${lang.language} (${lang.fluency})`).join(', ')}
           </p>
         </section>

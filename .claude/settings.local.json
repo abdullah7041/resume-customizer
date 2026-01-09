@@ -1,4 +1,27 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npx eslint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(tree:*)",
+      "Bash(test:*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__list_migrations",
+      "Bash(npm run quality:check:*)",
+      "Bash(npm run test:*)",
+      "Bash(dir:*)",
+      "Bash(npm uninstall:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(npm run lint:*)",
+      "Bash(npm run type:check:*)",
+      "Bash(gh pr list:*)",
+      "Bash(git diff:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
   ]

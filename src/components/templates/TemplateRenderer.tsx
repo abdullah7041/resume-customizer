@@ -339,24 +339,27 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
   // Fallback to userData if merge failed (e.g., missing basics)
   const finalData = mergedData || userData;
 
-  // Debug: Log data structure for template
-  console.log('[TemplateRenderer] Template:', template.id);
-  console.log('[TemplateRenderer] finalData has skills:', (finalData as any)?.skills?.length || 0);
-  console.log('[TemplateRenderer] finalData.basics:', !!(finalData as any)?.basics);
-
   // Use registry to get the correct component by template ID
   const templateId = template.id as TemplateId;
   const TemplateComponent = getTemplate(templateId);
 
   // Check if this is a known template from the registry
   // If so, use the proper component with the resume prop structure
-  if (['modern-professional', 'classic-traditional', 'technical-engineer'].includes(template.id)) {
+  if (['modern-professional', 'classic-traditional', 'technical-engineer', 'ats-optimized'].includes(template.id)) {
     // Registry templates expect { resume } prop
-    return <TemplateComponent resume={finalData} />;
+    return (
+      <div data-resume-preview>
+        <TemplateComponent resume={finalData} />
+      </div>
+    );
   }
 
   // Fallback to generic dynamic renderer for custom/unknown templates
-  return <DynamicTemplateRenderer template={template} userData={finalData} />;
+  return (
+    <div data-resume-preview>
+      <DynamicTemplateRenderer template={template} userData={finalData} />
+    </div>
+  );
 }
 
 

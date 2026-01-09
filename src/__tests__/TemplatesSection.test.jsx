@@ -22,6 +22,8 @@ vi.mock('../lib/stores/resumeStore', () => ({
         showOptimized: false,
         getActiveResume: vi.fn(() => null),
         setSelectedTemplate: vi.fn(),
+        displayOptions: { fontSize: 1 },
+        setDisplayOptions: vi.fn(),
     }),
 }));
 
@@ -45,12 +47,13 @@ vi.mock('../components/templates/TemplateRenderer', () => ({
     ),
 }));
 
-// Mock PDF imports
-vi.mock('@react-pdf/renderer', () => ({
-    pdf: vi.fn(() => ({
-        toBlob: vi.fn(() => Promise.resolve(new Blob())),
-    })),
-}));
+// Mock fetch for PDF generation (server-side Puppeteer)
+globalThis.fetch = vi.fn(() =>
+    Promise.resolve({
+        ok: true,
+        blob: () => Promise.resolve(new Blob(['pdf content'], { type: 'application/pdf' })),
+    })
+);
 
 const createMatchMedia = () => {
     const listeners = new Set();

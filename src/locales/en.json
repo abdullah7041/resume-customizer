@@ -365,7 +365,34 @@
     "applyAll": "Apply All",
     "original": "Original",
     "optimized": "Optimized",
-    "generating": "Generating optimizations..."
+    "generating": "Generating optimizations...",
+    "gapAnalysis": {
+      "title": "Gap Analysis",
+      "critical": "Critical Gap",
+      "moderate": "Moderate Gap",
+      "minor": "Minor Gap",
+      "currentState": "Current State",
+      "recommendation": "Recommendation"
+    },
+    "scoreBreakdown": {
+      "title": "Score Breakdown",
+      "before": "Current",
+      "after": "Optimized",
+      "experienceMatch": "Experience Match",
+      "skillCoverage": "Skill Coverage",
+      "keywordMatch": "Keyword Match",
+      "gapPenalties": "Gap Penalties",
+      "finalScore": "Final Score"
+    },
+    "hiddenMatches": {
+      "title": "Hidden Advantages",
+      "description": "Skills you have that match job requirements using different terminology:"
+    },
+    "mirroredKeywords": {
+      "title": "JD Phrases Injected",
+      "description": "These exact phrases from the job description were woven into your optimized resume:",
+      "structuralChanges": "Strategic Reorganization"
+    }
   },
   "export": {
     "title": "Export Resume",
@@ -941,5 +968,13 @@
     },
     "viewAllFeatures": "View all 5 features",
     "showLess": "Show less"
+  },
+  "beta": {
+    "title": "Early Access",
+    "subtitle": "Enter your beta access code to continue",
+    "placeholder": "Enter access code",
+    "submit": "Continue",
+    "invalidCode": "Invalid access code. Please try again.",
+    "welcome": "Welcome to the Beta!"
   }
 }

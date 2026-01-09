@@ -4,13 +4,15 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3 } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
 
 import TemplateRenderer from "../templates/TemplateRenderer";
 import { GlassButton } from "../ui/GlassButton";
+import { LoadingMessages } from "../LoadingMessages";
+import { ManualDataEditor } from "../ui/ManualDataEditor";
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -66,6 +68,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isHoveringSelector, setIsHoveringSelector] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   // Get resume data from store - subscribe to all relevant state for reactivity
   const {
@@ -86,12 +89,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const useStoreData = hasAppliedOptimizations || showOptimized || !propResumeData;
 
   // Compute active resume reactively
+  // Note: optimizations and showOptimized are intentionally included to trigger re-computation
   const storeActiveResume = useMemo(() => {
     if (!useStoreData) return null;
-
-    const result = getActiveResume();
-    console.log('[TemplatesSection] Computing activeResume from STORE, showOptimized:', showOptimized, 'appliedCount:', optimizations.filter(o => o.applied).length);
-    return result;
+    return getActiveResume();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- optimizations & showOptimized trigger re-render when store changes
   }, [getActiveResume, showOptimized, optimizations, useStoreData]);
 
   // Determine which resume to use
@@ -99,9 +101,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     ? (storeActiveResume || storeOriginalResume)
     : propResumeData;
   const hasRealResume = Boolean(resumeData?.basics?.name);
-
-  // Debug log the data source
-  console.log('[TemplatesSection] Data source:', useStoreData ? 'STORE' : 'PROPS', 'hasRealResume:', hasRealResume);
 
   // Filter to only active templates (Modern, Classic, Technical)
   const activeTemplates = useMemo(() => {
@@ -111,22 +110,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Merged data for display - reactive to all state changes
   const displayData = useMemo((): Partial<ResumeSchema> => {
-    const data = useStoreData
-      ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
-      : (propResumeData || SAMPLE_RESUME);
-
-    console.log('[TemplatesSection] displayData headline:', data?.basics?.label);
-    return data;
-  }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
-
-  // Data for PDF download - simplified, uses determined source
-  const mergedDownloadData = useMemo((): Partial<ResumeSchema> => {
     return useStoreData
       ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
       : (propResumeData || SAMPLE_RESUME);
   }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
 
-  // Download PDF using @react-pdf/renderer (loaded dynamically to reduce initial bundle)
+  // Download PDF using server-side Puppeteer (Netlify function)
+  // Note: We now send pre-rendered HTML from the preview instead of resumeData
   const handleDownloadPdf = async () => {
     if (isDownloading) return;
 
@@ -140,31 +130,36 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     const filename = `resume-${selectedTemplate.id}-${new Date().toISOString().split('T')[0]}.pdf`;
 
     try {
-      // Dynamic import @react-pdf/renderer
-      const { pdf } = await import("@react-pdf/renderer");
-
-      // Dynamic import based on selected template
-      let PDFComponent;
-      switch (selectedTemplate.id) {
-        case 'classic-traditional':
-          PDFComponent = (await import('../templates/pdf/ClassicTraditionalPDF')).default;
-          break;
-        case 'technical-engineer':
-          PDFComponent = (await import('../templates/pdf/TechnicalEngineerPDF')).default;
-          break;
-        case 'modern-professional':
-        default:
-          PDFComponent = (await import('../templates/pdf/ModernProfessionalPDF')).default;
-          break;
+      // Capture rendered HTML from preview container
+      const previewElement = document.querySelector('[data-resume-preview]');
+      if (!previewElement) {
+        throw new Error('Preview not found - unable to capture HTML');
       }
 
-      const blob = await pdf(<PDFComponent userData={mergedDownloadData} />).toBlob();
+      // Get fully rendered HTML including computed styles
+      const html = previewElement.outerHTML;
+
+      const response = await fetch('/.netlify/functions/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          html,
+          templateId: selectedTemplate.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('PDF generation failed');
+      }
+
+      const blob = await response.blob();
       saveAs(blob, filename);
 
       // Track PDF export
       analytics.trackExport(selectedTemplate.id, 'pdf');
     } catch (err) {
       console.error("PDF Download failed:", err);
+      // TODO: Show user-facing error toast
     } finally {
       setIsDownloading(false);
     }
@@ -197,16 +192,28 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             </p>
           </div>
 
-          <GlassButton
-            onClick={handleDownloadPdf}
-            variant="primary"
-            disabled={!hasRealResume || isDownloading}
-            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-lg"
-          >
-            {isDownloading ? t('sections.templates.generating', 'Generating...') : (
-              <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
-            )}
-          </GlassButton>
+          <div className="flex gap-3">
+            <GlassButton
+              onClick={() => setIsEditorOpen(true)}
+              variant="secondary"
+              disabled={!hasRealResume}
+              className="border border-white/20"
+            >
+              <Edit3 className="w-4 h-4 me-2" />
+              {t('sections.templates.editData', 'Edit Data')}
+            </GlassButton>
+
+            <GlassButton
+              onClick={handleDownloadPdf}
+              variant="primary"
+              disabled={!hasRealResume || isDownloading}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-lg"
+            >
+              {isDownloading ? t('sections.templates.generating', 'Generating...') : (
+                <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
+              )}
+            </GlassButton>
+          </div>
         </div>
 
         {/* No Resume Warning */}
@@ -238,7 +245,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           {/* Floating Template Selector - Sticky at bottom of scroll container */}
           <div
             className={cn(
-              "sticky bottom-4 md:bottom-4 left-1/2 -translate-x-1/2 z-50 w-fit mx-auto",
+              "sticky bottom-4 md:bottom-4 inset-x-0 z-50 w-fit mx-auto",
               "transition-all duration-300 ease-out",
               isHoveringSelector ? "opacity-100 scale-100" : "opacity-60 md:opacity-40 scale-100 md:scale-95 hover:opacity-100 hover:scale-100"
             )}
@@ -299,7 +306,22 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             </p>
           </div>
         </div>
+
+        {/* PDF Generation Loading Overlay */}
+        {isDownloading && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
+              <LoadingMessages type="pdf" estimatedTime={10000} />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Manual Data Editor Modal */}
+      <ManualDataEditor
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+      />
     </div>
   );
 }

@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDirection } from '../providers/DirectionProvider';
 import { Vision2030Analysis } from '../../lib/utils/vision2030Analyzer';
 import { TrendingUp, Target, Lightbulb, ChevronRight } from 'lucide-react';
 import { SectorIcon } from '../../lib/utils/vision2030Icons';
+import { Vision2030CalculationModal } from '../ui/Vision2030CalculationModal';
 
 interface Vision2030ScoreProps {
   analysis: Vision2030Analysis;
@@ -12,6 +14,7 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
   const { i18n } = useTranslation();
   const { isRTL } = useDirection();
   const isArabic = i18n.language === 'ar';
+  const [showCalculationHelp, setShowCalculationHelp] = useState(false);
 
   const getScoreColor = (score: number) => {
     if (score >= 70) return 'text-emerald-600 bg-emerald-100';
@@ -47,8 +50,23 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
       {/* Overall Score */}
       <div className="bg-white rounded-xl p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-gray-600">
+          <span className="text-gray-600 flex items-center gap-2">
             {isArabic ? 'النتيجة الإجمالية' : 'Overall Score'}
+            <button
+              type="button"
+              onClick={() => setShowCalculationHelp(true)}
+              className="inline-flex items-center justify-center w-5 h-5 ml-2 text-xs font-bold text-emerald-700 bg-emerald-100 rounded-full hover:bg-emerald-200 hover:text-emerald-900 transition-colors ring-1 ring-emerald-300"
+              title={isArabic
+                ? 'كيف يتم حساب النتيجة؟'
+                : 'How is this score calculated?'
+              }
+              aria-label={isArabic
+                ? 'عرض تفاصيل الحساب'
+                : 'Show calculation details'
+              }
+            >
+              ?
+            </button>
           </span>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(analysis.overallScore)}`}>
             {getScoreLabel(analysis.overallScore)}
@@ -161,6 +179,13 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
           </p>
         </div>
       </div>
+
+      {/* Calculation explanation modal */}
+      <Vision2030CalculationModal
+        isOpen={showCalculationHelp}
+        onClose={() => setShowCalculationHelp(false)}
+        isArabic={isArabic}
+      />
     </div>
   );
 }

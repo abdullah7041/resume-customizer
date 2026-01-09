@@ -43,22 +43,6 @@ export default defineConfig({
               return "vendor-state";
             }
 
-            // ===== PDF RENDERING - Keep all @react-pdf in one chunk =====
-            // IMPORTANT: @react-pdf packages have circular dependencies
-            // Splitting them causes "Cannot access before initialization" errors
-            if (
-              id.includes("@react-pdf") ||
-              id.includes("fontkit") ||
-              id.includes("restructure") ||
-              id.includes("unicode-trie") ||
-              id.includes("dfa")
-            ) {
-              return "vendor-pdf";
-            }
-            if (id.includes("pako") || id.includes("brotli") || id.includes("crypto-js")) {
-              return "vendor-compression";
-            }
-
             // ===== SUPABASE - lazy load for auth =====
             if (id.includes("@supabase")) {
               return "vendor-supabase";
@@ -124,20 +108,8 @@ export default defineConfig({
       "react-dom",
       "zustand",
       "base64-js",
-      // CommonJS dependencies for @react-pdf/renderer
-      "unicode-trie",
-      "pako",
-      "fontkit",
-      "restructure",
-      "brotli",
-      "crypto-js",
-      "png-js",
-      "dfa",
-      // Include react-pdf for stable dynamic imports
-      "@react-pdf/renderer",
     ],
     esbuildOptions: {
-      // Handle CommonJS modules for react-pdf dependencies
       define: {
         global: "globalThis",
       },

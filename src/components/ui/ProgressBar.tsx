@@ -2,12 +2,6 @@
 // DEPRECATED: This component is not currently used. It was designed for a React Router-based multi-page flow.
 // The app uses a single-page layout instead.
 
-const _steps = [
-  { path: "/resume", label: "Resume" },
-  { path: "/job", label: "Job" },
-  { path: "/results", label: "Results" },
-];
-
 export default function ProgressBar() {
   // TODO: Implement this when/if multi-page routing is added
   return null;
