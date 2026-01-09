@@ -33,9 +33,22 @@ export default defineConfig({
       output: {
         manualChunks(id, { getModuleInfo }) {
           if (id.includes("node_modules")) {
+            // ===== REACT-I18NEXT - MUST be with React =====
+            // IMPORTANT: react-i18next uses React.createContext internally
+            // If loaded before React, createContext will be undefined
+            // This MUST come before the generic react check below
+            if (id.includes("react-i18next")) {
+              return "vendor-react";
+            }
+
             // ===== REACT CORE (loads immediately) =====
             if (id.includes("/react-dom/") || id.includes("/react/")) {
               return "vendor-react";
+            }
+
+            // ===== I18N (core i18next without react bindings) =====
+            if (id.includes("i18next")) {
+              return "vendor-i18n";
             }
 
             // ===== STATE MANAGEMENT =====
@@ -68,11 +81,6 @@ export default defineConfig({
             // Splitting them causes "Cannot access before initialization" errors
             if (id.includes("@sentry")) {
               return "vendor-sentry";
-            }
-
-            // ===== I18N =====
-            if (id.includes("i18next") || id.includes("react-i18next")) {
-              return "vendor-i18n";
             }
 
             // ===== OTHER COMMON DEPS =====
