@@ -137,6 +137,13 @@ export interface OptimizationMetrics {
       insight: string;
     }[];
   };
+  // Category scores from API
+  categoryScores?: {
+    hard_skills?: { score: number; max: number; reasoning: string };
+    experience?: { score: number; max: number; reasoning: string };
+    education?: { score: number; max: number; reasoning: string };
+    soft_skills?: { score: number; max: number; reasoning: string };
+  } | null;
   // Score breakdown from API
   scoreBreakdown?: {
     base_score: number;

@@ -162,8 +162,23 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       sections: [...new Set(cards.map(c => c.section))],
     });
 
-    // Calculate projected score improvement
-    const beforeScore = 55; // Default baseline score
+    // Use AI-calculated match score, or calculate from category_scores as fallback
+    let beforeScore = optimization?.match_score;
+
+    // Fallback: Calculate from category_scores if match_score is missing
+    if (typeof beforeScore !== 'number' && optimization?.category_scores) {
+      const cs = optimization.category_scores;
+      beforeScore = (cs.hard_skills?.score || 0) +
+        (cs.experience?.score || 0) +
+        (cs.education?.score || 0) +
+        (cs.soft_skills?.score || 0);
+      console.log('[optimize] Calculated match_score from category_scores:', beforeScore);
+    }
+
+    if (typeof beforeScore !== 'number') {
+      console.error('[optimize] AI did not return match_score or category_scores');
+      throw new Error('AI optimization failed to calculate match score');
+    }
 
     // Score improvement logic:
     // - Base: +3% per optimization card (capped at +20%)
@@ -203,14 +218,21 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
           matchedKeywords: matchedKeywords.slice(0, 15),
           reasoning: null,
         },
-        // Gap Analysis - simplified (not returned by optimizeResume)
-        gapAnalysis: [],
+        // Gap Analysis - from AI response
+        gapAnalysis: (optimization?.gap_analysis || []).map((gap: any) => ({
+          requirement: gap.requirement || '',
+          currentState: gap.current_state || '',
+          severity: gap.gap_severity || 'minor',
+          recommendation: gap.recommendation || ''
+        })),
         // Keyword Strategy - simplified (not returned by optimizeResume)
         keywordStrategy: {
           mirroredPhrases: [],
           structuralChanges: [],
           hiddenMatches: []
         },
+        // Category Scores - NEW
+        categoryScores: optimization?.category_scores || null,
         // Score Breakdown - simplified (not returned by optimizeResume)
         scoreBreakdown: null,
         source: "gemini",

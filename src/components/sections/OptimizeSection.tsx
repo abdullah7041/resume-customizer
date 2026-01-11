@@ -296,6 +296,13 @@ export function OptimizeSection({
       ? getCachedAnalysis(resumeText, jobDescription)
       : null;
 
+    console.log('[OptimizeSection] Cache lookup:', {
+      hasResumeText: !!resumeText,
+      hasJobDescription: !!jobDescription,
+      cachedScore: cachedAnalysis?.score,
+      fallbackScore: optimizationMetrics.beforeScore
+    });
+
     // Priority: 1. Cached match analysis score, 2. API-provided score, 3. Resume meta, 4. Default 55
     const beforeScore = cachedAnalysis?.score ??
       optimizationMetrics.beforeScore ??
@@ -493,6 +500,13 @@ export function OptimizeSection({
       if (data.scoreBreakdown) {
         setOptimizationMetrics({
           scoreBreakdown: data.scoreBreakdown,
+        });
+      }
+
+      // Capture category scores from API response
+      if (data.categoryScores) {
+        setOptimizationMetrics({
+          categoryScores: data.categoryScores,
         });
       }
 

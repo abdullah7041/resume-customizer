@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -878,56 +878,136 @@ CRITICAL REMINDERS:
  * @returns {Promise<object>} - Optimization suggestions with original and improved content.
  */
 export async function optimizeResume(resumeText, jobDescription) {
-  const selectedModel = getModel('flash');
 
-  const prompt = `
-You are an expert resume optimizer. Analyze this resume against the job description.
+  // Define JSON schema for guaranteed structured output
+  const optimizeSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+      match_score: {
+        type: SchemaType.NUMBER,
+        description: "Overall match score 0-100"
+      },
+      category_scores: {
+        type: SchemaType.OBJECT,
+        properties: {
+          hard_skills: {
+            type: SchemaType.OBJECT,
+            properties: {
+              score: { type: SchemaType.NUMBER },
+              max: { type: SchemaType.NUMBER },
+              reasoning: { type: SchemaType.STRING }
+            },
+            required: ["score", "max", "reasoning"]
+          },
+          experience: {
+            type: SchemaType.OBJECT,
+            properties: {
+              score: { type: SchemaType.NUMBER },
+              max: { type: SchemaType.NUMBER },
+              reasoning: { type: SchemaType.STRING }
+            },
+            required: ["score", "max", "reasoning"]
+          },
+          education: {
+            type: SchemaType.OBJECT,
+            properties: {
+              score: { type: SchemaType.NUMBER },
+              max: { type: SchemaType.NUMBER },
+              reasoning: { type: SchemaType.STRING }
+            },
+            required: ["score", "max", "reasoning"]
+          },
+          soft_skills: {
+            type: SchemaType.OBJECT,
+            properties: {
+              score: { type: SchemaType.NUMBER },
+              max: { type: SchemaType.NUMBER },
+              reasoning: { type: SchemaType.STRING }
+            },
+            required: ["score", "max", "reasoning"]
+          }
+        },
+        required: ["hard_skills", "experience", "education", "soft_skills"]
+      },
+      gap_analysis: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.OBJECT,
+          properties: {
+            requirement: { type: SchemaType.STRING },
+            current_state: { type: SchemaType.STRING },
+            gap_severity: { type: SchemaType.STRING },
+            recommendation: { type: SchemaType.STRING }
+          },
+          required: ["requirement", "current_state", "gap_severity", "recommendation"]
+        }
+      },
+      original_headline: { type: SchemaType.STRING },
+      suggested_headline: { type: SchemaType.STRING },
+      original_summary: { type: SchemaType.STRING },
+      summary_rewrite: { type: SchemaType.STRING },
+      bullet_improvements: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.OBJECT,
+          properties: {
+            original: { type: SchemaType.STRING },
+            improved: { type: SchemaType.STRING },
+            issue: { type: SchemaType.STRING },
+            rationale: { type: SchemaType.STRING }
+          },
+          required: ["original", "improved", "issue", "rationale"]
+        }
+      },
+      missing_keywords: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING }
+      },
+      keywords_to_keep: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING }
+      },
+      keywords_to_avoid: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING }
+      }
+    },
+    required: ["match_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline",
+      "original_summary", "summary_rewrite", "bullet_improvements", "missing_keywords",
+      "keywords_to_keep", "keywords_to_avoid"]
+  };
 
-## JOB DESCRIPTION:
+  const prompt = `Analyze this resume against the job description and provide optimization suggestions.
+
+RULES:
+1. Copy EXACT text for "original" fields - no paraphrasing
+2. Provide 3-5 bullet improvements
+3. Provide 4+ gap analysis items
+4. Calculate match_score as sum of category scores
+
+JOB DESCRIPTION:
 ${jobDescription}
 
-## RESUME:
-${resumeText}
+RESUME:
+${resumeText}`;
 
-## CRITICAL RULES:
-1. For ALL "original" fields: COPY THE EXACT TEXT from the resume - NO paraphrasing
-2. For "improved" fields: Your enhanced version with metrics/action verbs
-3. Return ONLY the JSON structure below - no markdown, no explanations
-
-## REQUIRED OUTPUT:
-{
-  "original_headline": "<exact headline from resume or empty string>",
-  "suggested_headline": "<your improved headline aligned with JD>",
-  "original_summary": "<exact summary from resume or empty string>",
-  "summary_rewrite": "<your improved summary>",
-  "bullet_improvements": [
-    {
-      "original": "<EXACT bullet text from resume>",
-      "improved": "<your enhanced version>",
-      "issue": "<what's weak>",
-      "rationale": "<why yours is better>"
-    }
-  ],
-  "missing_keywords": ["<keyword1>", "<keyword2>"],
-  "keywords_to_keep": ["<keyword1>", "<keyword2>"],
-  "keywords_to_avoid": ["<keyword1>", "<keyword2>"]
-}
-
-Provide 3-5 bullet improvements. Focus on the weakest bullets first.
-`;
+  // Create model with schema at model level (per Context7 docs)
+  const modelWithSchema = genAI.getGenerativeModel({
+    model: MODELS.flash,
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 4096,
+      responseMimeType: "application/json",
+      responseSchema: optimizeSchema,  // Schema at model level - guarantees valid JSON
+    },
+  });
 
   try {
-    const result = await selectedModel.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 2048,  // Reduced for speed
-        topP: 0.95,
-        topK: 1,
-      }
-    });
+    const result = await modelWithSchema.generateContent(prompt);
 
-    return sanitizeAndParseJSON(result.response.text());
+    const text = result.response.text();
+    console.log(`[Gemini] Optimize response length: ${text.length} chars`);
+    return JSON.parse(text);
   } catch (error) {
     console.error("[Gemini] Error in optimizeResume:", error);
     throw error;
@@ -942,53 +1022,101 @@ Provide 3-5 bullet improvements. Focus on the weakest bullets first.
  * @returns {Promise<object>} - Match score, keywords, and reasoning.
  */
 export async function processMatchOnly(resumeText, jobDescription) {
-  const selectedModel = getModel('flash');
   try {
     console.log(`[Gemini] Fast match analysis with ${MODELS.flash}`);
 
-    const prompt = `
-Analyze this resume against the job description and return a match score.
+    // Define JSON schema for guaranteed structured output
+    const matchSchema = {
+      type: SchemaType.OBJECT,
+      properties: {
+        score: {
+          type: SchemaType.NUMBER,
+          description: "Overall match score 0-100"
+        },
+        categoryScores: {
+          type: SchemaType.OBJECT,
+          properties: {
+            hard_skills: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.NUMBER },
+                max: { type: SchemaType.NUMBER },
+                reasoning: { type: SchemaType.STRING }
+              },
+              required: ["score", "max", "reasoning"]
+            },
+            experience: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.NUMBER },
+                max: { type: SchemaType.NUMBER },
+                reasoning: { type: SchemaType.STRING }
+              },
+              required: ["score", "max", "reasoning"]
+            },
+            education: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.NUMBER },
+                max: { type: SchemaType.NUMBER },
+                reasoning: { type: SchemaType.STRING }
+              },
+              required: ["score", "max", "reasoning"]
+            },
+            soft_skills: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.NUMBER },
+                max: { type: SchemaType.NUMBER },
+                reasoning: { type: SchemaType.STRING }
+              },
+              required: ["score", "max", "reasoning"]
+            }
+          },
+          required: ["hard_skills", "experience", "education", "soft_skills"]
+        },
+        strongMatches: {
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING }
+        },
+        missingKeywords: {
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING }
+        },
+        reasoning: {
+          type: SchemaType.STRING
+        }
+      },
+      required: ["score", "categoryScores", "strongMatches", "missingKeywords", "reasoning"]
+    };
+
+    // Create model with schema at model level (per Context7 docs)
+    const modelWithSchema = genAI.getGenerativeModel({
+      model: MODELS.flash,
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+        responseSchema: matchSchema,  // Schema at model level - guarantees valid JSON
+      },
+    });
+
+    const prompt = `Analyze this resume against the job description. 
+Calculate score as: hard_skills (0-40) + experience (0-30) + education (0-15) + soft_skills (0-15).
 
 Job Description:
 ${jobDescription}
 
 Resume:
-${resumeText}
+${resumeText}`;
 
-Return ONLY this JSON structure (no other text):
-{
-  "score": <number 0-100, precise like 73, 41, 88 - avoid round numbers>,
-  "categoryScores": {
-    "hard_skills": {"score": <0-40>, "max": 40, "reasoning": "<brief>"},
-    "experience": {"score": <0-30>, "max": 30, "reasoning": "<brief>"},
-    "education": {"score": <0-15>, "max": 15, "reasoning": "<brief>"},
-    "soft_skills": {"score": <0-15>, "max": 15, "reasoning": "<brief>"}
-  },
-  "strongMatches": [<up to 10 skills/keywords matching JD>],
-  "missingKeywords": [<up to 10 missing skills/keywords>],
-  "reasoning": "<1-2 sentences explaining overall score>"
-}
-
-SCORING WEIGHTS (must sum to overall score):
-- hard_skills (40%): Technical skills alignment
-- experience (30%): Relevant experience and impact
-- education (15%): Degree/certification match
-- soft_skills (15%): Communication, leadership evidence
-
-Calculate overall score as:
-score = hard_skills.score + experience.score + education.score + soft_skills.score
-
-Be specific and precise. Focus on the most important requirements.`;
-
-    const result = await selectedModel.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    });
+    const result = await modelWithSchema.generateContent(prompt);
 
     const response = await result.response;
     const text = response.text();
-    const parsed = sanitizeAndParseJSON(text);
+    console.log(`[Gemini] Match response length: ${text.length} chars`);
+    const parsed = JSON.parse(text);
 
-    // Ensure all fields exist with defaults
     return {
       score: parsed.score || 50,
       categoryScores: parsed.categoryScores || null,

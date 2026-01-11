@@ -50,7 +50,7 @@ describe('optimize function', () => {
         });
 
         it('accepts POST requests', async () => {
-            (optimizeResume as any).mockResolvedValue({});
+            (optimizeResume as any).mockResolvedValue({ match_score: 55 });
 
             const event = {
                 httpMethod: 'POST',
@@ -106,7 +106,8 @@ describe('optimize function', () => {
         it('generates headline card when suggested_headline exists', async () => {
             (optimizeResume as any).mockResolvedValue({
                 suggested_headline: 'Senior Software Engineer',
-                original_headline: 'Developer'
+                original_headline: 'Developer',
+                match_score: 65
             });
 
             const event = {
@@ -128,7 +129,8 @@ describe('optimize function', () => {
         it('generates summary card when summary_rewrite exists', async () => {
             (optimizeResume as any).mockResolvedValue({
                 summary_rewrite: 'Optimized summary text',
-                original_summary: 'Original summary'
+                original_summary: 'Original summary',
+                match_score: 70
             });
 
             const event = {
@@ -151,7 +153,8 @@ describe('optimize function', () => {
             (optimizeResume as any).mockResolvedValue({
                 bullet_improvements: [
                     { original: 'Did stuff', improved: 'Led team of 5 to deliver project' }
-                ]
+                ],
+                match_score: 68
             });
 
             const event = {
@@ -166,7 +169,7 @@ describe('optimize function', () => {
         });
 
         it('returns empty cards array when no optimizations exist', async () => {
-            (optimizeResume as any).mockResolvedValue({});
+            (optimizeResume as any).mockResolvedValue({ match_score: 50 });
 
             const event = {
                 httpMethod: 'POST',
