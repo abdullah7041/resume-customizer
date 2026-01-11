@@ -50,6 +50,23 @@ export interface KeywordSuggestion {
 }
 
 /**
+ * Diagnostics for merge operations
+ * Tracks success/failure of optimization application during merging
+ */
+export interface MergeDiagnostics {
+  /** Number of optimizations successfully applied */
+  appliedCount: number;
+  /** Number of optimizations that failed to match */
+  failedCount: number;
+  /** Details of failed matches for debugging */
+  failedMatches: Array<{
+    sectionType: string;
+    sectionId: string;
+    originalPreview: string;
+  }>;
+}
+
+/**
  * Extended work experience with optimization tracking
  */
 export interface OptimizedWork {

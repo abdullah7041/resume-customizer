@@ -24,7 +24,7 @@
   timeout = 30
 
 [functions."optimize"]
-  timeout = 45  # Increased for complex resumes (was 30s)
+  timeout = 60  # Increased for Gemini flash model processing (target: 20-25s, buffer for edge cases)
 
 [functions."generate-cover-letter"]
   timeout = 30

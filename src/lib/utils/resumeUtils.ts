@@ -1,9 +1,11 @@
 /**
  * Resume Utilities - JSON Resume Schema Only
- * 
+ *
  * This module handles merging resume data with AI optimizations.
  * All data is expected to be in JSON Resume format (https://jsonresume.org/schema).
  */
+
+import { fuzzyTextMatch } from './textMatcher';
 
 /**
  * Deduplicates an array of objects by their name property.
@@ -93,9 +95,11 @@ export const mergeResumeData = (original, aiResult) => {
             jobImprovements.forEach(imp => {
                 if (!imp.improved) return;
 
-                const matchIndex = newHighlights.findIndex(h =>
-                    imp.original && h.toLowerCase().includes(imp.original.toLowerCase().substring(0, 30))
-                );
+                const matchIndex = newHighlights.findIndex(h => {
+                    if (!imp.original) return false;
+                    const result = fuzzyTextMatch(imp.original, h);
+                    return result.matched;
+                });
 
                 if (matchIndex !== -1) {
                     newHighlights[matchIndex] = imp.improved;
@@ -108,26 +112,13 @@ export const mergeResumeData = (original, aiResult) => {
         });
     }
 
-    // 3. Add missing keywords to skills
+    // 3. Skills recommendations (NOT auto-injected)
+    // POLICY: Skills are recommended only, not auto-injected
+    // Users must manually add skills they actually possess
     if (optimization.skills_gap_analysis?.missing_keywords_to_add) {
         const missingKeywords = optimization.skills_gap_analysis.missing_keywords_to_add;
         if (missingKeywords.length > 0) {
-            if (!mergedData.skills) mergedData.skills = [];
-
-            const existingKeywords = mergedData.skills.flatMap(s => s.keywords || []);
-            const newKeywords = missingKeywords.filter(k =>
-                !existingKeywords.some(ek => ek.toLowerCase() === k.toLowerCase())
-            );
-
-            if (newKeywords.length > 0) {
-                const targetCategory = mergedData.skills.find(s => s.name === "Recommended Skills") ||
-                    mergedData.skills[0];
-                if (targetCategory) {
-                    targetCategory.keywords = [...(targetCategory.keywords || []), ...newKeywords];
-                } else {
-                    mergedData.skills.push({ name: "Recommended Skills", keywords: newKeywords });
-                }
-            }
+            console.log('[mergeResumeData] Recommended skills (not added):', missingKeywords);
         }
     }
 

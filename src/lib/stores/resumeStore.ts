@@ -7,6 +7,7 @@ import type {
   KeywordSuggestion,
   TemplateId,
   CachedAnalysis,
+  MergeDiagnostics,
 } from '../../types/templates';
 import {
   validateResume,
@@ -14,6 +15,7 @@ import {
   validateOptimization,
 } from '../validation/store-schemas';
 import { deduplicateByName } from '../utils/resumeUtils';
+import { fuzzyTextMatch } from '../utils/textMatcher';
 
 // Cache validity duration: 5 minutes
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -218,32 +220,12 @@ export const useResumeStore = create<ResumeState>()(
           return String(val || '');
         };
 
-
-        // Fuzzy text matching - finds if text A is contained in or similar to text B
-        const textMatches = (needle: string, haystack: string): boolean => {
-          if (!needle || !haystack) return false;
-          const n = needle.toLowerCase().trim();
-          const h = haystack.toLowerCase().trim();
-
-          // Exact match
-          if (n === h) return true;
-
-          // Substring match (first 40 chars to handle truncation)
-          const nShort = n.substring(0, 40);
-          const hShort = h.substring(0, 40);
-          if (h.includes(nShort) || n.includes(hShort)) return true;
-
-          // Word overlap match (at least 60% of words match)
-          const nWords = n.split(/\s+/).filter(w => w.length > 3);
-          const hWords = h.split(/\s+/).filter(w => w.length > 3);
-          if (nWords.length === 0 || hWords.length === 0) return false;
-
-          const matches = nWords.filter(w => hWords.some(hw => hw.includes(w) || w.includes(hw)));
-          return matches.length / Math.min(nWords.length, hWords.length) >= 0.5;
+        // Track merge diagnostics for debugging
+        const diagnostics: MergeDiagnostics = {
+          appliedCount: 0,
+          failedCount: 0,
+          failedMatches: [],
         };
-
-        // Track which optimizations were successfully applied (for debugging)
-        let _appliedCount = 0;
 
         // Apply each optimization using CONTENT-BASED MATCHING
         for (const opt of state.optimizations) {
@@ -258,14 +240,14 @@ export const useResumeStore = create<ResumeState>()(
             case 'summary':
               if (merged.basics) {
                 merged.basics.summary = optimizedValue;
-                _appliedCount++;
+                diagnostics.appliedCount++;
               }
               break;
 
             case 'headline':
               if (merged.basics) {
                 merged.basics.label = optimizedValue;
-                _appliedCount++;
+                diagnostics.appliedCount++;
               }
               break;
 
@@ -280,20 +262,24 @@ export const useResumeStore = create<ResumeState>()(
 
                   // Search each highlight for the original text
                   for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
-                    if (textMatches(originalValue, highlights[hlIdx])) {
+                    const matchResult = fuzzyTextMatch(originalValue, highlights[hlIdx]);
+                    if (matchResult.matched) {
                       // Found a match - replace this highlight
                       merged.work[workIdx].highlights![hlIdx] = optimizedValue;
                       found = true;
-                      _appliedCount++;
+                      diagnostics.appliedCount++;
                       break; // Move to next optimization
                     }
                   }
 
                   // Also check summary field
-                  if (!found && workEntry.summary && textMatches(originalValue, workEntry.summary)) {
-                    merged.work[workIdx].summary = optimizedValue;
-                    found = true;
-                    _appliedCount++;
+                  if (!found && workEntry.summary) {
+                    const matchResult = fuzzyTextMatch(originalValue, workEntry.summary);
+                    if (matchResult.matched) {
+                      merged.work[workIdx].summary = optimizedValue;
+                      found = true;
+                      diagnostics.appliedCount++;
+                    }
                   }
 
                   if (found) break;
@@ -301,7 +287,16 @@ export const useResumeStore = create<ResumeState>()(
               }
 
               if (!found) {
-                // Failed to find match - warn but continue
+                diagnostics.failedCount++;
+                diagnostics.failedMatches.push({
+                  sectionType: opt.sectionType,
+                  sectionId: opt.sectionId,
+                  originalPreview: originalValue.substring(0, 60),
+                });
+                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                  originalPreview: originalValue.substring(0, 60),
+                  sectionId: opt.sectionId,
+                });
               }
               break;
             }
@@ -315,26 +310,43 @@ export const useResumeStore = create<ResumeState>()(
                   const eduEntry = merged.education[eduIdx];
 
                   // Check area, studyType, and highlights
-                  if (eduEntry.area && textMatches(originalValue, eduEntry.area)) {
-                    merged.education[eduIdx].area = optimizedValue;
-                    found = true;
-                    _appliedCount++;
-                    break;
+                  if (eduEntry.area) {
+                    const matchResult = fuzzyTextMatch(originalValue, eduEntry.area);
+                    if (matchResult.matched) {
+                      merged.education[eduIdx].area = optimizedValue;
+                      found = true;
+                      diagnostics.appliedCount++;
+                      break;
+                    }
                   }
 
                   // Check highlights array if present
                   const highlights = eduEntry.highlights || [];
                   for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
-                    if (textMatches(originalValue, highlights[hlIdx])) {
+                    const matchResult = fuzzyTextMatch(originalValue, highlights[hlIdx]);
+                    if (matchResult.matched) {
                       merged.education[eduIdx].highlights![hlIdx] = optimizedValue;
                       found = true;
-                      _appliedCount++;
+                      diagnostics.appliedCount++;
                       break;
                     }
                   }
 
                   if (found) break;
                 }
+              }
+
+              if (!found) {
+                diagnostics.failedCount++;
+                diagnostics.failedMatches.push({
+                  sectionType: opt.sectionType,
+                  sectionId: opt.sectionId,
+                  originalPreview: originalValue.substring(0, 60),
+                });
+                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                  originalPreview: originalValue.substring(0, 60),
+                  sectionId: opt.sectionId,
+                });
               }
               break;
             }
@@ -348,33 +360,53 @@ export const useResumeStore = create<ResumeState>()(
                   const projEntry = merged.projects[projIdx];
 
                   // Check name and description
-                  if (projEntry.name && textMatches(originalValue, projEntry.name)) {
-                    merged.projects[projIdx].name = optimizedValue;
-                    found = true;
-                    _appliedCount++;
-                    break;
+                  if (projEntry.name) {
+                    const matchResult = fuzzyTextMatch(originalValue, projEntry.name);
+                    if (matchResult.matched) {
+                      merged.projects[projIdx].name = optimizedValue;
+                      found = true;
+                      diagnostics.appliedCount++;
+                      break;
+                    }
                   }
 
-                  if (projEntry.description && textMatches(originalValue, projEntry.description)) {
-                    merged.projects[projIdx].description = optimizedValue;
-                    found = true;
-                    _appliedCount++;
-                    break;
+                  if (projEntry.description) {
+                    const matchResult = fuzzyTextMatch(originalValue, projEntry.description);
+                    if (matchResult.matched) {
+                      merged.projects[projIdx].description = optimizedValue;
+                      found = true;
+                      diagnostics.appliedCount++;
+                      break;
+                    }
                   }
 
                   // Check highlights
                   const highlights = projEntry.highlights || [];
                   for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
-                    if (textMatches(originalValue, highlights[hlIdx])) {
+                    const matchResult = fuzzyTextMatch(originalValue, highlights[hlIdx]);
+                    if (matchResult.matched) {
                       merged.projects[projIdx].highlights![hlIdx] = optimizedValue;
                       found = true;
-                      _appliedCount++;
+                      diagnostics.appliedCount++;
                       break;
                     }
                   }
 
                   if (found) break;
                 }
+              }
+
+              if (!found) {
+                diagnostics.failedCount++;
+                diagnostics.failedMatches.push({
+                  sectionType: opt.sectionType,
+                  sectionId: opt.sectionId,
+                  originalPreview: originalValue.substring(0, 60),
+                });
+                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                  originalPreview: originalValue.substring(0, 60),
+                  sectionId: opt.sectionId,
+                });
               }
               break;
             }
@@ -407,21 +439,40 @@ export const useResumeStore = create<ResumeState>()(
               void suggestedSkills; // Acknowledge variable is intentionally unused
 
               // Mark as "applied" for tracking but don't modify resume
-              _appliedCount++;
+              diagnostics.appliedCount++;
               break;
             }
 
             case 'certifications': {
               // Handle certification optimizations similarly
+              let found = false;
+
               if (merged.certificates) {
                 for (let certIdx = 0; certIdx < merged.certificates.length; certIdx++) {
                   const cert = merged.certificates[certIdx];
-                  if (cert.name && textMatches(originalValue, cert.name)) {
-                    merged.certificates[certIdx].name = optimizedValue;
-                    _appliedCount++;
-                    break;
+                  if (cert.name) {
+                    const matchResult = fuzzyTextMatch(originalValue, cert.name);
+                    if (matchResult.matched) {
+                      merged.certificates[certIdx].name = optimizedValue;
+                      found = true;
+                      diagnostics.appliedCount++;
+                      break;
+                    }
                   }
                 }
+              }
+
+              if (!found) {
+                diagnostics.failedCount++;
+                diagnostics.failedMatches.push({
+                  sectionType: opt.sectionType,
+                  sectionId: opt.sectionId,
+                  originalPreview: originalValue.substring(0, 60),
+                });
+                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                  originalPreview: originalValue.substring(0, 60),
+                  sectionId: opt.sectionId,
+                });
               }
               break;
             }
@@ -429,6 +480,13 @@ export const useResumeStore = create<ResumeState>()(
             default:
               console.warn(`[ResumeStore] Unknown sectionType: ${opt.sectionType}`);
           }
+        }
+
+        // Log merge diagnostics for debugging
+        if (diagnostics.failedCount > 0) {
+          console.warn('[ResumeStore] Merge diagnostics:', diagnostics);
+        } else if (diagnostics.appliedCount > 0) {
+          console.log(`[ResumeStore] Successfully applied ${diagnostics.appliedCount} optimizations`);
         }
 
         return merged;

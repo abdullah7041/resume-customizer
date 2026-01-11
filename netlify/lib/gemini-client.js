@@ -15,12 +15,10 @@ const MODELS = {
 };
 
 const generationConfig = {
-  // Removed responseMimeType - JSON mode has hidden length constraints that cause truncation
-  // Instead, we'll request JSON in markdown code blocks for longer responses
   temperature: 0,  // Deterministic output - no randomness
   topP: 0.95,      // Slightly more focused (was 1)
   topK: 1,         // Greedy decoding - always pick the most likely token
-  maxOutputTokens: 8192,  // Increased to allow complete JSON responses (was 4096, caused truncation)
+  maxOutputTokens: 4096,  // Balanced for most use cases (reduced from 8192 to prevent timeouts)
 };
 
 /**
@@ -87,10 +85,20 @@ function sanitizeAndParseJSON(text) {
       }
     }
 
-    // If we found a valid end point, truncate there
-    if (lastValidEnd > 0 && lastValidEnd < cleaned.length - 1) {
+    // If we found a valid end point AND the last character is not closing a structure,
+    // we may have trailing garbage. BUT if we're in a string, don't truncate yet - 
+    // we'll handle string closure in the next step to preserve more data.
+    const lastChar = cleaned.charAt(cleaned.length - 1);
+    const isLastCharStructure = lastChar === '}' || lastChar === ']' || lastChar === '"';
+
+    // Only truncate if we're NOT in the middle of a string (quoteCount is even)
+    // and there's actual trailing garbage after the last valid structure
+    if (lastValidEnd > 0 && lastValidEnd < cleaned.length - 1 && quoteCount % 2 === 0 && !isLastCharStructure) {
       console.warn(`[Gemini] Truncating at position ${lastValidEnd} to find valid JSON end`);
       cleaned = cleaned.substring(0, lastValidEnd + 1);
+    } else if (quoteCount % 2 !== 0) {
+      // We're in middle of a string - log but don't truncate, we'll close it next
+      console.warn(`[Gemini] Detected unterminated string at position ${cleaned.length}, will attempt to close it`);
     }
 
     // Count remaining open braces/brackets
@@ -120,15 +128,27 @@ function sanitizeAndParseJSON(text) {
       }
     }
 
-    // If we're still in a string, close it
+    // If we're still in a string, close it and clean up
     if (inString) {
       cleaned += '"';
-      // Remove trailing incomplete property after closing the string
-      // This handles cases like: "url": "https://incomplete
-      cleaned = cleaned.replace(/,?\s*"[^"]*":\s*"[^"]*"\s*$/g, (match) => {
-        // Only remove if it looks incomplete (doesn't end with proper structure)
-        return match;
-      });
+      // Remove trailing incomplete key-value pairs that would cause parse errors
+      // Patterns to handle:
+      // - Incomplete URL: "url": "https://incomplete" -> remove if no closing structure
+      // - Truncated content: "text": "some text that got cut" -> keep but ensure valid
+
+      // First, try to find and remove any trailing incomplete property
+      // Look for patterns like: , "key": "value that might be incomplete
+      const trailingIncomplete = cleaned.match(/,\s*"[^"]+"\s*:\s*"[^"]*"\s*$/);
+      if (trailingIncomplete) {
+        // Check if this looks like a complete key-value pair (has content after the colon)
+        const match = trailingIncomplete[0];
+        // If the value part is very short or looks like a truncated URL/path, remove it
+        if (match.includes('://') && !match.includes(' ')) {
+          // Likely a truncated URL - remove the whole property
+          cleaned = cleaned.slice(0, -match.length);
+          console.warn('[Gemini] Removed truncated URL property');
+        }
+      }
     }
 
     // Remove any trailing commas
@@ -163,7 +183,7 @@ function sanitizeAndParseJSON(text) {
           console.log('[Gemini] Extracted minimal basics object');
           return minimal;
         }
-      } catch (e) {
+      } catch {
         // Ignore extraction errors
       }
 
@@ -221,66 +241,24 @@ export async function processResume(inputData, jobDescription, isPdf = true, mod
   try {
     console.log(`[Gemini] Processing resume with ${MODELS[modelType]}. Input type: ${isPdf ? "PDF" : "Text"}`);
 
-    // OPTIMIZED PROMPT: Reduced from 238 lines to ~120 lines for faster processing
+    // Concise prompt - JSON Schema Mode handles structure validation
     const prompt = `
-CRITICAL INSTRUCTION: Return ONLY valid JSON wrapped in markdown code blocks like this:
-
-\`\`\`json
-{
-  "basics": {...},
-  "work": [...],
-  "meta": {"ai_suggestions": {...}}
-}
-\`\`\`
-
-Do not include explanatory text before or after the JSON.
+Analyze this resume against the job description below.
 
 Job Description:
 ${jobDescription}
 
-OUTPUT: JSON Resume schema (jsonresume.org) with the resume content plus AI optimization metadata in meta.ai_suggestions.
-
-CRITICAL ANALYSIS REQUIREMENTS:
-
-1. GAP ANALYSIS (REQUIRED - minimum 5 items, severity-ordered):
-   CRITICAL: You MUST generate at least 5 gap analysis items. Do not return an empty array.
-   Example: {"requirement": "3+ years experience with React", "current_state": "2 years React mentioned", "gap_severity": "moderate", "recommendation": "Highlight JavaScript framework experience to bridge gap"}
-   - requirement: Exact JD phrase requiring something
-   - current_state: What the resume currently shows
-   - gap_severity: critical|moderate|minor (ordered by importance)
-   - recommendation: Specific actionable advice
-
-2. KEYWORD STRATEGY:
-   - mirrored_phrases: 5-10 exact JD phrases used in optimizations
-   - structural_changes: 2-4 reorganization decisions with rationale
-   - hidden_matches: Resume skills mapping to JD (different terminology)
-
-3. CATEGORY SCORING (must sum to match_score):
-   hard_skills (0-40): Technical skill alignment
-   experience (0-30): Relevance & impact
-   education (0-10): Degree/cert match
-   soft_skills (0-20): Communication/leadership evidence
-
-4. OPTIMIZATIONS (3-5 minimum):
-   - bullet_improvements: [{work_index, highlight_index, original, improved, issue, rationale}]
-   - original_headline & suggested_headline (EXACT text required)
-   - original_summary & summary_rewrite (EXACT text required)
-   - education_improvements, project_improvements (if applicable)
-
-MATCH SCORE RULES:
-- Use precise numbers (73, 41, 88) - avoid round numbers (50, 60, 70, 80, 90)
-- Provide reasoning citing specific skills/gaps
-- Include score_breakdown showing calculation
-
-SCHEMA: JSON Resume (jsonresume.org) with meta.ai_suggestions containing:
-- original_headline/suggested_headline, original_summary/summary_rewrite (EXACT current text required)
-- reasoning, missing_keywords, keywords_to_keep/avoid
-- bullet_improvements[{work_index, highlight_index, original, improved, issue, rationale}]
-- gap_analysis[] (5-10 items), keyword_strategy{mirrored_phrases, structural_changes, hidden_matches}
-- category_scores{hard_skills, experience, education, soft_skills} (must sum to match_score)
-- score_breakdown{base_score, bonuses, penalties, final_score, explanation}
-
-Map experience→"work" with highlights[]. Use real project names. Never leave original/improved empty.
+Instructions:
+1. Parse the resume into JSON Resume format (jsonresume.org)
+2. Provide optimization suggestions in meta.ai_suggestions:
+   - GAP ANALYSIS: 3-5 items showing JD requirements vs resume (severity-ordered)
+   - KEYWORD STRATEGY: mirrored_phrases (3-8 exact JD phrases), structural_changes, hidden_matches
+   - BULLET IMPROVEMENTS: Top 3-5 bullets with original (exact text), improved, issue, rationale
+   - HEADLINE/SUMMARY: original (exact) + suggested versions
+   - CATEGORY SCORES: hard_skills (0-40), experience (0-30), education (0-10), soft_skills (0-20) - must sum to match_score
+   - MATCH SCORE: Precise number (e.g., 73, 88) - avoid round numbers
+3. Use EXACT original text for all "original_*" fields (critical for fuzzy matching)
+4. Map all Experience sections to "work" array with highlights
 `;
 
     const parts = [
@@ -299,13 +277,237 @@ Map experience→"work" with highlights[]. Use real project names. Never leave o
       parts.push({ text: `RESUME CONTENT:\n${inputData}` });
     }
 
+    // Define JSON schema for structured output
+    const responseJsonSchema = {
+      type: "object",
+      properties: {
+        basics: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            label: { type: "string" },
+            email: { type: "string" },
+            phone: { type: "string" },
+            summary: { type: "string" },
+            location: {
+              type: "object",
+              properties: {
+                city: { type: "string" },
+                countryCode: { type: "string" },
+                region: { type: "string" }
+              }
+            },
+            profiles: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  network: { type: "string" },
+                  url: { type: "string" }
+                }
+              }
+            }
+          }
+        },
+        work: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              position: { type: "string" },
+              location: { type: "string" },
+              startDate: { type: "string" },
+              endDate: { type: "string" },
+              highlights: { type: "array", items: { type: "string" } }
+            }
+          }
+        },
+        education: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              institution: { type: "string" },
+              area: { type: "string" },
+              studyType: { type: "string" },
+              startDate: { type: "string" },
+              endDate: { type: "string" }
+            }
+          }
+        },
+        skills: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              keywords: { type: "array", items: { type: "string" } }
+            }
+          }
+        },
+        projects: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              description: { type: "string" },
+              highlights: { type: "array", items: { type: "string" } },
+              keywords: { type: "array", items: { type: "string" } }
+            }
+          }
+        },
+        certificates: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              date: { type: "string" },
+              issuer: { type: "string" }
+            }
+          }
+        },
+        meta: {
+          type: "object",
+          properties: {
+            version: { type: "string" },
+            match_score: { type: "number" },
+            ai_suggestions: {
+              type: "object",
+              properties: {
+                original_headline: { type: "string" },
+                suggested_headline: { type: "string" },
+                original_summary: { type: "string" },
+                summary_rewrite: { type: "string" },
+                bullet_improvements: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      original: { type: "string" },
+                      improved: { type: "string" },
+                      issue: { type: "string" },
+                      rationale: { type: "string" }
+                    },
+                    required: ["original", "improved", "issue", "rationale"]
+                  }
+                },
+                gap_analysis: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      requirement: { type: "string" },
+                      current_state: { type: "string" },
+                      gap_severity: { type: "string", enum: ["critical", "moderate", "minor"] },
+                      recommendation: { type: "string" }
+                    },
+                    required: ["requirement", "current_state", "gap_severity", "recommendation"]
+                  }
+                },
+                keyword_strategy: {
+                  type: "object",
+                  properties: {
+                    mirrored_phrases: { type: "array", items: { type: "string" } },
+                    structural_changes: { type: "array", items: { type: "string" } },
+                    hidden_matches: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          resume_term: { type: "string" },
+                          jd_requirement: { type: "string" },
+                          insight: { type: "string" }
+                        }
+                      }
+                    }
+                  }
+                },
+                category_scores: {
+                  type: "object",
+                  properties: {
+                    hard_skills: {
+                      type: "object",
+                      properties: {
+                        score: { type: "number" },
+                        max: { type: "number" },
+                        reasoning: { type: "string" }
+                      }
+                    },
+                    experience: {
+                      type: "object",
+                      properties: {
+                        score: { type: "number" },
+                        max: { type: "number" },
+                        reasoning: { type: "string" }
+                      }
+                    },
+                    education: {
+                      type: "object",
+                      properties: {
+                        score: { type: "number" },
+                        max: { type: "number" },
+                        reasoning: { type: "string" }
+                      }
+                    },
+                    soft_skills: {
+                      type: "object",
+                      properties: {
+                        score: { type: "number" },
+                        max: { type: "number" },
+                        reasoning: { type: "string" }
+                      }
+                    }
+                  }
+                },
+                score_breakdown: {
+                  type: "object",
+                  properties: {
+                    base_score: { type: "number" },
+                    bonuses: { type: "number" },
+                    penalties: { type: "number" },
+                    final_score: { type: "number" }
+                  }
+                },
+                reasoning: { type: "string" },
+                missing_keywords: { type: "array", items: { type: "string" } },
+                keywords_to_keep: { type: "array", items: { type: "string" } },
+                keywords_to_avoid: { type: "array", items: { type: "string" } }
+              },
+              required: ["gap_analysis", "keyword_strategy", "bullet_improvements", "category_scores", "reasoning"]
+            }
+          },
+          required: ["ai_suggestions", "match_score"]
+        }
+      },
+      required: ["basics", "work", "meta"]
+    };
+
+    // Use JSON Schema Mode for guaranteed valid structure
     const result = await selectedModel.generateContent({
       contents: [{ role: "user", parts }],
+      generationConfig: {
+        ...generationConfig,
+        responseMimeType: "application/json",
+        responseSchema: responseJsonSchema
+      }
     });
 
     const response = await result.response;
     const text = response.text();
-    const parsed = sanitizeAndParseJSON(text);
+
+    // With JSON Schema Mode, response should be valid JSON, but we still need fallback
+    // for edge cases like truncation or network issues
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (jsonError) {
+      console.warn('[Gemini] JSON Schema Mode returned invalid JSON, attempting repair...', jsonError.message);
+      // Fall back to the robust sanitization function that can handle truncated JSON
+      parsed = sanitizeAndParseJSON(text);
+    }
 
     // Backwards compatibility: also expose optimization in legacy format
     if (parsed.meta?.ai_suggestions) {
@@ -669,6 +871,70 @@ CRITICAL REMINDERS:
 }
 
 /**
+ * Optimizes a resume against a job description using Gemini.
+ * Focused function for generating optimization suggestions only.
+ * @param {string} resumeText - Plain text resume content.
+ * @param {string} jobDescription - Job description text.
+ * @returns {Promise<object>} - Optimization suggestions with original and improved content.
+ */
+export async function optimizeResume(resumeText, jobDescription) {
+  const selectedModel = getModel('flash');
+
+  const prompt = `
+You are an expert resume optimizer. Analyze this resume against the job description.
+
+## JOB DESCRIPTION:
+${jobDescription}
+
+## RESUME:
+${resumeText}
+
+## CRITICAL RULES:
+1. For ALL "original" fields: COPY THE EXACT TEXT from the resume - NO paraphrasing
+2. For "improved" fields: Your enhanced version with metrics/action verbs
+3. Return ONLY the JSON structure below - no markdown, no explanations
+
+## REQUIRED OUTPUT:
+{
+  "original_headline": "<exact headline from resume or empty string>",
+  "suggested_headline": "<your improved headline aligned with JD>",
+  "original_summary": "<exact summary from resume or empty string>",
+  "summary_rewrite": "<your improved summary>",
+  "bullet_improvements": [
+    {
+      "original": "<EXACT bullet text from resume>",
+      "improved": "<your enhanced version>",
+      "issue": "<what's weak>",
+      "rationale": "<why yours is better>"
+    }
+  ],
+  "missing_keywords": ["<keyword1>", "<keyword2>"],
+  "keywords_to_keep": ["<keyword1>", "<keyword2>"],
+  "keywords_to_avoid": ["<keyword1>", "<keyword2>"]
+}
+
+Provide 3-5 bullet improvements. Focus on the weakest bullets first.
+`;
+
+  try {
+    const result = await selectedModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 2048,  // Reduced for speed
+        topP: 0.95,
+        topK: 1,
+      }
+    });
+
+    return sanitizeAndParseJSON(result.response.text());
+  } catch (error) {
+    console.error("[Gemini] Error in optimizeResume:", error);
+    throw error;
+  }
+}
+
+/**
  * Fast match-only analysis - lightweight prompt for quick scoring.
  * Returns only essential match data without detailed improvements.
  * @param {string} resumeText - Plain text resume content.
@@ -691,17 +957,26 @@ ${resumeText}
 
 Return ONLY this JSON structure (no other text):
 {
-  "score": <number 0-100, be precise like 73, 41, 88 - avoid round numbers>,
-  "strongMatches": [<up to 10 skills/keywords from resume that match JD requirements>],
-  "missingKeywords": [<up to 10 important skills/keywords from JD missing in resume>],
-  "reasoning": "<1-2 sentences explaining the score>"
+  "score": <number 0-100, precise like 73, 41, 88 - avoid round numbers>,
+  "categoryScores": {
+    "hard_skills": {"score": <0-40>, "max": 40, "reasoning": "<brief>"},
+    "experience": {"score": <0-30>, "max": 30, "reasoning": "<brief>"},
+    "education": {"score": <0-15>, "max": 15, "reasoning": "<brief>"},
+    "soft_skills": {"score": <0-15>, "max": 15, "reasoning": "<brief>"}
+  },
+  "strongMatches": [<up to 10 skills/keywords matching JD>],
+  "missingKeywords": [<up to 10 missing skills/keywords>],
+  "reasoning": "<1-2 sentences explaining overall score>"
 }
 
-SCORING GUIDE:
-- 80-100: Strong match - most required skills present, relevant experience
-- 60-79: Good match - core skills present, some gaps
-- 40-59: Partial match - transferable skills, significant gaps
-- 0-39: Weak match - few relevant skills/experience
+SCORING WEIGHTS (must sum to overall score):
+- hard_skills (40%): Technical skills alignment
+- experience (30%): Relevant experience and impact
+- education (15%): Degree/certification match
+- soft_skills (15%): Communication, leadership evidence
+
+Calculate overall score as:
+score = hard_skills.score + experience.score + education.score + soft_skills.score
 
 Be specific and precise. Focus on the most important requirements.`;
 
@@ -716,6 +991,7 @@ Be specific and precise. Focus on the most important requirements.`;
     // Ensure all fields exist with defaults
     return {
       score: parsed.score || 50,
+      categoryScores: parsed.categoryScores || null,
       strongMatches: parsed.strongMatches || [],
       missingKeywords: parsed.missingKeywords || [],
       reasoning: parsed.reasoning || "Unable to determine match score."

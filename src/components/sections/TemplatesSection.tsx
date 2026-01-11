@@ -178,7 +178,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   };
 
   return (
-    <div className="relative flex flex-col h-[700px] md:h-[800px]">
+    <div className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
       {/* Full-Width Preview */}
       <div className="flex-1 flex flex-col bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0">
 

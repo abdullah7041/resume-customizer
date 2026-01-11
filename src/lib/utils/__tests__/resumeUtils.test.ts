@@ -148,7 +148,7 @@ describe('resumeUtils', () => {
         });
 
         describe('skills gap analysis', () => {
-            it('adds missing keywords to existing skill category', () => {
+            it('does NOT auto-inject missing keywords (recommend only policy)', () => {
                 const aiResult = {
                     optimization: {
                         skills_gap_analysis: {
@@ -158,24 +158,13 @@ describe('resumeUtils', () => {
                 };
                 const result = mergeResumeData(baseResume, aiResult);
                 const allKeywords = result.skills.flatMap(s => s.keywords);
-                expect(allKeywords).toContain('React');
-                expect(allKeywords).toContain('TypeScript');
+                // Skills should NOT be auto-added - users must add them manually
+                expect(allKeywords).not.toContain('React');
+                expect(allKeywords).not.toContain('TypeScript');
+                expect(allKeywords).not.toContain('AWS');
             });
 
-            it('avoids duplicate keywords', () => {
-                const aiResult = {
-                    optimization: {
-                        skills_gap_analysis: {
-                            missing_keywords_to_add: ['Python', 'NewSkill'] // Python already exists
-                        }
-                    }
-                };
-                const result = mergeResumeData(baseResume, aiResult);
-                const pythonCount = result.skills.flatMap(s => s.keywords).filter(k => k === 'Python').length;
-                expect(pythonCount).toBe(1);
-            });
-
-            it('creates Recommended Skills category when needed', () => {
+            it('does NOT create Recommended Skills category', () => {
                 const emptySkillsResume = { ...baseResume, skills: [] };
                 const aiResult = {
                     optimization: {
@@ -185,7 +174,8 @@ describe('resumeUtils', () => {
                     }
                 };
                 const result = mergeResumeData(emptySkillsResume, aiResult);
-                expect(result.skills.find(s => s.name === 'Recommended Skills')).toBeDefined();
+                // Should not auto-create skills categories
+                expect(result.skills.find(s => s.name === 'Recommended Skills')).toBeUndefined();
             });
         });
 

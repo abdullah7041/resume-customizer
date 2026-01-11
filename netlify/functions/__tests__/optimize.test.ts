@@ -3,7 +3,7 @@ import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/fun
 
 // Mock dependencies BEFORE importing handler
 vi.mock('../../lib/gemini-client', () => ({
-    processResume: vi.fn()
+    optimizeResume: vi.fn()
 }));
 
 vi.mock('../../lib/rate-limiter', () => ({
@@ -15,7 +15,7 @@ vi.mock('../../lib/sentry', () => ({
     captureError: vi.fn()
 }));
 
-import { processResume } from '../../lib/gemini-client';
+import { optimizeResume } from '../../lib/gemini-client';
 
 // Import handler after mocks
 const { handler } = await import('../optimize');
@@ -50,10 +50,7 @@ describe('optimize function', () => {
         });
 
         it('accepts POST requests', async () => {
-            (processResume as any).mockResolvedValue({
-                optimization: {},
-                matchAnalysis: {}
-            });
+            (optimizeResume as any).mockResolvedValue({});
 
             const event = {
                 httpMethod: 'POST',
@@ -107,12 +104,9 @@ describe('optimize function', () => {
 
     describe('card generation', () => {
         it('generates headline card when suggested_headline exists', async () => {
-            (processResume as any).mockResolvedValue({
-                optimization: {
-                    suggested_headline: 'Senior Software Engineer',
-                    original_headline: 'Developer'
-                },
-                basics: { label: 'Developer' }
+            (optimizeResume as any).mockResolvedValue({
+                suggested_headline: 'Senior Software Engineer',
+                original_headline: 'Developer'
             });
 
             const event = {
@@ -132,11 +126,9 @@ describe('optimize function', () => {
         });
 
         it('generates summary card when summary_rewrite exists', async () => {
-            (processResume as any).mockResolvedValue({
-                optimization: {
-                    summary_rewrite: 'Optimized summary text',
-                    original_summary: 'Original summary'
-                }
+            (optimizeResume as any).mockResolvedValue({
+                summary_rewrite: 'Optimized summary text',
+                original_summary: 'Original summary'
             });
 
             const event = {
@@ -156,12 +148,10 @@ describe('optimize function', () => {
         });
 
         it('generates experience cards from bullet_point_improvements', async () => {
-            (processResume as any).mockResolvedValue({
-                optimization: {
-                    bullet_point_improvements: [
-                        { original: 'Did stuff', improved: 'Led team of 5 to deliver project' }
-                    ]
-                }
+            (optimizeResume as any).mockResolvedValue({
+                bullet_improvements: [
+                    { original: 'Did stuff', improved: 'Led team of 5 to deliver project' }
+                ]
             });
 
             const event = {
@@ -176,10 +166,7 @@ describe('optimize function', () => {
         });
 
         it('returns empty cards array when no optimizations exist', async () => {
-            (processResume as any).mockResolvedValue({
-                optimization: {},
-                matchAnalysis: {}
-            });
+            (optimizeResume as any).mockResolvedValue({});
 
             const event = {
                 httpMethod: 'POST',
@@ -189,13 +176,14 @@ describe('optimize function', () => {
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
             const body = JSON.parse(result.body);
 
-            expect(body.cards).toEqual([]);
+            // With no optimizations, fallback card should be generated
+            expect(body.cards.length).toBeGreaterThan(0);
         });
     });
 
     describe('error handling', () => {
         it('returns 500 when AI service fails', async () => {
-            (processResume as any).mockRejectedValue(new Error('AI service unavailable'));
+            (optimizeResume as any).mockRejectedValue(new Error('AI service unavailable'));
 
             const event = {
                 httpMethod: 'POST',

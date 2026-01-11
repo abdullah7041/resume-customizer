@@ -18,7 +18,11 @@
       "Bash(npm run lint:*)",
       "Bash(npm run type:check:*)",
       "Bash(gh pr list:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(where claude-code)",
+      "Bash(findstr:*)",
+      "Bash(npm test:*)",
+      "Bash(node -e:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

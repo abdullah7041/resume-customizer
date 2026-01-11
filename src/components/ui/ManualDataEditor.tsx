@@ -2,7 +2,7 @@
 // Manual data editor modal for resume data correction and display settings
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, User, Briefcase, GraduationCap, Wrench, FolderKanban, Award, Languages, Type, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { X, Save, User, Briefcase, GraduationCap, Wrench, FolderKanban, Award, Languages, Type, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from './GlassCard';
 import { GlassButton } from './GlassButton';

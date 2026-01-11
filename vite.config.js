@@ -28,6 +28,11 @@ export default defineConfig({
     sourcemap: false, // disable for production (faster builds)
     cssCodeSplit: true,
 
+    // Remove console and debugger statements in production
+    esbuildOptions: {
+      drop: ['console', 'debugger'],
+    },
+
     rollupOptions: {
       external: ["path2d"],
       output: {

@@ -95,7 +95,7 @@ const baseHandler: Handler = async (event) => {
         reason: match.reasoning,
         tips: match.missingKeywords.map((k: string) => `Consider adding ${k}`)
       },
-      categoryScores: null,
+      categoryScores: match.categoryScores || null,
       interviewPrep: null,
       gapAnalysis: [],
       keywordStrategy: null
