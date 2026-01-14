@@ -23,11 +23,11 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@netlify/functions": "^5.1.2",
-    "@sentry/node": "^10.32.1",
-    "@sentry/react": "^10.32.1",
+    "@sentry/node": "^10.33.0",
+    "@sentry/react": "^10.33.0",
     "@sparticuz/chromium": "^143.0.4",
     "@supabase/supabase-js": "^2.90.1",
-    "@upstash/ratelimit": "^2.0.7",
+    "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.1",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
@@ -40,15 +40,15 @@
     "lucide-react": "^0.562.0",
     "mixpanel-browser": "^2.73.0",
     "pdfjs-dist": "^5.4.530",
-    "puppeteer-core": "^24.34.0",
+    "puppeteer-core": "^24.35.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-dropzone": "^14.3.8",
-    "react-i18next": "^16.5.2",
+    "react-i18next": "^16.5.3",
     "react-to-print": "^3.2.0",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.5",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -58,10 +58,10 @@
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^25.0.6",
+    "@types/node": "^25.0.8",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/parser": "^8.52.0",
+    "@typescript-eslint/parser": "^8.53.0",
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/eslint-plugin": "^1.6.6",
     "cross-env": "^10.1.0",
@@ -76,9 +76,9 @@
     "source-map-explorer": "^2.5.3",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.52.0",
+    "typescript-eslint": "^8.53.0",
     "vite": "^7.3.1",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.17"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

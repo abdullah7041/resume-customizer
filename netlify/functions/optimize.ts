@@ -32,6 +32,12 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
     const optimization = await optimizeResume(resumeText, jobText);
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);
+    console.log('[optimize] AI response summary:', {
+      hasGapAnalysis: !!optimization?.gap_analysis,
+      gapAnalysisCount: optimization?.gap_analysis?.length || 0,
+      hasCategoryScores: !!optimization?.category_scores,
+      matchScore: optimization?.match_score,
+    });
 
     // CRITICAL: Handle cases where AI returns incomplete data
     if (!optimization) {

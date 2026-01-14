@@ -58,7 +58,7 @@ export const useResumeStore = create<ResumeState>()(
         reasoning: null,
         hasJobDescription: false,
         vision2030: null,
-        gapAnalysis: null, // null = not loaded yet, [] = AI returned no gaps
+        gapAnalysis: [], // null = not loaded yet, [] = AI returned no gaps
         keywordStrategy: {
           mirroredPhrases: [],
           structuralChanges: [],
@@ -545,13 +545,14 @@ export const useResumeStore = create<ResumeState>()(
           reasoning: null,
           hasJobDescription: false,
           vision2030: null,
-          gapAnalysis: [],
+          gapAnalysis: [], // Initialize as empty array, not null
           keywordStrategy: {
             mirroredPhrases: [],
             structuralChanges: [],
             hiddenMatches: []
           },
           scoreBreakdown: null,
+          categoryScores: null,
         }
       }),
 
@@ -576,6 +577,14 @@ export const useResumeStore = create<ResumeState>()(
             reasoning: null,
             hasJobDescription: false,
             vision2030: null,
+            gapAnalysis: [],
+            keywordStrategy: {
+              mirroredPhrases: [],
+              structuralChanges: [],
+              hiddenMatches: []
+            },
+            scoreBreakdown: null,
+            categoryScores: null,
           },
           showOptimized: false,
         });
@@ -597,6 +606,14 @@ export const useResumeStore = create<ResumeState>()(
             reasoning: null,
             hasJobDescription: false,
             vision2030: null,
+            gapAnalysis: [],
+            keywordStrategy: {
+              mirroredPhrases: [],
+              structuralChanges: [],
+              hiddenMatches: []
+            },
+            scoreBreakdown: null,
+            categoryScores: null,
           },
           showOptimized: false,
         });
@@ -617,6 +634,23 @@ export const useResumeStore = create<ResumeState>()(
         // Persist analysisCache so match analysis score survives refresh
         analysisCache: state.analysisCache,
       }),
+      // Custom merge to properly handle nested optimizationMetrics
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<ResumeState>;
+        return {
+          ...currentState,
+          ...persisted,
+          // Deep merge optimizationMetrics to preserve all nested fields
+          optimizationMetrics: {
+            ...currentState.optimizationMetrics,
+            ...(persisted.optimizationMetrics || {}),
+            keywordStrategy: {
+              ...(currentState.optimizationMetrics?.keywordStrategy || {}),
+              ...(persisted.optimizationMetrics?.keywordStrategy || {}),
+            },
+          },
+        };
+      },
     }
   )
 );

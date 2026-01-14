@@ -22,14 +22,18 @@ import { cn } from '../../lib/utils/cn';
 import { FeedbackButtons } from '../ui/FeedbackButtons';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import type { SuggestionType } from '../../services/feedback';
+import type { OptimizationMetrics } from '../../types/templates';
 import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
-import { ScoreBreakdown, ScoreBreakdownData } from '../ScoreBreakdown';
+import { ScoreBreakdown, ScoreBreakdownData, CategoryScoresData } from '../ScoreBreakdown';
 import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { LoadingMessages } from '../LoadingMessages';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'airo:lastJobDescription';
+
+// Default match score when no analysis is available (represents neutral/baseline match)
+const DEFAULT_FALLBACK_SCORE = 55;
 
 // === Keyword bucket labels ===
 const CHIP_LABELS = {
@@ -253,6 +257,27 @@ export function OptimizeSection({
     }
   }, [optimizations.length, optimizationMetrics.vision2030, resumeText, originalResume, isArabic, setOptimizationMetrics]);
 
+  // Restore beforeScore from cache on mount if optimizations exist but score is missing
+  // This happens when page loads with persisted optimizations but beforeScore wasn't saved
+  useEffect(() => {
+    if (optimizations.length > 0 && !optimizationMetrics.beforeScore && resumeText) {
+      const jobDescription = typeof window !== 'undefined'
+        ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+        : '';
+
+      if (jobDescription) {
+        const cachedAnalysis = getCachedAnalysis(resumeText, jobDescription);
+        if (cachedAnalysis?.score) {
+          console.log('[OptimizeSection] Restoring beforeScore from cache on mount:', cachedAnalysis.score);
+          setOptimizationMetrics({
+            beforeScore: cachedAnalysis.score,
+            hasJobDescription: true,
+          });
+        }
+      }
+    }
+  }, [optimizations.length, optimizationMetrics.beforeScore, resumeText, getCachedAnalysis, setOptimizationMetrics]);
+
 
   // Memoize keyword buckets - use store or props
   const keywordBuckets = useMemo(() => {
@@ -303,11 +328,19 @@ export function OptimizeSection({
       fallbackScore: optimizationMetrics.beforeScore
     });
 
-    // Priority: 1. Cached match analysis score, 2. API-provided score, 3. Resume meta, 4. Default 55
-    const beforeScore = cachedAnalysis?.score ??
-      optimizationMetrics.beforeScore ??
+    // Priority: 1. Store metrics (from API or cache restore), 2. Current cache, 3. Resume meta, 4. Default fallback
+    // Note: optimizationMetrics.beforeScore is the source of truth - populated from API response or cache restoration
+    const beforeScore = optimizationMetrics.beforeScore ??
+      cachedAnalysis?.score ??
       ((originalResume?.meta as Record<string, unknown> | undefined)?.match_score as number) ??
-      55;
+      DEFAULT_FALLBACK_SCORE;
+
+    // Track if we're using placeholder/fallback values (Bug Fix: Make fake scores obvious)
+    const isPlaceholderScore = !cachedAnalysis?.score &&
+      !optimizationMetrics.beforeScore &&
+      !((originalResume?.meta as Record<string, unknown> | undefined)?.match_score);
+    // FIX: Use explicit null check, not truthy check, because improvement can be 0 (valid value)
+    const isPlaceholderImprovement = optimizationMetrics.improvement === null || optimizationMetrics.improvement === undefined;
 
     // Recalculate after score based on applied optimizations
     // API gives us the "potential" score, but we adjust based on what's actually applied
@@ -336,6 +369,9 @@ export function OptimizeSection({
       // Check if job description exists from API or localStorage
       hasJobDescription: optimizationMetrics.hasJobDescription || Boolean(jobDescription.trim()),
       vision2030: optimizationMetrics.vision2030,
+      // Bug Fix: Expose placeholder status to UI
+      isPlaceholderScore,
+      isPlaceholderImprovement,
     };
   }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis]);
 
@@ -382,6 +418,20 @@ export function OptimizeSection({
       }
 
       const data = await response.json();
+
+      // DEBUG: Log ALL data received from API
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[OptimizeSection] API response data:', {
+          hasCards: !!data.cards,
+          cardsCount: data.cards?.length,
+          hasMatchScoring: !!data.matchScoring,
+          matchScoring: data.matchScoring,
+          hasGapAnalysis: !!data.gapAnalysis,
+          gapAnalysisCount: data.gapAnalysis?.length,
+          hasCategoryScores: !!data.categoryScores,
+          categoryScores: data.categoryScores,
+        });
+      }
 
       // Transform API response to OptimizationResult format
       // API returns: { cards: [{section, issue, suggestion, exampleBefore, exampleAfter}], keywords: {add, neutral, remove} }
@@ -469,45 +519,56 @@ export function OptimizeSection({
         useResumeStore.getState().setKeywordSuggestions(suggestions);
       }
 
+      // Initialize accumulator for consolidated update
+      const metricsToUpdate: Partial<OptimizationMetrics> = {};
+
       // Capture match scoring data for Results Summary
       if (data.matchScoring) {
-        setOptimizationMetrics({
-          beforeScore: data.matchScoring.beforeScore,
-          afterScore: data.matchScoring.afterScore,
-          improvement: data.matchScoring.improvement,
-          jdKeywords: data.matchScoring.jdKeywords || [],
-          matchedKeywords: data.matchScoring.matchedKeywords || [],
-          reasoning: data.matchScoring.reasoning,
-          hasJobDescription: data.debug?.hasJobDescription || false,
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[OptimizeSection] Received matchScoring from API:', {
+            beforeScore: data.matchScoring.beforeScore,
+            afterScore: data.matchScoring.afterScore,
+            improvement: data.matchScoring.improvement,
+          });
+        }
+        metricsToUpdate.beforeScore = data.matchScoring.beforeScore;
+        metricsToUpdate.afterScore = data.matchScoring.afterScore;
+        metricsToUpdate.improvement = data.matchScoring.improvement;
+        metricsToUpdate.jdKeywords = data.matchScoring.jdKeywords || [];
+        metricsToUpdate.matchedKeywords = data.matchScoring.matchedKeywords || [];
+        metricsToUpdate.reasoning = data.matchScoring.reasoning;
+        metricsToUpdate.hasJobDescription = data.debug?.hasJobDescription || false;
+      } else {
+        // Fallback: Use cached match analysis score if available
+        const jobDesc = typeof window !== 'undefined' ? window.localStorage.getItem(LAST_JOB_KEY) || '' : '';
+        const cachedAnalysis = resumeText && jobDesc ? getCachedAnalysis(resumeText, jobDesc) : null;
+        if (cachedAnalysis?.score) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[OptimizeSection] No matchScoring from API, using cached score:', cachedAnalysis.score);
+          }
+          metricsToUpdate.beforeScore = cachedAnalysis.score;
+          metricsToUpdate.hasJobDescription = true;
+        }
       }
 
       // Capture gap analysis from API response
       if (data.gapAnalysis && Array.isArray(data.gapAnalysis)) {
-        setOptimizationMetrics({
-          gapAnalysis: data.gapAnalysis,
-        });
+        metricsToUpdate.gapAnalysis = data.gapAnalysis;
       }
 
       // Capture keyword strategy from API response
       if (data.keywordStrategy) {
-        setOptimizationMetrics({
-          keywordStrategy: data.keywordStrategy,
-        });
+        metricsToUpdate.keywordStrategy = data.keywordStrategy;
       }
 
       // Capture score breakdown from API response
       if (data.scoreBreakdown) {
-        setOptimizationMetrics({
-          scoreBreakdown: data.scoreBreakdown,
-        });
+        metricsToUpdate.scoreBreakdown = data.scoreBreakdown;
       }
 
       // Capture category scores from API response
       if (data.categoryScores) {
-        setOptimizationMetrics({
-          categoryScores: data.categoryScores,
-        });
+        metricsToUpdate.categoryScores = data.categoryScores;
       }
 
       // Run Vision 2030 analysis on resume text
@@ -546,16 +607,40 @@ export function OptimizeSection({
           nameAr: vision2030Analysis.detectedCareer.archetypeNameAr,
         } : null;
 
-        setOptimizationMetrics({
-          vision2030: {
-            overallScore: vision2030Analysis.overallScore,
-            primarySector,
-            secondarySectors,
-            matchedSkillsCount: vision2030Analysis.matchedSkills.length,
-            topMatchedSkills: vision2030Analysis.matchedSkills.slice(0, 6).map(s => s.skillNameEn),
-            detectedCareer,
-          },
-        });
+        metricsToUpdate.vision2030 = {
+          overallScore: vision2030Analysis.overallScore,
+          primarySector,
+          secondarySectors,
+          matchedSkillsCount: vision2030Analysis.matchedSkills.length,
+          topMatchedSkills: vision2030Analysis.matchedSkills.slice(0, 6).map(s => s.skillNameEn),
+          detectedCareer,
+        };
+      }
+
+      // Update the store with all accumulated metrics at once
+      if (Object.keys(metricsToUpdate).length > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[OptimizeSection] Dispatching consolidated metrics update:', {
+            keys: Object.keys(metricsToUpdate),
+            gapAnalysisCount: metricsToUpdate.gapAnalysis?.length,
+            beforeScore: metricsToUpdate.beforeScore
+          });
+        }
+
+        setOptimizationMetrics(metricsToUpdate);
+
+        // Update the cache with the new match score if available
+        // This ensures subsequent renders use the fresh score instead of stale cache
+        if (metricsToUpdate.beforeScore && resumeText && (metricsToUpdate.hasJobDescription)) {
+          const jobDesc = typeof window !== 'undefined' ? window.localStorage.getItem(LAST_JOB_KEY) || '' : '';
+          if (jobDesc) {
+            useResumeStore.getState().setCachedAnalysis(resumeText, jobDesc, {
+              score: metricsToUpdate.beforeScore,
+              matchedKeywords: metricsToUpdate.matchedKeywords || [],
+              missingKeywords: metricsToUpdate.jdKeywords?.filter((k: string) => !metricsToUpdate.matchedKeywords?.includes(k)) || []
+            });
+          }
+        }
       }
 
     } catch (err) {
@@ -785,8 +870,11 @@ export function OptimizeSection({
       {optimizations.length > 0 && (
         <ScoreBreakdown
           data={optimizationMetrics.scoreBreakdown as ScoreBreakdownData | null}
+          categoryScores={optimizationMetrics.categoryScores as unknown as CategoryScoresData | undefined}
           beforeScore={resultsSummaryData.beforeScore}
           afterScore={resultsSummaryData.potentialScore}
+          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
+          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
           className="mb-2"
         />
       )}
@@ -906,6 +994,7 @@ export function OptimizeSection({
                         onClick={() => onCopy(Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized)}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                         title={t('common.copy', 'Copy')}
+                        aria-label={t('common.copy', 'Copy')}
                       >
                         <Copy className="w-4 h-4 text-gray-400" />
                       </button>
@@ -919,12 +1008,16 @@ export function OptimizeSection({
                           : "hover:bg-white/10 text-gray-400"
                       )}
                       title={isArabic ? 'مقارنة' : 'Compare'}
+                      aria-label={isArabic ? 'مقارنة' : 'Compare'}
                     >
                       <ArrowLeftRight className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => toggleCard(opt.sectionId)}
                       className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      aria-label={expandedCards.has(opt.sectionId)
+                        ? (isArabic ? 'طي' : 'Collapse')
+                        : (isArabic ? 'توسيع' : 'Expand')}
                     >
                       {expandedCards.has(opt.sectionId)
                         ? <ChevronUp className="w-4 h-4 text-gray-400" />

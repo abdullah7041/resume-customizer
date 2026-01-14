@@ -46,7 +46,7 @@ describe('JobMatch', () => {
     expect(
       screen.getByPlaceholderText(/paste the job description/i)
     ).toHaveValue('Saved JD');
-    expect(screen.getByText(/paste a job description to see match insights here/i)).toBeInTheDocument();
+    expect(screen.getByText(/matches the requirements/i)).toBeInTheDocument();
   });
 });
 

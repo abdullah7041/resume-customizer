@@ -22,7 +22,11 @@
       "Bash(where claude-code)",
       "Bash(findstr:*)",
       "Bash(npm test:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(cd:*)",
+      "WebSearch",
+      "WebFetch(domain:discuss.ai.google.dev)",
+      "WebFetch(domain:ai.google.dev)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -499,6 +499,30 @@ export default function MainContent() {
         setOptimizations(result.cards ?? []);
         setOptimizationData(result.optimization ?? null);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
+
+        // FIX: Store optimization metrics (gapAnalysis, matchScoring, categoryScores) in Zustand
+        // These were previously discarded, causing gap analysis and optimized score to not appear
+        const { setOptimizationMetrics } = useResumeStore.getState();
+        if (result.matchScoring || result.gapAnalysis || result.categoryScores) {
+          setOptimizationMetrics({
+            ...(result.matchScoring && {
+              beforeScore: result.matchScoring.beforeScore,
+              afterScore: result.matchScoring.afterScore,
+              improvement: result.matchScoring.improvement,
+              jdKeywords: result.matchScoring.jdKeywords || [],
+              matchedKeywords: result.matchScoring.matchedKeywords || [],
+              reasoning: result.matchScoring.reasoning,
+              hasJobDescription: true,
+            }),
+            ...(result.gapAnalysis && { gapAnalysis: result.gapAnalysis }),
+            ...(result.categoryScores && { categoryScores: result.categoryScores }),
+          });
+          console.log('[MainContent] Stored optimization metrics:', {
+            hasMatchScoring: !!result.matchScoring,
+            gapAnalysisCount: result.gapAnalysis?.length,
+            hasCategoryScores: !!result.categoryScores,
+          });
+        }
         pushToast(
           {
             type: result.source === "gemini" && result.cards?.length > 0 ? "success" : "warning",

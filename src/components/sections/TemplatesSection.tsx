@@ -1,10 +1,10 @@
 // src/components/sections/TemplatesSection.tsx
 // Resume template gallery with floating overlay template selector
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle, Edit3 } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, Maximize, RotateCcw } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -69,6 +69,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isDownloading, setIsDownloading] = useState(false);
   const [isHoveringSelector, setIsHoveringSelector] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
 
   // Get resume data from store - subscribe to all relevant state for reactivity
   const {
@@ -114,6 +116,43 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
       : (propResumeData || SAMPLE_RESUME);
   }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
+
+  // Calculate optimal initial scale based on viewport
+  useLayoutEffect(() => {
+    if (isManuallyZoomed) return;
+
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 640) { // sm
+        setScale(0.55);
+      } else if (width < 768) { // md
+        setScale(0.75);
+      } else {
+        setScale(0.9); // Desktop: 90% scale for "fit" look with margins
+      }
+    };
+
+    handleResize(); // Initial call
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isManuallyZoomed]);
+
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    setIsManuallyZoomed(true);
+    setScale(prev => Math.min(prev + 0.1, 1.5));
+  };
+
+  const handleZoomOut = () => {
+    setIsManuallyZoomed(true);
+    setScale(prev => Math.max(prev - 0.1, 0.4));
+  };
+
+  const handleResetZoom = () => {
+    setIsManuallyZoomed(false);
+    // Resetting manually zoomed flag will trigger the useLayoutEffect to re-calculate optimal scale
+  };
 
   // Download PDF using server-side Puppeteer (Netlify function)
   // Note: We now send pre-rendered HTML from the preview instead of resumeData
@@ -180,12 +219,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   return (
     <div className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
       {/* Full-Width Preview */}
-      <div className="flex-1 flex flex-col bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
-        <div className="flex items-center justify-between p-4 md:p-5 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
           <div>
-            <h3 className="text-lg font-bold text-white">{selectedTemplate.name}</h3>
+            <h3 className="text-lg font-bold text-white transition-opacity duration-300">{selectedTemplate.name}</h3>
             <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`)}
@@ -216,9 +255,36 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
         </div>
 
+        {/* Zoom Controls Overlay */}
+        <div className="absolute top-24 right-6 z-30 flex flex-col gap-2 bg-black/60 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity duration-300">
+          <button
+            onClick={handleZoomIn}
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+            title={t('common.zoomIn', 'Zoom In')}
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+            title={t('common.zoomOut', 'Zoom Out')}
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <div className="h-px bg-white/10 my-0.5" />
+          <button
+            onClick={handleResetZoom}
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+            title={t('common.resetZoom', 'Reset Zoom')}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
+
+
         {/* No Resume Warning */}
         {!hasRealResume && (
-          <div className="mx-4 mt-4 flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+          <div className="mx-4 mt-4 flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg relative z-10">
             <AlertCircle className="w-5 h-5 text-amber-400" />
             <p className="text-sm text-amber-400">
               {t('sections.templates.noResumeWarning', 'This is a preview. Upload your resume to see your data.')}
@@ -230,10 +296,16 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         <div className="relative flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30 min-h-0">
 
           {/* Resume Preview */}
-          <div className="w-full flex justify-center pb-28 md:pb-20">
+          <div className="w-full flex justify-center pb-32 md:pb-20 pt-4">
+            {/* Dynamic Scale Wrapper */}
             <div
               dir="ltr"
-              className="bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/10 w-full max-w-[210mm] transition-all duration-500"
+              className="bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/10 w-fit transition-transform duration-300 origin-top ease-out"
+              style={{
+                transform: `scale(${scale})`,
+                // Ensure proper mobile scaling without horizontal overflow
+                maxWidth: 'min(210mm, 100vw)'
+              }}
             >
               <TemplateRenderer
                 template={selectedTemplate}
@@ -242,68 +314,75 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             </div>
           </div>
 
-          {/* Floating Template Selector - Sticky at bottom of scroll container */}
+
+          {/* Floating Template Selector - Fixed absolute bottom */}
           <div
             className={cn(
-              "sticky bottom-4 md:bottom-4 inset-x-0 z-50 w-fit mx-auto",
+              "absolute bottom-0 inset-x-0 z-50 w-full flex justify-center pb-4 md:pb-6 pt-12 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent pointer-events-none",
               "transition-all duration-300 ease-out",
-              isHoveringSelector ? "opacity-100 scale-100" : "opacity-60 md:opacity-40 scale-100 md:scale-95 hover:opacity-100 hover:scale-100"
+              isHoveringSelector ? "translate-y-0" : "translate-y-0"
             )}
             onMouseEnter={() => setIsHoveringSelector(true)}
             onMouseLeave={() => setIsHoveringSelector(false)}
           >
-            {/* Desktop Pills */}
-            <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-black/80 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
-              {activeTemplates.map((template) => {
-                const isSelected = selectedTemplate.id === template.id;
-                return (
-                  <button
-                    key={template.id}
-                    onClick={() => handleSelectTemplate(template)}
-                    className={cn(
-                      "relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200",
-                      isSelected
-                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
-                        : "text-white/70 hover:text-white hover:bg-white/10"
-                    )}
-                  >
-                    {isSelected && (
-                      <Check className="w-4 h-4" />
-                    )}
-                    <span className="text-sm font-medium whitespace-nowrap">
-                      {template.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <div className="w-full pointer-events-auto px-4 overflow-hidden">
+              {/* Desktop Pills */}
+              <div className="hidden md:flex justify-center items-center gap-2 px-3 py-2 bg-black/80 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl w-fit mx-auto">
+                {activeTemplates.map((template) => {
+                  const isSelected = selectedTemplate.id === template.id;
+                  return (
+                    <button
+                      key={template.id}
+                      onClick={() => handleSelectTemplate(template)}
+                      className={cn(
+                        "relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200",
+                        isSelected
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg scale-105"
+                          : "text-white/70 hover:text-white hover:bg-white/10"
+                      )}
+                    >
+                      {isSelected && (
+                        <Check className="w-4 h-4" />
+                      )}
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {template.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-            {/* Mobile Chips - Simplified and compact */}
-            <div className="md:hidden flex items-center justify-center gap-1.5 px-2 py-1.5 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
-              {activeTemplates.map(template => (
-                <button
-                  key={template.id}
-                  onClick={() => handleSelectTemplate(template)}
-                  className={cn(
-                    "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200",
-                    selectedTemplate.id === template.id
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-                      : "text-white/60 active:bg-white/10"
-                  )}
-                >
-                  {selectedTemplate.id === template.id && <Check className="w-3 h-3" />}
-                  {template.name.split(' ')[0]}
-                </button>
-              ))}
-            </div>
+              {/* Mobile Chips - Horizontal Scrollable */}
+              <div className="md:hidden w-full overflow-x-auto no-scrollbar pb-1">
+                <div className="flex items-center gap-2 px-1 w-max mx-auto min-w-full justify-center">
+                  <div className="flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
+                    {activeTemplates.map(template => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleSelectTemplate(template)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0",
+                          selectedTemplate.id === template.id
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md transform scale-105"
+                            : "text-white/70 active:bg-white/10"
+                        )}
+                      >
+                        {selectedTemplate.id === template.id && <Check className="w-3 h-3" />}
+                        {template.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-            {/* Subtle hint text - desktop only */}
-            <p className={cn(
-              "hidden md:block text-center text-xs text-white/40 mt-2 transition-opacity",
-              isHoveringSelector ? "opacity-100" : "opacity-0"
-            )}>
-              {t('sections.templates.selectHint', 'Choose your style')}
-            </p>
+              {/* Subtle hint text - desktop only */}
+              <p className={cn(
+                "hidden md:block text-center text-xs text-white/40 mt-2 transition-opacity",
+                isHoveringSelector ? "opacity-100" : "opacity-0"
+              )}>
+                {t('sections.templates.selectHint', 'Choose your style')}
+              </p>
+            </div>
           </div>
         </div>
 

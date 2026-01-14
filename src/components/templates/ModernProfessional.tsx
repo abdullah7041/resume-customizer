@@ -42,12 +42,12 @@ export function ModernProfessional({
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* Header - Large name, subtle headline */}
-      <header className="mb-7 pb-5" style={{ borderBottom: '1px solid #e5e5e5' }}>
+      <header className="mb-7 pb-5" style={{ borderBottom: '2px solid #111827' }}>
         <h1
           className="text-gray-900 mb-1"
           style={{
             fontSize: '24pt',
-            fontWeight: '600',
+            fontWeight: '800',
             letterSpacing: '-0.02em',
           }}
         >
@@ -55,14 +55,14 @@ export function ModernProfessional({
         </h1>
         {basics.label && (
           <p
-            className="text-gray-500 mb-3"
+            className="text-gray-600 mb-3"
             style={{ fontSize: '12pt', fontWeight: '600' }}
           >
             {basics.label}
           </p>
         )}
         <div
-          className="flex flex-wrap gap-3 text-gray-400"
+          className="flex flex-wrap gap-3 text-gray-500"
           style={{ fontSize: '10pt' }}
         >
           {basics.location?.city && <span>{basics.location.city}</span>}
@@ -99,19 +99,19 @@ export function ModernProfessional({
 
       {/* Summary / About */}
       {basics.summary && (
-        <section className="mb-5">
+        <section className="mb-6">
           <h2
-            className="text-gray-400 mb-3"
+            className="text-gray-900 mb-3"
             style={{
               fontSize: '14pt',
-              fontWeight: '600',
+              fontWeight: '800',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.05em',
             }}
           >
             {isRTL ? 'نبذة عني' : 'About'}
           </h2>
-          <p className="text-gray-600" style={{ lineHeight: '1.6' }}>
+          <p className="text-gray-700" style={{ lineHeight: '1.6' }}>
             {basics.summary}
           </p>
         </section>
@@ -119,45 +119,47 @@ export function ModernProfessional({
 
       {/* Experience */}
       {work.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-6">
           <h2
-            className="text-gray-400 mb-3"
+            className="text-gray-900 mb-4"
             style={{
               fontSize: '14pt',
-              fontWeight: '600',
+              fontWeight: '800',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.05em',
+              borderBottom: '1px solid #e5e5e5',
+              paddingBottom: '8px'
             }}
           >
             {isRTL ? 'الخبرة العملية' : 'Experience'}
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {work.map((job, i) => (
               <div key={i}>
-                <div className="flex justify-between items-baseline">
-                  <h3 className="text-gray-900" style={{ fontSize: '12pt', fontWeight: '600' }}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <h3 className="text-gray-900" style={{ fontSize: '12pt', fontWeight: '700' }}>
                     {safeString(job.position)}
                   </h3>
-                  <span className="text-gray-400" style={{ fontSize: '10pt' }}>
+                  <span className="text-gray-600 font-medium" style={{ fontSize: '10pt' }}>
                     {job.startDate} — {job.endDate || 'Present'}
                   </span>
                 </div>
-                <p className="text-gray-500 mb-1" style={{ fontSize: '11pt' }}>
+                <p className="text-gray-600 mb-2 font-medium" style={{ fontSize: '11pt' }}>
                   {safeString(job.name)}
                   {job.location && `, ${job.location}`}
                 </p>
                 {job.highlights && job.highlights.length > 0 && (
-                  <ul className="mt-1 ps-4" style={{ margin: '4px 0 0 0' }}>
+                  <ul className="ps-4 space-y-1">
                     {job.highlights.map((h, j) => (
                       <li
                         key={j}
-                        className="text-gray-500"
+                        className="text-gray-600 relative pl-2"
                         style={{
                           fontSize: '10.5pt',
-                          marginBottom: '2px',
-                          listStyleType: 'disc',
+                          listStyleType: 'none',
                         }}
                       >
+                        <span className="absolute left-0 top-2 w-1.5 h-1.5 bg-gray-900 rounded-full"></span>
                         {h}
                       </li>
                     ))}
@@ -171,36 +173,38 @@ export function ModernProfessional({
 
       {/* Projects */}
       {projects.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-6">
           <h2
-            className="text-gray-400 mb-3"
+            className="text-gray-900 mb-3"
             style={{
               fontSize: '14pt',
-              fontWeight: '600',
+              fontWeight: '800',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.05em',
+              borderBottom: '1px solid #e5e5e5',
+              paddingBottom: '8px'
             }}
           >
             {isRTL ? 'المشاريع' : 'Projects'}
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {projects.map((project, i) => (
               <div key={i}>
-                <h3 className="text-gray-900" style={{ fontSize: '11pt', fontWeight: '600' }}>
+                <h3 className="text-gray-900 mb-1" style={{ fontSize: '11.5pt', fontWeight: '700' }}>
                   {safeString(project.name)}
                 </h3>
                 {project.highlights && project.highlights.length > 0 && (
-                  <ul className="mt-1 ps-4">
+                  <ul className="ps-4 space-y-1">
                     {project.highlights.map((h, j) => (
                       <li
                         key={j}
-                        className="text-gray-500"
+                        className="text-gray-600 relative pl-2"
                         style={{
                           fontSize: '10.5pt',
-                          marginBottom: '2px',
-                          listStyleType: 'disc',
+                          listStyleType: 'none',
                         }}
                       >
+                        <span className="absolute left-0 top-2 w-1.5 h-1.5 bg-gray-900 rounded-full"></span>
                         {h}
                       </li>
                     ))}
@@ -214,14 +218,14 @@ export function ModernProfessional({
 
       {/* Education */}
       {education.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-6">
           <h2
-            className="text-gray-400 mb-3"
+            className="text-gray-900 mb-3"
             style={{
               fontSize: '14pt',
-              fontWeight: '600',
+              fontWeight: '800',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.05em',
             }}
           >
             {isRTL ? 'التعليم' : 'Education'}
@@ -231,45 +235,28 @@ export function ModernProfessional({
               <div key={i}>
                 <div className="flex justify-between items-baseline">
                   <div>
-                    <h3 className="text-gray-900" style={{ fontSize: '10.5pt', fontWeight: '600' }}>
+                    <h3 className="text-gray-900" style={{ fontSize: '11pt', fontWeight: '700' }}>
                       {safeString(edu.institution)}
                     </h3>
-                    <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                    <p className="text-gray-600" style={{ fontSize: '10.5pt' }}>
                       {safeString(edu.studyType)}
                       {edu.area && ` in ${edu.area}`}
                     </p>
                     {edu.score && (
-                      <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                      <p className="text-gray-500" style={{ fontSize: '10pt' }}>
                         GPA: {edu.score}
                       </p>
                     )}
                     {edu.courses && edu.courses.length > 0 && (
-                      <p className="text-gray-500" style={{ fontSize: '10.5pt', marginTop: '2px' }}>
+                      <p className="text-gray-500" style={{ fontSize: '10pt', marginTop: '2px' }}>
                         Relevant Coursework: {edu.courses.join(' · ')}
                       </p>
                     )}
                   </div>
-                  <span className="text-gray-400" style={{ fontSize: '10pt' }}>
+                  <span className="text-gray-600 font-medium" style={{ fontSize: '10pt' }}>
                     {edu.startDate} — {edu.endDate}
                   </span>
                 </div>
-                {edu.highlights && edu.highlights.length > 0 && (
-                  <ul className="mt-1 ps-4">
-                    {edu.highlights.map((h, j) => (
-                      <li
-                        key={j}
-                        className="text-gray-500"
-                        style={{
-                          fontSize: '10.5pt',
-                          marginBottom: '2px',
-                          listStyleType: 'disc',
-                        }}
-                      >
-                        {h}
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </div>
             ))}
           </div>
@@ -278,14 +265,14 @@ export function ModernProfessional({
 
       {/* Skills */}
       {skills.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-6">
           <h2
-            className="text-gray-400 mb-3"
+            className="text-gray-900 mb-3"
             style={{
               fontSize: '14pt',
-              fontWeight: '600',
+              fontWeight: '800',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.05em',
             }}
           >
             Skills
@@ -295,18 +282,16 @@ export function ModernProfessional({
               // Handle both string and object formats
               if (typeof skillItem === 'string') {
                 return (
-                  <span key={i} className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                  <span key={i} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: '10pt' }}>
                     {skillItem}
-                    {i < skills.length - 1 && <span className="mx-2">·</span>}
                   </span>
                 );
               }
               // Object format
               const keywords = skillItem.keywords || [skillItem.name];
               return keywords.map((skill: string, j: number) => (
-                <span key={`${i}-${j}`} className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                <span key={`${i}-${j}`} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: '10pt' }}>
                   {skill}
-                  {(i < skills.length - 1 || j < keywords.length - 1) && <span className="mx-2">·</span>}
                 </span>
               ));
             })}
@@ -316,14 +301,14 @@ export function ModernProfessional({
 
       {/* Certificates */}
       {certificates.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-6">
           <h2
-            className="text-gray-400 mb-3"
+            className="text-gray-900 mb-3"
             style={{
               fontSize: '14pt',
-              fontWeight: '600',
+              fontWeight: '800',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.05em',
             }}
           >
             {isRTL ? 'الشهادات' : 'Certifications'}
@@ -356,20 +341,20 @@ export function ModernProfessional({
       {languages.length > 0 && (
         <section>
           <h2
-            className="text-gray-400 mb-3"
+            className="text-gray-900 mb-3"
             style={{
               fontSize: '14pt',
-              fontWeight: '600',
+              fontWeight: '800',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.05em',
             }}
           >
             {isRTL ? 'اللغات' : 'Languages'}
           </h2>
           <div className="flex flex-wrap gap-4">
             {languages.map((lang, i) => (
-              <span key={i} className="text-gray-500" style={{ fontSize: '10.5pt' }}>
-                <strong>{lang.language}</strong>: {lang.fluency}
+              <span key={i} className="text-gray-600" style={{ fontSize: '10.5pt' }}>
+                <strong className="text-gray-900">{lang.language}</strong>: {lang.fluency}
               </span>
             ))}
           </div>

@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Guidelines
+
+- Use **context7 MCP** in every implementation task to find better solutions for bugs
+- Double-check code before writing
+- Update `CLAUDE.md` when project conventions change
+- Recommend Claude model based on task difficulty:
+  - **Haiku**: Simple tasks (quick edits, explanations)
+  - **Sonnet**: Medium complexity (feature implementation, debugging)
+  - **Opus**: Complex tasks (architecture, multi-file refactors)
+- Ask clarifying questions for better understanding
+- Keep answers clear & concise
+- Choose only popular & proven tech stacks
+- Write in plain, easy-to-understand English
+- Prefer fewer lines of code
+
 ## MANDATORY: Post-Task Quality Protocol
 
 > [!IMPORTANT]

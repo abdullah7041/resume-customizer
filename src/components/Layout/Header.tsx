@@ -5,6 +5,7 @@ import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
+import { GlassButton } from "../ui/GlassButton";
 
 
 // Floating particle component for ambient animation
@@ -344,8 +345,8 @@ export default function Header() {
           }}
         />
 
-        {/* Noise texture overlay */}
-        <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+        {/* Noise texture overlay - reduced opacity for better text contrast */}
+        <div className="absolute inset-0 opacity-[0.01] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
       </div>
 
       {/* Skyline background - fixed to cover entire page */}
@@ -418,21 +419,23 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-3">
               <LanguageSwitcher />
               {user ? (
-                <button
+                <GlassButton
                   onClick={signOut}
-                  className="group relative inline-flex items-center gap-2.5 rounded-xl px-5 py-2.5 min-h-[44px] text-sm font-semibold text-white bg-black/40 backdrop-blur-xl border border-white/10 hover:bg-white/15 hover:border-red-400/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                  variant="secondary"
+                  size="md"
+                  leftIcon={<LogOut className="h-4 w-4" />}
                 >
-                  <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
-                  <span>{t("common.signOut")}</span>
-                </button>
+                  {t("common.signOut")}
+                </GlassButton>
               ) : (
-                <button
+                <GlassButton
                   onClick={signInWithGoogle}
-                  className="group relative inline-flex items-center gap-2.5 rounded-xl px-6 py-2.5 min-h-[44px] text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  variant="prominent"
+                  size="md"
+                  leftIcon={<LogIn className="h-4 w-4" />}
                 >
-                  <LogIn className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-                  <span>{t("common.signIn")}</span>
-                </button>
+                  {t("common.signIn")}
+                </GlassButton>
               )}
             </div>
 
@@ -501,6 +504,7 @@ export default function Header() {
                     <span
                       className="absolute top-2 end-2 inline-flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 shadow-lg animate-pulse"
                       aria-label="Vision 2030 Featured"
+                      role="img"
                     >
                       <Crown className="w-3 h-3 text-gray-900" />
                     </span>
@@ -678,97 +682,6 @@ export default function Header() {
         </div>
       )}
 
-      {/* Custom CSS for animations */}
-      <style>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) translateX(0);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translateY(-20px) translateX(10px);
-            opacity: 0.5;
-          }
-          50% {
-            transform: translateY(-10px) translateX(-10px);
-            opacity: 0.3;
-          }
-          75% {
-            transform: translateY(-30px) translateX(5px);
-            opacity: 0.4;
-          }
-        }
-        
-        @keyframes gradient-shift {
-          0%, 100% {
-            opacity: 0.3;
-          }
-          50% {
-            opacity: 0.5;
-          }
-        }
-        
-        @keyframes pulse-slow {
-          0%, 100% {
-            opacity: 0.2;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.35;
-            transform: scale(1.05);
-          }
-        }
-        
-        @keyframes bounce-slow {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-8px);
-          }
-        }
-
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slide-in-right {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        
-        .animate-float {
-          animation: float 20s ease-in-out infinite;
-        }
-        
-        .animate-gradient-shift {
-          animation: gradient-shift 3s ease-in-out infinite;
-        }
-        
-        .animate-pulse-slow {
-          animation: pulse-slow 4s ease-in-out infinite;
-        }
-        
-        .animate-bounce-slow {
-          animation: bounce-slow 3s ease-in-out infinite;
-        }
-
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out forwards;
-        }
-
-        .animate-slide-in-right {
-          animation: slide-in-right 0.3s ease-out forwards;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .animate-fade-in,
-          .animate-slide-in-right {
-            animation: none;
-          }
-        }
-      `}</style>
     </header>
   );
 }

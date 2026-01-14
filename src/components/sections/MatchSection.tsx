@@ -13,17 +13,17 @@ import {
   Zap,
   Wrench,
   ChevronDown,
-  ChevronUp,
-  ExternalLink
+
+  Code2,
+  Briefcase,
+  GraduationCap,
+  Users
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { analytics } from '../../services/analytics';
 import Tooltip from '../ui/Tooltip';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
-import { analyzeVision2030Alignment, Vision2030Analysis } from '../../lib/utils/vision2030Analyzer';
-import Vision2030Modal from '../ui/Vision2030Modal';
 import { MatchSkeleton } from './MatchSection.skeleton';
-import { SectorIcon } from '../../lib/utils/vision2030Icons';
 import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
 import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
@@ -126,8 +126,7 @@ export function MatchSection({
   });
   const [error, setError] = useState("");
   const [whyOpen, setWhyOpen] = useState(false);
-  const [v2030Expanded, setV2030Expanded] = useState(false);
-  const [v2030ModalOpen, setV2030ModalOpen] = useState(false);
+
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -193,12 +192,6 @@ export function MatchSection({
   const missing = matchAnalysis?.missingKeywords?.slice(0, 6) ?? [];
   const hits = matchAnalysis?.topHits?.slice(0, 6) ?? [];
 
-  // Vision 2030 analysis - compute when resume text and results are available
-  const v2030Analysis = useMemo<Vision2030Analysis | null>(() => {
-    if (!resumeText || !hasResults) return null;
-    return analyzeVision2030Alignment(resumeText, isArabic ? 'ar' : 'en');
-  }, [resumeText, hasResults, isArabic]);
-
   const buttonDisabled = !jobText.trim() || !hasResume || isAnalyzing;
   const disabledHint = !hasResume
     ? t('sections.match.hints.uploadFirst', 'Upload or paste your resume first.')
@@ -231,7 +224,7 @@ export function MatchSection({
                   setJobText("");
                   onClear?.();
                 }}
-                className="text-xs font-medium text-gray-400 hover:text-red-400 transition-colors"
+                className="text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-rose-500/20 px-2.5 py-1 rounded-lg transition-all"
               >
                 {t('common.clear', 'Clear')}
               </button>
@@ -239,16 +232,18 @@ export function MatchSection({
           </div>
 
           <textarea
+            id="jobDescription"
+            name="jobDescription"
             value={jobText}
             onChange={(e) => setJobText(e.target.value)}
             placeholder={t('sections.match.jobInput.placeholder', 'Paste the job description here...')}
             className={cn(
-              'w-full h-64 p-4 rounded-xl resize-none mb-4',
-              'bg-white/5 border border-white/10',
-              'text-white placeholder-gray-500',
-              'focus:outline-none focus:border-emerald-500/50 focus:bg-white/10',
-              'transition-all',
-              error && 'border-red-500/50'
+              'w-full h-64 p-5 rounded-xl resize-none mb-4',
+              'bg-black/20 border border-white/5',
+              'text-white placeholder-gray-500/80 leading-relaxed',
+              'focus:outline-none focus:border-emerald-500/30 focus:bg-black/30 focus:ring-1 focus:ring-emerald-500/20',
+              'transition-all duration-300',
+              error && 'border-rose-500/50 focus:border-rose-500/50 focus:ring-rose-500/20'
             )}
           />
 
@@ -297,8 +292,8 @@ export function MatchSection({
           {isAnalyzing ? (
             <MatchSkeleton />
           ) : hasResults && score !== null ? (
-            <div className="space-y-5">
-              {/* Score Ring Display */}
+            <div className="flex flex-col h-full gap-5">
+              {/* Score Ring Display - Fixed at top */}
               <div className="relative rounded-2xl overflow-hidden">
                 {/* Background gradient */}
                 <div className={cn(
@@ -356,20 +351,19 @@ export function MatchSection({
                       </svg>
 
                       {/* Inner Score */}
-                      <div className="absolute inset-4 grid place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md">
+                      <div className="absolute inset-4 grid place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md shadow-inner shadow-white/5">
                         <div className="flex flex-col items-center justify-center text-center">
-                          <variant.icon className="w-5 h-5 mb-1 text-white/90" />
                           <Tooltip
                             content={`${score}/100 - ${isArabic ? variant.labelAr : variant.label}`}
                             position="bottom"
                           >
-                            <div className="flex items-baseline gap-0.5 cursor-help">
+                            <div className="flex flex-col items-center cursor-help">
                               <AnimatedCounter
                                 to={score}
                                 duration={1500}
-                                className="text-4xl font-black text-white"
+                                className="text-5xl font-black text-white tracking-tight drop-shadow-lg"
                               />
-                              <span className="text-[10px] font-bold text-white/70">/100</span>
+                              <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest mt-[-2px]">Score</span>
                             </div>
                           </Tooltip>
                         </div>
@@ -409,255 +403,199 @@ export function MatchSection({
                 {whyOpen && (
                   <div
                     ref={popoverRef}
-                    className="absolute left-4 right-4 bottom-4 z-50 rounded-xl border border-white/20 bg-slate-900/95 p-4 backdrop-blur-xl"
+                    className="absolute left-2 right-2 bottom-2 z-50 rounded-2xl border border-white/20 bg-slate-900/80 p-5 backdrop-blur-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200"
                   >
-                    <p className="text-xs font-semibold uppercase tracking-wider text-white/70 mb-3">
-                      {t('sections.match.results.howItWorks', 'Score Breakdown')}
-                    </p>
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-xs font-bold uppercase tracking-widest text-white/60">
+                        {t('sections.match.results.howItWorks', 'Score Breakdown')}
+                      </p>
+                      <button
+                        onClick={() => setWhyOpen(false)}
+                        className="text-white/40 hover:text-white transition-colors"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+
                     {matchAnalysis?.categoryScores ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {[
-                          { key: 'hard_skills', label: isArabic ? 'المهارات التقنية' : 'Hard Skills', color: 'bg-blue-500' },
-                          { key: 'experience', label: isArabic ? 'الخبرة' : 'Experience', color: 'bg-purple-500' },
-                          { key: 'education', label: isArabic ? 'التعليم' : 'Education', color: 'bg-amber-500' },
-                          { key: 'soft_skills', label: isArabic ? 'المهارات الشخصية' : 'Soft Skills', color: 'bg-emerald-500' }
+                          { key: 'hard_skills', label: isArabic ? 'المهارات التقنية' : 'Hard Skills', color: 'bg-blue-500', text: 'text-blue-400', icon: Code2 },
+                          { key: 'experience', label: isArabic ? 'الخبرة' : 'Experience', color: 'bg-purple-500', text: 'text-purple-400', icon: Briefcase },
+                          { key: 'education', label: isArabic ? 'التعليم' : 'Education', color: 'bg-amber-500', text: 'text-amber-400', icon: GraduationCap },
+                          { key: 'soft_skills', label: isArabic ? 'المهارات الشخصية' : 'Soft Skills', color: 'bg-emerald-500', text: 'text-emerald-400', icon: Users }
                         ].map(cat => {
                           const data = matchAnalysis.categoryScores?.[cat.key as keyof typeof matchAnalysis.categoryScores];
                           if (!data) return null;
+                          const CatIcon = cat.icon;
+                          const percent = Math.min(100, (data.score / data.max) * 100);
+
                           return (
-                            <div key={cat.key} className="flex items-center gap-2">
-                              <span className="text-xs text-white/70 w-24 truncate">{cat.label}</span>
-                              <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full ${cat.color}`} style={{ width: `${(data.score / data.max) * 100}%` }} />
+                            <div key={cat.key} className="space-y-1.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <CatIcon className={cn("w-3.5 h-3.5", cat.text)} />
+                                  <span className="text-white/80 font-medium">{cat.label}</span>
+                                </div>
+                                <span className={cn("font-bold", cat.text)}>{data.score}/{data.max}</span>
                               </div>
-                              <span className="text-xs text-white/90 w-10 text-end">{data.score}/{data.max}</span>
+                              <div className="h-2.5 w-full bg-black/20 rounded-full overflow-hidden ring-1 ring-white/5">
+                                <div
+                                  className={cn("h-full rounded-full transition-all duration-700 ease-out", cat.color)}
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm text-white/90">
+                      <p className="text-sm text-white/90 leading-relaxed">
                         <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
                       </p>
                     )}
+                    <div className="mt-4 pt-3 border-t border-white/10">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">
+                        {t('sections.match.results.calculation.title', 'How is this calculated?')}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 text-[10px] text-white/60">
+                        <div>
+                          <span className="text-blue-400 font-medium block mb-0.5">{isArabic ? 'المهارات التقنية' : 'Hard Skills'}</span>
+                          {isArabic ? 'مطابقة الكلمات المفتاحية التقنية' : 'Matching technical keywords'}
+                        </div>
+                        <div>
+                          <span className="text-purple-400 font-medium block mb-0.5">{isArabic ? 'الخبرة' : 'Experience'}</span>
+                          {isArabic ? 'المسميات الوظيفية وسنوات الخبرة' : 'Job titles & years relevance'}
+                        </div>
+                        <div>
+                          <span className="text-amber-400 font-medium block mb-0.5">{isArabic ? 'التعليم' : 'Education'}</span>
+                          {isArabic ? 'الدرجة العلمية ومجال الدراسة' : 'Degree & field match'}
+                        </div>
+                        <div>
+                          <span className="text-emerald-400 font-medium block mb-0.5">{isArabic ? 'المهارات الشخصية' : 'Soft Skills'}</span>
+                          {isArabic ? 'السمات الشخصية والقيادية' : 'Behavioral & leadership traits'}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Missing Keywords */}
-              {missing.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-rose-400">
-                    <AlertCircle className="h-4 w-4" />
-                    {t('sections.match.results.missing', 'Missing Keywords')} ({missing.length})
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {missing.map((keyword, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-sm border border-rose-500/20 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/20 transition-all cursor-pointer"
-                        title={t('sections.match.results.addKeyword', 'Add this keyword to your resume')}
-                      >
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Scrollable Content Area */}
+              <div className="flex-1 overflow-y-auto glass-scrollbar space-y-5 pr-2 -mr-2 max-h-[500px]">
 
-              {/* Matched Keywords (Top Hits) */}
-              {hits.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-emerald-400">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {t('sections.match.results.keywords', 'Recognized Strengths')} ({hits.length})
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {hits.map((keyword, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-sm border border-emerald-500/20"
-                      >
-                        <CheckCircle2 className="w-3 h-3 inline me-1" />
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Suggestions */}
-              {matchAnalysis?.suggestions && matchAnalysis.suggestions.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-amber-400">
-                    <Sparkles className="h-4 w-4" />
-                    {t('sections.match.results.suggestions', 'Suggestions')}
-                  </h4>
-                  <ul className="space-y-2">
-                    {matchAnalysis.suggestions.map((suggestion, i) => (
-                      <li
-                        key={i}
-                        className="p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-300"
-                      >
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Gap Analysis Section */}
-              {matchAnalysis?.gapAnalysis && matchAnalysis.gapAnalysis.length > 0 && (
-                <GapAnalysisCard gaps={matchAnalysis.gapAnalysis} />
-              )}
-
-              {/* Hidden Matches - Skills that match using different terminology */}
-              {matchAnalysis?.keywordStrategy?.hiddenMatches && matchAnalysis.keywordStrategy.hiddenMatches.length > 0 && (
-                <HiddenMatchesCard matches={matchAnalysis.keywordStrategy.hiddenMatches} />
-              )}
-
-              {/* Mirrored Keywords - JD phrases injected into optimized content */}
-              {matchAnalysis?.keywordStrategy && (
-                matchAnalysis.keywordStrategy.mirroredPhrases?.length || matchAnalysis.keywordStrategy.structuralChanges?.length
-              ) ? (
-                <MirroredKeywordsCard
-                  mirroredPhrases={matchAnalysis.keywordStrategy.mirroredPhrases || []}
-                  structuralChanges={matchAnalysis.keywordStrategy.structuralChanges || []}
-                />
-              ) : null}
-
-              {/* Vision 2030 Alignment Section */}
-              {v2030Analysis && (
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setV2030Expanded(!v2030Expanded)}
-                    className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#006C35]/20 to-emerald-500/10 border border-[#006C35]/30 hover:border-[#006C35]/50 transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#006C35' }}>
-                        2030
+                {/* Missing Keywords */}
+                {missing.length > 0 && (
+                  <div className="space-y-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-rose-400/90">
+                      <div className="p-1 rounded bg-rose-500/20">
+                        <AlertCircle className="h-3.5 w-3.5" />
                       </div>
-                      <div className="text-start">
-                        <h4 className="text-white font-semibold">
-                          {t('vision2030.matchSection.title', 'Vision 2030 Alignment')}
-                        </h4>
-                        <p className="text-sm text-gray-400">
-                          {t('vision2030.subtitle', 'How your skills align with Saudi national priorities')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-end">
-                        <span className={cn(
-                          "text-2xl font-bold",
-                          v2030Analysis.overallScore >= 70 ? "text-emerald-400" :
-                            v2030Analysis.overallScore >= 40 ? "text-amber-400" : "text-rose-400"
-                        )}>
-                          {v2030Analysis.overallScore}
+                      {t('sections.match.results.missing', 'Missing Keywords')} <span className="text-white/40">({missing.length})</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {missing.map((keyword, i) => (
+                        <span
+                          key={i}
+                          className="group px-3 py-1.5 bg-rose-500/5 text-rose-300/90 rounded-lg text-sm border border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all cursor-pointer hover:scale-[1.02]"
+                          title={t('sections.match.results.addKeyword', 'Consider adding this keyword')}
+                        >
+                          {keyword}
                         </span>
-                        <span className="text-gray-500 text-sm">/100</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Matched Keywords (Top Hits) */}
+                {hits.length > 0 && (
+                  <div className="space-y-3 animate-fade-in" style={{ animationDelay: '200ms' }}>
+                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400/90">
+                      <div className="p-1 rounded bg-emerald-500/20">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                       </div>
-                      {v2030Expanded ? (
-                        <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-                      )}
+                      {t('sections.match.results.keywords', 'Recognized Strengths')} <span className="text-white/40">({hits.length})</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {hits.map((keyword, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1.5 bg-emerald-500/5 text-emerald-300/90 rounded-lg text-sm border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors"
+                        >
+                          <CheckCircle2 className="w-3 h-3 inline me-1.5 opacity-60" />
+                          {keyword}
+                        </span>
+                      ))}
                     </div>
-                  </button>
+                  </div>
+                )}
 
-                  {v2030Expanded && (
-                    <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                      {/* Top Sectors */}
-                      {v2030Analysis.sectorBreakdown.slice(0, 4).length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-medium text-gray-400 mb-2">
-                            {t('vision2030.sectorBreakdown', 'Sector Breakdown')}
-                          </h5>
-                          <div className="grid grid-cols-2 gap-2">
-                            {v2030Analysis.sectorBreakdown.slice(0, 4).map((sector) => (
-                              <div
-                                key={sector.sectorId}
-                                className="p-3 rounded-lg bg-white/5 border border-white/10"
-                              >
-                                <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-7 h-7 rounded-lg bg-[#006C35]/20 flex items-center justify-center">
-                                    <SectorIcon sectorId={sector.sectorId} className="w-4 h-4 text-[#4ade80]" />
-                                  </div>
-                                  <span className="text-sm text-white truncate">
-                                    {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-700 rounded-full h-1.5">
-                                  <div
-                                    className="h-1.5 rounded-full transition-all duration-500"
-                                    style={{
-                                      width: `${sector.score}%`,
-                                      backgroundColor: '#006C35'
-                                    }}
-                                  />
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {sector.matchedCount}/{sector.totalSkills} {t('vision2030.skills', 'skills')}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                {/* Suggestions */}
+                {matchAnalysis?.suggestions && matchAnalysis.suggestions.length > 0 && (
+                  <div className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
+                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-400/90">
+                      <div className="p-1 rounded bg-amber-500/20">
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </div>
+                      {t('sections.match.results.suggestions', 'Suggestions')}
+                    </h4>
+                    <ul className="space-y-2">
+                      {matchAnalysis.suggestions.map((suggestion, i) => (
+                        <li
+                          key={i}
+                          className="p-3 rounded-xl bg-white/5 border border-white/5 text-sm text-gray-300 hover:bg-white/10 transition-colors"
+                        >
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                      {/* Matched V2030 Skills */}
-                      {v2030Analysis.matchedSkills.length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-medium text-gray-400 mb-2">
-                            {t('vision2030.matchedSkills', 'Matched Vision 2030 Skills')}
-                          </h5>
-                          <div className="flex flex-wrap gap-2">
-                            {v2030Analysis.matchedSkills.map((skill, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-1 text-xs rounded-full border"
-                                style={{ backgroundColor: 'rgba(0, 108, 53, 0.2)', borderColor: 'rgba(0, 108, 53, 0.5)', color: '#4ade80' }}
-                              >
-                                {isArabic ? skill.skillNameAr : skill.skillNameEn}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                {/* Gap Analysis Section */}
+                {matchAnalysis?.gapAnalysis && matchAnalysis.gapAnalysis.length > 0 && (
+                  <GapAnalysisCard gaps={matchAnalysis.gapAnalysis} />
+                )}
 
-                      {/* Learn More Button */}
-                      <button
-                        type="button"
-                        onClick={() => setV2030ModalOpen(true)}
-                        className="flex items-center gap-2 text-sm font-medium transition-colors hover:text-white"
-                        style={{ color: '#4ade80' }}
-                      >
-                        <Info className="w-4 h-4" />
-                        {t('vision2030.matchSection.learnMore', 'Learn about Vision 2030')}
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                {/* Hidden Matches - Skills that match using different terminology */}
+                {matchAnalysis?.keywordStrategy?.hiddenMatches && matchAnalysis.keywordStrategy.hiddenMatches.length > 0 && (
+                  <HiddenMatchesCard matches={matchAnalysis.keywordStrategy.hiddenMatches} />
+                )}
+
+                {/* Mirrored Keywords - JD phrases injected into optimized content */}
+                {matchAnalysis?.keywordStrategy && (
+                  matchAnalysis.keywordStrategy.mirroredPhrases?.length || matchAnalysis.keywordStrategy.structuralChanges?.length
+                ) ? (
+                  <MirroredKeywordsCard
+                    mirroredPhrases={matchAnalysis.keywordStrategy.mirroredPhrases || []}
+                    structuralChanges={matchAnalysis.keywordStrategy.structuralChanges || []}
+                  />
+                ) : null}
+
+
+              </div>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <Target className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>{t('sections.match.emptyState', 'Paste a job description to see match insights here')}</p>
+            <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8 animate-fade-in">
+              <div className="relative mb-6 group">
+                <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                <div className="relative p-6 rounded-full bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-500 group-hover:scale-110">
+                  <Target className="w-10 h-10 text-gray-600 group-hover:text-blue-400 transition-colors duration-500" />
+                </div>
               </div>
+              <h4 className="text-lg font-medium text-white mb-2">
+                {t('sections.match.emptyState.title', 'Ready to Analyze')}
+              </h4>
+              <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">
+                {t('sections.match.emptyState', 'Paste a job description to see how well your resume matches the requirements.')}
+              </p>
             </div>
           )}
         </GlassCard>
       </div>
 
       {/* Vision 2030 Info Modal */}
-      <Vision2030Modal
-        isOpen={v2030ModalOpen}
-        onClose={() => setV2030ModalOpen(false)}
-      />
+
     </>
   );
 }

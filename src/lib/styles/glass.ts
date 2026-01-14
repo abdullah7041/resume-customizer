@@ -22,9 +22,10 @@ export const glass = {
 
   // Buttons
   button: {
-    primary: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25',
-    secondary: 'bg-white/10 hover:bg-white/15 text-white border border-white/10',
-    ghost: 'hover:bg-white/10 text-gray-300 hover:text-white',
+    primary: 'bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20',
+    prominent: 'bg-gradient-to-br from-royal-600 to-emerald-700 hover:from-royal-500 hover:to-emerald-600 text-white shadow-lg shadow-royal-500/25 border border-emerald-400/20',
+    secondary: 'bg-white/5 hover:bg-white/10 text-white border border-white/10 backdrop-blur-md',
+    ghost: 'hover:bg-white/5 text-gray-300 hover:text-white',
   },
 
   // Tabs

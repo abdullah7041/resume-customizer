@@ -1,6 +1,7 @@
 import { TrendingUp, Code2, Briefcase, GraduationCap, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from './ui/GlassCard';
+import { GlassCircle } from './ui/GlassCircle';
 
 // New categorical scores structure
 export interface CategoryScore {
@@ -34,6 +35,8 @@ interface ScoreBreakdownProps {
     categoryScores?: CategoryScoresData | null;
     beforeScore: number;
     afterScore: number;
+    isPlaceholderScore?: boolean;
+    isPlaceholderImprovement?: boolean;
     className?: string;
 }
 
@@ -42,25 +45,29 @@ const CATEGORY_CONFIG = {
         icon: Code2,
         colorClass: 'text-blue-400',
         bgClass: 'bg-blue-500/20',
-        barClass: 'bg-blue-500'
+        barClass: 'bg-blue-500',
+        variant: 'blue' as const
     },
     experience: {
         icon: Briefcase,
         colorClass: 'text-purple-400',
         bgClass: 'bg-purple-500/20',
-        barClass: 'bg-purple-500'
+        barClass: 'bg-purple-500',
+        variant: 'purple' as const
     },
     education: {
         icon: GraduationCap,
         colorClass: 'text-amber-400',
         bgClass: 'bg-amber-500/20',
-        barClass: 'bg-amber-500'
+        barClass: 'bg-amber-500',
+        variant: 'warning' as const
     },
     soft_skills: {
         icon: Users,
         colorClass: 'text-emerald-400',
         bgClass: 'bg-emerald-500/20',
-        barClass: 'bg-emerald-500'
+        barClass: 'bg-emerald-500',
+        variant: 'success' as const
     }
 } as const;
 
@@ -69,6 +76,8 @@ export function ScoreBreakdown({
     categoryScores,
     beforeScore,
     afterScore,
+    isPlaceholderScore = false,
+    isPlaceholderImprovement = false,
     className = ''
 }: ScoreBreakdownProps) {
     const { t, i18n } = useTranslation();
@@ -109,30 +118,87 @@ export function ScoreBreakdown({
                             const percentage = (catData.score / catData.max) * 100;
 
                             return (
-                                <div key={cat.key} className="space-y-1">
+                                <div key={cat.key} className="space-y-2 p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-6 h-6 rounded-md flex items-center justify-center ${config.bgClass}`}>
-                                                <Icon className={`w-3.5 h-3.5 ${config.colorClass}`} />
-                                            </div>
-                                            <span className="text-sm text-gray-300">{cat.label}</span>
+                                        <div className="flex items-center gap-3">
+                                            <GlassCircle size="sm" variant={config.variant}>
+                                                <Icon className={`w-4 h-4 ${config.colorClass}`} />
+                                            </GlassCircle>
+                                            <span className="text-sm font-medium text-gray-200">{cat.label}</span>
                                         </div>
-                                        <span className={`text-sm font-semibold ${config.colorClass}`}>
-                                            {catData.score}/{catData.max}
-                                        </span>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className={`text-lg font-bold ${config.colorClass}`}>
+                                                {catData.score}
+                                            </span>
+                                            <span className="text-xs text-gray-500">/{catData.max}</span>
+                                        </div>
                                     </div>
-                                    <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                                    <div className="h-2.5 bg-black/20 rounded-full overflow-hidden ring-1 ring-white/5">
                                         <div
-                                            className={`h-full rounded-full transition-all duration-500 ${config.barClass}`}
+                                            className={`h-full rounded-full transition-all duration-700 ease-out ${config.barClass}`}
                                             style={{ width: `${percentage}%` }}
                                         />
                                     </div>
                                     {catData.reasoning && (
-                                        <p className="text-xs text-gray-500 mt-1">{catData.reasoning}</p>
+                                        <p className="text-xs text-gray-500 pl-1">{catData.reasoning}</p>
                                     )}
                                 </div>
                             );
                         })}
+                    </div>
+
+                    {/* Calculation Logic Footer */}
+                    <div className="mt-6 pt-4 border-t border-white/5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="p-1.5 rounded-full bg-white/5">
+                                <TrendingUp className="w-3 h-3 text-white/40" />
+                            </div>
+                            <span className="text-xs font-medium text-white/40 uppercase tracking-widest">
+                                {t ? t('sections.match.calculation.title', 'Scoring Logic') : 'Scoring Logic'}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                                <span className="text-xs font-bold text-blue-400 block mb-1">
+                                    {isArabic ? 'المهارات التقنية' : 'Hard Skills'}
+                                </span>
+                                <p className="text-[10px] text-gray-400 leading-relaxed">
+                                    {isArabic
+                                        ? 'يقيس تطابق الكلمات المفتاحية التقنية والأدوات المذكورة في الوصف الوظيفي.'
+                                        : 'Measures the match of technical keywords and tools mentioned in the job description.'}
+                                </p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                                <span className="text-xs font-bold text-purple-400 block mb-1">
+                                    {isArabic ? 'الخبرة' : 'Experience'}
+                                </span>
+                                <p className="text-[10px] text-gray-400 leading-relaxed">
+                                    {isArabic
+                                        ? 'يحلل المسميات الوظيفية السابقة وسنوات الخبرة ومدى صلتها بالدور المطلوب.'
+                                        : 'Analyzes past job titles, years of experience, and relevance to the target role.'}
+                                </p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                                <span className="text-xs font-bold text-amber-400 block mb-1">
+                                    {isArabic ? 'التعليم' : 'Education'}
+                                </span>
+                                <p className="text-[10px] text-gray-400 leading-relaxed">
+                                    {isArabic
+                                        ? 'يتحقق من المستوى الأكاديمي ومجال الدراسة للتأكد من استيفاء المتطلبات.'
+                                        : 'Checks academic level and field of study to ensure requirements are met.'}
+                                </p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                                <span className="text-xs font-bold text-emerald-400 block mb-1">
+                                    {isArabic ? 'المهارات الشخصية' : 'Soft Skills'}
+                                </span>
+                                <p className="text-[10px] text-gray-400 leading-relaxed">
+                                    {isArabic
+                                        ? 'يكتشف السمات الشخصية والقيادية والتواصل من خلال سياق سيرتك الذاتية.'
+                                        : 'Detects behavioral, leadership, and communication traits from your resume context.'}
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Before/After comparison */}
@@ -142,24 +208,30 @@ export function ScoreBreakdown({
                                 <p className="text-xs text-gray-500 uppercase">
                                     {t('optimize.scoreBreakdown.before', 'Before')}
                                 </p>
-                                <p className="text-xl font-bold text-gray-400">{beforeScore}%</p>
+                                <p className={`text-xl font-bold ${isPlaceholderScore ? 'text-gray-600 italic' : 'text-gray-400'}`}>
+                                    {isPlaceholderScore ? '—' : `${beforeScore}%`}
+                                </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-emerald-400" />
-                                <span className="text-lg font-semibold text-emerald-400">
-                                    +{improvement}%
-                                </span>
-                            </div>
+                            {!isPlaceholderImprovement && (
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp className="w-5 h-5 text-emerald-400" />
+                                    <span className="text-lg font-semibold text-emerald-400">
+                                        +{improvement}%
+                                    </span>
+                                </div>
+                            )}
                             <div className="text-center">
                                 <p className="text-xs text-gray-500 uppercase">
                                     {t('optimize.scoreBreakdown.after', 'After')}
                                 </p>
-                                <p className="text-xl font-bold text-emerald-400">{afterScore}%</p>
+                                <p className={`text-xl font-bold ${isPlaceholderScore || isPlaceholderImprovement ? 'text-gray-600 italic' : 'text-emerald-400'}`}>
+                                    {isPlaceholderScore || isPlaceholderImprovement ? '—' : `${afterScore}%`}
+                                </p>
                             </div>
                         </div>
                     )}
                 </div>
-            </GlassCard>
+            </GlassCard >
         );
     }
 
@@ -172,19 +244,25 @@ export function ScoreBreakdown({
                         <p className="text-xs text-gray-500 uppercase">
                             {t('optimize.scoreBreakdown.before', 'Before')}
                         </p>
-                        <p className="text-2xl font-bold text-gray-400">{beforeScore}%</p>
+                        <p className={`text-2xl font-bold ${isPlaceholderScore ? 'text-gray-600 italic' : 'text-gray-400'}`}>
+                            {isPlaceholderScore ? '—' : `${beforeScore}%`}
+                        </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <TrendingUp className="w-6 h-6 text-emerald-400" />
-                        <span className="text-lg font-semibold text-emerald-400">
-                            +{improvement}%
-                        </span>
-                    </div>
+                    {!isPlaceholderImprovement && (
+                        <div className="flex items-center gap-2">
+                            <TrendingUp className="w-6 h-6 text-emerald-400" />
+                            <span className="text-lg font-semibold text-emerald-400">
+                                +{improvement}%
+                            </span>
+                        </div>
+                    )}
                     <div className="text-center">
                         <p className="text-xs text-gray-500 uppercase">
                             {t('optimize.scoreBreakdown.after', 'After')}
                         </p>
-                        <p className="text-2xl font-bold text-emerald-400">{afterScore}%</p>
+                        <p className={`text-2xl font-bold ${isPlaceholderScore || isPlaceholderImprovement ? 'text-gray-600 italic' : 'text-emerald-400'}`}>
+                            {isPlaceholderScore || isPlaceholderImprovement ? '—' : `${afterScore}%`}
+                        </p>
                     </div>
                 </div>
             </GlassCard>
@@ -227,17 +305,23 @@ export function ScoreBreakdown({
                         <p className="text-xs text-gray-500 uppercase">
                             {t('optimize.scoreBreakdown.before', 'Current')}
                         </p>
-                        <p className="text-3xl font-bold text-gray-400">{beforeScore}%</p>
+                        <p className={`text-3xl font-bold ${isPlaceholderScore ? 'text-gray-600 italic' : 'text-gray-400'}`}>
+                            {isPlaceholderScore ? '—' : `${beforeScore}%`}
+                        </p>
                     </div>
-                    <div className="flex flex-col items-center">
-                        <TrendingUp className="w-8 h-8 text-emerald-400" />
-                        <span className="text-xl font-bold text-emerald-400">+{improvement}%</span>
-                    </div>
+                    {!isPlaceholderImprovement && (
+                        <div className="flex flex-col items-center">
+                            <TrendingUp className="w-8 h-8 text-emerald-400" />
+                            <span className="text-xl font-bold text-emerald-400">+{improvement}%</span>
+                        </div>
+                    )}
                     <div className="text-center">
                         <p className="text-xs text-gray-500 uppercase">
                             {t('optimize.scoreBreakdown.after', 'Optimized')}
                         </p>
-                        <p className="text-3xl font-bold text-emerald-400">{afterScore}%</p>
+                        <p className={`text-3xl font-bold ${isPlaceholderScore || isPlaceholderImprovement ? 'text-gray-600 italic' : 'text-emerald-400'}`}>
+                            {isPlaceholderScore || isPlaceholderImprovement ? '—' : `${afterScore}%`}
+                        </p>
                     </div>
                 </div>
 

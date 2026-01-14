@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils/cn';
 import { Loader2 } from 'lucide-react';
 
 interface GlassButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'prominent' | 'secondary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -34,8 +34,9 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-200',
+          'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-300',
           'disabled:opacity-50 disabled:cursor-not-allowed',
+          'hover:translate-y-[-1px] hover:shadow-lg active:translate-y-[1px]',
           glass.button[variant],
           sizeMap[size],
           className

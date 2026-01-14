@@ -9,16 +9,36 @@ if (!API_KEY) {
 const genAI = new GoogleGenerativeAI(API_KEY || "");
 
 // Dual model configuration
-const MODELS = {
-  lite: "gemini-2.5-flash-lite",  // Fast, lower cost - for parsing
-  flash: "gemini-2.5-flash"       // Higher quality - for matching/optimization
+const MODELS = { lite: "gemini-2.5-flash-lite", flash: "gemini-2.5-flash" };
+
+const generationConfig = { temperature: 0, topP: 0.95, topK: 1, maxOutputTokens: 4096 };
+
+// Shared schema for category scores (used by processMatchOnly & optimizeResume)
+const CATEGORY_SCORE_SCHEMA = {
+  type: SchemaType.OBJECT,
+  properties: {
+    hard_skills: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] },
+    experience: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] },
+    education: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] },
+    soft_skills: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] }
+  },
+  required: ["hard_skills", "experience", "education", "soft_skills"]
 };
 
-const generationConfig = {
-  temperature: 0,  // Deterministic output - no randomness
-  topP: 0.95,      // Slightly more focused (was 1)
-  topK: 1,         // Greedy decoding - always pick the most likely token
-  maxOutputTokens: 4096,  // Balanced for most use cases (reduced from 8192 to prevent timeouts)
+// Helper: create flash model with JSON schema (thinkingBudget defaults to 0 for structured output)
+const createFlashModel = (schema, opts = {}) => {
+  const { thinkingBudget = 0, ...restOpts } = opts;
+  return genAI.getGenerativeModel({
+    model: MODELS.flash,
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 16384,
+      responseMimeType: "application/json",
+      responseSchema: schema,
+      thinkingConfig: { thinkingBudget },
+      ...restOpts
+    }
+  });
 };
 
 /**
@@ -800,7 +820,24 @@ CRITICAL REMINDERS:
         `${parsed.basics.location.city || ""}, ${parsed.basics.location.region || ""}`.trim().replace(/^,\s*|,\s*$/g, "") : "",
       links: (parsed.basics?.profiles || []).map(p => p.url).filter(Boolean)
     };
-    parsed.summary = parsed.basics?.summary || "";
+    // CRITICAL FIX: Extract summary from raw_text if basics.summary is missing/short
+    let summary = parsed.basics?.summary || "";
+    if ((!summary || summary.length < 50) && extractedPlainText) {
+      // Try to find summary section in raw text
+      const summaryMatch = extractedPlainText.match(
+        /(?:SUMMARY|PROFESSIONAL SUMMARY|PROFILE|OBJECTIVE|ABOUT)[:\s]*\n?([\s\S]*?)(?=\n\n|\n(?:EXPERIENCE|WORK|EDUCATION|SKILLS|CERTIFICATIONS?|PROJECTS?|$))/i
+      );
+      if (summaryMatch && summaryMatch[1]) {
+        const extractedSummary = summaryMatch[1].trim();
+        if (extractedSummary.length > 50) {
+          summary = extractedSummary;
+          // Also update basics.summary for consistency
+          if (parsed.basics) parsed.basics.summary = summary;
+          console.log("[Gemini] Extracted summary from raw_text, length:", summary.length);
+        }
+      }
+    }
+    parsed.summary = summary;
     parsed.skills = (parsed.skills || []).flatMap(s => s.keywords || []);
     parsed.experience = (parsed.work || []).map(w => ({
       title: w.position || "",
@@ -878,112 +915,38 @@ CRITICAL REMINDERS:
  * @returns {Promise<object>} - Optimization suggestions with original and improved content.
  */
 export async function optimizeResume(resumeText, jobDescription) {
-
-  // Define JSON schema for guaranteed structured output
-  const optimizeSchema = {
+  const schema = {
     type: SchemaType.OBJECT,
     properties: {
-      match_score: {
-        type: SchemaType.NUMBER,
-        description: "Overall match score 0-100"
-      },
-      category_scores: {
-        type: SchemaType.OBJECT,
-        properties: {
-          hard_skills: {
-            type: SchemaType.OBJECT,
-            properties: {
-              score: { type: SchemaType.NUMBER },
-              max: { type: SchemaType.NUMBER },
-              reasoning: { type: SchemaType.STRING }
-            },
-            required: ["score", "max", "reasoning"]
-          },
-          experience: {
-            type: SchemaType.OBJECT,
-            properties: {
-              score: { type: SchemaType.NUMBER },
-              max: { type: SchemaType.NUMBER },
-              reasoning: { type: SchemaType.STRING }
-            },
-            required: ["score", "max", "reasoning"]
-          },
-          education: {
-            type: SchemaType.OBJECT,
-            properties: {
-              score: { type: SchemaType.NUMBER },
-              max: { type: SchemaType.NUMBER },
-              reasoning: { type: SchemaType.STRING }
-            },
-            required: ["score", "max", "reasoning"]
-          },
-          soft_skills: {
-            type: SchemaType.OBJECT,
-            properties: {
-              score: { type: SchemaType.NUMBER },
-              max: { type: SchemaType.NUMBER },
-              reasoning: { type: SchemaType.STRING }
-            },
-            required: ["score", "max", "reasoning"]
-          }
-        },
-        required: ["hard_skills", "experience", "education", "soft_skills"]
-      },
-      gap_analysis: {
-        type: SchemaType.ARRAY,
-        items: {
-          type: SchemaType.OBJECT,
-          properties: {
-            requirement: { type: SchemaType.STRING },
-            current_state: { type: SchemaType.STRING },
-            gap_severity: { type: SchemaType.STRING },
-            recommendation: { type: SchemaType.STRING }
-          },
-          required: ["requirement", "current_state", "gap_severity", "recommendation"]
-        }
-      },
+      match_score: { type: SchemaType.NUMBER },
+      category_scores: CATEGORY_SCORE_SCHEMA,
+      gap_analysis: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { requirement: { type: SchemaType.STRING }, current_state: { type: SchemaType.STRING }, gap_severity: { type: SchemaType.STRING }, recommendation: { type: SchemaType.STRING } }, required: ["requirement", "current_state", "gap_severity", "recommendation"] } },
       original_headline: { type: SchemaType.STRING },
       suggested_headline: { type: SchemaType.STRING },
       original_summary: { type: SchemaType.STRING },
       summary_rewrite: { type: SchemaType.STRING },
-      bullet_improvements: {
-        type: SchemaType.ARRAY,
-        items: {
-          type: SchemaType.OBJECT,
-          properties: {
-            original: { type: SchemaType.STRING },
-            improved: { type: SchemaType.STRING },
-            issue: { type: SchemaType.STRING },
-            rationale: { type: SchemaType.STRING }
-          },
-          required: ["original", "improved", "issue", "rationale"]
-        }
-      },
-      missing_keywords: {
-        type: SchemaType.ARRAY,
-        items: { type: SchemaType.STRING }
-      },
-      keywords_to_keep: {
-        type: SchemaType.ARRAY,
-        items: { type: SchemaType.STRING }
-      },
-      keywords_to_avoid: {
-        type: SchemaType.ARRAY,
-        items: { type: SchemaType.STRING }
-      }
+      bullet_improvements: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { original: { type: SchemaType.STRING }, improved: { type: SchemaType.STRING }, issue: { type: SchemaType.STRING }, rationale: { type: SchemaType.STRING } }, required: ["original", "improved", "issue", "rationale"] } },
+      missing_keywords: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      keywords_to_keep: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      keywords_to_avoid: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
     },
-    required: ["match_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline",
-      "original_summary", "summary_rewrite", "bullet_improvements", "missing_keywords",
-      "keywords_to_keep", "keywords_to_avoid"]
+    required: ["match_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline", "original_summary", "summary_rewrite", "bullet_improvements", "missing_keywords", "keywords_to_keep", "keywords_to_avoid"]
   };
 
   const prompt = `Analyze this resume against the job description and provide optimization suggestions.
 
 RULES:
 1. Copy EXACT text for "original" fields - no paraphrasing
-2. Provide 3-5 bullet improvements
-3. Provide 4+ gap analysis items
-4. Calculate match_score as sum of category scores
+2. Provide 3-5 bullet improvements with original, improved, issue, rationale
+3. Provide 4-6 gap_analysis items identifying MISSING requirements from job description
+4. match_score = sum of category scores (hard_skills + experience + education + soft_skills)
+5. gap_analysis should identify what the resume LACKS compared to the job requirements
+
+GAP ANALYSIS FORMAT - Each gap MUST have:
+- requirement: What the job requires (e.g., "5+ years Python experience")
+- current_state: What the resume shows (e.g., "2 years Python mentioned")
+- gap_severity: "critical", "moderate", or "minor"
+- recommendation: Specific action to address the gap
 
 JOB DESCRIPTION:
 ${jobDescription}
@@ -991,23 +954,16 @@ ${jobDescription}
 RESUME:
 ${resumeText}`;
 
-  // Create model with schema at model level (per Context7 docs)
-  const modelWithSchema = genAI.getGenerativeModel({
-    model: MODELS.flash,
-    generationConfig: {
-      temperature: 0,
-      maxOutputTokens: 4096,
-      responseMimeType: "application/json",
-      responseSchema: optimizeSchema,  // Schema at model level - guarantees valid JSON
-    },
-  });
-
   try {
-    const result = await modelWithSchema.generateContent(prompt);
-
+    console.log(`[Gemini] Optimizing with ${MODELS.flash}`);
+    const result = await createFlashModel(schema).generateContent(prompt);
     const text = result.response.text();
     console.log(`[Gemini] Optimize response length: ${text.length} chars`);
-    return JSON.parse(text);
+
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { parsed = sanitizeAndParseJSON(text); }
+    return parsed;
   } catch (error) {
     console.error("[Gemini] Error in optimizeResume:", error);
     throw error;
@@ -1022,87 +978,21 @@ ${resumeText}`;
  * @returns {Promise<object>} - Match score, keywords, and reasoning.
  */
 export async function processMatchOnly(resumeText, jobDescription) {
-  try {
-    console.log(`[Gemini] Fast match analysis with ${MODELS.flash}`);
+  console.log(`[Gemini] Fast match analysis with ${MODELS.flash}`);
 
-    // Define JSON schema for guaranteed structured output
-    const matchSchema = {
-      type: SchemaType.OBJECT,
-      properties: {
-        score: {
-          type: SchemaType.NUMBER,
-          description: "Overall match score 0-100"
-        },
-        categoryScores: {
-          type: SchemaType.OBJECT,
-          properties: {
-            hard_skills: {
-              type: SchemaType.OBJECT,
-              properties: {
-                score: { type: SchemaType.NUMBER },
-                max: { type: SchemaType.NUMBER },
-                reasoning: { type: SchemaType.STRING }
-              },
-              required: ["score", "max", "reasoning"]
-            },
-            experience: {
-              type: SchemaType.OBJECT,
-              properties: {
-                score: { type: SchemaType.NUMBER },
-                max: { type: SchemaType.NUMBER },
-                reasoning: { type: SchemaType.STRING }
-              },
-              required: ["score", "max", "reasoning"]
-            },
-            education: {
-              type: SchemaType.OBJECT,
-              properties: {
-                score: { type: SchemaType.NUMBER },
-                max: { type: SchemaType.NUMBER },
-                reasoning: { type: SchemaType.STRING }
-              },
-              required: ["score", "max", "reasoning"]
-            },
-            soft_skills: {
-              type: SchemaType.OBJECT,
-              properties: {
-                score: { type: SchemaType.NUMBER },
-                max: { type: SchemaType.NUMBER },
-                reasoning: { type: SchemaType.STRING }
-              },
-              required: ["score", "max", "reasoning"]
-            }
-          },
-          required: ["hard_skills", "experience", "education", "soft_skills"]
-        },
-        strongMatches: {
-          type: SchemaType.ARRAY,
-          items: { type: SchemaType.STRING }
-        },
-        missingKeywords: {
-          type: SchemaType.ARRAY,
-          items: { type: SchemaType.STRING }
-        },
-        reasoning: {
-          type: SchemaType.STRING
-        }
-      },
-      required: ["score", "categoryScores", "strongMatches", "missingKeywords", "reasoning"]
-    };
+  const schema = {
+    type: SchemaType.OBJECT,
+    properties: {
+      score: { type: SchemaType.NUMBER },
+      categoryScores: CATEGORY_SCORE_SCHEMA,
+      strongMatches: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      missingKeywords: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      reasoning: { type: SchemaType.STRING }
+    },
+    required: ["score", "categoryScores", "strongMatches", "missingKeywords", "reasoning"]
+  };
 
-    // Create model with schema at model level (per Context7 docs)
-    const modelWithSchema = genAI.getGenerativeModel({
-      model: MODELS.flash,
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 2048,
-        responseMimeType: "application/json",
-        responseSchema: matchSchema,  // Schema at model level - guarantees valid JSON
-      },
-    });
-
-    const prompt = `Analyze this resume against the job description. 
-Calculate score as: hard_skills (0-40) + experience (0-30) + education (0-15) + soft_skills (0-15).
+  const prompt = `Analyze this resume against the job description. Calculate score as: hard_skills (0-40) + experience (0-30) + education (0-15) + soft_skills (0-15).
 
 Job Description:
 ${jobDescription}
@@ -1110,12 +1000,22 @@ ${jobDescription}
 Resume:
 ${resumeText}`;
 
-    const result = await modelWithSchema.generateContent(prompt);
+  try {
+    const result = await createFlashModel(schema, { thinkingBudget: 0 }).generateContent(prompt);
+    const response = result.response;
+    const finishReason = response.candidates?.[0]?.finishReason;
+    const usage = response.usageMetadata;
 
-    const response = await result.response;
+    console.log(`[Gemini] Match finish: ${finishReason}, tokens: ${JSON.stringify(usage)}`);
+    if (usage?.thoughtsTokenCount > 0) console.warn(`[Gemini] ⚠️ Thinking tokens: ${usage.thoughtsTokenCount}`);
+    if (finishReason === 'MAX_TOKENS') console.warn(`[Gemini] ⚠️ Truncated - ${usage?.candidatesTokenCount}/4096 tokens`);
+
     const text = response.text();
-    console.log(`[Gemini] Match response length: ${text.length} chars`);
-    const parsed = JSON.parse(text);
+    console.log(`[Gemini] Match response: ${text.length} chars`);
+
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { parsed = sanitizeAndParseJSON(text); }
 
     return {
       score: parsed.score || 50,
@@ -1124,7 +1024,6 @@ ${resumeText}`;
       missingKeywords: parsed.missingKeywords || [],
       reasoning: parsed.reasoning || "Unable to determine match score."
     };
-
   } catch (error) {
     console.error("[Gemini] Error in fast match analysis:", error);
     throw error;
