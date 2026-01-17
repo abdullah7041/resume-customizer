@@ -26,7 +26,14 @@
       "Bash(cd:*)",
       "WebSearch",
       "WebFetch(domain:discuss.ai.google.dev)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(grep:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(claude mcp inspect:*)",
+      "Bash(claude mcp tools:*)",
+      "Bash(claude mcp:*)",
+      "mcp__supabase__execute_sql",
+      "Bash(npm run lint:fix:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

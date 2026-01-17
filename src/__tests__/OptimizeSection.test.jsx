@@ -22,6 +22,7 @@ const mockApplyAllOptimizations = vi.fn();
 const mockRevertAllOptimizations = vi.fn();
 const mockSetKeywordSuggestions = vi.fn();
 const mockSetOptimizationMetrics = vi.fn();
+const mockResetOptimizationMetrics = vi.fn();
 
 // Create a mock store state that can be modified per test
 let mockStoreState = {
@@ -47,16 +48,19 @@ let mockStoreState = {
         vision2030: null
     },
     setOptimizationMetrics: mockSetOptimizationMetrics,
+    resetOptimizationMetrics: mockResetOptimizationMetrics,
 };
 
-vi.mock('../lib/stores/resumeStore', () => ({
-    useResumeStore: (selector) => {
+vi.mock('../lib/stores/resumeStore', () => {
+    const mockFn = (selector) => {
         if (typeof selector === 'function') {
             return selector(mockStoreState);
         }
         return mockStoreState;
-    },
-}));
+    };
+    mockFn.getState = () => mockStoreState;
+    return { useResumeStore: mockFn };
+});
 
 vi.mock('../services/analytics', () => ({
     analytics: {
@@ -170,6 +174,7 @@ beforeEach(() => {
             vision2030: null
         },
         setOptimizationMetrics: mockSetOptimizationMetrics,
+        resetOptimizationMetrics: mockResetOptimizationMetrics,
     };
 });
 
@@ -183,7 +188,7 @@ describe('OptimizeSection', () => {
         it('renders the section title', () => {
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('Polish Every Section')).toBeInTheDocument();
+            expect(screen.getByText('Optimize Resume')).toBeInTheDocument();
         });
 
         it('renders the optimize button', () => {
@@ -193,11 +198,11 @@ describe('OptimizeSection', () => {
             expect(screen.getByRole('button', { name: /upload resume first/i })).toBeInTheDocument();
         });
 
-        it('renders view mode toggle (Side-by-Side and Inline Diff)', () => {
+        it('renders view mode toggle (Split and Diff)', () => {
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('Side-by-Side')).toBeInTheDocument();
-            expect(screen.getByText('Inline Diff')).toBeInTheDocument();
+            expect(screen.getByText('Split')).toBeInTheDocument();
+            expect(screen.getByText('Diff')).toBeInTheDocument();
         });
 
         it('renders section filter tabs', () => {
@@ -210,10 +215,10 @@ describe('OptimizeSection', () => {
             expect(screen.getByText('Skills')).toBeInTheDocument();
         });
 
-        it('renders keyword focus section', () => {
+        it('renders keyword strategy section', () => {
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('Keyword Focus')).toBeInTheDocument();
+            expect(screen.getByText('Keyword Strategy')).toBeInTheDocument();
         });
 
         it('shows empty state when no optimizations', () => {
@@ -280,11 +285,11 @@ describe('OptimizeSection', () => {
             expect(screen.getByText('Outdated')).toBeInTheDocument();
         });
 
-        it('shows "No items yet" when keyword bucket is empty', () => {
+        it('shows empty state when keyword bucket is empty', () => {
             renderWithProviders(<OptimizeSection />);
 
-            const noItemsTexts = screen.getAllByText('No items yet');
-            expect(noItemsTexts.length).toBe(3); // add, neutral, remove buckets
+            const noKeywordsTexts = screen.getAllByText('No keywords identified');
+            expect(noKeywordsTexts.length).toBe(3); // add, neutral, remove buckets
         });
 
         it('uses props keywords when store keywords are empty', () => {
@@ -317,6 +322,16 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
+            // Card header shows section type
+            expect(screen.getByText('summary')).toBeInTheDocument();
+
+            // Expand the card by clicking on the header
+            const cardHeader = screen.getByText('summary').closest('div[class*="cursor-pointer"]');
+            if (cardHeader) {
+                fireEvent.click(cardHeader);
+            }
+
+            // After expansion, content should be visible
             expect(screen.getByText('Original summary text')).toBeInTheDocument();
             expect(screen.getByText('Optimized summary text')).toBeInTheDocument();
         });
@@ -364,7 +379,11 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('2/3 Applied')).toBeInTheDocument();
+            // The counter shows applied count and total in separate elements
+            // Find the emerald text that contains the applied count
+            const counterText = screen.getByText('2');
+            expect(counterText).toBeInTheDocument();
+            expect(screen.getByText('/ 3')).toBeInTheDocument();
         });
     });
 
@@ -377,16 +396,16 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            // Initially shows all
-            expect(screen.getByText('Summary text')).toBeInTheDocument();
-            expect(screen.getByText('Experience text')).toBeInTheDocument();
+            // Initially shows all - verify by checking section type labels in card headers
+            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.getByText('Experience 1')).toBeInTheDocument();
 
             // Click on Summary tab
-            fireEvent.click(screen.getByRole('button', { name: 'Summary' }));
+            fireEvent.click(screen.getByRole('button', { name: /^Summary/ }));
 
-            // Should only show summary
-            expect(screen.getByText('Summary text')).toBeInTheDocument();
-            expect(screen.queryByText('Experience text')).not.toBeInTheDocument();
+            // Should only show summary (experience card should be hidden)
+            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.queryByText('Experience 1')).not.toBeInTheDocument();
         });
 
         it('shows all optimizations when "All Sections" is selected', () => {
@@ -397,19 +416,19 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            // Initially both should be visible
-            expect(screen.getByText('Summary Content Here')).toBeInTheDocument();
-            expect(screen.getByText('Headline Content Here')).toBeInTheDocument();
+            // Initially both should be visible - verify by section type labels
+            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.getByText('headline')).toBeInTheDocument();
 
-            // Click on Summary tab - should only show summary content
-            fireEvent.click(screen.getByRole('button', { name: 'Summary' }));
-            expect(screen.getByText('Summary Content Here')).toBeInTheDocument();
-            expect(screen.queryByText('Headline Content Here')).not.toBeInTheDocument();
+            // Click on Summary tab - should only show summary card
+            fireEvent.click(screen.getByRole('button', { name: /^Summary/ }));
+            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.queryByText('headline')).not.toBeInTheDocument();
 
             // Click on All Sections - both should be visible again
             fireEvent.click(screen.getByRole('button', { name: 'All Sections' }));
-            expect(screen.getByText('Summary Content Here')).toBeInTheDocument();
-            expect(screen.getByText('Headline Content Here')).toBeInTheDocument();
+            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.getByText('headline')).toBeInTheDocument();
         });
     });
 
@@ -421,8 +440,8 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            // Click on Inline Diff
-            const diffButton = screen.getByRole('button', { name: 'Inline Diff' });
+            // Click on Diff view
+            const diffButton = screen.getByRole('button', { name: 'Diff' });
             fireEvent.click(diffButton);
 
             // Diff view shows strikethrough text
@@ -451,23 +470,22 @@ describe('OptimizeSection', () => {
             }
         });
 
-        it('calls revertOptimization when card Revert button is clicked', () => {
+        it('has no per-card revert button - only Revert All is available', () => {
+            // This test documents that individual card revert is not implemented
+            // The component only provides revertAllOptimizations via the header "Revert" button
             mockStoreState.optimizations = [
                 { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
             ];
 
             const { container } = renderWithProviders(<OptimizeSection />);
 
-            // Find the Revert button within the card (not Revert All)
+            // The Revert button in header calls revertAllOptimizations
             const allButtons = container.querySelectorAll('button');
             const revertButton = Array.from(allButtons).find(btn =>
-                btn.textContent?.trim() === 'Revert' && !btn.textContent?.includes('All')
+                btn.textContent?.trim() === 'Revert'
             );
 
-            if (revertButton) {
-                fireEvent.click(revertButton);
-                expect(mockRevertOptimization).toHaveBeenCalledWith('summary-0');
-            }
+            expect(revertButton).toBeDefined();
         });
 
         it('calls applyAllOptimizations when Apply All is clicked', () => {
@@ -485,15 +503,16 @@ describe('OptimizeSection', () => {
             expect(mockApplyAllOptimizations).toHaveBeenCalled();
         });
 
-        it('calls revertAllOptimizations when Revert All is clicked', () => {
+        it('calls revertAllOptimizations when Revert is clicked', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: true },
             ];
 
             renderWithProviders(<OptimizeSection />);
 
-            const revertAllButton = screen.getByRole('button', { name: /revert all/i });
-            fireEvent.click(revertAllButton);
+            // The Revert button (not "Revert All") triggers revertAllOptimizations
+            const revertButton = screen.getByRole('button', { name: /^revert$/i });
+            fireEvent.click(revertButton);
 
             expect(mockRevertAllOptimizations).toHaveBeenCalled();
         });
@@ -664,7 +683,7 @@ describe('OptimizeSection', () => {
             // This test verifies the component doesn't crash in RTL mode
             // Full RTL testing would require mocking i18n.language = 'ar'
             renderWithProviders(<OptimizeSection />);
-            expect(screen.getByText('Polish Every Section')).toBeInTheDocument();
+            expect(screen.getByText('Optimize Resume')).toBeInTheDocument();
         });
     });
 
@@ -711,6 +730,7 @@ describe('Optimization Card Types', () => {
                 vision2030: null
             },
             setOptimizationMetrics: mockSetOptimizationMetrics,
+            resetOptimizationMetrics: mockResetOptimizationMetrics,
         };
     });
 

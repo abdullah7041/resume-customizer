@@ -29,35 +29,47 @@ export function MirroredKeywordsCard({
     };
 
     return (
-        <GlassCard className={className}>
-            <div className="space-y-5">
+        <GlassCard className={className} variant="elevated">
+            <div className="space-y-6">
                 {/* Mirrored Phrases */}
                 {mirroredPhrases && mirroredPhrases.length > 0 && (
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <Sparkles className="w-5 h-5 text-purple-400" />
-                            <h3 className="text-lg font-semibold text-white">
-                                {t('optimize.mirroredKeywords.title')}
-                            </h3>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-full bg-purple-500/10 ring-1 ring-purple-500/20">
+                                <Sparkles className="w-5 h-5 text-purple-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-semibold text-white">
+                                    {t('optimize.mirroredKeywords.title', 'Mirrored Keywords')}
+                                </h3>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                    {t('optimize.mirroredKeywords.description', 'These phrases align perfectly with the job description')}
+                                </p>
+                            </div>
                         </div>
-                        <p className="text-sm text-gray-400 mb-3">
-                            {t('optimize.mirroredKeywords.description')}
-                        </p>
+
                         <div className="flex flex-wrap gap-2">
                             {mirroredPhrases.map((phrase, index) => (
                                 <button
                                     key={index}
                                     onClick={() => handleCopy(phrase, index)}
-                                    className="group px-3 py-1.5 text-sm bg-purple-500/20 border border-purple-500/30 
-                             rounded-full text-purple-300 hover:bg-purple-500/30 transition-colors
-                             flex items-center gap-2"
+                                    className={`
+                                        group relative px-4 py-2 text-sm font-medium rounded-xl transition-all duration-300
+                                        flex items-center gap-2.5 overflow-hidden
+                                        ${copiedIndex === index
+                                            ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/50'
+                                            : 'bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20'
+                                        }
+                                    `}
                                 >
-                                    <span>"{phrase}"</span>
+                                    <span className="relative z-10">{phrase}</span>
                                     {copiedIndex === index ? (
-                                        <Check className="w-3 h-3 text-green-400" />
+                                        <Check className="w-3.5 h-3.5 text-emerald-400 relative z-10" />
                                     ) : (
-                                        <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 transition-opacity relative z-10" />
                                     )}
+                                    {/* Subtle gradient background effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                                 </button>
                             ))}
                         </div>
@@ -66,18 +78,21 @@ export function MirroredKeywordsCard({
 
                 {/* Structural Changes */}
                 {structuralChanges && structuralChanges.length > 0 && (
-                    <div>
-                        <h4 className="text-sm font-semibold text-white mb-2">
-                            {t('optimize.mirroredKeywords.structuralChanges')}
+                    <div className="pt-4 border-t border-white/5">
+                        <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                            {t('optimize.mirroredKeywords.structuralChanges', 'Structural Improvements')}
                         </h4>
-                        <ul className="space-y-2">
+                        <ul className="space-y-2.5">
                             {structuralChanges.map((change, index) => (
                                 <li
                                     key={index}
-                                    className="flex items-start gap-2 text-sm text-gray-300"
+                                    className="flex items-start gap-3 text-sm group"
                                 >
-                                    <span className="text-emerald-400 mt-1">→</span>
-                                    <span>{change}</span>
+                                    <span className="flex-shrink-0 mt-1.5 w-4 h-[1px] bg-blue-500/50 group-hover:bg-blue-400/80 transition-colors" />
+                                    <span className="text-gray-400 group-hover:text-gray-300 transition-colors leading-relaxed">
+                                        {change}
+                                    </span>
                                 </li>
                             ))}
                         </ul>

@@ -7,12 +7,8 @@ describe('resumeStore', () => {
     });
 
     it('should initialize gapAnalysis as an empty array, not null', () => {
-        // In the initial state as defined in create(), it might be null or [],
-        // but we want to ensure our reset methods set it to []
-
         useResumeStore.getState().resetOptimizationMetrics();
         const updatedState = useResumeStore.getState();
-
         expect(updatedState.optimizationMetrics.gapAnalysis).toEqual([]);
     });
 
@@ -38,8 +34,7 @@ describe('resumeStore', () => {
         expect(state.optimizationMetrics.categoryScores).toEqual({ hard_skills: { score: 10, max: 10, reasoning: 'test' } });
     });
 
-    it('should reset all fields correctly including gapAnalysis', () => {
-        // First set some messy state
+    it('should reset all fields correctly including gapAnalysis and hasDownloaded', () => {
         useResumeStore.getState().setOptimizationMetrics({
             gapAnalysis: [{
                 requirement: 'Old Req',
@@ -49,12 +44,27 @@ describe('resumeStore', () => {
             }],
             beforeScore: 50
         });
+        useResumeStore.getState().setHasDownloaded(true);
 
-        // Reset
         useResumeStore.getState().resetForNewUpload();
 
         const state = useResumeStore.getState();
         expect(state.optimizationMetrics.gapAnalysis).toEqual([]);
         expect(state.optimizationMetrics.beforeScore).toBeNull();
+        expect(state.hasDownloaded).toBe(false);
+    });
+
+    it('should reset hasDownloaded when resume content changes', () => {
+        useResumeStore.getState().setHasDownloaded(true);
+        expect(useResumeStore.getState().hasDownloaded).toBe(true);
+
+        // Simulate changing template - should reset
+        useResumeStore.getState().setSelectedTemplate('classic-traditional');
+        expect(useResumeStore.getState().hasDownloaded).toBe(false);
+
+        // Reset and test another action
+        useResumeStore.getState().setHasDownloaded(true);
+        useResumeStore.getState().setShowOptimized(true);
+        expect(useResumeStore.getState().hasDownloaded).toBe(false);
     });
 });

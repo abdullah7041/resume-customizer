@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
+import { GlassInput } from '../ui/GlassInput';
 import {
   FileText,
   Wand2,
@@ -14,7 +15,8 @@ import {
   Zap,
   BookOpen,
   Palette,
-  Loader2
+  Loader2,
+  Edit3
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { cn } from '../../lib/utils/cn';
@@ -32,10 +34,10 @@ interface CoverLetterSectionProps {
 
 // === Tone options ===
 const tones = [
-  { value: 'professional', label: 'Professional', labelAr: 'احترافي', icon: Briefcase },
-  { value: 'enthusiastic', label: 'Enthusiastic', labelAr: 'متحمس', icon: Zap },
-  { value: 'formal', label: 'Formal', labelAr: 'رسمي', icon: BookOpen },
-  { value: 'creative', label: 'Creative', labelAr: 'إبداعي', icon: Palette }
+  { value: 'professional', label: 'Professional', labelAr: 'احترافي', icon: Briefcase, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  { value: 'enthusiastic', label: 'Enthusiastic', labelAr: 'متحمس', icon: Zap, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
+  { value: 'formal', label: 'Formal', labelAr: 'رسمي', icon: BookOpen, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  { value: 'creative', label: 'Creative', labelAr: 'إبداعي', icon: Palette, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' }
 ];
 
 export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSectionProps) {
@@ -51,6 +53,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   const [wordCount, setWordCount] = useState(0);
   const [keyHighlights, setKeyHighlights] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Load from localStorage
   useEffect(() => {
@@ -102,13 +105,28 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      setCoverLetter(data.coverLetter || '');
-      setKeyHighlights(data.keyHighlights || []);
-      setWordCount(data.wordCount || 0);
+      let generatedKeyHighlights = data.keyHighlights || [];
+      let generatedText = data.coverLetter || '';
+
+      // Auto-format if blob (no newlines found but has length)
+      if (generatedText.length > 100 && !generatedText.includes('\n')) {
+        // Safe heuristic: split on clear transition words and salutations
+        generatedText = generatedText
+          .replace(/(Dear\s+[^,]+,)/g, "$1\n\n")
+          // Split before common paragraph starters if they follow a period
+          .replace(/([.!?])\s+(?=(?:In|The|I\s|As|My|This|Furthermore|However|Finally|While|With)\s)/g, "$1\n\n")
+          .replace(/(Sincerely,|Best regards,|Respectfully,)/g, "\n\n$1");
+      }
+
+      // Calculate word count from the processed text
+      const calculatedWordCount = data.wordCount || (generatedText.trim().split(/\s+/).length || 0);
+
+      setCoverLetter(generatedText);
+      setKeyHighlights(generatedKeyHighlights);
+      setWordCount(calculatedWordCount);
 
       // Track cover letter generation
-      const generatedWordCount = data.wordCount || (data.coverLetter?.trim().split(/\s+/).length || 0);
-      analytics.trackCoverLetter(generatedWordCount);
+      analytics.trackCoverLetter(calculatedWordCount);
 
       // Save to localStorage
       if (typeof window !== 'undefined') {
@@ -140,39 +158,53 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
 
   const downloadCoverLetter = async () => {
     // Dynamic import docx to reduce bundle size
-    const { Document, Packer, Paragraph, TextRun, AlignmentType, convertInchesToTwip } = await import('docx');
+    const { Document, Packer, Paragraph, TextRun, AlignmentType, convertInchesToTwip, LineRuleType } = await import('docx');
 
-    const paragraphs = coverLetter.split(/\n\n+/).filter(p => p.trim());
+    // Professional font settings - Times New Roman 12pt (size in half-points: 12 * 2 = 24)
+    const fontConfig = { font: 'Times New Roman', size: 24 };
+    const lineSpacing = { line: 276, lineRule: LineRuleType.AUTO }; // 1.15 line spacing
+
+    // Remove any existing greeting from the cover letter content to avoid duplication
+    let cleanedContent = coverLetter.trim();
+    // Remove greeting line if it exists (e.g., "Dear Hiring Manager," or "Dear [Name],")
+    cleanedContent = cleanedContent.replace(/^Dear\s+[^,\n]+,?\s*/i, '');
+
+    // Split into paragraphs and filter empty ones
+    const contentParagraphs = cleanedContent.split(/\n\n+/).filter(p => p.trim());
     const docChildren: any[] = [];
 
+    // Company name (bold, left-aligned)
     if (companyName) {
       docChildren.push(new Paragraph({
-        children: [new TextRun({ text: companyName, bold: true, size: 24 })],
+        children: [new TextRun({ text: companyName, bold: true, ...fontConfig })],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 }
+        spacing: { after: 200, ...lineSpacing }
       }));
     }
 
+    // Date (formatted professionally)
     const currentDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric'
     });
     docChildren.push(new Paragraph({
-      children: [new TextRun({ text: currentDate, size: 22 })],
-      spacing: { after: 240 }
+      children: [new TextRun({ text: currentDate, ...fontConfig })],
+      spacing: { after: 400, ...lineSpacing }
     }));
 
+    // Greeting
     const greeting = hiringManager ? `Dear ${hiringManager},` : 'Dear Hiring Manager,';
     docChildren.push(new Paragraph({
-      children: [new TextRun({ text: greeting, size: 24 })],
-      spacing: { after: 240 }
+      children: [new TextRun({ text: greeting, ...fontConfig })],
+      spacing: { after: 280, ...lineSpacing }
     }));
 
-    paragraphs.forEach(para => {
+    // Body paragraphs (justified, proper spacing)
+    contentParagraphs.forEach(para => {
       const trimmed = para.trim();
-      if (trimmed.toLowerCase().startsWith('dear ')) return;
+      if (!trimmed) return;
       docChildren.push(new Paragraph({
-        children: [new TextRun({ text: trimmed, size: 24 })],
-        spacing: { after: 200 },
+        children: [new TextRun({ text: trimmed, ...fontConfig })],
+        spacing: { after: 280, ...lineSpacing },
         alignment: AlignmentType.JUSTIFIED
       }));
     });
@@ -203,28 +235,32 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   // Empty state
   if (!resumeText || !jobDescription) {
     return (
-      <GlassCard variant="elevated">
-        <div className="py-12 text-center text-gray-500">
-          <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <h3 className="text-lg font-semibold text-white mb-2">
+      <GlassCard variant="elevated" className="border-dashed border-white/10 bg-white/5">
+        <div className="py-12 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+            <FileText className="w-8 h-8 text-gray-400 opacity-50" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">
             {t('sections.coverLetter.emptyTitle', 'Missing Information')}
           </h3>
-          <p>{t('sections.coverLetter.emptyDesc', 'Upload your resume and add a job description to generate a cover letter.')}</p>
+          <p className="text-gray-400 max-w-md mx-auto">
+            {t('sections.coverLetter.emptyDesc', 'Upload your resume and add a job description to generate a tailored cover letter.')}
+          </p>
         </div>
       </GlassCard>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Configuration */}
-      <GlassCard variant="elevated">
-        <div className="flex items-center gap-3 mb-6">
-          <GlassCircle size="md" variant="indigo">
-            <FileText className="w-5 h-5 text-indigo-400" />
+      <GlassCard variant="elevated" className="overflow-hidden">
+        <div className="flex items-center gap-4 mb-8">
+          <GlassCircle size="lg" variant="indigo" className="shadow-lg shadow-indigo-500/20">
+            <FileText className="w-6 h-6 text-indigo-300" />
           </GlassCircle>
           <div>
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-xl font-bold text-white mb-1">
               {t('sections.coverLetter.title', 'Cover Letter Generator')}
             </h3>
             <p className="text-sm text-gray-400">
@@ -233,53 +269,54 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                {t('sections.coverLetter.companyName', 'Company Name')} ({t('common.optional', 'Optional')})
-              </label>
-              <input
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                placeholder={t('sections.coverLetter.companyPlaceholder', 'e.g., Acme Corporation')}
-                className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                {t('sections.coverLetter.hiringManager', 'Hiring Manager')} ({t('common.optional', 'Optional')})
-              </label>
-              <input
-                type="text"
-                value={hiringManager}
-                onChange={(e) => setHiringManager(e.target.value)}
-                placeholder={t('sections.coverLetter.managerPlaceholder', 'e.g., John Smith')}
-                className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50"
-              />
-            </div>
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <GlassInput
+              label={`${t('sections.coverLetter.companyName', 'Company Name')} (${t('common.optional', 'Optional')})`}
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder={t('sections.coverLetter.companyPlaceholder', 'e.g., Aramco')}
+              leftIcon={<Briefcase className="w-4 h-4" />}
+            />
+            <GlassInput
+              label={`${t('sections.coverLetter.hiringManager', 'Hiring Manager')} (${t('common.optional', 'Optional')})`}
+              value={hiringManager}
+              onChange={(e) => setHiringManager(e.target.value)}
+              placeholder={t('sections.coverLetter.managerPlaceholder', 'e.g., Abdullah Al-Otaibi')}
+              leftIcon={<UserIcon className="w-4 h-4" />}
+            />
           </div>
 
           {/* Tone Selector */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">{t('sections.coverLetter.tone', 'Tone')}</label>
-            <div className="flex flex-wrap gap-2">
-              {tones.map(t => {
-                const IconComponent = t.icon;
+            <label className="block text-sm font-medium text-gray-300 mb-3 ml-1">
+              {t('sections.coverLetter.tone', 'Select Tone')}
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {tones.map(tOption => {
+                const IconComponent = tOption.icon;
+                const isSelected = tone === tOption.value;
                 return (
                   <button
-                    key={t.value}
-                    onClick={() => setTone(t.value)}
+                    key={tOption.value}
+                    onClick={() => setTone(tOption.value)}
                     className={cn(
-                      'px-4 py-2 rounded-xl border-2 transition-all flex items-center gap-2',
-                      tone === t.value
-                        ? 'border-indigo-500 bg-indigo-500/20 text-indigo-400'
-                        : 'border-white/10 bg-white/5 text-gray-400 hover:border-indigo-500/50'
+                      'relative px-4 py-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 group',
+                      isSelected
+                        ? `border-indigo-500 bg-indigo-500/20 text-white shadow-lg shadow-indigo-500/20`
+                        : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20'
                     )}
                   >
-                    <IconComponent className="w-4 h-4" />
-                    {isArabic ? t.labelAr : t.label}
+                    {isSelected && (
+                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20" />
+                    )}
+                    <IconComponent className={cn(
+                      "w-6 h-6 transition-colors duration-300",
+                      isSelected ? "text-indigo-300" : "text-gray-500 group-hover:text-gray-300"
+                    )} />
+                    <span className="text-sm font-medium">
+                      {isArabic ? tOption.labelAr : tOption.label}
+                    </span>
                   </button>
                 );
               })}
@@ -288,92 +325,208 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-400" />
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl animate-in fade-in zoom-in-95">
+              <div className="p-2 bg-red-500/20 rounded-full">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+              </div>
+              <p className="text-sm text-red-300 font-medium">{error}</p>
             </div>
           )}
 
-          <GlassButton onClick={generateCoverLetter} disabled={isGenerating} className="w-full">
+          <GlassButton
+            onClick={generateCoverLetter}
+            disabled={isGenerating}
+            size="lg"
+            className="w-full relative overflow-hidden group"
+          >
             {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 me-2 animate-spin" />
-                {t('sections.coverLetter.generating', 'Generating...')}
-              </>
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>{t('sections.coverLetter.generating', 'Crafting your letter...')}</span>
+              </div>
             ) : (
-              <>
-                <Wand2 className="w-4 h-4 me-2" />
-                {coverLetter ? t('sections.coverLetter.regenerate', 'Regenerate') : t('sections.coverLetter.generate', 'Generate Cover Letter')}
-              </>
+              <div className="flex items-center justify-center gap-2">
+                <Wand2 className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+                <span>{coverLetter ? t('sections.coverLetter.regenerate', 'Regenerate Cover Letter') : t('sections.coverLetter.generate', 'Generate Cover Letter')}</span>
+              </div>
+            )}
+            {!isGenerating && (
+              <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             )}
           </GlassButton>
         </div>
       </GlassCard>
 
-      {/* Loading */}
+      {/* Loading State */}
       {isGenerating && (
-        <GlassCard variant="elevated">
-          <div className="py-12 flex flex-col items-center justify-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
-            <p className="text-gray-400">{t('sections.coverLetter.crafting', 'Crafting your personalized cover letter...')}</p>
+        <GlassCard variant="elevated" className="p-12 relative overflow-hidden">
+          <div className="absolute inset-0 bg-indigo-500/5 animate-pulse" />
+          <div className="relative z-10 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 mb-6 relative">
+              <div className="absolute inset-0 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+              <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10 scale-75 animate-ping" />
+              <FileText className="absolute inset-0 m-auto w-6 h-6 text-indigo-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {t('sections.coverLetter.craftingTitle', 'AI is writing...')}
+            </h3>
+            <p className="text-gray-400 max-w-sm">
+              {t('sections.coverLetter.crafting', 'Analyzing your resume and job description to create the perfect cover letter.')}
+            </p>
           </div>
         </GlassCard>
       )}
 
-      {/* Cover Letter Display */}
+      {/* Result Display */}
       {!isGenerating && coverLetter && (
-        <GlassCard variant="elevated">
-          <div className="flex items-center justify-between mb-4">
+        <GlassCard variant="elevated" className="overflow-hidden border-t-4 border-t-indigo-500/50">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
             <div>
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-xl font-bold text-white mb-1">
                 {t('sections.coverLetter.yourLetter', 'Your Cover Letter')}
               </h3>
-              <p className="text-sm text-gray-400">
-                {wordCount} {t('sections.coverLetter.words', 'words')} • {tones.find(t => t.value === tone)?.label} {t('sections.coverLetter.toneLabel', 'tone')}
-              </p>
+              <div className="flex items-center gap-3 text-sm text-gray-400">
+                <span className="flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-indigo-400" />
+                  {wordCount} {t('sections.coverLetter.words', 'words')}
+                </span>
+                <span className="w-1 h-1 rounded-full bg-gray-600" />
+                <span className="flex items-center gap-1.5 capitalize">
+                  {tones.find(t => t.value === tone)?.icon && (() => {
+                    const Icon = tones.find(t => t.value === tone)!.icon;
+                    return <Icon className="w-4 h-4 text-indigo-400" />
+                  })()}
+                  {tones.find(t => t.value === tone)?.label} {t('sections.coverLetter.toneLabel', 'tone')}
+                </span>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <GlassButton variant="secondary" onClick={copyCoverLetter}>
-                <Copy className="w-4 h-4 me-2" />
+            <div className="flex gap-3">
+              <GlassButton variant="secondary" size="sm" onClick={copyCoverLetter} className="flex-1 md:flex-none justify-center">
+                {copied ? <CheckCircle2 className="w-4 h-4 me-2 text-emerald-400" /> : <Copy className="w-4 h-4 me-2" />}
                 {copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
               </GlassButton>
-              <GlassButton onClick={downloadCoverLetter}>
+              <GlassButton size="sm" onClick={downloadCoverLetter} className="flex-1 md:flex-none justify-center">
                 <Download className="w-4 h-4 me-2" />
-                {t('common.download', 'Download')}
+                {t('common.download', 'DOCX')}
               </GlassButton>
             </div>
           </div>
 
           {/* Key Highlights */}
           {keyHighlights.length > 0 && (
-            <div className="mb-4 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-              <h4 className="text-sm font-semibold text-emerald-400 mb-2">
+            <div className="mb-6 p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+              <h4 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+                <Zap className="w-4 h-4" />
                 {t('sections.coverLetter.highlights', 'Key Highlights Included')}
               </h4>
-              <ul className="space-y-1">
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {keyHighlights.map((h, idx) => (
-                  <li key={idx} className="text-sm text-gray-300 flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                    <span>{h}</span>
+                  <li key={idx} className="text-sm text-gray-300 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                    <span className="leading-tight">{h}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
-          <textarea
-            value={coverLetter}
-            onChange={(e) => setCoverLetter(e.target.value)}
-            className="w-full h-[400px] p-4 rounded-xl bg-white/5 border border-white/10 text-white font-serif text-base leading-relaxed resize-none focus:outline-none focus:border-indigo-500/50"
-          />
+          {/* Document Container - Professional Word-like appearance */}
+          <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8 lg:p-12 rounded-xl">
+            {/* Edit Toggle Button */}
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className={cn(
+                "absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                isEditing
+                  ? "bg-indigo-600 text-white shadow-lg"
+                  : "bg-white/80 text-gray-600 hover:bg-white shadow-md"
+              )}
+            >
+              <Edit3 className="w-4 h-4" />
+              {isEditing ? t('common.done', 'Done') : t('common.edit', 'Edit')}
+            </button>
 
-          <div className="mt-4 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-            <p className="text-sm text-indigo-300">
-              💡 <strong>{t('sections.coverLetter.tipLabel', 'Tip')}:</strong> {t('sections.coverLetter.tipText', 'Edit the generated text to add personal touches and ensure accuracy.')}
+            {/* Paper Document */}
+            <div className="max-w-3xl mx-auto bg-white rounded shadow-2xl shadow-gray-400/30 overflow-hidden">
+              {/* Document Content */}
+              <div
+                className="p-10 md:p-14 lg:p-16 min-h-[700px]"
+                style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
+              >
+                {isEditing ? (
+                  /* Edit Mode - Textarea */
+                  <textarea
+                    value={coverLetter}
+                    onChange={(e) => setCoverLetter(e.target.value)}
+                    className="w-full min-h-[600px] text-gray-800 text-[17px] leading-relaxed bg-transparent resize-none focus:outline-none border-2 border-dashed border-gray-300 rounded-lg p-4 -m-4"
+                    style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
+                    autoFocus
+                  />
+                ) : (
+                  /* View Mode - Rendered Document */
+                  <div className="text-gray-800 text-[17px] leading-relaxed">
+                    {/* Header */}
+                    {companyName && (
+                      <p className="font-bold text-lg mb-1">{companyName}</p>
+                    )}
+                    <p className="text-gray-600 mb-6">
+                      {new Date().toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                      })}
+                    </p>
+
+                    {/* Greeting */}
+                    <p className="mb-6">
+                      {hiringManager ? `Dear ${hiringManager},` : 'Dear Hiring Manager,'}
+                    </p>
+
+                    {/* Body Paragraphs */}
+                    {coverLetter
+                      .replace(/^Dear\s+[^,]+,?\s*/i, '') // Remove greeting from body
+                      .split(/\n\n+/)
+                      .filter(p => p.trim())
+                      .map((para, idx) => (
+                        <p key={idx} className="mb-5 text-justify">
+                          {para.trim()}
+                        </p>
+                      ))
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center gap-3 p-3 bg-indigo-500/5 rounded-lg border border-indigo-500/10">
+            <div className="p-1.5 bg-indigo-500/20 rounded-md">
+              <Wand2 className="w-4 h-4 text-indigo-400" />
+            </div>
+            <p className="text-sm text-indigo-200/80">
+              <strong>{t('sections.coverLetter.tipLabel', 'Pro Tip')}:</strong> {t('sections.coverLetter.tipText', 'Review and edit the generated text to add your personal touch before sending.')}
             </p>
           </div>
         </GlassCard>
       )}
     </div>
   );
+}
+
+function UserIcon(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
 }

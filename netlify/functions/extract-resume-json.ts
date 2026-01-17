@@ -44,8 +44,15 @@ export const handler = async (event: { httpMethod: string; body: string; }) => {
         console.warn("[extract-resume-json] Pre-extraction failed, will rely on Gemini:", extractError);
       }
 
-      console.log("[extract-resume-json] Calling parseResumeOnly with PDF data...");
-      analysis = await parseResumeOnly(data, true);
+      // OPTIMIZATION: Use pre-extracted text if available (much faster than PDF parsing)
+      // PDF mode takes 30-45s, text mode takes ~5-10s
+      if (extractedPlainText.length > 200) {
+        console.log("[extract-resume-json] Using pre-extracted text for faster parsing...");
+        analysis = await parseResumeOnly(extractedPlainText, false);
+      } else {
+        console.log("[extract-resume-json] Calling parseResumeOnly with PDF data (fallback)...");
+        analysis = await parseResumeOnly(data, true);
+      }
       console.log("[extract-resume-json] parseResumeOnly returned success.");
     } else if (kind === "text" && body.value) {
       console.log("[extract-resume-json] Calling parseResumeOnly with text...");

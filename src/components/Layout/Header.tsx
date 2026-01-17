@@ -384,21 +384,21 @@ export default function Header() {
 
               {/* Brand text */}
               <div className="flex flex-col">
-                <p className="text-[10px] sm:text-sm font-bold tracking-[0.12em] sm:tracking-[0.15em] bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent uppercase">
+                <p className="text-[11px] sm:text-sm font-extrabold tracking-[0.2em] bg-gradient-to-r from-emerald-200 via-white to-teal-200 bg-clip-text text-transparent uppercase drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                   {t("common.appName")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-xs font-medium text-white/60 tracking-wide">
+                  <p className="text-[10px] sm:text-xs font-medium text-emerald-100/50 tracking-wider">
                     {t("common.byAuthor")}
                   </p>
                   <a
                     href="https://www.linkedin.com/in/3binahmed/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center text-white/50 hover:text-[#0A66C2] transition-all duration-300 hover:scale-110"
+                    className="inline-flex items-center justify-center text-emerald-100/50 hover:text-[#0A66C2] transition-all duration-300 hover:scale-110"
                     aria-label="Visit LinkedIn profile"
                   >
-                    <Linkedin className="h-3.5 w-3.5" />
+                    <Linkedin className="h-3 w-3" />
                   </a>
                 </div>
               </div>
@@ -466,34 +466,38 @@ export default function Header() {
             {/* Badge - moved to Header */}
 
             {/* Main heading card - matching Workflow card style */}
-            <div className={cn(glassCardClass, "p-4 sm:p-6 lg:p-8")}>
+            <div className={cn(
+              glassCardClass,
+              "p-6 sm:p-8 lg:p-10",
+              "border-emerald-500/10 hover:border-emerald-500/20 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_-4px_rgba(16,185,129,0.1)]"
+            )}>
               {/* Card header with icon */}
-              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <div className="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-6">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-emerald-500/90 to-teal-600/90 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.3)] ring-1 ring-white/20">
+                  <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <h1 className="text-base sm:text-xl font-bold text-white">{t("header.heroTitle")}</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight">{t("header.heroTitle")}</h1>
               </div>
 
-              <p className="text-sm sm:text-base text-white/70 leading-relaxed">
+              <p className="text-base sm:text-lg text-emerald-50/70 leading-relaxed font-light">
                 {t("header.heroDescription")}
               </p>
             </div>
 
             {/* Feature cards - hidden on mobile */}
-            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 gap-4">
               {featureCards.map((card, idx) => (
                 <div
                   key={card.label}
                   className={cn(
                     glassCardClass,
                     glassCardHoverClass,
-                    "p-3 sm:p-5 cursor-default group relative",
+                    "p-4 sm:p-5 cursor-default group relative overflow-hidden",
                     prefersReducedMotion
                       ? ""
                       : "transition-all duration-500 ease-out",
                     heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
-                    card.highlight && "border-[#006C35]/50 shadow-[0_0_20px_rgba(0,108,53,0.2)]"
+                    card.highlight ? "bg-[#006C35]/20 border-[#006C35]/40 hover:border-[#4ade80]/50" : ""
                   )}
                   style={{
                     transitionDelay: !prefersReducedMotion ? `${150 + idx * 50}ms` : undefined,
@@ -502,34 +506,34 @@ export default function Header() {
                   {/* Vision 2030 badge */}
                   {card.highlight && (
                     <span
-                      className="absolute top-2 end-2 inline-flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 shadow-lg animate-pulse"
+                      className="absolute top-3 end-3 inline-flex items-center justify-center p-1.5 rounded-full bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.5)] animate-pulse"
                       aria-label="Vision 2030 Featured"
                       role="img"
                     >
-                      <Crown className="w-3 h-3 text-gray-900" />
+                      <Crown className="w-3.5 h-3.5 text-black drop-shadow-sm" />
                     </span>
                   )}
 
                   {/* Hover glow effect */}
                   <div className={cn(
-                    "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
-                    `bg-gradient-to-r ${card.gradient}`
-                  )} style={{ opacity: 0.1 }} />
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl",
+                    `bg-gradient-to-br ${card.gradient}`
+                  )} style={{ opacity: 0.15 }} />
 
                   <div className={cn(
-                    "inline-flex h-10 w-10 items-center justify-center rounded-lg mb-3 bg-gradient-to-br transition-transform duration-300 group-hover:scale-110",
+                    "inline-flex h-12 w-12 items-center justify-center rounded-xl mb-4 bg-gradient-to-br shadow-inner border border-white/5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
                     card.gradient
                   )}>
-                    <card.icon className="h-5 w-5 text-white" />
+                    <card.icon className="h-6 w-6 text-white drop-shadow-md" />
                   </div>
 
                   <p className={cn(
-                    "text-[11px] font-bold uppercase tracking-[0.2em]",
-                    card.highlight ? "text-[#4ade80]" : "text-emerald-300/80"
+                    "text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5",
+                    card.highlight ? "text-[#4ade80] drop-shadow-[0_0_8px_rgba(74,222,128,0.4)]" : "text-emerald-400/80"
                   )}>
                     {card.label}
                   </p>
-                  <p className="mt-1 text-base font-semibold text-white">
+                  <p className="text-sm font-medium text-white/90 leading-snug">
                     {card.desc}
                   </p>
                 </div>
@@ -559,11 +563,14 @@ export default function Header() {
               <h2 className="text-xl font-bold text-white">{t("header.workflow.title")}</h2>
             </div>
 
-            <ul className="space-y-6">
+            <ul className="space-y-7 relative">
+              {/* Connector Line */}
+              <div className="absolute left-[1.5rem] top-4 bottom-4 w-px bg-gradient-to-b from-emerald-500/50 via-teal-500/20 to-transparent" />
+
               {workflowSteps.map((step, idx) => (
                 <li
                   key={step.title}
-                  className="group flex items-start gap-4"
+                  className="group flex items-start gap-5 relative z-10"
                   style={{
                     animationDelay: `${idx * 100}ms`,
                   }}
@@ -571,16 +578,16 @@ export default function Header() {
                   {/* Animated icon circle */}
                   <div className={cn(
                     iconCircleClass,
-                    "h-12 w-12 flex-shrink-0 group-hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] group-hover:scale-105"
+                    "h-12 w-12 flex-shrink-0 bg-black/40 border-emerald-500/20 group-hover:border-emerald-400/50 group-hover:scale-110 group-hover:shadow-[0_0_25px_-5px_rgba(16,185,129,0.4)]"
                   )}>
-                    <step.icon className="h-5 w-5 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                    <step.icon className="h-5 w-5 text-emerald-400 transition-colors duration-300 group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                   </div>
 
-                  <div className="flex-1 pt-1">
-                    <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors duration-300">
+                  <div className="flex-1 pt-1.5 transition-transform duration-300 group-hover:translate-x-1">
+                    <p className="font-bold text-white group-hover:text-emerald-300 transition-colors duration-300 text-base">
                       {step.title}
                     </p>
-                    <p className="text-sm text-white/60 mt-1">
+                    <p className="text-sm text-emerald-100/50 mt-1 leading-relaxed group-hover:text-emerald-100/70 transition-colors">
                       {step.desc}
                     </p>
                   </div>
@@ -588,8 +595,7 @@ export default function Header() {
               ))}
             </ul>
 
-            {/* Decorative line connector */}
-            <div className="absolute left-[2.25rem] top-[7.5rem] bottom-[4rem] w-[2px] bg-gradient-to-b from-emerald-400/30 via-teal-400/20 to-transparent hidden lg:block" />
+            {/* Remove old decorative line, logic is now inside ul */}
           </div>
         </div>
       </div>

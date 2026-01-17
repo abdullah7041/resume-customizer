@@ -58,10 +58,10 @@ export function PricingSection() {
     return (
         <section
             id="pricing"
-            className="py-16 sm:py-24"
+            className="py-6 sm:py-10"
             dir={isRTL ? 'rtl' : 'ltr'}
         >
-            <div className="space-y-12">
+            <div className="space-y-6">
                 {/* Section Header */}
                 <div className="text-center space-y-4">
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
@@ -73,94 +73,110 @@ export function PricingSection() {
                 </div>
 
                 {/* Pricing Cards Grid - 2 columns for Free and Pro */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto items-stretch">
                     {plans.map((plan) => {
                         const features = t(`pricing.plans.${plan.key}.features`, { returnObjects: true }) as string[];
 
                         return (
-                            <div key={plan.key} className="relative group">
+                            <div key={plan.key} className="relative group flex flex-col h-full">
                                 <GlassCard
                                     variant={plan.active ? 'elevated' : 'default'}
                                     padding="lg"
                                     className={cn(
-                                        "h-full transition-all duration-500 relative overflow-hidden",
-                                        "hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)] hover:-translate-y-1",
-                                        plan.active && "border-emerald-500/50 shadow-[0_8px_32px_rgba(16,185,129,0.2)]",
-                                        plan.comingSoon && "opacity-90"
+                                        "flex flex-col h-full transition-all duration-500 relative overflow-hidden",
+                                        "hover:shadow-[0_8px_32px_rgba(16,185,129,0.1)] hover:-translate-y-1",
+                                        plan.active && "border-emerald-500/30 bg-emerald-950/20 shadow-[0_8px_32px_rgba(16,185,129,0.15)]",
+                                        plan.comingSoon && "opacity-80 hover:opacity-100 bg-white/5 border-white/5",
+                                        "p-6 sm:p-8"
                                     )}
                                 >
-                                    <div className="space-y-6">
+                                    {/* Active Plan Highlight */}
+                                    {plan.active && (
+                                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500" />
+                                    )}
+
+                                    <div className="space-y-7 flex flex-col flex-1">
                                         {/* Plan Icon & Name */}
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <GlassCircle size="lg" variant={plan.key === 'free' ? 'success' : 'purple'}>
+                                            <div className="flex items-center gap-4">
+                                                <GlassCircle size="lg" variant={plan.key === 'free' ? 'success' : 'purple'} className="w-12 h-12 shadow-lg">
                                                     <plan.icon className="w-6 h-6 text-white" />
                                                 </GlassCircle>
                                                 <div>
-                                                    <h3 className="text-xl font-bold text-white">
+                                                    <h3 className="text-xl font-bold text-white tracking-tight">
                                                         {t(`pricing.plans.${plan.key}.name`)}
                                                     </h3>
-                                                    <p className="text-sm text-white/50">
+                                                    <p className="text-sm text-emerald-100/60 font-medium">
                                                         {t(`pricing.plans.${plan.key}.description`)}
                                                     </p>
                                                 </div>
                                             </div>
                                             {/* Coming Soon Badge for Pro */}
                                             {plan.comingSoon && (
-                                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-white/5 text-white/50 border border-white/10">
                                                     {t('pricing.comingSoon')}
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Price */}
-                                        <div className="flex items-baseline gap-1">
+                                        <div className="flex items-baseline gap-1 py-2">
                                             {plan.key === 'free' ? (
                                                 <>
-                                                    <span className="text-4xl font-bold text-white">$0</span>
-                                                    <span className="text-white/50">{t('pricing.forever')}</span>
+                                                    <span className="text-5xl font-extrabold text-white tracking-tight drop-shadow-sm">$0</span>
+                                                    <span className="text-emerald-100/50 font-medium text-lg ml-1">{t('pricing.forever')}</span>
                                                 </>
                                             ) : (
-                                                <span className="text-xl font-medium text-white/60">
-                                                    {t('pricing.proPrice')}
-                                                </span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-2xl font-bold text-white/40 blur-[2px] select-none">
+                                                        $29.99
+                                                    </span>
+                                                    <span className="text-sm font-medium text-emerald-400">
+                                                        {t('pricing.proPrice')}
+                                                    </span>
+                                                </div>
                                             )}
                                         </div>
 
-                                        {/* Features List */}
-                                        <ul className="space-y-3">
+                                        {/* Features List - Pushed to fill space */}
+                                        <ul className="space-y-4 flex-1">
                                             {Array.isArray(features) && features.map((feature, idx) => (
-                                                <li key={idx} className="flex items-start gap-3">
-                                                    <GlassCircle size="sm" variant={plan.key === 'free' ? 'success' : 'purple'} className="mt-0.5 shrink-0">
-                                                        <Check className="w-3 h-3 text-white" />
-                                                    </GlassCircle>
+                                                <li key={idx} className="flex items-start gap-3.5 group/item">
+                                                    <div className={cn(
+                                                        "mt-1 shrink-0 rounded-full p-0.5",
+                                                        plan.key === 'free' ? "bg-emerald-500/20 text-emerald-400" : "bg-purple-500/10 text-purple-300/50"
+                                                    )}>
+                                                        <Check className="w-3.5 h-3.5" />
+                                                    </div>
                                                     <span className={cn(
-                                                        "text-sm",
-                                                        plan.comingSoon ? "text-white/60" : "text-white/80"
+                                                        "text-sm leading-relaxed transition-colors",
+                                                        plan.comingSoon ? "text-white/50" : "text-emerald-50/80 group-hover/item:text-white"
                                                     )}>{feature}</span>
                                                 </li>
                                             ))}
                                         </ul>
 
-                                        {/* CTA Button */}
-                                        {plan.active ? (
-                                            <GlassButton
-                                                variant="primary"
-                                                size="lg"
-                                                className="w-full"
-                                            >
-                                                {t('pricing.getStarted')}
-                                            </GlassButton>
-                                        ) : (
-                                            <GlassButton
-                                                variant="secondary"
-                                                size="lg"
-                                                className="w-full"
-                                                disabled
-                                            >
-                                                {t('pricing.joinWaitlist')}
-                                            </GlassButton>
-                                        )}
+                                        {/* CTA Button - Anchored at bottom */}
+                                        <div className="pt-4">
+                                            {plan.active ? (
+                                                <GlassButton
+                                                    variant="primary"
+                                                    size="lg"
+                                                    className="w-full font-bold shadow-lg shadow-emerald-900/20"
+                                                >
+                                                    {t('pricing.getStarted')}
+                                                </GlassButton>
+                                            ) : (
+                                                <GlassButton
+                                                    variant="secondary"
+                                                    size="lg"
+                                                    className="w-full border-white/5 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white transition-colors"
+                                                    disabled
+                                                >
+                                                    {t('pricing.joinWaitlist')}
+                                                </GlassButton>
+                                            )}
+                                        </div>
                                     </div>
                                 </GlassCard>
                             </div>

@@ -19,7 +19,7 @@ import {
   Users,
   Briefcase,
   GraduationCap,
-  Info,
+
 } from "lucide-react";
 import { GlassButton } from "../components/ui/GlassButton";
 import AnimatedCard from "../components/ui/AnimatedCard";
@@ -373,6 +373,7 @@ function StatsSection() {
 }
 
 // Component: Job categories with real Saudi market focus
+// eslint-disable-next-line no-unused-vars
 function JobMarketSection() {
   const { t } = useTranslation();
   const industries = [

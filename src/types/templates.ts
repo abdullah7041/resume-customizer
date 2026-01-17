@@ -159,7 +159,18 @@ export interface OptimizationMetrics {
  * Display options for template rendering (user-adjustable)
  */
 export interface DisplayOptions {
-  fontSize: number; // Scale factor: 1 = 100%, 0.9 = 90%, 1.1 = 110%
+  fontSize: number; // Legacy scale factor: 1 = 100%, 0.9 = 90%, 1.1 = 110%
+  // Font formatting
+  baseFontSize: number;   // pt (9-12)
+  headingSize: number;    // pt (12-18)
+  fontFamily: string;     // CSS font-family
+  // Document formatting
+  sectionSpacing: number; // px (4-20)
+  paragraphSpacing: number; // px (2-12)
+  lineHeight: number;     // ratio (1.2-2.0)
+  marginTop: number;      // inches (0.3-1.0)
+  marginBottom: number;   // inches (0.3-1.0)
+  marginSide: number;     // inches (0.3-1.0)
 }
 
 /**
@@ -182,6 +193,7 @@ export interface ResumeState {
   showOptimized: boolean;
   selectedTemplate: TemplateId;
   displayOptions: DisplayOptions;
+  hasDownloaded: boolean;
 
   // Actions
   setOriginalResume: (resume: ResumeSchema) => void;
@@ -196,6 +208,7 @@ export interface ResumeState {
   setShowOptimized: (_show: boolean) => void;
   setSelectedTemplate: (_id: TemplateId) => void;
   setKeywordSuggestions: (_suggestions: KeywordSuggestion[]) => void;
+  setHasDownloaded: (value: boolean) => void;
   getActiveResume: () => ResumeSchema | null;
   clearAll: () => void;
   resetForNewUpload: () => void;
@@ -220,6 +233,9 @@ export interface TemplateProps {
   resume: ResumeSchema;
   isAtsMode?: boolean;
   scale?: number;
+  displayOptions?: DisplayOptions;
+  /** @deprecated Use displayOptions.fontSize instead */
+  fontScale?: number;
 }
 
 /**

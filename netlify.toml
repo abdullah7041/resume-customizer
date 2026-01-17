@@ -1,3 +1,10 @@
+# Local development configuration
+[dev]
+  # Increase function timeout for local development to match production
+  # This fixes "Task timed out" errors for slow Gemini responses
+  # Also accounts for Puppeteer cold start (browser launch can take 30-60s)
+  functionTimeout = 120
+
 [build]
   command = "npm run build"
   publish = "dist"
@@ -33,10 +40,10 @@
   timeout = 30
 
 [functions."extract-resume-json"]
-  timeout = 30
+  timeout = 60  # Increased for Gemini parsing (PDF data takes 30-45s, buffer for edge cases)
 
 [functions."generate-pdf"]
-  timeout = 45  # PDF generation: Target <10s, buffer for edge cases
+  timeout = 90  # PDF generation: Puppeteer browser launch can take 30-60s on cold start
   memory = 1024
 
 [[redirects]]

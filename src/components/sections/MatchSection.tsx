@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
+import { GlassTextarea } from '../ui/GlassTextarea';
 import {
   Target,
   TrendingUp,
@@ -33,13 +34,13 @@ const resolveVariant = (score: number) => {
   if (score >= 70) {
     return {
       gradient: "from-emerald-500/20 via-emerald-500/10 to-emerald-500/5",
-      glow: "bg-emerald-500/20",
+      glow: "bg-emerald-500/30",
       strokeStart: "#10B981",
       strokeEnd: "#34D399",
       label: "Strong Match",
       labelAr: "تطابق قوي",
       icon: Target,
-      text: "text-emerald-400"
+      text: "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
     };
   }
   if (score >= 40) {
@@ -231,29 +232,17 @@ export function MatchSection({
             )}
           </div>
 
-          <textarea
+          <GlassTextarea
             id="jobDescription"
             name="jobDescription"
             value={jobText}
             onChange={(e) => setJobText(e.target.value)}
             placeholder={t('sections.match.jobInput.placeholder', 'Paste the job description here...')}
-            className={cn(
-              'w-full h-64 p-5 rounded-xl resize-none mb-4',
-              'bg-black/20 border border-white/5',
-              'text-white placeholder-gray-500/80 leading-relaxed',
-              'focus:outline-none focus:border-emerald-500/30 focus:bg-black/30 focus:ring-1 focus:ring-emerald-500/20',
-              'transition-all duration-300',
-              error && 'border-rose-500/50 focus:border-rose-500/50 focus:ring-rose-500/20'
-            )}
+            className="w-full h-64 mb-4 font-mono text-sm leading-relaxed"
+            error={error}
           />
 
-          {/* Error Message */}
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
-          )}
+
 
           {/* No Resume Warning */}
           {!hasResume && (
@@ -267,9 +256,11 @@ export function MatchSection({
             onClick={handleAnalyze}
             disabled={buttonDisabled}
             isLoading={isAnalyzing}
-            className="w-full"
+            className="w-full group relative overflow-hidden"
+            variant="prominent"
           >
-            <Sparkles className="w-4 h-4 me-2" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+            <Sparkles className={cn("w-4 h-4 me-2", isAnalyzing && "animate-spin")} />
             {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : t('sections.match.analyze', 'Analyze Match with AI')}
           </GlassButton>
 
@@ -351,8 +342,12 @@ export function MatchSection({
                       </svg>
 
                       {/* Inner Score */}
-                      <div className="absolute inset-4 grid place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md shadow-inner shadow-white/5">
-                        <div className="flex flex-col items-center justify-center text-center">
+                      <div className="absolute inset-4 grid place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md shadow-inner shadow-white/5 overflow-hidden">
+                        {/* Inner highlight pulse */}
+                        {score >= 70 && (
+                          <div className="absolute inset-0 bg-emerald-500/20 animate-pulse" />
+                        )}
+                        <div className="flex flex-col items-center justify-center text-center relative z-10">
                           <Tooltip
                             content={`${score}/100 - ${isArabic ? variant.labelAr : variant.label}`}
                             position="bottom"
@@ -543,8 +538,9 @@ export function MatchSection({
                       {matchAnalysis.suggestions.map((suggestion, i) => (
                         <li
                           key={i}
-                          className="p-3 rounded-xl bg-white/5 border border-white/5 text-sm text-gray-300 hover:bg-white/10 transition-colors"
+                          className="p-3 rounded-xl bg-white/5 border border-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all cursor-default"
                         >
+                          <span className="text-amber-400 mr-2">•</span>
                           {suggestion}
                         </li>
                       ))}
@@ -578,9 +574,9 @@ export function MatchSection({
           ) : (
             <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8 animate-fade-in">
               <div className="relative mb-6 group">
-                <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-1000 animate-pulse" />
                 <div className="relative p-6 rounded-full bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-500 group-hover:scale-110">
-                  <Target className="w-10 h-10 text-gray-600 group-hover:text-blue-400 transition-colors duration-500" />
+                  <Target className="w-10 h-10 text-gray-400 group-hover:text-blue-400 transition-colors duration-500" />
                 </div>
               </div>
               <h4 className="text-lg font-medium text-white mb-2">

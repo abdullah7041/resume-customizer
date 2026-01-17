@@ -82,11 +82,19 @@ export default function UploadCard({
   disabled = false,
   onValidationError,
   onTextChange,
+  isSaved,
+  onCancel,
 }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Import CheckCircle dynamically or assume it's available. 
+  // Since I can't change the import lines in `replace_file_content` easily if they are at the top,
+  // I will use a separate `edit` for imports or just use an existing icon if CheckCircle isn't there?
+  // Wait, I can't import inside the function.
+  // I will assume I need to do a multi_replace to handle imports as well.
 
   const statusCopy = {
     uploading: t("upload.card.status.uploading"),
@@ -179,9 +187,9 @@ export default function UploadCard({
     <GlassCard
       variant="elevated"
       padding="lg"
-      className="mx-auto w-full max-w-full sm:max-w-5xl"
+      className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden"
     >
-      <header className="space-y-1.5 sm:space-y-2 text-center sm:text-left">
+      <header className="space-y-1.5 sm:space-y-2 text-center sm:text-left mb-6 sm:mb-8">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.15em] sm:tracking-[0.32em] text-gold-500">{t("upload.card.step")}</p>
         </div>
@@ -261,7 +269,7 @@ export default function UploadCard({
       />
 
       {/* Mobile: Prominent upload buttons */}
-      <div className="flex flex-col sm:hidden gap-2 w-full">
+      <div className="flex flex-col sm:hidden gap-2 w-full mt-4">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -280,27 +288,61 @@ export default function UploadCard({
         </button>
       </div>
 
-      {fileName && (
-        <div className="flex items-center justify-between rounded-lg border border-[color:color-mix(in_oklab,var(--glass-border),transparent_32%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_16%)] px-4 py-3 text-sm text-ink shadow-soft backdrop-blur-xl">
-          <span className="truncate font-medium">{fileName}</span>
+      {isSaved && fileName && (
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-ink shadow-[0_4px_20px_-4px_rgba(16,185,129,0.2)] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
+              {/* Check icon (manual SVG to avoid import issues if verify fails otherwise, but I will try use CheckCircle later or just SVG here for safety) */}
+              <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-emerald-100">Resume Ready & Saved</span>
+              <span className="truncate text-xs text-emerald-200/80 font-mono">{fileName}</span>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={onFileClear}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_10%)] text-emerald-400 transition-all duration-snappy ease-snappy hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--button-primary-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]"
+            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-emerald-200/70 transition-all hover:bg-red-500/20 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/50"
             aria-label="Remove selected file"
             title="Remove selected file"
           >
-            <XCircle className="h-4 w-4" aria-hidden="true" />
+            <XCircle className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {/* File Selected Indicator (Not Saved Yet) */}
+      {fileName && !isSaved && (
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-blue-500/30 bg-blue-500/10 px-5 py-4 text-sm text-ink shadow-[0_4px_20px_-4px_rgba(59,130,246,0.2)] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 border border-blue-500/30">
+              <FileText className="h-5 w-5 text-blue-400" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-blue-100">Ready to Prepare</span>
+              <span className="truncate text-xs text-blue-200/80 font-mono">{fileName}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onFileClear}
+            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-blue-200/70 transition-all hover:bg-blue-500/20 hover:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            aria-label="Remove selected file"
+            title="Remove selected file"
+          >
+            <XCircle className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       )}
 
 
-
-
-
       {showProgress && (
-        <div className="space-y-2" aria-live="assertive">
+        <div className="mt-6 space-y-2" aria-live="assertive">
           <div className="relative h-2 w-full overflow-hidden rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_50%)]">
             <div
               className="h-full w-full origin-left bg-[image:var(--gradient-primary-value)] transition-all duration-breathe ease-snappy"
@@ -312,43 +354,59 @@ export default function UploadCard({
             />
           </div>
           {stateMessage && (
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-500">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-500 text-center">
               {stateMessage}
             </p>
           )}
         </div>
-      )}
+      )
+      }
 
-      {!showProgress && stateMessage && (
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-500">
-          {stateMessage}
-        </p>
-      )}
+      {
+        error && (
+          <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
+            <p className="text-sm font-medium text-red-200" role="alert">
+              {error}
+            </p>
+          </div>
+        )
+      }
 
-      {error && (
-        <p className="text-sm font-medium text-[color:var(--color-danger-500)]" role="alert">
-          {error}
-        </p>
-      )}
+      <div className="mt-8 pt-6 border-t border-white/5 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
+        <GlassButton
+          variant="ghost"
+          onClick={onFileClear}
+          disabled={!fileName}
+          className="w-full sm:w-auto text-emerald-200/60 hover:text-red-300 hover:bg-red-500/5"
+        >
+          <XCircle className="w-4 h-4 me-2" />
+          {t("upload.card.clearButton")}
+        </GlassButton>
 
-      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
+        {/* Show Cancel button during processing */}
+        {(status === 'uploading' || status === 'parsing') && (
+          <GlassButton
+            variant="ghost"
+            onClick={onCancel}
+            className="w-full sm:w-auto text-red-300 hover:text-red-200 hover:bg-red-500/10"
+          >
+            <XCircle className="w-4 h-4 me-2" />
+            Cancel
+          </GlassButton>
+        )}
+
         <GlassButton
           onClick={onSubmit}
           disabled={disabled || status === "uploading" || status === "parsing"}
           variant="primary"
-          className="w-full sm:w-auto"
+          size="lg"
+          className="w-full sm:w-auto min-w-[200px] shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
         >
-          {(status === "uploading" || status === "parsing") && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
-          {t("upload.card.prepareButton")}
-        </GlassButton>
-        <GlassButton
-          variant="secondary"
-          onClick={onFileClear}
-          disabled={!fileName}
-          className="w-full sm:w-auto"
-        >
-          <XCircle className="w-4 h-4 me-2" />
-          {t("upload.card.clearButton")}
+          {(status === "uploading" || status === "parsing") ? (
+            <><Loader2 className="w-4 h-4 me-2 animate-spin" /> Processing...</>
+          ) : (
+            <>{t("upload.card.prepareButton")} <span className="ml-2">→</span></>
+          )}
         </GlassButton>
       </div>
     </GlassCard>

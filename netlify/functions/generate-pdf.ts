@@ -115,14 +115,65 @@ export const handler: Handler = async (event) => {
     // No need to wait for network resources (fonts already loaded in client)
     await page.setContent(html, { waitUntil: 'domcontentloaded' });
 
-    // Short stabilization delay for layout (using setTimeout - waitForTimeout is deprecated)
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Emulate screen media to match browser preview (not print media)
+    await page.emulateMediaType('screen');
 
-    // Generate PDF
+    // Inject critical CSS for proper PDF rendering
+    await page.addStyleTag({
+      content: `
+        /* Hide elements marked as non-printable (page break indicators, etc.) */
+        [data-no-print] { display: none !important; }
+        
+        /* Page break prevention - keep individual items together, not whole sections */
+        li, p, h1, h2, h3, h4 { 
+          page-break-inside: avoid !important; 
+          break-inside: avoid !important;
+        }
+        
+        /* Tailwind border utilities (not loaded without stylesheet) */
+        .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+        .border-b-2 { border-bottom-width: 2px; border-bottom-style: solid; }
+        .border-black { border-color: #000 !important; }
+        .border-gray-400 { border-color: #9ca3af !important; }
+        .border-white\\/10 { border-color: rgba(255,255,255,0.1) !important; }
+        
+        /* Tailwind text utilities */
+        .text-center { text-align: center !important; }
+        .text-justify { text-align: justify !important; }
+        .uppercase { text-transform: uppercase !important; }
+        .font-bold { font-weight: 700 !important; }
+        .font-semibold { font-weight: 600 !important; }
+        
+        /* Tailwind spacing */
+        .mb-1 { margin-bottom: 0.25rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-3 { margin-bottom: 0.75rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-5 { margin-bottom: 1.25rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .pb-1 { padding-bottom: 0.25rem; }
+        .pb-4 { padding-bottom: 1rem; }
+        .mt-1 { margin-top: 0.25rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .space-y-1 > * + * { margin-top: 0.25rem; }
+        .space-y-2 > * + * { margin-top: 0.5rem; }
+        
+        /* Ensure exact color rendering */
+        * { 
+          -webkit-print-color-adjust: exact !important; 
+          print-color-adjust: exact !important; 
+        }
+      `
+    });
+
+    // Short stabilization delay for layout
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Generate PDF - Use A4 to match template dimensions, no extra margins (templates have their own padding)
     const pdfBuffer = await page.pdf({
-      format: "Letter",
+      format: "A4",
       printBackground: true,
-      margin: { top: "0.5in", right: "0.5in", bottom: "0.5in", left: "0.5in" },
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
     // Close page but keep browser alive for pooling

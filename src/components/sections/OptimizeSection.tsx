@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
-import { GlassCircle } from '../ui/GlassCircle';
 import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
 import { useRateLimit } from '../../hooks/useRateLimit';
@@ -11,7 +11,6 @@ import {
   Sparkles,
   Copy,
   ChevronDown,
-  ChevronUp,
   Check,
   RotateCcw,
   ArrowLeftRight,
@@ -143,6 +142,7 @@ export function OptimizeSection({
     keywordSuggestions,
     optimizationMetrics,
     setOptimizationMetrics,
+    resetOptimizationMetrics,
     getCachedAnalysis,
   } = useResumeStore();
 
@@ -430,8 +430,16 @@ export function OptimizeSection({
           gapAnalysisCount: data.gapAnalysis?.length,
           hasCategoryScores: !!data.categoryScores,
           categoryScores: data.categoryScores,
+          // Added: Track project and certification data
+          hasProjectImprovements: !!data.projectImprovements,
+          projectImprovementsCount: data.projectImprovements?.length || 0,
+          projectImprovements: data.projectImprovements,
+          hasCertificationRecs: !!data.certificationRecommendations,
+          certificationRecsCount: data.certificationRecommendations?.length || 0,
+          certificationRecommendations: data.certificationRecommendations,
         });
       }
+
 
       // Transform API response to OptimizationResult format
       // API returns: { cards: [{section, issue, suggestion, exampleBefore, exampleAfter}], keywords: {add, neutral, remove} }
@@ -445,7 +453,7 @@ export function OptimizeSection({
           const optimizedContent = card.exampleAfter || '';
 
           newOptimizations.push({
-            sectionId: `${sectionType} -${index} `,
+            sectionId: `${sectionType}-${index}`,
             sectionType: sectionType,
             original: originalContent,
             optimized: optimizedContent,
@@ -453,6 +461,47 @@ export function OptimizeSection({
           });
         });
       }
+
+      // Map project_improvements from API to optimization cards
+      if (data.projectImprovements && Array.isArray(data.projectImprovements)) {
+        data.projectImprovements.forEach((proj: { project_name?: string; original?: string; improved?: string; issue?: string; rationale?: string }, index: number) => {
+          newOptimizations.push({
+            sectionId: `projects-${index}`,
+            sectionType: 'projects',
+            original: proj.original || '',
+            optimized: proj.improved || '',
+            applied: false,
+          });
+        });
+      }
+
+      // Map certification_recommendations as display-only cards (not applied to template)
+      if (data.certificationRecommendations && Array.isArray(data.certificationRecommendations)) {
+        data.certificationRecommendations.forEach((cert: { name?: string; issuer?: string; relevance?: string }, index: number) => {
+          newOptimizations.push({
+            sectionId: `certifications-${index}`,
+            sectionType: 'certifications',
+            // Show recommendation as "optimized" (right side) with empty original (left side)
+            original: isArabic ? 'شهادة موصى بها' : 'Recommended Certification',
+            optimized: `${cert.name || ''} (${cert.issuer || ''}) - ${cert.relevance || ''}`,
+            applied: false, // Certifications are display-only, never applied
+          });
+        });
+      }
+
+      // DEBUG: Log what optimizations were created
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[OptimizeSection] Processed optimizations:', {
+          totalCount: newOptimizations.length,
+          bySection: newOptimizations.reduce((acc, opt) => {
+            acc[opt.sectionType] = (acc[opt.sectionType] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          hasProjects: newOptimizations.some(o => o.sectionType === 'projects'),
+          hasCertifications: newOptimizations.some(o => o.sectionType === 'certifications'),
+        });
+      }
+
 
       // If no cards but we have API data, try legacy format
       if (newOptimizations.length === 0) {
@@ -660,6 +709,9 @@ export function OptimizeSection({
     } else {
       setOptimizations([]);
     }
+    // Also reset all optimization metrics to clear stale data
+    resetOptimizationMetrics();
+    setSessionId(null);
   };
 
   const toggleCard = (sectionId: string) => {
@@ -685,11 +737,10 @@ export function OptimizeSection({
     { id: 'experience', label: 'Experience', labelAr: 'الخبرة' },
     { id: 'skills', label: 'Skills', labelAr: 'المهارات' },
     { id: 'projects', label: 'Projects', labelAr: 'المشاريع' },
-    { id: 'education', label: 'Education', labelAr: 'التعليم' },
     { id: 'certifications', label: 'Certifications', labelAr: 'الشهادات' },
   ];
 
-  const [activeSection, setActiveSection] = useState<'all' | 'headline' | 'summary' | 'experience' | 'skills' | 'projects' | 'education' | 'certifications'>('all');
+  const [activeSection, setActiveSection] = useState<'all' | 'headline' | 'summary' | 'experience' | 'skills' | 'projects' | 'certifications'>('all');
 
   // Filter optimizations by section
   const filteredOptimizations = activeSection === 'all'
@@ -699,170 +750,271 @@ export function OptimizeSection({
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <GlassCard variant="elevated">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <GlassCircle size="md" variant="purple">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-            </GlassCircle>
+      <GlassCard variant="elevated" className="overflow-hidden relative">
+        {/* Background Accents */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none" />
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 shadow-lg shadow-purple-500/5">
+              <Sparkles className="w-6 h-6 text-purple-400" />
+            </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">
-                {t('sections.optimize.title', 'Polish Every Section')}
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                {t('sections.optimize.title', 'Optimize Resume')}
               </h3>
-              <p className="text-sm text-gray-400">
-                {t('sections.optimize.subtitle', 'Fine-tune your resume with AI recommendations')}
+              <p className="text-sm text-gray-400 mt-1">
+                {t('sections.optimize.subtitle', 'AI-powered suggestions to improve your resume score')}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Applied Counter */}
             {optimizations.length > 0 && (
-              <>
-                <span className="text-sm text-gray-400">
-                  {appliedCount}/{optimizations.length} {isArabic ? 'مُطبّق' : 'Applied'}
-                </span>
+              <div className="flex items-center gap-3 bg-white/5 rounded-xl p-1.5 pr-3 border border-white/5">
+                <div className="px-3 py-1.5 rounded-lg bg-black/20 border border-white/5">
+                  <span className="text-sm font-medium text-emerald-400">
+                    {appliedCount} <span className="text-gray-500">/ {optimizations.length}</span>
+                  </span>
+                </div>
+
                 {appliedCount > 0 && (
-                  <GlassButton
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={revertAllOptimizations}
+                    className="text-xs font-medium text-gray-400 hover:text-white transition-colors px-2"
                   >
-                    {isArabic ? 'التراجع عن الكل' : 'Revert All'}
-                  </GlassButton>
+                    {isArabic ? 'تراجع' : 'Revert'}
+                  </button>
                 )}
-                <GlassButton
-                  variant="secondary"
-                  size="sm"
+
+                <div className="w-px h-4 bg-white/10 mx-1" />
+
+                <button
                   onClick={applyAllOptimizations}
                   disabled={appliedCount === optimizations.length}
+                  className={cn(
+                    "text-xs font-bold transition-colors px-2",
+                    appliedCount === optimizations.length
+                      ? "text-gray-500 cursor-not-allowed"
+                      : "text-emerald-400 hover:text-emerald-300"
+                  )}
                 >
                   {isArabic ? 'تطبيق الكل' : 'Apply All'}
-                </GlassButton>
-              </>
+                </button>
+              </div>
             )}
+
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
+            <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/5">
               <button
                 onClick={() => setViewMode('split')}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-all',
+                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
                   viewMode === 'split'
-                    ? 'bg-white/10 text-emerald-400'
+                    ? 'bg-white/10 text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-300'
                 )}
               >
-                {t('sections.optimize.sideBySide', 'Side-by-Side')}
+                {t('sections.optimize.sideBySide', 'Split')}
               </button>
               <button
                 onClick={() => setViewMode('diff')}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-all',
+                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
                   viewMode === 'diff'
-                    ? 'bg-white/10 text-emerald-400'
+                    ? 'bg-white/10 text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-300'
                 )}
               >
-                {t('sections.optimize.inlineDiff', 'Inline Diff')}
+                {t('sections.optimize.inlineDiff', 'Diff')}
               </button>
             </div>
+
             {optimizations.length > 0 && (
-              <button
+              <GlassButton
+                variant="ghost"
+                size="sm"
                 onClick={handleClear}
-                className="text-xs font-medium text-gray-400 hover:text-red-400 transition-colors"
+                className="text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
               >
                 {t('common.clear', 'Clear')}
-              </button>
+              </GlassButton>
             )}
           </div>
         </div>
 
-        {/* Section Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6 p-1 bg-white/5 rounded-xl">
-          {tabs.map((tab) => (
+        {/* Global Expand/Collapse for Cards */}
+        {optimizations.length > 0 && (
+          <div className="flex justify-end mb-2">
             <button
-              key={tab.id}
-              onClick={() => setActiveSection(tab.id as typeof activeSection)}
-              className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                activeSection === tab.id
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-white/10'
-              )}
+              onClick={() => {
+                if (expandedCards.size === filteredOptimizations.length) {
+                  setExpandedCards(new Set());
+                } else {
+                  setExpandedCards(new Set(filteredOptimizations.map(o => o.sectionId)));
+                }
+              }}
+              className="text-[10px] font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md border border-white/5"
             >
-              {isArabic ? tab.labelAr : tab.label}
+              {expandedCards.size === filteredOptimizations.length
+                ? (isArabic ? 'طي الكل' : 'Collapse All')
+                : (isArabic ? 'توسيع الكل' : 'Expand All')
+              }
             </button>
-          ))}
+          </div>
+        )}
+
+        {/* Section Tabs */}
+        <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 mb-6">
+          <div className="flex items-center gap-2 p-1 bg-black/20 rounded-xl border border-white/5">
+            {tabs.map((tab) => {
+              const isActive = activeSection === tab.id;
+              const hasItems = tab.id === 'all'
+                ? optimizations.length > 0
+                : optimizations.some(o => o.sectionType === tab.id);
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveSection(tab.id as typeof activeSection)}
+                  className={cn(
+                    'relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap',
+                    isActive
+                      ? 'text-white'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/5',
+                    !hasItems && !isActive && 'opacity-50'
+                  )}
+                >
+                  {isActive && (
+                    <div className="absolute inset-0 bg-white/10 rounded-lg shadow-sm border border-white/5" />
+                  )}
+                  <span className="relative z-10">
+                    {isArabic ? tab.labelAr : tab.label}
+                    {tab.id !== 'all' && hasItems && (
+                      <span className="ml-2 text-xs opacity-60 bg-white/10 px-1.5 py-0.5 rounded-full">
+                        {optimizations.filter(o => o.sectionType === tab.id).length}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-
 
         {/* Error Message */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
-            <AlertCircle className="w-5 h-5 text-red-400" />
-            <p className="text-sm text-red-400">{error}</p>
+          <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 backdrop-blur-sm">
+            <div className="p-2 bg-red-500/10 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <p className="text-sm font-medium text-red-400">{error}</p>
           </div>
         )}
 
         {/* No Resume Warning */}
         {!hasResume && (
-          <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-            <AlertCircle className="w-5 h-5 text-amber-400" />
-            <p className="text-sm text-amber-400">
+          <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6 backdrop-blur-sm">
+            <div className="p-2 bg-amber-500/10 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-amber-400" />
+            </div>
+            <p className="text-sm font-medium text-amber-400">
               {isArabic ? 'يرجى رفع سيرة ذاتية أولاً' : 'Please upload a resume first'}
             </p>
           </div>
         )}
 
         {/* Optimize Button */}
-        <GlassButton
+        <button
           onClick={handleGenerate}
-          isLoading={isOptimizing}
           disabled={isOptimizing || !hasResume}
-          className="w-full"
+          className={cn(
+            "w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 transform active:scale-[0.99]",
+            (!hasResume || isOptimizing) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
+          )}
         >
-          <Sparkles className="w-4 h-4 me-2" />
-          {hasResume
-            ? t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')
-            : t('sections.optimize.runMatchFirst', 'Upload Resume First')
-          }
-        </GlassButton>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 opacity-100 group-hover:opacity-100 animate-gradient-xy transition-opacity" />
+          <div className="relative bg-gray-900/90 backdrop-blur-xl rounded-xl px-6 py-4 flex items-center justify-center gap-3 transition-colors group-hover:bg-gray-900/80">
+            {isOptimizing ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span className="text-white font-semibold tracking-wide">
+                  {isArabic ? 'جاري التحسين...' : 'Optimizing Resume...'}
+                </span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 text-purple-300 group-hover:text-white transition-colors" />
+                <span className="text-white font-bold tracking-wide">
+                  {hasResume
+                    ? t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')
+                    : t('sections.optimize.runMatchFirst', 'Upload Resume First')
+                  }
+                </span>
+              </>
+            )}
+          </div>
+        </button>
       </GlassCard>
 
-      {/* Keyword Focus Section */}
+      {/* Keyword Focus Section - Manual Buckets */}
       <GlassCard variant="elevated">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-emerald-400 mb-4">
-          {t('sections.optimize.keywordFocus', 'Keyword Focus')}
-        </h3>
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400">
+            {t('sections.optimize.keywordFocus', 'Keyword Strategy')}
+          </h3>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-3">
-          {(['add', 'neutral', 'remove'] as const).map((bucket) => (
-            <div key={bucket} className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                {isArabic ? CHIP_LABELS[`${bucket} Ar` as keyof typeof CHIP_LABELS] : CHIP_LABELS[bucket]}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {(keywordBuckets[bucket] ?? []).length > 0 ? (
-                  keywordBuckets[bucket].map((token) => (
-                    <span
-                      key={token}
-                      className={cn(
-                        'relative overflow-hidden rounded-full border px-3 py-1 text-xs font-semibold transition-all',
-                        bucket === 'add' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
-                        bucket === 'neutral' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
-                        bucket === 'remove' && 'border-rose-500/30 bg-rose-500/10 text-rose-400'
-                      )}
-                    >
-                      {token}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-gray-500">
-                    {t('sections.optimize.noItems', 'No items yet')}
+          {(['add', 'neutral', 'remove'] as const).map((bucket) => {
+            const items = keywordBuckets[bucket] ?? [];
+            const config = {
+              add: { label: 'Add to Resume', color: 'emerald', icon: Check },
+              neutral: { label: 'Keep as is', color: 'blue', icon: Info },
+              remove: { label: 'Consider Removing', color: 'rose', icon: AlertCircle },
+            }[bucket];
+
+            const Icon = config.icon;
+
+            return (
+              <div key={bucket} className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-center justify-between">
+                  <p className={`text-xs font-bold uppercase tracking-wider text-${config.color}-400 flex items-center gap-2`}>
+                    <Icon className="w-3.5 h-3.5" />
+                    {isArabic ? CHIP_LABELS[`${bucket} Ar` as keyof typeof CHIP_LABELS] : CHIP_LABELS[bucket]}
+                  </p>
+                  <span className="text-[10px] font-medium text-gray-500 bg-black/20 px-2 py-0.5 rounded-full">
+                    {items.length}
                   </span>
-                )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {items.length > 0 ? (
+                    items.map((token) => (
+                      <span
+                        key={token}
+                        className={cn(
+                          'px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all',
+                          bucket === 'add' && 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20',
+                          bucket === 'neutral' && 'bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20',
+                          bucket === 'remove' && 'bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20 line-through decoration-rose-500/50'
+                        )}
+                      >
+                        {token}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-600 italic py-1">
+                      {isArabic ? 'لا توجد عناصر' : 'No keywords identified'}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </GlassCard>
 
@@ -930,222 +1082,254 @@ export function OptimizeSection({
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
 
-        {isOptimizing ? (
-          <LoadingMessages type="optimize" estimatedTime={25000} />
-        ) : filteredOptimizations.length > 0 ? (
-          <div className="space-y-4">
+        {filteredOptimizations.length > 0 ? (
+          <div className="grid gap-4">
             {filteredOptimizations.map((opt, index) => (
               <GlassCard
                 key={opt.sectionId}
-                variant="subtle"
-                padding="sm"
+                variant="elevated"
+                padding="none"
                 className={cn(
-                  'transition-all',
-                  opt.applied && 'ring-1 ring-emerald-500/30'
+                  'overflow-hidden transition-all duration-300 border',
+                  opt.applied
+                    ? 'border-emerald-500/30 ring-1 ring-emerald-500/20'
+                    : 'border-white/5 hover:border-white/10'
                 )}
               >
-                {/* Card Header */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {opt.applied && (
-                      <Check className="w-4 h-4 text-emerald-400" />
-                    )}
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 capitalize">
-                      {opt.sectionType === 'experience'
-                        ? `${isArabic ? 'الخبرة' : 'Experience'} ${opt.sectionId.split('-')[1] ? Number(opt.sectionId.split('-')[1]) + 1 : ''} `
-                        : isArabic
-                          ? tabs.find(t => t.id === opt.sectionType)?.labelAr
-                          : opt.sectionType
-                      }
-                    </span>
-                    {/* Info icon for Skills section - recommendations only */}
-                    {opt.sectionType === 'skills' && (
-                      <span
-                        className="group relative cursor-help"
-                        title={isArabic
-                          ? 'هذه توصيات فقط ولن تُضاف تلقائياً إلى سيرتك الذاتية'
-                          : 'These are recommendations only and will not be added to your resume'
-                        }
-                      >
-                        <Info className="w-4 h-4 text-amber-400/70 hover:text-amber-400 transition-colors" />
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 border border-white/10 text-xs text-gray-300 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                          {isArabic
-                            ? '💡 توصيات فقط - لن تُضاف للسيرة الذاتية'
-                            : '💡 Recommendations only - not added to resume'
-                          }
-                        </span>
-                      </span>
-                    )}
-                    <span className={cn(
-                      'px-2 py-0.5 rounded text-xs',
+                {/* Card Header - Always Visible */}
+                <div
+                  className={cn(
+                    "p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors",
+                    expandedCards.has(opt.sectionId) && "bg-white/5 border-b border-white/5"
+                  )}
+                  onClick={() => toggleCard(opt.sectionId)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "p-2 rounded-lg border",
                       opt.applied
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-white/10 text-gray-400'
+                        ? "bg-emerald-500/10 border-emerald-500/20"
+                        : "bg-purple-500/10 border-purple-500/20"
                     )}>
                       {opt.applied
-                        ? (isArabic ? 'مُطبّق' : 'Applied')
-                        : (isArabic ? 'معلق' : 'Pending')
+                        ? <Check className="w-4 h-4 text-emerald-400" />
+                        : <Sparkles className="w-4 h-4 text-purple-400" />
                       }
-                    </span>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white capitalize">
+                          {opt.sectionType === 'experience'
+                            ? (function () {
+                              // Calculate index specifically among experience items
+                              const expIndex = filteredOptimizations
+                                .filter(o => o.sectionType === 'experience')
+                                .findIndex(o => o.sectionId === opt.sectionId);
+                              return `${isArabic ? 'الخبرة' : 'Experience'} ${expIndex !== -1 ? expIndex + 1 : ''}`;
+                            })()
+                            : isArabic
+                              ? tabs.find(t => t.id === opt.sectionType)?.labelAr
+                              : opt.sectionType
+                          }
+                        </span>
+                        {/* Status Badge */}
+                        <span className={cn(
+                          'px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold border',
+                          opt.applied
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            : 'bg-white/5 border-white/10 text-gray-400'
+                        )}>
+                          {opt.applied
+                            ? (isArabic ? 'مُطبّق' : 'Applied')
+                            : (isArabic ? 'معلق' : 'Pending')
+                          }
+                        </span>
+
+                        {/* Info icon for Skills section */}
+                        {opt.sectionType === 'skills' && (
+                          <span
+                            className="group relative cursor-help"
+                            title={isArabic
+                              ? 'هذه توصيات فقط ولن تُضاف تلقائياً إلى سيرتك الذاتية'
+                              : 'These are recommendations only and will not be added to your resume'
+                            }
+                          >
+                            <Info className="w-3.5 h-3.5 text-amber-400/70 hover:text-amber-400 transition-colors" />
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                        {t('sections.optimize.clickToExpand', 'Click to review suggestions')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {onCopy && (
-                      <button
-                        onClick={() => onCopy(Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized)}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                        title={t('common.copy', 'Copy')}
-                        aria-label={t('common.copy', 'Copy')}
-                      >
-                        <Copy className="w-4 h-4 text-gray-400" />
-                      </button>
-                    )}
+
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => setCompareMode(compareMode === opt.sectionId ? null : opt.sectionId)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCompareMode(compareMode === opt.sectionId ? null : opt.sectionId);
+                      }}
                       className={cn(
-                        "p-2 rounded-lg transition-colors",
+                        "p-2 rounded-lg transition-colors border border-transparent",
                         compareMode === opt.sectionId
-                          ? "bg-purple-500/20 text-purple-400"
-                          : "hover:bg-white/10 text-gray-400"
+                          ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
+                          : "hover:bg-white/10 text-gray-400 hover:text-white"
                       )}
                       title={isArabic ? 'مقارنة' : 'Compare'}
-                      aria-label={isArabic ? 'مقارنة' : 'Compare'}
                     >
                       <ArrowLeftRight className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => toggleCard(opt.sectionId)}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                      aria-label={expandedCards.has(opt.sectionId)
-                        ? (isArabic ? 'طي' : 'Collapse')
-                        : (isArabic ? 'توسيع' : 'Expand')}
-                    >
-                      {expandedCards.has(opt.sectionId)
-                        ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                        : <ChevronDown className="w-4 h-4 text-gray-400" />
-                      }
-                    </button>
+                    <div className={cn(
+                      "p-2 text-gray-400 transition-transform duration-300",
+                      expandedCards.has(opt.sectionId) && "rotate-180"
+                    )}>
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
                   </div>
                 </div>
 
-                {/* Compare Mode */}
-                {compareMode === opt.sectionId && (
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="p-3 bg-white/5 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-2">{isArabic ? 'الأصلي' : 'Original'}</p>
-                      <p className="text-sm text-gray-300">
-                        {Array.isArray(opt.original)
-                          ? opt.original.map((item, i) => <span key={i} className="block">• {item}</span>)
-                          : opt.original || 'No content'
-                        }
-                      </p>
-                    </div>
-                    <div className="p-3 bg-emerald-500/10 rounded-lg">
-                      <p className="text-xs text-emerald-400 mb-2">{isArabic ? 'المحسّن' : 'Optimized'}</p>
-                      <p className="text-sm text-white">
-                        {Array.isArray(opt.optimized)
-                          ? opt.optimized.map((item, i) => <span key={i} className="block">• {item}</span>)
-                          : opt.optimized || 'No content'
-                        }
-                      </p>
+                {/* Expanded Content */}
+                {(expandedCards.has(opt.sectionId) || compareMode === opt.sectionId) && (
+                  <div className="p-4 pt-0 animate-in slide-in-from-top-2 duration-200">
+
+                    {/* Compare Mode (Full View) */}
+                    {compareMode === opt.sectionId && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 mt-2">
+                        <div className="p-4 bg-red-500/5 rounded-xl border border-red-500/10">
+                          <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                            {isArabic ? 'الأصلي' : 'Original Content'}
+                          </p>
+                          <div className="text-sm text-gray-300 font-mono text-xs leading-relaxed opacity-80 bg-black/20 p-3 rounded-lg">
+                            {Array.isArray(opt.original)
+                              ? opt.original.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-white/5 last:border-0">{item}</div>)
+                              : opt.original || 'No content'
+                            }
+                          </div>
+                        </div>
+                        <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+                          <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            {isArabic ? 'المحسّن' : 'Optimized Version'}
+                          </p>
+                          <div className="text-sm text-gray-200 font-mono text-xs leading-relaxed bg-black/20 p-3 rounded-lg shadow-inner">
+                            {Array.isArray(opt.optimized)
+                              ? opt.optimized.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-white/5 last:border-0">{item}</div>)
+                              : opt.optimized || 'No content'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Standard Mode (Split/Diff) */}
+                    {compareMode !== opt.sectionId && (
+                      viewMode === 'split' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                          <div className="space-y-2">
+                            <p className="text-xs text-gray-500 uppercase tracking-wider pl-1">
+                              {t('sections.optimize.original', 'Original')}
+                            </p>
+                            <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-sm text-gray-400 leading-relaxed">
+                              {Array.isArray(opt.original)
+                                ? opt.original.join('\n')
+                                : opt.original || t('sections.optimize.noOriginal', 'No original text')
+                              }
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs text-emerald-500/70 uppercase tracking-wider pl-1">
+                              {t('sections.optimize.optimized', 'Optimized')}
+                            </p>
+                            <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-sm text-gray-200 leading-relaxed shadow-sm">
+                              {Array.isArray(opt.optimized)
+                                ? opt.optimized.join('\n')
+                                : opt.optimized || t('sections.optimize.noOptimized', 'No optimized text')
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 p-4 bg-black/20 rounded-xl border border-white/5 font-mono text-sm leading-7">
+                          <span className="bg-red-500/20 text-red-300 px-1 rounded mx-1 line-through decoration-red-400/50">
+                            {Array.isArray(opt.original) ? opt.original.join(' ') : opt.original}
+                          </span>
+                          <span className="text-gray-500 mx-2">→</span>
+                          <span className="bg-emerald-500/20 text-emerald-300 px-1 rounded mx-1">
+                            {Array.isArray(opt.optimized) ? opt.optimized.join(' ') : opt.optimized}
+                          </span>
+                        </div>
+                      )
+                    )}
+
+                    {/* Feedback Buttons */}
+                    {sessionId && (
+                      <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
+                        <FeedbackButtons
+                          suggestionType={(['summary', 'experience', 'skills', 'keywords'].includes(opt.sectionType) ? opt.sectionType : 'summary') as SuggestionType}
+                          sectionIndex={index}
+                          sessionId={sessionId}
+                        />
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 mt-4">
+                      {opt.applied ? (
+                        <GlassButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => revertOptimization(opt.sectionId)}
+                          leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                          className="flex-1 hover:bg-red-500/10 hover:text-red-400"
+                        >
+                          {isArabic ? 'التراجع' : 'Revert Changes'}
+                        </GlassButton>
+                      ) : (
+                        <GlassButton
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            analytics.trackOptimization('applied', { section_type: opt.sectionType });
+                            applyOptimization(opt.sectionId);
+                          }}
+                          leftIcon={<Check className="w-3.5 h-3.5" />}
+                          className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-0"
+                        >
+                          {isArabic ? 'تطبيق' : 'Apply Suggestion'}
+                        </GlassButton>
+                      )}
+
+                      {onCopy && (
+                        <button
+                          onClick={() => onCopy(Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized)}
+                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white border border-white/5"
+                          title={t('common.copy', 'Copy Text')}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
-
-                {/* Card Content */}
-                {compareMode !== opt.sectionId && (
-                  viewMode === 'split' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-white/5 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-2">
-                          {t('sections.optimize.original', 'Original')}
-                        </p>
-                        <p className={cn(
-                          'text-sm text-gray-300 transition-all',
-                          !expandedCards.has(opt.sectionId) && 'line-clamp-3'
-                        )}>
-                          {Array.isArray(opt.original)
-                            ? opt.original.join(', ')
-                            : opt.original || t('sections.optimize.noOriginal', 'No original text')
-                          }
-                        </p>
-                      </div>
-                      <div className="p-3 bg-emerald-500/10 rounded-lg">
-                        <p className="text-xs text-emerald-400 mb-2">
-                          {t('sections.optimize.optimized', 'Optimized')}
-                        </p>
-                        <p className={cn(
-                          'text-sm text-white transition-all',
-                          !expandedCards.has(opt.sectionId) && 'line-clamp-3'
-                        )}>
-                          {Array.isArray(opt.optimized)
-                            ? opt.optimized.join(', ')
-                            : opt.optimized || t('sections.optimize.noOptimized', 'No optimized text')
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-white/5 rounded-lg">
-                      <p className={cn(
-                        'text-sm text-gray-300 transition-all',
-                        !expandedCards.has(opt.sectionId) && 'line-clamp-4'
-                      )}>
-                        <span className="line-through text-rose-400/70">
-                          {Array.isArray(opt.original) ? opt.original.join(', ') : opt.original}
-                        </span>
-                        {' → '}
-                        <span className="text-emerald-400">
-                          {Array.isArray(opt.optimized) ? opt.optimized.join(', ') : opt.optimized}
-                        </span>
-                      </p>
-                    </div>
-                  )
-                )}
-
-                {/* Feedback Buttons */}
-                {sessionId && (
-                  <div className="mt-3 pt-3 border-t border-white/5">
-                    <FeedbackButtons
-                      suggestionType={(['summary', 'experience', 'skills', 'keywords'].includes(opt.sectionType) ? opt.sectionType : 'summary') as SuggestionType}
-                      sectionIndex={index}
-                      sessionId={sessionId}
-                    />
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex gap-2 mt-3">
-                  {opt.applied ? (
-                    <GlassButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => revertOptimization(opt.sectionId)}
-                      leftIcon={<RotateCcw className="w-3 h-3" />}
-                    >
-                      {isArabic ? 'التراجع' : 'Revert'}
-                    </GlassButton>
-                  ) : (
-                    <GlassButton
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        analytics.trackOptimization('applied', { section_type: opt.sectionType });
-                        applyOptimization(opt.sectionId);
-                      }}
-                      leftIcon={<Check className="w-3 h-3" />}
-                    >
-                      {isArabic ? 'تطبيق' : 'Apply'}
-                    </GlassButton>
-                  )}
-                </div>
               </GlassCard>
             ))}
           </div>
         ) : (
-          <GlassCard variant="subtle" padding="lg">
-            <div className="text-center text-gray-500">
-              <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>{t('sections.optimize.emptyState', 'Run an analysis to see AI optimization cards appear here.')}</p>
+          <GlassCard variant="subtle" padding="lg" className="border-dashed border-white/10">
+            <div className="text-center text-gray-500 py-8">
+              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8 text-gray-600" />
+              </div>
+              <h4 className="text-lg font-medium text-gray-400 mb-2">
+                {t('sections.optimize.emptyTitle', 'Ready to Optimize?')}
+              </h4>
+              <p className="max-w-md mx-auto text-sm opacity-60">
+                {t('sections.optimize.emptyState', 'Run an analysis to generate AI-powered optimization cards for your resume.')}
+              </p>
             </div>
           </GlassCard>
         )}
@@ -1161,6 +1345,14 @@ export function OptimizeSection({
           }}
           onDismiss={clearRateLimit}
         />
+      )}
+
+      {/* Optimization Loading Toast - Non-blocking */}
+      {isOptimizing && createPortal(
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-10 fade-in duration-500 pointer-events-auto">
+          <LoadingMessages type="optimize" estimatedTime={25000} />
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -37,6 +37,10 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
       gapAnalysisCount: optimization?.gap_analysis?.length || 0,
       hasCategoryScores: !!optimization?.category_scores,
       matchScore: optimization?.match_score,
+      hasProjectImprovements: !!optimization?.project_improvements,
+      projectImprovementsCount: optimization?.project_improvements?.length || 0,
+      hasCertificationRecs: !!optimization?.certification_recommendations,
+      certificationRecsCount: optimization?.certification_recommendations?.length || 0,
     });
 
     // CRITICAL: Handle cases where AI returns incomplete data
@@ -239,6 +243,20 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
         },
         // Category Scores - NEW
         categoryScores: optimization?.category_scores || null,
+        // Project improvements from AI
+        projectImprovements: (optimization?.project_improvements || []).map((proj: any) => ({
+          project_name: proj.project_name || '',
+          original: proj.original || '',
+          improved: proj.improved || '',
+          issue: proj.issue || '',
+          rationale: proj.rationale || ''
+        })),
+        // Certification recommendations from AI (display-only, not applied to template)
+        certificationRecommendations: (optimization?.certification_recommendations || []).map((cert: any) => ({
+          name: cert.name || '',
+          issuer: cert.issuer || '',
+          relevance: cert.relevance || ''
+        })),
         // Score Breakdown - simplified (not returned by optimizeResume)
         scoreBreakdown: null,
         source: "gemini",

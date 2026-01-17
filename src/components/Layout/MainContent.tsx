@@ -291,6 +291,7 @@ export default function MainContent() {
         return {
           parseInput: file,
           storage: storage && typeof storage === "object" ? storage : null,
+          fileName: file?.name || "Uploaded Resume",
         };
       }
 
@@ -298,6 +299,7 @@ export default function MainContent() {
         return {
           parseInput: input.value,
           storage: null,
+          fileName: "Pasted Text",
         };
       }
 
@@ -308,6 +310,7 @@ export default function MainContent() {
         return {
           parseInput: input.file,
           storage: null,
+          fileName: input.file.name,
         };
       }
 
@@ -316,6 +319,7 @@ export default function MainContent() {
         return {
           parseInput: input.plainText,
           storage: null,
+          fileName: "Pasted Resume Text",
         };
       }
 
@@ -323,12 +327,12 @@ export default function MainContent() {
       console.warn('[MainContent] ⚠️ normalizeResumePayload received unexpected object shape:', Object.keys(input));
     }
 
-    return { parseInput: input, storage: null };
+    return { parseInput: input, storage: null, fileName: "Uploaded Resume" };
   }, []);
 
   const handleParseResume = useCallback(
     async (resumeInput) => {
-      const { parseInput, storage } = normalizeResumePayload(resumeInput);
+      const { parseInput, storage, fileName } = normalizeResumePayload(resumeInput);
 
       // Clear old localStorage data to prevent corruption issues
       if (typeof window !== "undefined") {
@@ -350,13 +354,14 @@ export default function MainContent() {
         const parsed = await parseResume(parseInput);
         setFlowProgress(88);
         const enriched =
-          parsed && storage
+          parsed
             ? {
               ...parsed,
-              storagePath: storage.path,
-              storageBucket: storage.bucket,
-              storageFileName: storage.fileName,
-              storageUserId: storage.userId,
+              fileName: fileName || parsed.fileName || "Resume", // Ensure fileName is persisted
+              storagePath: storage?.path,
+              storageBucket: storage?.bucket,
+              storageFileName: storage?.fileName,
+              storageUserId: storage?.userId,
             }
             : parsed;
         setResumeData(enriched);
@@ -496,7 +501,40 @@ export default function MainContent() {
           }
         );
 
-        setOptimizations(result.cards ?? []);
+        // Build full cards array including projects and certifications
+        const allCards = [...(result.cards ?? [])];
+
+        // Add projectImprovements as cards (if any)
+        if (result.projectImprovements && Array.isArray(result.projectImprovements)) {
+          result.projectImprovements.forEach((proj: { project_name?: string; original?: string; improved?: string; issue?: string; rationale?: string }, index: number) => {
+            if (proj.improved || proj.original) {
+              allCards.push({
+                section: 'Projects',
+                issue: proj.issue || 'Project description could be more impactful',
+                suggestion: proj.rationale || 'Reframe project to highlight relevant skills',
+                exampleBefore: proj.original || '',
+                exampleAfter: proj.improved || '',
+              });
+            }
+          });
+        }
+
+        // Add certificationRecommendations as display-only cards (if any)
+        if (result.certificationRecommendations && Array.isArray(result.certificationRecommendations)) {
+          result.certificationRecommendations.forEach((cert: { name?: string; issuer?: string; relevance?: string }, index: number) => {
+            if (cert.name) {
+              allCards.push({
+                section: 'Certifications',
+                issue: 'Recommended certification to strengthen your profile',
+                suggestion: cert.relevance || 'This certification aligns with job requirements',
+                exampleBefore: 'Recommended Certification',
+                exampleAfter: `${cert.name || ''} (${cert.issuer || ''})`,
+              });
+            }
+          });
+        }
+
+        setOptimizations(allCards);
         setOptimizationData(result.optimization ?? null);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
 
@@ -720,20 +758,33 @@ export default function MainContent() {
         {/* Tab navigation - full width on mobile */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <GlassTabs tabs={tabs} activeValue={activeTab} onTabChange={handleTabChange} />
+            <GlassTabs
+              tabs={tabs}
+              activeValue={activeTab}
+              onTabChange={handleTabChange}
+              rightAction={resumeData?.plainText ? (
+                <button
+                  type="button"
+                  onClick={handleClearAllData}
+                  className="flex-shrink-0 group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-500/70 hover:bg-danger-500/10 hover:text-danger-500 transition-all duration-200 dark:text-surface-50/60 dark:hover:bg-danger-400/10 dark:hover:text-danger-400"
+                  title="Clear all saved data"
+                >
+                  <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+                  <span className="hidden sm:inline">{t("workspace.clearAll")}</span>
+                </button>
+              ) : undefined}
+            />
           </div>
-          {resumeData?.plainText && (
-            <button
-              type="button"
-              onClick={handleClearAllData}
-              className="flex-shrink-0 group flex items-center gap-1 sm:gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-500/70 hover:bg-danger-500/10 hover:text-danger-600 transition-all duration-200 dark:text-surface-50/60 dark:hover:bg-danger-400/10 dark:hover:text-danger-400"
-              title="Clear all saved data"
-            >
-              <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform group-hover:scale-110" />
-              <span className="hidden sm:inline">{t("workspace.clearAll")}</span>
-            </button>
-          )}
         </div>
+        {/* Hero Section & Vision Summary - Only visible on Resume tab */}
+        {activeTab === 'resume' && (
+          <>
+            {/* Space for future dashboard widgets or specific messages if needed */}
+            {/* Vision 2030 Quick Access Summary */}
+            <Vision2030Summary resumeText={resumeData?.plainText} className="mb-6" />
+          </>
+        )}
+
         <div className="relative min-h-[420px] sm:min-h-[480px] rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-5 lg:p-6 transition-shadow duration-300 hover:shadow-2xl">
           {activeTab === "resume" && (
             <UploadSection
@@ -808,8 +859,6 @@ export default function MainContent() {
           </div>
         )}
 
-        {/* Vision 2030 Quick Access Summary */}
-        <Vision2030Summary resumeText={resumeData?.plainText} className="mt-4" />
       </div>
     </ParallaxContainer>
   );
@@ -931,7 +980,7 @@ export default function MainContent() {
       </div>
 
       {/* Pricing Section - shown for all users */}
-      <div className={`${containerClass} mt-8`}>
+      <div className={`${containerClass} mt-2`}>
         <PricingSection />
       </div>
     </main>

@@ -17,6 +17,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Write in plain, easy-to-understand English
 - Prefer fewer lines of code
 
+## Agent Skills (MANDATORY)
+
+- **best-practices**: (`.agent/skills/best-practices/SKILL.md`) - **CRITICAL:** ALWAYS read this file before ANY implementation or debugging task. It contains the mandatory research protocol for latest standards.
+- **vibe-coding**: (`.agent/skills/vibe-coding/SKILL.md`) - Use for high-velocity, intent-driven development and agentic orchestration.
+- **Rules**: Prefer fewer lines of code in all implementations.
+
 ## MANDATORY: Post-Task Quality Protocol
 
 > [!IMPORTANT]

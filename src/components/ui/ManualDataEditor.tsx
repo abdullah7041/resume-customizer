@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X, Save, User, Briefcase, GraduationCap, Wrench,
-    FolderKanban, Award, Languages, Type, Plus, Trash2,
-    Edit2, ChevronRight, LayoutTemplate, Palette
+    FolderKanban, Award, Languages, Plus, Trash2,
+    Edit2, LayoutTemplate, Palette
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from './GlassCard';
@@ -55,7 +55,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
 
     // State for list management
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
-    const [isAddingNew, setIsAddingNew] = useState(false);
+    const [_isAddingNew, setIsAddingNew] = useState(false);
 
     useEffect(() => {
         if (isOpen && originalResume) {
@@ -152,6 +152,12 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     label={isArabic ? 'الهاتف' : 'Phone'}
                     value={localResume?.basics?.phone || ''}
                     onChange={(e) => updateNestedState('basics.phone', e.target.value)}
+                />
+                <GlassInput
+                    label={isArabic ? 'المدينة' : 'Location (City)'}
+                    value={localResume?.basics?.location?.city || ''}
+                    onChange={(e) => updateNestedState('basics.location.city', e.target.value)}
+                    placeholder={isArabic ? 'مثال: الرياض' : 'e.g., Riyadh'}
                 />
             </div>
             <div>
@@ -689,6 +695,24 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         ? 'يتحكم هذا الإعداد في كثافة المعلومات في السيرة الذاتية.'
                         : 'This controls the information density of your resume.'}
                 </p>
+
+                {/* Live Font Size Preview */}
+                <div className="mt-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                    <p className="text-xs text-white/40 mb-2">
+                        {isArabic ? 'معاينة حجم الخط:' : 'Font Size Preview:'}
+                    </p>
+                    <div
+                        className="bg-white text-gray-900 p-3 rounded-md"
+                        style={{ fontSize: `${10.5 * localFontSize}pt`, lineHeight: '1.55' }}
+                    >
+                        <p className="font-bold" style={{ fontSize: `${14 * localFontSize}pt` }}>
+                            {isArabic ? 'الخبرة العملية' : 'Experience'}
+                        </p>
+                        <p className="text-gray-600">
+                            {isArabic ? 'مطور برمجيات أول في شركة التقنية' : 'Senior Developer at Tech Company'}
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );

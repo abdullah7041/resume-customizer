@@ -1,7 +1,7 @@
 // src/components/TemplateRenderer.jsx
 // Renders resume templates with user data injection
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { cn } from "../../lib/utils/cn";
 import { ExternalLink, Github, Linkedin, Mail, Phone, MapPin } from "lucide-react";
 import { getTemplate } from "./registry";
@@ -316,6 +316,7 @@ const DynamicTemplateRenderer = ({ template, userData }) => {
 };
 
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
+import { useResumeStore } from "../../lib/stores/resumeStore";
 
 interface UserData {
   [key: string]: unknown;
@@ -332,6 +333,9 @@ interface TemplateRendererProps {
 }
 
 export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult = null }: TemplateRendererProps) {
+  // Get display options from store (user's formatting preferences)
+  const displayOptions = useResumeStore((state) => state.displayOptions);
+
   // MERGE: Ensure we have the full data set (Original + AI Suggestions)
   const optimization = aiAnalysisResult || userData.meta?.aiAnalysisResult || {};
   const mergedData = mergeResumeData(userData, { optimization });
@@ -343,26 +347,35 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
   const templateId = template.id as TemplateId;
   const TemplateComponent = getTemplate(templateId);
 
+  // CSS variables for formatting - applied to all templates
+  const formattingStyles = {
+    '--base-font-size': `${displayOptions.baseFontSize}pt`,
+    '--heading-size': `${displayOptions.headingSize}pt`,
+    '--section-spacing': `${displayOptions.sectionSpacing}px`,
+    '--paragraph-spacing': `${displayOptions.paragraphSpacing}px`,
+    '--line-height': displayOptions.lineHeight,
+    '--margin-top': `${displayOptions.marginTop}in`,
+    '--margin-bottom': `${displayOptions.marginBottom}in`,
+    '--margin-side': `${displayOptions.marginSide}in`,
+    fontFamily: displayOptions.fontFamily,
+  } as React.CSSProperties;
+
   // Check if this is a known template from the registry
   // If so, use the proper component with the resume prop structure
   if (['modern-professional', 'classic-traditional', 'technical-engineer', 'ats-optimized'].includes(template.id)) {
-    // Registry templates expect { resume } prop
+    // Registry templates expect { resume, displayOptions } props
     return (
-      <div data-resume-preview>
-        <TemplateComponent resume={finalData} />
+      <div data-resume-preview style={formattingStyles}>
+        <TemplateComponent resume={finalData} displayOptions={displayOptions} />
       </div>
     );
   }
 
   // Fallback to generic dynamic renderer for custom/unknown templates
   return (
-    <div data-resume-preview>
+    <div data-resume-preview style={formattingStyles}>
       <DynamicTemplateRenderer template={template} userData={finalData} />
     </div>
   );
 }
-
-
-
-
 

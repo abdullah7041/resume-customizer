@@ -1,34 +1,71 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
 import { useDirection } from '../providers/DirectionProvider';
+
+// Default display options if not provided
+const DEFAULT_OPTIONS = {
+    baseFontSize: 10.5,
+    headingSize: 14,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+    sectionSpacing: 12,
+    paragraphSpacing: 6,
+    lineHeight: 1.5,
+    marginTop: 0.5,
+    marginBottom: 0.5,
+    marginSide: 0.6,
+};
 
 /**
  * Technical Engineer Template
- * Skills-first layout with monospace-inspired typography
- * Emphasizes technical competencies, clean data presentation
- * Supports RTL for Arabic
+ * Optimized for tech roles with prominent skills section
+ * Clean sections, monospace accents for technical credibility
  */
 export function TechnicalEngineer({
     resume,
     isAtsMode = false,
     scale = 1,
+    fontScale = 1,
+    displayOptions,
 }: TemplateProps) {
     const { isRTL } = useDirection();
+
+    // Merge displayOptions with defaults
+    const opts = { ...DEFAULT_OPTIONS, ...displayOptions };
 
     // ATS mode returns pure semantic HTML
     if (isAtsMode) {
         return <ATSResume resume={resume} />;
     }
 
-    const { basics, work = [], education = [], skills = [], projects = [], languages = [], certificates = [] } = resume;
+    const { basics, work = [], education = [], skills = [], projects = [], certificates = [], languages = [] } = resume;
 
     // Get profile links
     const linkedInUrl = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url;
     const portfolioUrl = basics.url || basics.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website')?.url;
 
-    // Debug: Log skills data to understand structure
-    console.log('[TechnicalEngineer] Skills count:', skills.length);
-    console.log('[TechnicalEngineer] Skills sample:', skills[0]);
+    // Helper for scaled fonts - use displayOptions or legacy fontScale
+    const fs = (pt: number) => {
+        if (displayOptions?.baseFontSize) {
+            const scaleFactor = displayOptions.baseFontSize / 10.5;
+            return scaledFontSize(pt, scaleFactor);
+        }
+        return scaledFontSize(pt, fontScale);
+    };
+
+    // Dynamic margins based on displayOptions
+    const marginPadding = `${opts.marginTop * 25.4}mm ${opts.marginSide * 25.4}mm`;
+
+    // Computed styles based on displayOptions
+    const sectionStyle = { marginBottom: `${opts.sectionSpacing}px` };
+    const headingStyle = {
+        fontSize: `${opts.headingSize}pt`,
+        fontWeight: '700' as const,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.05em',
+        borderBottom: '1px dashed #e5e7eb',
+        paddingBottom: '4px',
+        marginBottom: `${opts.paragraphSpacing}px`,
+    };
 
     return (
         <div
@@ -38,10 +75,10 @@ export function TechnicalEngineer({
                 transformOrigin: 'top left',
                 width: A4_STYLES.width,
                 minHeight: A4_STYLES.minHeight,
-                padding: '18mm 20mm',
-                fontFamily: "'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace",
-                fontSize: '10.5pt',
-                lineHeight: '1.5',
+                padding: marginPadding,
+                fontFamily: opts.fontFamily,
+                fontSize: `${opts.baseFontSize}pt`,
+                lineHeight: String(opts.lineHeight),
             }}
             dir={isRTL ? 'rtl' : 'ltr'}
         >
@@ -50,7 +87,7 @@ export function TechnicalEngineer({
                 <h1
                     className="text-gray-900 mb-1"
                     style={{
-                        fontSize: '24pt',
+                        fontSize: fs(24),
                         fontWeight: '700',
                         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
@@ -61,7 +98,7 @@ export function TechnicalEngineer({
                     <p
                         className="text-gray-500 mb-2"
                         style={{
-                            fontSize: '12pt',
+                            fontSize: fs(12),
                             fontFamily: "'Inter', -apple-system, sans-serif",
                             fontWeight: '600',
                         }}
@@ -69,7 +106,7 @@ export function TechnicalEngineer({
                         {basics.label}
                     </p>
                 )}
-                <div className="flex flex-wrap gap-4 text-gray-500" style={{ fontSize: '10pt' }}>
+                <div className="flex flex-wrap gap-4 text-gray-500" style={{ fontSize: fs(10) }}>
                     {basics.email && <span>{basics.email}</span>}
                     {basics.phone && <span>{basics.phone}</span>}
                     {basics.location?.city && <span>{basics.location.city}</span>}
@@ -81,18 +118,11 @@ export function TechnicalEngineer({
             {/* SKILLS FIRST - Technical emphasis */}
             {skills.length > 0 && (
                 <section
-                    className="mb-5 p-4 rounded"
-                    style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}
+                    style={{ ...sectionStyle, padding: '1rem', borderRadius: '0.25rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}
                 >
                     <h2
-                        className="text-gray-700 mb-3 pb-1"
-                        style={{
-                            fontSize: '14pt',
-                            fontWeight: '700',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: 'none',
-                        }}
+                        className="text-gray-700"
+                        style={{ ...headingStyle, borderBottom: 'none' }}
                     >
                         Technical Skills
                     </h2>
@@ -105,7 +135,7 @@ export function TechnicalEngineer({
                                         key={i}
                                         className="px-3 py-1 text-gray-700 rounded"
                                         style={{
-                                            fontSize: '10.5pt',
+                                            fontSize: fs(10.5),
                                             backgroundColor: '#ffffff',
                                             border: '1px solid #d1d5db',
                                         }}
@@ -121,7 +151,7 @@ export function TechnicalEngineer({
                                     key={`${i}-${j}`}
                                     className="px-3 py-1 text-gray-700 rounded"
                                     style={{
-                                        fontSize: '10.5pt',
+                                        fontSize: fs(10.5),
                                         backgroundColor: '#ffffff',
                                         border: '1px solid #d1d5db',
                                     }}
@@ -136,16 +166,10 @@ export function TechnicalEngineer({
 
             {/* Summary */}
             {basics.summary && (
-                <section className="mb-5">
+                <section style={sectionStyle}>
                     <h2
-                        className="text-gray-700 mb-2 pb-1"
-                        style={{
-                            fontSize: '14pt',
-                            fontWeight: '700',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: '1px dashed #e5e7eb',
-                        }}
+                        className="text-gray-700"
+                        style={headingStyle}
                     >
                         {isRTL ? 'الملخص' : 'Summary'}
                     </h2>
@@ -153,7 +177,7 @@ export function TechnicalEngineer({
                         className="text-gray-600"
                         style={{
                             fontFamily: "'Inter', -apple-system, sans-serif",
-                            fontSize: '10.5pt',
+                            fontSize: fs(10.5),
                         }}
                     >
                         {basics.summary}
@@ -163,16 +187,10 @@ export function TechnicalEngineer({
 
             {/* Experience */}
             {work.length > 0 && (
-                <section className="mb-5">
+                <section style={sectionStyle}>
                     <h2
-                        className="text-gray-700 mb-3 pb-1"
-                        style={{
-                            fontSize: '14pt',
-                            fontWeight: '700',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: '1px dashed #e5e7eb',
-                        }}
+                        className="text-gray-700"
+                        style={headingStyle}
                     >
                         {isRTL ? 'الخبرة' : 'Experience'}
                     </h2>
@@ -183,18 +201,18 @@ export function TechnicalEngineer({
                                     <h3
                                         className="text-gray-900"
                                         style={{
-                                            fontSize: '12pt',
+                                            fontSize: fs(12),
                                             fontWeight: '600',
                                             fontFamily: "'Inter', -apple-system, sans-serif",
                                         }}
                                     >
                                         {safeString(job.position)}
                                     </h3>
-                                    <span className="text-gray-500" style={{ fontSize: '10pt' }}>
+                                    <span className="text-gray-500" style={{ fontSize: fs(10) }}>
                                         {job.startDate} → {job.endDate || 'Present'}
                                     </span>
                                 </div>
-                                <p className="text-gray-500 mb-2" style={{ fontSize: '11pt' }}>
+                                <p className="text-gray-500 mb-2" style={{ fontSize: fs(11) }}>
                                     {safeString(job.name)}
                                 </p>
                                 {job.highlights && job.highlights.length > 0 && (
@@ -204,7 +222,7 @@ export function TechnicalEngineer({
                                                 key={j}
                                                 className="text-gray-600 relative"
                                                 style={{
-                                                    fontSize: '10.5pt',
+                                                    fontSize: fs(10.5),
                                                     listStyleType: 'disc',
                                                 }}
                                             >
@@ -221,16 +239,10 @@ export function TechnicalEngineer({
 
             {/* Projects */}
             {projects.length > 0 && (
-                <section className="mb-5">
+                <section style={sectionStyle}>
                     <h2
-                        className="text-gray-700 mb-3 pb-1"
-                        style={{
-                            fontSize: '14pt',
-                            fontWeight: '700',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: '1px dashed #e5e7eb',
-                        }}
+                        className="text-gray-700"
+                        style={headingStyle}
                     >
                         {isRTL ? 'المشاريع' : 'Projects'}
                     </h2>
@@ -240,7 +252,7 @@ export function TechnicalEngineer({
                                 <h3
                                     className="text-gray-900"
                                     style={{
-                                        fontSize: '11pt',
+                                        fontSize: fs(11),
                                         fontWeight: '600',
                                         fontFamily: "'Inter', -apple-system, sans-serif",
                                     }}
@@ -248,7 +260,7 @@ export function TechnicalEngineer({
                                     {safeString(project.name)}
                                 </h3>
                                 {project.description && (
-                                    <p className="text-gray-600 mb-1" style={{ fontSize: '10.5pt' }}>{project.description}</p>
+                                    <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5) }}>{project.description}</p>
                                 )}
                                 {project.highlights && project.highlights.length > 0 && (
                                     <ul className="space-y-1 ps-4">
@@ -257,7 +269,7 @@ export function TechnicalEngineer({
                                                 key={j}
                                                 className="text-gray-600"
                                                 style={{
-                                                    fontSize: '10.5pt',
+                                                    fontSize: fs(10.5),
                                                     listStyleType: 'disc',
                                                 }}
                                             >
@@ -274,16 +286,10 @@ export function TechnicalEngineer({
 
             {/* Education */}
             {education.length > 0 && (
-                <section className="mb-5">
+                <section style={sectionStyle}>
                     <h2
-                        className="text-gray-700 mb-3 pb-1"
-                        style={{
-                            fontSize: '14pt',
-                            fontWeight: '700',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: '1px dashed #e5e7eb',
-                        }}
+                        className="text-gray-700"
+                        style={headingStyle}
                     >
                         {isRTL ? 'التعليم' : 'Education'}
                     </h2>
@@ -295,29 +301,29 @@ export function TechnicalEngineer({
                                         <h3
                                             className="text-gray-900"
                                             style={{
-                                                fontSize: '10.5pt',
+                                                fontSize: fs(10.5),
                                                 fontWeight: '600',
                                                 fontFamily: "'Inter', -apple-system, sans-serif",
                                             }}
                                         >
                                             {safeString(edu.institution)}
                                         </h3>
-                                        <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                                        <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
                                             {safeString(edu.studyType)}
                                             {edu.area && ` — ${edu.area}`}
                                         </p>
                                         {edu.score && (
-                                            <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                                            <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
                                                 GPA: {edu.score}
                                             </p>
                                         )}
                                         {edu.courses && edu.courses.length > 0 && (
-                                            <p className="text-gray-500" style={{ fontSize: '10.5pt', marginTop: '2px' }}>
+                                            <p className="text-gray-500" style={{ fontSize: fs(10.5), marginTop: '2px' }}>
                                                 Relevant Coursework: {edu.courses.join(' · ')}
                                             </p>
                                         )}
                                     </div>
-                                    <span className="text-gray-500" style={{ fontSize: '10pt' }}>
+                                    <span className="text-gray-500" style={{ fontSize: fs(10) }}>
                                         {edu.endDate || edu.startDate}
                                     </span>
                                 </div>
@@ -328,7 +334,7 @@ export function TechnicalEngineer({
                                                 key={j}
                                                 className="text-gray-600"
                                                 style={{
-                                                    fontSize: '10.5pt',
+                                                    fontSize: fs(10.5),
                                                     listStyleType: 'disc',
                                                 }}
                                             >
@@ -345,16 +351,10 @@ export function TechnicalEngineer({
 
             {/* Certificates */}
             {certificates.length > 0 && (
-                <section className="mb-5">
+                <section style={sectionStyle}>
                     <h2
-                        className="text-gray-700 mb-3 pb-1"
-                        style={{
-                            fontSize: '14pt',
-                            fontWeight: '700',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: '1px dashed #e5e7eb',
-                        }}
+                        className="text-gray-700"
+                        style={headingStyle}
                     >
                         {isRTL ? 'الشهادات' : 'Certifications'}
                     </h2>
@@ -365,7 +365,7 @@ export function TechnicalEngineer({
                                     <h3
                                         className="text-gray-900"
                                         style={{
-                                            fontSize: '10.5pt',
+                                            fontSize: fs(10.5),
                                             fontWeight: '600',
                                             fontFamily: "'Inter', -apple-system, sans-serif",
                                         }}
@@ -373,13 +373,13 @@ export function TechnicalEngineer({
                                         {safeString(cert.name)}
                                     </h3>
                                     {cert.issuer && (
-                                        <p className="text-gray-500" style={{ fontSize: '10.5pt' }}>
+                                        <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
                                             {cert.issuer}
                                         </p>
                                     )}
                                 </div>
                                 {cert.date && (
-                                    <span className="text-gray-500" style={{ fontSize: '10pt' }}>
+                                    <span className="text-gray-500" style={{ fontSize: fs(10) }}>
                                         {cert.date}
                                     </span>
                                 )}
@@ -393,20 +393,14 @@ export function TechnicalEngineer({
             {languages.length > 0 && (
                 <section>
                     <h2
-                        className="text-gray-700 mb-2 pb-1"
-                        style={{
-                            fontSize: '14pt',
-                            fontWeight: '700',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: '1px dashed #e5e7eb',
-                        }}
+                        className="text-gray-700"
+                        style={headingStyle}
                     >
                         {isRTL ? 'اللغات' : 'Languages'}
                     </h2>
                     <div className="flex flex-wrap gap-3">
                         {languages.map((lang, i) => (
-                            <span key={i} className="text-gray-600" style={{ fontSize: '10.5pt' }}>
+                            <span key={i} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
                                 <strong>{lang.language}</strong>: {lang.fluency}
                             </span>
                         ))}

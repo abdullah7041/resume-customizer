@@ -6,6 +6,7 @@ import OfflineIndicator from "./components/ui/OfflineIndicator";
 import { DirectionProvider } from "./components/providers/DirectionProvider";
 import { ConsentBanner } from "./components/compliance/ConsentBanner";
 import { AuthGate } from "./components/AuthGate";
+import { UserProgressNav } from "./components/ui/UserProgressNav";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <OfflineIndicator />
           <EnvironmentBadge />
           <Header />
+          <UserProgressNav />
           <FeaturesShowcase />
           <MainContent />
           <ConsentBanner />

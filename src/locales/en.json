@@ -24,7 +24,15 @@
     "pricing": "Pricing",
     "login": "Login",
     "signup": "Sign Up",
-    "logout": "Logout"
+    "logout": "Logout",
+    "workflowSteps": {
+      "upload": "Upload & Parse Resume",
+      "match": "Match with Job",
+      "optimize": "Optimize with AI",
+      "download": "Review & Download",
+      "yourWorkflow": "Your Workflow",
+      "inProgress": "In Progress"
+    }
   },
   "header": {
     "badge": "Designed for Saudi ambition",

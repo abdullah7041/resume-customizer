@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Shield, ChevronUp, ChevronDown, Check } from 'lucide-react';
+import { Shield, Check, Cookie } from 'lucide-react';
 import { GlassCircle } from '../ui/GlassCircle';
 import { cn } from '../../lib/utils/cn';
 import { useConsentStore } from '../../lib/stores/consentStore';
@@ -9,121 +9,114 @@ import { analytics } from '../../services/analytics';
 export function ConsentBanner() {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.dir() === 'rtl';
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const { hasConsented, acceptAll, rejectAll } = useConsentStore();
 
-  // Don't show if already consented
-  if (hasConsented()) return null;
+  // Show banner after a short delay for smooth entrance
+  useEffect(() => {
+    if (!hasConsented()) {
+      const timer = setTimeout(() => setIsVisible(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasConsented]);
+
+  // Don't render if already opted in/out
+  if (hasConsented() && !isVisible) return null;
 
   return (
-    <>
-      {/* Floating Pill - Always Visible */}
+    <div
+      className={cn(
+        'fixed z-50 transition-all duration-500 ease-out transform',
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none',
+        'bottom-4 sm:bottom-6',
+        isRTL ? 'left-4 sm:left-6' : 'right-4 sm:right-6',
+        'w-[calc(100vw-32px)] sm:w-[380px]'
+      )}
+    >
       <div
         className={cn(
-          'fixed bottom-6 z-50 transition-all duration-300',
-          isRTL ? 'left-6' : 'right-6'
+          'relative overflow-hidden rounded-2xl border border-white/10',
+          'bg-[#0f172a]/80 supports-[backdrop-filter]:bg-[#0f172a]/60', // Deep dark blue/slate tinted background
+          'backdrop-blur-xl shadow-2xl shadow-black/50',
+          'flex flex-col gap-4 p-5'
         )}
       >
-        {/* Collapsed State: Floating Glass Pill */}
-        {!isExpanded && (
-          <button
-            onClick={() => setIsExpanded(true)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-3',
-              'rounded-full border border-white/10',
-              'bg-gradient-to-br from-emerald-900/90 to-gray-900/90',
-              'backdrop-blur-xl shadow-2xl',
-              'hover:scale-105 transition-transform',
-              'text-sm font-medium text-white'
-            )}
-          >
-            <GlassCircle size="sm" variant="success">
-              <Shield className="w-4 h-4 text-emerald-400" />
-            </GlassCircle>
-            <span>{t('consent.pill', 'نقدّر خصوصيتك')}</span>
-            <ChevronUp className="w-4 h-4 text-white/60" />
-          </button>
-        )}
+        {/* Subtle Gradient Background */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-60" />
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Expanded State: Compact Card */}
-        {isExpanded && (
-          <div
-            className={cn(
-              'w-80 rounded-2xl border border-white/10',
-              'bg-gradient-to-br from-gray-900/95 to-emerald-900/95',
-              'backdrop-blur-xl shadow-2xl overflow-hidden',
-              'animate-in slide-in-from-bottom-4 duration-300'
-            )}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <GlassCircle size="md" variant="success">
-                  <Shield className="w-5 h-5 text-emerald-400" />
-                </GlassCircle>
-                <span className="font-semibold text-white">
-                  {t('consent.title', 'نقدّر خصوصيتك')}
-                </span>
-              </div>
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <ChevronDown className="w-5 h-5 text-white/60" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-4">
-              <p className="text-sm text-white/70 mb-4 leading-relaxed">
-                {t('consent.description', 'نستخدم ملفات تعريف الارتباط ونعالج بياناتك لتقديم وتحسين خدماتنا. وفقاً لنظام حماية البيانات الشخصية في المملكة، نحتاج موافقتك.')}
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    acceptAll();
-                    // Initialize analytics after user consents
-                    analytics.init();
-                    setIsExpanded(false);
-                  }}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2',
-                    'px-4 py-2.5 rounded-xl',
-                    'bg-gradient-to-r from-emerald-500 to-teal-500',
-                    'text-white font-medium text-sm',
-                    'hover:from-emerald-400 hover:to-teal-400',
-                    'transition-colors'
-                  )}
-                >
-                  <Check className="w-4 h-4" />
-                  {t('consent.acceptAll', 'قبول الكل')}
-                </button>
-                <button
-                  onClick={() => {
-                    rejectAll();
-                    setIsExpanded(false);
-                  }}
-                  className={cn(
-                    'px-4 py-2.5 rounded-xl',
-                    'border border-white/20 text-white/80',
-                    'text-sm hover:bg-white/5 transition-colors'
-                  )}
-                >
-                  {t('consent.rejectOptional', 'رفض')}
-                </button>
-              </div>
-
-              {/* Compliance Badge */}
-              <p className="text-xs text-white/40 text-center mt-3">
-                {t('consent.compliance', 'متوافق مع نظام حماية البيانات الشخصية السعودي - المرسوم الملكي رقم م/19')}
-              </p>
+        {/* Header & Content */}
+        <div className="flex gap-4 relative z-10">
+          <div className="shrink-0 pt-1">
+            <div className="relative">
+              <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur animate-pulse" />
+              <GlassCircle size="md" variant="success" className="relative z-10 border-emerald-500/30 bg-emerald-500/10">
+                <Cookie className="w-5 h-5 text-emerald-400" />
+              </GlassCircle>
             </div>
           </div>
-        )}
+          <div className="flex-1 space-y-1">
+            <h3 className="font-bold text-base text-white tracking-tight flex items-center justify-between">
+              {t('consent.title', 'Cookie Preferences')}
+              {/* Optional: Subtle close button if user REALLY wants to ignore it (optional behavior) */}
+              {/* <button onClick={() => setIsVisible(false)} className="text-white/40 hover:text-white transition-colors"><X size={16} /></button> */}
+            </h3>
+            <p className="text-sm text-white/70 leading-relaxed font-light">
+              {t('consent.description', 'We use cookies to analyze traffic and improve your experience. Identifying data is never sold.')}
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 relative z-10 pt-1">
+          <button
+            onClick={() => {
+              rejectAll();
+              setIsVisible(false);
+            }}
+            className={cn(
+              'order-2 sm:order-1 px-4 py-2.5 rounded-xl text-sm font-medium',
+              'text-white/50 hover:text-white transition-colors duration-200',
+              'hover:bg-white/5 text-center'
+            )}
+          >
+            {t('consent.reject', 'Decline')}
+          </button>
+
+          <button
+            onClick={() => {
+              acceptAll();
+              analytics.init();
+              setIsVisible(false);
+            }}
+            className={cn(
+              'order-1 sm:order-2 flex-1 flex items-center justify-center gap-2',
+              'px-6 py-2.5 rounded-xl text-sm font-semibold',
+              'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white',
+              'shadow-lg shadow-emerald-500/25',
+              'hover:shadow-emerald-500/40 hover:scale-[1.02]',
+              'active:scale-[0.98]',
+              'transition-all duration-200 group relative overflow-hidden'
+            )}
+          >
+            <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rotate-12" />
+            <Check className="w-4 h-4" />
+            <span>{t('consent.acceptAll', 'Accept & Continue')}</span>
+          </button>
+        </div>
+
+        {/* Footer / Compliance Check */}
+        <div className="flex items-center justify-between pt-3 border-t border-white/5 relative z-10">
+          <div className="flex items-center gap-1.5 opacity-40 hover:opacity-100 transition-opacity duration-300">
+            <Shield className="w-3 h-3" />
+            <span className="text-[10px] font-medium uppercase tracking-wider">
+              {t('consent.compliance', 'Secure & Private')}
+            </span>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 

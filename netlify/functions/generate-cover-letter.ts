@@ -1,4 +1,4 @@
-import { processResume } from "../lib/gemini-client";
+import { generateCoverLetter } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { CoverLetterRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
@@ -25,12 +25,12 @@ const baseHandler = async (event) => {
 
     const { resumeText, jobDescription } = parseResult.data;
 
-    const analysis = await processResume(resumeText, jobDescription, false);
+    const result = await generateCoverLetter(resumeText, jobDescription);
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coverLetter: analysis.coverLetter.draft_text }),
+      body: JSON.stringify({ coverLetter: result.draft_text }),
     };
 
   } catch (error) {

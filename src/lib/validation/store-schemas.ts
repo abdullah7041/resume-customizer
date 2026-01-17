@@ -10,27 +10,27 @@ import { z } from 'zod';
 // ============================================
 
 export const LocationSchema = z.object({
-    address: z.string().optional(),
-    postalCode: z.string().optional(),
-    city: z.string().optional().default(''),
-    countryCode: z.string().optional().default(''),
-    region: z.string().optional().default(''),
+    address: z.string().nullable().optional().transform(val => val ?? ''),
+    postalCode: z.string().nullable().optional().transform(val => val ?? ''),
+    city: z.string().nullable().optional().transform(val => val ?? '').default(''),
+    countryCode: z.string().nullable().optional().transform(val => val ?? '').default(''),
+    region: z.string().nullable().optional().transform(val => val ?? '').default(''),
 });
 
 export const ProfileSchema = z.object({
-    network: z.string(),
-    username: z.string(),
-    url: z.string().optional(),
+    network: z.string().nullable().transform(val => val ?? ''),
+    username: z.string().nullable().transform(val => val ?? ''),
+    url: z.string().nullable().optional().transform(val => val ?? ''),
 });
 
 export const BasicsSchema = z.object({
     name: z.string().min(1, 'Name is required'),
-    label: z.string().optional().default(''),
-    image: z.string().optional(),
-    email: z.string().optional().default(''),
-    phone: z.string().optional().default(''),
-    url: z.string().optional(),
-    summary: z.string().optional().default(''),
+    label: z.string().nullable().optional().transform(val => val ?? '').default(''),
+    image: z.string().nullable().optional().transform(val => val ?? ''),
+    email: z.string().nullable().optional().transform(val => val ?? '').default(''),
+    phone: z.string().nullable().optional().transform(val => val ?? '').default(''),
+    url: z.string().nullable().optional().transform(val => val ?? ''),
+    summary: z.string().nullable().optional().transform(val => val ?? '').default(''),
     location: LocationSchema.optional(),
     profiles: z.array(ProfileSchema).optional().default([]),
 });

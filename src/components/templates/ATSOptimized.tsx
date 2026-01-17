@@ -1,6 +1,19 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
 import { useDirection } from '../providers/DirectionProvider';
+
+// Default display options if not provided
+const DEFAULT_OPTIONS = {
+    baseFontSize: 10.5,
+    headingSize: 14,
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    sectionSpacing: 12,
+    paragraphSpacing: 6,
+    lineHeight: 1.4,
+    marginTop: 0.5,
+    marginBottom: 0.5,
+    marginSide: 0.6,
+};
 
 /**
  * ATS Optimized Template
@@ -11,8 +24,13 @@ export function ATSOptimized({
     resume,
     isAtsMode = false,
     scale = 1,
+    fontScale = 1,
+    displayOptions,
 }: TemplateProps) {
     const { isRTL } = useDirection();
+
+    // Merge displayOptions with defaults
+    const opts = { ...DEFAULT_OPTIONS, ...displayOptions };
 
     // If ATS mode is enabled, use the pure ATS renderer
     if (isAtsMode) {
@@ -36,51 +54,78 @@ export function ATSOptimized({
         basics?.profiles?.[0]?.url
     ].filter(Boolean);
 
+    // Helper for scaled fonts - use displayOptions or legacy fontScale
+    const fs = (pt: number) => {
+        if (displayOptions?.baseFontSize) {
+            const scaleFactor = displayOptions.baseFontSize / 10.5;
+            return scaledFontSize(pt, scaleFactor);
+        }
+        return scaledFontSize(pt, fontScale);
+    };
+
+    // Dynamic margins based on displayOptions
+    const marginPadding = `${opts.marginTop * 25.4}mm ${opts.marginSide * 25.4}mm`;
+
+    // Computed styles based on displayOptions
+    const sectionStyle = { marginBottom: `${opts.sectionSpacing}px` };
+    const headingStyle = {
+        fontSize: `${opts.headingSize}pt`,
+        fontWeight: 'bold' as const,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.05em',
+        borderBottom: '1px solid #9ca3af',
+        paddingBottom: '4px',
+        marginBottom: `${opts.paragraphSpacing}px`,
+    };
+
     return (
         <div
             className="bg-white text-black font-sans"
             style={{
                 width: A4_STYLES.width,
                 minHeight: A4_STYLES.minHeight,
-                padding: A4_STYLES.padding,
+                padding: marginPadding,
                 transform: `scale(${scale})`,
                 transformOrigin: 'top left',
                 direction: isRTL ? 'rtl' : 'ltr',
+                fontFamily: opts.fontFamily,
+                fontSize: `${opts.baseFontSize}pt`,
+                lineHeight: String(opts.lineHeight),
             }}
         >
             {/* Header - Name and Title prominently displayed */}
             <header className="text-center border-b-2 border-black pb-4 mb-6">
-                <h1 className="font-bold uppercase tracking-wide text-black" style={{ fontSize: '24pt' }}>
+                <h1 className="font-bold uppercase tracking-wide text-black" style={{ fontSize: fs(24) }}>
                     {safeString(basics?.name) || 'Your Name'}
                 </h1>
                 {basics?.label && (
-                    <p className="font-semibold text-black mt-1" style={{ fontSize: '12pt' }}>
+                    <p className="font-semibold text-black mt-1" style={{ fontSize: fs(12) }}>
                         {basics.label}
                     </p>
                 )}
                 {/* Contact Line */}
-                <p className="text-black mt-2" style={{ fontSize: '10pt' }}>
+                <p className="text-black mt-2" style={{ fontSize: fs(10) }}>
                     {contactParts.join(' | ')}
                 </p>
             </header>
 
             {/* Professional Summary */}
             {basics?.summary && (
-                <section className="mb-6">
-                    <h2 className="font-bold uppercase tracking-wider border-b border-gray-400 pb-1 mb-3 text-black" style={{ fontSize: '14pt' }}>
+                <section style={sectionStyle}>
+                    <h2 className="text-black" style={headingStyle}>
                         Professional Summary
                     </h2>
-                    <p className="leading-relaxed" style={{ fontSize: '10.5pt' }}>{basics.summary}</p>
+                    <p className="leading-relaxed" style={{ fontSize: fs(10.5) }}>{basics.summary}</p>
                 </section>
             )}
 
             {/* Core Competencies - Keywords for ATS */}
             {allSkills.length > 0 && (
-                <section className="mb-6">
-                    <h2 className="font-bold uppercase tracking-wider border-b border-gray-400 pb-1 mb-3 text-black" style={{ fontSize: '14pt' }}>
+                <section style={sectionStyle}>
+                    <h2 className="text-black" style={headingStyle}>
                         Core Competencies
                     </h2>
-                    <p style={{ fontSize: '10.5pt' }}>
+                    <p style={{ fontSize: fs(10.5) }}>
                         {allSkills.join(' • ')}
                     </p>
                 </section>
@@ -88,28 +133,28 @@ export function ATSOptimized({
 
             {/* Professional Experience */}
             {work && work.length > 0 && (
-                <section className="mb-6">
-                    <h2 className="font-bold uppercase tracking-wider border-b border-gray-400 pb-1 mb-3 text-black" style={{ fontSize: '14pt' }}>
+                <section style={sectionStyle}>
+                    <h2 className="text-black" style={headingStyle}>
                         Professional Experience
                     </h2>
                     {work.map((job, index) => (
                         <div key={index} className="mb-4">
                             <div className="flex justify-between items-baseline">
                                 <div>
-                                    <span className="font-semibold" style={{ fontSize: '12pt' }}>{safeString(job.position)}</span>
-                                    {job.name && <span className="text-black" style={{ fontSize: '11pt' }}> | {job.name}</span>}
+                                    <span className="font-semibold" style={{ fontSize: fs(12) }}>{safeString(job.position)}</span>
+                                    {job.name && <span className="text-black" style={{ fontSize: fs(11) }}> | {job.name}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: '10pt' }}>
+                                <span className="text-black" style={{ fontSize: fs(10) }}>
                                     {job.startDate} - {job.endDate || 'Present'}
                                 </span>
                             </div>
                             {job.location && (
-                                <p className="text-black" style={{ fontSize: '10.5pt' }}>{job.location}</p>
+                                <p className="text-black" style={{ fontSize: fs(10.5) }}>{job.location}</p>
                             )}
                             {job.highlights && job.highlights.length > 0 && (
-                                <ul className="mt-2 space-y-1">
+                                <ul className="mt-2 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
                                     {job.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} className="flex" style={{ fontSize: '10.5pt' }}>
+                                        <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
                                             <span className={isRTL ? 'ml-2' : 'mr-2'}>•</span>
                                             <span>{highlight}</span>
                                         </li>
@@ -123,20 +168,20 @@ export function ATSOptimized({
 
             {/* Key Projects */}
             {projects && projects.length > 0 && (
-                <section className="mb-6">
-                    <h2 className="font-bold uppercase tracking-wider border-b border-gray-400 pb-1 mb-3 text-black" style={{ fontSize: '14pt' }}>
+                <section style={sectionStyle}>
+                    <h2 className="text-black" style={headingStyle}>
                         Key Projects
                     </h2>
                     {projects.map((project, index) => (
                         <div key={index} className="mb-3">
-                            <p className="font-semibold" style={{ fontSize: '11pt' }}>{safeString(project.name)}</p>
+                            <p className="font-semibold" style={{ fontSize: fs(11) }}>{safeString(project.name)}</p>
                             {project.description && (
-                                <p className="text-black" style={{ fontSize: '10.5pt' }}>{project.description}</p>
+                                <p className="text-black" style={{ fontSize: fs(10.5) }}>{project.description}</p>
                             )}
                             {project.highlights && project.highlights.length > 0 && (
-                                <ul className="mt-1 space-y-1">
+                                <ul className="mt-1 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
                                     {project.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} className="flex" style={{ fontSize: '10.5pt' }}>
+                                        <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
                                             <span className={isRTL ? 'ml-2' : 'mr-2'}>•</span>
                                             <span>{highlight}</span>
                                         </li>
@@ -150,30 +195,30 @@ export function ATSOptimized({
 
             {/* Education */}
             {education && education.length > 0 && (
-                <section className="mb-6">
-                    <h2 className="font-bold uppercase tracking-wider border-b border-gray-400 pb-1 mb-3 text-black" style={{ fontSize: '14pt' }}>
+                <section style={sectionStyle}>
+                    <h2 className="text-black" style={headingStyle}>
                         Education
                     </h2>
                     {education.map((edu, index) => (
                         <div key={index} className="mb-3">
                             <div className="flex justify-between">
                                 <div>
-                                    <span className="font-semibold" style={{ fontSize: '10.5pt' }}>{safeString(edu.studyType)}</span>
-                                    {edu.area && <span style={{ fontSize: '10.5pt' }}> in {edu.area}</span>}
+                                    <span className="font-semibold" style={{ fontSize: fs(10.5) }}>{safeString(edu.studyType)}</span>
+                                    {edu.area && <span style={{ fontSize: fs(10.5) }}> in {edu.area}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: '10pt' }}>{edu.endDate}</span>
+                                <span className="text-black" style={{ fontSize: fs(10) }}>{edu.endDate}</span>
                             </div>
-                            <p className="text-black" style={{ fontSize: '10.5pt' }}>{safeString(edu.institution)}</p>
-                            {edu.score && <p style={{ fontSize: '10.5pt' }}>GPA: {edu.score}</p>}
+                            <p className="text-black" style={{ fontSize: fs(10.5) }}>{safeString(edu.institution)}</p>
+                            {edu.score && <p style={{ fontSize: fs(10.5) }}>GPA: {edu.score}</p>}
                             {edu.courses && edu.courses.length > 0 && (
-                                <p className="text-black" style={{ fontSize: '10.5pt', marginTop: '2px' }}>
+                                <p className="text-black" style={{ fontSize: fs(10.5), marginTop: '2px' }}>
                                     Relevant Coursework: {edu.courses.join(' · ')}
                                 </p>
                             )}
                             {edu.highlights && edu.highlights.length > 0 && (
-                                <ul className="mt-1 space-y-1">
+                                <ul className="mt-1 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
                                     {edu.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} className="flex" style={{ fontSize: '10.5pt' }}>
+                                        <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
                                             <span className={isRTL ? 'ml-2' : 'mr-2'}>•</span>
                                             <span>{highlight}</span>
                                         </li>
@@ -187,11 +232,11 @@ export function ATSOptimized({
 
             {/* Certifications */}
             {certificates && certificates.length > 0 && (
-                <section className="mb-6">
-                    <h2 className="font-bold uppercase tracking-wider border-b border-gray-400 pb-1 mb-3 text-black" style={{ fontSize: '14pt' }}>
+                <section style={sectionStyle}>
+                    <h2 className="text-black" style={headingStyle}>
                         Certifications & Training
                     </h2>
-                    <p style={{ fontSize: '10.5pt' }}>
+                    <p style={{ fontSize: fs(10.5) }}>
                         {certificates.map(cert =>
                             typeof cert === 'string' ? cert : safeString(cert.name)
                         ).filter(Boolean).join(' • ')}
@@ -202,10 +247,10 @@ export function ATSOptimized({
             {/* Languages */}
             {languages && languages.length > 0 && (
                 <section>
-                    <h2 className="font-bold uppercase tracking-wider border-b border-gray-400 pb-1 mb-3 text-black" style={{ fontSize: '14pt' }}>
+                    <h2 className="text-black" style={headingStyle}>
                         Languages
                     </h2>
-                    <p style={{ fontSize: '10.5pt' }}>
+                    <p style={{ fontSize: fs(10.5) }}>
                         {languages.map(lang =>
                             `${safeString(lang.language)}${lang.fluency ? ` (${lang.fluency})` : ''}`
                         ).join(' • ')}

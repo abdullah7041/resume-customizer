@@ -1,4 +1,4 @@
-import { processResume } from "../lib/gemini-client";
+import { predictInterviewQuestions } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
@@ -25,16 +25,16 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
 
     const { resumeText, jobDescription } = parseResult.data;
 
-    // Use 'lite' model for fast interview question prediction (structured extraction task)
-    const analysis = await processResume(resumeText, jobDescription, false, 'lite');
+    // Use dedicated interview question prediction function
+    const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription);
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        questions: analysis.interviewPrep.predicted_questions,
-        roleLevel: analysis.interviewPrep.role_level,
-        focusAreas: analysis.interviewPrep.focus_areas
+        questions: interviewPrep.predicted_questions,
+        roleLevel: interviewPrep.role_level,
+        focusAreas: interviewPrep.focus_areas
       }),
     };
 

@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ExternalLink, Target, TrendingUp, X, Sparkles, MapPin, ArrowRight } from "lucide-react";
+import { ExternalLink, Target, TrendingUp, X, Sparkles, MapPin } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { VISION_2030_SECTORS } from "../../lib/data/vision2030Skills";
 import { cn } from "../../lib/utils/cn";
@@ -17,7 +17,7 @@ interface Vision2030ModalProps {
 export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProps) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
-    const [activeTab, setActiveTab] = useState<'overview' | 'sectors'>('overview');
+    const [_activeTab, _setActiveTab] = useState<'overview' | 'sectors'>('overview');
 
     // Close on ESC key
     useEffect(() => {

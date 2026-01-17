@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import type { ResumeSchema } from '../../types/resume';
+import type { DisplayOptions } from '../../types/templates';
 
 /**
  * Props interface for all template components
@@ -8,6 +9,9 @@ export interface TemplateProps {
   resume: ResumeSchema;
   isAtsMode?: boolean;
   scale?: number;
+  /** @deprecated Use displayOptions instead */
+  fontScale?: number; // 0.8 to 1.2, default 1 (100%)
+  displayOptions?: DisplayOptions;
 }
 
 /**
@@ -19,12 +23,22 @@ export interface TemplateComponent extends FC<TemplateProps> {
 
 /**
  * Common styles for A4 page dimensions
+ * Reduced padding from 15mm to 10mm for less white space
  */
 export const A4_STYLES = {
   width: '210mm',
   minHeight: '297mm',
-  padding: '20mm',
+  padding: '10mm 12mm',
 } as const;
+
+/**
+ * Helper to scale font sizes based on user preference
+ * @param basePt - Base font size in pt (e.g., 10.5)
+ * @param fontScale - Scale factor (0.8 to 1.2, default 1)
+ * @returns Scaled font size string (e.g., "10.5pt")
+ */
+export const scaledFontSize = (basePt: number, fontScale = 1): string =>
+  `${(basePt * fontScale).toFixed(1)}pt`;
 
 /**
  * ATS-safe inline styles (no Tailwind for print reliability)
@@ -36,7 +50,7 @@ export const ATS_STYLES = {
     lineHeight: '1.4',
     color: '#000000',
     backgroundColor: '#ffffff',
-    padding: '40px 50px',
+    padding: '28px 34px',
     maxWidth: '210mm',
     margin: '0 auto',
     minHeight: '297mm',

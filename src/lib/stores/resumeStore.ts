@@ -69,8 +69,18 @@ export const useResumeStore = create<ResumeState>()(
       showOptimized: false, // Start with original
       selectedTemplate: 'modern-professional',
       displayOptions: {
-        fontSize: 1, // 100% scale by default
+        fontSize: 1, // Legacy 100% scale
+        baseFontSize: 10.5,   // pt
+        headingSize: 14,      // pt
+        fontFamily: 'Georgia, serif',
+        sectionSpacing: 12,   // px
+        paragraphSpacing: 6,  // px
+        lineHeight: 1.55,
+        marginTop: 0.5,       // inches
+        marginBottom: 0.5,    // inches
+        marginSide: 0.6,      // inches
       },
+      hasDownloaded: false,
 
       // Actions
       setOriginalResume: (resume: ResumeSchema) => {
@@ -92,7 +102,10 @@ export const useResumeStore = create<ResumeState>()(
           validatedResume.work = deduplicateByName(validatedResume.work);
         }
 
-        set({ originalResume: validatedResume });
+        set({
+          originalResume: validatedResume,
+          hasDownloaded: false // Reset download status on content change
+        });
       },
 
       setParsedResumeText: (text: unknown) => {
@@ -113,7 +126,10 @@ export const useResumeStore = create<ResumeState>()(
           console.warn('[ResumeStore] ⚠️ WARNING: Parsed text is very short! This may indicate a PDF extraction issue.');
         }
 
-        set({ parsedResumeText: resolvedText });
+        set({
+          parsedResumeText: resolvedText,
+          hasDownloaded: false
+        });
       },
 
 
@@ -138,12 +154,16 @@ export const useResumeStore = create<ResumeState>()(
             ),
             fullOptimization,
           ],
+          hasDownloaded: false
         }));
       },
 
 
       setOptimizations: (optimizations: OptimizationResult[]) => {
-        set({ optimizations });
+        set({
+          optimizations,
+          hasDownloaded: false
+        });
       },
 
       applyOptimization: (sectionId: string) => {
@@ -151,6 +171,7 @@ export const useResumeStore = create<ResumeState>()(
           optimizations: state.optimizations.map((o) =>
             o.sectionId === sectionId ? { ...o, applied: true } : o
           ),
+          hasDownloaded: false
         }));
       },
 
@@ -159,6 +180,7 @@ export const useResumeStore = create<ResumeState>()(
           optimizations: state.optimizations.map((o) =>
             o.sectionId === sectionId ? { ...o, applied: false } : o
           ),
+          hasDownloaded: false
         }));
       },
 
@@ -169,6 +191,7 @@ export const useResumeStore = create<ResumeState>()(
             applied: true,
           })),
           showOptimized: true,
+          hasDownloaded: false
         }));
       },
 
@@ -179,20 +202,34 @@ export const useResumeStore = create<ResumeState>()(
             applied: false,
           })),
           showOptimized: false,
+          hasDownloaded: false
         }));
       },
 
       toggleShowOptimized: () => {
         const current = get().showOptimized;
-        set({ showOptimized: !current });
+        set({
+          showOptimized: !current,
+          hasDownloaded: false
+        });
       },
 
       setShowOptimized: (show: boolean) => {
-        set({ showOptimized: show });
+        set({
+          showOptimized: show,
+          hasDownloaded: false
+        });
       },
 
       setSelectedTemplate: (templateId: TemplateId) => {
-        set({ selectedTemplate: templateId });
+        set({
+          selectedTemplate: templateId,
+          hasDownloaded: false
+        });
+      },
+
+      setHasDownloaded: (value: boolean) => {
+        set({ hasDownloaded: value });
       },
 
       setKeywordSuggestions: (suggestions: KeywordSuggestion[]) => {
@@ -565,6 +602,7 @@ export const useResumeStore = create<ResumeState>()(
         set({
           originalResume: null,
           parsedResumeText: null,
+          hasDownloaded: false,
           optimizations: [],
           keywordSuggestions: [],
           analysisCache: {},
@@ -594,6 +632,7 @@ export const useResumeStore = create<ResumeState>()(
         set({
           originalResume: null,
           parsedResumeText: null,
+          hasDownloaded: false,
           optimizations: [],
           keywordSuggestions: [],
           analysisCache: {},
@@ -631,6 +670,7 @@ export const useResumeStore = create<ResumeState>()(
         keywordSuggestions: state.keywordSuggestions,
         optimizationMetrics: state.optimizationMetrics,
         displayOptions: state.displayOptions,
+        hasDownloaded: state.hasDownloaded,
         // Persist analysisCache so match analysis score survives refresh
         analysisCache: state.analysisCache,
       }),

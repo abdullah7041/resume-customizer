@@ -106,10 +106,10 @@ describe('TemplatesSection', () => {
         });
 
         it('renders floating template selector pills', () => {
-            const { container } = renderWithProviders(<TemplateGallery />);
+            renderWithProviders(<TemplateGallery />);
 
-            // Find template pills in the floating selector
-            const allButtons = container.querySelectorAll('button');
+            // Find template pills in the floating selector (portaled to document.body)
+            const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons)
                 .map(btn => btn.textContent?.trim())
                 .filter(text => ['Modern Professional', 'Classic Traditional', 'Technical Engineer'].includes(text || ''));
@@ -212,10 +212,10 @@ describe('TemplatesSection', () => {
         });
 
         it('template pills are clickable', () => {
-            const { container } = renderWithProviders(<TemplateGallery />);
+            renderWithProviders(<TemplateGallery />);
 
-            // Find all template buttons
-            const allButtons = container.querySelectorAll('button');
+            // Find all template buttons (portaled to document.body)
+            const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons).filter(btn => {
                 const text = btn.textContent?.trim();
                 return ['Modern Professional', 'Classic Traditional', 'Technical Engineer'].includes(text || '');

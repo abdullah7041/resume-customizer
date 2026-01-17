@@ -926,21 +926,38 @@ export async function optimizeResume(resumeText, jobDescription) {
       original_summary: { type: SchemaType.STRING },
       summary_rewrite: { type: SchemaType.STRING },
       bullet_improvements: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { original: { type: SchemaType.STRING }, improved: { type: SchemaType.STRING }, issue: { type: SchemaType.STRING }, rationale: { type: SchemaType.STRING } }, required: ["original", "improved", "issue", "rationale"] } },
+      project_improvements: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { project_name: { type: SchemaType.STRING }, original: { type: SchemaType.STRING }, improved: { type: SchemaType.STRING }, issue: { type: SchemaType.STRING }, rationale: { type: SchemaType.STRING } }, required: ["project_name", "original", "improved", "issue", "rationale"] } },
+      certification_recommendations: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { name: { type: SchemaType.STRING }, issuer: { type: SchemaType.STRING }, relevance: { type: SchemaType.STRING } }, required: ["name", "issuer", "relevance"] } },
       missing_keywords: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
       keywords_to_keep: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
       keywords_to_avoid: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
     },
-    required: ["match_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline", "original_summary", "summary_rewrite", "bullet_improvements", "missing_keywords", "keywords_to_keep", "keywords_to_avoid"]
+    required: ["match_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline", "original_summary", "summary_rewrite", "bullet_improvements", "project_improvements", "certification_recommendations", "missing_keywords", "keywords_to_keep", "keywords_to_avoid"]
   };
 
   const prompt = `Analyze this resume against the job description and provide optimization suggestions.
 
 RULES:
 1. Copy EXACT text for "original" fields - no paraphrasing
-2. Provide 3-5 bullet improvements with original, improved, issue, rationale
+2. Provide 3-5 bullet_improvements from Experience section with original, improved, issue, rationale
 3. Provide 4-6 gap_analysis items identifying MISSING requirements from job description
 4. match_score = sum of category scores (hard_skills + experience + education + soft_skills)
 5. gap_analysis should identify what the resume LACKS compared to the job requirements
+
+PROJECT IMPROVEMENTS (REQUIRED - do not leave empty):
+6. Look for any Projects section in the resume. If found, provide 1-3 project_improvements to reframe them for this job.
+   - project_name: The actual name of the project from the resume
+   - original: The current project description text
+   - improved: Rewritten description highlighting relevance to the job
+   - issue: What's wrong with the current description
+   - rationale: Why the improvement helps
+   If no projects section exists, create 1 suggestion with project_name="No Projects Found", original="N/A", improved="Consider adding a Projects section showcasing relevant work", issue="Missing projects section", rationale="Projects demonstrate practical skills"
+
+CERTIFICATION RECOMMENDATIONS (REQUIRED - do not leave empty):
+7. Based on the job requirements, recommend 1-2 certifications the candidate should obtain.
+   - name: Full certification name (e.g., "AWS Solutions Architect Associate")
+   - issuer: Organization that issues it (e.g., "Amazon Web Services")
+   - relevance: Why this certification matters for this specific job
 
 GAP ANALYSIS FORMAT - Each gap MUST have:
 - requirement: What the job requires (e.g., "5+ years Python experience")
@@ -1026,6 +1043,132 @@ ${resumeText}`;
     };
   } catch (error) {
     console.error("[Gemini] Error in fast match analysis:", error);
+    throw error;
+  }
+}
+
+/**
+ * Predicts interview questions based on resume and job description.
+ * Uses structured output for reliable extraction.
+ * @param {string} resumeText - Plain text resume content.
+ * @param {string} jobDescription - Job description text.
+ * @returns {Promise<object>} - Interview prep data with questions and focus areas.
+ */
+export async function predictInterviewQuestions(resumeText, jobDescription) {
+  console.log(`[Gemini] Predicting interview questions with ${MODELS.lite}`);
+
+  const schema = {
+    type: SchemaType.OBJECT,
+    properties: {
+      predicted_questions: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING }
+      },
+      role_level: { type: SchemaType.STRING },
+      focus_areas: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING }
+      }
+    },
+    required: ["predicted_questions", "role_level", "focus_areas"]
+  };
+
+  const prompt = `You are an expert interviewer. Based on the resume and job description below, generate interview questions.
+
+INSTRUCTIONS:
+1. Generate 8-12 likely interview questions the candidate might face
+2. Include a mix of:
+   - Behavioral questions (STAR format triggers)
+   - Technical questions based on required skills
+   - Experience-based questions about their background
+   - Role-specific situational questions
+3. Identify the role level (e.g., "Junior", "Mid-level", "Senior", "Lead", "Executive")
+4. List 3-5 key focus areas the interview will likely cover
+
+JOB DESCRIPTION:
+${jobDescription}
+
+RESUME:
+${resumeText}`;
+
+  try {
+    const liteModel = genAI.getGenerativeModel({
+      model: MODELS.lite,
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 4096,
+        responseMimeType: "application/json",
+        responseSchema: schema
+      }
+    });
+
+    const result = await liteModel.generateContent(prompt);
+    const text = result.response.text();
+    console.log(`[Gemini] Interview prep response: ${text.length} chars`);
+
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { parsed = sanitizeAndParseJSON(text); }
+
+    return {
+      predicted_questions: parsed.predicted_questions || [],
+      role_level: parsed.role_level || "Unknown",
+      focus_areas: parsed.focus_areas || []
+    };
+  } catch (error) {
+    console.error("[Gemini] Error predicting interview questions:", error);
+    throw error;
+  }
+}
+
+/**
+ * Generates a professional cover letter based on resume and job description.
+ * @param {string} resumeText - Plain text resume content.
+ * @param {string} jobDescription - Job description text.
+ * @returns {Promise<{ draft_text: string }>} - Generated cover letter.
+ */
+export async function generateCoverLetter(resumeText, jobDescription) {
+  console.log(`[Gemini] Generating cover letter with ${MODELS.flash}`);
+
+  const schema = {
+    type: SchemaType.OBJECT,
+    properties: {
+      draft_text: { type: SchemaType.STRING }
+    },
+    required: ["draft_text"]
+  };
+
+  const prompt = `Write a professional cover letter based on the resume and job description below.
+
+RULES:
+1. Address it to "Hiring Manager" unless a specific name is in the job description
+2. Keep it concise (3-4 paragraphs max)
+3. Highlight relevant skills and experience from the resume that match the job requirements
+4. Use a professional but engaging tone
+5. Include a strong opening and compelling closing
+6. Do NOT include placeholder text like [Your Name] - use actual details from the resume
+
+JOB DESCRIPTION:
+${jobDescription}
+
+RESUME:
+${resumeText}
+
+Return ONLY the cover letter text in the draft_text field.
+7. CRITICAL: Use double newlines (\n\n) to separate paragraphs. Do NOT write a single block of text.`;
+
+  try {
+    const result = await createFlashModel(schema).generateContent(prompt);
+    const text = result.response.text();
+    console.log(`[Gemini] Cover letter response: ${text.length} chars`);
+
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { parsed = sanitizeAndParseJSON(text); }
+
+    return { draft_text: parsed.draft_text || "" };
+  } catch (error) {
+    console.error("[Gemini] Error generating cover letter:", error);
     throw error;
   }
 }

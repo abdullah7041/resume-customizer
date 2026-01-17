@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, ChevronDown, ChevronUp, Info, TrendingUp, Sparkles, Upload, Crosshair, Star, Zap, ThumbsUp, Rocket } from 'lucide-react';
+import { Target, ChevronDown, Info, TrendingUp, Sparkles, Upload, Crosshair, Star, Zap, ThumbsUp, Rocket, Check } from 'lucide-react';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import { SectorIcon } from '../../lib/utils/vision2030Icons';
 import { EXAMPLE_RESUME_TEXT } from '../../lib/data/exampleResume';
@@ -20,7 +20,7 @@ interface Vision2030SummaryProps {
 export function Vision2030Summary({ resumeText, className = '' }: Vision2030SummaryProps) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [calculationModalOpen, setCalculationModalOpen] = useState(false);
 
@@ -36,15 +36,15 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
     }, [textToAnalyze, isArabic]);
 
     const getScoreColor = (score: number) => {
-        if (score >= 70) return 'text-emerald-400';
-        if (score >= 40) return 'text-amber-400';
-        return 'text-red-400';
+        if (score >= 70) return 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]';
+        if (score >= 40) return 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]';
+        return 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]';
     };
 
     const getScoreBg = (score: number) => {
-        if (score >= 70) return 'bg-emerald-500/20';
-        if (score >= 40) return 'bg-amber-500/20';
-        return 'bg-red-500/20';
+        if (score >= 70) return 'bg-emerald-500/10 border-emerald-500/20';
+        if (score >= 40) return 'bg-amber-500/10 border-amber-500/20';
+        return 'bg-red-500/10 border-red-500/20';
     };
 
     // Get encouragement message based on score
@@ -81,209 +81,256 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
 
     // Demo mode banner component
     const DemoBanner = () => (
-        <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
-            <div className="flex items-start gap-2">
-                <Upload className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+        <div className="mb-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 backdrop-blur-sm relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <div className="flex items-start gap-3 relative z-10">
+                <div className="p-2 rounded-lg bg-amber-500/10">
+                    <Upload className="w-4 h-4 text-amber-400" />
+                </div>
                 <div>
-                    <p className="text-xs font-medium text-amber-400">
+                    <h4 className="text-sm font-semibold text-amber-400 mb-1">
                         {t('vision2030.demoMode', 'Example Analysis')}
-                    </p>
-                    <p className="text-xs text-white/60 mt-0.5">
+                    </h4>
+                    <p className="text-xs text-white/70 leading-relaxed">
                         {t('vision2030.demoBanner', 'This shows how a well-optimized resume aligns with Vision 2030. Upload yours to see your personal score!')}
                     </p>
                 </div>
             </div>
         </div>
     );
+
     return (
-        <GlassCard className={`p-4 ${className}`}>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3 rtl:flex-row-reverse">
-                    <GlassCircle size="lg" variant="success" className="shrink-0">
-                        <Target className="w-5 h-5 text-white" />
-                    </GlassCircle>
+        <GlassCard className={`p-0 overflow-hidden ${className} transition-all duration-300 border-white/10`}>
+            {/* Header - Always Visible */}
+            <div
+                className={`p-5 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition-colors`}
+                onClick={() => setExpanded(!expanded)}
+            >
+                <div className="flex items-center gap-4 rtl:flex-row-reverse">
+                    <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-md animate-pulse-slow" />
+                        <GlassCircle size="lg" variant="success" className="shrink-0 relative z-10 border-emerald-500/30">
+                            <Target className="w-6 h-6 text-emerald-400" />
+                        </GlassCircle>
+                        {analysis && (
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gray-900 border border-white/10 flex items-center justify-center z-20">
+                                <span className={`text-[10px] font-bold ${analysis.overallScore >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                    {Math.round(analysis.overallScore / 10)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
                     <div>
-                        <h3 className="font-bold text-white flex items-center gap-2">
-                            {t('vision2030.title', 'Vision 2030 Alignment')}
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-lg text-white tracking-tight">
+                                {t('vision2030.title', 'Vision 2030 Alignment')}
+                            </h3>
+
                             <button
                                 type="button"
-                                onClick={() => setCalculationModalOpen(true)}
-                                className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-emerald-700 bg-emerald-100 rounded-full hover:bg-emerald-200 hover:text-emerald-900 transition-colors ring-1 ring-emerald-300"
-                                title={isArabic ? 'كيف يتم حساب النتيجة؟' : 'How is this score calculated?'}
-                                aria-label={isArabic ? 'عرض تفاصيل الحساب' : 'Show calculation details'}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCalculationModalOpen(true);
+                                }}
+                                className="group/info relative"
                             >
-                                ?
+                                <Info className="w-4 h-4 text-white/40 hover:text-emerald-400 transition-colors" />
                             </button>
-                        </h3>
-                        <p className="text-xs text-white/60">
+                        </div>
+                        <p className="text-sm text-white/50 font-light">
                             {t('vision2030.subtitle', 'How your skills align with Saudi priorities')}
                         </p>
                     </div>
                 </div>
-                {analysis && (
-                    <div className={`px-3 py-1.5 rounded-full ${getScoreBg(analysis.overallScore)}`}>
-                        <span className={`text-xl font-bold ${getScoreColor(analysis.overallScore)}`}>
-                            {analysis.overallScore}%
-                        </span>
+
+                <div className="flex items-center gap-4">
+                    {analysis && (
+                        <div className={`px-4 py-2 rounded-xl border backdrop-blur-md transition-all duration-300 ${getScoreBg(analysis.overallScore)}`}>
+                            <div className="flex flex-col items-center leading-none">
+                                <span className={`text-2xl font-bold tracking-tighter ${getScoreColor(analysis.overallScore)}`}>
+                                    {analysis.overallScore}%
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                    <div
+                        className={`p-2 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 transition-all duration-300 ${expanded ? 'rotate-180 bg-white/10' : ''}`}
+                    >
+                        <ChevronDown className="w-4 h-4 text-white/70" />
                     </div>
-                )}
+                </div>
             </div>
 
-            {/* Demo Mode Banner */}
-            {isDemo && <DemoBanner />}
+            {/* Collapsible Content */}
+            <div className={`grid transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                    <div className="px-5 pb-5 pt-0">
+                        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-5" />
 
-            {/* Score Bar */}
-            {analysis && (
-                <div className="mb-4">
-                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-[#006C35] to-[#4ade80] transition-all duration-500"
-                            style={{ width: `${analysis.overallScore}%` }}
-                        />
-                    </div>
-                    {/* Encouragement Message */}
-                    <div className="mt-2 flex items-center gap-2">
-                        {renderEncouragementIcon(getEncouragementMessage(analysis.overallScore).icon)}
-                        <span className="text-xs text-emerald-300 font-medium">
-                            {getEncouragementMessage(analysis.overallScore).message}
-                        </span>
-                    </div>
-                </div>
-            )}
+                        {/* Demo Mode Banner */}
+                        {isDemo && <DemoBanner />}
 
-            {/* Detected Career Path */}
-            {analysis && analysis.detectedCareer && (
-                <div className="flex items-center gap-2 text-sm text-emerald-400 mb-3">
-                    <Crosshair className="w-4 h-4" />
-                    <span>
-                        {isArabic
-                            ? `المسار المهني المكتشف: ${analysis.detectedCareer.archetypeNameAr}`
-                            : `Detected Career Path: ${analysis.detectedCareer.archetypeNameEn}`
-                        }
-                    </span>
-                    <span className="text-xs text-white/50">
-                        ({analysis.detectedCareer.confidence})
-                    </span>
-                </div>
-            )}
-
-            {/* All Sectors */}
-            {analysis && analysis.sectorBreakdown.length > 0 && (
-                <div className="mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="w-4 h-4 text-[#4ade80]" />
-                        <span className="text-sm font-medium text-white/80">
-                            {isArabic ? 'جميع القطاعات' : 'All Sectors'}
-                        </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {analysis.sectorBreakdown.map((sector) => (
-                            <div
-                                key={sector.sectorId}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${sector.score > 0
-                                    ? 'bg-white/5 border-white/10'
-                                    : 'bg-white/[0.02] border-white/5'
-                                    }`}
-                            >
-                                <SectorIcon
-                                    sectorId={sector.sectorId}
-                                    className={`w-4 h-4 ${sector.score > 0 ? 'text-[#4ade80]' : 'text-white/30'
-                                        }`}
-                                />
-                                <span className={`text-xs ${sector.score > 0 ? 'text-white/80' : 'text-white/40'
-                                    }`}>
-                                    {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
-                                </span>
-                                <span className={`text-xs font-medium ${sector.score > 0 ? 'text-emerald-400' : 'text-white/30'
-                                    }`}>
-                                    {sector.score}%
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Expandable Details */}
-            {analysis && expanded && (
-                <div className="pt-3 border-t border-white/10 space-y-3">
-                    {/* Matched Skills */}
-                    {analysis.matchedSkills.length > 0 && (
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <Sparkles className="w-4 h-4 text-[#4ade80]" />
-                                <span className="text-sm font-medium text-white/80">
-                                    {t('vision2030.matchedSkills', 'Matched Vision 2030 Skills')}
-                                </span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                                {analysis.matchedSkills.map((skill, index) => (
-                                    <span
-                                        key={index}
-                                        className="px-2 py-0.5 text-xs rounded-full bg-[#006C35]/20 text-[#4ade80]"
-                                    >
-                                        {isArabic ? skill.skillNameAr : skill.skillNameEn}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Suggested Keywords from Top Sectors */}
-                    {analysis.sectorBreakdown.slice(0, 3).some(s => s.suggestedKeywords.length > 0) && (
-                        <div>
-                            <span className="text-sm font-medium text-white/80">
-                                {t('vision2030.suggestions', 'Suggested Skills to Add')}:
-                            </span>
-                            <div className="flex flex-wrap gap-1.5 mt-1">
-                                {analysis.sectorBreakdown
-                                    .slice(0, 3)
-                                    .flatMap(s => s.suggestedKeywords)
-                                    .slice(0, 6)
-                                    .map((skill, index) => (
-                                        <span
-                                            key={index}
-                                            className="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-400"
-                                        >
-                                            {skill}
+                        {/* Score Bar */}
+                        {analysis && (
+                            <div className="mb-6 bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`p-1.5 rounded-lg bg-emerald-500/10`}>
+                                            {renderEncouragementIcon(getEncouragementMessage(analysis.overallScore).icon)}
+                                        </div>
+                                        <span className="text-sm font-medium text-emerald-200">
+                                            {getEncouragementMessage(analysis.overallScore).message}
                                         </span>
-                                    ))}
+                                    </div>
+                                    <span className="text-xs text-white/40 font-mono">
+                                        {analysis.overallScore}/100
+                                    </span>
+                                </div>
+                                <div className="w-full h-2.5 bg-gray-900/50 rounded-full overflow-hidden border border-white/5">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.3)] transition-all duration-1000 ease-out relative"
+                                        style={{ width: `${analysis.overallScore}%` }}
+                                    >
+                                        <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
-                <button
-                    type="button"
-                    onClick={() => setModalOpen(true)}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-[#4ade80] hover:text-white transition-colors"
-                >
-                    <Info className="w-3 h-3" />
-                    {t('vision2030.matchSection.learnMore', 'Learn about Vision 2030')}
-                </button>
-                {analysis && (
-                    <button
-                        type="button"
-                        onClick={() => setExpanded(!expanded)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-white/60 hover:text-white transition-colors"
-                    >
-                        {expanded ? (
-                            <>
-                                {isArabic ? 'إخفاء' : 'Hide'}
-                                <ChevronUp className="w-3 h-3" />
-                            </>
-                        ) : (
-                            <>
-                                {t('vision2030.matchSection.viewDetails', 'View Details')}
-                                <ChevronDown className="w-3 h-3" />
-                            </>
                         )}
-                    </button>
-                )}
+
+                        {/* Detected Career Path */}
+                        {analysis && analysis.detectedCareer && (
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 mb-5">
+                                <div className="p-2 rounded-full bg-blue-500/10 shrink-0">
+                                    <Crosshair className="w-4 h-4 text-blue-400" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-blue-300/80 mb-0.5 uppercase tracking-wider font-semibold">
+                                        {isArabic ? 'المسار المهني' : 'Detected Career Path'}
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-blue-100 font-medium">
+                                            {isArabic ? analysis.detectedCareer.archetypeNameAr : analysis.detectedCareer.archetypeNameEn}
+                                        </span>
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/20">
+                                            {analysis.detectedCareer.confidence}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* All Sectors */}
+                        {analysis && analysis.sectorBreakdown.length > 0 && (
+                            <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                                    <span className="text-sm font-semibold text-white/90">
+                                        {isArabic ? 'جميع القطاعات' : 'Sector Analysis'}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {analysis.sectorBreakdown.map((sector) => (
+                                        <div
+                                            key={sector.sectorId}
+                                            className={`flex items-center justify-between p-2.5 rounded-lg border transition-all duration-300 group ${sector.score > 0
+                                                ? 'bg-gradient-to-r from-white/10 to-white/5 border-white/10 hover:border-emerald-500/30'
+                                                : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-1.5 rounded-md ${sector.score > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/20'}`}>
+                                                    <SectorIcon
+                                                        sectorId={sector.sectorId}
+                                                        className="w-3.5 h-3.5"
+                                                    />
+                                                </div>
+                                                <span className={`text-xs font-medium ${sector.score > 0 ? 'text-white/90' : 'text-white/40'
+                                                    }`}>
+                                                    {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
+                                                </span>
+                                            </div>
+                                            <span className={`text-xs font-bold ${sector.score > 0 ? 'text-emerald-400' : 'text-white/20'
+                                                }`}>
+                                                {sector.score}%
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Expandable Details */}
+                        {analysis && (
+                            <div className="space-y-5">
+                                {/* Matched Skills */}
+                                {analysis.matchedSkills.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Sparkles className="w-4 h-4 text-emerald-400" />
+                                            <span className="text-sm font-semibold text-white/90">
+                                                {t('vision2030.matchedSkills', 'Matched Vision 2030 Skills')}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {analysis.matchedSkills.map((skill, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 flex items-center gap-1.5 shadow-sm shadow-emerald-900/20"
+                                                >
+                                                    <Check className="w-3 h-3 text-emerald-500" />
+                                                    {isArabic ? skill.skillNameAr : skill.skillNameEn}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Suggested Keywords from Top Sectors */}
+                                {analysis.sectorBreakdown.slice(0, 3).some(s => s.suggestedKeywords.length > 0) && (
+                                    <div className="bg-amber-500/[0.03] rounded-xl p-4 border border-amber-500/10">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="p-1 rounded bg-amber-500/10">
+                                                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                                            </div>
+                                            <span className="text-sm font-semibold text-amber-100">
+                                                {t('vision2030.suggestions', 'Suggested Skills to Add')}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {analysis.sectorBreakdown
+                                                .slice(0, 3)
+                                                .flatMap(s => s.suggestedKeywords)
+                                                .slice(0, 6)
+                                                .map((skill, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="px-3 py-1 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/30 transition-colors cursor-default"
+                                                    >
+                                                        + {skill}
+                                                    </span>
+                                                ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between mt-6 pt-5 border-t border-white/5">
+                            <button
+                                type="button"
+                                onClick={() => setModalOpen(true)}
+                                className="group inline-flex items-center gap-2 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-500/10"
+                            >
+                                <Info className="w-4 h-4" />
+                                <span className="border-b border-transparent group-hover:border-emerald-300 transition-colors">
+                                    {t('vision2030.matchSection.learnMore', 'Learn about Vision 2030')}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <Vision2030Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} />

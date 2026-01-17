@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import UploadCard from '../ui/UploadCard';
 import { AppError } from '../../services/supabase.js';
 import { useResumeStore } from '../../lib/stores/resumeStore';
@@ -46,6 +46,9 @@ export default function UploadSection({
     const [pastedText, setPastedText] = useState('');
     const [warnings, setWarnings] = useState<ParsingWarning[]>([]);
 
+    // Ref for tracking active parse request to support cancellation
+    const parseRequestActive = useRef(false);
+
     // Get store actions
     const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload } = useResumeStore();
 
@@ -85,6 +88,18 @@ export default function UploadSection({
         });
     }, [onToast]);
 
+    const handleCancel = useCallback(() => {
+        if (status === 'uploading' || status === 'parsing') {
+            parseRequestActive.current = false;
+            setStatus('idle');
+            setProgress(0);
+            onToast({
+                type: 'info',
+                title: 'Upload cancelled',
+            });
+        }
+    }, [status, onToast]);
+
     const handleSubmit = useCallback(async () => {
         if (!file && !pastedText) {
             onToast({
@@ -102,6 +117,7 @@ export default function UploadSection({
         analytics.track('resume_upload_started', { file_type: fileType });
 
         try {
+            parseRequestActive.current = true;
             // CRITICAL: Reset previous resume data before processing new upload
             resetForNewUpload();
             setWarnings([]);
@@ -115,6 +131,11 @@ export default function UploadSection({
             setProgress(60);
 
             const result = await onParseResume(input);
+
+            // Check if request was cancelled
+            if (!parseRequestActive.current) {
+                return;
+            }
 
             setProgress(100);
             setStatus('success');
@@ -162,6 +183,8 @@ export default function UploadSection({
                 title: 'Resume parsed successfully',
             });
         } catch (err) {
+            if (!parseRequestActive.current) return;
+
             setStatus('error');
             setProgress(0);
             const message = err instanceof Error ? err.message : 'Failed to parse resume';
@@ -181,6 +204,9 @@ export default function UploadSection({
     const fileName = file?.name || resumeDocument?.fileName || '';
     const disabled = !file && !pastedText && !resumeDocument?.plainText;
 
+    // Resume is saved only if we have a successful new upload OR we have an existing document and haven't selected a new file
+    const isSaved = status === 'success' || (!file && !!resumeDocument?.fileName);
+
     return (
         <div className="space-y-6">
             <UploadCard
@@ -194,6 +220,8 @@ export default function UploadSection({
                 disabled={disabled}
                 onValidationError={handleValidationError}
                 onTextChange={handleTextChange}
+                isSaved={isSaved}
+                onCancel={handleCancel}
             />
 
             {/* Validation Warnings */}

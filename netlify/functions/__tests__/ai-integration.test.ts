@@ -4,7 +4,9 @@ import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/fun
 // Mock dependencies
 const mockGeminiClient = {
     processResume: vi.fn(),
-    processMatchOnly: vi.fn()
+    processMatchOnly: vi.fn(),
+    generateCoverLetter: vi.fn(),
+    predictInterviewQuestions: vi.fn()
 };
 
 const mockRateLimiter = {
@@ -116,10 +118,8 @@ describe('AI Integration Functions', () => {
         });
 
         it('returns cover letter draft', async () => {
-            mockGeminiClient.processResume.mockResolvedValue({
-                coverLetter: {
-                    draft_text: "Dear Hiring Manager..."
-                }
+            mockGeminiClient.generateCoverLetter.mockResolvedValue({
+                draft_text: "Dear Hiring Manager..."
             });
 
             const event = {
@@ -154,12 +154,10 @@ describe('AI Integration Functions', () => {
         });
 
         it('returns interview prep data', async () => {
-            mockGeminiClient.processResume.mockResolvedValue({
-                interviewPrep: {
-                    predicted_questions: ['Tell me about yourself'],
-                    role_level: 'Senior',
-                    focus_areas: ['System Design']
-                }
+            mockGeminiClient.predictInterviewQuestions.mockResolvedValue({
+                predicted_questions: ['Tell me about yourself'],
+                role_level: 'Senior',
+                focus_areas: ['System Design']
             });
 
             const event = {

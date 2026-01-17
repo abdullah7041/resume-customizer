@@ -12,12 +12,11 @@ import {
   Monitor,
   Users,
   Target,
-  BarChart3,
-  HelpCircle,
   FileSpreadsheet,
   ChevronDown,
-  ChevronUp,
-  Loader2
+  Loader2,
+  Award,
+  Zap
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 
@@ -62,30 +61,14 @@ interface InterviewSectionProps {
 }
 
 // === Sub-components ===
-const QuestionTypeIcon = ({ type }: { type: string }) => {
-  const iconClass = 'w-5 h-5 text-emerald-400';
-  const icons: Record<string, React.ReactNode> = {
-    technical: <Monitor className={iconClass} />,
-    behavioral: <Users className={iconClass} />,
-    situational: <Target className={iconClass} />,
-    'case-study': <BarChart3 className={iconClass} />,
-    general: <HelpCircle className={iconClass} />
-  };
-  return (
-    <GlassCircle size="md" variant="success">
-      {icons[type] || icons.general}
-    </GlassCircle>
-  );
-};
-
 const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
   const colors: Record<string, string> = {
-    easy: 'bg-emerald-500/20 text-emerald-400',
-    medium: 'bg-amber-500/20 text-amber-400',
-    hard: 'bg-rose-500/20 text-rose-400'
+    easy: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    hard: 'bg-rose-500/20 text-rose-300 border-rose-500/30'
   };
   return (
-    <span className={cn('px-2 py-1 rounded-full text-xs font-semibold', colors[difficulty] || colors.medium)}>
+    <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm', colors[difficulty] || colors.medium)}>
       {difficulty || 'medium'}
     </span>
   );
@@ -93,51 +76,42 @@ const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
 
 // STAR Method Tip component
 const STARMethodTip = () => (
-  <div className="mb-6 p-5 bg-emerald-900/80 border border-emerald-500/40 rounded-xl backdrop-blur-sm shadow-lg">
-    <div className="flex items-start gap-4">
-      <GlassCircle size="md" variant="success">
-        <Lightbulb className="w-5 h-5 text-emerald-300" />
-      </GlassCircle>
-      <div>
-        <h4 className="text-base font-bold text-emerald-200 mb-2">
+  <GlassCard variant="subtle" className="mb-8 border-emerald-500/30 bg-emerald-900/10">
+    <div className="flex flex-col md:flex-row items-start gap-6">
+      <div className="flex-shrink-0">
+        <GlassCircle size="lg" className="bg-emerald-500/20 border-emerald-500/40">
+          <Lightbulb className="w-6 h-6 text-emerald-300" />
+        </GlassCircle>
+      </div>
+      <div className="flex-1 w-full">
+        <h4 className="text-lg font-bold text-emerald-300 mb-2 flex items-center gap-2">
           Use the STAR Method
+          <span className="text-xs font-normal text-emerald-400/70 border border-emerald-500/30 px-2 py-0.5 rounded-full">Recommended</span>
         </h4>
-        <p className="text-sm text-white/80 leading-relaxed mb-3">
-          Structure your answers for maximum impact:
+        <p className="text-white/80 leading-relaxed mb-6 max-w-2xl">
+          Structure your answers for maximum impact. This proven framework helps you tell compelling stories that demonstrate your skills effectively.
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-emerald-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 mb-1">
-              <span className="font-bold text-emerald-300 text-lg">S</span>
-              <span className="text-white/90 text-sm font-medium">ituation</span>
-            </div>
-            <span className="text-white/70 text-xs block">Set the context</span>
-          </div>
-          <div className="bg-emerald-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 mb-1">
-              <span className="font-bold text-emerald-300 text-lg">T</span>
-              <span className="text-white/90 text-sm font-medium">ask</span>
-            </div>
-            <span className="text-white/70 text-xs block">Your responsibility</span>
-          </div>
-          <div className="bg-emerald-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 mb-1">
-              <span className="font-bold text-emerald-300 text-lg">A</span>
-              <span className="text-white/90 text-sm font-medium">ction</span>
-            </div>
-            <span className="text-white/70 text-xs block">What you did</span>
-          </div>
-          <div className="bg-emerald-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 mb-1">
-              <span className="font-bold text-emerald-300 text-lg">R</span>
-              <span className="text-white/90 text-sm font-medium">esult</span>
-            </div>
-            <span className="text-white/70 text-xs block">Measurable outcome</span>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { letter: 'S', word: 'Situation', desc: 'Set the context', icon: <Target className="w-4 h-4" /> },
+            { letter: 'T', word: 'Task', desc: 'Your responsibility', icon: <FileSpreadsheet className="w-4 h-4" /> },
+            { letter: 'A', word: 'Action', desc: 'What you did', icon: <Zap className="w-4 h-4" /> },
+            { letter: 'R', word: 'Result', desc: 'Measurable outcome', icon: <Award className="w-4 h-4" /> }
+          ].map((item, idx) => (
+            <GlassCard key={idx} variant="subtle" padding="sm" className="group hover:bg-emerald-500/10 transition-colors border-emerald-500/10">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 group-hover:scale-110 transition-transform">
+                  {item.letter}
+                </div>
+                <span className="text-emerald-200 font-semibold">{item.word}</span>
+              </div>
+              <p className="text-xs text-white/60 ps-1">{item.desc}</p>
+            </GlassCard>
+          ))}
         </div>
       </div>
     </div>
-  </div>
+  </GlassCard>
 );
 
 // Get contextual STAR tips based on question type
@@ -363,13 +337,13 @@ export function InterviewSection({
     <div className="space-y-6">
       {/* Header */}
       <GlassCard variant="elevated">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <GlassCircle size="md" variant="blue">
-              <MessageSquare className="w-5 h-5 text-blue-400" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <GlassCircle size="lg" variant="blue" className="bg-blue-500/10">
+              <MessageSquare className="w-6 h-6 text-blue-400" />
             </GlassCircle>
             <div>
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-xl font-bold text-white">
                 {t('sections.interview.title', 'Interview Preparation')}
               </h3>
               <p className="text-sm text-gray-400">
@@ -377,7 +351,7 @@ export function InterviewSection({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {questions.length > 0 && (
               <>
                 <GlassButton variant="secondary" onClick={exportQuestions}>
@@ -395,26 +369,41 @@ export function InterviewSection({
 
         {/* Role Insights */}
         {(roleLevel || focusAreas.length > 0) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white/5 rounded-xl">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('sections.interview.roleLevel', 'Role Level')}</p>
-              <p className="text-xl font-bold text-emerald-400 capitalize">{roleLevel || 'Mid'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('sections.interview.focusAreas', 'Focus Areas')}</p>
-              <div className="flex flex-wrap gap-2">
-                {focusAreas.length > 0 ? focusAreas.map((area, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs font-medium">
-                    {area}
-                  </span>
-                )) : (
-                  <span className="text-sm text-gray-500 italic">
-                    {t('sections.interview.noFocusAreas', 'Generate questions to see focus areas')}
-                  </span>
-                )}
+          <GlassCard variant="subtle" className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
+            {/* Decorative background gradients */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+            <div className="relative z-10 flex items-start gap-4 p-2">
+              <GlassCircle size="md" variant="warning" className="mt-1">
+                <Award className="w-5 h-5 text-amber-400" />
+              </GlassCircle>
+              <div>
+                <p className="text-sm text-gray-400 mb-1 font-medium">{t('sections.interview.roleLevel', 'Role Level')}</p>
+                <p className="text-xl font-bold text-white capitalize">{roleLevel || 'Mid-Senior'}</p>
               </div>
             </div>
-          </div>
+
+            <div className="relative z-10 flex items-start gap-4 p-2">
+              <GlassCircle size="md" variant="success" className="mt-1">
+                <Target className="w-5 h-5 text-emerald-400" />
+              </GlassCircle>
+              <div>
+                <p className="text-sm text-gray-400 mb-2 font-medium">{t('sections.interview.focusAreas', 'Focus Areas')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {focusAreas.length > 0 ? focusAreas.map((area, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-white/5 hover:bg-white/10 text-emerald-300 border border-emerald-500/20 rounded-full text-xs font-medium transition-colors cursor-default backdrop-blur-sm">
+                      {area}
+                    </span>
+                  )) : (
+                    <span className="text-sm text-gray-500 italic">
+                      {t('sections.interview.noFocusAreas', 'Generate questions to see focus areas')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </GlassCard>
         )}
 
         {/* Error State */}
@@ -427,18 +416,18 @@ export function InterviewSection({
 
         {/* Generate Button */}
         {questions.length === 0 && !isLoading && (
-          <div className="text-center py-8">
-            <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="text-center py-12">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]">
               <Sparkles className="w-10 h-10 text-emerald-400" />
             </div>
-            <h4 className="text-xl font-bold text-white mb-2">
+            <h4 className="text-2xl font-bold text-white mb-2">
               {t('sections.interview.readyTitle', 'Prepare for Your Interview')}
             </h4>
-            <p className="text-gray-400 max-w-md mx-auto mb-6">
+            <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
               {t('sections.interview.readyDesc', 'Generate AI-predicted interview questions based on the job description.')}
             </p>
-            <GlassButton onClick={() => predictQuestions(false)} disabled={isLoading}>
-              <MessageSquare className="w-4 h-4 me-2" />
+            <GlassButton size="lg" onClick={() => predictQuestions(false)} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-900/20">
+              <MessageSquare className="w-5 h-5 me-2" />
               {t('sections.interview.generate', 'Generate Questions')}
             </GlassButton>
           </div>
@@ -446,9 +435,9 @@ export function InterviewSection({
 
         {/* Loading State */}
         {isLoading && (
-          <div className="py-12 flex flex-col items-center justify-center gap-4">
+          <div className="py-20 flex flex-col items-center justify-center gap-4">
             <Loader2 className="h-12 w-12 animate-spin text-emerald-500" />
-            <p className="text-gray-400">
+            <p className="text-gray-400 animate-pulse">
               {t('sections.interview.generating', 'Analyzing job description and generating questions...')}
             </p>
           </div>
@@ -457,102 +446,145 @@ export function InterviewSection({
 
       {/* Questions List */}
       {!isLoading && questions.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* STAR Method Tip */}
           <STARMethodTip />
 
-          <h3 className="text-lg font-semibold text-white">
-            {t('sections.interview.questionsTitle', 'Predicted Questions')} ({questions.length})
-          </h3>
-          {questions.map((question, index) => (
-            <GlassCard key={index} variant="subtle" padding="sm">
-              <div className="flex items-start gap-4">
-                <QuestionTypeIcon type={question.type} />
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold text-white pe-4">
-                      {index + 1}. {question.question}
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <DifficultyBadge difficulty={question.difficulty} />
-                      <button
-                        onClick={() => toggleQuestion(index)}
-                        className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-                      >
-                        {expandedQuestions.has(index) ? (
-                          <ChevronUp className="w-4 h-4 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
-                        )}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              {t('sections.interview.questionsTitle', 'Predicted Questions')}
+              <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-xs font-normal">
+                {questions.length}
+              </span>
+            </h3>
+          </div>
+
+          <div className="space-y-4">
+            {questions.map((question, index) => (
+              <GlassCard
+                key={index}
+                variant="elevated"
+                padding="none"
+                className={cn(
+                  "overflow-hidden transition-all duration-300 border-white/5",
+                  expandedQuestions.has(index) ? "bg-white/5 ring-1 ring-emerald-500/30" : "hover:bg-white/5"
+                )}
+              >
+                {/* Header / Question Summary */}
+                <div
+                  className="p-5 flex items-start gap-4 cursor-pointer"
+                  onClick={() => toggleQuestion(index)}
+                >
+                  <div className="mt-1">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold">
+                      {index + 1}
+                    </span>
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <h4 className={cn(
+                        "font-semibold text-white/90 leading-relaxed transition-colors",
+                        expandedQuestions.has(index) ? "text-emerald-300" : ""
+                      )}>
+                        {question.question}
+                      </h4>
+                      <button className={cn(
+                        "p-2 rounded-full transition-all duration-300",
+                        expandedQuestions.has(index) ? "bg-emerald-500/20 text-emerald-400 rotate-180" : "bg-white/5 text-gray-400 hover:bg-white/10"
+                      )}>
+                        <ChevronDown className="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 mb-2">
-                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">{question.type}</span>
-                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs">{question.category}</span>
-                  </div>
 
-                  {/* Expanded Content */}
-                  {expandedQuestions.has(index) && (
-                    <div className="mt-4 space-y-3">
-                      {/* STAR Guidance for this question */}
-                      <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Lightbulb className="w-4 h-4 text-emerald-400" />
-                          <span className="text-sm font-medium text-emerald-400">
-                            How to answer using STAR:
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <span className="font-semibold text-emerald-400">S: </span>
-                            <span className="text-white/50">{getSTARTips(question.question).situation}</span>
-                          </div>
-                          <div>
-                            <span className="font-semibold text-emerald-400">T: </span>
-                            <span className="text-white/50">{getSTARTips(question.question).task}</span>
-                          </div>
-                          <div>
-                            <span className="font-semibold text-emerald-400">A: </span>
-                            <span className="text-white/50">{getSTARTips(question.question).action}</span>
-                          </div>
-                          <div>
-                            <span className="font-semibold text-emerald-400">R: </span>
-                            <span className="text-white/50">{getSTARTips(question.question).result}</span>
-                          </div>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DifficultyBadge difficulty={question.difficulty} />
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                        {question.type === 'technical' && <Monitor className="w-3 h-3" />}
+                        {question.type === 'behavioral' && <Users className="w-3 h-3" />}
+                        {question.type === 'situational' && <Target className="w-3 h-3" />}
+                        {question.type || 'General'}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                        {question.category}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Content */}
+                {expandedQuestions.has(index) && (
+                  <div className="px-5 pb-5 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="h-px w-full bg-white/5 mb-4" />
+
+                    {/* STAR Guidance for this question */}
+                    <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <GlassCircle size="sm" className="bg-emerald-500/20">
+                          <Lightbulb className="w-3.5 h-3.5 text-emerald-300" />
+                        </GlassCircle>
+                        <span className="text-sm font-bold text-emerald-400">
+                          How to answer using STAR:
+                        </span>
                       </div>
-
-                      {question.answerFramework && (
-                        <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Lightbulb className="w-4 h-4 text-blue-400" />
-                            <span className="text-sm font-medium text-blue-400">
-                              {t('sections.interview.framework', 'Answer Framework')}
-                            </span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <div className="flex gap-2">
+                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
+                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).situation}</span>
                           </div>
-                          <p className="text-sm text-gray-300">{question.answerFramework}</p>
+                          <div className="flex gap-2">
+                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
+                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).task}</span>
+                          </div>
                         </div>
-                      )}
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">
-                          {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
-                        </label>
-                        <textarea
-                          value={savedAnswers[index] || ''}
-                          onChange={(e) => setSavedAnswers(prev => ({ ...prev, [index]: e.target.value }))}
-                          placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here...')}
-                          className="w-full h-24 p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-emerald-500/50"
-                        />
+                        <div className="space-y-1">
+                          <div className="flex gap-2">
+                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
+                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).action}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
+                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).result}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            </GlassCard>
-          ))}
+
+                    {question.answerFramework && (
+                      <div className="p-4 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                        <div className="flex items-center gap-2 mb-2">
+                          <GlassCircle size="sm" className="bg-blue-500/20">
+                            <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                          </GlassCircle>
+                          <span className="text-sm font-bold text-blue-400">
+                            {t('sections.interview.framework', 'Answer Framework')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-300 leading-relaxed ps-9">{question.answerFramework}</p>
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <label className="block text-sm font-medium text-gray-300 mb-2 flex justify-between">
+                        {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
+                        <span className="text-xs text-gray-500 font-normal">Private to you</span>
+                      </label>
+                      <textarea
+                        value={savedAnswers[index] || ''}
+                        onChange={(e) => setSavedAnswers(prev => ({ ...prev, [index]: e.target.value }))}
+                        placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}
+                        className="w-full h-32 p-4 rounded-xl bg-black/20 border border-white/10 text-white placeholder-gray-600 resize-y focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all font-sans text-sm leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                )}
+              </GlassCard>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
+

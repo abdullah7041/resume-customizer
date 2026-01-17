@@ -2,9 +2,10 @@
 // Resume template gallery with floating overlay template selector
 
 import { useState, useMemo, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, Maximize, RotateCcw } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -13,6 +14,7 @@ import TemplateRenderer from "../templates/TemplateRenderer";
 import { GlassButton } from "../ui/GlassButton";
 import { LoadingMessages } from "../LoadingMessages";
 import { ManualDataEditor } from "../ui/ManualDataEditor";
+import { FormattingPanel } from "../ui/FormattingPanel";
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -85,18 +87,19 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const hasAppliedOptimizations = optimizations.some(o => o.applied);
 
   // Use store data when:
-  // 1. Store has applied optimizations (user clicked Apply All)
-  // 2. OR when showOptimized is true
+  // 1. Store has resume data (includes manual edits from ManualDataEditor)
+  // 2. Store has applied optimizations
+  // 3. showOptimized is true
   // Use prop data only as fallback when store is empty
-  const useStoreData = hasAppliedOptimizations || showOptimized || !propResumeData;
+  const useStoreData = Boolean(storeOriginalResume) || hasAppliedOptimizations || showOptimized || !propResumeData;
 
   // Compute active resume reactively
-  // Note: optimizations and showOptimized are intentionally included to trigger re-computation
+  // IMPORTANT: Include storeOriginalResume to trigger re-render on manual edits
   const storeActiveResume = useMemo(() => {
     if (!useStoreData) return null;
     return getActiveResume();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- optimizations & showOptimized trigger re-render when store changes
-  }, [getActiveResume, showOptimized, optimizations, useStoreData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- All deps trigger re-render when store changes
+  }, [getActiveResume, showOptimized, optimizations, useStoreData, storeOriginalResume]);
 
   // Determine which resume to use
   const resumeData = useStoreData
@@ -196,10 +199,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       // Track PDF export
       analytics.trackExport(selectedTemplate.id, 'pdf');
+
+      // Update progress state
+      useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
       console.error("PDF Download failed:", err);
       // TODO: Show user-facing error toast
     } finally {
+      // Restore scroll
       setIsDownloading(false);
     }
   };
@@ -292,35 +299,71 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
         )}
 
-        {/* Preview Area with Floating Selector */}
-        <div className="relative flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/30 min-h-0">
+        {/* Preview Area with Formatting Panel */}
+        <div className="relative flex-1 flex overflow-hidden bg-gradient-to-br from-gray-900/50 to-gray-800/30 min-h-0">
 
-          {/* Resume Preview */}
-          <div className="w-full flex justify-center pb-32 md:pb-20 pt-4">
-            {/* Dynamic Scale Wrapper */}
-            <div
-              dir="ltr"
-              className="bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/10 w-fit transition-transform duration-300 origin-top ease-out"
-              style={{
-                transform: `scale(${scale})`,
-                // Ensure proper mobile scaling without horizontal overflow
-                maxWidth: 'min(210mm, 100vw)'
-              }}
-            >
-              <TemplateRenderer
-                template={selectedTemplate}
-                userData={displayData as unknown as Record<string, unknown>}
-              />
-            </div>
+          {/* Formatting Panel - Left Side */}
+          <div className="hidden md:block flex-shrink-0 p-3 overflow-y-auto">
+            <FormattingPanel />
           </div>
 
+          {/* Resume Preview - Right Side */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6">
+            <div className="w-full flex justify-center pb-32 md:pb-20 pt-4">
+              {/* Dynamic Scale Wrapper */}
+              <div
+                dir="ltr"
+                className="relative bg-white shadow-2xl rounded-xl overflow-visible ring-1 ring-white/10 w-fit transition-transform duration-300 origin-top ease-out"
+                style={{
+                  transform: `scale(${scale})`,
+                  maxWidth: 'min(210mm, 100vw)'
+                }}
+              >
+                <TemplateRenderer
+                  template={selectedTemplate}
+                  userData={displayData as unknown as Record<string, unknown>}
+                />
 
-          {/* Floating Template Selector - Fixed absolute bottom */}
+                {/* Page Break Indicator - positioned at 297mm (A4 height) */}
+                <div
+                  className="absolute left-0 right-0 pointer-events-none z-20"
+                  style={{ top: '297mm' }}
+                >
+                  <div className="relative w-full flex items-center">
+                    {/* Dashed line spanning full width */}
+                    <div className="flex-1 border-t-2 border-dashed border-rose-500/70" />
+                    {/* Mobile-friendly label - centered on mobile, right on desktop */}
+                    <div className="absolute -top-3 md:-top-4 left-1/2 md:left-auto md:right-2 -translate-x-1/2 md:translate-x-0 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[9px] md:text-[11px] font-semibold px-2 md:px-3 py-0.5 md:py-1 rounded-full shadow-lg shadow-rose-500/30 whitespace-nowrap">
+                      📄 Page 1 ends
+                    </div>
+                  </div>
+                </div>
+
+                {/* Page 2 break indicator */}
+                <div
+                  className="absolute left-0 right-0 pointer-events-none z-20"
+                  style={{ top: '594mm' }}
+                >
+                  <div className="relative w-full flex items-center">
+                    <div className="flex-1 border-t-2 border-dashed border-rose-500/70" />
+                    <div className="absolute -top-3 md:-top-4 left-1/2 md:left-auto md:right-2 -translate-x-1/2 md:translate-x-0 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[9px] md:text-[11px] font-semibold px-2 md:px-3 py-0.5 md:py-1 rounded-full shadow-lg shadow-rose-500/30 whitespace-nowrap">
+                      📄 Page 2 ends
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Floating Template Selector - Rendered via Portal to bypass transformed parents */}
+        {createPortal(
           <div
             className={cn(
-              "absolute bottom-0 inset-x-0 z-50 w-full flex justify-center pb-4 md:pb-6 pt-12 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent pointer-events-none",
+              "fixed bottom-0 inset-x-0 z-50 w-full flex justify-center pb-4 md:pb-6 pt-12 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent pointer-events-none",
               "transition-all duration-300 ease-out",
-              isHoveringSelector ? "translate-y-0" : "translate-y-0"
+              // Semi-transparent when idle, fully visible on hover
+              isHoveringSelector ? "opacity-100 translate-y-0" : "opacity-40 translate-y-2"
             )}
             onMouseEnter={() => setIsHoveringSelector(true)}
             onMouseLeave={() => setIsHoveringSelector(false)}
@@ -383,16 +426,16 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 {t('sections.templates.selectHint', 'Choose your style')}
               </p>
             </div>
-          </div>
-        </div>
+          </div>,
+          document.body
+        )}
 
-        {/* PDF Generation Loading Overlay */}
-        {isDownloading && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
-              <LoadingMessages type="pdf" estimatedTime={10000} />
-            </div>
-          </div>
+        {/* PDF Generation Loading Overlay - Full Screen via Portal */}
+        {isDownloading && createPortal(
+          <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-10 fade-in duration-500">
+            <LoadingMessages type="pdf" estimatedTime={8000} />
+          </div>,
+          document.body
         )}
       </div>
 
