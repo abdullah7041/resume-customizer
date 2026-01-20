@@ -21,7 +21,6 @@
     "cleanup": "node -e \"const fs=require('fs');const files=['unified-pipeline.js','test-local.sh','test-parse-resume.ps1','debug_output.png','deno.lock','scripts/debug-gemini.js','LOCAL_TESTING_GUIDE.md'];files.forEach(f=>{try{fs.unlinkSync(f);console.log('Deleted:',f)}catch(e){if(e.code!=='ENOENT')console.error('Error:',f,e.message)}});console.log('Cleanup complete!')\""
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@netlify/functions": "^5.1.2",
     "@sentry/node": "^10.35.0",
     "@sentry/react": "^10.35.0",
@@ -30,7 +29,6 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.1",
     "clsx": "^2.1.1",
-    "crypto-js": "^4.2.0",
     "docx": "^9.5.1",
     "dotenv": "^17.2.3",
     "file-saver": "^2.0.5",
@@ -47,7 +45,6 @@
     "react-dom": "^19.2.3",
     "react-dropzone": "^14.3.8",
     "react-i18next": "^16.5.3",
-    "react-to-print": "^3.2.0",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.5",
     "zustand": "^5.0.10"

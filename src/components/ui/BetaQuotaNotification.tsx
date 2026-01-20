@@ -16,7 +16,6 @@ interface QuotaData {
   optimize: QuotaStatus;
   predict: QuotaStatus;
   coverLetter: QuotaStatus;
-  batch: QuotaStatus;
 }
 
 const getBetaCode = () => {
@@ -75,7 +74,6 @@ export function BetaQuotaNotification() {
     { key: 'optimize' as const, label: t('quota.features.optimize'), icon: '✨' },
     { key: 'predict' as const, label: t('quota.features.predict'), icon: '💼' },
     { key: 'coverLetter' as const, label: t('quota.features.coverLetter'), icon: '✉️' },
-    { key: 'batch' as const, label: t('quota.features.batch'), icon: '📦' },
   ];
 
   const hasExhaustedQuota = features.some(f => quotaData[f.key].remaining === 0);

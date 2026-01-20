@@ -1000,8 +1000,7 @@
       "match": "Match Analysis",
       "optimize": "Optimize",
       "predict": "Interview Prep",
-      "coverLetter": "Cover Letter",
-      "batch": "Batch Processing"
+      "coverLetter": "Cover Letter"
     },
     "refreshNote": "Quotas refresh when you enter a new beta code.",
     "exhausted": "Exhausted",

@@ -268,7 +268,6 @@ export function OptimizeSection({
       if (jobDescription) {
         const cachedAnalysis = getCachedAnalysis(resumeText, jobDescription);
         if (cachedAnalysis?.score) {
-          console.log('[OptimizeSection] Restoring beforeScore from cache on mount:', cachedAnalysis.score);
           setOptimizationMetrics({
             beforeScore: cachedAnalysis.score,
             hasJobDescription: true,
@@ -320,13 +319,6 @@ export function OptimizeSection({
     const cachedAnalysis = resumeText && jobDescription
       ? getCachedAnalysis(resumeText, jobDescription)
       : null;
-
-    console.log('[OptimizeSection] Cache lookup:', {
-      hasResumeText: !!resumeText,
-      hasJobDescription: !!jobDescription,
-      cachedScore: cachedAnalysis?.score,
-      fallbackScore: optimizationMetrics.beforeScore
-    });
 
     // Priority: 1. Store metrics (from API or cache restore), 2. Current cache, 3. Resume meta, 4. Default fallback
     // Note: optimizationMetrics.beforeScore is the source of truth - populated from API response or cache restoration

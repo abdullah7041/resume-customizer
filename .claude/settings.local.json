@@ -40,7 +40,9 @@
       "Bash(time npm run build:vite:*)",
       "Bash(find:*)",
       "Bash(npm list:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm install:*)",
+      "Bash(git add:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

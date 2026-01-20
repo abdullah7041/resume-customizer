@@ -36,75 +36,54 @@ export default defineConfig({
     rollupOptions: {
       external: ["path2d"],
       output: {
-        manualChunks(id, { getModuleInfo }) {
+        manualChunks(id) {
           if (id.includes("node_modules")) {
             // ===== REACT-I18NEXT - MUST be with React =====
             // IMPORTANT: react-i18next uses React.createContext internally
             // If loaded before React, createContext will be undefined
-            // This MUST come before the generic react check below
             if (id.includes("react-i18next")) {
-              return "vendor-react";
+              return "vendor-core";
             }
 
-            // ===== REACT CORE (loads immediately) =====
-            if (id.includes("/react-dom/") || id.includes("/react/")) {
-              return "vendor-react";
+            // ===== CORE DEPENDENCIES (always loaded) =====
+            if (
+              id.includes("/react-dom/") ||
+              id.includes("/react/") ||
+              id.includes("/zustand/") ||
+              id.includes("/zod/") ||
+              id.includes("i18next")
+            ) {
+              return "vendor-core";
             }
 
-            // ===== I18N (core i18next without react bindings) =====
-            if (id.includes("i18next")) {
-              return "vendor-i18n";
-            }
-
-            // ===== STATE MANAGEMENT =====
-            if (id.includes("/zustand/")) {
-              return "vendor-state";
-            }
-
-            // ===== SUPABASE - lazy load for auth =====
-            if (id.includes("@supabase")) {
-              return "vendor-supabase";
-            }
-
-            // ===== ICONS - tree-shake aggressively =====
-            if (id.includes("lucide-react")) {
-              return "vendor-icons";
-            }
-
-            // ===== DOCUMENT GENERATION - lazy load =====
-            if (id.includes("/docx/")) {
-              return "vendor-docs";
-            }
-
-            // ===== PDF.js for parsing =====
+            // ===== PDF PARSING (dynamically imported) =====
+            // Used in src/lib/utils/resumeText.ts for client-side PDF text extraction
             if (id.includes("pdfjs-dist")) {
               return "vendor-pdfjs";
             }
 
-            // ===== SENTRY - Keep all in one chunk =====
-            // IMPORTANT: @sentry packages have circular dependencies
-            // Splitting them causes "Cannot access before initialization" errors
+            // ===== UI UTILITIES (lazy loaded) =====
+            if (
+              id.includes("lucide-react") ||
+              id.includes("mixpanel-browser") ||
+              id.includes("file-saver")
+            ) {
+              return "vendor-ui";
+            }
+
+            // ===== SUPABASE (lazy loaded for auth) =====
+            if (id.includes("@supabase")) {
+              return "vendor-supabase";
+            }
+
+            // ===== SENTRY (lazy loaded for monitoring) =====
+            // IMPORTANT: Keep all @sentry packages together (circular dependencies)
             if (id.includes("@sentry")) {
               return "vendor-sentry";
             }
 
-            // ===== OTHER COMMON DEPS =====
-            // Date formatting
-            if (id.includes("date-fns")) {
-              return "vendor-date";
-            }
-
-            // Form validation
-            if (id.includes("zod")) {
-              return "vendor-validation";
-            }
-
-            // Shared utilities that are dynamically imported
-            const info = getModuleInfo(id);
-            if (info && info.dynamicImporters && info.dynamicImporters.length > 0) {
-              // Module is only used via dynamic import - keep it lazy
-              return undefined; // Let Rollup decide the best chunk
-            }
+            // Let Rollup handle the rest (dynamic imports)
+            return undefined;
           }
         },
       },
@@ -119,8 +98,14 @@ export default defineConfig({
     include: [
       "react",
       "react-dom",
+      "react/jsx-runtime",
       "zustand",
       "base64-js",
+      "@sentry/react",           // Heavy, benefits from pre-bundling
+      "lucide-react",            // Tree-shakeable but still large
+      "i18next",                 // i18n core
+      "react-i18next",           // React bindings
+      "mixpanel-browser",        // Analytics SDK
     ],
     esbuildOptions: {
       define: {

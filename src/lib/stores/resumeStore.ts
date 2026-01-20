@@ -542,8 +542,6 @@ export const useResumeStore = create<ResumeState>()(
         // Log merge diagnostics for debugging
         if (diagnostics.failedCount > 0) {
           console.warn('[ResumeStore] Merge diagnostics:', diagnostics);
-        } else if (diagnostics.appliedCount > 0) {
-          console.log(`[ResumeStore] Successfully applied ${diagnostics.appliedCount} optimizations`);
         }
 
         return merged;

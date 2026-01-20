@@ -305,7 +305,6 @@ export default function MainContent() {
       // Handle input from UploadSection.tsx which passes { file } or { plainText }
       // This is the CRITICAL FIX for the [object Object] bug
       if (input.file instanceof File) {
-        console.log('[MainContent] Normalized input: File detected');
         return {
           parseInput: input.file,
           storage: null,
@@ -314,7 +313,6 @@ export default function MainContent() {
       }
 
       if (typeof input.plainText === "string") {
-        console.log('[MainContent] Normalized input: plainText string detected, length:', input.plainText.length);
         return {
           parseInput: input.plainText,
           storage: null,
@@ -444,7 +442,6 @@ export default function MainContent() {
             beforeScore: result.score,
             hasJobDescription: true,
           });
-          console.log('[MainContent] Cached match analysis score:', result.score, 'using parsedResumeText:', !!parsedResumeText);
         }
 
         pushToast(
@@ -561,11 +558,6 @@ export default function MainContent() {
             }),
             ...(result.gapAnalysis && { gapAnalysis: result.gapAnalysis }),
             ...(result.categoryScores && { categoryScores: result.categoryScores }),
-          });
-          console.log('[MainContent] Stored optimization metrics:', {
-            hasMatchScoring: !!result.matchScoring,
-            gapAnalysisCount: result.gapAnalysis?.length,
-            hasCategoryScores: !!result.categoryScores,
           });
         }
         pushToast(

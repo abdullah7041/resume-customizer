@@ -1,5 +1,6 @@
 // src/services/api.js
 import { supabase } from './supabase';
+import * as Sentry from '@sentry/react';
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
@@ -115,6 +116,17 @@ export const parseResume = async (resumeInput) => {
   } catch (error) {
     console.error("Parse failed:", error);
 
+    // Capture error in Sentry (even if quota exceeded - helps track usage patterns)
+    Sentry.captureException(error, {
+      tags: { api_function: 'parseResume' },
+      contexts: {
+        request: {
+          quota_exceeded: error.quotaExceeded || false,
+          file_type: resumeInput instanceof File ? resumeInput.type : 'text'
+        }
+      }
+    });
+
     // Handle quota exceeded errors with user-friendly message
     if (error.quotaExceeded) {
       throw new Error(`Upload limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} uploads.`);
@@ -172,6 +184,18 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
   } catch (error) {
     console.error("Match failed:", error);
 
+    // Capture error in Sentry
+    Sentry.captureException(error, {
+      tags: { api_function: 'analyzeResumeWithAI' },
+      contexts: {
+        request: {
+          quota_exceeded: error.quotaExceeded || false,
+          has_resume: !!resumeText,
+          has_job_desc: !!jobDescription
+        }
+      }
+    });
+
     // Handle quota exceeded
     if (error.quotaExceeded) {
       throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} analyses.`);
@@ -205,6 +229,18 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => 
 
   } catch (error) {
     console.error("Optimization failed:", error);
+
+    // Capture error in Sentry
+    Sentry.captureException(error, {
+      tags: { api_function: 'optimizeResume' },
+      contexts: {
+        request: {
+          quota_exceeded: error.quotaExceeded || false,
+          mode: mode || 'default',
+          preview_mode: !!preview
+        }
+      }
+    });
 
     // Handle quota exceeded errors with user-friendly message
     if (error.quotaExceeded) {

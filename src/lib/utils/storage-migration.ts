@@ -26,8 +26,6 @@ export function migrateStorageKeys(): void {
     'beta_access',
   ];
 
-  let migratedCount = 0;
-
   keysToMigrate.forEach(key => {
     const oldKey = `${OLD_PREFIX}${key}`;
     const newKey = `${NEW_PREFIX}${key}`;
@@ -39,8 +37,6 @@ export function migrateStorageKeys(): void {
       if (oldValue !== null && localStorage.getItem(newKey) === null) {
         localStorage.setItem(newKey, oldValue);
         localStorage.removeItem(oldKey);
-        migratedCount++;
-        console.log(`[Storage Migration] ${oldKey} → ${newKey}`);
       }
     } catch (error) {
       console.error(`[Storage Migration] Failed to migrate ${oldKey}:`, error);
@@ -49,8 +45,4 @@ export function migrateStorageKeys(): void {
 
   // Mark migration as complete
   localStorage.setItem(MIGRATION_FLAG, 'true');
-
-  if (migratedCount > 0) {
-    console.log(`[Storage Migration] Completed: ${migratedCount} keys migrated`);
-  }
 }

@@ -521,7 +521,6 @@ const BETA_LIMITS = {
   optimize: 5,      // optimize.ts (Flash model optimization)
   predict: 5,       // predict-questions.ts (interview prep)
   coverLetter: 5,   // generate-cover-letter.ts (Flash model)
-  batch: 5,         // batch-api.ts (bulk processing)
 } as const;
 
 /**
@@ -532,7 +531,7 @@ const VALID_BETA_CODES = [
   'DAMMAM26', 'NEOM2026', 'SAUDIA26', 'ARAMCO26', 'VISION30'
 ];
 
-export type BetaAction = 'upload' | 'extract' | 'match' | 'optimize' | 'predict' | 'coverLetter' | 'batch';
+export type BetaAction = 'upload' | 'extract' | 'match' | 'optimize' | 'predict' | 'coverLetter';
 
 export interface BetaQuotaStatus {
   allowed: boolean;

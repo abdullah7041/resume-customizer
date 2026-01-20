@@ -12,6 +12,8 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": false,
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "bundler",

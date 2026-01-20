@@ -25,20 +25,19 @@ const handler: Handler = async (event) => {
 
   try {
     // Check all quota types in parallel
-    const [upload, extract, match, optimize, predict, coverLetter, batch] = await Promise.all([
+    const [upload, extract, match, optimize, predict, coverLetter] = await Promise.all([
       checkBetaQuota(betaCode, 'upload'),
       checkBetaQuota(betaCode, 'extract'),
       checkBetaQuota(betaCode, 'match'),
       checkBetaQuota(betaCode, 'optimize'),
       checkBetaQuota(betaCode, 'predict'),
       checkBetaQuota(betaCode, 'coverLetter'),
-      checkBetaQuota(betaCode, 'batch'),
     ]);
 
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ upload, extract, match, optimize, predict, coverLetter, batch }),
+      body: JSON.stringify({ upload, extract, match, optimize, predict, coverLetter }),
     };
   } catch (error) {
     console.error("[beta-quota-status] Error:", error);

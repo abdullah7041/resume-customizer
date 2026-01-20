@@ -82,10 +82,13 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     }, [position]);
 
     // Drag handlers
+    const hasDraggedRef = useRef(false);
+
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (mode !== 'fixed') return;
         e.preventDefault();
         setIsDragging(true);
+        hasDraggedRef.current = false;
         dragStartRef.current = {
             mouseX: e.clientX,
             mouseY: e.clientY,
@@ -99,6 +102,11 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
 
         const deltaX = e.clientX - dragStartRef.current.mouseX;
         const deltaY = e.clientY - dragStartRef.current.mouseY;
+
+        // Mark as dragged if moved more than 5 pixels
+        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+            hasDraggedRef.current = true;
+        }
 
         const newX = dragStartRef.current.posX + deltaX;
         const newY = dragStartRef.current.posY + deltaY;
@@ -170,16 +178,26 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     if (isMinimized && mode === 'fixed') {
         return (
             <div
-                className="fixed top-24 right-4 z-50 hidden md:block"
+                className={cn(
+                    "fixed top-24 right-4 z-50 hidden md:block",
+                    isDragging ? "cursor-grabbing" : "cursor-grab"
+                )}
                 style={{
-                    transform: `translate(${position.x}px, ${position.y}px)`
+                    transform: `translate(${position.x}px, ${position.y}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.2s ease-out'
                 }}
+                onMouseDown={handleMouseDown}
+                onDoubleClick={handleResetPosition}
             >
                 <button
-                    onClick={() => setIsMinimized(false)}
+                    onClick={(e) => {
+                        // Only open if no actual drag occurred
+                        if (!hasDraggedRef.current) setIsMinimized(false);
+                    }}
                     className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-full border border-white/20 backdrop-blur-md transition-all hover:scale-110",
-                        "bg-gradient-to-br from-emerald-500/80 to-teal-500/80 shadow-lg"
+                        "flex h-12 w-12 items-center justify-center rounded-full border border-white/20 backdrop-blur-md transition-all",
+                        "bg-gradient-to-br from-emerald-500/80 to-teal-500/80 shadow-lg",
+                        !isDragging && "hover:scale-110"
                     )}
                 >
                     <ChevronLeft className="h-6 w-6 text-white" />

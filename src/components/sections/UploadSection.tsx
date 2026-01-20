@@ -156,19 +156,16 @@ export default function UploadSection({
                 if (parsedResume && typeof parsedResume === 'object' && 'basics' in parsedResume) {
                     const resumeData = parsedResume as ResumeSchema;
                     setOriginalResume(resumeData);
-                    console.log('[Upload] Resume saved to store:', resumeData.basics?.name);
 
                     // Generate warnings
                     const newWarnings = getParsingWarnings(resumeData);
                     if (newWarnings.length > 0) {
                         setWarnings(newWarnings);
-                        console.log('[Upload] Generated warnings:', newWarnings);
                     }
                 }
 
                 if (rawText && typeof rawText === 'string') {
                     setParsedResumeText(rawText);
-                    console.log('[Upload] Raw text saved to store, length:', rawText.length);
                 } else {
                     console.warn('[Upload] Warning: No valid rawText to save. Value was:', typeof plainTextValue, plainTextValue);
                 }

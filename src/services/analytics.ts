@@ -32,6 +32,7 @@ class Analytics {
             persistence: 'localStorage',
             ignore_dnt: false, // Respect Do Not Track
             opt_out_tracking_by_default: false,
+            record_sessions_percent: 10, // 10% sampling for privacy and cost efficiency
         });
 
         this.initialized = true;

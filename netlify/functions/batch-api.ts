@@ -1,5 +1,5 @@
 import type { Handler } from "@netlify/functions";
-import { RateLimiter, batchWithConcurrency, checkBetaQuota } from "../lib/rate-limiter";
+import { RateLimiter, batchWithConcurrency } from "../lib/rate-limiter";
 import { initSentry, captureError } from "../lib/sentry";
 
 initSentry();
@@ -178,23 +178,8 @@ const handler: Handler = async (event) => {
     };
   }
 
-  // Check batch quota (but don't consume - child tasks consume their own)
-  const quotaStatus = await checkBetaQuota(betaCode, 'batch');
-
-  if (!quotaStatus.allowed) {
-    return {
-      statusCode: 403,
-      headers: HEADERS,
-      body: JSON.stringify({
-        error: "Batch processing quota exceeded",
-        quotaExceeded: true,
-        used: quotaStatus.used,
-        limit: quotaStatus.limit,
-        remaining: quotaStatus.remaining,
-        action: 'batch'
-      })
-    };
-  }
+  // Note: No separate batch quota check needed here.
+  // Child tasks (extract, match, etc.) consume their own quotas when called.
 
   try {
     const body: BatchRequest = event.body ? JSON.parse(event.body) : {};
