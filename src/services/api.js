@@ -7,6 +7,12 @@ const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/extract-resume-json`;
 const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 
+// Helper to get beta code from localStorage
+const getBetaCode = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('watheq:beta_access');
+};
+
 // Helper to get auth headers
 const getAuthHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
@@ -37,9 +43,20 @@ const handleResponse = async (response) => {
   }
 
   const data = await response.json().catch(() => ({}));
+
   if (!response.ok) {
-    throw new Error(data.error || "Request failed");
+    // Preserve quota metadata from error response
+    const error = new Error(data.error || "Request failed");
+    if (data.quotaExceeded) {
+      error.quotaExceeded = true;
+      error.used = data.used;
+      error.limit = data.limit;
+      error.remaining = data.remaining;
+      error.action = data.action;
+    }
+    throw error;
   }
+
   return data;
 };
 
@@ -57,6 +74,12 @@ const fileToBase64 = async (file) => {
 
 export const parseResume = async (resumeInput) => {
   try {
+    const betaCode = getBetaCode();
+
+    if (!betaCode) {
+      throw new Error("Beta code not found. Please sign in again.");
+    }
+
     let payload;
     if (resumeInput instanceof File) {
       const base64 = await fileToBase64(resumeInput);
@@ -73,7 +96,10 @@ export const parseResume = async (resumeInput) => {
 
     const response = await fetch(PARSE_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Beta-Code": betaCode
+      },
       body: JSON.stringify(payload),
     }).catch(err => {
       // Handle network errors (like Connection Refused)
@@ -88,6 +114,12 @@ export const parseResume = async (resumeInput) => {
 
   } catch (error) {
     console.error("Parse failed:", error);
+
+    // Handle quota exceeded errors with user-friendly message
+    if (error.quotaExceeded) {
+      throw new Error(`Upload limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} uploads.`);
+    }
+
     throw error;
   }
 };
@@ -107,7 +139,15 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
   }
 
   try {
+    const betaCode = getBetaCode();
+
+    if (!betaCode) {
+      throw new Error("Beta code not found. Please sign in again.");
+    }
+
     const headers = await getAuthHeaders();
+    headers["X-Beta-Code"] = betaCode;
+
     const response = await fetch(MATCH_ENDPOINT, {
       method: "POST",
       headers,
@@ -131,23 +171,29 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 
   } catch (error) {
     console.error("Match failed:", error);
-    // Return graceful failure object to prevent app crash
-    return {
-      score: 0,
-      coverage: 0,
-      similarity: 0,
-      missingKeywords: [],
-      strongMatches: [],
-      recommendations: [],
-      overallAssessment: "Analysis failed",
-      explanation: { reason: "Could not complete analysis.", tips: [] }
-    };
+
+    // Handle quota exceeded
+    if (error.quotaExceeded) {
+      throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} analyses.`);
+    }
+
+    // Re-throw the error so the caller (MainContent) can show proper failure notification
+    // The UI needs to know when analysis fails to inform the user
+    throw error;
   }
 };
 
 export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => {
   try {
+    const betaCode = getBetaCode();
+
+    if (!betaCode) {
+      throw new Error("Beta code not found. Please sign in again.");
+    }
+
     const headers = await getAuthHeaders();
+    headers["X-Beta-Code"] = betaCode;
+
     const response = await fetch(OPTIMIZE_ENDPOINT, {
       method: "POST",
       headers,
@@ -159,6 +205,12 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => 
 
   } catch (error) {
     console.error("Optimization failed:", error);
+
+    // Handle quota exceeded errors with user-friendly message
+    if (error.quotaExceeded) {
+      throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} optimizations.`);
+    }
+
     throw error;
   }
 };

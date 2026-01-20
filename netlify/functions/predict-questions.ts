@@ -1,13 +1,42 @@
 import { predictInterviewQuestions } from "../lib/gemini-client";
-import { withRateLimit } from "../lib/rate-limiter";
+import { withRateLimit, checkBetaQuota, consumeBetaQuota } from "../lib/rate-limiter";
 import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
 
 initSentry();
 
-const baseHandler = async (event: { httpMethod: string; body: any; }) => {
+const baseHandler = async (event: { httpMethod: string; body: any; headers: any; }) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  // Extract beta code from header
+  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+
+  if (!betaCode) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Beta code required. Please sign in with a valid beta code." })
+    };
+  }
+
+  // Check quota BEFORE processing
+  const quotaStatus = await checkBetaQuota(betaCode, 'predict');
+
+  if (!quotaStatus.allowed) {
+    return {
+      statusCode: 403,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: quotaStatus.error || "Interview prediction quota exceeded",
+        quotaExceeded: true,
+        used: quotaStatus.used,
+        limit: quotaStatus.limit,
+        remaining: quotaStatus.remaining,
+        action: 'predict'
+      })
+    };
   }
 
   try {
@@ -27,6 +56,9 @@ const baseHandler = async (event: { httpMethod: string; body: any; }) => {
 
     // Use dedicated interview question prediction function
     const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription);
+
+    // Consume quota AFTER successful prediction
+    await consumeBetaQuota(betaCode, 'predict');
 
     return {
       statusCode: 200,

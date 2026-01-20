@@ -129,7 +129,7 @@ export function PricingSection() {
                                             ) : (
                                                 <div className="flex flex-col">
                                                     <span className="text-2xl font-bold text-white/40 blur-[2px] select-none">
-                                                        $29.99
+                                                        XXX
                                                     </span>
                                                     <span className="text-sm font-medium text-emerald-400">
                                                         {t('pricing.proPrice')}

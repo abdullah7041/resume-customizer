@@ -1,41 +1,68 @@
 ---
 name: best-practices
-description: Always ensure the code and design follow the absolute latest industry standards, premium UI/UX trends, and library documentation.
+description: Ensure code and design follow the latest industry standards, premium UI/UX trends, and library documentation.
 ---
 
-# Best Latest Practices Skill
+# Best Practices Skill
 
-This skill ensures that Antigravity always delivers state-of-the-art solutions by proactively researching the latest standards before implementation.
+Proactively research latest standards before implementation.
 
-## 1. Research Protocol (Pre-Implementation)
+## When to Use
+- Adding new UI components
+- Fixing bugs in libraries
+- Refactoring existing code
+- Performance optimization
 
-Before writing any UI or architectural code, you MUST:
-1.  **Library Check**: Use `context7 mcp` to resolve and query the latest documentation for any major library being used (e.g., Tailwind CSS, React, Framer Motion, Radix UI).
-2.  **Design Trend Check**: Use `search_web` to look for "2025/2026 UI trends" specifically for the component you are building (e.g., "latest glassmorphism button trends 2026").
-3.  **Performance Check**: Check for modern performance optimizations (e.g., React Server Components, hydration strategies, CSS-only animations).
-4.  **Interaction Check**: Use `search_web` to find latest "High Engagement" UX patterns (e.g., progressive disclosure, gamification loops, micro-onboarding, personalized feedback).
+## 1. Research Protocol
 
-## 2. Premium UI/UX & Engagement Standards
+Before writing code, you MUST:
 
-Every UI component must follow these "Premium" rules:
--   **Glassmorphism**: Use sophisticated backdrops (blur, semi-transparent borders).
--   **Micro-interactions**: Add subtle transitions using CSS or Framer Motion (hover, entry, active states) that provide instant feedback.
--   **Vibrant Palettes**: Avoid flat colors. Use HSL-tuned gradients and neon accents for dark mode.
--   **Engagement Loops**: Suggest features that improve retention (e.g., progress bars, achievement states, clear CTA transitions).
--   **Contextual Assistance**: Use tooltips or smart empty states that coach the user through the workflow.
--   **Accessibility**: Ensure WCAG compliance while maintaining high aesthetics.
+1. **Library Check**: Use `context7 mcp` → `resolve-library-id` → `query-docs`
+2. **Design Trends**: Use `search_web` for "2025/2026 [component] trends"
+3. **Performance**: Check for modern optimizations (lazy loading, CSS-only animations)
 
-## 3. Tooling Usage
+## 2. Premium UI Standards
 
--   **Context7**: ALWAYS call `resolve-library-id` followed by `query-docs` when adding new features or fixing bugs in existing libraries.
--   **Web Search**: Use `search_web` for subjective design quality and "best in class" examples.
+```css
+/* Glassmorphism Example */
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+}
 
-## 4. Execution Workflow
+/* Vibrant Gradient */
+.gradient-bg {
+  background: linear-gradient(135deg, hsl(240, 80%, 60%), hsl(280, 90%, 50%));
+}
 
-1.  **Discover**: Research current best practices using tools.
-2.  **Propose**: Explain to the user WHY the proposed design is considered "best practice" based on your findings.
-3.  **Implement**: Write the code using the latest syntax (e.g., Tailwind v4 features if available).
-4.  **Validate**: Verify against the research findings.
+/* Micro-interaction */
+.btn-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+```
 
-## 5. Code Style
-- **Efficiency**: Prefer fewer lines of code. Use modern JS/TS features (optional chaining, nullish coalescing, arrow functions) to keep logic concise without sacrificing readability.
+### Checklist
+- [ ] Glassmorphism with blur + semi-transparent borders
+- [ ] Micro-interactions (hover, focus, active states)
+- [ ] HSL gradients, avoid flat colors
+- [ ] Engagement loops (progress bars, success states)
+- [ ] WCAG accessibility compliance
+
+## 3. Execution Flow
+
+1. **Discover**: Research using context7 + search_web
+2. **Propose**: Explain WHY it's best practice
+3. **Implement**: Use latest syntax
+4. **Validate**: Test against research findings
+
+## 4. Code Style
+
+- Prefer fewer lines of code
+- Use modern JS/TS: optional chaining (`?.`), nullish coalescing (`??`)
+- Graceful degradation for unsupported features

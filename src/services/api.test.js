@@ -15,10 +15,23 @@ vi.mock('./supabase', () => ({
 
 beforeEach(() => {
   global.fetch = vi.fn();
+
+  // Mock localStorage with beta code
+  const localStorageMock = {
+    getItem: vi.fn((key) => {
+      if (key === 'watheq:beta_access') return 'WATHEQ01';
+      return null;
+    }),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+  };
+  global.localStorage = localStorageMock;
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete global.localStorage;
 });
 
 describe('parseResume', () => {
@@ -42,7 +55,12 @@ describe('parseResume', () => {
     });
     expect(global.fetch).toHaveBeenCalledWith(
       '/.netlify/functions/extract-resume-json',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'X-Beta-Code': 'WATHEQ01'
+        })
+      })
     );
   });
 
@@ -76,6 +94,9 @@ describe('analyzeResume', () => {
 
     expect(global.fetch).toHaveBeenCalledWith('/.netlify/functions/ai-match', expect.objectContaining({
       method: 'POST',
+      headers: expect.objectContaining({
+        'X-Beta-Code': 'WATHEQ01'
+      }),
       body: JSON.stringify({ resumeText: 'resume text', jobDesc: 'job text' })
     }));
     expect(result.score).toBe(82);
@@ -103,6 +124,9 @@ describe('optimizeResume', () => {
       '/.netlify/functions/optimize',
       expect.objectContaining({
         method: 'POST',
+        headers: expect.objectContaining({
+          'X-Beta-Code': 'WATHEQ01'
+        }),
         body: JSON.stringify({ resumeText: 'resume', jobText: 'job' })
       })
     );

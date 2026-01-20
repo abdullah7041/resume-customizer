@@ -227,6 +227,29 @@ export function FormattingPanel() {
                             unit="in"
                             onChange={(v) => setDisplayOptions({ marginSide: v })}
                         />
+
+                        {/* Page Break Toggle */}
+                        <div className="flex items-center justify-between pt-2">
+                            <span className="text-sm text-white/70">
+                                {isArabic ? 'إظهار فواصل الصفحات' : 'Show Page Breaks'}
+                            </span>
+                            <button
+                                onClick={() => setDisplayOptions({ showPageBreaks: !displayOptions.showPageBreaks })}
+                                className={cn(
+                                    "relative w-10 h-5 rounded-full transition-colors",
+                                    displayOptions.showPageBreaks
+                                        ? "bg-emerald-500"
+                                        : "bg-white/20"
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm",
+                                        displayOptions.showPageBreaks && "translate-x-5"
+                                    )}
+                                />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Quick Actions */}

@@ -1,6 +1,6 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
-import { useDirection } from '../providers/DirectionProvider';
+import { useSectionLabel } from '../../hooks/useSectionLabel';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -29,7 +29,7 @@ export function ClassicTraditional({
   fontScale = 1,
   displayOptions,
 }: TemplateProps) {
-  const { isRTL } = useDirection();
+  const getSectionLabel = useSectionLabel();
 
   // Merge displayOptions with defaults
   const opts = { ...DEFAULT_OPTIONS, ...displayOptions };
@@ -82,7 +82,7 @@ export function ClassicTraditional({
         fontSize: `${opts.baseFontSize}pt`,
         lineHeight: String(opts.lineHeight),
       }}
-      dir={isRTL ? 'rtl' : 'ltr'}
+      dir="ltr"
     >
       {/* Centered Header with bold divider */}
       <header className="text-center mb-5 pb-4" style={{ borderBottom: '2px solid #1a1a1a' }}>
@@ -128,7 +128,7 @@ export function ClassicTraditional({
               borderBottom: '1px solid #1a1a1a',
             }}
           >
-            {isRTL ? 'الملخص المهني' : 'Professional Summary'}
+            {getSectionLabel('summary')}
           </h2>
           <p
             className="text-gray-700 italic text-justify"
@@ -152,7 +152,7 @@ export function ClassicTraditional({
               borderBottom: '1px solid #1a1a1a',
             }}
           >
-            {isRTL ? 'الخبرة المهنية' : 'Professional Experience'}
+            {getSectionLabel('workExperience')}
           </h2>
           <div className="space-y-4">
             {work.map((job, i) => (
@@ -207,7 +207,7 @@ export function ClassicTraditional({
             className="text-gray-900"
             style={headingStyle}
           >
-            {isRTL ? 'التعليم' : 'Education'}
+            {getSectionLabel('education')}
           </h2>
           <div className="space-y-3">
             {education.map((edu, i) => (
@@ -275,7 +275,7 @@ export function ClassicTraditional({
             className="text-gray-900"
             style={headingStyle}
           >
-            Skills & Expertise
+            {getSectionLabel('skillsExpertise')}
           </h2>
           <div className="text-gray-600" style={{ fontSize: fs(10.5), lineHeight: '1.6' }}>
             {skills.map((skillItem, i) => {
@@ -308,7 +308,7 @@ export function ClassicTraditional({
             className="text-gray-900"
             style={headingStyle}
           >
-            {isRTL ? 'المشاريع الرئيسية' : 'Key Projects'}
+            {getSectionLabel('keyProjects')}
           </h2>
           <div className="space-y-3">
             {projects.map((project, i) => (
@@ -355,7 +355,7 @@ export function ClassicTraditional({
             className="text-gray-900"
             style={headingStyle}
           >
-            {isRTL ? 'الشهادات' : 'Certifications'}
+            {getSectionLabel('certifications')}
           </h2>
           <div className="space-y-2">
             {certificates.map((cert, i) => (
@@ -388,7 +388,7 @@ export function ClassicTraditional({
             className="text-gray-900"
             style={headingStyle}
           >
-            {isRTL ? 'اللغات' : 'Languages'}
+            {getSectionLabel('languages')}
           </h2>
           <p className="text-gray-600" style={{ fontSize: fs(10.5) }}>
             {languages.map((lang) => `${lang.language} (${lang.fluency})`).join(', ')}

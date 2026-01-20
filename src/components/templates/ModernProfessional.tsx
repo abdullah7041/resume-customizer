@@ -1,6 +1,6 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
-import { useDirection } from '../providers/DirectionProvider';
+import { useSectionLabel } from '../../hooks/useSectionLabel';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -28,7 +28,7 @@ export function ModernProfessional({
   fontScale = 1,
   displayOptions,
 }: TemplateProps) {
-  const { isRTL } = useDirection();
+  const getSectionLabel = useSectionLabel();
 
   // Merge displayOptions with defaults
   const opts = { ...DEFAULT_OPTIONS, ...displayOptions };
@@ -78,7 +78,9 @@ export function ModernProfessional({
         fontSize: `${opts.baseFontSize}pt`,
         lineHeight: String(opts.lineHeight),
       }}
-      dir={isRTL ? 'rtl' : 'ltr'}
+      // Always LTR for resume content - resumes are typically English
+      // Section headings translate based on UI language, but content stays LTR
+      dir="ltr"
     >
       {/* Header - Large name, subtle headline */}
       <header className="mb-7 pb-5" style={{ borderBottom: '2px solid #111827' }}>
@@ -143,7 +145,7 @@ export function ModernProfessional({
             className="text-gray-900"
             style={{ ...headingStyle, marginBottom: `${opts.paragraphSpacing}px` }}
           >
-            {isRTL ? 'نبذة عني' : 'About'}
+            {getSectionLabel('about')}
           </h2>
           <p className="text-gray-700" style={{ lineHeight: String(opts.lineHeight) }}>
             {basics.summary}
@@ -163,7 +165,7 @@ export function ModernProfessional({
               paddingBottom: '8px'
             }}
           >
-            {isRTL ? 'الخبرة العملية' : 'Experience'}
+            {getSectionLabel('experience')}
           </h2>
           <div className="space-y-5">
             {work.map((job, i) => (
@@ -215,7 +217,7 @@ export function ModernProfessional({
               paddingBottom: '8px'
             }}
           >
-            {isRTL ? 'المشاريع' : 'Projects'}
+            {getSectionLabel('projects')}
           </h2>
           <div className="space-y-4">
             {projects.map((project, i) => (
@@ -253,7 +255,7 @@ export function ModernProfessional({
             className="text-gray-900"
             style={{ ...headingStyle, marginBottom: `${opts.paragraphSpacing}px` }}
           >
-            {isRTL ? 'التعليم' : 'Education'}
+            {getSectionLabel('education')}
           </h2>
           <div className="space-y-3">
             {education.map((edu, i) => (
@@ -295,7 +297,7 @@ export function ModernProfessional({
             className="text-gray-900"
             style={{ ...headingStyle, marginBottom: `${opts.paragraphSpacing}px` }}
           >
-            Skills
+            {getSectionLabel('skills')}
           </h2>
           <div className="flex flex-wrap gap-2">
             {skills.map((skillItem, i) => {
@@ -326,7 +328,7 @@ export function ModernProfessional({
             className="text-gray-900"
             style={{ ...headingStyle, marginBottom: `${opts.paragraphSpacing}px` }}
           >
-            {isRTL ? 'الشهادات' : 'Certifications'}
+            {getSectionLabel('certifications')}
           </h2>
           <div className="space-y-2">
             {certificates.map((cert, i) => (
@@ -359,7 +361,7 @@ export function ModernProfessional({
             className="text-gray-900"
             style={{ ...headingStyle, marginBottom: `${opts.paragraphSpacing}px` }}
           >
-            {isRTL ? 'اللغات' : 'Languages'}
+            {getSectionLabel('languages')}
           </h2>
           <div className="flex flex-wrap gap-4">
             {languages.map((lang, i) => (

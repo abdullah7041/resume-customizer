@@ -331,8 +331,9 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   default: { maxRequests: 30 },
 };
 
-// Singleton Upstash rate limiter (lazy initialized)
+// Singleton Upstash rate limiter and Redis client (lazy initialized)
 let upstashRatelimit: Ratelimit | null = null;
+let upstashRedis: Redis | null = null;
 let upstashInitAttempted = false;
 let upstashInitError: string | null = null;
 
@@ -341,32 +342,51 @@ let upstashInitError: string | null = null;
  * Returns null if Upstash is not configured
  */
 function getRateLimiter(): Ratelimit | null {
-  if (!upstashInitAttempted) {
-    upstashInitAttempted = true;
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  initUpstash();
+  return upstashRatelimit;
+}
 
-    if (!url || !token) {
-      upstashInitError = "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required";
-      console.error(`[rate-limiter] ${upstashInitError}`);
-      return null;
-    }
+/**
+ * Get the Upstash Redis client for direct operations (beta quota tracking)
+ * Returns null if Upstash is not configured
+ */
+function getRedisClient(): Redis | null {
+  initUpstash();
+  return upstashRedis;
+}
 
-    try {
-      upstashRatelimit = new Ratelimit({
-        redis: new Redis({ url, token }),
-        limiter: Ratelimit.slidingWindow(20, "60 s"),
-        analytics: true,
-        prefix: "resume-optimizer",
-      });
-      console.log("[rate-limiter] ✓ Initialized Upstash rate limiter");
-    } catch (err) {
-      upstashInitError = `Failed to initialize Upstash: ${err instanceof Error ? err.message : String(err)}`;
-      console.error(`[rate-limiter] ${upstashInitError}`);
-    }
+/**
+ * Initialize Upstash clients (rate limiter and Redis)
+ * Only runs once due to upstashInitAttempted flag
+ */
+function initUpstash(): void {
+  if (upstashInitAttempted) return;
+
+  upstashInitAttempted = true;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    upstashInitError = "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required";
+    console.error(`[rate-limiter] ${upstashInitError}`);
+    return;
   }
 
-  return upstashRatelimit;
+  try {
+    // Create a shared Redis client for both rate limiting and quota tracking
+    upstashRedis = new Redis({ url, token });
+
+    upstashRatelimit = new Ratelimit({
+      redis: upstashRedis,
+      limiter: Ratelimit.slidingWindow(20, "60 s"),
+      analytics: true,
+      prefix: "resume-optimizer",
+    });
+    console.log("[rate-limiter] ✓ Initialized Upstash rate limiter and Redis client");
+  } catch (err) {
+    upstashInitError = `Failed to initialize Upstash: ${err instanceof Error ? err.message : String(err)}`;
+    console.error(`[rate-limiter] ${upstashInitError}`);
+  }
 }
 
 /**
@@ -484,4 +504,137 @@ export function getRateLimitStats(): {
     type: upstashRatelimit ? "upstash" : "in-memory",
     endpointsConfigured: Object.keys(ENDPOINT_RATE_LIMITS).filter(k => k !== "default"),
   };
+}
+
+// ============================================
+// BETA CODE QUOTA TRACKING (LIFETIME LIMITS)
+// ============================================
+
+/**
+ * Beta quota configuration - PERMANENT lifetime limits per code
+ * All features limited to 2 uses per beta code for consistency
+ */
+const BETA_LIMITS = {
+  upload: 2,        // parse-resume.ts (PDF/DOCX parsing with OCR)
+  extract: 2,       // extract-resume-json.ts (Gemini-only parsing)
+  match: 2,         // ai-match.ts (TF-IDF + cosine similarity)
+  optimize: 2,      // optimize.ts (Flash model optimization)
+  predict: 2,       // predict-questions.ts (interview prep)
+  coverLetter: 2,   // generate-cover-letter.ts (Flash model)
+  batch: 2,         // batch-api.ts (bulk processing)
+} as const;
+
+/**
+ * Valid beta codes (must match frontend AuthGate.tsx)
+ */
+const VALID_BETA_CODES = [
+  'WATHEQ01', 'TAMKEEN2', 'INJAZ026', 'RIYADH26', 'JEDDAH26',
+  'DAMMAM26', 'NEOM2026', 'SAUDIA26', 'ARAMCO26', 'VISION30'
+];
+
+export type BetaAction = 'upload' | 'extract' | 'match' | 'optimize' | 'predict' | 'coverLetter' | 'batch';
+
+export interface BetaQuotaStatus {
+  allowed: boolean;
+  used: number;
+  limit: number;
+  remaining: number;
+  error?: string;
+}
+
+/**
+ * Check if beta code has remaining quota for action
+ * Uses Upstash Redis for persistent lifetime tracking
+ */
+export async function checkBetaQuota(
+  betaCode: string,
+  action: BetaAction
+): Promise<BetaQuotaStatus> {
+  // Validate beta code
+  if (!betaCode || !VALID_BETA_CODES.includes(betaCode.toUpperCase())) {
+    return {
+      allowed: false,
+      used: 0,
+      limit: 0,
+      remaining: 0,
+      error: 'Invalid beta code'
+    };
+  }
+
+  const normalizedCode = betaCode.toUpperCase();
+  const redis = getRedisClient();
+  const limit = BETA_LIMITS[action];
+
+  // Fail closed if Upstash unavailable (prevents unlimited access during outages)
+  if (!redis) {
+    console.error('[beta-quota] Upstash not configured - denying beta access');
+    return {
+      allowed: false,
+      used: 0,
+      limit,
+      remaining: 0,
+      error: 'Quota service unavailable. Please try again later.'
+    };
+  }
+
+  try {
+    const key = `beta:${normalizedCode}:${action}`;
+
+    // Get current usage count (returns null if key doesn't exist)
+    const currentUsage = await redis.get(key);
+    const used = currentUsage ? parseInt(String(currentUsage), 10) : 0;
+
+    const allowed = used < limit;
+    const remaining = Math.max(0, limit - used);
+
+    console.log(`[beta-quota] Code: ${normalizedCode}, Action: ${action}, Used: ${used}/${limit}, Allowed: ${allowed}`);
+
+    return {
+      allowed,
+      used,
+      limit,
+      remaining,
+    };
+
+  } catch (err) {
+    console.error('[beta-quota] Error checking quota:', err);
+    // Fail open to prevent service disruption if quota check fails
+    return {
+      allowed: true,
+      used: 0,
+      limit,
+      remaining: limit,
+    };
+  }
+}
+
+/**
+ * Consume one quota unit for beta code action
+ * Should only be called AFTER successful operation completion
+ */
+export async function consumeBetaQuota(
+  betaCode: string,
+  action: BetaAction
+): Promise<void> {
+  const normalizedCode = betaCode.toUpperCase();
+  const redis = getRedisClient();
+
+  if (!redis) {
+    console.warn('[beta-quota] Cannot consume quota - Upstash not configured');
+    return;
+  }
+
+  try {
+    const key = `beta:${normalizedCode}:${action}`;
+
+    // Atomic increment - prevents race conditions if user makes parallel requests
+    const newCount = await redis.incr(key);
+
+    console.log(`[beta-quota] Consumed quota for ${normalizedCode}:${action} -> ${newCount}/${BETA_LIMITS[action]}`);
+
+  } catch (err) {
+    console.error('[beta-quota] Error consuming quota:', err);
+    // Log error but don't throw - we don't want to fail the user's request
+    // if quota tracking fails after successful operation
+  }
 }

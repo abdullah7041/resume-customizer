@@ -12,7 +12,14 @@ const mockResumeText = {
 };
 
 const mockRateLimiter = {
-    withRateLimit: (_name: string, handler: Function) => handler
+    withRateLimit: (_name: string, handler: Function) => handler,
+    checkBetaQuota: vi.fn().mockResolvedValue({
+        allowed: true,
+        used: 0,
+        limit: 2,
+        remaining: 2
+    }),
+    consumeBetaQuota: vi.fn().mockResolvedValue(undefined)
 };
 
 const mockSentry = {
@@ -31,6 +38,9 @@ global.fetch = mockFetch;
 
 // Import handler
 const { handler } = await import('../parse-resume');
+
+// Test beta code header
+const TEST_HEADERS = { 'X-Beta-Code': 'WATHEQ01' };
 
 // Helper to create mock context
 const createMockContext = (): HandlerContext => ({
@@ -80,6 +90,7 @@ describe('parse-resume function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ kind: 'text', value: text })
             } as Partial<HandlerEvent>;
 
@@ -101,6 +112,7 @@ describe('parse-resume function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ kind: 'text', value: text })
             } as Partial<HandlerEvent>;
 
@@ -124,6 +136,7 @@ describe('parse-resume function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({
                     kind: 'file',
                     name: 'test.pdf',
@@ -142,6 +155,7 @@ describe('parse-resume function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({
                     kind: 'file',
                     name: 'large.pdf',
@@ -183,6 +197,7 @@ describe('parse-resume function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({
                     kind: 'file',
                     name: 'scanned.pdf',
@@ -217,6 +232,7 @@ describe('parse-resume function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({
                     kind: 'file',
                     name: 'scanned.pdf',

@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Upload, Target, Sparkles, Download, Check, ChevronLeft, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Upload, Target, Sparkles, Download, Check, ChevronLeft, X, GripVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { cn } from '../../lib/utils/cn';
@@ -9,6 +9,34 @@ interface UserProgressNavProps {
     className?: string;
 }
 
+const STORAGE_KEY = 'workflow-panel-position';
+
+interface Position {
+    x: number;
+    y: number;
+}
+
+function getInitialPosition(): Position {
+    if (typeof window === 'undefined') return { x: 0, y: 0 };
+
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Validate the position is still within viewport
+            const maxX = window.innerWidth - 288; // 72rem = 288px panel width
+            const maxY = window.innerHeight - 200; // Approximate panel height
+            return {
+                x: Math.min(Math.max(0, parsed.x), maxX),
+                y: Math.min(Math.max(0, parsed.y), maxY)
+            };
+        }
+    } catch {
+        // Ignore parse errors
+    }
+    return { x: 0, y: 0 }; // Defaults to CSS positioning
+}
+
 export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavProps) {
     const { t } = useTranslation();
     const originalResume = useResumeStore((state) => state.originalResume);
@@ -16,6 +44,12 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     const optimizations = useResumeStore((state) => state.optimizations);
     const hasDownloaded = useResumeStore((state) => state.hasDownloaded);
     const [isMinimized, setIsMinimized] = useState(true);
+
+    // Drag state
+    const [position, setPosition] = useState<Position>(getInitialPosition);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragRef = useRef<HTMLDivElement>(null);
+    const dragStartRef = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number } | null>(null);
 
     // Derive current step
     const hasResume = !!originalResume;
@@ -39,6 +73,68 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
         }
         setIsMinimized(false);
     }, [currentStepIndex]);
+
+    // Save position to localStorage when it changes
+    useEffect(() => {
+        if (position.x !== 0 || position.y !== 0) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
+        }
+    }, [position]);
+
+    // Drag handlers
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (mode !== 'fixed') return;
+        e.preventDefault();
+        setIsDragging(true);
+        dragStartRef.current = {
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            posX: position.x,
+            posY: position.y
+        };
+    }, [mode, position]);
+
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!isDragging || !dragStartRef.current) return;
+
+        const deltaX = e.clientX - dragStartRef.current.mouseX;
+        const deltaY = e.clientY - dragStartRef.current.mouseY;
+
+        const newX = dragStartRef.current.posX + deltaX;
+        const newY = dragStartRef.current.posY + deltaY;
+
+        // Constrain to viewport
+        const maxX = window.innerWidth - 288;
+        const maxY = window.innerHeight - 100;
+
+        setPosition({
+            x: Math.min(Math.max(-window.innerWidth + 320, newX), maxX),
+            y: Math.min(Math.max(-80, newY), maxY)
+        });
+    }, [isDragging]);
+
+    const handleMouseUp = useCallback(() => {
+        setIsDragging(false);
+        dragStartRef.current = null;
+    }, []);
+
+    // Add/remove global mouse listeners
+    useEffect(() => {
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                window.removeEventListener('mousemove', handleMouseMove);
+                window.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isDragging, handleMouseMove, handleMouseUp]);
+
+    // Reset position handler
+    const handleResetPosition = useCallback(() => {
+        setPosition({ x: 0, y: 0 });
+        localStorage.removeItem(STORAGE_KEY);
+    }, []);
 
     const steps = [
         {
@@ -73,7 +169,12 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
 
     if (isMinimized && mode === 'fixed') {
         return (
-            <div className="fixed top-24 right-4 z-50 hidden md:block">
+            <div
+                className="fixed top-24 right-4 z-50 hidden md:block"
+                style={{
+                    transform: `translate(${position.x}px, ${position.y}px)`
+                }}
+            >
                 <button
                     onClick={() => setIsMinimized(false)}
                     className={cn(
@@ -94,9 +195,21 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                 mode === 'inline' ? "h-full" : ""
             )}
         >
-            {/* Header */}
-            <div className="flex items-center justify-between bg-gradient-to-r from-emerald-900/80 to-emerald-900/40 px-4 py-3 border-b border-emerald-500/20">
+            {/* Header - Draggable */}
+            <div
+                ref={dragRef}
+                onMouseDown={handleMouseDown}
+                onDoubleClick={mode === 'fixed' ? handleResetPosition : undefined}
+                className={cn(
+                    "flex items-center justify-between bg-gradient-to-r from-emerald-900/80 to-emerald-900/40 px-4 py-3 border-b border-emerald-500/20",
+                    mode === 'fixed' && "cursor-grab select-none",
+                    isDragging && "cursor-grabbing"
+                )}
+            >
                 <h3 className="flex items-center gap-2 text-sm font-bold text-emerald-100">
+                    {mode === 'fixed' && (
+                        <GripVertical className="h-4 w-4 text-emerald-400/50 flex-shrink-0" />
+                    )}
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-400/30">
                         <Check className="h-3.5 w-3.5 text-emerald-400" />
                     </div>
@@ -169,7 +282,17 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
 
     if (mode === 'fixed') {
         return (
-            <div className={cn("fixed top-24 right-4 z-50 hidden w-72 md:block", className)}>
+            <div
+                className={cn(
+                    "fixed top-24 right-4 z-50 hidden w-72 md:block transition-shadow",
+                    isDragging && "shadow-2xl",
+                    className
+                )}
+                style={{
+                    transform: `translate(${position.x}px, ${position.y}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+                }}
+            >
                 {content}
             </div>
         );

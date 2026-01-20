@@ -33,7 +33,9 @@
       "Bash(claude mcp tools:*)",
       "Bash(claude mcp:*)",
       "mcp__supabase__execute_sql",
-      "Bash(npm run lint:fix:*)"
+      "Bash(npm run lint:fix:*)",
+      "Bash(npm ls:*)",
+      "Bash(tee:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

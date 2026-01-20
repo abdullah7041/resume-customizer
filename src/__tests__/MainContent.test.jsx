@@ -121,6 +121,25 @@ describe("MainContent resume parsing", () => {
       bullets: [],
       sections: [],
     });
+
+    // Mock localStorage with beta code while preserving normal localStorage behavior
+    const storage = {};
+    const localStorageMock = {
+      getItem: vi.fn((key) => {
+        if (key === 'watheq:beta_access') return 'WATHEQ01';
+        return storage[key] || null;
+      }),
+      setItem: vi.fn((key, value) => {
+        storage[key] = value;
+      }),
+      removeItem: vi.fn((key) => {
+        delete storage[key];
+      }),
+      clear: vi.fn(() => {
+        Object.keys(storage).forEach(key => delete storage[key]);
+      }),
+    };
+    global.localStorage = localStorageMock;
   });
 
   it("passes upload payloads through parseResume with storage metadata", async () => {
@@ -173,12 +192,12 @@ describe("MainContent resume parsing", () => {
       plainText: "Resume with \x09 tab and \x0A newline and maybe one \x00 null byte",
       sections: [],
     };
-    localStorage.setItem("airo:resumeData", JSON.stringify(resumeData));
+    localStorage.setItem("watheq:resumeData", JSON.stringify(resumeData));
     const removeItemSpy = vi.spyOn(Storage.prototype, "removeItem");
 
     render(<MainContent />);
 
-    expect(removeItemSpy).not.toHaveBeenCalledWith("airo:resumeData");
+    expect(removeItemSpy).not.toHaveBeenCalledWith("watheq:resumeData");
     // Verify that the data was loaded into the component (by checking if ResumeUpload received it)
     expect(resumeUploadMockProps.current.resumeDocument).toEqual(resumeData);
 

@@ -12,14 +12,14 @@
   --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 60%);
 
   /* Brand accents */
-  --accent: #0f766e;
-  --accent-royal: #075951;
+  --accent: #005a2b;
+  --accent-royal: #004d25;
   --accent-magenta: #34d399;
-  --secondary: #0ea472;
-  --emerald-700: #0d8f72;
-  --emerald-900: #0a5d4a;
-  --accent-gold: #f4d37d;
-  --accent-gold-soft: rgba(244, 211, 125, 0.2);
+  --secondary: #006C35;
+  --emerald-700: #005028;
+  --emerald-900: #00361b;
+  --accent-gold: #c5a059;
+  --accent-gold-soft: rgba(197, 160, 89, 0.2);
 
   /* Panels */
   --panel-bg: color-mix(in oklab, rgba(7, 42, 44, 0.78), transparent 8%);
@@ -149,14 +149,14 @@
   --ink-muted: color-mix(in oklab, var(--ink), rgba(122, 189, 177, 0.42) 45%);
   --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 60%);
 
-  --accent: #0f766e;
-  --accent-royal: #075951;
+  --accent: #005a2b;
+  --accent-royal: #004d25;
   --accent-magenta: #34d399;
-  --secondary: #0ea472;
-  --emerald-700: #0d8f72;
-  --emerald-900: #0a5d4a;
-  --accent-gold: #f4d37d;
-  --accent-gold-soft: rgba(244, 211, 125, 0.2);
+  --secondary: #006C35;
+  --emerald-700: #005028;
+  --emerald-900: #00361b;
+  --accent-gold: #c5a059;
+  --accent-gold-soft: rgba(197, 160, 89, 0.2);
 
   --panel-bg: color-mix(in oklab, rgba(7, 42, 44, 0.78), transparent 8%);
   --panel-stroke: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 42%);

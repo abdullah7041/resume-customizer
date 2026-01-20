@@ -12,7 +12,14 @@ const mockResumeText = {
 };
 
 const mockRateLimiter = {
-    withRateLimit: (_name: string, handler: Function) => handler
+    withRateLimit: (_name: string, handler: Function) => handler,
+    checkBetaQuota: vi.fn().mockResolvedValue({
+        allowed: true,
+        used: 0,
+        limit: 2,
+        remaining: 2
+    }),
+    consumeBetaQuota: vi.fn().mockResolvedValue(undefined)
 };
 
 const mockSentry = {
@@ -44,7 +51,11 @@ describe('extract-resume-json function', () => {
 
     it('returns 500 if GEMINI_API_KEY is not set', async () => {
         delete process.env.GEMINI_API_KEY;
-        const event = { httpMethod: 'POST', body: '{}' } as Partial<HandlerEvent>;
+        const event = {
+            httpMethod: 'POST',
+            body: '{}',
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
+        } as Partial<HandlerEvent>;
         const result = await handler(event as any) as HandlerResponse;
         expect(result.statusCode).toBe(500);
         expect(result.body).toContain('Server configuration error');
@@ -60,7 +71,8 @@ describe('extract-resume-json function', () => {
 
         const event = {
             httpMethod: 'POST',
-            body: JSON.stringify({ kind: 'text', value: text })
+            body: JSON.stringify({ kind: 'text', value: text }),
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any) as HandlerResponse;
@@ -89,7 +101,8 @@ describe('extract-resume-json function', () => {
                 name: 'test.pdf',
                 data: Buffer.from('fake-pdf').toString('base64'),
                 mime: 'application/pdf'
-            })
+            }),
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any) as HandlerResponse;
@@ -114,7 +127,8 @@ describe('extract-resume-json function', () => {
                 kind: 'file',
                 name: 'scanned.pdf',
                 data: Buffer.from('image-pdf').toString('base64')
-            })
+            }),
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any) as HandlerResponse;
@@ -127,7 +141,8 @@ describe('extract-resume-json function', () => {
 
         const event = {
             httpMethod: 'POST',
-            body: JSON.stringify({ kind: 'text', value: 'test' })
+            body: JSON.stringify({ kind: 'text', value: 'test' }),
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any) as HandlerResponse;

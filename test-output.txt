@@ -1,0 +1,498 @@
+
+> resume-customizer@0.0.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.17 [39m[90mC:/Users/NoteBook Pc/Desktop/resume-customizer[39m
+
+ [31m❯[39m netlify/functions/__tests__/optimize.test.ts [2m([22m[2m11 tests[22m[2m | [22m[31m9 failed[39m[2m)[22m[32m 59[2mms[22m[39m
+       [32m✓[39m rejects GET requests with 405[32m 7[2mms[22m[39m
+[31m       [31m×[31m accepts POST requests[39m[32m 16[2mms[22m[39m
+[31m       [31m×[31m rejects missing resumeText with 400[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m rejects missing jobText with 400[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m rejects empty strings[39m[32m 3[2mms[22m[39m
+       [32m✓[39m rejects malformed JSON with error[32m 6[2mms[22m[39m
+[31m       [31m×[31m generates headline card when suggested_headline exists[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m generates summary card when summary_rewrite exists[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m generates experience cards from bullet_point_improvements[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m returns empty cards array when no optimizations exist[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m returns 500 when AI service fails[39m[32m 3[2mms[22m[39m
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mRendering[2m > [22m[2mrenders the section title
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mRendering[2m > [22m[2mrenders the optimize button
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mRendering[2m > [22m[2mrenders view mode toggle (Split and Diff)
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mRendering[2m > [22m[2mrenders section filter tabs
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mRendering[2m > [22m[2mrenders keyword strategy section
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mRendering[2m > [22m[2mshows empty state when no optimizations
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mResume Requirement[2m > [22m[2mshows warning when no resume is uploaded
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mResume Requirement[2m > [22m[2mdisables optimize button when no resume
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mResume Requirement[2m > [22m[2menables optimize button when resume exists
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mKeywords Display[2m > [22m[2mdisplays "add" keywords when available
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mKeywords Display[2m > [22m[2mdisplays "keep" keywords when available
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mKeywords Display[2m > [22m[2mdisplays "deemphasize" keywords when available
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mKeywords Display[2m > [22m[2mshows empty state when keyword bucket is empty
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mKeywords Display[2m > [22m[2muses props keywords when store keywords are empty
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mOptimization Cards Display[2m > [22m[2mdisplays optimization cards when available
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mOptimization Cards Display[2m > [22m[2mshows applied badge when optimization is applied
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mOptimization Cards Display[2m > [22m[2mshows pending badge when optimization is not applied
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mOptimization Cards Display[2m > [22m[2mdisplays applied count correctly
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mSection Filtering[2m > [22m[2mfilters optimizations by section type
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mSection Filtering[2m > [22m[2mshows all optimizations when "All Sections" is selected
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mView Mode Toggle[2m > [22m[2mtoggles between split and diff view modes
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mApply/Revert Actions[2m > [22m[2mcalls applyOptimization when card Apply button is clicked
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mApply/Revert Actions[2m > [22m[2mhas no per-card revert button - only Revert All is available
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mApply/Revert Actions[2m > [22m[2mcalls applyAllOptimizations when Apply All is clicked
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+ [31m❯[39m src/__tests__/MainContent.test.jsx [2m([22m[2m3 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1522[2mms[22m[39m
+     [33m[2m✓[22m[39m passes upload payloads through parseResume with storage metadata [33m 866[2mms[22m[39m
+     [33m[2m✓[22m[39m supports text payloads [33m 335[2mms[22m[39m
+[31m     [31m×[31m persists resume data with minor control characters (relaxed validation)[39m[33m 313[2mms[22m[39m
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mApply/Revert Actions[2m > [22m[2mcalls revertAllOptimizations when Revert is clicked
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mClear Functionality[2m > [22m[2mcalls onClear prop when clear button is clicked
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mClear Functionality[2m > [22m[2mclears optimizations via store when onClear prop not provided
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mAPI Integration[2m > [22m[2mcalls optimize API when generate button is clicked
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mtrue[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mAPI Integration[2m > [22m[2mhandles API error gracefully (button becomes non-loading)
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mtrue[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mCard Expansion[2m > [22m[2mtoggles card expansion when chevron is clicked
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mCompare Mode[2m > [22m[2mshows compare view when compare button is clicked
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mAccessibility[2m > [22m[2mall interactive elements are accessible via keyboard
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mAccessibility[2m > [22m[2msection tabs are keyboard navigable
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mRTL Support[2m > [22m[2mrenders correctly with RTL direction
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimizeSection[2m > [22m[2mImpact Summary[2m > [22m[2mdoes not show impact summary on initial load with existing optimizations
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimization Card Types[2m > [22m[2mdisplays headline optimization correctly
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimization Card Types[2m > [22m[2mdisplays experience optimization with index
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+[90mstdout[2m | src/__tests__/OptimizeSection.test.jsx[2m > [22m[2mOptimization Card Types[2m > [22m[2mdisplays skills optimization with info tooltip
+[22m[39m[OptimizeSection] Cache lookup: {
+  hasResumeText: [33mfalse[39m,
+  hasJobDescription: [33mfalse[39m,
+  cachedScore: [90mundefined[39m,
+  fallbackScore: [1mnull[22m
+}
+
+ [32m✓[39m src/__tests__/OptimizeSection.test.jsx [2m([22m[2m38 tests[22m[2m)[22m[33m 6585[2mms[22m[39m
+       [33m[2m✓[22m[39m renders the section title [33m 339[2mms[22m[39m
+       [33m[2m✓[22m[39m displays optimization cards when available [33m 497[2mms[22m[39m
+       [33m[2m✓[22m[39m filters optimizations by section type [33m 329[2mms[22m[39m
+       [33m[2m✓[22m[39m shows all optimizations when "All Sections" is selected [33m 486[2mms[22m[39m
+       [33m[2m✓[22m[39m calls applyAllOptimizations when Apply All is clicked [33m 371[2mms[22m[39m
+ [32m✓[39m src/__tests__/TemplatesSection.test.jsx [2m([22m[2m21 tests[22m[2m)[22m[33m 3138[2mms[22m[39m
+       [33m[2m✓[22m[39m renders the template gallery with selected template name [33m 357[2mms[22m[39m
+       [33m[2m✓[22m[39m disables download button when no resume data [33m 338[2mms[22m[39m
+ [32m✓[39m src/services/exportPdf.test.js [2m([22m[2m7 tests[22m[2m)[22m[33m 676[2mms[22m[39m
+     [33m[2m✓[22m[39m throws in non-browser environments [33m 630[2mms[22m[39m
+ [32m✓[39m src/__tests__/ResumeUpload.test.jsx [2m([22m[2m3 tests[22m[2m)[22m[33m 671[2mms[22m[39m
+     [33m[2m✓[22m[39m renders the Saudi-inspired upload card [33m 351[2mms[22m[39m
+ [32m✓[39m src/__tests__/JobMatch.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 701[2mms[22m[39m
+     [33m[2m✓[22m[39m renders analysis results with Saudi styling [33m 621[2mms[22m[39m
+ [32m✓[39m netlify/functions/__tests__/ai-integration.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 505[2mms[22m[39m
+       [33m[2m✓[22m[39m validates input schema [33m 392[2mms[22m[39m
+ [32m✓[39m src/lib/assets.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 131[2mms[22m[39m
+[90mstdout[2m | netlify/functions/__tests__/parse-resume.test.ts[2m > [22m[2mparse-resume function[2m > [22m[2mtext parsing[2m > [22m[2mprocesses valid text input
+[22m[39m=========== PARSE RESUME DEBUG ===========
+[parse-resume] Extraction method: Standard PDF/DOCX parsing
+[parse-resume] Raw text length: 26 characters
+[parse-resume] Extraction quality: 7.2%
+[parse-resume] Warnings: Text quality is low. Ensure you've pasted the complete resume content.
+[parse-resume] First 200 chars: "John Doe
+Software Engineer"
+[parse-resume] Text preview (cleaned): "John Doe Software Engineer"
+[parse-resume] Normalized plainText length: 26 characters
+[parse-resume] Bullets extracted: 0
+[parse-resume] Sections extracted: 0
+==========================================
+
+[90mstdout[2m | netlify/functions/__tests__/parse-resume.test.ts[2m > [22m[2mparse-resume function[2m > [22m[2mtext parsing[2m > [22m[2mwarns about low quality input
+[22m[39m=========== PARSE RESUME DEBUG ===========
+[parse-resume] Extraction method: Standard PDF/DOCX parsing
+[parse-resume] Raw text length: 9 characters
+[parse-resume] Extraction quality: 3.6%
+[parse-resume] Warnings: Text quality is low. Ensure you've pasted the complete resume content.
+[parse-resume] First 200 chars: "Too short"
+[parse-resume] Text preview (cleaned): "Too short"
+[parse-resume] Normalized plainText length: 9 characters
+[parse-resume] Bullets extracted: 0
+[parse-resume] Sections extracted: 0
+==========================================
+
+[90mstdout[2m | netlify/functions/__tests__/parse-resume.test.ts[2m > [22m[2mparse-resume function[2m > [22m[2mfile parsing[2m > [22m[2msuccessfully parses valid PDF file
+[22m[39m=========== PARSE RESUME DEBUG ===========
+[parse-resume] Extraction method: Standard PDF/DOCX parsing
+[parse-resume] Raw text length: 88 characters
+[parse-resume] Extraction quality: 9.1%
+[parse-resume] Warnings: Text extraction quality is low. Consider uploading a text-based PDF or pasting content directly.
+[parse-resume] First 200 chars: "Valid resume content with significant length and keywords like experience and education."
+[parse-resume] Text preview (cleaned): "Valid resume content with significant length and keywords like experience and education."
+[parse-resume] Normalized plainText length: 88 characters
+[parse-resume] Bullets extracted: 0
+[parse-resume] Sections extracted: 0
+==========================================
+
+[90mstdout[2m | netlify/functions/__tests__/parse-resume.test.ts[2m > [22m[2mparse-resume function[2m > [22m[2mOCR fallback[2m > [22m[2mattempts OCR when text extraction is low quality
+[22m[39m[parse-resume] Low quality extraction detected, attempting OCR fallback
+
+[90mstdout[2m | netlify/functions/__tests__/parse-resume.test.ts[2m > [22m[2mparse-resume function[2m > [22m[2mOCR fallback[2m > [22m[2mattempts OCR when text extraction is low quality
+[22m[39m=========== PARSE RESUME DEBUG ===========
+[parse-resume] Extraction method: DeepSeek OCR
+[parse-resume] Raw text length: 45 characters
+[parse-resume] Extraction quality: 5.8%
+[parse-resume] Warnings: OCR was used due to poor standard extraction. Quality may vary.
+[parse-resume] First 200 chars: "OCR Name
+
+
+SUMMARY
+Recovered summary from OCR"
+[parse-resume] Text preview (cleaned): "OCR Name SUMMARY Recovered summary from OCR"
+[parse-resume] Normalized plainText length: 44 characters
+[parse-resume] Bullets extracted: 0
+[parse-resume] Sections extracted: 0
+==========================================
+
+[90mstdout[2m | netlify/functions/__tests__/parse-resume.test.ts[2m > [22m[2mparse-resume function[2m > [22m[2mOCR fallback[2m > [22m[2mfalls back to original text if OCR fails
+[22m[39m[parse-resume] Low quality extraction detected, attempting OCR fallback
+
+[90mstdout[2m | netlify/functions/__tests__/parse-resume.test.ts[2m > [22m[2mparse-resume function[2m > [22m[2mOCR fallback[2m > [22m[2mfalls back to original text if OCR fails
+[22m[39m=========== PARSE RESUME DEBUG ===========
+[parse-resume] Extraction method: Standard PDF/DOCX parsing
+[parse-resume] Raw text length: 25 characters
+[parse-resume] Extraction quality: 7.2%
+[parse-resume] Warnings: Text extraction quality is low. Consider uploading a text-based PDF or pasting content directly.
+[parse-resume] First 200 chars: "Garbled extraction result"
+[parse-resume] Text preview (cleaned): "Garbled extraction result"
+[parse-resume] Normalized plainText length: 25 characters
+[parse-resume] Bullets extracted: 0
+[parse-resume] Sections extracted: 0
+==========================================
+
+ [32m✓[39m netlify/functions/__tests__/parse-resume.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 195[2mms[22m[39m
+ [32m✓[39m src/__tests__/useAuth.test.jsx [2m([22m[2m1 test[22m[2m)[22m[32m 127[2mms[22m[39m
+ [32m✓[39m netlify/functions/__tests__/resume-schemas.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m✓[39m src/lib/utils/__tests__/vision2030Analyzer.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+ [32m✓[39m src/__tests__/supabase.test.js [2m([22m[2m13 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+ [32m✓[39m src/services/api.test.js [2m([22m[2m4 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+[90mstdout[2m | src/lib/utils/__tests__/resumeUtils.test.ts[2m > [22m[2mresumeUtils[2m > [22m[2mmergeResumeData[2m > [22m[2mskills gap analysis[2m > [22m[2mdoes NOT auto-inject missing keywords (recommend only policy)
+[22m[39m[mergeResumeData] Recommended skills (not added): [ [32m'React'[39m, [32m'TypeScript'[39m, [32m'AWS'[39m ]
+
+[90mstdout[2m | src/lib/utils/__tests__/resumeUtils.test.ts[2m > [22m[2mresumeUtils[2m > [22m[2mmergeResumeData[2m > [22m[2mskills gap analysis[2m > [22m[2mdoes NOT create Recommended Skills category
+[22m[39m[mergeResumeData] Recommended skills (not added): [ [32m'NewSkill'[39m ]
+
+ [32m✓[39m src/lib/utils/__tests__/resumeUtils.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mhandles direct text input
+[22m[39m[extract-resume-json] Received request. Method: POST
+[extract-resume-json] Payload kind: text, Data length: N/A
+[extract-resume-json] Calling parseResumeOnly with text...
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mhandles direct text input
+[22m[39m[extract-resume-json] DEBUG: typeof analysis.plainText: undefined
+[extract-resume-json] DEBUG: analysis.plainText preview: [90mundefined[39m
+[extract-resume-json] DEBUG: typeof analysis.meta?.raw_text: string
+[extract-resume-json] DEBUG: geminiPlainText length after safeStringify: [33m26[39m
+[extract-resume-json] Final plainText length: 26 chars
+[extract-resume-json] Source: pre-extracted-fallback
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mhandles file input with pre-extraction success
+[22m[39m[extract-resume-json] Received request. Method: POST
+[extract-resume-json] Payload kind: file, Data length: 12
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mhandles file input with pre-extraction success
+[22m[39m[extract-resume-json] Pre-extracted text length: 17 chars
+[extract-resume-json] Pre-extracted preview: "Valid PDF Content"
+[extract-resume-json] Calling parseResumeOnly with PDF data (fallback)...
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mhandles file input with pre-extraction success
+[22m[39m[extract-resume-json] parseResumeOnly returned success.
+[extract-resume-json] DEBUG: typeof analysis.plainText: undefined
+[extract-resume-json] DEBUG: analysis.plainText preview: [90mundefined[39m
+[extract-resume-json] DEBUG: typeof analysis.meta?.raw_text: string
+[extract-resume-json] DEBUG: geminiPlainText length after safeStringify: [33m17[39m
+[extract-resume-json] Final plainText length: 17 chars
+[extract-resume-json] Source: pre-extracted-fallback
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mfails gracefully when Gemini returns placeholder
+[22m[39m[extract-resume-json] Received request. Method: POST
+[extract-resume-json] Payload kind: file, Data length: 12
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mfails gracefully when Gemini returns placeholder
+[22m[39m[extract-resume-json] Pre-extracted text length: 0 chars
+[extract-resume-json] Calling parseResumeOnly with PDF data (fallback)...
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mfails gracefully when Gemini returns placeholder
+[22m[39m[extract-resume-json] parseResumeOnly returned success.
+[extract-resume-json] DEBUG: typeof analysis.plainText: string
+[extract-resume-json] DEBUG: analysis.plainText preview: Please provide the resume text
+[extract-resume-json] DEBUG: typeof analysis.meta?.raw_text: string
+[extract-resume-json] DEBUG: geminiPlainText length after safeStringify: [33m30[39m
+
+[90mstdout[2m | netlify/functions/__tests__/extract-resume-json.test.ts[2m > [22m[2mextract-resume-json function[2m > [22m[2mhandles Gemini API errors
+[22m[39m[extract-resume-json] Received request. Method: POST
+[extract-resume-json] Payload kind: text, Data length: N/A
+[extract-resume-json] Calling parseResumeOnly with text...
+
+ [32m✓[39m netlify/functions/__tests__/extract-resume-json.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+ [32m✓[39m src/lib/utils/__tests__/normalize-resume.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m src/lib/utils/__tests__/textMatcher.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m src/__tests__/resumeText.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m src/__tests__/matchScore.fixture.test.js [2m([22m[2m7 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m src/lib/stores/resumeStore.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m src/__tests__/smoke.test.jsx [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m21 passed[39m[22m[90m (23)[39m
+[2m      Tests [22m [1m[31m10 failed[39m[22m[2m | [22m[1m[32m273 passed[39m[22m[90m (283)[39m
+[2m   Start at [22m 21:22:04
+[2m   Duration [22m 48.66s[2m (transform 7.50s, setup 16.66s, import 17.86s, tests 14.96s, environment 68.65s)[22m
+

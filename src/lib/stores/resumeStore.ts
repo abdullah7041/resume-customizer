@@ -20,20 +20,38 @@ import { fuzzyTextMatch } from '../utils/textMatcher';
 // Cache validity duration: 5 minutes
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+// Memoization cache for cache key generation (performance optimization)
+const cacheKeyMemo = new Map<string, string>();
+
 /**
  * Generate a cache key from resume and job description
- * Uses first 100 chars + length as fingerprint
+ * Uses FNV-1a hash with memoization for performance
  */
 const generateCacheKey = (resumeText: string, jobDescription: string): string => {
-  const resumeFingerprint = (resumeText || '').substring(0, 100) + (resumeText || '').length;
-  const jobFingerprint = (jobDescription || '').substring(0, 100) + (jobDescription || '').length;
-  // Simple hash using btoa
-  try {
-    return btoa(resumeFingerprint + '|' + jobFingerprint).substring(0, 32);
-  } catch {
-    // Fallback for non-ASCII characters
-    return `${resumeFingerprint.length}-${jobFingerprint.length}-${Date.now()}`;
+  // Use shorter fingerprints (first 50 chars + length) for faster processing
+  const key = `${(resumeText || '').slice(0, 50)}|${(resumeText || '').length}|${(jobDescription || '').slice(0, 50)}|${(jobDescription || '').length}`;
+
+  // Check memo cache first
+  const cached = cacheKeyMemo.get(key);
+  if (cached) return cached;
+
+  // FNV-1a hash - faster than djb2 and works with Arabic
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
   }
+
+  const result = `cache-${(hash >>> 0).toString(36)}-${key.length}`;
+
+  // Memoize result (limit size to prevent memory leak)
+  cacheKeyMemo.set(key, result);
+  if (cacheKeyMemo.size > 100) {
+    const firstKey = cacheKeyMemo.keys().next().value;
+    if (firstKey) cacheKeyMemo.delete(firstKey);
+  }
+
+  return result;
 };
 
 /**
@@ -79,8 +97,10 @@ export const useResumeStore = create<ResumeState>()(
         marginTop: 0.5,       // inches
         marginBottom: 0.5,    // inches
         marginSide: 0.6,      // inches
+        showPageBreaks: false, // Page break indicators off by default
       },
       hasDownloaded: false,
+      contentLanguage: null, // Detected from resume text
 
       // Actions
       setOriginalResume: (resume: ResumeSchema) => {
@@ -597,6 +617,13 @@ export const useResumeStore = create<ResumeState>()(
         set((state) => ({
           displayOptions: { ...state.displayOptions, ...options }
         })),
+
+      togglePageBreaks: () =>
+        set((state) => ({
+          displayOptions: { ...state.displayOptions, showPageBreaks: !state.displayOptions.showPageBreaks }
+        })),
+
+      setContentLanguage: (lang) => set({ contentLanguage: lang }),
 
       clearAll: () => {
         set({

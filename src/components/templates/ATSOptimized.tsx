@@ -1,6 +1,7 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
 import { useDirection } from '../providers/DirectionProvider';
+import { useSectionLabel } from '../../hooks/useSectionLabel';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -27,6 +28,7 @@ export function ATSOptimized({
     fontScale = 1,
     displayOptions,
 }: TemplateProps) {
+    const getSectionLabel = useSectionLabel();
     const { isRTL } = useDirection();
 
     // Merge displayOptions with defaults
@@ -87,7 +89,7 @@ export function ATSOptimized({
                 padding: marginPadding,
                 transform: `scale(${scale})`,
                 transformOrigin: 'top left',
-                direction: isRTL ? 'rtl' : 'ltr',
+                direction: 'ltr', // Always LTR for resume content
                 fontFamily: opts.fontFamily,
                 fontSize: `${opts.baseFontSize}pt`,
                 lineHeight: String(opts.lineHeight),
@@ -113,7 +115,7 @@ export function ATSOptimized({
             {basics?.summary && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        Professional Summary
+                        {getSectionLabel('summary')}
                     </h2>
                     <p className="leading-relaxed" style={{ fontSize: fs(10.5) }}>{basics.summary}</p>
                 </section>
@@ -123,7 +125,7 @@ export function ATSOptimized({
             {allSkills.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        Core Competencies
+                        {getSectionLabel('coreCompetencies')}
                     </h2>
                     <p style={{ fontSize: fs(10.5) }}>
                         {allSkills.join(' • ')}
@@ -135,7 +137,7 @@ export function ATSOptimized({
             {work && work.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        Professional Experience
+                        {getSectionLabel('workExperience')}
                     </h2>
                     {work.map((job, index) => (
                         <div key={index} className="mb-4">
@@ -170,7 +172,7 @@ export function ATSOptimized({
             {projects && projects.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        Key Projects
+                        {getSectionLabel('keyProjects')}
                     </h2>
                     {projects.map((project, index) => (
                         <div key={index} className="mb-3">
@@ -197,7 +199,7 @@ export function ATSOptimized({
             {education && education.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        Education
+                        {getSectionLabel('education')}
                     </h2>
                     {education.map((edu, index) => (
                         <div key={index} className="mb-3">
@@ -234,7 +236,7 @@ export function ATSOptimized({
             {certificates && certificates.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        Certifications & Training
+                        {getSectionLabel('certificationsTraining')}
                     </h2>
                     <p style={{ fontSize: fs(10.5) }}>
                         {certificates.map(cert =>
@@ -248,7 +250,7 @@ export function ATSOptimized({
             {languages && languages.length > 0 && (
                 <section>
                     <h2 className="text-black" style={headingStyle}>
-                        Languages
+                        {getSectionLabel('languages')}
                     </h2>
                     <p style={{ fontSize: fs(10.5) }}>
                         {languages.map(lang =>

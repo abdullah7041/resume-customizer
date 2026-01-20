@@ -1,39 +1,74 @@
 ---
 name: vibe-coding
-description: Optimize for high-velocity, intent-driven development using agentic workflows, MCP servers, and AI-native stacks.
+description: High-velocity, intent-driven development using agentic workflows and MCP servers.
 ---
 
-# Vibe Coding Skill (2026 AI-Native Standard)
+# Vibe Coding Skill
 
-This skill enables Antigravity to operate as a high-velocity "Vibe Coder," focusing on expressing intent and orchestrating specialized AI behaviors to build complex systems rapidly.
+Operate as a high-velocity coder: express intent, orchestrate tools, build fast.
+
+## When to Use
+- Rapid prototyping
+- Intent-based requests ("make it feel modern")
+- Complex multi-step implementations
+- When user wants minimal back-and-forth
 
 ## 1. Core Principles
 
--   **Intent over Implementation**: Focus on describing the *vibe* and *outcome* (e.g., "Make the login feel like a sleek futuristic portal") rather than listing every CSS property.
--   **Agentic Orchestration**: Break complex requests into sub-tasks as if managing a team of specialized AI experts (Designer, Architect, Tester).
--   **Zero Friction**: Proactively resolve blockers using tools without asking for permission on trivial details.
+- **Intent over Implementation**: Focus on outcome, not every CSS property
+- **Agentic Orchestration**: Break complex tasks into sub-tasks
+- **Zero Friction**: Resolve trivial blockers proactively
 
-## 2. The Agentic Stack (2026)
+## 2. Tool Priority
 
-When this skill is active, you MUST prioritize using:
--   **MCP Servers**: Proactively search for and use MCP servers (e.g., `supabase-mcp-server`, `context7`) to interact with the environment.
--   **Vector-Native Features**: Use RAG patterns for complex code understanding or data retrieval.
--   **Spec-Driven Workflows**: Create implementation plans that define the "Spec" first, then let the "Vibe" drive the execution.
+| Tool | When to Use |
+|------|-------------|
+| `context7` | Always—verify library docs before coding |
+| `search_web` | Find "best-in-class" examples and trends |
+| `supabase-mcp-server` | Database operations, auth, storage |
+| `run_command` | Build, lint, test after significant changes |
 
-## 3. High-Engagement Interactions
+## 3. Engagement Patterns
 
-Every implementation should include:
--   **Micro-Onboarding**: Add subtle tooltips or coach marks to new features.
--   **Instant Feedback Loops**: Glowing buttons, success animations, and progress indicators.
--   **Personalization**: Suggest ways to make the UI adapt to user behavior.
+```tsx
+// Instant Feedback Example
+<button
+  onClick={handleSave}
+  className="btn-primary"
+  disabled={isSaving}
+>
+  {isSaving ? <Spinner /> : <CheckIcon />}
+  {isSaving ? 'Saving...' : 'Saved!'}
+</button>
 
-## 4. Automation & Tools
+// Micro-onboarding Tooltip
+<Tooltip content="Click here to get started">
+  <InfoIcon />
+</Tooltip>
+```
 
--   **context7**: Mandatory for every implementation to ensure up-to-date documentation.
--   **search_web**: Use to find "best-in-class" examples and 2026 design trends.
--   **Proactive Quality**: Run `npm run quality:check` (or equivalent) after every significant change without being asked.
+### Quick Wins
+- Glowing buttons on success
+- Progress indicators for async ops
+- Subtle tooltips for new features
+- Empty states that guide users
 
-## 5. Coding Style
+## 4. Automation
 
--   **Conciseness**: Prefer fewer lines of code. Use modern ES2026+ features.
--   **Self-Commenting Code**: Write code that "explains its own intent."
+After significant changes, run project quality checks if available:
+```bash
+# Check if script exists before running
+npm run lint 2>/dev/null || echo "No lint script"
+npm run build 2>/dev/null || echo "No build script"
+```
+
+## 5. Code Style
+
+- Prefer fewer lines of code
+- Use latest stable ES features
+- Self-documenting variable names
+- Extract repeated logic into helpers
+
+---
+
+> **Cross-reference**: See `best-practices` skill for UI/UX standards and research protocols.

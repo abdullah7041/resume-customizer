@@ -35,6 +35,7 @@
     }
   },
   "header": {
+    "feedback": "Your Feedback",
     "badge": "Designed for Saudi ambition",
     "heroTitle": "Watheq - AI Resume Optimizer",
     "heroDescription": "Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.",
@@ -833,7 +834,13 @@
         "download": "Download PDF",
         "ats": "ATS-Friendly",
         "styled": "Styled"
-      }
+      },
+      "pageBreak": "Page Break",
+      "showPageBreaks": "Show Page Breaks",
+      "resumeLanguage": "Resume Language",
+      "languageEnglish": "English",
+      "languageArabic": "Arabic",
+      "languageMixed": "Mixed"
     },
     "interview": {
       "title": "Interview",
@@ -984,5 +991,39 @@
     "submit": "Continue",
     "invalidCode": "Invalid access code. Please try again.",
     "welcome": "Welcome to the Beta!"
+  },
+  "quota": {
+    "title": "Beta Quota",
+    "features": {
+      "upload": "Upload",
+      "extract": "Extract Resume",
+      "match": "Match Analysis",
+      "optimize": "Optimize",
+      "predict": "Interview Prep",
+      "coverLetter": "Cover Letter",
+      "batch": "Batch Processing"
+    },
+    "refreshNote": "Quotas refresh when you enter a new beta code.",
+    "exhausted": "Exhausted",
+    "available": "Available"
+  },
+  "resume": {
+    "sections": {
+      "about": "About",
+      "summary": "Professional Summary",
+      "experience": "Experience",
+      "workExperience": "Professional Experience",
+      "projects": "Projects",
+      "keyProjects": "Key Projects",
+      "education": "Education",
+      "skills": "Skills",
+      "skillsExpertise": "Skills & Expertise",
+      "technicalSkills": "Technical Skills",
+      "coreCompetencies": "Core Competencies",
+      "languages": "Languages",
+      "certificates": "Certificates",
+      "certifications": "Certifications",
+      "certificationsTraining": "Certifications & Training"
+    }
   }
 }

@@ -7,7 +7,14 @@ vi.mock('../../lib/gemini-client', () => ({
 }));
 
 vi.mock('../../lib/rate-limiter', () => ({
-    withRateLimit: (_name: string, handler: Function) => handler
+    withRateLimit: (_name: string, handler: Function) => handler,
+    checkBetaQuota: vi.fn().mockResolvedValue({
+        allowed: true,
+        used: 0,
+        limit: 2,
+        remaining: 2
+    }),
+    consumeBetaQuota: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('../../lib/sentry', () => ({
@@ -19,6 +26,9 @@ import { optimizeResume } from '../../lib/gemini-client';
 
 // Import handler after mocks
 const { handler } = await import('../optimize');
+
+// Test beta code header
+const TEST_HEADERS = { 'X-Beta-Code': 'WATHEQ01' };
 
 // Helper to create mock context
 const createMockContext = (): HandlerContext => ({
@@ -54,6 +64,7 @@ describe('optimize function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test', jobText: 'test job' })
             } as Partial<HandlerEvent>;
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
@@ -65,6 +76,7 @@ describe('optimize function', () => {
         it('rejects missing resumeText with 400', async () => {
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ jobText: 'test job' })
             } as Partial<HandlerEvent>;
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
@@ -75,6 +87,7 @@ describe('optimize function', () => {
         it('rejects missing jobText with 400', async () => {
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test resume' })
             } as Partial<HandlerEvent>;
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
@@ -85,6 +98,7 @@ describe('optimize function', () => {
         it('rejects empty strings', async () => {
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: '', jobText: '' })
             } as Partial<HandlerEvent>;
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
@@ -94,6 +108,7 @@ describe('optimize function', () => {
         it('rejects malformed JSON with error', async () => {
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: 'not json'
             } as Partial<HandlerEvent>;
             // The function catches JSON parse errors but then re-throws when
@@ -112,6 +127,7 @@ describe('optimize function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -135,6 +151,7 @@ describe('optimize function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -159,6 +176,7 @@ describe('optimize function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -173,6 +191,7 @@ describe('optimize function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -190,6 +209,7 @@ describe('optimize function', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 

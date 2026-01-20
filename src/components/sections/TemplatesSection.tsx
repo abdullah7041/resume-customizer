@@ -1,11 +1,11 @@
 // src/components/sections/TemplatesSection.tsx
 // Resume template gallery with floating overlay template selector
 
-import { useState, useMemo, useLayoutEffect } from "react";
+import { useState, useMemo, useLayoutEffect, useRef, useCallback, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -15,6 +15,8 @@ import { GlassButton } from "../ui/GlassButton";
 import { LoadingMessages } from "../LoadingMessages";
 import { ManualDataEditor } from "../ui/ManualDataEditor";
 import { FormattingPanel } from "../ui/FormattingPanel";
+import { PageBreakOverlay, A4_PAGE_HEIGHT_PX } from "../ui/PageBreakIndicator";
+import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -74,6 +76,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [scale, setScale] = useState(1);
   const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
 
+  // Draggable template bar state
+  const [barPosition, setBarPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
+
   // Get resume data from store - subscribe to all relevant state for reactivity
   const {
     originalResume: storeOriginalResume,
@@ -81,7 +88,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     showOptimized,
     getActiveResume,
     setSelectedTemplate: setStoreTemplate,
+    displayOptions,
   } = useResumeStore();
+
+  // Detect resume content language
+  const contentLanguage = useResumeLanguage();
 
   // Determine if store has applied optimizations - THIS TAKES PRIORITY
   const hasAppliedOptimizations = optimizations.some(o => o.applied);
@@ -126,9 +137,16 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
     const handleResize = () => {
       const width = window.innerWidth;
-      if (width < 640) { // sm
-        setScale(0.55);
-      } else if (width < 768) { // md
+      // A4 width in pixels at 96 DPI = 210mm * 96 / 25.4 ≈ 793px
+      const a4WidthPx = 793;
+      // Account for padding (p-3 = 12px on each side = 24px total)
+      const availableWidth = width - 24;
+
+      if (width < 640) { // Mobile
+        // Scale to fit full A4 width within available viewport
+        const mobileScale = availableWidth / a4WidthPx;
+        setScale(Math.max(mobileScale, 0.35)); // Min 0.35 for very small screens
+      } else if (width < 768) { // Tablet
         setScale(0.75);
       } else {
         setScale(0.9); // Desktop: 90% scale for "fit" look with margins
@@ -156,6 +174,56 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     setIsManuallyZoomed(false);
     // Resetting manually zoomed flag will trigger the useLayoutEffect to re-calculate optimal scale
   };
+
+  // Drag handlers for moveable template bar
+  const handleDragStart = useCallback((e: ReactMouseEvent | ReactTouchEvent) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    dragRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initialX: barPosition.x,
+      initialY: barPosition.y,
+    };
+    setIsDragging(true);
+  }, [barPosition]);
+
+  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!dragRef.current || !isDragging) return;
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    const deltaX = clientX - dragRef.current.startX;
+    const deltaY = clientY - dragRef.current.startY;
+
+    setBarPosition({
+      x: dragRef.current.initialX + deltaX,
+      y: dragRef.current.initialY + deltaY,
+    });
+  }, [isDragging]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+    dragRef.current = null;
+  }, []);
+
+  // Attach global listeners when dragging
+  useLayoutEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchmove', handleDragMove);
+      window.addEventListener('touchend', handleDragEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleDragMove);
+        window.removeEventListener('mouseup', handleDragEnd);
+        window.removeEventListener('touchmove', handleDragMove);
+        window.removeEventListener('touchend', handleDragEnd);
+      };
+    }
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   // Download PDF using server-side Puppeteer (Netlify function)
   // Note: We now send pre-rendered HTML from the preview instead of resumeData
@@ -235,6 +303,15 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`)}
+              {contentLanguage && (
+                <span className="ms-2 px-2 py-0.5 bg-white/10 rounded text-xs font-medium">
+                  {contentLanguage === 'ar'
+                    ? t('sections.templates.languageArabic', 'العربية')
+                    : contentLanguage === 'mixed'
+                      ? t('sections.templates.languageMixed', 'Mixed')
+                      : t('sections.templates.languageEnglish', 'English')}
+                </span>
+              )}
             </p>
           </div>
 
@@ -262,18 +339,18 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
         </div>
 
-        {/* Zoom Controls Overlay */}
-        <div className="absolute top-24 right-6 z-30 flex flex-col gap-2 bg-black/60 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Zoom Controls Overlay - RTL aware: left in Arabic, right in LTR */}
+        <div className="absolute top-24 right-4 md:right-6 rtl:right-auto rtl:left-4 rtl:md:left-6 z-30 flex flex-col gap-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handleZoomIn}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
             title={t('common.zoomIn', 'Zoom In')}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
             title={t('common.zoomOut', 'Zoom Out')}
           >
             <ZoomOut className="w-4 h-4" />
@@ -281,7 +358,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           <div className="h-px bg-white/10 my-0.5" />
           <button
             onClick={handleResetZoom}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
             title={t('common.resetZoom', 'Reset Zoom')}
           >
             <RotateCcw className="w-4 h-4" />
@@ -307,128 +384,85 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             <FormattingPanel />
           </div>
 
-          {/* Resume Preview - Right Side */}
+          {/* Resume Preview - Right Side - Fit on screen, use zoom controls */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6">
             <div className="w-full flex justify-center pb-32 md:pb-20 pt-4">
-              {/* Dynamic Scale Wrapper */}
+              {/* Dynamic Scale Wrapper - centered and fit to viewport */}
               <div
                 dir="ltr"
-                className="relative bg-white shadow-2xl rounded-xl overflow-visible ring-1 ring-white/10 w-fit transition-transform duration-300 origin-top ease-out"
+                className="relative bg-white shadow-2xl rounded-xl overflow-visible ring-1 ring-white/10 transition-transform duration-300 origin-top ease-out mx-auto"
                 style={{
                   transform: `scale(${scale})`,
-                  maxWidth: 'min(210mm, 100vw)'
+                  width: '210mm',
+                  // Container takes scaled width to prevent clipping
+                  marginBottom: `calc((1 - ${scale}) * -50%)`,
                 }}
               >
+                {/* Page Break Indicators Overlay */}
+                {displayOptions.showPageBreaks && (
+                  <PageBreakOverlay contentHeight={A4_PAGE_HEIGHT_PX * 2} />
+                )}
                 <TemplateRenderer
                   template={selectedTemplate}
                   userData={displayData as unknown as Record<string, unknown>}
                 />
-
-                {/* Page Break Indicator - positioned at 297mm (A4 height) */}
-                <div
-                  className="absolute left-0 right-0 pointer-events-none z-20"
-                  style={{ top: '297mm' }}
-                >
-                  <div className="relative w-full flex items-center">
-                    {/* Dashed line spanning full width */}
-                    <div className="flex-1 border-t-2 border-dashed border-rose-500/70" />
-                    {/* Mobile-friendly label - centered on mobile, right on desktop */}
-                    <div className="absolute -top-3 md:-top-4 left-1/2 md:left-auto md:right-2 -translate-x-1/2 md:translate-x-0 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[9px] md:text-[11px] font-semibold px-2 md:px-3 py-0.5 md:py-1 rounded-full shadow-lg shadow-rose-500/30 whitespace-nowrap">
-                      📄 Page 1 ends
-                    </div>
-                  </div>
-                </div>
-
-                {/* Page 2 break indicator */}
-                <div
-                  className="absolute left-0 right-0 pointer-events-none z-20"
-                  style={{ top: '594mm' }}
-                >
-                  <div className="relative w-full flex items-center">
-                    <div className="flex-1 border-t-2 border-dashed border-rose-500/70" />
-                    <div className="absolute -top-3 md:-top-4 left-1/2 md:left-auto md:right-2 -translate-x-1/2 md:translate-x-0 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[9px] md:text-[11px] font-semibold px-2 md:px-3 py-0.5 md:py-1 rounded-full shadow-lg shadow-rose-500/30 whitespace-nowrap">
-                      📄 Page 2 ends
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Floating Template Selector - Rendered via Portal to bypass transformed parents */}
-        {createPortal(
-          <div
-            className={cn(
-              "fixed bottom-0 inset-x-0 z-50 w-full flex justify-center pb-4 md:pb-6 pt-12 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent pointer-events-none",
-              "transition-all duration-300 ease-out",
-              // Semi-transparent when idle, fully visible on hover
-              isHoveringSelector ? "opacity-100 translate-y-0" : "opacity-40 translate-y-2"
-            )}
-            onMouseEnter={() => setIsHoveringSelector(true)}
-            onMouseLeave={() => setIsHoveringSelector(false)}
-          >
-            <div className="w-full pointer-events-auto px-4 overflow-hidden">
-              {/* Desktop Pills */}
-              <div className="hidden md:flex justify-center items-center gap-2 px-3 py-2 bg-black/80 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl w-fit mx-auto">
-                {activeTemplates.map((template) => {
-                  const isSelected = selectedTemplate.id === template.id;
-                  return (
-                    <button
-                      key={template.id}
-                      onClick={() => handleSelectTemplate(template)}
-                      className={cn(
-                        "relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200",
-                        isSelected
-                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg scale-105"
-                          : "text-white/70 hover:text-white hover:bg-white/10"
-                      )}
-                    >
-                      {isSelected && (
-                        <Check className="w-4 h-4" />
-                      )}
-                      <span className="text-sm font-medium whitespace-nowrap">
-                        {template.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Draggable Template Selector - via Portal */}
+            {createPortal(
+              <div
+                className={cn(
+                  "fixed z-50 flex justify-center",
+                  isDragging ? "cursor-grabbing" : "cursor-grab",
+                  "transition-opacity duration-200",
+                  isHoveringSelector || isDragging ? "opacity-100" : "opacity-70"
+                )}
+                style={{
+                  bottom: `calc(24px - ${barPosition.y}px)`,
+                  left: `calc(50% + ${barPosition.x}px)`,
+                  transform: 'translateX(-50%)',
+                }}
+                onMouseEnter={() => setIsHoveringSelector(true)}
+                onMouseLeave={() => !isDragging && setIsHoveringSelector(false)}
+              >
+                <div className="flex items-center gap-1 px-2 py-2 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
+                  {/* Drag Handle */}
+                  <div
+                    className="p-2 text-white/50 hover:text-white cursor-grab active:cursor-grabbing touch-none"
+                    onMouseDown={handleDragStart}
+                    onTouchStart={handleDragStart}
+                  >
+                    <GripHorizontal className="w-4 h-4" />
+                  </div>
 
-              {/* Mobile Chips - Horizontal Scrollable */}
-              <div className="md:hidden w-full overflow-x-auto no-scrollbar pb-1">
-                <div className="flex items-center gap-2 px-1 w-max mx-auto min-w-full justify-center">
-                  <div className="flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
-                    {activeTemplates.map(template => (
+                  {/* Template Pills */}
+                  {activeTemplates.map((template) => {
+                    const isSelected = selectedTemplate.id === template.id;
+                    return (
                       <button
                         key={template.id}
                         onClick={() => handleSelectTemplate(template)}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0",
-                          selectedTemplate.id === template.id
-                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md transform scale-105"
-                            : "text-white/70 active:bg-white/10"
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200",
+                          isSelected
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md scale-105"
+                            : "text-white/70 hover:text-white hover:bg-white/10"
                         )}
                       >
-                        {selectedTemplate.id === template.id && <Check className="w-3 h-3" />}
+                        {isSelected && <Check className="w-3 h-3" />}
                         {template.name}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              </div>
+              </div>,
+              document.body
+            )}
+          </div>
+        </div>
 
-              {/* Subtle hint text - desktop only */}
-              <p className={cn(
-                "hidden md:block text-center text-xs text-white/40 mt-2 transition-opacity",
-                isHoveringSelector ? "opacity-100" : "opacity-0"
-              )}>
-                {t('sections.templates.selectHint', 'Choose your style')}
-              </p>
-            </div>
-          </div>,
-          document.body
-        )}
+
 
         {/* PDF Generation Loading Overlay - Full Screen via Portal */}
         {isDownloading && createPortal(

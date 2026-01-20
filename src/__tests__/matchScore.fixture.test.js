@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import { analyzeResume } from "../services/api";
 
 // Mock supabase
@@ -19,8 +19,23 @@ const mockResponse = (payload) => ({
 });
 
 describe("analyzeResume", () => {
+  beforeEach(() => {
+    // Mock localStorage with beta code
+    const localStorageMock = {
+      getItem: vi.fn((key) => {
+        if (key === 'watheq:beta_access') return 'WATHEQ01';
+        return null;
+      }),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    };
+    global.localStorage = localStorageMock;
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
+    delete global.localStorage;
   });
 
   it("clamps and returns non-zero scores when API responds with numeric strings", async () => {

@@ -375,30 +375,32 @@ export default function Header() {
             {/* Logo section */}
             <div className="flex items-center gap-4 group">
               {/* Animated logo icon */}
-              <div className="relative">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
-                <div className="relative h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform duration-300">
-                  <Sparkles className="h-6 w-6 text-white drop-shadow-lg" />
-                </div>
+              <div className="relative group-hover:scale-105 transition-transform duration-300">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
+                <img
+                  src="/logo.png"
+                  alt="Watheq Logo"
+                  className="relative h-14 w-14 object-cover rounded-full drop-shadow-lg"
+                />
               </div>
 
               {/* Brand text */}
               <div className="flex flex-col">
-                <p className="text-[11px] sm:text-sm font-extrabold tracking-[0.2em] bg-gradient-to-r from-emerald-200 via-white to-teal-200 bg-clip-text text-transparent uppercase drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] bg-gradient-to-r from-emerald-200 via-white to-teal-200 bg-clip-text text-transparent uppercase drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                   {t("common.appName")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-[10px] sm:text-xs font-medium text-emerald-100/50 tracking-wider">
+                  <p className="text-sm sm:text-base font-medium text-emerald-200/80 tracking-wider">
                     {t("common.byAuthor")}
                   </p>
                   <a
                     href="https://www.linkedin.com/in/3binahmed/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center text-emerald-100/50 hover:text-[#0A66C2] transition-all duration-300 hover:scale-110"
+                    className="inline-flex items-center justify-center text-emerald-200/80 hover:text-[#0A66C2] transition-all duration-300 hover:scale-110"
                     aria-label="Visit LinkedIn profile"
                   >
-                    <Linkedin className="h-3 w-3" />
+                    <Linkedin className="h-6 w-6" />
                   </a>
                 </div>
               </div>
@@ -415,9 +417,18 @@ export default function Header() {
               </span>
             </div>
 
-            {/* Desktop: Language switcher and Auth button */}
+            {/* Desktop: Language switcher, Feedback, and Auth button */}
             <div className="hidden md:flex items-center gap-3">
               <LanguageSwitcher />
+              <a
+                href="https://tally.so/r/KYxEzV"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 border border-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all duration-300 hover:from-amber-400 hover:to-orange-400 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] hover:scale-105"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>{t("header.feedback")}</span>
+              </a>
               {user ? (
                 <GlassButton
                   onClick={signOut}
@@ -641,6 +652,20 @@ export default function Header() {
                 <LanguageSwitcher />
               </div>
 
+              {/* Beta Feedback */}
+              <div className="pb-4 border-b border-white/10">
+                <a
+                  href="https://tally.so/r/KYxEzV"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all duration-300 hover:from-amber-400 hover:to-orange-400 active:scale-[0.98]"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>{t("header.feedback")}</span>
+                </a>
+              </div>
+
               {/* Auth Section */}
               <div className="pt-2 space-y-3">
                 {user ? (
@@ -671,13 +696,13 @@ export default function Header() {
 
             {/* Footer */}
             <div className="absolute bottom-0 left-0 right-0 p-5 border-t border-white/10">
-              <div className="flex items-center justify-center gap-2 text-xs text-white/40">
+              <div className="flex items-center justify-center gap-2 text-xs text-white/70">
                 <span>{t("common.byAuthor")}</span>
                 <a
                   href="https://www.linkedin.com/in/3binahmed/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/60 hover:text-[#0A66C2] transition-colors"
+                  className="text-white/80 hover:text-[#0A66C2] transition-colors"
                   aria-label="LinkedIn"
                 >
                   <Linkedin className="h-4 w-4" />

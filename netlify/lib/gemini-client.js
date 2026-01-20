@@ -1,44 +1,17 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-
-const API_KEY = process.env.GEMINI_API_KEY;
-
-if (!API_KEY) {
-  console.error("Error: GEMINI_API_KEY is not set.");
-}
-
-const genAI = new GoogleGenerativeAI(API_KEY || "");
-
-// Dual model configuration
-const MODELS = { lite: "gemini-2.5-flash-lite", flash: "gemini-2.5-flash" };
-
-const generationConfig = { temperature: 0, topP: 0.95, topK: 1, maxOutputTokens: 4096 };
+// OpenRouter API client for Gemini models
+import { callOpenRouter, MODELS } from './openrouter-client.js';
 
 // Shared schema for category scores (used by processMatchOnly & optimizeResume)
+// Note: No longer using SchemaType - plain JSON Schema objects
 const CATEGORY_SCORE_SCHEMA = {
-  type: SchemaType.OBJECT,
+  type: "object",
   properties: {
-    hard_skills: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] },
-    experience: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] },
-    education: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] },
-    soft_skills: { type: SchemaType.OBJECT, properties: { score: { type: SchemaType.NUMBER }, max: { type: SchemaType.NUMBER }, reasoning: { type: SchemaType.STRING } }, required: ["score", "max", "reasoning"] }
+    hard_skills: { type: "object", properties: { score: { type: "number" }, max: { type: "number" }, reasoning: { type: "string" } }, required: ["score", "max", "reasoning"] },
+    experience: { type: "object", properties: { score: { type: "number" }, max: { type: "number" }, reasoning: { type: "string" } }, required: ["score", "max", "reasoning"] },
+    education: { type: "object", properties: { score: { type: "number" }, max: { type: "number" }, reasoning: { type: "string" } }, required: ["score", "max", "reasoning"] },
+    soft_skills: { type: "object", properties: { score: { type: "number" }, max: { type: "number" }, reasoning: { type: "string" } }, required: ["score", "max", "reasoning"] }
   },
   required: ["hard_skills", "experience", "education", "soft_skills"]
-};
-
-// Helper: create flash model with JSON schema (thinkingBudget defaults to 0 for structured output)
-const createFlashModel = (schema, opts = {}) => {
-  const { thinkingBudget = 0, ...restOpts } = opts;
-  return genAI.getGenerativeModel({
-    model: MODELS.flash,
-    generationConfig: {
-      temperature: 0,
-      maxOutputTokens: 16384,
-      responseMimeType: "application/json",
-      responseSchema: schema,
-      thinkingConfig: { thinkingBudget },
-      ...restOpts
-    }
-  });
 };
 
 /**
@@ -214,404 +187,6 @@ function sanitizeAndParseJSON(text) {
 }
 
 /**
- * Get a Gemini model instance by type
- * @param {'lite' | 'flash'} modelType - Model type to use
- * @returns {object} - Gemini model instance
- */
-function getModel(modelType = 'lite') {
-  const modelName = MODELS[modelType] || MODELS.lite;
-  console.log(`[Gemini] Using model: ${modelName}`);
-  return genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig,
-  });
-}
-
-// Default model for backwards compatibility
-const model = getModel('lite');
-
-/**
- * JSON Resume Schema System Prompt
- * Enforces strict adherence to https://jsonresume.org/schema
- */
-const JSON_RESUME_SYSTEM_PROMPT = `You are a strict ATS (Applicant Tracking System) parser.
-You MUST output JSON strictly adhering to the JSONResume.org schema standard.
-
-CRITICAL MAPPING RULES:
-- "Experience" sections MUST map to "work" array
-- Bullet points MUST map to "work[].highlights" array
-- "Education" sections MUST map to "education" array
-- "Skills" MUST map to "skills" array with categorized keywords
-- Contact information MUST map to "basics" object
-- Projects MUST map to "projects" array
-
-AI optimization suggestions should be stored in "meta.ai_suggestions" to preserve schema integrity.`;
-
-/**
- * Processes a resume against a job description using Gemini.
- * Returns JSON Resume format with AI optimization metadata.
- * @param {string} inputData - Base64 encoded PDF data OR plain text resume.
- * @param {string} jobDescription - Job description text.
- * @param {boolean} isPdf - True if inputData is base64 PDF, false if text.
- * @param {'lite' | 'flash'} modelType - Model to use: 'lite' for fast/cheap, 'flash' for quality.
- * @returns {Promise<object>} - JSON Resume schema with meta.ai_suggestions.
- */
-export async function processResume(inputData, jobDescription, isPdf = true, modelType = 'flash') {
-  const selectedModel = getModel(modelType);
-  try {
-    console.log(`[Gemini] Processing resume with ${MODELS[modelType]}. Input type: ${isPdf ? "PDF" : "Text"}`);
-
-    // Concise prompt - JSON Schema Mode handles structure validation
-    const prompt = `
-Analyze this resume against the job description below.
-
-Job Description:
-${jobDescription}
-
-Instructions:
-1. Parse the resume into JSON Resume format (jsonresume.org)
-2. Provide optimization suggestions in meta.ai_suggestions:
-   - GAP ANALYSIS: 3-5 items showing JD requirements vs resume (severity-ordered)
-   - KEYWORD STRATEGY: mirrored_phrases (3-8 exact JD phrases), structural_changes, hidden_matches
-   - BULLET IMPROVEMENTS: Top 3-5 bullets with original (exact text), improved, issue, rationale
-   - HEADLINE/SUMMARY: original (exact) + suggested versions
-   - CATEGORY SCORES: hard_skills (0-40), experience (0-30), education (0-10), soft_skills (0-20) - must sum to match_score
-   - MATCH SCORE: Precise number (e.g., 73, 88) - avoid round numbers
-3. Use EXACT original text for all "original_*" fields (critical for fuzzy matching)
-4. Map all Experience sections to "work" array with highlights
-`;
-
-    const parts = [
-      { text: JSON_RESUME_SYSTEM_PROMPT },
-      { text: prompt }
-    ];
-
-    if (isPdf) {
-      parts.push({
-        inlineData: {
-          mimeType: "application/pdf",
-          data: inputData,
-        },
-      });
-    } else {
-      parts.push({ text: `RESUME CONTENT:\n${inputData}` });
-    }
-
-    // Define JSON schema for structured output
-    const responseJsonSchema = {
-      type: "object",
-      properties: {
-        basics: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            label: { type: "string" },
-            email: { type: "string" },
-            phone: { type: "string" },
-            summary: { type: "string" },
-            location: {
-              type: "object",
-              properties: {
-                city: { type: "string" },
-                countryCode: { type: "string" },
-                region: { type: "string" }
-              }
-            },
-            profiles: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  network: { type: "string" },
-                  url: { type: "string" }
-                }
-              }
-            }
-          }
-        },
-        work: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              position: { type: "string" },
-              location: { type: "string" },
-              startDate: { type: "string" },
-              endDate: { type: "string" },
-              highlights: { type: "array", items: { type: "string" } }
-            }
-          }
-        },
-        education: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              institution: { type: "string" },
-              area: { type: "string" },
-              studyType: { type: "string" },
-              startDate: { type: "string" },
-              endDate: { type: "string" }
-            }
-          }
-        },
-        skills: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              keywords: { type: "array", items: { type: "string" } }
-            }
-          }
-        },
-        projects: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              description: { type: "string" },
-              highlights: { type: "array", items: { type: "string" } },
-              keywords: { type: "array", items: { type: "string" } }
-            }
-          }
-        },
-        certificates: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              date: { type: "string" },
-              issuer: { type: "string" }
-            }
-          }
-        },
-        meta: {
-          type: "object",
-          properties: {
-            version: { type: "string" },
-            match_score: { type: "number" },
-            ai_suggestions: {
-              type: "object",
-              properties: {
-                original_headline: { type: "string" },
-                suggested_headline: { type: "string" },
-                original_summary: { type: "string" },
-                summary_rewrite: { type: "string" },
-                bullet_improvements: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      original: { type: "string" },
-                      improved: { type: "string" },
-                      issue: { type: "string" },
-                      rationale: { type: "string" }
-                    },
-                    required: ["original", "improved", "issue", "rationale"]
-                  }
-                },
-                gap_analysis: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      requirement: { type: "string" },
-                      current_state: { type: "string" },
-                      gap_severity: { type: "string", enum: ["critical", "moderate", "minor"] },
-                      recommendation: { type: "string" }
-                    },
-                    required: ["requirement", "current_state", "gap_severity", "recommendation"]
-                  }
-                },
-                keyword_strategy: {
-                  type: "object",
-                  properties: {
-                    mirrored_phrases: { type: "array", items: { type: "string" } },
-                    structural_changes: { type: "array", items: { type: "string" } },
-                    hidden_matches: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          resume_term: { type: "string" },
-                          jd_requirement: { type: "string" },
-                          insight: { type: "string" }
-                        }
-                      }
-                    }
-                  }
-                },
-                category_scores: {
-                  type: "object",
-                  properties: {
-                    hard_skills: {
-                      type: "object",
-                      properties: {
-                        score: { type: "number" },
-                        max: { type: "number" },
-                        reasoning: { type: "string" }
-                      }
-                    },
-                    experience: {
-                      type: "object",
-                      properties: {
-                        score: { type: "number" },
-                        max: { type: "number" },
-                        reasoning: { type: "string" }
-                      }
-                    },
-                    education: {
-                      type: "object",
-                      properties: {
-                        score: { type: "number" },
-                        max: { type: "number" },
-                        reasoning: { type: "string" }
-                      }
-                    },
-                    soft_skills: {
-                      type: "object",
-                      properties: {
-                        score: { type: "number" },
-                        max: { type: "number" },
-                        reasoning: { type: "string" }
-                      }
-                    }
-                  }
-                },
-                score_breakdown: {
-                  type: "object",
-                  properties: {
-                    base_score: { type: "number" },
-                    bonuses: { type: "number" },
-                    penalties: { type: "number" },
-                    final_score: { type: "number" }
-                  }
-                },
-                reasoning: { type: "string" },
-                missing_keywords: { type: "array", items: { type: "string" } },
-                keywords_to_keep: { type: "array", items: { type: "string" } },
-                keywords_to_avoid: { type: "array", items: { type: "string" } }
-              },
-              required: ["gap_analysis", "keyword_strategy", "bullet_improvements", "category_scores", "reasoning"]
-            }
-          },
-          required: ["ai_suggestions", "match_score"]
-        }
-      },
-      required: ["basics", "work", "meta"]
-    };
-
-    // Use JSON Schema Mode for guaranteed valid structure
-    const result = await selectedModel.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        ...generationConfig,
-        responseMimeType: "application/json",
-        responseSchema: responseJsonSchema
-      }
-    });
-
-    const response = await result.response;
-    const text = response.text();
-
-    // With JSON Schema Mode, response should be valid JSON, but we still need fallback
-    // for edge cases like truncation or network issues
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch (jsonError) {
-      console.warn('[Gemini] JSON Schema Mode returned invalid JSON, attempting repair...', jsonError.message);
-      // Fall back to the robust sanitization function that can handle truncated JSON
-      parsed = sanitizeAndParseJSON(text);
-    }
-
-    // Backwards compatibility: also expose optimization in legacy format
-    if (parsed.meta?.ai_suggestions) {
-      parsed.optimization = {
-        original_headline: parsed.meta.ai_suggestions.original_headline,
-        suggested_headline: parsed.meta.ai_suggestions.suggested_headline,
-        original_summary: parsed.meta.ai_suggestions.original_summary,
-        summary_rewrite: parsed.meta.ai_suggestions.summary_rewrite,
-        skills_gap_analysis: {
-          missing_keywords_to_add: parsed.meta.ai_suggestions.missing_keywords || [],
-          irrelevant_skills_to_remove: parsed.meta.ai_suggestions.keywords_to_avoid || []
-        },
-        bullet_point_improvements: (parsed.meta.ai_suggestions.bullet_improvements || []).map(b => ({
-          original: b.original,
-          improved: b.improved,
-          issue: b.issue,
-          rationale: b.rationale
-        })),
-        education_improvements: (parsed.meta.ai_suggestions.education_improvements || []).map(e => ({
-          degree: parsed.education?.[e.education_index]?.studyType || "",
-          original: e.original,
-          improved: e.improved,
-          issue: e.issue,
-          rationale: e.rationale
-        })),
-        projects_improvements: (parsed.meta.ai_suggestions.project_improvements || []).map(p => ({
-          project_name: parsed.projects?.[p.project_index]?.name || "",
-          original: p.original,
-          improved: p.improved,
-          issue: p.issue,
-          rationale: p.rationale
-        })),
-        keywords_to_keep: parsed.meta.ai_suggestions.keywords_to_keep || [],
-        keywords_to_avoid: parsed.meta.ai_suggestions.keywords_to_avoid || []
-      };
-      parsed.matchAnalysis = {
-        score_0_to_100: parsed.meta.match_score,
-        reasoning: parsed.meta.ai_suggestions.reasoning,
-        missingKeywords: parsed.meta.ai_suggestions.missing_keywords || [],
-        hardSkillsGap: parsed.meta.ai_suggestions.hard_skills_gap || [],
-        keywordsToKeep: parsed.meta.ai_suggestions.keywords_to_keep || [],
-        categoryScores: parsed.meta.ai_suggestions.category_scores || null,
-        // Gap analysis - map from snake_case to camelCase
-        gapAnalysis: (parsed.meta.ai_suggestions.gap_analysis || []).map(g => ({
-          requirement: g.requirement,
-          currentState: g.current_state,
-          severity: g.gap_severity,
-          recommendation: g.recommendation
-        })),
-        // Keyword strategy - map from snake_case to camelCase
-        keywordStrategy: parsed.meta.ai_suggestions.keyword_strategy ? {
-          mirroredPhrases: parsed.meta.ai_suggestions.keyword_strategy.mirrored_phrases || [],
-          structuralChanges: parsed.meta.ai_suggestions.keyword_strategy.structural_changes || [],
-          hiddenMatches: (parsed.meta.ai_suggestions.keyword_strategy.hidden_matches || []).map(h => ({
-            resumeTerm: h.resume_term,
-            jdRequirement: h.jd_requirement,
-            insight: h.insight
-          }))
-        } : null
-      };
-      parsed.candidateProfile = {
-        name: parsed.basics?.name || "",
-        email: parsed.basics?.email || "",
-        skills: (parsed.skills || []).flatMap(s => s.keywords || [])
-      };
-      parsed.interviewPrep = parsed.meta.interview_prep ? {
-        predicted_questions: parsed.meta.interview_prep.predicted_questions || [],
-        roleLevel: parsed.meta.interview_prep.role_level || "",
-        focusAreas: parsed.meta.interview_prep.focus_areas || []
-      } : undefined;
-      parsed.coverLetter = parsed.meta.cover_letter_draft ? {
-        draft_text: parsed.meta.cover_letter_draft
-      } : undefined;
-    }
-
-    return parsed;
-
-  } catch (error) {
-    console.error("[Gemini] Error processing resume:", error);
-    throw error;
-  }
-}
-
-/**
  * Parses a resume to extract full text and structured data.
  * Returns JSON Resume format for complete content extraction.
  * @param {string} inputData - Base64 encoded PDF data OR plain text resume.
@@ -619,8 +194,13 @@ Instructions:
  * @returns {Promise<object>} - JSON Resume schema with plainText extension.
  */
 export async function parseResumeOnly(inputData, isPdf = true) {
+  // OpenRouter doesn't support inline PDF data - must use text mode only
+  if (isPdf) {
+    throw new Error('PDF inline data not supported with OpenRouter. Please convert PDF to text first using OCR.');
+  }
+
   try {
-    console.log(`[Gemini] Parsing resume with ${MODELS.lite}. Input type: ${isPdf ? "PDF" : "Text"}`);
+    console.log(`[OpenRouter] Parsing resume with ${MODELS.lite}. Input type: Text`);
 
     const systemInstruction = `You are a highly accurate OCR and resume parser.
 Your goal is to extract the FULL text verbatim and structure the data.
@@ -762,28 +342,11 @@ CRITICAL REMINDERS:
 - DO NOT skip or summarize any content
 `;
 
-    const parts = [
-      { text: systemInstruction },
-      { text: prompt }
-    ];
+    // Build prompt with system instruction and user content
+    const fullPrompt = `${systemInstruction}\n\n${prompt}\n\nRESUME CONTENT:\n${inputData}`;
 
-    if (isPdf) {
-      parts.push({
-        inlineData: {
-          mimeType: "application/pdf",
-          data: inputData,
-        },
-      });
-    } else {
-      parts.push({ text: `RESUME CONTENT:\n${inputData}` });
-    }
-
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts }],
-    });
-
-    const response = await result.response;
-    const text = response.text();
+    const messages = [{ role: 'user', content: fullPrompt }];
+    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 8192 });
     const parsed = sanitizeAndParseJSON(text);
 
     // CRITICAL FIX: Safely extract plainText as string
@@ -877,22 +440,13 @@ CRITICAL REMINDERS:
     return parsed;
 
   } catch (error) {
-    console.error("[Gemini] Error parsing resume:", error);
-
-    // Provide more specific error messages
-    if (!API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured. Please set the environment variable.");
-    }
-
-    if (error instanceof SyntaxError) {
-      throw new Error("Failed to parse AI response as JSON. The AI may have returned invalid data.");
-    }
+    console.error("[OpenRouter] Error parsing resume:", error);
 
     // Preserve and enrich the original error message
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (errorMessage.includes("API_KEY") || errorMessage.includes("permission") || errorMessage.includes("403")) {
-      throw new Error("API key error: Please verify your GEMINI_API_KEY is valid and has proper permissions.");
+      throw new Error("API key error: Please verify your OPENROUTER_API_KEY is valid and has proper permissions.");
     }
 
     if (errorMessage.includes("quota") || errorMessage.includes("429")) {
@@ -916,21 +470,21 @@ CRITICAL REMINDERS:
  */
 export async function optimizeResume(resumeText, jobDescription) {
   const schema = {
-    type: SchemaType.OBJECT,
+    type: "object",
     properties: {
-      match_score: { type: SchemaType.NUMBER },
+      match_score: { type: "number" },
       category_scores: CATEGORY_SCORE_SCHEMA,
-      gap_analysis: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { requirement: { type: SchemaType.STRING }, current_state: { type: SchemaType.STRING }, gap_severity: { type: SchemaType.STRING }, recommendation: { type: SchemaType.STRING } }, required: ["requirement", "current_state", "gap_severity", "recommendation"] } },
-      original_headline: { type: SchemaType.STRING },
-      suggested_headline: { type: SchemaType.STRING },
-      original_summary: { type: SchemaType.STRING },
-      summary_rewrite: { type: SchemaType.STRING },
-      bullet_improvements: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { original: { type: SchemaType.STRING }, improved: { type: SchemaType.STRING }, issue: { type: SchemaType.STRING }, rationale: { type: SchemaType.STRING } }, required: ["original", "improved", "issue", "rationale"] } },
-      project_improvements: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { project_name: { type: SchemaType.STRING }, original: { type: SchemaType.STRING }, improved: { type: SchemaType.STRING }, issue: { type: SchemaType.STRING }, rationale: { type: SchemaType.STRING } }, required: ["project_name", "original", "improved", "issue", "rationale"] } },
-      certification_recommendations: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT, properties: { name: { type: SchemaType.STRING }, issuer: { type: SchemaType.STRING }, relevance: { type: SchemaType.STRING } }, required: ["name", "issuer", "relevance"] } },
-      missing_keywords: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-      keywords_to_keep: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-      keywords_to_avoid: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
+      gap_analysis: { type: "array", items: { type: "object", properties: { requirement: { type: "string" }, current_state: { type: "string" }, gap_severity: { type: "string" }, recommendation: { type: "string" } }, required: ["requirement", "current_state", "gap_severity", "recommendation"] } },
+      original_headline: { type: "string" },
+      suggested_headline: { type: "string" },
+      original_summary: { type: "string" },
+      summary_rewrite: { type: "string" },
+      bullet_improvements: { type: "array", items: { type: "object", properties: { original: { type: "string" }, improved: { type: "string" }, issue: { type: "string" }, rationale: { type: "string" } }, required: ["original", "improved", "issue", "rationale"] } },
+      project_improvements: { type: "array", items: { type: "object", properties: { project_name: { type: "string" }, original: { type: "string" }, improved: { type: "string" }, issue: { type: "string" }, rationale: { type: "string" } }, required: ["project_name", "original", "improved", "issue", "rationale"] } },
+      certification_recommendations: { type: "array", items: { type: "object", properties: { name: { type: "string" }, issuer: { type: "string" }, relevance: { type: "string" } }, required: ["name", "issuer", "relevance"] } },
+      missing_keywords: { type: "array", items: { type: "string" } },
+      keywords_to_keep: { type: "array", items: { type: "string" } },
+      keywords_to_avoid: { type: "array", items: { type: "string" } }
     },
     required: ["match_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline", "original_summary", "summary_rewrite", "bullet_improvements", "project_improvements", "certification_recommendations", "missing_keywords", "keywords_to_keep", "keywords_to_avoid"]
   };
@@ -972,17 +526,17 @@ RESUME:
 ${resumeText}`;
 
   try {
-    console.log(`[Gemini] Optimizing with ${MODELS.flash}`);
-    const result = await createFlashModel(schema).generateContent(prompt);
-    const text = result.response.text();
-    console.log(`[Gemini] Optimize response length: ${text.length} chars`);
+    console.log(`[OpenRouter] Optimizing with ${MODELS.flash}`);
+    const messages = [{ role: 'user', content: prompt }];
+    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384 });
+    console.log(`[OpenRouter] Optimize response length: ${text.length} chars`);
 
     let parsed;
     try { parsed = JSON.parse(text); }
     catch { parsed = sanitizeAndParseJSON(text); }
     return parsed;
   } catch (error) {
-    console.error("[Gemini] Error in optimizeResume:", error);
+    console.error("[OpenRouter] Error in optimizeResume:", error);
     throw error;
   }
 }
@@ -998,13 +552,13 @@ export async function processMatchOnly(resumeText, jobDescription) {
   console.log(`[Gemini] Fast match analysis with ${MODELS.flash}`);
 
   const schema = {
-    type: SchemaType.OBJECT,
+    type: "object",
     properties: {
-      score: { type: SchemaType.NUMBER },
+      score: { type: "number" },
       categoryScores: CATEGORY_SCORE_SCHEMA,
-      strongMatches: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-      missingKeywords: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-      reasoning: { type: SchemaType.STRING }
+      strongMatches: { type: "array", items: { type: "string" } },
+      missingKeywords: { type: "array", items: { type: "string" } },
+      reasoning: { type: "string" }
     },
     required: ["score", "categoryScores", "strongMatches", "missingKeywords", "reasoning"]
   };
@@ -1018,17 +572,9 @@ Resume:
 ${resumeText}`;
 
   try {
-    const result = await createFlashModel(schema, { thinkingBudget: 0 }).generateContent(prompt);
-    const response = result.response;
-    const finishReason = response.candidates?.[0]?.finishReason;
-    const usage = response.usageMetadata;
-
-    console.log(`[Gemini] Match finish: ${finishReason}, tokens: ${JSON.stringify(usage)}`);
-    if (usage?.thoughtsTokenCount > 0) console.warn(`[Gemini] ⚠️ Thinking tokens: ${usage.thoughtsTokenCount}`);
-    if (finishReason === 'MAX_TOKENS') console.warn(`[Gemini] ⚠️ Truncated - ${usage?.candidatesTokenCount}/4096 tokens`);
-
-    const text = response.text();
-    console.log(`[Gemini] Match response: ${text.length} chars`);
+    const messages = [{ role: 'user', content: prompt }];
+    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384 });
+    console.log(`[OpenRouter] Match response: ${text.length} chars`);
 
     let parsed;
     try { parsed = JSON.parse(text); }
@@ -1058,16 +604,16 @@ export async function predictInterviewQuestions(resumeText, jobDescription) {
   console.log(`[Gemini] Predicting interview questions with ${MODELS.lite}`);
 
   const schema = {
-    type: SchemaType.OBJECT,
+    type: "object",
     properties: {
       predicted_questions: {
-        type: SchemaType.ARRAY,
-        items: { type: SchemaType.STRING }
+        type: "array",
+        items: { type: "string" }
       },
-      role_level: { type: SchemaType.STRING },
+      role_level: { type: "string" },
       focus_areas: {
-        type: SchemaType.ARRAY,
-        items: { type: SchemaType.STRING }
+        type: "array",
+        items: { type: "string" }
       }
     },
     required: ["predicted_questions", "role_level", "focus_areas"]
@@ -1092,19 +638,9 @@ RESUME:
 ${resumeText}`;
 
   try {
-    const liteModel = genAI.getGenerativeModel({
-      model: MODELS.lite,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 4096,
-        responseMimeType: "application/json",
-        responseSchema: schema
-      }
-    });
-
-    const result = await liteModel.generateContent(prompt);
-    const text = result.response.text();
-    console.log(`[Gemini] Interview prep response: ${text.length} chars`);
+    const messages = [{ role: 'user', content: prompt }];
+    const text = await callOpenRouter('lite', messages, schema, { temperature: 0.3, maxTokens: 4096 });
+    console.log(`[OpenRouter] Interview prep response: ${text.length} chars`);
 
     let parsed;
     try { parsed = JSON.parse(text); }
@@ -1116,7 +652,7 @@ ${resumeText}`;
       focus_areas: parsed.focus_areas || []
     };
   } catch (error) {
-    console.error("[Gemini] Error predicting interview questions:", error);
+    console.error("[OpenRouter] Error predicting interview questions:", error);
     throw error;
   }
 }
@@ -1131,9 +667,9 @@ export async function generateCoverLetter(resumeText, jobDescription) {
   console.log(`[Gemini] Generating cover letter with ${MODELS.flash}`);
 
   const schema = {
-    type: SchemaType.OBJECT,
+    type: "object",
     properties: {
-      draft_text: { type: SchemaType.STRING }
+      draft_text: { type: "string" }
     },
     required: ["draft_text"]
   };
@@ -1158,9 +694,9 @@ Return ONLY the cover letter text in the draft_text field.
 7. CRITICAL: Use double newlines (\n\n) to separate paragraphs. Do NOT write a single block of text.`;
 
   try {
-    const result = await createFlashModel(schema).generateContent(prompt);
-    const text = result.response.text();
-    console.log(`[Gemini] Cover letter response: ${text.length} chars`);
+    const messages = [{ role: 'user', content: prompt }];
+    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384 });
+    console.log(`[OpenRouter] Cover letter response: ${text.length} chars`);
 
     let parsed;
     try { parsed = JSON.parse(text); }
@@ -1168,7 +704,7 @@ Return ONLY the cover letter text in the draft_text field.
 
     return { draft_text: parsed.draft_text || "" };
   } catch (error) {
-    console.error("[Gemini] Error generating cover letter:", error);
+    console.error("[OpenRouter] Error generating cover letter:", error);
     throw error;
   }
 }

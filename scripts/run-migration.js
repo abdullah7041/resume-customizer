@@ -76,7 +76,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 /**
  * Execute SQL query and return results
  */
-async function executeSQL(sql, description = '') {
+async function _executeSQL(sql, description = '') {
   if (description) {
     logInfo(description);
   }
@@ -108,8 +108,8 @@ async function executeSQL(sql, description = '') {
 /**
  * Execute SQL using pg client (alternative method)
  */
-async function executeSQLDirect(sql) {
-  const { data, error } = await supabase.from('_placeholder_').select('*').limit(0);
+async function _executeSQLDirect(sql) {
+  const { data: _data, error: _error } = await supabase.from('_placeholder_').select('*').limit(0);
 
   // Use the connection to execute raw SQL
   // Note: This is a workaround since Supabase client doesn't expose raw SQL execution
@@ -289,10 +289,10 @@ async function main() {
 
   try {
     // Phase 1: Pre-migration checks
-    const preCheckResults = await preMigrationChecks();
+    const _preCheckResults = await preMigrationChecks();
 
     // Phase 2: Execute migration
-    const migrationResults = await executeMigration();
+    const _migrationResults = await executeMigration();
 
     logSuccess('\nScript completed successfully!');
     logInfo('Please execute the migration SQL in Supabase Dashboard as instructed above.');

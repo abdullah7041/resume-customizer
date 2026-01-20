@@ -1,132 +1,260 @@
-# AI Resume Optimizer
+<div align="center">
 
-> **Transform your resume into a job-winning document with AI-powered optimization**
+# وثّق | Watheq
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-success?style=for-the-badge&logo=netlify)](https://resume-optimizing.netlify.app)
-[![Built with React](https://img.shields.io/badge/Built%20with-React%2019-61dafb?style=for-the-badge&logo=react)](https://react.dev)
+### AI Resume Optimizer for Saudi Arabia's Job Market
 
----
+[![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-006C35?style=for-the-badge&logo=netlify)](https://resume-optimizing.netlify.app)
+[![React 19](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 
-## PROPRIETARY SOFTWARE NOTICE
+<br/>
 
-> **COPYRIGHT © 2025 ABDULLAH. ALL RIGHTS RESERVED.**
+**Transform your resume into a job-winning document with AI-powered optimization**
 
-This software and its source code are the exclusive intellectual property of **Abdullah**. Unauthorized copying, modification, distribution, or use of this software, in whole or in part, is strictly prohibited and may result in legal action.
+*Designed for Vision 2030 • Bilingual Arabic/English • ATS-Friendly*
 
-**You may NOT:**
-- Clone, fork, or copy this repository
-- Use any part of this code in your own projects
-- Redistribute or resell this software
-- Create derivative works based on this code
-- Remove or modify copyright notices
-
-**Violators will be subject to DMCA takedown requests and may face legal consequences.**
-
-For licensing inquiries or collaboration, please contact the author directly.
+</div>
 
 ---
 
-## About This Project
+## ⚠️ Proprietary Software Notice
 
-**AI Resume Optimizer** is an intelligent resume optimization platform designed specifically for **Saudi Arabia's job market**. It helps job seekers create powerful, ATS-friendly resumes using artificial intelligence.
+> **COPYRIGHT © 2025-2026 ABDULLAH. ALL RIGHTS RESERVED.**
 
-This platform empowers Saudi professionals to align their resumes with Vision 2030 sector needs and modern hiring standards.
+This software and its source code are the exclusive intellectual property of **Abdullah**. Unauthorized copying, modification, distribution, or use of this software is strictly prohibited. See [LICENSE](./LICENSE) for full terms.
 
-### Key Features
+| ❌ Prohibited Actions |
+|----------------------|
+| Cloning, forking, or copying this repository |
+| Using any code in your own projects |
+| Redistributing or reselling this software |
+| Creating derivative works |
+| Removing or modifying copyright notices |
 
-| Feature | Description |
-|---------|-------------|
-| **Smart Resume Upload** | Upload PDF/DOCX with automatic section detection |
-| **Structured JSON Parsing** | Extract resumes into clean, editable JSON format |
-| **Job Match Analysis** | 0-100 match scores using TF-IDF similarity algorithms |
-| **AI Optimization** | GPT-powered rewrites with stronger language and keywords |
-| **Bulk Comparison** | Compare multiple resume versions side-by-side |
-| **Professional Export** | Download styled or ATS-optimized PDFs |
-| **Privacy-First** | Your data stays secure and private |
+**Violators will be subject to DMCA takedown requests and legal action.**
 
----
-
-## Saudi Market Focus
-
-Unlike generic resume tools, this platform is specifically optimized for:
-
-- **Vision 2030** skills and workforce requirements
-- **Arabic and English** bilingual support
-- Local hiring practices and ATS systems
-- Cultural considerations for the MENA region
+For licensing inquiries: Contact the author directly.
 
 ---
 
-## Technology Stack
+## 🎯 About Watheq
 
-| Layer        | Technology                          |
-|--------------|-------------------------------------|
-| Frontend     | React 19, Vite 7, Tailwind CSS v4   |
-| Backend      | Netlify Functions (TypeScript)      |
-| AI           | Google Gemini API                   |
-| Database     | Supabase (Auth + Storage)           |
-| PDF Export   | @react-pdf/renderer                 |
-| Validation   | Zod Schema Validation               |
+**Watheq** (وثّق) is an intelligent AI-powered resume optimization platform built specifically for **Saudi Arabia's job market**. It helps job seekers create powerful, ATS-friendly resumes that align with Vision 2030 sector needs and modern hiring standards.
 
----
+### Why Watheq?
 
-## Performance
-
-| Metric            | Value                        |
-|-------------------|------------------------------|
-| Parse Time        | 2-3 seconds (average resume) |
-| Match Analysis    | 1-2 seconds (pure algorithm) |
-| AI Optimization   | 8-15 seconds (API dependent) |
-| Bundle Size       | ~162KB gzipped               |
+| Traditional Resume Tools | Watheq |
+|-------------------------|--------|
+| Generic optimization | Saudi market-specific targeting |
+| English-only support | Full Arabic/English bilingual support |
+| Basic keyword matching | AI-powered TF-IDF similarity analysis |
+| Manual editing | Intelligent optimization suggestions |
+| Static templates | Dynamic RTL/LTR adaptive templates |
 
 ---
 
-## Privacy & Security
+## ✨ Key Features
 
-| Feature | Status |
-|---------|--------|
-| Server-Side API Keys | Never exposed to clients |
-| Row-Level Security | Supabase RLS policies enforced |
-| No Tracking | Zero analytics or third-party cookies |
-| User Control | Delete your data anytime |
-| Anti-Hallucination | AI never invents facts about you |
+### 📄 Smart Resume Processing
+- **PDF/DOCX Upload** — Automatic text extraction with section detection
+- **Structured JSON Parsing** — Clean, editable JSON Resume format
+- **Language Detection** — Auto-detects English vs Arabic content
+
+### 📊 AI-Powered Analysis
+- **Match Score (0-100)** — TF-IDF + cosine similarity algorithms
+- **Gap Analysis** — Identifies missing qualifications
+- **Keyword Strategy** — Highlights critical missing keywords
+
+### ✍️ Intelligent Optimization
+- **GPT-Powered Rewrites** — Stronger action verbs and impact statements
+- **Section-by-Section Suggestions** — Granular optimization cards
+- **Ethical AI** — Never invents facts; only enhances what exists
+
+### 🎨 Professional Templates
+| Template | Best For |
+|----------|----------|
+| Modern Professional | Clean, minimal design (emerald theme) |
+| Classic Traditional | Serif-based, two-column layout |
+| Technical Engineer | Skills-first for tech roles |
+| ATS Optimized | Single-column for applicant tracking systems |
+
+### 📥 Export Options
+- **Styled PDF** — Beautiful, design-forward resumes
+- **ATS-Friendly PDF** — Optimized for automated screening
+- **Print-Ready** — Direct browser printing support
+
+### 🛡️ Additional Features
+- **Interview Prep** — AI-generated questions based on your resume
+- **Cover Letter Generator** — Tailored cover letters for each job
+- **Bulk Comparison** — Compare multiple resume versions side-by-side
+- **Session Recovery** — Automatic localStorage persistence
 
 ---
 
-## Credits
+## 🇸🇦 Saudi Market Focus
+
+Unlike generic resume tools, Watheq is specifically optimized for:
+
+- 🏛️ **Vision 2030** skills and workforce requirements
+- 🌐 **Arabic & English** bilingual support with RTL layouts
+- 📋 Local hiring practices and ATS systems
+- 🎨 Cultural considerations for the MENA region
+- 🎯 Saudi-themed UI with Saudi Green (`#006C35`) branding
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| React | 19.2 | UI Framework |
+| Vite | 7.3 | Build Tool |
+| TypeScript | 5.9 | Type Safety |
+| Tailwind CSS | 4.1 | Styling |
+| Zustand | 5.0 | State Management |
+| i18next | 25.7 | Internationalization |
+| Zod | 4.3 | Schema Validation |
+
+### Backend (Serverless)
+| Technology | Purpose |
+|------------|---------|
+| Netlify Functions | TypeScript serverless API |
+| Google Gemini API | AI processing (2.5-flash) |
+| Supabase | Auth + Database + Storage |
+| Upstash Redis | Rate limiting |
+| Puppeteer | Server-side PDF generation |
+
+### Development & Quality
+| Tool | Purpose |
+|------|---------|
+| Vitest | Unit Testing |
+| ESLint | Code Linting |
+| Husky | Git Hooks |
+| Sentry | Error Tracking |
+
+---
+
+## ⚡ Performance
+
+| Metric | Value |
+|--------|-------|
+| Resume Parse Time | 2-3 seconds |
+| Match Analysis | 1-2 seconds |
+| AI Optimization | 8-15 seconds |
+| Bundle Size | ~162KB gzipped |
+| Lighthouse Score | 90+ Performance |
+
+---
+
+## 🔒 Privacy & Security
+
+| Feature | Implementation |
+|---------|----------------|
+| **API Keys** | Server-side only, never exposed |
+| **Row-Level Security** | Supabase RLS policies enforced |
+| **No Tracking** | Zero analytics or third-party cookies |
+| **User Control** | Delete your data anytime (GDPR compliant) |
+| **Anti-Hallucination** | AI never invents facts about you |
+| **Rate Limiting** | Redis-backed sliding window protection |
+
+---
+
+## 🏗️ Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Frontend (SPA)                       │
+│  React 19 + Vite + Zustand + Tailwind CSS v4 + i18next     │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Netlify Functions (API)                   │
+├──────────────┬──────────────┬──────────────┬───────────────┤
+│ parse-resume │   ai-match   │   optimize   │ generate-pdf  │
+│ extract-json │predict-ques  │ cover-letter │  batch-api    │
+└──────────────┴──────────────┴──────────────┴───────────────┘
+                              │
+          ┌───────────────────┼───────────────────┐
+          ▼                   ▼                   ▼
+   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+   │   Gemini    │     │  Supabase   │     │   Upstash   │
+   │  2.5-flash  │     │  Auth + DB  │     │    Redis    │
+   └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### User Flow
+```
+Upload Resume → Parse to JSON → Paste Job Description → AI Match Score
+                                                              │
+                        ◄────── Export PDF ◄── Apply Cards ◄──┘
+```
+
+---
+
+## 📁 Project Structure
+
+```
+resume-customizer/
+├── src/
+│   ├── components/         # React components
+│   │   ├── Layout/        # MainContent, Header
+│   │   ├── sections/      # Upload, Score, Optimize, Templates
+│   │   ├── templates/     # Resume templates + PDF exports
+│   │   └── ui/            # Reusable UI components
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Utilities, stores, validation
+│   ├── locales/           # i18n translations (en, ar)
+│   ├── services/          # API clients
+│   └── types/             # TypeScript definitions
+├── netlify/
+│   ├── functions/         # Serverless API endpoints
+│   └── lib/               # Shared backend utilities
+├── public/                # Static assets
+└── scripts/               # Build & development scripts
+```
+
+---
+
+## 🙏 Credits
 
 **Created by Abdullah** — Full-stack developer passionate about democratizing career opportunities through AI.
 
 ### Technology Acknowledgments
 
-- Google — Gemini API
-- Supabase — Backend infrastructure
-- Netlify — Serverless hosting
-- Tailwind CSS — Design system
-- Saudi Vision 2030 — Design inspiration
+- **Google** — Gemini API for AI processing
+- **Supabase** — Backend infrastructure
+- **Netlify** — Serverless hosting
+- **Tailwind CSS** — Design system
+- **Saudi Vision 2030** — Brand inspiration
 
 ---
 
-## License
+## 📜 License
 
 **PROPRIETARY LICENSE — NOT OPEN SOURCE**
 
-Copyright © 2025 Abdullah. All rights reserved.
+Copyright © 2025-2026 Abdullah. All rights reserved.
 
 This software is provided for authorized use only. No license is granted for copying, distribution, modification, or any other use without explicit written permission from the copyright holder.
 
-For licensing inquiries, please contact the author.
+See [LICENSE](./LICENSE) for complete terms.
 
 ---
 
 <div align="center">
 
-**[View Live Demo](https://resume-optimizing.netlify.app)**
+**[🚀 View Live Demo](https://resume-optimizing.netlify.app)**
 
-Made for the Saudi job market by **Abdullah**
+*Built with ❤️ for the Saudi job market*
 
 ---
 
-*© 2025 Abdullah. All Rights Reserved. Unauthorized reproduction or distribution is prohibited.*
+**وثّق | Watheq** — *Document your success*
+
+© 2025-2026 Abdullah. All Rights Reserved.
 
 </div>

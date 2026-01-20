@@ -3,14 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { Lock, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { GlassButton } from './ui/GlassButton';
+import { BetaQuotaNotification } from './ui/BetaQuotaNotification';
 import { cn } from '../lib/utils/cn';
 
 interface AuthGateProps {
   children: ReactNode;
 }
 
-// Beta access codes - could be moved to env vars or backend in future
-const VALID_CODES = ['LAUNCH2025', 'BETA2025', 'WATHEQ2025'];
+// Beta access codes - Saudi-themed beta testing codes
+const VALID_CODES = [
+  'WATHEQ01', 'TAMKEEN2', 'INJAZ026', 'RIYADH26', 'JEDDAH26',
+  'DAMMAM26', 'NEOM2026', 'SAUDIA26', 'ARAMCO26', 'VISION30'
+];
 const STORAGE_KEY = 'watheq:beta_access';
 
 /**
@@ -71,7 +75,12 @@ export function AuthGate({ children }: AuthGateProps) {
 
   // Authorized - render children
   if (isAuthorized) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <BetaQuotaNotification />
+      </>
+    );
   }
 
   // Not authorized - show code entry

@@ -171,7 +171,14 @@ export interface DisplayOptions {
   marginTop: number;      // inches (0.3-1.0)
   marginBottom: number;   // inches (0.3-1.0)
   marginSide: number;     // inches (0.3-1.0)
+  // Page break indicators
+  showPageBreaks: boolean;
 }
+
+/**
+ * Resume content language (detected from resume text)
+ */
+export type ContentLanguage = 'en' | 'ar' | 'mixed' | null;
 
 /**
  * Resume state for the store
@@ -194,6 +201,7 @@ export interface ResumeState {
   selectedTemplate: TemplateId;
   displayOptions: DisplayOptions;
   hasDownloaded: boolean;
+  contentLanguage: ContentLanguage;
 
   // Actions
   setOriginalResume: (resume: ResumeSchema) => void;
@@ -224,6 +232,10 @@ export interface ResumeState {
 
   // Display options actions
   setDisplayOptions: (options: Partial<DisplayOptions>) => void;
+  togglePageBreaks: () => void;
+
+  // Language detection
+  setContentLanguage: (lang: ContentLanguage) => void;
 }
 
 /**

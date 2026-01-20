@@ -996,8 +996,9 @@ export function OptimizeSection({
                     items.map((token) => (
                       <span
                         key={token}
+                        title={token}
                         className={cn(
-                          'px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all',
+                          'px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all truncate max-w-[140px]',
                           bucket === 'add' && 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20',
                           bucket === 'neutral' && 'bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20',
                           bucket === 'remove' && 'bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20 line-through decoration-rose-500/50'

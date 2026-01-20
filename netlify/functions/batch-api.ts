@@ -1,5 +1,5 @@
 import type { Handler } from "@netlify/functions";
-import { RateLimiter, batchWithConcurrency } from "../lib/rate-limiter";
+import { RateLimiter, batchWithConcurrency, checkBetaQuota } from "../lib/rate-limiter";
 import { initSentry, captureError } from "../lib/sentry";
 
 initSentry();
@@ -52,7 +52,7 @@ const rateLimiter = new RateLimiter({
 /**
  * Execute a single task by calling the appropriate internal endpoint
  */
-async function executeTask(task: BatchTask): Promise<BatchResponse> {
+async function executeTask(task: BatchTask, betaCode: string): Promise<BatchResponse> {
   const endpoint = INTERNAL_ENDPOINTS[task.type];
 
   if (!endpoint) {
@@ -71,6 +71,7 @@ async function executeTask(task: BatchTask): Promise<BatchResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Beta-Code": betaCode,
       },
       body: JSON.stringify(task.payload),
     });
@@ -166,6 +167,35 @@ const handler: Handler = async (event) => {
     };
   }
 
+  // Extract beta code from header
+  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+
+  if (!betaCode) {
+    return {
+      statusCode: 401,
+      headers: HEADERS,
+      body: JSON.stringify({ error: "Beta code required. Please sign in with a valid beta code." })
+    };
+  }
+
+  // Check batch quota (but don't consume - child tasks consume their own)
+  const quotaStatus = await checkBetaQuota(betaCode, 'batch');
+
+  if (!quotaStatus.allowed) {
+    return {
+      statusCode: 403,
+      headers: HEADERS,
+      body: JSON.stringify({
+        error: "Batch processing quota exceeded",
+        quotaExceeded: true,
+        used: quotaStatus.used,
+        limit: quotaStatus.limit,
+        remaining: quotaStatus.remaining,
+        action: 'batch'
+      })
+    };
+  }
+
   try {
     const body: BatchRequest = event.body ? JSON.parse(event.body) : {};
 
@@ -188,7 +218,7 @@ const handler: Handler = async (event) => {
     const results = await batchWithConcurrency(
       tasks,
       async (task) => {
-        const result = await executeTask(task);
+        const result = await executeTask(task, betaCode);
 
         // If continueOnError is false and we hit an error, throw to stop batch
         if (!continueOnError && result.status === "error") {

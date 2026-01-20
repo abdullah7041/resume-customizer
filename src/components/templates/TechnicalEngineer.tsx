@@ -1,6 +1,6 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
-import { useDirection } from '../providers/DirectionProvider';
+import { useSectionLabel } from '../../hooks/useSectionLabel';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -27,7 +27,7 @@ export function TechnicalEngineer({
     fontScale = 1,
     displayOptions,
 }: TemplateProps) {
-    const { isRTL } = useDirection();
+    const getSectionLabel = useSectionLabel();
 
     // Merge displayOptions with defaults
     const opts = { ...DEFAULT_OPTIONS, ...displayOptions };
@@ -80,7 +80,7 @@ export function TechnicalEngineer({
                 fontSize: `${opts.baseFontSize}pt`,
                 lineHeight: String(opts.lineHeight),
             }}
-            dir={isRTL ? 'rtl' : 'ltr'}
+            dir="ltr"
         >
             {/* Header */}
             <header className="mb-5 pb-4" style={{ borderBottom: '2px dashed #d1d5db' }}>
@@ -124,7 +124,7 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={{ ...headingStyle, borderBottom: 'none' }}
                     >
-                        Technical Skills
+                        {getSectionLabel('technicalSkills')}
                     </h2>
                     <div className="flex flex-wrap gap-2">
                         {skills.map((skillItem, i) => {
@@ -171,7 +171,7 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={headingStyle}
                     >
-                        {isRTL ? 'الملخص' : 'Summary'}
+                        {getSectionLabel('summary')}
                     </h2>
                     <p
                         className="text-gray-600"
@@ -192,7 +192,7 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={headingStyle}
                     >
-                        {isRTL ? 'الخبرة' : 'Experience'}
+                        {getSectionLabel('experience')}
                     </h2>
                     <div className="space-y-4">
                         {work.map((job, i) => (
@@ -244,7 +244,7 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={headingStyle}
                     >
-                        {isRTL ? 'المشاريع' : 'Projects'}
+                        {getSectionLabel('projects')}
                     </h2>
                     <div className="space-y-3">
                         {projects.map((project, i) => (
@@ -291,7 +291,7 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={headingStyle}
                     >
-                        {isRTL ? 'التعليم' : 'Education'}
+                        {getSectionLabel('education')}
                     </h2>
                     <div className="space-y-3">
                         {education.map((edu, i) => (
@@ -356,7 +356,7 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={headingStyle}
                     >
-                        {isRTL ? 'الشهادات' : 'Certifications'}
+                        {getSectionLabel('certifications')}
                     </h2>
                     <div className="space-y-2">
                         {certificates.map((cert, i) => (
@@ -396,7 +396,7 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={headingStyle}
                     >
-                        {isRTL ? 'اللغات' : 'Languages'}
+                        {getSectionLabel('languages')}
                     </h2>
                     <div className="flex flex-wrap gap-3">
                         {languages.map((lang, i) => (

@@ -46,9 +46,9 @@ const TOAST_IDS = {
   match: "toast:match",
   optimize: "toast:optimize",
 };
-const TAB_STORAGE_KEY = "airo:lastActiveTab";
-const RESUME_STORAGE_KEY = "airo:resumeData";
-const JOB_STORAGE_KEY = "airo:jobDescription";
+const TAB_STORAGE_KEY = "watheq:lastActiveTab";
+const RESUME_STORAGE_KEY = "watheq:resumeData";
+const JOB_STORAGE_KEY = "watheq:lastJobDescription";
 const withTemperature = (message) => message;
 
 const getId = () => {
@@ -123,9 +123,9 @@ export default function MainContent() {
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, _setAiDebug] = useState(null);
-  const [showLanding, setShowLanding] = useState(() => {
+  const [showLanding, _setShowLanding] = useState(() => {
     if (typeof window === "undefined") return true;
-    return !window.localStorage.getItem("airo:landingSeen");
+    return !window.localStorage.getItem("watheq:landingSeen");
   });
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
@@ -185,7 +185,7 @@ export default function MainContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setPreviewUsed(window.localStorage.getItem("airo:previewQuotaUsed") === "true");
+    setPreviewUsed(window.localStorage.getItem("watheq:previewQuotaUsed") === "true");
   }, []);
 
   // Persist resume data to localStorage
@@ -229,7 +229,7 @@ export default function MainContent() {
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem("airo:previewQuotaUsed", "true");
+    window.localStorage.setItem("watheq:previewQuotaUsed", "true");
     setPreviewUsed(true);
   }, []);
 
@@ -239,7 +239,6 @@ export default function MainContent() {
     // Clear all stored data
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(JOB_STORAGE_KEY);
-    window.localStorage.removeItem("airo:lastJobDescription");
 
     // Reset state
     setResumeData("");
@@ -429,15 +428,23 @@ export default function MainContent() {
         // Cache the match analysis score so OptimizeSection can read it
         // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
         if (result && typeof result.score === 'number') {
-          const { setCachedAnalysis } = useResumeStore.getState();
-          setCachedAnalysis(resumeData.plainText, trimmedJob, {
+          const { setCachedAnalysis, setOptimizationMetrics, parsedResumeText } = useResumeStore.getState();
+          // CRITICAL: Use parsedResumeText from Zustand store for cache key consistency
+          // OptimizeSection reads from parsedResumeText, so we must use the same source
+          const cacheResumeText = parsedResumeText || resumeData.plainText;
+          setCachedAnalysis(cacheResumeText, trimmedJob, {
             score: result.score,
             matchedKeywords: result.matchedKeywords || result.topHits || [],
             missingKeywords: result.missingKeywords || [],
             suggestions: result.suggestions || [],
             reasoning: result.reasoning || '',
           });
-          console.log('[MainContent] Cached match analysis score:', result.score);
+          // Also update optimizationMetrics.beforeScore so it takes priority in OptimizeSection
+          setOptimizationMetrics({
+            beforeScore: result.score,
+            hasJobDescription: true,
+          });
+          console.log('[MainContent] Cached match analysis score:', result.score, 'using parsedResumeText:', !!parsedResumeText);
         }
 
         pushToast(
@@ -899,9 +906,10 @@ export default function MainContent() {
             <LandingPage
               onGetStarted={() => {
                 if (typeof window !== "undefined") {
-                  window.localStorage.setItem("airo:landingSeen", "true");
+                  window.localStorage.setItem("watheq:landingSeen", "true");
                 }
-                setShowLanding(false);
+                // Directly trigger sign-in instead of showing sign-in empty state
+                signInWithGoogle();
               }}
             />
           ) : (

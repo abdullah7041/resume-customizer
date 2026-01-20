@@ -10,7 +10,14 @@ const mockGeminiClient = {
 };
 
 const mockRateLimiter = {
-    withRateLimit: (_name: string, handler: Function) => handler
+    withRateLimit: (_name: string, handler: Function) => handler,
+    checkBetaQuota: vi.fn().mockResolvedValue({
+        allowed: true,
+        used: 0,
+        limit: 2,
+        remaining: 2
+    }),
+    consumeBetaQuota: vi.fn().mockResolvedValue(undefined)
 };
 
 const mockSentry = {
@@ -67,7 +74,7 @@ describe('AI Integration Functions', () => {
         it('validates input schema', async () => {
             const event = {
                 httpMethod: 'POST',
-                headers: {},
+                headers: { 'X-Beta-Code': 'WATHEQ01' },
                 body: JSON.stringify({ resumeText: 'test' }) // Missing jobDesc
             } as Partial<HandlerEvent>;
 
@@ -86,7 +93,7 @@ describe('AI Integration Functions', () => {
 
             const event = {
                 httpMethod: 'POST',
-                headers: {},
+                headers: { 'X-Beta-Code': 'WATHEQ01' },
                 body: JSON.stringify({ resumeText: 'resume', jobDesc: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -110,6 +117,7 @@ describe('AI Integration Functions', () => {
         it('validates input schema', async () => {
             const event = {
                 httpMethod: 'POST',
+                headers: { 'X-Beta-Code': 'WATHEQ01' },
                 body: JSON.stringify({ jobDescription: 'job' }) // Missing resumeText
             } as Partial<HandlerEvent>;
 
@@ -124,6 +132,7 @@ describe('AI Integration Functions', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: { 'X-Beta-Code': 'WATHEQ01' },
                 body: JSON.stringify({ resumeText: 'resume', jobDescription: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -146,6 +155,7 @@ describe('AI Integration Functions', () => {
         it('validates input schema', async () => {
             const event = {
                 httpMethod: 'POST',
+                headers: { 'X-Beta-Code': 'WATHEQ01' },
                 body: JSON.stringify({ jobDescription: 'job' }) // Missing resumeText
             } as Partial<HandlerEvent>;
 
@@ -162,6 +172,7 @@ describe('AI Integration Functions', () => {
 
             const event = {
                 httpMethod: 'POST',
+                headers: { 'X-Beta-Code': 'WATHEQ01' },
                 body: JSON.stringify({ resumeText: 'resume', jobDescription: 'job' })
             } as Partial<HandlerEvent>;
 

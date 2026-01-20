@@ -92,7 +92,10 @@ export function ScoreBreakdown({
             { key: 'soft_skills' as const, label: isArabic ? 'المهارات الشخصية' : 'Soft Skills' }
         ];
 
-        const totalScore = categories.reduce((sum, cat) => sum + (categoryScores[cat.key]?.score || 0), 0);
+        // Calculate normalized total score as percentage out of 100
+        const rawTotal = categories.reduce((sum, cat) => sum + (categoryScores[cat.key]?.score || 0), 0);
+        const totalMax = categories.reduce((sum, cat) => sum + (categoryScores[cat.key]?.max || 25), 0);
+        const totalScore = totalMax > 0 ? Math.round((rawTotal / totalMax) * 100) : rawTotal;
 
         return (
             <GlassCard className={className} variant="elevated">

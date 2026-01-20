@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
 import FeaturesShowcase from "./components/sections/FeaturesShowcase";
@@ -7,8 +8,13 @@ import { DirectionProvider } from "./components/providers/DirectionProvider";
 import { ConsentBanner } from "./components/compliance/ConsentBanner";
 import { AuthGate } from "./components/AuthGate";
 import { UserProgressNav } from "./components/ui/UserProgressNav";
+import { migrateStorageKeys } from "./lib/utils/storage-migration";
 
 export default function App() {
+  // Run storage migration once on app initialization
+  useEffect(() => {
+    migrateStorageKeys();
+  }, []);
   return (
     <DirectionProvider>
       <AuthGate>

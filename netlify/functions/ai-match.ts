@@ -1,7 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { processMatchOnly } from "../lib/gemini-client";
-import { withRateLimit } from "../lib/rate-limiter";
+import { withRateLimit, checkBetaQuota, consumeBetaQuota } from "../lib/rate-limiter";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
 
@@ -28,6 +28,35 @@ function getSupabaseClient(): SupabaseClient | null {
 const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  // Extract beta code from header
+  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+
+  if (!betaCode) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Beta code required. Please sign in with a valid beta code." })
+    };
+  }
+
+  // Check quota BEFORE processing
+  const quotaStatus = await checkBetaQuota(betaCode, 'match');
+
+  if (!quotaStatus.allowed) {
+    return {
+      statusCode: 403,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: quotaStatus.error || "Match analysis quota exceeded",
+        quotaExceeded: true,
+        used: quotaStatus.used,
+        limit: quotaStatus.limit,
+        remaining: quotaStatus.remaining,
+        action: 'match'
+      })
+    };
   }
 
   try {
@@ -100,6 +129,9 @@ const baseHandler: Handler = async (event) => {
       gapAnalysis: [],
       keywordStrategy: null
     };
+
+    // Consume quota AFTER successful match
+    await consumeBetaQuota(betaCode, 'match');
 
     return {
       statusCode: 200,

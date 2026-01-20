@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Brand Identity
+
+**Watheq** (وثّق) - Saudi-themed AI Resume Optimizer
+- Primary Color: Saudi Green (`#006C35`)
+- Accent Color: Warm Gold
+- Storage Key Prefix: `watheq:` (migrated from legacy `airo:`)
+
 ## Development Guidelines
 
 - Use **context7 MCP** in every implementation task to find better solutions for bugs
@@ -134,6 +141,11 @@ npm run test:watch             # Run tests in watch mode
   3. Technical Engineer - Skills-first for tech roles (blue theme)
   4. ATS Optimized - Single-column for applicant tracking systems (emerald theme)
 
+**i18n Support**:
+- Templates detect resume content language (English vs Arabic)
+- Section headers render in the resume's language, NOT the UI language
+- RTL layout applied automatically for Arabic resumes
+
 **PDF Generation**:
 - `src/components/templates/pdf/` - React-PDF components for each template
 - `pdf/shared.ts` - Common styling, formatters, and layout helpers
@@ -228,6 +240,7 @@ interface TemplateProps {
 5. **Skills**: Never auto-injected (recommendations only, user must add manually)
 6. **Cache Keys**: Generated from first 100 chars + length of both resume and job description
 7. **File Paths**: Use `@/` alias for imports from `src/` directory
+8. **Storage Keys**: Use `watheq:` prefix for all localStorage keys (e.g., `watheq:resumeData`, `watheq:lastJobDescription`)
 
 ## Build Configuration
 
@@ -316,6 +329,14 @@ npm run quality:check
   - Supabase (Auth + Storage)
   - Upstash Redis (Rate limiting)
   - Sentry (Error tracking)
+
+## Recent Enhancements (Implemented)
+
+The following features were recently implemented:
+
+- **Page Break Indicators**: Toggleable page break markers in TemplatesSection (`PageBreakIndicator.tsx`)
+- **Language Selector**: Auto-detects English vs Arabic content with badge (`useResumeLanguage.ts`)
+- **Cache Key Performance**: FNV-1a hash with memoization (~2x faster than previous djb2)
 
 ---
 

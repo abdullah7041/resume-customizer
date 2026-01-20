@@ -365,7 +365,17 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
   if (['modern-professional', 'classic-traditional', 'technical-engineer', 'ats-optimized'].includes(template.id)) {
     // Registry templates expect { resume, displayOptions } props
     return (
-      <div data-resume-preview style={formattingStyles}>
+      <div
+        data-resume-preview
+        dir="ltr"
+        style={{
+          ...formattingStyles,
+          // Force LTR for resume content regardless of UI language
+          direction: 'ltr',
+          textAlign: 'left',
+          unicodeBidi: 'isolate',
+        }}
+      >
         <TemplateComponent resume={finalData} displayOptions={displayOptions} />
       </div>
     );
@@ -373,7 +383,16 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
 
   // Fallback to generic dynamic renderer for custom/unknown templates
   return (
-    <div data-resume-preview style={formattingStyles}>
+    <div
+      data-resume-preview
+      dir="ltr"
+      style={{
+        ...formattingStyles,
+        direction: 'ltr',
+        textAlign: 'left',
+        unicodeBidi: 'isolate',
+      }}
+    >
       <DynamicTemplateRenderer template={template} userData={finalData} />
     </div>
   );

@@ -18,13 +18,20 @@ vi.mock('react-i18next', () => ({
 vi.mock('../lib/stores/resumeStore', () => ({
     useResumeStore: () => ({
         originalResume: null,
+        parsedResumeText: null,
         optimizations: [],
         showOptimized: false,
         getActiveResume: vi.fn(() => null),
         setSelectedTemplate: vi.fn(),
-        displayOptions: { fontSize: 1 },
+        displayOptions: { fontSize: 1, showPageBreaks: false },
         setDisplayOptions: vi.fn(),
+        contentLanguage: null,
+        setContentLanguage: vi.fn(),
     }),
+}));
+
+vi.mock('../hooks/useResumeLanguage', () => ({
+    useResumeLanguage: () => null,
 }));
 
 vi.mock('../services/analytics', () => ({
@@ -205,10 +212,11 @@ describe('TemplatesSection', () => {
     });
 
     describe('Floating Selector', () => {
-        it('renders hint text for choosing style', () => {
+        it('renders template selector in floating bar', () => {
             renderWithProviders(<TemplateGallery />);
 
-            expect(screen.getByText(/choose your style/i)).toBeInTheDocument();
+            // Template selector renders pills - Modern Professional should be visible
+            expect(screen.getAllByText('Modern Professional').length).toBeGreaterThan(0);
         });
 
         it('template pills are clickable', () => {
