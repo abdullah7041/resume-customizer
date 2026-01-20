@@ -40,8 +40,8 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
   }
 
   // Check for API key before proceeding
-  if (!process.env.GEMINI_API_KEY) {
-    console.error("[extract-resume-json] GEMINI_API_KEY is not set");
+  if (!process.env.OPENROUTER_API_KEY) {
+    console.error("[extract-resume-json] OPENROUTER_API_KEY is not set");
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },

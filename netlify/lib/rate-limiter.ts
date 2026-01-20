@@ -512,16 +512,16 @@ export function getRateLimitStats(): {
 
 /**
  * Beta quota configuration - PERMANENT lifetime limits per code
- * All features limited to 2 uses per beta code for consistency
+ * All features limited to 5 uses per beta code
  */
 const BETA_LIMITS = {
-  upload: 2,        // parse-resume.ts (PDF/DOCX parsing with OCR)
-  extract: 2,       // extract-resume-json.ts (Gemini-only parsing)
-  match: 2,         // ai-match.ts (TF-IDF + cosine similarity)
-  optimize: 2,      // optimize.ts (Flash model optimization)
-  predict: 2,       // predict-questions.ts (interview prep)
-  coverLetter: 2,   // generate-cover-letter.ts (Flash model)
-  batch: 2,         // batch-api.ts (bulk processing)
+  upload: 5,        // parse-resume.ts (PDF/DOCX parsing with OCR)
+  extract: 5,       // extract-resume-json.ts (Gemini-only parsing)
+  match: 5,         // ai-match.ts (TF-IDF + cosine similarity)
+  optimize: 5,      // optimize.ts (Flash model optimization)
+  predict: 5,       // predict-questions.ts (interview prep)
+  coverLetter: 5,   // generate-cover-letter.ts (Flash model)
+  batch: 5,         // batch-api.ts (bulk processing)
 } as const;
 
 /**

@@ -167,19 +167,23 @@ interface TemplateProps {
 | Function | Purpose | Model Used |
 |----------|---------|------------|
 | `parse-resume.ts` | Extract text from PDF/DOCX | N/A (OCR) |
-| `extract-resume-json.ts` | Convert text to JSON Resume schema | gemini-2.5-flash-lite (fast) |
-| `ai-match.ts` | TF-IDF + cosine similarity matching | gemini-2.5-flash |
-| `optimize.ts` | AI-driven optimization suggestions | gemini-2.5-flash (slowest) |
-| `predict-questions.ts` | Interview question generation | gemini-2.5-flash |
-| `generate-cover-letter.ts` | Cover letter generation | gemini-2.5-flash |
+| `extract-resume-json.ts` | Convert text to JSON Resume schema | OpenRouter: google/gemini-2.5-flash-lite |
+| `ai-match.ts` | TF-IDF + cosine similarity matching | OpenRouter: google/gemini-2.5-flash |
+| `optimize.ts` | AI-driven optimization suggestions | OpenRouter: google/gemini-2.5-flash |
+| `predict-questions.ts` | Interview question generation | OpenRouter: google/gemini-2.5-flash |
+| `generate-cover-letter.ts` | Cover letter generation | OpenRouter: google/gemini-2.5-flash |
+| `parse-arabic-resume.ts` | Parse Arabic/bilingual resumes | OpenRouter: google/gemini-2.5-flash-lite |
 | `generate-pdf.ts` | Server-side PDF generation | N/A (Puppeteer) |
-| `batch-api.ts` | Bulk resume analysis | gemini-2.5-flash |
+| `batch-api.ts` | Bulk resume analysis | OpenRouter: google/gemini-2.5-flash |
 | `delete-user-data.ts` | GDPR compliance | N/A |
 | `export-user-data.ts` | GDPR compliance | N/A |
 
-**Dual Model Strategy**:
-- `gemini-2.5-flash-lite` - Fast, low-cost for parsing (completions in seconds)
-- `gemini-2.5-flash` - Higher quality for AI analysis (completions in 10-30 seconds)
+**AI Provider Architecture**:
+- **Provider**: OpenRouter API (`openrouter-client.js`)
+- **Dual Model Strategy**:
+  - `lite` tier → `google/gemini-2.5-flash-lite` - Fast, low-cost for parsing (completions in seconds)
+  - `flash` tier → `google/gemini-2.5-flash` - Higher quality for AI analysis (completions in 10-30 seconds)
+- **Benefits**: Unified quota tracking, automatic failover, cost optimization through OpenRouter
 
 **Request Validation**: All endpoints use Zod schemas from `netlify/lib/resume-schemas.ts`
 
@@ -216,7 +220,7 @@ interface TemplateProps {
 | Matching Algorithm | TF-IDF + Cosine Similarity | Fast, free (no API costs), deterministic |
 | PDF Export | @react-pdf/renderer | Client-side rendering, no server dependencies |
 | Authentication | Supabase Auth | Already integrated, reduces vendor complexity |
-| AI Model | Gemini 2.5 Flash | Cost-effective, deterministic output (temperature=0) |
+| AI Provider | OpenRouter (Gemini 2.5) | Unified quota tracking, cost-effective, structured output |
 | Validation | Zod | Runtime type safety at boundaries |
 | Styling | Tailwind CSS v4 | Utility-first, dark mode support |
 | Testing | Vitest | Fast, ESM-native, Vite integration |
@@ -233,7 +237,11 @@ interface TemplateProps {
 
 ## Important Conventions
 
-1. **Logging Prefixes**: All store/function changes logged with `[ResumeStore]` or `[optimize]` prefixes
+1. **Logging Prefixes**: All store/function changes logged with component/function prefixes:
+   - `[ResumeStore]` - Zustand store operations
+   - `[OpenRouter]` - AI API calls via OpenRouter client
+   - `[extract-resume-json]` - Resume parsing function
+   - `[optimize]` - Optimization function
 2. **Error Objects**: Include `status`, `code`, `message` for structured error handling
 3. **Resume Text**: Can be either plain text or parsed JSON Resume
 4. **Optimizations**: Only applied if `applied: true` flag is set
@@ -241,6 +249,59 @@ interface TemplateProps {
 6. **Cache Keys**: Generated from first 100 chars + length of both resume and job description
 7. **File Paths**: Use `@/` alias for imports from `src/` directory
 8. **Storage Keys**: Use `watheq:` prefix for all localStorage keys (e.g., `watheq:resumeData`, `watheq:lastJobDescription`)
+9. **Environment Variables**:
+   - `OPENROUTER_API_KEY` - Required for all AI functions (replaces legacy `GEMINI_API_KEY`)
+   - All AI functions validate this key before processing
+
+## AI Client Architecture
+
+### OpenRouter Client (`netlify/lib/openrouter-client.js`)
+
+**Purpose**: Unified API client for all AI operations, replacing direct Google AI SDK usage.
+
+**Key Features**:
+- **Model Abstraction**: Internal tier names (`lite`, `flash`) map to OpenRouter model IDs
+- **Structured Output**: Automatic conversion from Google AI schema format to OpenRouter JSON schema
+- **Error Handling**: Comprehensive error messages with status codes
+- **Type Safety**: Returns typed responses for predictable parsing
+
+**Function Signature**:
+```javascript
+callOpenRouter(
+  modelType: 'lite' | 'flash',     // Model tier to use
+  messages: Array<{role, content}>, // Chat messages
+  jsonSchema: Object | null,        // Optional JSON schema for structured output
+  options: {                        // Optional configuration
+    temperature?: number,           // Default: 0
+    maxTokens?: number,             // Default: 16384
+    schemaName?: string             // Schema name for strict mode
+  }
+): Promise<string>                  // Returns JSON string if schema provided
+```
+
+**Usage Pattern**:
+```javascript
+import { callOpenRouter } from '../lib/openrouter-client.js';
+
+// For parsing (fast, lite model)
+const messages = [{ role: 'user', content: prompt }];
+const response = await callOpenRouter('lite', messages, null, {
+  temperature: 0,
+  maxTokens: 4096
+});
+
+// For structured output (with schema validation)
+const response = await callOpenRouter('flash', messages, schema, {
+  temperature: 0,
+  maxTokens: 16384,
+  schemaName: 'optimization_response'
+});
+```
+
+**Migration Notes**:
+- All functions previously using `@google/generative-ai` now use `openrouter-client.js`
+- `gemini-client.js` is a compatibility wrapper that internally calls OpenRouter
+- Environment variable: `OPENROUTER_API_KEY` (replaces `GEMINI_API_KEY`)
 
 ## Build Configuration
 

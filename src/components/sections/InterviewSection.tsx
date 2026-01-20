@@ -235,9 +235,19 @@ export function InterviewSection({
     setError(null);
 
     try {
+      // Get beta code from localStorage
+      const betaCode = typeof window !== 'undefined' ? localStorage.getItem('watheq:beta_access') : null;
+
+      if (!betaCode) {
+        throw new Error('Beta code not found. Please sign in again.');
+      }
+
       const response = await fetch(PREDICT_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Beta-Code': betaCode
+        },
         body: JSON.stringify({ jobDescription, resumeText: resumeText || '' }),
       });
 

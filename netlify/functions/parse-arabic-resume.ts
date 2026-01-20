@@ -1,28 +1,59 @@
 import { Handler } from '@netlify/functions';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { callOpenRouter } from '../lib/openrouter-client.js';
 import { initSentry, captureError } from '../lib/sentry';
 
 initSentry();
 
-const API_KEY = process.env.GEMINI_API_KEY;
+// Model tier constant for resume parsing
+const MODEL_TIER = 'lite'; // Fast, cost-effective model for parsing tasks
 
-if (!API_KEY) {
-  console.error('Error: GEMINI_API_KEY is not set.');
+// Type definition for parsed resume structure
+interface ParsedResume {
+  personalInfo: {
+    name: string;
+    email: string;
+    phone: string;
+    location: string;
+    linkedin: string;
+  };
+  objective: string;
+  experience: Array<{
+    title: string;
+    titleEn: string;
+    company: string;
+    location: string;
+    startDate: string;
+    endDate: string;
+    current: boolean;
+    description: string[];
+  }>;
+  education: Array<{
+    degree: string;
+    institution: string;
+    graduationDate: string;
+    gpa: string;
+  }>;
+  skills: string[];
+  certifications: string[];
+  languages: Array<{
+    name: string;
+    level: string;
+  }>;
 }
-
-const genAI = new GoogleGenerativeAI(API_KEY || '');
-const MODEL_NAME = 'gemini-2.5-flash-lite';
-
-const model = genAI.getGenerativeModel({
-  model: MODEL_NAME,
-  generationConfig: {
-    responseMimeType: 'application/json',
-  },
-});
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method not allowed' };
+  }
+
+  // Validate environment configuration
+  if (!process.env.OPENROUTER_API_KEY) {
+    console.error('[parse-arabic-resume] OPENROUTER_API_KEY is not set');
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Server configuration error: AI service not configured' }),
+    };
   }
 
   try {
@@ -82,13 +113,29 @@ Return JSON with this structure:
   ]
 }`;
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
+    // Use OpenRouter with lite model for parsing
+    const messages = [{ role: 'user', content: prompt }];
+    const text = await callOpenRouter(MODEL_TIER, messages, null, { temperature: 0, maxTokens: 4096 });
 
-    const response = await result.response;
-    const text = response.text();
-    const parsed = JSON.parse(text);
+    // Parse JSON response (callOpenRouter returns raw text)
+    let parsed: ParsedResume;
+    try {
+      parsed = JSON.parse(text);
+    } catch (parseError) {
+      // Try to extract JSON from markdown code blocks
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        try {
+          parsed = JSON.parse(jsonMatch[1].trim());
+        } catch (innerError) {
+          const errorMsg = innerError instanceof Error ? innerError.message : 'Unknown error';
+          throw new Error(`Failed to parse JSON from markdown block: ${errorMsg}. Response preview: ${text.substring(0, 200)}...`);
+        }
+      } else {
+        const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown error';
+        throw new Error(`Failed to parse AI response as JSON: ${errorMsg}. Response preview: ${text.substring(0, 200)}...`);
+      }
+    }
 
     return {
       statusCode: 200,

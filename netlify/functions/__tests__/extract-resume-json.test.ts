@@ -1,5 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
+import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/functions';
+
+// Mock context object for Netlify functions
+const mockContext: HandlerContext = {
+    callbackWaitsForEmptyEventLoop: true,
+    functionName: 'extract-resume-json',
+    functionVersion: '$LATEST',
+    invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:extract-resume-json',
+    memoryLimitInMB: '1024',
+    awsRequestId: 'test-request-id',
+    logGroupName: '/aws/lambda/extract-resume-json',
+    logStreamName: '2024/01/01/[$LATEST]test',
+    getRemainingTimeInMillis: () => 30000,
+    done: () => { },
+    fail: () => { },
+    succeed: () => { }
+};
 
 // Mock dependencies
 const mockGeminiClient = {
@@ -39,24 +55,24 @@ const { handler } = await import('../extract-resume-json');
 describe('extract-resume-json function', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        process.env.GEMINI_API_KEY = 'test-key';
+        process.env.OPENROUTER_API_KEY = 'test-key';
     });
 
     it('rejects GET requests with 405', async () => {
         const event = { httpMethod: 'GET', body: null } as Partial<HandlerEvent>;
         // function signature only takes 1 argument
-        const result = await handler(event as any) as HandlerResponse;
+        const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(405);
     });
 
-    it('returns 500 if GEMINI_API_KEY is not set', async () => {
-        delete process.env.GEMINI_API_KEY;
+    it('returns 500 if OPENROUTER_API_KEY is not set', async () => {
+        delete process.env.OPENROUTER_API_KEY;
         const event = {
             httpMethod: 'POST',
             body: '{}',
             headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
-        const result = await handler(event as any) as HandlerResponse;
+        const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(500);
         expect(result.body).toContain('Server configuration error');
     });
@@ -75,7 +91,7 @@ describe('extract-resume-json function', () => {
             headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as any) as HandlerResponse;
+        const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(200);
 
         const body = JSON.parse(result.body);
@@ -105,7 +121,7 @@ describe('extract-resume-json function', () => {
             headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as any) as HandlerResponse;
+        const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(200);
 
         const body = JSON.parse(result.body);
@@ -131,7 +147,7 @@ describe('extract-resume-json function', () => {
             headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as any) as HandlerResponse;
+        const result = await handler(event as any, mockContext) as HandlerResponse;
         // Expect 422 Unprocessable Entity as defined in the handler logic
         expect(result.statusCode).toBe(422);
     });
@@ -145,7 +161,7 @@ describe('extract-resume-json function', () => {
             headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as any) as HandlerResponse;
+        const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(500);
         expect(JSON.parse(result.body).error).toContain('AI service is currently busy');
     });

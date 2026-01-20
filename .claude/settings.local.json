@@ -35,7 +35,12 @@
       "mcp__supabase__execute_sql",
       "Bash(npm run lint:fix:*)",
       "Bash(npm ls:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(npx vitest:*)",
+      "Bash(time npm run build:vite:*)",
+      "Bash(find:*)",
+      "Bash(npm list:*)",
+      "Bash(ls:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
