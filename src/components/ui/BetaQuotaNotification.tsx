@@ -24,17 +24,22 @@ const getBetaCode = () => {
   return localStorage.getItem('watheq:beta_access');
 };
 
-const fetchQuotaStatus = async (): Promise<QuotaData | null> => {
+const fetchQuotaStatus = async (signal?: AbortSignal): Promise<QuotaData | null> => {
   const betaCode = getBetaCode();
   if (!betaCode) return null;
 
   try {
     const response = await fetch('/.netlify/functions/beta-quota-status', {
       headers: { 'X-Beta-Code': betaCode },
+      signal,
     });
     if (!response.ok) return null;
     return await response.json();
-  } catch {
+  } catch (error) {
+    // Gracefully handle AbortError when component unmounts
+    if (error instanceof Error && error.name === 'AbortError') {
+      return null;
+    }
     return null;
   }
 };
@@ -45,14 +50,20 @@ export function BetaQuotaNotification() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     const loadQuota = async () => {
-      const data = await fetchQuotaStatus();
+      const data = await fetchQuotaStatus(abortController.signal);
       setQuotaData(data);
     };
 
     loadQuota();
     const interval = setInterval(loadQuota, 30000); // Refresh every 30s
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      abortController.abort(); // Abort any in-flight fetch requests
+    };
   }, []);
 
   if (!quotaData) return null;
