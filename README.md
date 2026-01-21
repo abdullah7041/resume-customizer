@@ -1,6 +1,6 @@
 <div align="center">
 
-# وثّق | Watheq
+# واثق | Watheq
 
 ### AI Resume Optimizer for Saudi Arabia's Job Market
 
@@ -41,7 +41,7 @@ For licensing inquiries: Contact the author directly.
 
 ## 🎯 About Watheq
 
-**Watheq** (وثّق) is an intelligent AI-powered resume optimization platform built specifically for **Saudi Arabia's job market**. It helps job seekers create powerful, ATS-friendly resumes that align with Vision 2030 sector needs and modern hiring standards.
+**Watheq** (واثق) is an intelligent AI-powered resume optimization platform built specifically for **Saudi Arabia's job market**. It helps job seekers create powerful, ATS-friendly resumes that align with Vision 2030 sector needs and modern hiring standards.
 
 ### Why Watheq?
 
@@ -182,7 +182,7 @@ Unlike generic resume tools, Watheq is specifically optimized for:
           ▼                   ▼                   ▼
    ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
    │   Gemini    │     │  Supabase   │     │   Upstash   │
-   │  2.5-flash  │     │  Auth + DB  │     │    Redis    │
+   │             │     │  Auth + DB  │     │    Redis    │
    └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
@@ -253,7 +253,7 @@ See [LICENSE](./LICENSE) for complete terms.
 
 ---
 
-**وثّق | Watheq** — *Document your success*
+**واثق | Watheq** — *Document your success*
 
 © 2025-2026 Abdullah. All Rights Reserved.
 
