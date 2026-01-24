@@ -18,7 +18,8 @@ export default defineConfig({
     setupFiles: "./src/test/setup.ts",
     include: [
       "src/**/*.{test,spec}.{js,jsx,ts,tsx}",
-      "netlify/functions/__tests__/**/*.test.ts"
+      "netlify/functions/__tests__/**/*.test.ts",
+      "netlify/lib/__tests__/**/*.test.{js,ts}"
     ],
     css: true,
     env: {
