@@ -55,25 +55,93 @@ const resolveRedirectUrl = () => {
   return origin;
 };
 
+/**
+ * Capture and store referral parameter from URL
+ */
+const captureReferralParam = () => {
+  if (typeof window === "undefined") return;
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const refParam = searchParams.get("ref");
+
+  if (refParam) {
+    localStorage.setItem("watheq:pending_referrer_id", refParam);
+    console.log("[useAuth] Captured referral parameter:", refParam);
+
+    // Clean up URL without reloading
+    const cleanUrl = window.location.href.split("?")[0];
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+};
+
+/**
+ * Track referral after user signup
+ */
+const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
+  const referrerId = localStorage.getItem("watheq:pending_referrer_id");
+
+  if (!referrerId || referrerId === userId) {
+    return; // No referral to track
+  }
+
+  try {
+    console.log("[useAuth] Tracking referral:", { referrerId, userId });
+
+    const response = await fetch("/.netlify/functions/track-referral", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        referrer_id: referrerId,
+        referee_id: userId,
+        referee_email: userEmail || null,
+      }),
+    });
+
+    if (response.ok) {
+      console.log("[useAuth] Referral tracked successfully");
+      localStorage.removeItem("watheq:pending_referrer_id");
+    } else {
+      const errorData = await response.json();
+      console.warn("[useAuth] Failed to track referral:", errorData);
+    }
+  } catch (error) {
+    console.error("[useAuth] Error tracking referral:", error);
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lastUserId, setLastUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Capture referral parameter on mount
+    captureReferralParam();
+
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
       setLoading(false);
+
+      // Track referral for new signups
+      if (currentUser && !lastUserId && _event === "SIGNED_IN") {
+        trackReferralAfterSignup(currentUser.id, currentUser.email);
+      }
+
+      setLastUserId(currentUser?.id || null);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      setLastUserId(currentUser?.id || null);
       setLoading(false);
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [lastUserId]);
 
   const signInWithGoogle = async () => {
     const redirectUrl = resolveRedirectUrl();
