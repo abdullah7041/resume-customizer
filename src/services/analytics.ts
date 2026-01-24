@@ -26,14 +26,15 @@ class Analytics {
             return;
         }
 
+        // Note: recording_sessions_percent is not in TS types yet but is the correct API option
         mixpanel.init(MIXPANEL_TOKEN, {
             debug: false, // Disable debug mode to prevent mutex lock spam
             track_pageview: true,
             persistence: 'localStorage',
             ignore_dnt: false, // Respect Do Not Track
             opt_out_tracking_by_default: false,
-            record_sessions_percent: 10, // 10% sampling for privacy and cost efficiency
-        });
+            recording_sessions_percent: 50, // 50% moderate sampling - balances cost with visibility
+        } as Parameters<typeof mixpanel.init>[1]);
 
         this.initialized = true;
     }

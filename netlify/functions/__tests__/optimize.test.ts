@@ -7,14 +7,7 @@ vi.mock('../../lib/gemini-client', () => ({
 }));
 
 vi.mock('../../lib/rate-limiter', () => ({
-    withRateLimit: (_name: string, handler: Function) => handler,
-    checkBetaQuota: vi.fn().mockResolvedValue({
-        allowed: true,
-        used: 0,
-        limit: 2,
-        remaining: 2
-    }),
-    consumeBetaQuota: vi.fn().mockResolvedValue(undefined)
+    withRateLimit: (_name: string, handler: Function) => handler
 }));
 
 vi.mock('../../lib/sentry', () => ({
@@ -22,13 +15,36 @@ vi.mock('../../lib/sentry', () => ({
     captureError: vi.fn()
 }));
 
+vi.mock('@supabase/supabase-js', () => ({
+    createClient: vi.fn(() => ({
+        auth: {
+            getUser: vi.fn().mockResolvedValue({
+                data: { user: { id: 'test-user-123' } },
+                error: null
+            })
+        }
+    }))
+}));
+
+vi.mock('../../lib/credit-manager', () => ({
+    checkCredits: vi.fn().mockResolvedValue({
+        hasCredits: true,
+        required: 5,
+        available: 15
+    }),
+    consumeCredits: vi.fn().mockResolvedValue({
+        success: true,
+        creditsRemaining: 10
+    })
+}));
+
 import { optimizeResume } from '../../lib/gemini-client';
 
 // Import handler after mocks
 const { handler } = await import('../optimize');
 
-// Test beta code header
-const TEST_HEADERS = { 'X-Beta-Code': 'WATHEQ01' };
+// Test auth header
+const TEST_HEADERS = { 'Authorization': 'Bearer test-token' };
 
 // Helper to create mock context
 const createMockContext = (): HandlerContext => ({

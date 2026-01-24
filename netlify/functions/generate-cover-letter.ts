@@ -1,7 +1,9 @@
 import { generateCoverLetter } from "../lib/gemini-client";
-import { withRateLimit, checkBetaQuota, consumeBetaQuota } from "../lib/rate-limiter";
+import { withRateLimit } from "../lib/rate-limiter";
 import { CoverLetterRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
+import { checkCredits, consumeCredits } from "../lib/credit-manager";
+import { createClient } from "@supabase/supabase-js";
 
 initSentry();
 
@@ -10,31 +12,47 @@ const baseHandler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  // Extract beta code from header
-  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+  // Extract auth token from header
+  const authHeader = event.headers.authorization || event.headers.Authorization;
 
-  if (!betaCode) {
+  if (!authHeader) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Beta code required. Please sign in with a valid beta code." })
+      body: JSON.stringify({ error: "Authentication required. Please sign in." })
     };
   }
 
-  // Check quota BEFORE processing
-  const quotaStatus = await checkBetaQuota(betaCode, 'coverLetter');
+  // Verify token and get authenticated user
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!
+  );
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-  if (!quotaStatus.allowed) {
+  if (authError || !user) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or expired authentication token" })
+    };
+  }
+
+  const userId = user.id;
+
+  // Check credits BEFORE processing (4 credits for cover_letter)
+  const creditCheck = await checkCredits(userId, 'cover_letter');
+
+  if (!creditCheck.hasCredits) {
     return {
       statusCode: 403,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        error: quotaStatus.error || "Cover letter generation quota exceeded",
-        quotaExceeded: true,
-        used: quotaStatus.used,
-        limit: quotaStatus.limit,
-        remaining: quotaStatus.remaining,
-        action: 'coverLetter'
+        error: "Insufficient credits",
+        creditsRequired: creditCheck.required,
+        creditsAvailable: creditCheck.available,
+        creditsNeeded: creditCheck.required - creditCheck.available
       })
     };
   }
@@ -56,8 +74,8 @@ const baseHandler = async (event) => {
 
     const result = await generateCoverLetter(resumeText, jobDescription);
 
-    // Consume quota AFTER successful generation
-    await consumeBetaQuota(betaCode, 'coverLetter');
+    // Consume credits AFTER successful generation
+    await consumeCredits(userId, 'cover_letter');
 
     return {
       statusCode: 200,

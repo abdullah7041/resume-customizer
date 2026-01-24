@@ -1,14 +1,30 @@
 {
     "files": {
         "read": [
-            "CLAUDE.md"
+            "CLAUDE.md",
+            "CLAUDE_CODE_BEST_PRACTICES.md",
+            ".agent/AUTOMATIC_PROTOCOLS.md"
+        ]
+    },
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "*",
+                "hooks": [
+                    {
+                        "type": "prompt",
+                        "prompt": "You are starting a new session for the Watheq resume project. Remember:\n\n1. Use context7 mcp before implementing with unfamiliar libraries\n2. Enter Plan Mode for complex tasks (3+ files)\n3. Use task decomposition for multi-domain work\n4. MCP optimized: Only Supabase + Context7 enabled (~4k tokens)\n5. Run quality:parallel after code changes\n6. Create Tasks (not Todos) for multi-session projects\n7. Fix quality issues immediately without asking\n\nRefer to CLAUDE.md section '🤖 AUTOMATIC PROTOCOLS' for complete guidelines.\n\nRespond with: 'Ready. Automatic protocols loaded.' and await user's request.",
+                        "statusMessage": "Loading automatic protocols..."
+                    }
+                ]
+            }
         ]
     },
     "postTask": {
         "commands": [
             {
-                "command": "npm run quality:check",
-                "description": "Run linting, TypeScript checks, and tests after every code modification",
+                "command": "npm run quality:parallel",
+                "description": "Run linting, TypeScript checks, and tests in parallel (2-3x faster)",
                 "enabled": true
             }
         ]

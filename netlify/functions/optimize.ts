@@ -1,7 +1,9 @@
 import { optimizeResume } from "../lib/gemini-client";
-import { withRateLimit, checkBetaQuota, consumeBetaQuota } from "../lib/rate-limiter";
+import { withRateLimit } from "../lib/rate-limiter";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
+import { checkCredits, consumeCredits } from "../lib/credit-manager";
+import { createClient } from "@supabase/supabase-js";
 
 initSentry();
 
@@ -10,33 +12,51 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  // Extract beta code from header
-  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+  // Extract auth token from header
+  const authHeader = event.headers.authorization || event.headers.Authorization;
 
-  if (!betaCode) {
+  if (!authHeader) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        error: "Beta code required. Please sign in with a valid beta code."
+        error: "Authentication required. Please sign in."
       })
     };
   }
 
-  // Check quota BEFORE processing
-  const quotaStatus = await checkBetaQuota(betaCode, 'optimize');
+  // Verify token and get authenticated user
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!
+  );
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-  if (!quotaStatus.allowed) {
+  if (authError || !user) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Invalid or expired authentication token"
+      })
+    };
+  }
+
+  const userId = user.id;
+
+  // Check credits BEFORE processing (5 credits for optimize)
+  const creditCheck = await checkCredits(userId, 'optimize');
+
+  if (!creditCheck.hasCredits) {
     return {
       statusCode: 403,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        error: quotaStatus.error || "Optimization quota exceeded",
-        quotaExceeded: true,
-        used: quotaStatus.used,
-        limit: quotaStatus.limit,
-        remaining: quotaStatus.remaining,
-        action: 'optimize'
+        error: "Insufficient credits",
+        creditsRequired: creditCheck.required,
+        creditsAvailable: creditCheck.available,
+        creditsNeeded: creditCheck.required - creditCheck.available
       })
     };
   }
@@ -240,8 +260,8 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
       ...addKeywords
     ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
 
-    // Consume quota AFTER successful optimization
-    await consumeBetaQuota(betaCode, 'optimize');
+    // Consume credits AFTER successful optimization
+    await consumeCredits(userId, 'optimize');
 
     return {
       statusCode: 200,

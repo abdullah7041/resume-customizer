@@ -10,14 +10,7 @@ const mockGeminiClient = {
 };
 
 const mockRateLimiter = {
-    withRateLimit: (_name: string, handler: Function) => handler,
-    checkBetaQuota: vi.fn().mockResolvedValue({
-        allowed: true,
-        used: 0,
-        limit: 2,
-        remaining: 2
-    }),
-    consumeBetaQuota: vi.fn().mockResolvedValue(undefined)
+    withRateLimit: (_name: string, handler: Function) => handler
 };
 
 const mockSentry = {
@@ -28,7 +21,10 @@ const mockSentry = {
 const mockSupabase = {
     createClient: vi.fn(() => ({
         auth: {
-            getUser: vi.fn().mockResolvedValue({ data: { user: null } })
+            getUser: vi.fn().mockResolvedValue({
+                data: { user: { id: 'test-user-123' } },
+                error: null
+            })
         },
         from: vi.fn(() => ({
             insert: vi.fn().mockResolvedValue({ data: null, error: null })
@@ -36,10 +32,23 @@ const mockSupabase = {
     }))
 };
 
+const mockCreditManager = {
+    checkCredits: vi.fn().mockResolvedValue({
+        hasCredits: true,
+        required: 2,
+        available: 15
+    }),
+    consumeCredits: vi.fn().mockResolvedValue({
+        success: true,
+        creditsRemaining: 13
+    })
+};
+
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/sentry', () => mockSentry);
 vi.mock('@supabase/supabase-js', () => mockSupabase);
+vi.mock('../../lib/credit-manager', () => mockCreditManager);
 
 // Helper to create mock context
 const createMockContext = (): HandlerContext => ({
@@ -61,6 +70,10 @@ const createMockContext = (): HandlerContext => ({
 describe('AI Integration Functions', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Set required env vars for Supabase client initialization
+        process.env.SUPABASE_URL = 'https://test.supabase.co';
+        process.env.SUPABASE_ANON_KEY = 'test-anon-key';
+        process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
     });
 
     describe('ai-match function', () => {
@@ -74,7 +87,7 @@ describe('AI Integration Functions', () => {
         it('validates input schema', async () => {
             const event = {
                 httpMethod: 'POST',
-                headers: { 'X-Beta-Code': 'WATHEQ01' },
+                headers: { 'Authorization': 'Bearer test-token' },
                 body: JSON.stringify({ resumeText: 'test' }) // Missing jobDesc
             } as Partial<HandlerEvent>;
 
@@ -93,7 +106,7 @@ describe('AI Integration Functions', () => {
 
             const event = {
                 httpMethod: 'POST',
-                headers: { 'X-Beta-Code': 'WATHEQ01' },
+                headers: { 'Authorization': 'Bearer test-token' },
                 body: JSON.stringify({ resumeText: 'resume', jobDesc: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -117,7 +130,7 @@ describe('AI Integration Functions', () => {
         it('validates input schema', async () => {
             const event = {
                 httpMethod: 'POST',
-                headers: { 'X-Beta-Code': 'WATHEQ01' },
+                headers: { 'Authorization': 'Bearer test-token' },
                 body: JSON.stringify({ jobDescription: 'job' }) // Missing resumeText
             } as Partial<HandlerEvent>;
 
@@ -132,7 +145,7 @@ describe('AI Integration Functions', () => {
 
             const event = {
                 httpMethod: 'POST',
-                headers: { 'X-Beta-Code': 'WATHEQ01' },
+                headers: { 'Authorization': 'Bearer test-token' },
                 body: JSON.stringify({ resumeText: 'resume', jobDescription: 'job' })
             } as Partial<HandlerEvent>;
 
@@ -155,7 +168,7 @@ describe('AI Integration Functions', () => {
         it('validates input schema', async () => {
             const event = {
                 httpMethod: 'POST',
-                headers: { 'X-Beta-Code': 'WATHEQ01' },
+                headers: { 'Authorization': 'Bearer test-token' },
                 body: JSON.stringify({ jobDescription: 'job' }) // Missing resumeText
             } as Partial<HandlerEvent>;
 
@@ -172,7 +185,7 @@ describe('AI Integration Functions', () => {
 
             const event = {
                 httpMethod: 'POST',
-                headers: { 'X-Beta-Code': 'WATHEQ01' },
+                headers: { 'Authorization': 'Bearer test-token' },
                 body: JSON.stringify({ resumeText: 'resume', jobDescription: 'job' })
             } as Partial<HandlerEvent>;
 

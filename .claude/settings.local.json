@@ -42,11 +42,13 @@
       "Bash(npm list:*)",
       "Bash(ls:*)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run quality:parallel:*)"
     ]
   },
-  "enableAllProjectMcpServers": true,
+  "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [
-    "supabase"
+    "supabase",
+    "context7"
   ]
 }

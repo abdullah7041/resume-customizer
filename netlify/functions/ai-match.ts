@@ -1,9 +1,10 @@
 import { Handler } from '@netlify/functions';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { processMatchOnly } from "../lib/gemini-client";
-import { withRateLimit, checkBetaQuota, consumeBetaQuota } from "../lib/rate-limiter";
+import { withRateLimit } from "../lib/rate-limiter";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
+import { checkCredits, consumeCredits } from "../lib/credit-manager";
 
 initSentry();
 
@@ -30,31 +31,53 @@ const baseHandler: Handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  // Extract beta code from header
-  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+  // Extract auth token from header
+  const authHeader = event.headers.authorization || event.headers.Authorization;
 
-  if (!betaCode) {
+  if (!authHeader) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Beta code required. Please sign in with a valid beta code." })
+      body: JSON.stringify({ error: "Authentication required. Please sign in." })
     };
   }
 
-  // Check quota BEFORE processing
-  const quotaStatus = await checkBetaQuota(betaCode, 'match');
+  // Verify token and get authenticated user
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const client = getSupabaseClient();
 
-  if (!quotaStatus.allowed) {
+  if (!client) {
+    return {
+      statusCode: 503,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Service temporarily unavailable" })
+    };
+  }
+
+  const { data: { user }, error: authError } = await client.auth.getUser(token);
+
+  if (authError || !user) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or expired authentication token" })
+    };
+  }
+
+  const userId = user.id;
+
+  // Check credits BEFORE processing (2 credits for ai_match)
+  const creditCheck = await checkCredits(userId, 'ai_match');
+
+  if (!creditCheck.hasCredits) {
     return {
       statusCode: 403,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        error: quotaStatus.error || "Match analysis quota exceeded",
-        quotaExceeded: true,
-        used: quotaStatus.used,
-        limit: quotaStatus.limit,
-        remaining: quotaStatus.remaining,
-        action: 'match'
+        error: "Insufficient credits",
+        creditsRequired: creditCheck.required,
+        creditsAvailable: creditCheck.available,
+        creditsNeeded: creditCheck.required - creditCheck.available
       })
     };
   }
@@ -73,23 +96,6 @@ const baseHandler: Handler = async (event) => {
     }
 
     const { resumeText, jobDesc } = parseResult.data;
-
-    // Extract user ID from Authorization header (optional)
-    let userId: string | null = null;
-    const client = getSupabaseClient();
-
-    if (client) {
-      try {
-        const authHeader = event.headers.authorization || event.headers.Authorization;
-        if (authHeader?.startsWith('Bearer ')) {
-          const token = authHeader.substring(7);
-          const { data: { user } } = await client.auth.getUser(token);
-          userId = user?.id || null;
-        }
-      } catch {
-        // Non-blocking auth error
-      }
-    }
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
     const match = await processMatchOnly(resumeText, jobDesc);
@@ -130,8 +136,8 @@ const baseHandler: Handler = async (event) => {
       keywordStrategy: null
     };
 
-    // Consume quota AFTER successful match
-    await consumeBetaQuota(betaCode, 'match');
+    // Consume credits AFTER successful match
+    await consumeCredits(userId, 'ai_match');
 
     return {
       statusCode: 200,

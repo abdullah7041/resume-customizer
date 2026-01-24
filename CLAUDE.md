@@ -9,26 +9,102 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Accent Color: Warm Gold
 - Storage Key Prefix: `watheq:` (migrated from legacy `airo:`)
 
+## 🤖 AUTOMATIC PROTOCOLS (Claude Must Follow Every Session)
+
+> [!CRITICAL]
+> **These protocols are MANDATORY and AUTOMATIC. Claude must apply them in EVERY session without the user needing to ask.**
+
+### 1. Pre-Task Research Protocol (ALWAYS)
+**Before writing ANY code:**
+1. Use `context7 mcp` → `resolve-library-id` → `query-docs` for library research
+2. Search for 2026 best practices if uncertain
+3. Read `.agent/skills/best-practices/SKILL.md` for current standards
+
+**Example**: Before implementing auth, research latest Supabase patterns via context7.
+
+### 2. MCP Context Awareness (AUTOMATIC)
+- **Check token usage**: Run `/context` before complex tasks
+- **Current setup**: Supabase (3.2k) + Context7 (0.9k) = ~4k tokens
+- **Alert user if**: MCP tools exceed 10k tokens (needs optimization)
+- **Never suggest**: Enabling Notion, Canva, or Sentry unless explicitly needed
+
+### 3. Task Decomposition (AUTO-TRIGGER)
+**Automatically use for:**
+- Tasks affecting 3+ files
+- Multi-domain work (frontend + backend + tests)
+- Complex refactoring or new features
+
+**Pattern**:
+1. Break into 2-3 parallel subtasks
+2. Launch Explore agents simultaneously
+3. Consolidate in Plan Mode
+4. Execute with quality checks
+
+**Reference**: See [TASK_DECOMPOSITION.md](TASK_DECOMPOSITION.md)
+
+### 4. Plan Mode for Complex Tasks (AUTOMATIC)
+**Enter Plan Mode when:**
+- 3+ files will be modified
+- Architecture decisions needed
+- User requests complex feature
+- Uncertainty about approach
+
+**In Plan Mode**: Use Tasks (not Todos) for persistence across sessions
+
+### 5. Quality Checks (NON-NEGOTIABLE)
+**After EVERY code modification:**
+```bash
+npm run quality:parallel  # Runs automatically via post-task hook
+```
+- Must pass: ESLint (0 warnings), TypeScript (0 errors), Tests (0 failures)
+- Auto-fix immediately if failures occur
+- Never ask permission to fix quality issues
+
+### 6. Model Selection (AUTOMATIC)
+**Claude automatically recommends:**
+- **Haiku**: Simple edits, explanations, file reading
+- **Sonnet**: Feature implementation, debugging, refactoring
+- **Opus**: Architecture planning, complex multi-file refactors
+
+**Cost awareness**: Mention when Opus might be expensive for user's budget
+
+### 7. Tasks vs Todos (AUTOMATIC)
+**Use Tasks for:**
+- Multi-session projects
+- Features with dependencies
+- Complex implementations (auth, payments, etc.)
+
+**Use Todos for:**
+- Single-session work
+- Simple fixes
+- No dependencies
+
+**Tasks syntax**: `#1, #2, #3` with `blocked by` relationships
+
+---
+
 ## Development Guidelines
 
-- Use **context7 MCP** in every implementation task to find better solutions for bugs
 - Double-check code before writing
 - Update `CLAUDE.md` when project conventions change
-- Recommend Claude model based on task difficulty:
-  - **Haiku**: Simple tasks (quick edits, explanations)
-  - **Sonnet**: Medium complexity (feature implementation, debugging)
-  - **Opus**: Complex tasks (architecture, multi-file refactors)
 - Ask clarifying questions for better understanding
 - Keep answers clear & concise
 - Choose only popular & proven tech stacks
 - Write in plain, easy-to-understand English
 - Prefer fewer lines of code
 
-## Agent Skills (MANDATORY)
+## Agent Skills (AUTO-LOADED)
 
-- **best-practices**: (`.agent/skills/best-practices/SKILL.md`) - **CRITICAL:** ALWAYS read this file before ANY implementation or debugging task. It contains the mandatory research protocol for latest standards.
-- **vibe-coding**: (`.agent/skills/vibe-coding/SKILL.md`) - Use for high-velocity, intent-driven development and agentic orchestration.
-- **Rules**: Prefer fewer lines of code in all implementations.
+- **best-practices**: (`.agent/skills/best-practices/SKILL.md`) - Contains MCP optimization, task decomposition, research protocol
+- **vibe-coding**: (`.agent/skills/vibe-coding/SKILL.md`) - High-velocity development patterns
+- **mcp-toolbox**: (`.agent/skills/mcp-toolbox/SKILL.md`) - MCP server reference
+
+**Additional Resources**:
+- [CLAUDE_CODE_BEST_PRACTICES.md](CLAUDE_CODE_BEST_PRACTICES.md) - Complete 2026 best practices
+- [TASK_DECOMPOSITION.md](TASK_DECOMPOSITION.md) - Parallel agent workflows
+- [AI_ALTERNATIVES.md](AI_ALTERNATIVES.md) - Cline, Continue.dev, Aider
+- [API_COST_ANALYSIS.md](API_COST_ANALYSIS.md) - Budget optimization
+- [TASKS_FEATURE_GUIDE.md](TASKS_FEATURE_GUIDE.md) - New Tasks feature
 
 ## MANDATORY: Post-Task Quality Protocol
 
@@ -50,8 +126,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Manual Quality Commands
 
 ```bash
-# Run full quality check (lint + types + tests)
-npm run quality:check
+# RECOMMENDED: Parallel quality check (2-3x faster)
+npm run quality:parallel   # Runs lint, type:check, test simultaneously
+
+# Sequential quality check (slower, but easier to read output)
+npm run quality:check      # Runs lint → type:check → test
 
 # Auto-fix linting issues + check types + run tests
 npm run quality:fix
@@ -63,6 +142,8 @@ npm run type:check    # Check TypeScript
 npm run test          # Run unit tests
 npm run test:watch    # Run tests in watch mode
 ```
+
+**Automatic Enforcement**: Post-task hook runs `quality:check` after every code modification.
 
 ## Development Commands
 
@@ -78,7 +159,8 @@ npm run build:analyze          # Build with bundle analyzer
 npm run preview                # Preview production build
 
 # Quality checks
-npm run quality:check          # Run all quality checks
+npm run quality:parallel       # Run all checks in parallel (RECOMMENDED, 2-3x faster)
+npm run quality:check          # Run all quality checks sequentially
 npm run quality:fix            # Auto-fix and check
 npm run lint                   # ESLint check
 npm run lint:fix               # ESLint auto-fix
@@ -354,32 +436,68 @@ Before completing ANY code task, ensure:
 - [ ] All imports are actually used
 - [ ] React components have unique keys in `.map()`
 
-## Enforcement Rules
+## Enforcement Rules (AUTOMATIC - No User Prompting Needed)
 
+### Quality & Code Standards
 1. **Never ask the user** if you should fix quality issues - FIX THEM IMMEDIATELY
 2. **Do not mark tasks complete** while `quality:check` has errors
-3. **Common fixes to apply automatically:**
+3. **Always use `quality:parallel`** for faster checks (2-3x speedup)
+4. **Common fixes to apply automatically:**
    - Missing types → Add explicit TypeScript interfaces
    - Unused imports → Remove them
    - Missing React keys → Add unique keys to mapped elements
    - `any` type warnings → Replace with proper typed interfaces
    - ESLint rule violations → Follow the suggested fix
 
-## Auto-Fix Workflow
+### Research & Best Practices
+5. **Before ANY implementation**: Use `context7 mcp` to research library docs
+6. **For complex tasks (3+ files)**: Automatically enter Plan Mode
+7. **Multi-domain tasks**: Use task decomposition pattern without asking
+8. **Uncertainty about approach**: Use Plan Mode and create Tasks (not Todos)
+
+### MCP & Context Management
+9. **Monitor token usage**: Check `/context` before complex tasks
+10. **Alert user if MCP > 10k tokens**: Suggest optimization
+11. **Never suggest**: Enabling Notion/Canva/Sentry unless explicitly needed for feature
+12. **Current optimized setup**: Only Supabase + Context7 enabled (~4k tokens)
+
+### Model Selection
+13. **Automatically recommend**:
+    - Haiku for: Simple edits, explanations, file reading
+    - Sonnet for: Feature implementation, debugging, refactoring
+    - Opus for: Architecture, complex multi-file refactors
+14. **Warn user**: When Opus might exceed their budget
+
+### Tasks vs Todos
+15. **Use Tasks for**: Multi-session projects, complex features with dependencies
+16. **Use Todos for**: Simple single-session work
+17. **Tasks syntax**: Use `#1, #2, #3` numbering with `blocked by` relationships
+
+### Never Do This (Anti-Patterns)
+- ❌ Skip research for unfamiliar libraries
+- ❌ Enable all MCP servers "just in case"
+- ❌ Use Opus for simple bug fixes
+- ❌ Ask permission to fix linting/TypeScript errors
+- ❌ Mark task complete with failing quality checks
+- ❌ Use Todos for complex multi-session projects (use Tasks)
+
+## Auto-Fix Workflow (AUTOMATIC)
 
 ```bash
 # 1. Auto-fix what can be fixed
 npm run lint:fix
 
-# 2. Check what remains
-npm run quality:check
+# 2. Check what remains (use parallel for speed)
+npm run quality:parallel
 
 # 3. Manually fix TypeScript errors
 # (ESLint errors should be gone after step 1)
 
 # 4. Verify everything passes
-npm run quality:check
+npm run quality:parallel  # 2-3x faster than quality:check
 ```
+
+**Claude executes this automatically** - user doesn't need to ask.
 
 ## Deployment Architecture
 
@@ -401,4 +519,35 @@ The following features were recently implemented:
 
 ---
 
-**Remember:** Quality checks are automated and enforced. There is no "skipping" this step.
+## 🔄 Session Initialization Checklist (Claude's Internal Protocol)
+
+**At the start of EVERY session, Claude automatically:**
+
+1. ✅ Loads `.agent/skills/best-practices/SKILL.md` for current standards
+2. ✅ Remembers MCP optimization (Supabase + Context7 only, ~4k tokens)
+3. ✅ Knows to use `context7 mcp` before implementation
+4. ✅ Uses Plan Mode for complex tasks (3+ files)
+5. ✅ Applies task decomposition for multi-domain work
+6. ✅ Runs `quality:parallel` after code changes
+7. ✅ Creates Tasks (not Todos) for multi-session projects
+8. ✅ Recommends appropriate model (Haiku/Sonnet/Opus)
+9. ✅ Fixes quality issues immediately without asking
+
+**User never needs to:**
+- ❌ Remind Claude to research libraries (automatic via context7)
+- ❌ Ask to use Plan Mode (triggers automatically for complex tasks)
+- ❌ Request quality checks (runs automatically via post-task hook)
+- ❌ Specify model selection (Claude recommends based on complexity)
+- ❌ Explain MCP optimization (already configured in settings)
+- ❌ Ask for task decomposition (applies automatically when beneficial)
+
+**Reference Documentation (Loaded Automatically):**
+- [CLAUDE_CODE_BEST_PRACTICES.md](CLAUDE_CODE_BEST_PRACTICES.md) - Complete 2026 guidelines
+- [TASK_DECOMPOSITION.md](TASK_DECOMPOSITION.md) - Parallel agent workflows
+- [TASKS_FEATURE_GUIDE.md](TASKS_FEATURE_GUIDE.md) - Tasks vs Todos usage
+- [API_COST_ANALYSIS.md](API_COST_ANALYSIS.md) - Budget awareness
+- [AI_ALTERNATIVES.md](AI_ALTERNATIVES.md) - Alternative tools reference
+
+---
+
+**Remember:** All protocols above are AUTOMATIC and MANDATORY. Quality checks are enforced. There is no "skipping" these steps.
