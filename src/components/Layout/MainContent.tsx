@@ -16,6 +16,7 @@ import { InterviewSection } from "../sections/InterviewSection";
 import { BulkAnalysisSection } from "../sections/BulkAnalysisSection";
 import { CoverLetterSection } from "../sections/CoverLetterSection";
 import { PricingSection } from "../sections/PricingSection";
+import { Vision2030Section } from "../Vision2030/Vision2030Section";
 import { GlassTabs } from "../ui/GlassTabs";
 import Toast, { ToastContainer } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
@@ -33,6 +34,7 @@ import { useFeedbackPrompt } from "../../lib/hooks/useFeedbackPrompt";
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
   { value: "match", label: t("tabs.match"), icon: Target },
+  { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target },
   { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
 
   { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate },
@@ -807,6 +809,12 @@ export default function MainContent() {
               resumeText={resumeData?.plainText || ''}
               onToast={pushToast}
               onClear={handleClearMatch}
+            />
+          )}
+          {activeTab === "vision2030" && (
+            <Vision2030Section
+              resumeText={resumeData?.plainText || ''}
+              onToast={pushToast}
             />
           )}
           {activeTab === "optimize" && (

@@ -1,0 +1,315 @@
+/**
+ * Vision2030Section Component
+ *
+ * Full dedicated tab for Vision 2030 alignment analysis.
+ * Costs 2 credits for detailed AI-powered sector analysis.
+ */
+
+import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Target, Sparkles, Info, FileText } from 'lucide-react';
+import { analyzeVision2030 } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import { useUserCredits } from '../../hooks/useUserCredits';
+import { Vision2030AnalysisResponse } from '../../types/vision2030';
+import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { SectorBreakdown } from './SectorBreakdown';
+import { RecommendationsModal } from './RecommendationsModal';
+import { GlassButton } from '../ui/GlassButton';
+import { GlassCard } from '../ui/GlassCard';
+import EmptyState from '../ui/EmptyState';
+
+interface Vision2030SectionProps {
+  resumeText?: string;
+  onToast?: (toast: any) => void;
+}
+
+export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProps) {
+  const { t, i18n } = useTranslation();
+  const { user } = useAuth();
+  const { credits, isLoading: creditsLoading, refetch: refreshCredits } = useUserCredits();
+  const isArabic = i18n.language === 'ar';
+
+  const [analysis, setAnalysis] = useState<Vision2030AnalysisResponse | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
+
+  // Handle analyze action
+  const handleAnalyze = useCallback(async () => {
+    if (!resumeText || !user) {
+      onToast?.({
+        type: 'warning',
+        title: t('vision2030.section.noResume', 'Resume Required'),
+        description: t('vision2030.section.noResumeDesc', 'Please upload a resume first.'),
+      });
+      return;
+    }
+
+    // Show confirmation modal
+    setShowConfirmModal(true);
+  }, [resumeText, user, onToast, t]);
+
+  // Execute analysis after credit confirmation
+  const executeAnalysis = useCallback(async () => {
+    if (!resumeText) return;
+
+    setShowConfirmModal(false);
+    setIsAnalyzing(true);
+
+    try {
+      onToast?.({
+        type: 'info',
+        title: t('vision2030.section.analyzing', 'Analyzing...'),
+        description: t('vision2030.section.analyzingDesc', 'Analyzing your resume against Vision 2030 sectors...'),
+      });
+
+      const result = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', null);
+      setAnalysis(result);
+
+      onToast?.({
+        type: 'success',
+        title: t('vision2030.section.complete', 'Analysis Complete'),
+        description: t('vision2030.section.completeDesc', 'Your Vision 2030 alignment report is ready.'),
+      });
+
+      // Refresh credits after consumption
+      await refreshCredits();
+    } catch (error: any) {
+      console.error('[Vision2030Section] Analysis failed:', error);
+
+      onToast?.({
+        type: 'danger',
+        title: t('vision2030.section.failed', 'Analysis Failed'),
+        description: error?.message || t('vision2030.section.failedDesc', 'Failed to analyze Vision 2030 alignment. Please try again.'),
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [resumeText, isArabic, onToast, t, refreshCredits]);
+
+  // Get score color based on value
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return 'text-emerald-400';
+    if (score >= 40) return 'text-amber-400';
+    return 'text-red-400';
+  };
+
+  const getScoreBg = (score: number) => {
+    if (score >= 70) return 'bg-emerald-500/10 border-emerald-500/20';
+    if (score >= 40) return 'bg-amber-500/10 border-amber-500/20';
+    return 'bg-red-500/10 border-red-500/20';
+  };
+
+  // Empty state when no resume uploaded
+  if (!resumeText) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title={t('vision2030.section.uploadResume', 'Upload Your Resume')}
+        description={t('vision2030.section.uploadResumeDesc', 'Upload your resume on the Resume tab to analyze your alignment with Saudi Vision 2030.')}
+      />
+    );
+  }
+
+  // Loading state
+  if (isAnalyzing) {
+    return (
+      <GlassCard className="p-8">
+        <div className="flex flex-col items-center justify-center space-y-4 py-12">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl animate-pulse" />
+            <div className="relative p-4 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
+              <Sparkles className="w-8 h-8 text-emerald-400 animate-spin" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-white">
+            {t('vision2030.section.analyzing', 'Analyzing...')}
+          </h3>
+          <p className="text-sm text-white/60 max-w-md text-center">
+            {t('vision2030.section.analyzingProgress', 'Analyzing your resume against Saudi Vision 2030 strategic sectors...')}
+          </p>
+        </div>
+      </GlassCard>
+    );
+  }
+
+  // Results state
+  if (analysis) {
+    return (
+      <div className="space-y-6">
+        {/* Overall Score Card */}
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
+                <Target className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {t('vision2030.section.yourAlignment', 'Your Vision 2030 Alignment')}
+                </h2>
+                <p className="text-sm text-white/60">
+                  {t('vision2030.section.careerPath', 'Detected Career Path')}: <span className="font-medium text-white/80">{isArabic ? analysis.detectedCareer.archetypeNameAr : analysis.detectedCareer.archetypeNameEn}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Overall Score */}
+            <div className={`px-6 py-4 rounded-xl border backdrop-blur-md ${getScoreBg(analysis.overallScore)}`}>
+              <div className="flex flex-col items-center">
+                <span className="text-xs text-white/50 uppercase tracking-wider mb-1">
+                  {t('vision2030.section.overallScore', 'Overall Score')}
+                </span>
+                <span className={`text-3xl font-bold ${getScoreColor(analysis.overallScore)}`}>
+                  {analysis.overallScore}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Sectors */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              {t('vision2030.section.topSectors', 'Top Aligned Sectors')}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {analysis.sectorBreakdown
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 3)
+                .map((sector) => (
+                  <div
+                    key={sector.sectorId}
+                    className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-emerald-500/30 transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-white/90">
+                        {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
+                      </span>
+                      <span className={`text-lg font-bold ${getScoreColor(sector.score)}`}>
+                        {sector.score}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-900/50 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-1000"
+                        style={{ width: `${sector.score}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-white/5">
+            <GlassButton
+              variant="secondary"
+              onClick={() => setShowRecommendationsModal(true)}
+              className="flex-1"
+            >
+              <Info className="w-4 h-4 me-2" />
+              {t('vision2030.section.viewRecommendations', 'View Recommendations')}
+            </GlassButton>
+            <GlassButton
+              variant="primary"
+              onClick={handleAnalyze}
+              className="flex-1"
+            >
+              <Sparkles className="w-4 h-4 me-2" />
+              {t('vision2030.section.reanalyze', 'Re-analyze (2 credits)')}
+            </GlassButton>
+          </div>
+        </GlassCard>
+
+        {/* Detailed Sector Breakdown */}
+        <SectorBreakdown
+          sectorBreakdown={analysis.sectorBreakdown}
+          matchedSkills={analysis.matchedSkills}
+          isArabic={isArabic}
+        />
+
+        {/* Recommendations Modal */}
+        <RecommendationsModal
+          isOpen={showRecommendationsModal}
+          onClose={() => setShowRecommendationsModal(false)}
+          missingSuggestions={analysis.missingSuggestions}
+          isArabic={isArabic}
+        />
+      </div>
+    );
+  }
+
+  // Initial state - prompt to analyze
+  return (
+    <GlassCard className="p-8">
+      <div className="flex flex-col items-center justify-center space-y-6 py-12">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-2xl animate-pulse" />
+          <div className="relative p-6 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
+            <Target className="w-12 h-12 text-emerald-400" />
+          </div>
+        </div>
+
+        <div className="text-center space-y-2 max-w-lg">
+          <h2 className="text-2xl font-bold text-white">
+            {t('vision2030.section.title', 'Vision 2030 Alignment Analysis')}
+          </h2>
+          <p className="text-white/60">
+            {t('vision2030.section.description', 'Discover how your skills and experience align with Saudi Vision 2030 strategic sectors. Get AI-powered insights and recommendations.')}
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+          <GlassButton
+            variant="primary"
+            onClick={handleAnalyze}
+            disabled={creditsLoading || !user}
+            className="flex-1 justify-center"
+          >
+            <Sparkles className="w-4 h-4 me-2" />
+            {t('vision2030.section.analyze', 'Analyze Resume (2 credits)')}
+          </GlassButton>
+        </div>
+
+        {/* Info about what's included */}
+        <div className="mt-8 p-4 rounded-xl bg-white/[0.02] border border-white/5 max-w-lg">
+          <h4 className="text-sm font-semibold text-white/90 mb-3">
+            {t('vision2030.section.included', "What's Included:")}
+          </h4>
+          <ul className="space-y-2 text-sm text-white/60">
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-400">✓</span>
+              <span>{t('vision2030.section.feature1', 'Overall alignment score across all Vision 2030 sectors')}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-400">✓</span>
+              <span>{t('vision2030.section.feature2', 'Sector-by-sector breakdown with matched skills')}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-400">✓</span>
+              <span>{t('vision2030.section.feature3', 'Personalized recommendations to improve alignment')}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-400">✓</span>
+              <span>{t('vision2030.section.feature4', 'Keywords and skills to add (Arabic + English)')}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Credit Confirmation Modal */}
+      {!creditsLoading && credits && (
+        <ConfirmActionModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={executeAnalysis}
+          feature="vision2030"
+          currentCredits={credits.remaining}
+          isLoading={isAnalyzing}
+        />
+      )}
+    </GlassCard>
+  );
+}
