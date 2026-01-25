@@ -12,7 +12,6 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { sendCreditsRefreshedEmail } from '../lib/email-service.js';
-import { addCredits } from '../lib/credit-manager.js';
 
 const handler: Handler = async (event) => {
   console.log('[cron-reset-credits] Starting scheduled credit reset...');

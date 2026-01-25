@@ -99,7 +99,7 @@ const handler: Handler = async (event) => {
     let requestData: unknown;
     try {
       requestData = JSON.parse(event.body);
-    } catch (error) {
+    } catch {
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },

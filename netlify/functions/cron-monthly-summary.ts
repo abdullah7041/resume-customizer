@@ -79,7 +79,6 @@ const handler: Handler = async (event) => {
     const creditsMap = new Map((allUserCredits || []).map((c) => [c.user_id, c]));
 
     // Calculate the date range for past month (since last_reset_date)
-    const now = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -99,8 +98,6 @@ const handler: Handler = async (event) => {
 
     for (const user of authUsers.users) {
       const userId = user.id;
-      const userEmail = user.email;
-      const userName = user.user_metadata?.full_name || userEmail?.split('@')[0] || 'User';
 
       const userCredits = creditsMap.get(userId);
       if (!userCredits) {
