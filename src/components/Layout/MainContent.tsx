@@ -791,7 +791,7 @@ export default function MainContent() {
           </>
         )}
 
-        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-5 lg:p-6 transition-shadow duration-300 hover:shadow-2xl">
+        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-5 lg:p-6 transition-shadow duration-300 hover:shadow-2xl">
           {activeTab === "resume" && (
             <UploadSection
               onParseResume={handleParseResume}
@@ -891,7 +891,7 @@ export default function MainContent() {
         onClose={dismissFeedback}
       />
       <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="rounded-2xl bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-7 lg:p-8 transition-shadow duration-300 hover:shadow-2xl">
+        <div className="rounded-2xl bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-7 lg:p-8 transition-shadow duration-300 hover:shadow-2xl">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div
@@ -941,7 +941,7 @@ export default function MainContent() {
         </div>
         {isDev && aiDebug && (
           <section className="text-xs text-ink-500 dark:text-surface-50/70">
-            <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-5">
+            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-5">
               <p className="font-semibold uppercase tracking-[0.24em] text-emerald-500">AI Debug</p>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-7">
                 <div>

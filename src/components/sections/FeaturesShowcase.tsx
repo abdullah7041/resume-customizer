@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
     FileSearch,
@@ -20,7 +20,7 @@ import { cn } from "../../lib/utils/cn";
 
 interface Feature {
     id: string;
-    icon: React.ReactNode;
+    icon: ReactNode;
     titleKey: string;
     descriptionKey: string;
     benefitKeys: string[];

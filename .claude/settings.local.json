@@ -43,7 +43,8 @@
       "Bash(ls:*)",
       "Bash(npm install:*)",
       "Bash(git add:*)",
-      "Bash(npm run quality:parallel:*)"
+      "Bash(npm run quality:parallel:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": false,
