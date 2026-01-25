@@ -1,6 +1,6 @@
 import { parseResumeOnly } from "../lib/gemini-client";
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
-import { withRateLimit, checkBetaQuota, consumeBetaQuota } from "../lib/rate-limiter";
+import { withRateLimit } from "../lib/rate-limiter";
 import { initSentry, captureError } from "../lib/sentry";
 
 initSentry();
@@ -8,35 +8,6 @@ initSentry();
 const baseHandler = async (event: { httpMethod: string; body: string; headers: any; }) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
-  }
-
-  // Extract beta code from header
-  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
-
-  if (!betaCode) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Beta code required. Please sign in with a valid beta code." })
-    };
-  }
-
-  // Check quota BEFORE processing
-  const quotaStatus = await checkBetaQuota(betaCode, 'extract');
-
-  if (!quotaStatus.allowed) {
-    return {
-      statusCode: 403,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: quotaStatus.error || "Resume extraction quota exceeded",
-        quotaExceeded: true,
-        used: quotaStatus.used,
-        limit: quotaStatus.limit,
-        remaining: quotaStatus.remaining,
-        action: 'extract'
-      })
-    };
   }
 
   // Check for API key before proceeding
@@ -215,9 +186,6 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       // Metadata
       meta: analysis.meta || {}
     };
-
-    // Consume quota AFTER successful extraction
-    await consumeBetaQuota(betaCode, 'extract');
 
     return {
       statusCode: 200,

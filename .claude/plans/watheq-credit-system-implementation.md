@@ -229,7 +229,7 @@ Keywords to Add:
 
 **Session 21: Quality Checks**
 - [ ] Run `npm run quality:check`
-- [ ] Fix all ESLint errors
+- [ ] Fix all ESLint errorsnpm
 - [ ] Fix all TypeScript errors
 - [ ] Run `npm run test`
 - [ ] Test all features manually:

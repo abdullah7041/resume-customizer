@@ -112,6 +112,18 @@ vi.mock("../services/api.js", () => ({
   AI_DEFAULT_TEMPERATURE: 0.32,
 }));
 
+vi.mock("../hooks/useUserCredits", () => ({
+  useUserCredits: () => ({
+    credits: { remaining: 100, total: 100, feedbackCreditsEarned: 0, referralCreditsEarned: 0, resetDate: new Date().toISOString() },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    showUpgrade: false,
+    setShowUpgrade: vi.fn(),
+    upgradeDismissedKey: null,
+  }),
+}));
+
 describe("MainContent resume parsing", () => {
   beforeEach(() => {
     resumeUploadMockProps.current = null;

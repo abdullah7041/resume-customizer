@@ -1,5 +1,70 @@
 import { render, screen } from '@testing-library/react';
+import { vi, beforeEach, describe, it, expect } from 'vitest';
 import { MatchSection as JobMatch } from '../components/sections/MatchSection';
+
+// Mock supabase
+vi.mock('../services/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      })),
+      insert: vi.fn(() => Promise.resolve({ error: null })),
+    })),
+    auth: {
+      getSession: vi.fn(() => Promise.resolve({ data: { session: null } })),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    },
+    channel: vi.fn(() => ({
+      on: vi.fn(() => ({ subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })) })),
+    })),
+  },
+  AppError: class AppError extends Error {
+    constructor(message, code) {
+      super(message);
+      this.code = code;
+    }
+  },
+}));
+
+// Mock useAuth hook
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: null,
+    loading: false,
+    signInWithGoogle: vi.fn(),
+  }),
+}));
+
+// Mock useUserCredits hook
+vi.mock('../hooks/useUserCredits', () => ({
+  useUserCredits: () => ({
+    credits: { remaining: 100, total: 100, feedbackCreditsEarned: 0, referralCreditsEarned: 0, resetDate: new Date().toISOString() },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    showUpgrade: false,
+    setShowUpgrade: vi.fn(),
+    upgradeDismissedKey: null,
+  }),
+}));
+
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key, options) => {
+      // Handle both simple strings and interpolated strings
+      if (typeof options === 'string') {
+        return options || key;
+      }
+      // Return key (translation strings are not critical for these tests)
+      return key;
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}));
 
 describe('JobMatch', () => {
   beforeEach(() => {

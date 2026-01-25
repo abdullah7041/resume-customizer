@@ -4,7 +4,7 @@ import {
   extractPlainTextFromArrayBuffer,
   inferMimeType,
 } from "../lib/resumeText.js";
-import { withRateLimit, checkBetaQuota, consumeBetaQuota } from "../lib/rate-limiter";
+import { withRateLimit } from "../lib/rate-limiter";
 import { initSentry, captureError } from "../lib/sentry";
 
 initSentry();
@@ -496,37 +496,6 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  // Extract beta code from header
-  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
-
-  if (!betaCode) {
-    return {
-      statusCode: 401,
-      headers: HEADERS,
-      body: JSON.stringify({
-        error: "Beta code required. Please sign in with a valid beta code."
-      })
-    };
-  }
-
-  // Check quota BEFORE processing
-  const quotaStatus = await checkBetaQuota(betaCode, 'upload');
-
-  if (!quotaStatus.allowed) {
-    return {
-      statusCode: 403,
-      headers: HEADERS,
-      body: JSON.stringify({
-        error: quotaStatus.error || "Upload quota exceeded",
-        quotaExceeded: true,
-        used: quotaStatus.used,
-        limit: quotaStatus.limit,
-        remaining: quotaStatus.remaining,
-        action: 'upload'
-      })
-    };
-  }
-
   try {
     const rawBody = event.body ? JSON.parse(event.body) : {};
 
@@ -580,9 +549,6 @@ const baseHandler: Handler = async (event) => {
         }),
       };
     }
-
-    // Consume quota AFTER successful parse
-    await consumeBetaQuota(betaCode, 'upload');
 
     return {
       statusCode: 200,
