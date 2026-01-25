@@ -4,12 +4,19 @@
  * Modal for submitting emoji ratings and testimonials.
  * Shows success state with credit notification.
  * Only displays testimonial field for positive ratings.
+ * Supports Arabic/English with RTL layout.
  */
 
 import React, { useState, useCallback } from 'react';
-import { X, Heart, Smile, Meh, Frown, Angry } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useUserCredits } from '../../hooks/useUserCredits';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase';
+import { GlassButton } from '../ui/GlassButton';
+import { glass } from '../../lib/styles/glass';
+import { cn } from '../../lib/utils/cn';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -20,80 +27,88 @@ type EmojiRating = 'love' | 'happy' | 'neutral' | 'sad' | 'terrible';
 
 interface EmojiOption {
   value: EmojiRating;
-  label: string;
-  icon: React.ReactNode;
-  color: string;
+  emoji: string;
+  labelEn: string;
+  labelAr: string;
 }
 
 const EMOJI_OPTIONS: EmojiOption[] = [
   {
     value: 'love',
-    label: 'Love it! 💖',
-    icon: <Heart className="w-8 h-8" />,
-    color: 'text-red-500',
+    emoji: '😍',
+    labelEn: 'Love it!',
+    labelAr: 'رائع!',
   },
   {
     value: 'happy',
-    label: 'Happy 😊',
-    icon: <Smile className="w-8 h-8" />,
-    color: 'text-yellow-500',
+    emoji: '😊',
+    labelEn: 'Happy',
+    labelAr: 'سعيد',
   },
   {
     value: 'neutral',
-    label: 'Neutral 😐',
-    icon: <Meh className="w-8 h-8" />,
-    color: 'text-gray-500',
+    emoji: '😐',
+    labelEn: 'Okay',
+    labelAr: 'عادي',
   },
   {
     value: 'sad',
-    label: 'Sad 😕',
-    icon: <Frown className="w-8 h-8" />,
-    color: 'text-blue-500',
+    emoji: '😕',
+    labelEn: 'Sad',
+    labelAr: 'حزين',
   },
   {
     value: 'terrible',
-    label: 'Terrible 👎',
-    icon: <Angry className="w-8 h-8" />,
-    color: 'text-purple-500',
+    emoji: '😢',
+    labelEn: 'Bad',
+    labelAr: 'سيئ',
   },
 ];
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const { refetch: refreshCredits } = useUserCredits();
+  const { i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
+
   const [selectedRating, setSelectedRating] = useState<EmojiRating | null>(null);
   const [testimonial, setTestimonial] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successData, setSuccessData] = useState<{
+    creditAwarded: boolean;
+    creditsRemaining: number;
+    maxReached: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Reset state when modal closes
   const handleClose = useCallback(() => {
     setSelectedRating(null);
     setTestimonial('');
-    setSuccessMessage(null);
+    setSuccessData(null);
     setError(null);
     onClose();
   }, [onClose]);
 
-  // Auto-close on success after 3 seconds
+  // Auto-close on success after 4 seconds
   React.useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(handleClose, 3000);
+    if (successData) {
+      const timer = setTimeout(handleClose, 4000);
       return () => clearTimeout(timer);
     }
-  }, [successMessage, handleClose]);
+  }, [successData, handleClose]);
 
   // Handle form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) {
-      setError('You must be logged in to submit feedback');
+      setError(isArabic ? 'يجب تسجيل الدخول أولاً' : 'You must be logged in to submit feedback');
       return;
     }
 
     if (!selectedRating) {
-      setError('Please select a rating');
+      setError(isArabic ? 'الرجاء اختيار تقييم' : 'Please select a rating');
       return;
     }
 
@@ -105,7 +120,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session?.access_token) {
-        throw new Error('Failed to get authentication token');
+        throw new Error(isArabic ? 'فشل الحصول على رمز المصادقة' : 'Failed to get authentication token');
       }
 
       // Call the submit-feedback endpoint
@@ -124,68 +139,132 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit feedback');
+        throw new Error(errorData.error || (isArabic ? 'فشل إرسال الملاحظات' : 'Failed to submit feedback'));
       }
 
       const result = await response.json();
 
       if (result.success) {
-        let message = 'Thank you for your feedback!';
+        setSuccessData({
+          creditAwarded: result.credit.awarded,
+          creditsRemaining: result.credit.creditsRemaining,
+          maxReached: result.credit.maxFeedbackCreditsReached || false,
+        });
 
-        if (result.credit.awarded) {
-          message += ` You earned +1 credit! (${result.credit.creditsRemaining} remaining)`;
-        } else if (result.credit.maxFeedbackCreditsReached) {
-          message = 'Thank you! You\'ve already earned the max feedback credits.';
-        }
-
-        setSuccessMessage(message);
+        // Refresh credits in header
+        await refreshCredits();
       } else {
-        throw new Error('Unexpected response format');
+        throw new Error(isArabic ? 'استجابة غير متوقعة' : 'Unexpected response format');
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to submit feedback';
+      const errorMsg = err instanceof Error ? err.message : (isArabic ? 'فشل إرسال الملاحظات' : 'Failed to submit feedback');
       setError(errorMsg);
+      console.error('[FeedbackModal] Submit failed:', err);
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, selectedRating, testimonial]);
+  }, [user, selectedRating, testimonial, isArabic, refreshCredits]);
 
   if (!isOpen) return null;
 
+  const isPositiveRating = selectedRating === 'love' || selectedRating === 'happy';
+
   // Success state
-  if (successMessage) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
-          <div className="flex flex-col items-center justify-center gap-4">
-            <div className="text-5xl">✅</div>
-            <p className="text-lg font-semibold text-center text-slate-900 dark:text-white">
-              {successMessage}
-            </p>
-            <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
-              Closing in 3 seconds...
+  if (successData) {
+    const modal = (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md"
+          onClick={handleClose}
+          aria-hidden="true"
+        />
+
+        {/* Success Modal */}
+        <div
+          className={cn(
+            glass.elevated,
+            'relative rounded-xl p-8 max-w-md w-full text-center',
+            isArabic && 'rtl'
+          )}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <CheckCircle2 className="w-16 h-16 text-emerald-400" />
+
+            <h3 className="text-xl font-bold text-white">
+              {isArabic ? 'شكراً على ملاحظاتك!' : 'Thank you for your feedback!'}
+            </h3>
+
+            {successData.creditAwarded && (
+              <div className={cn(glass.card, 'p-4 w-full border-emerald-500/30')}>
+                <p className="text-emerald-400 font-semibold mb-1">
+                  {isArabic ? '✅ +1 رصيد' : '✅ +1 Credit Added'}
+                </p>
+                <p className="text-sm text-gray-400">
+                  {isArabic
+                    ? `الرصيد الحالي: ${successData.creditsRemaining}`
+                    : `Current balance: ${successData.creditsRemaining} credits`
+                  }
+                </p>
+              </div>
+            )}
+
+            {successData.maxReached && (
+              <p className="text-sm text-gray-400">
+                {isArabic
+                  ? 'لقد حصلت على الحد الأقصى من أرصدة الملاحظات (3)'
+                  : 'You\'ve already earned max feedback credits (3)'}
+              </p>
+            )}
+
+            <p className="text-xs text-gray-500">
+              {isArabic ? 'سيتم الإغلاق خلال 4 ثوانٍ...' : 'Closing in 4 seconds...'}
             </p>
           </div>
         </div>
       </div>
     );
+
+    return createPortal(modal, document.body);
   }
 
   // Main feedback form
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl max-w-md w-full">
+  const modal = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-md"
+        onClick={handleClose}
+        aria-hidden="true"
+      />
+
+      {/* Modal */}
+      <div
+        className={cn(
+          glass.elevated,
+          'relative rounded-xl max-w-md w-full',
+          isArabic && 'rtl'
+        )}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-title"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            How's your experience?
-          </h2>
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-emerald-400" />
+            <h3 id="feedback-title" className="text-lg font-semibold text-white">
+              {isArabic ? 'كيف كانت تجربتك؟' : 'How was your experience?'}
+            </h3>
+          </div>
           <button
             onClick={handleClose}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-            aria-label="Close"
+            className="text-gray-400 hover:text-white transition-colors"
+            aria-label={isArabic ? 'إغلاق' : 'Close'}
           >
-            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -193,35 +272,34 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Error message */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+            <div className={cn(glass.card, 'p-3 border-red-500/30')}>
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
           {/* Emoji rating selection */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Choose your rating:
+            <label className="block text-sm font-medium text-gray-300">
+              {isArabic ? 'اختر تقييمك:' : 'Choose your rating:'}
             </label>
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-5 gap-2">
               {EMOJI_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setSelectedRating(option.value)}
-                  className={`
-                    flex flex-col items-center gap-2 p-3 rounded-lg transition-all
-                    ${
-                      selectedRating === option.value
-                        ? 'bg-emerald-50 dark:bg-emerald-900/30 border-2 border-emerald-600 dark:border-emerald-500'
-                        : 'bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600'
-                    }
-                  `}
-                  aria-label={option.label}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-3 rounded-lg transition-all',
+                    selectedRating === option.value
+                      ? 'bg-emerald-500/20 border-2 border-emerald-500/50 scale-105'
+                      : cn(glass.card, 'border-transparent hover:border-emerald-500/30 hover:scale-105')
+                  )}
+                  aria-label={isArabic ? option.labelAr : option.labelEn}
+                  title={isArabic ? option.labelAr : option.labelEn}
                 >
-                  <div className={`${option.color}`}>{option.icon}</div>
-                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400 text-center">
-                    {option.value}
+                  <div className="text-3xl">{option.emoji}</div>
+                  <span className="text-xs font-medium text-gray-400 text-center">
+                    {isArabic ? option.labelAr : option.labelEn}
                   </span>
                 </button>
               ))}
@@ -229,65 +307,71 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
           </div>
 
           {/* Testimonial textarea (only for positive ratings) */}
-          {selectedRating && (selectedRating === 'love' || selectedRating === 'happy') && (
+          {selectedRating && isPositiveRating && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-              <label htmlFor="testimonial" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Tell us more (optional):
+              <label htmlFor="testimonial" className="block text-sm font-medium text-gray-300">
+                {isArabic ? 'تبي تكتب شي نستخدمه كتوصية؟ (اختياري)' : 'Share a testimonial? (optional)'}
               </label>
               <textarea
                 id="testimonial"
                 value={testimonial}
                 onChange={(e) => setTestimonial(e.target.value.slice(0, 500))}
-                placeholder="What did you like most about Watheq?"
-                className="
-                  w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600
-                  bg-white dark:bg-slate-800 text-slate-900 dark:text-white
-                  placeholder-slate-500 dark:placeholder-slate-400
-                  focus:outline-none focus:ring-2 focus:ring-emerald-500
-                  resize-none
-                "
+                placeholder={isArabic ? 'وش أكثر شي عجبك في واثق؟' : 'What did you like most about Watheq?'}
+                className={cn(
+                  'w-full px-4 py-3 rounded-lg resize-none',
+                  'bg-white/5 border border-white/10',
+                  'text-white placeholder-gray-500',
+                  'focus:outline-none focus:ring-2 focus:ring-emerald-500/50',
+                  'transition-all'
+                )}
                 rows={3}
+                dir={isArabic ? 'rtl' : 'ltr'}
               />
-              <div className="text-xs text-slate-600 dark:text-slate-400 text-right">
-                {testimonial.length}/500 characters
+              <div className={cn(
+                'text-xs text-gray-400',
+                isArabic ? 'text-left' : 'text-right'
+              )}>
+                {testimonial.length}/500
               </div>
             </div>
           )}
 
           {/* Submit button */}
           <div className="flex gap-3 pt-4">
-            <button
+            <GlassButton
               type="button"
+              variant="secondary"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="
-                flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600
-                text-slate-700 dark:text-slate-300 font-medium
-                hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed
-              "
+              className="flex-1"
             >
-              Skip
-            </button>
-            <button
+              {isArabic ? 'تخطي' : 'Skip'}
+            </GlassButton>
+            <GlassButton
               type="submit"
+              variant="primary"
               disabled={isSubmitting || !selectedRating}
-              className="
-                flex-1 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700
-                text-white font-medium transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed
-              "
+              isLoading={isSubmitting}
+              className="flex-1"
             >
-              {isSubmitting ? 'Sending...' : 'Submit'}
-            </button>
+              {isSubmitting
+                ? (isArabic ? 'جاري الإرسال...' : 'Sending...')
+                : (isArabic ? 'إرسال' : 'Submit')
+              }
+            </GlassButton>
           </div>
 
           {/* Info text */}
-          <p className="text-xs text-slate-600 dark:text-slate-400 text-center">
-            💚 Positive feedback earns +1 credit (max 3 lifetime)
+          <p className="text-xs text-gray-500 text-center">
+            {isArabic
+              ? '💚 الملاحظات الإيجابية تكسبك +1 رصيد (الحد الأقصى 3)'
+              : '💚 Positive feedback earns +1 credit (max 3 lifetime)'
+            }
           </p>
         </form>
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 };
