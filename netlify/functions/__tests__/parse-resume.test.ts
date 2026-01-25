@@ -12,14 +12,7 @@ const mockResumeText = {
 };
 
 const mockRateLimiter = {
-    withRateLimit: (_name: string, handler: Function) => handler,
-    checkBetaQuota: vi.fn().mockResolvedValue({
-        allowed: true,
-        used: 0,
-        limit: 2,
-        remaining: 2
-    }),
-    consumeBetaQuota: vi.fn().mockResolvedValue(undefined)
+    withRateLimit: (_name: string, handler: Function) => handler
 };
 
 const mockSentry = {
@@ -39,8 +32,8 @@ global.fetch = mockFetch;
 // Import handler
 const { handler } = await import('../parse-resume');
 
-// Test beta code header
-const TEST_HEADERS = { 'X-Beta-Code': 'WATHEQ01' };
+// Test headers (beta code no longer required)
+const TEST_HEADERS = {};
 
 // Helper to create mock context
 const createMockContext = (): HandlerContext => ({

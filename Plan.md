@@ -96,13 +96,12 @@ Keywords to Add:
 - [ ] `getUserCredits(userId)` - Get balance
 - [ ] Unit test credit deduction
 
-**Session 3-4: Remove Beta Gate**
-- [ ] Delete `checkBetaQuota()` from `netlify/lib/rate-limiter.ts`
-- [ ] Update `optimize.ts` - Replace beta check with credit check
-- [ ] Update `ai-match.ts` - Replace beta check with credit check
-- [ ] Update `predict-questions.ts` - Add credit check
-- [ ] Update `generate-cover-letter.ts` - Add credit check
-- [ ] Remove `<AuthGate>` from `src/App.tsx`
+**Session 3-4: Remove Beta Gate** ✅ COMPLETE
+- [x] Delete `checkBetaQuota()` and `consumeBetaQuota()` from `netlify/lib/rate-limiter.ts`
+- [x] Remove beta code header checks from extract-resume-json.ts
+- [x] Remove beta code header checks from parse-resume.ts
+- [x] Delete unused beta-quota-status.ts endpoint
+- [x] Commit: 6e3c0c3 - fix: remove beta gate completely (Session 3-4 cleanup)
 
 **Session 5: Referral System**
 - [ ] Create `netlify/lib/referral-manager.js`
