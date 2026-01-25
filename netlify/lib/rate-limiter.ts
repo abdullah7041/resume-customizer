@@ -325,6 +325,9 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // Generation endpoints using "Lite" model (faster)
   "predict-questions": { maxRequests: 10 },  // Uses 'lite' model - can handle more traffic
 
+  // Feedback system - prevent spam
+  "submit-feedback": { maxRequests: 5 },  // Prevent rapid feedback submissions
+
   // Batch processing (very expensive)
   "batch-api": { maxRequests: 5 },
 

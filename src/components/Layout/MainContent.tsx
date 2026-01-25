@@ -27,6 +27,8 @@ import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supa
 import ViewTextModal from "../ui/ViewTextModal";
 import Vision2030Summary from "../ui/Vision2030Summary";
 import { useResumeStore } from "../../lib/stores/resumeStore";
+import { FeedbackModal } from "../Feedback/FeedbackModal";
+import { useFeedbackPrompt } from "../../lib/hooks/useFeedbackPrompt";
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
@@ -71,6 +73,9 @@ export default function MainContent() {
     user?.user_metadata?.tier === "premium" ||
     user?.app_metadata?.plan === "premium"
   );
+
+  // Feedback system hook
+  const { shouldShowFeedback, dismissFeedback } = useFeedbackPrompt();
 
   // Memoize tabs to avoid recreating on every render
   const tabs = useMemo(() => getTabsConfig(t), [t]);
@@ -872,6 +877,10 @@ export default function MainContent() {
         isOpen={viewTextModalOpen}
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
+      />
+      <FeedbackModal
+        isOpen={shouldShowFeedback}
+        onClose={dismissFeedback}
       />
       <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
         <div className="rounded-2xl bg-black/40 backdrop-blur-xl shadow-xl p-4 sm:p-7 lg:p-8 transition-shadow duration-300 hover:shadow-2xl">

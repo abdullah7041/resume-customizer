@@ -264,3 +264,19 @@ export function formatZodError(error: z.ZodError): string {
         .map(e => `${e.path.length > 0 ? e.path.join('.') + ': ' : ''}${e.message}`)
         .join('; ');
 }
+
+// ============================================
+// Feedback System Schemas
+// ============================================
+
+export const SubmitFeedbackRequestSchema = z.object({
+    emoji_rating: z.enum(['love', 'happy', 'neutral', 'sad', 'terrible'], {
+        errorMap: () => ({ message: 'Invalid emoji rating' }),
+    }),
+    testimonial_text: z.string().max(500, 'Testimonial must be 500 characters or less').optional()
+        .transform(val => val?.trim() || undefined),
+    context: z.string().max(200, 'Context must be 200 characters or less').optional()
+        .transform(val => val?.trim() || undefined),
+});
+
+export type SubmitFeedbackRequest = z.infer<typeof SubmitFeedbackRequestSchema>;

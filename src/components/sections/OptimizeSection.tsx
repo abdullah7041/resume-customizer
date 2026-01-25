@@ -6,6 +6,7 @@ import { GlassButton } from '../ui/GlassButton';
 import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
 import { useRateLimit } from '../../hooks/useRateLimit';
+import { useFeedbackPrompt } from '../../lib/hooks/useFeedbackPrompt';
 import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
   Sparkles,
@@ -156,6 +157,9 @@ export function OptimizeSection({
   const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // Feedback system hook
+  const { incrementFeatureUses } = useFeedbackPrompt();
 
   // Sync prop optimizations to store when they change
   // IMPORTANT: Merge with existing store state to preserve applied flags
@@ -541,6 +545,9 @@ export function OptimizeSection({
         optimization_count: newOptimizations.length,
         time_ms: performance.now() - startTime,
       });
+
+      // Increment feature usage for feedback system
+      incrementFeatureUses();
 
       // Also update keyword suggestions from API response
       if (data.keywords) {

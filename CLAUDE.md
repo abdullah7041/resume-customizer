@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Brand Identity
 
-**Watheq** (وثّق) - Saudi-themed AI Resume Optimizer
+**Watheq** (واثق) - Saudi-themed AI Resume Optimizer
 - Primary Color: Saudi Green (`#006C35`)
 - Accent Color: Warm Gold
 - Storage Key Prefix: `watheq:` (migrated from legacy `airo:`)

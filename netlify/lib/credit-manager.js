@@ -242,3 +242,46 @@ export async function addCredits(userId, amount, type, metadata = {}) {
 
   return { success: true, creditsRemaining: creditsAfter };
 }
+
+/**
+ * Add feedback credit (max 3 lifetime)
+ * @param {string} userId - User ID
+ * @param {object} [metadata] - Optional metadata (e.g., emoji_rating, testimonial_text)
+ * @returns {Promise<{success: boolean, creditsAwarded: number, feedbackCreditsEarned: number, creditsRemaining: number, error?: string}>}
+ */
+export async function addFeedbackCredits(userId, metadata = {}) {
+  const supabase = getSupabaseClient();
+
+  // Call atomic RPC function that enforces max 3 constraint at database level
+  const { data, error } = await supabase.rpc('add_feedback_credits', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error('[CreditManager] Failed to add feedback credits:', error);
+    throw new Error(`Failed to add feedback credits: ${error.message}`);
+  }
+
+  // Parse the JSON response from the RPC function
+  const result = typeof data === 'string' ? JSON.parse(data) : data;
+
+  if (!result.success) {
+    console.warn(`[CreditManager] Feedback credit not awarded: ${result.error}. Feedback credits earned: ${result.feedback_credits_earned}`);
+    return {
+      success: false,
+      creditsAwarded: 0,
+      feedbackCreditsEarned: result.feedback_credits_earned,
+      creditsRemaining: result.credits_remaining,
+      error: result.error,
+    };
+  }
+
+  console.log(`[CreditManager] Added feedback credit. Feedback credits earned: ${result.feedback_credits_earned}/${3}. Balance: ${result.credits_remaining}`);
+
+  return {
+    success: true,
+    creditsAwarded: result.credits_awarded,
+    feedbackCreditsEarned: result.feedback_credits_earned,
+    creditsRemaining: result.credits_remaining,
+  };
+}
