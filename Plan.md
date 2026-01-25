@@ -151,16 +151,43 @@ Keywords to Add:
   - Will be called by: `cron-reset-credits.ts` (credits refreshed)
   - Will be called by: `cron-monthly-summary.ts` (monthly usage)
 
-**Session 10: Cron Jobs**
-- [ ] Create `netlify/functions/cron-reset-credits.ts`:
-  - Daily at 2 AM GMT+3
-  - Reset credits for users where last_reset_date > 30 days ago
-  - Send credits refreshed email
-- [ ] Create `netlify/functions/cron-monthly-summary.ts`:
-  - 28th of each month at 10 AM
-  - Calculate usage stats per user
-  - Send monthly summary email
-- [ ] Add to `netlify.toml` scheduled functions
+**Session 10: Cron Jobs** ✅ COMPLETE
+- [x] Create `netlify/functions/cron-reset-credits.ts`:
+  - [x] Daily at 2 AM GMT+3 (schedule: `0 23 * * *` UTC)
+  - [x] Query users where last_reset_date > 30 days ago
+  - [x] Reset credits to 15, update last_reset_date
+  - [x] Log transaction in credit_transactions
+  - [x] Send credits refreshed email via sendCreditsRefreshedEmail()
+  - [x] Error handling per user with comprehensive logging
+  - [x] Graceful email failure handling
+- [x] Create `netlify/functions/cron-monthly-summary.ts`:
+  - [x] 28th of each month at 10 AM GMT+3 (schedule: `0 7 28 * *` UTC)
+  - [x] Query all active users from Supabase auth
+  - [x] Calculate usage stats for past 30 days:
+    - [x] Total credits used
+    - [x] Credits remaining
+    - [x] Total actions performed
+    - [x] Usage percentage
+    - [x] Feature-by-feature breakdown
+  - [x] Send monthly summary email with stats
+  - [x] Handle missing users and credits gracefully
+- [x] Add to `netlify.toml`:
+  - [x] Timeout settings for cron functions (30s each)
+  - [x] Added to external_node_modules list
+- [x] Create `scheduled-functions.md`:
+  - [x] Cron expressions for UTC and GMT+3 timezones
+  - [x] Setup instructions for dashboard, CLI, and API
+  - [x] Local testing guide with curl commands
+  - [x] Monitoring and logging guidance
+- [x] Quality assurance:
+  - [x] All 300 tests passing
+  - [x] ESLint: 0 errors
+  - [x] TypeScript: 0 errors
+  - [x] Commit: 79eba5b - feat: implement cron jobs (Session 10)
+- [ ] Next steps (manual, deploy phase):
+  - Deploy to Netlify: `git push origin main`
+  - Configure scheduled functions in Netlify Dashboard or via API
+  - Test with manual triggers before first scheduled run
 
 ### Week 2: More Backend (Use Haiku Model)
 
