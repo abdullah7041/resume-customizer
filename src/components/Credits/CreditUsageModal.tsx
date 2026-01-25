@@ -15,6 +15,8 @@ import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
 import type { CreditTransaction } from '../../types/credits';
+import { ReferralLink } from '../Referrals/ReferralLink';
+import { ReferralStats } from '../Referrals/ReferralStats';
 
 interface CreditUsageModalProps {
   isOpen: boolean;
@@ -190,6 +192,12 @@ export function CreditUsageModal({ isOpen, onClose }: CreditUsageModalProps) {
             </div>
           </div>
         )}
+
+        {/* Referral Section */}
+        <div className="mb-6 space-y-4">
+          <ReferralStats />
+          <ReferralLink />
+        </div>
 
         {/* Transaction History */}
         <div>

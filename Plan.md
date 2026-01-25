@@ -284,15 +284,45 @@ Keywords to Add:
   - TypeScript: 0 errors
   - Tests: Pre-existing failures in OptimizeSection (not related to feedback changes)
 
-**Session 20: Referral UI**
-- [ ] Create `src/components/Referrals/ReferralLink.tsx`:
+**Session 20: Referral UI** ✅ COMPLETE
+**Started:** 2026-01-25
+**Completed:** 2026-01-25
+**Model:** Sonnet 4.5 (React component UI work)
+
+**Implemented:**
+- [x] Created `src/components/Referrals/ReferralLink.tsx`:
   - Generate unique link: `watheq.app?ref=abc123`
-  - Copy to clipboard button
-  - Share to WhatsApp/Twitter
-- [ ] Create `src/components/Referrals/ReferralStats.tsx`:
-  - Count of successful referrals
+  - Copy to clipboard button with visual feedback
+  - Share to WhatsApp (Arabic + English messages)
+  - Share to Twitter/X (Saudi Vision 2030 branding)
+  - Glass morphism design matching app theme
+  - Loading and error states
+- [x] Created `src/components/Referrals/ReferralStats.tsx`:
+  - Total referrals (all time)
+  - Completed referrals (active)
   - Credits earned from referrals
-- [ ] Add to user dashboard/settings
+  - Color-coded stat cards with icons
+  - Dynamic info messages (no referrals, pending, all completed)
+  - Glass morphism design
+- [x] Created backend functions:
+  - `netlify/functions/get-referral-link.ts` - Generate/retrieve referral code
+  - `netlify/functions/get-referral-stats.ts` - Fetch referral statistics
+- [x] Integrated into CreditUsageModal:
+  - Added ReferralStats + ReferralLink components
+  - Positioned above transaction history
+- [x] Added translations:
+  - English: 11 new referral keys (en.json)
+  - Arabic: 11 new referral keys with RTL support (ar.json)
+- [x] Database migration:
+  - Added `referral_code` column to `user_credits` table
+  - Unique constraint + index for fast lookups
+- [x] Dependencies:
+  - Installed `nanoid` for generating short referral codes
+  - Added to netlify.toml external_node_modules
+- [x] Quality checks:
+  - [x] ESLint: 0 errors (deprecation warning in build.mjs is pre-existing)
+  - [x] TypeScript: 0 errors
+  - [x] Tests: Pre-existing failures in OptimizeSection (not related to referrals)
 
 ### Week 4: Testing & Launch (Use Haiku Model)
 

@@ -45,6 +45,19 @@
       "noTransactions": "No activity yet"
     }
   },
+  "referrals": {
+    "yourLink": "Your Referral Link",
+    "yourStats": "Your Referral Stats",
+    "linkUnavailable": "Referral link unavailable",
+    "statsUnavailable": "Stats unavailable",
+    "shareInfo": "Share your link and earn +5 credits when friends sign up!",
+    "totalReferrals": "Total",
+    "completedReferrals": "Active",
+    "creditsEarned": "Earned",
+    "noReferralsYet": "Share your link to start earning credits!",
+    "pendingReferrals": "{{count}} referral(s) pending activation",
+    "allCompleted": "All referrals are active! 🎉"
+  },
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",

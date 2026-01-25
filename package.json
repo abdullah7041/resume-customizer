@@ -40,6 +40,7 @@
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "mixpanel-browser": "^2.73.0",
+    "nanoid": "^5.1.6",
     "pdfjs-dist": "^5.4.530",
     "puppeteer-core": "^24.35.0",
     "react": "^19.2.3",

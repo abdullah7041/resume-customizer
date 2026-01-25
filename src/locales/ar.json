@@ -49,6 +49,19 @@
       "noTransactions": "لا يوجد نشاط بعد"
     }
   },
+  "referrals": {
+    "yourLink": "رابط الإحالة الخاص بك",
+    "yourStats": "إحصائيات الإحالات",
+    "linkUnavailable": "رابط الإحالة غير متاح",
+    "statsUnavailable": "الإحصائيات غير متاحة",
+    "shareInfo": "شارك رابطك واكسب +5 نقاط عندما يسجل أصدقاؤك!",
+    "totalReferrals": "الإجمالي",
+    "completedReferrals": "النشطة",
+    "creditsEarned": "المكتسب",
+    "noReferralsYet": "شارك رابطك لتبدأ في كسب النقاط!",
+    "pendingReferrals": "{{count}} إحالة قيد التفعيل",
+    "allCompleted": "جميع الإحالات نشطة! 🎉"
+  },
   "nav": {
     "home": "الرئيسية",
     "dashboard": "لوحة التحكم",
