@@ -28,6 +28,8 @@ import { MatchSkeleton } from './MatchSection.skeleton';
 import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
 import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
+import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { useUserCredits } from '../../hooks/useUserCredits';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 const resolveVariant = (score: number) => {
@@ -127,6 +129,8 @@ export function MatchSection({
   });
   const [error, setError] = useState("");
   const [whyOpen, setWhyOpen] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const { credits } = useUserCredits();
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -156,7 +160,7 @@ export function MatchSection({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [whyOpen]);
 
-  const handleAnalyze = async () => {
+  const handleAnalyzeActual = async () => {
     const trimmedJob = jobText.trim();
     if (!trimmedJob) {
       const message = t('sections.match.errors.noJob', 'Paste the job description before analyzing.');
@@ -178,6 +182,28 @@ export function MatchSection({
     } catch (err) {
       setError((err as Error)?.message || t('sections.match.errors.analyzeFailed', 'We could not analyze this match.'));
     }
+  };
+
+  // Wrapper function that shows confirmation modal first
+  const handleAnalyze = () => {
+    const trimmedJob = jobText.trim();
+    if (!trimmedJob) {
+      const message = t('sections.match.errors.noJob', 'Paste the job description before analyzing.');
+      setError(message);
+      onToast?.({
+        type: "warning",
+        title: t('sections.match.errors.jobNeeded', 'Job description needed'),
+        description: message,
+      });
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  // Handler for confirmed match analysis action
+  const handleConfirmMatch = async () => {
+    setShowConfirmModal(false);
+    await handleAnalyzeActual();
   };
 
   // Computed values
@@ -592,6 +618,15 @@ export function MatchSection({
 
       {/* Vision 2030 Info Modal */}
 
+      {/* Credit Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmMatch}
+        feature="ai_match"
+        currentCredits={credits?.remaining || 0}
+        isLoading={isAnalyzing}
+      />
     </>
   );
 }

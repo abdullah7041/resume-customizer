@@ -28,6 +28,8 @@ import { ScoreBreakdown, ScoreBreakdownData, CategoryScoresData } from '../Score
 import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { LoadingMessages } from '../LoadingMessages';
+import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { useUserCredits } from '../../hooks/useUserCredits';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'airo:lastJobDescription';
@@ -157,6 +159,8 @@ export function OptimizeSection({
   const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const { credits } = useUserCredits();
 
   // Feedback system hook
   const { incrementFeatureUses } = useFeedbackPrompt();
@@ -373,7 +377,7 @@ export function OptimizeSection({
 
 
   // Generate optimizations from API
-  const handleGenerate = async () => {
+  const handleGenerateActual = async () => {
     // If parent provided handler, use that
     if (propOnOptimize) {
       return propOnOptimize('auto');
@@ -700,6 +704,17 @@ export function OptimizeSection({
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Wrapper function that shows confirmation modal first
+  const handleGenerate = () => {
+    setShowConfirmModal(true);
+  };
+
+  // Handler for confirmed optimization action
+  const handleConfirmOptimize = async () => {
+    setShowConfirmModal(false);
+    await handleGenerateActual();
   };
 
   const handleClear = () => {
@@ -1354,6 +1369,16 @@ export function OptimizeSection({
         </div>,
         document.body
       )}
+
+      {/* Credit Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmOptimize}
+        feature="optimize"
+        currentCredits={credits?.remaining || 0}
+        isLoading={isOptimizing}
+      />
     </div>
   );
 }

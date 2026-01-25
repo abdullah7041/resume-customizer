@@ -20,7 +20,34 @@
     "optional": "اختياري",
     "copy": "نسخ",
     "copied": "تم النسخ!",
-    "download": "تحميل"
+    "download": "تحميل",
+    "dismiss": "تجاهل"
+  },
+  "credits": {
+    "balance": "الرصيد",
+    "remaining": "نقطة",
+    "resetsIn": "إعادة التعيين في {{time}}",
+    "confirm": {
+      "title": "تأكيد العملية",
+      "message": "سيتم استخدام {{cost}} نقاط.",
+      "current": "الرصيد الحالي: {{remaining}} / {{total}}",
+      "continue": "متابعة ({{cost}} نقاط)",
+      "insufficient": "رصيد غير كافٍ. تحتاج {{required}} ولديك {{available}}."
+    },
+    "upgrade": {
+      "title": "الترقية إلى المميز",
+      "lowCredits": "رصيدك أوشك على النفاد ({{remaining}} متبقي)",
+      "comingSoon": "قريباً",
+      "joinWaitlist": "انضم لقائمة الانتظار",
+      "earnTip": "نصيحة: اكسب نقاطاً إضافية من خلال إرسال ملاحظاتك!"
+    },
+    "usage": {
+      "title": "استخدام النقاط",
+      "feedbackEarned": "من الملاحظات",
+      "referralEarned": "من الإحالات",
+      "history": "النشاط الأخير",
+      "noTransactions": "لا يوجد نشاط بعد"
+    }
   },
   "nav": {
     "home": "الرئيسية",

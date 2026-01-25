@@ -6,6 +6,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrl } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
+import { CreditBalance } from "../Credits/CreditBalance";
+import { CreditUsageModal } from "../Credits/CreditUsageModal";
 
 
 // Floating particle component for ambient animation
@@ -73,6 +75,7 @@ export default function Header() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const mobileNavRef = useRef<HTMLDivElement>(null);
+  const [showCreditModal, setShowCreditModal] = useState(false);
 
   // Mouse tracking for interactive gradient
   const handleMouseMove = useCallback((e) => {
@@ -420,6 +423,7 @@ export default function Header() {
             {/* Desktop: Language switcher, Feedback, and Auth button */}
             <div className="hidden md:flex items-center gap-3">
               <LanguageSwitcher />
+              {user && <CreditBalance onClick={() => setShowCreditModal(true)} />}
               <a
                 href="https://tally.so/r/KYxEzV"
                 target="_blank"
@@ -652,6 +656,17 @@ export default function Header() {
                 <LanguageSwitcher />
               </div>
 
+              {/* Credit Balance */}
+              {user && (
+                <div className="pb-4 border-b border-white/10">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">{t("credits.balance")}</p>
+                  <CreditBalance onClick={() => {
+                    setShowCreditModal(true);
+                    setMobileNavOpen(false);
+                  }} />
+                </div>
+              )}
+
               {/* Beta Feedback */}
               <div className="pb-4 border-b border-white/10">
                 <a
@@ -713,6 +728,11 @@ export default function Header() {
         </div>
       )}
 
+      {/* Credit Usage Modal */}
+      <CreditUsageModal
+        isOpen={showCreditModal}
+        onClose={() => setShowCreditModal(false)}
+      />
     </header>
   );
 }

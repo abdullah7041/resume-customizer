@@ -16,7 +16,34 @@
     "close": "Close",
     "signIn": "Sign In",
     "signOut": "Sign Out",
-    "byAuthor": "By Abdullah bin Ahmed"
+    "byAuthor": "By Abdullah bin Ahmed",
+    "dismiss": "Dismiss"
+  },
+  "credits": {
+    "balance": "Credits",
+    "remaining": "credits",
+    "resetsIn": "Resets in {{time}}",
+    "confirm": {
+      "title": "Confirm Action",
+      "message": "This will use {{cost}} credits.",
+      "current": "Current balance: {{remaining}} / {{total}}",
+      "continue": "Continue ({{cost}} credits)",
+      "insufficient": "Insufficient credits. You need {{required}} but have {{available}}."
+    },
+    "upgrade": {
+      "title": "Upgrade to Premium",
+      "lowCredits": "You're running low on credits ({{remaining}} remaining)",
+      "comingSoon": "Coming Soon",
+      "joinWaitlist": "Join Waitlist",
+      "earnTip": "Tip: Earn bonus credits by submitting feedback!"
+    },
+    "usage": {
+      "title": "Credit Usage",
+      "feedbackEarned": "From Feedback",
+      "referralEarned": "From Referrals",
+      "history": "Recent Activity",
+      "noTransactions": "No activity yet"
+    }
   },
   "nav": {
     "home": "Home",
