@@ -124,16 +124,27 @@ Keywords to Add:
 - [ ] Test with sample Arabic resume
 - [ ] Test with sample English resume
 
-**Session 8-9: Email System**
+**Session 8-9: Email System** ⏳ IN PROGRESS
 - [ ] Sign up at resend.com (free tier: 3,000 emails/month)
 - [ ] `npm install resend`
 - [ ] Create `netlify/lib/email-templates.js`:
   - Credits Refreshed (Arabic RTL + English)
   - Monthly Usage Summary (Arabic RTL + English)
+  - Template structure: HTML + plain text fallback
+  - Brand styling: Saudi Green (#006C35), Warm Gold accents
+  - RTL layout for Arabic content
 - [ ] Create `netlify/lib/email-service.js`:
-  - `sendCreditsRefreshedEmail(userEmail, userName, credits)`
-  - `sendMonthlyUsageSummary(userEmail, userName, stats)`
+  - `sendCreditsRefreshedEmail(userEmail, userName, credits)` - Send when credits reset
+  - `sendMonthlyUsageSummary(userEmail, userName, stats)` - Send monthly breakdown
+  - Error handling with retry logic
+  - Type checking for email validation
 - [ ] Add `RESEND_API_KEY` to Netlify env vars
+  - Test key for staging, production key for live
+- [ ] Test email delivery:
+  - Send test email to personal address
+  - Verify HTML rendering in email client
+  - Check RTL layout for Arabic text
+- [ ] Integrate with credit reset cron job (Session 10)
 
 **Session 10: Cron Jobs**
 - [ ] Create `netlify/functions/cron-reset-credits.ts`:

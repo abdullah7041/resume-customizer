@@ -19,7 +19,7 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
   # External modules to avoid bundling large dependencies
-  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium"]
+  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium", "resend"]
   # Included files for shared modules (now in netlify/lib/)
   included_files = ["netlify/lib/**"]
 
