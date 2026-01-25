@@ -6,6 +6,7 @@ const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
 const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/extract-resume-json`;
 const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
+const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 
 // Helper to get beta code from localStorage
@@ -245,6 +246,56 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => 
     // Handle quota exceeded errors with user-friendly message
     if (error.quotaExceeded) {
       throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} optimizations.`);
+    }
+
+    throw error;
+  }
+};
+
+export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null) => {
+  if (!resumeText?.plainText && typeof resumeText !== "string") {
+    throw new Error("Resume text is required");
+  }
+
+  const text = resumeText?.plainText || resumeText;
+  if (!text?.trim()) {
+    throw new Error("Resume text is required");
+  }
+
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(VISION2030_ENDPOINT, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        resumeText: text,
+        language: language || 'en',
+        jobDescription: jobDescription || undefined
+      }),
+    });
+
+    const data = await handleResponse(response);
+    return data;
+
+  } catch (error) {
+    console.error("Vision 2030 alignment analysis failed:", error);
+
+    // Capture error in Sentry
+    Sentry.captureException(error, {
+      tags: { api_function: 'analyzeVision2030' },
+      contexts: {
+        request: {
+          quota_exceeded: error.quotaExceeded || false,
+          language: language || 'en',
+          has_job_description: !!jobDescription
+        }
+      }
+    });
+
+    // Handle insufficient credits error
+    if (error.message?.includes('Insufficient credits')) {
+      throw new Error('You need 2 credits to analyze Vision 2030 alignment. Please purchase more credits.');
     }
 
     throw error;

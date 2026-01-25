@@ -213,6 +213,12 @@ export const CoverLetterRequestSchema = z.object({
     hiringManager: z.string().optional(),
 });
 
+export const Vision2030RequestSchema = z.object({
+    resumeText: z.string().min(1, "Resume text is required"),
+    language: z.enum(["en", "ar"]).optional().default("en"),
+    jobDescription: z.string().optional(),
+});
+
 // ============================================
 // Type Exports (inferred from schemas)
 // ============================================

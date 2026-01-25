@@ -320,6 +320,7 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
 
   // AI endpoints using "Flash" model (higher quality, slower - 20-25s response)
   "optimize": { maxRequests: 5 },         // Flash model - prevent timeout cascades, ensure quality
+  "vision2030-alignment": { maxRequests: 5 },  // Flash model - deep contextual analysis
 
   // Generation endpoints using "Lite" model (faster)
   "predict-questions": { maxRequests: 10 },  // Uses 'lite' model - can handle more traffic
