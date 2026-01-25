@@ -46,6 +46,13 @@
   timeout = 90  # PDF generation: Puppeteer browser launch can take 30-60s on cold start
   memory = 1024
 
+# Scheduled Functions (Cron Jobs)
+[functions."cron-reset-credits"]
+  timeout = 30
+
+[functions."cron-monthly-summary"]
+  timeout = 30
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
