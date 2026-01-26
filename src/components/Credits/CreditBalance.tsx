@@ -7,7 +7,6 @@
 
 import { Coins } from 'lucide-react';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
@@ -88,21 +87,30 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
     <button
       onClick={onClick}
       className={cn(
-        glass.badge.neutral,
-        colorClasses.border,
-        'flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-white/10',
+        // Glassy dark background (more transparent as requested)
+        'bg-black/40 backdrop-blur-md border border-white/10 items-center gap-3 px-4 py-2 rounded-xl transition-all shadow-lg',
+        // colorClasses.border, // Removed solid border color to cleaner look, or keep subtle
+        'hover:bg-black/50 hover:scale-105 active:scale-95',
         colorClasses.pulse
       )}
       aria-label={t('credits.balance')}
     >
-      <Coins className={cn('w-4 h-4', colorClasses.icon)} />
-      <div className="flex flex-col items-start">
-        <span className={cn('text-sm font-medium', colorClasses.text)}>
+      <div className={cn("p-1.5 rounded-full bg-white/5", colorClasses.text)}>
+        <Coins className="w-4 h-4" />
+      </div>
+
+      <div className="flex flex-col items-start gap-0.5">
+        <span className={cn('text-sm font-extrabold tracking-wide', colorClasses.text)}>
           {credits.remaining} / {credits.total}
         </span>
         {timeUntilReset && (
-          <span className="text-xs text-gray-400">
-            {t('credits.resetsIn', { time: timeUntilReset })}
+          <span className={cn(
+            "text-[10px] uppercase tracking-wider font-bold opacity-80",
+            colorClasses.text
+          )}>
+            {timeUntilReset === 'Soon'
+              ? t('credits.resetsSoon', 'Resets soon')
+              : t('credits.resetsIn', { time: timeUntilReset })}
           </span>
         )}
       </div>

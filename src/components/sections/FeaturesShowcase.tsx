@@ -140,7 +140,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
         <GlassCard
             variant={feature.highlight ? "elevated" : "default"}
             className={cn(
-                "p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+                "p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-gray-900/95 border border-gray-800",
                 feature.highlight &&
                 "border-[#006C35]/50 shadow-[0_0_30px_rgba(0,108,53,0.2)]"
             )}
@@ -173,7 +173,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
                     </div>
 
                     {/* Description */}
-                    <p className="text-gray-400 mt-2 leading-relaxed">
+                    <p className="text-gray-300 mt-2 leading-relaxed">
                         {t(feature.descriptionKey)}
                     </p>
 
@@ -182,7 +182,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
                         {feature.benefitKeys.map((benefitKey, index) => (
                             <li
                                 key={`${feature.id}-benefit-${index}`}
-                                className="flex items-center gap-2 text-sm text-gray-300"
+                                className="flex items-center gap-2 text-sm text-gray-200"
                             >
                                 <Check
                                     className={cn(
@@ -213,7 +213,7 @@ export default function FeaturesShowcase() {
                     eyebrow={t("showcase.eyebrow")}
                     title={t("showcase.title")}
                     description={t("showcase.subtitle")}
-                    className="text-center mb-6"
+                    className="text-center mb-6 bg-gray-900/95 border border-gray-800 [&_p]:text-gray-300"
                 />
 
                 {/* Hero Features - Always visible (3-column grid) */}
@@ -227,7 +227,7 @@ export default function FeaturesShowcase() {
                 <div className="flex justify-center mt-8 relative z-10">
                     <button
                         onClick={() => setShowAllFeatures(!showAllFeatures)}
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-800/80 border border-emerald-500/50 rounded-xl text-emerald-400 hover:bg-gray-700/80 hover:text-emerald-300 hover:border-emerald-400 transition-all font-medium shadow-lg backdrop-blur-sm cursor-pointer"
+                        className="flex items-center gap-2 px-6 py-3 bg-gray-900/95 border border-emerald-500/50 rounded-xl text-emerald-400 hover:bg-gray-800 hover:text-emerald-300 hover:border-emerald-400 transition-all font-medium shadow-lg cursor-pointer"
                         aria-expanded={showAllFeatures}
                         aria-controls="additional-features"
                         type="button"
