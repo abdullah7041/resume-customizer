@@ -48,7 +48,6 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
       const prompted = getPromptedMilestones();
       prompted.add(milestone);
       localStorage.setItem(PROMPTED_MILESTONES_KEY, JSON.stringify([...prompted]));
-      console.log(`[useFeedbackPrompt] Marked milestone ${milestone} as prompted`);
     } catch (error) {
       console.error('[useFeedbackPrompt] Failed to save prompted milestone:', error);
     }
@@ -61,7 +60,6 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
     // Find the milestone we just reached (if any)
     for (const milestone of PROMPT_MILESTONES) {
       if (count === milestone && !prompted.has(milestone)) {
-        console.log(`[useFeedbackPrompt] 🎯 Reached milestone ${milestone}!`);
         return milestone;
       }
     }
@@ -99,7 +97,6 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
       if (milestone) {
         setCurrentMilestone(milestone);
         setShouldShowFeedback(true);
-        console.log(`[useFeedbackPrompt] Showing feedback for milestone ${milestone}`);
       }
     } catch (error) {
       console.error('[useFeedbackPrompt] Failed to increment feature uses:', error);
@@ -115,7 +112,6 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
     }
 
     setCurrentMilestone(null);
-    console.log('[useFeedbackPrompt] Feedback dismissed');
   }, [currentMilestone, markMilestonePrompted]);
 
   return {

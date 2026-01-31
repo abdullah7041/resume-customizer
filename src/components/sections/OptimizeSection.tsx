@@ -431,28 +431,6 @@ export function OptimizeSection({
 
       const data = await response.json();
 
-      // DEBUG: Log ALL data received from API
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[OptimizeSection] API response data:', {
-          hasCards: !!data.cards,
-          cardsCount: data.cards?.length,
-          hasMatchScoring: !!data.matchScoring,
-          matchScoring: data.matchScoring,
-          hasGapAnalysis: !!data.gapAnalysis,
-          gapAnalysisCount: data.gapAnalysis?.length,
-          hasCategoryScores: !!data.categoryScores,
-          categoryScores: data.categoryScores,
-          // Added: Track project and certification data
-          hasProjectImprovements: !!data.projectImprovements,
-          projectImprovementsCount: data.projectImprovements?.length || 0,
-          projectImprovements: data.projectImprovements,
-          hasCertificationRecs: !!data.certificationRecommendations,
-          certificationRecsCount: data.certificationRecommendations?.length || 0,
-          certificationRecommendations: data.certificationRecommendations,
-        });
-      }
-
-
       // Transform API response to OptimizationResult format
       // API returns: { cards: [{section, issue, suggestion, exampleBefore, exampleAfter}], keywords: {add, neutral, remove} }
       const newOptimizations: OptimizationResult[] = [];
@@ -498,19 +476,6 @@ export function OptimizeSection({
             optimized: `${cert.name || ''} (${cert.issuer || ''}) - ${cert.relevance || ''}`,
             applied: false, // Certifications are display-only, never applied
           });
-        });
-      }
-
-      // DEBUG: Log what optimizations were created
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[OptimizeSection] Processed optimizations:', {
-          totalCount: newOptimizations.length,
-          bySection: newOptimizations.reduce((acc, opt) => {
-            acc[opt.sectionType] = (acc[opt.sectionType] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>),
-          hasProjects: newOptimizations.some(o => o.sectionType === 'projects'),
-          hasCertifications: newOptimizations.some(o => o.sectionType === 'certifications'),
         });
       }
 
@@ -566,7 +531,6 @@ export function OptimizeSection({
       trackFeatureUse('optimize');
 
       // Show feedback modal at milestones (if user hasn't reached max 3 submissions)
-      console.log('[OptimizeSection] Checking feedback prompt:', { shouldShowFeedback, userId: user?.id });
       if (shouldShowFeedback && user?.id) {
         try {
           const { data: userCredits, error: creditsError } = await supabase
@@ -575,19 +539,13 @@ export function OptimizeSection({
             .eq('user_id', user.id)
             .single();
 
-          console.log('[OptimizeSection] Feedback credits query result:', { userCredits, creditsError });
-
           // Only show if user has < 3 feedback submissions (max limit)
           if (!userCredits || (userCredits.feedback_credits_earned ?? 0) < 3) {
-            console.log('[OptimizeSection] Showing feedback modal (milestone reached)');
-
             // Add 5-10 second delay for better UX
             const delay = 5000 + Math.random() * 5000;
             setTimeout(() => {
               setShowFeedbackModal(true);
             }, delay);
-          } else {
-            console.log('[OptimizeSection] User has max feedback submissions, not showing modal');
           }
         } catch (error) {
           // Default to showing modal on error (better UX)
@@ -597,8 +555,6 @@ export function OptimizeSection({
             setShowFeedbackModal(true);
           }, delay);
         }
-      } else {
-        console.log('[OptimizeSection] Not showing feedback modal:', { shouldShowFeedback, hasUser: !!user?.id });
       }
 
       // Also update keyword suggestions from API response
@@ -624,13 +580,6 @@ export function OptimizeSection({
 
       // Capture match scoring data for Results Summary
       if (data.matchScoring) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[OptimizeSection] Received matchScoring from API:', {
-            beforeScore: data.matchScoring.beforeScore,
-            afterScore: data.matchScoring.afterScore,
-            improvement: data.matchScoring.improvement,
-          });
-        }
         metricsToUpdate.beforeScore = data.matchScoring.beforeScore;
         metricsToUpdate.afterScore = data.matchScoring.afterScore;
         metricsToUpdate.improvement = data.matchScoring.improvement;
@@ -643,9 +592,6 @@ export function OptimizeSection({
         const jobDesc = typeof window !== 'undefined' ? window.localStorage.getItem(LAST_JOB_KEY) || '' : '';
         const cachedAnalysis = resumeText && jobDesc ? getCachedAnalysis(resumeText, jobDesc) : null;
         if (cachedAnalysis?.score) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[OptimizeSection] No matchScoring from API, using cached score:', cachedAnalysis.score);
-          }
           metricsToUpdate.beforeScore = cachedAnalysis.score;
           metricsToUpdate.hasJobDescription = true;
         }
@@ -719,14 +665,6 @@ export function OptimizeSection({
 
       // Update the store with all accumulated metrics at once
       if (Object.keys(metricsToUpdate).length > 0) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[OptimizeSection] Dispatching consolidated metrics update:', {
-            keys: Object.keys(metricsToUpdate),
-            gapAnalysisCount: metricsToUpdate.gapAnalysis?.length,
-            beforeScore: metricsToUpdate.beforeScore
-          });
-        }
-
         setOptimizationMetrics(metricsToUpdate);
 
         // Update the cache with the new match score if available
@@ -1444,7 +1382,6 @@ export function OptimizeSection({
       <FeedbackModal
         isOpen={showFeedbackModal}
         onClose={() => {
-          console.log('[OptimizeSection] Feedback modal closed');
           setShowFeedbackModal(false);
           dismissFeedback(); // Mark as prompted for this session
         }}

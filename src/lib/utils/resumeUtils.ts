@@ -117,9 +117,7 @@ export const mergeResumeData = (original, aiResult) => {
     // Users must manually add skills they actually possess
     if (optimization.skills_gap_analysis?.missing_keywords_to_add) {
         const missingKeywords = optimization.skills_gap_analysis.missing_keywords_to_add;
-        if (missingKeywords.length > 0) {
-            console.log('[mergeResumeData] Recommended skills (not added):', missingKeywords);
-        }
+        // Skills recommendations are displayed in UI, not auto-injected
     }
 
     // 4. Apply education improvements

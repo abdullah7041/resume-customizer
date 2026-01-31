@@ -96,13 +96,10 @@ export function ReferralLink({ className }: ReferralLinkProps) {
       return;
     }
 
-    console.log('[ReferralLink] LinkedIn share - referralUrl:', referralUrl);
-
     // LinkedIn only accepts URL parameter (no custom text in share dialog)
     // Note: Unlike WhatsApp/X, LinkedIn pulls title/summary from page meta tags
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralUrl)}`;
 
-    console.log('[ReferralLink] Opening LinkedIn with URL:', linkedInUrl);
     window.open(linkedInUrl, '_blank', 'noopener,noreferrer');
   };
 

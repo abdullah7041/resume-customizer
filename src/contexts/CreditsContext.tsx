@@ -52,7 +52,6 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             if (fetchError) {
                 // Handle "No rows found" (PGRST116) by defaulting to 0 credits
                 if (fetchError.code === 'PGRST116') {
-                    console.log('[CreditsContext] No credit record found, defaulting to 0');
                     setCredits({
                         remaining: 0,
                         total: 0,
@@ -68,7 +67,6 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             }
 
             if (data) {
-                console.log('[CreditsContext] Credits updated:', data.credits_remaining, '/', data.credits_total);
                 setCredits({
                     remaining: data.credits_remaining,
                     total: data.credits_total,
@@ -96,8 +94,6 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
     useEffect(() => {
         if (!user) return;
 
-        console.log('[CreditsContext] Setting up real-time subscription for user:', user.id);
-
         const subscription = supabase
             .channel(`user_credits_global:${user.id}`)
             .on(
@@ -109,16 +105,12 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
                     filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-                    console.log('[CreditsContext] Real-time update detected:', payload);
                     fetchCredits();
                 }
             )
-            .subscribe((status) => {
-                console.log('[CreditsContext] Subscription status:', status);
-            });
+            .subscribe();
 
         return () => {
-            console.log('[CreditsContext] Cleaning up subscription');
             subscription.unsubscribe();
         };
     }, [user, fetchCredits]);

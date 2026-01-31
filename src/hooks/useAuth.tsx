@@ -66,7 +66,6 @@ const captureReferralParam = () => {
 
   if (refParam) {
     localStorage.setItem("watheq:pending_referrer_id", refParam);
-    console.log("[useAuth] Captured referral parameter:", refParam);
 
     // Clean up URL without reloading
     const cleanUrl = window.location.href.split("?")[0];
@@ -85,8 +84,6 @@ const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
   }
 
   try {
-    console.log("[useAuth] Tracking referral:", { referrerId, userId });
-
     const response = await fetch("/.netlify/functions/referral-api", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -99,7 +96,6 @@ const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
     });
 
     if (response.ok) {
-      console.log("[useAuth] Referral tracked successfully");
       localStorage.removeItem("watheq:pending_referrer_id");
     } else {
       const errorData = await response.json();

@@ -158,8 +158,6 @@ export function useFeatureTracking(): UseFeatureTrackingResult {
 
     // Increment the feedback prompt counter (checks for milestones)
     incrementFeatureUses();
-
-    console.log(`[useFeatureTracking] Feature used: ${feature}, total uses: ${featureUsesCount + 1}`);
   }, [incrementFeatureUses, featureUsesCount, currentMilestone, addToFeatureSequence]);
 
   return {

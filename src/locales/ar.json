@@ -392,8 +392,8 @@
       "genericToolB": "أداة عادية ب",
       "features": {
         "vision2030": "توافق رؤية 2030",
-        "antiHallucination": "منع البيانات الوهمية",
-        "arabicSupport": "دعم اللغة العربية الأصلي",
+        "antiHallucination": "بدون هلوسة",
+        "arabicSupport": "دعم اللغة العربية",
         "jobMatch": "مطابقة الوظائف بالذكاء الاصطناعي",
         "atsPassRate": "معدل اجتياز ATS",
         "templates": "قوالب احترافية",
