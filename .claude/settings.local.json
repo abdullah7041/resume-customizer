@@ -44,7 +44,8 @@
       "Bash(npm install:*)",
       "Bash(git add:*)",
       "Bash(npm run quality:parallel:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run build:*)"
     ]
   },
   "enableAllProjectMcpServers": false,
