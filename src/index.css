@@ -869,4 +869,33 @@
   .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out forwards;
   }
+
+  /* Badge flip animations */
+  @keyframes flipIn {
+    0% {
+      transform: rotateX(-90deg);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      transform: rotateX(0deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes flipOut {
+    0% {
+      transform: rotateX(0deg);
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      transform: rotateX(90deg);
+      opacity: 0;
+    }
+  }
 }

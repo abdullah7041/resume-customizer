@@ -48,6 +48,7 @@ export default function Header() {
   const workflowAnimatedRef = useRef(initialReducedMotion);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [badgeFlipped, setBadgeFlipped] = useState(false);
   const mobileNavRef = useRef<HTMLDivElement>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
@@ -380,16 +381,24 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Badge - moved from Hero */}
-            <div className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg ml-4">
+            {/* Badge - moved from Hero - Now clickable with flip animation */}
+            <button
+              onClick={() => setBadgeFlipped(!badgeFlipped)}
+              className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg ml-4 cursor-pointer hover:border-emerald-400/30 transition-all duration-300 hover:scale-105 group"
+              aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
+              title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
+            >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
               </span>
-              <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent uppercase">
-                {t("header.badge")}
+              <span
+                key={badgeFlipped ? 'alt' : 'main'}
+                className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent uppercase animate-[flipIn_0.5s_ease-in-out]"
+              >
+                {badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
               </span>
-            </div>
+            </button>
 
             {/* Desktop: Language switcher, Feedback, and Auth button */}
             <div className="hidden md:flex items-center gap-3">
