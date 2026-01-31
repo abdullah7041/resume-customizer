@@ -29,6 +29,7 @@ import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supa
 import ViewTextModal from "../ui/ViewTextModal";
 import Vision2030Summary from "../ui/Vision2030Summary";
 import { useResumeStore } from "../../lib/stores/resumeStore";
+import { mergeResumeData } from "../../lib/utils/resumeUtils";
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
@@ -660,7 +661,6 @@ export default function MainContent() {
 
       try {
         // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
-        const { mergeResumeData } = await import("../../lib/utils/resumeUtils");
         const mergedResume = mergeResumeData(resumeData, {
           optimization: optimizationData,
           candidateProfile: null // Add if available

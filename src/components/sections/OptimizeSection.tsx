@@ -533,7 +533,7 @@ export function OptimizeSection({
       // Show feedback modal at milestones (if user hasn't reached max 3 submissions)
       if (shouldShowFeedback && user?.id) {
         try {
-          const { data: userCredits, error: creditsError } = await supabase
+          const { data: userCredits, error: _creditsError } = await supabase
             .from('user_credits')
             .select('feedback_credits_earned')
             .eq('user_id', user.id)

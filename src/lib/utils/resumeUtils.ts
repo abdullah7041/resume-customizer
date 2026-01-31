@@ -115,10 +115,8 @@ export const mergeResumeData = (original, aiResult) => {
     // 3. Skills recommendations (NOT auto-injected)
     // POLICY: Skills are recommended only, not auto-injected
     // Users must manually add skills they actually possess
-    if (optimization.skills_gap_analysis?.missing_keywords_to_add) {
-        const missingKeywords = optimization.skills_gap_analysis.missing_keywords_to_add;
-        // Skills recommendations are displayed in UI, not auto-injected
-    }
+    // Skills recommendations are displayed in UI via optimization.skills_gap_analysis
+    // No automatic injection happens here
 
     // 4. Apply education improvements
     if (mergedData.education && optimization.education_improvements) {
