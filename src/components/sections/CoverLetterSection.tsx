@@ -21,6 +21,11 @@ import {
 import { saveAs } from 'file-saver';
 import { cn } from '../../lib/utils/cn';
 import { analytics } from '../../services/analytics';
+import { useUserCredits } from '../../hooks/useUserCredits';
+import { useFeatureTracking } from '../../hooks/useFeatureTracking';
+import { UpgradeModal } from '../Credits/UpgradeModal';
+import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { FeedbackModal } from '../Feedback/FeedbackModal';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
 const GENERATE_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-cover-letter`;
@@ -42,6 +47,8 @@ const tones = [
 
 export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSectionProps) {
   const { t, i18n } = useTranslation();
+  const { credits, refetch: refetchCredits } = useUserCredits();
+  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
   const isArabic = i18n.language === 'ar';
 
   const [coverLetter, setCoverLetter] = useState('');
@@ -54,6 +61,9 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   const [keyHighlights, setKeyHighlights] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Load from localStorage
   useEffect(() => {
@@ -79,7 +89,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
     setWordCount(coverLetter ? coverLetter.trim().split(/\s+/).length : 0);
   }, [coverLetter]);
 
-  const generateCoverLetter = useCallback(async () => {
+  const generateCoverLetterActual = useCallback(async () => {
     if (!resumeText || !jobDescription) {
       setError(t('sections.coverLetter.errors.missing', 'Please provide both resume and job description'));
       return;
@@ -89,19 +99,13 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
     setError(null);
 
     try {
-      // Get beta code from localStorage
-      const betaCode = typeof window !== 'undefined' ? localStorage.getItem('watheq:beta_access') : null;
-
-      if (!betaCode) {
-        throw new Error('Beta code not found. Please sign in again.');
-      }
+      // Get authenticated headers (includes Authorization Bearer token)
+      const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
+      const headers = await getAuthHeaders();
 
       const response = await fetch(GENERATE_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Beta-Code': betaCode
-        },
+        headers,
         body: JSON.stringify({
           resumeText,
           jobDescription,
@@ -110,6 +114,13 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
           tone
         }),
       });
+
+      // Handle insufficient credits (403)
+      if (response.status === 403) {
+        setShowUpgradeModal(true);
+        setIsGenerating(false);
+        return;
+      }
 
       if (!response.ok) throw new Error(`Failed to generate: ${response.statusText}`);
       const data = await response.json();
@@ -149,12 +160,41 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
           generatedAt: new Date().toISOString()
         }));
       }
+
+      // Track feature use for feedback prompt
+      trackFeatureUse('cover-letter');
+
+      // Check if we should show feedback modal (with 5-10 second delay for better UX)
+      if (shouldShowFeedback) {
+        const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
+        setTimeout(() => {
+          setShowFeedbackModal(true);
+        }, delay);
+      }
+
+      // Refetch credits to update balance (credits were consumed by backend)
+      setTimeout(() => refetchCredits(), 500);
     } catch (err) {
       setError((err as Error).message || t('sections.coverLetter.errors.failed', 'Failed to generate cover letter'));
     } finally {
       setIsGenerating(false);
     }
-  }, [resumeText, jobDescription, companyName, hiringManager, tone, t]);
+  }, [resumeText, jobDescription, companyName, hiringManager, tone, refetchCredits, trackFeatureUse, shouldShowFeedback, t]);
+
+  // Wrapper function that shows confirmation modal first
+  const generateCoverLetter = () => {
+    if (!resumeText || !jobDescription) {
+      setError(t('sections.coverLetter.errors.missing', 'Please provide both resume and job description'));
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  // Handler for confirmed cover letter generation
+  const handleConfirmGenerate = async () => {
+    setShowConfirmModal(false);
+    await generateCoverLetterActual();
+  };
 
   const copyCoverLetter = async () => {
     try {
@@ -245,7 +285,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   // Empty state
   if (!resumeText || !jobDescription) {
     return (
-      <GlassCard variant="elevated" className="border-dashed border-white/10 bg-white/5">
+      <GlassCard className="border-dashed border-white/10 bg-white/5">
         <div className="py-12 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
             <FileText className="w-8 h-8 text-gray-400 opacity-50" />
@@ -264,7 +304,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Configuration */}
-      <GlassCard variant="elevated" className="overflow-hidden">
+      <GlassCard className="overflow-hidden">
         <div className="flex items-center gap-4 mb-8">
           <GlassCircle size="lg" variant="indigo" className="shadow-lg shadow-indigo-500/20">
             <FileText className="w-6 h-6 text-indigo-300" />
@@ -369,7 +409,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
 
       {/* Loading State */}
       {isGenerating && (
-        <GlassCard variant="elevated" className="p-12 relative overflow-hidden">
+        <GlassCard className="p-12 relative overflow-hidden">
           <div className="absolute inset-0 bg-indigo-500/5 animate-pulse" />
           <div className="relative z-10 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 mb-6 relative">
@@ -389,7 +429,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
 
       {/* Result Display */}
       {!isGenerating && coverLetter && (
-        <GlassCard variant="elevated" className="overflow-hidden border-t-4 border-t-indigo-500/50">
+        <GlassCard className="overflow-hidden border-t-4 border-t-indigo-500/50">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
             <div>
               <h3 className="text-xl font-bold text-white mb-1">
@@ -517,6 +557,33 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
           </div>
         </GlassCard>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        creditsRemaining={credits?.remaining || 0}
+        dismissKey="watheq:upgradeDismissed-coverletter"
+      />
+
+      {/* Credit Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmGenerate}
+        feature="cover_letter"
+        currentCredits={credits?.remaining || 0}
+        isLoading={isGenerating}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => {
+          setShowFeedbackModal(false);
+          dismissFeedback();
+        }}
+      />
     </div>
   );
 }

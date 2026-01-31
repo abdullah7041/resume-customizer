@@ -52,7 +52,7 @@ const rateLimiter = new RateLimiter({
 /**
  * Execute a single task by calling the appropriate internal endpoint
  */
-async function executeTask(task: BatchTask, betaCode: string): Promise<BatchResponse> {
+async function executeTask(task: BatchTask, betaCode: string, authHeader?: string): Promise<BatchResponse> {
   const endpoint = INTERNAL_ENDPOINTS[task.type];
 
   if (!endpoint) {
@@ -67,12 +67,19 @@ async function executeTask(task: BatchTask, betaCode: string): Promise<BatchResp
   try {
     const url = `${NETLIFY_BASE}${endpoint}`;
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-Beta-Code": betaCode,
+    };
+
+    // Forward Authorization header if provided
+    if (authHeader) {
+      headers.Authorization = authHeader;
+    }
+
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Beta-Code": betaCode,
-      },
+      headers,
       body: JSON.stringify(task.payload),
     });
 
@@ -167,8 +174,9 @@ const handler: Handler = async (event) => {
     };
   }
 
-  // Extract beta code from header
+  // Extract beta code and auth header from headers
   const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+  const authHeader = event.headers["authorization"] || event.headers["Authorization"];
 
   if (!betaCode) {
     return {
@@ -203,7 +211,7 @@ const handler: Handler = async (event) => {
     const results = await batchWithConcurrency(
       tasks,
       async (task) => {
-        const result = await executeTask(task, betaCode);
+        const result = await executeTask(task, betaCode, authHeader);
 
         // If continueOnError is false and we hit an error, throw to stop batch
         if (!continueOnError && result.status === "error") {

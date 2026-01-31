@@ -21,8 +21,11 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
-import { parseResume, analyzeResume } from '../../services/api';
+import { parseResume } from '../../services/api';
 import { cn } from '../../lib/utils/cn';
+import { useUserCredits } from '../../hooks/useUserCredits';
+import { UpgradeModal } from '../Credits/UpgradeModal';
+import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -75,7 +78,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
 
   return (
     <div className="group relative">
-      <GlassCard variant="subtle" padding="sm" className="h-full transition-all duration-300 hover:bg-white/5 hover:border-white/20 hover:shadow-lg hover:-translate-y-1">
+      <GlassCard padding="sm" className="h-full transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-white/20">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className={cn(
@@ -165,6 +168,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
 
 export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps) {
   const { t } = useTranslation();
+  const { credits, refetch: refetchCredits } = useUserCredits();
   const [resumes, setResumes] = useState<Resume[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -179,6 +183,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     return [];
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingResumeId, setPendingResumeId] = useState<string | null>(null);
 
   // Save to localStorage
   useEffect(() => {
@@ -202,7 +209,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     window.localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const processResume = useCallback(async (resumeId: string, file: File) => {
+  const processResumeActual = useCallback(async (resumeId: string, file: File) => {
     setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'parsing' as const } : r));
 
     try {
@@ -213,15 +220,64 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, plainText, status: 'analyzing' as const } : r));
 
       if (jobDescription) {
-        const aiAnalysis = await analyzeResume(plainText, jobDescription);
+        // Use authenticated AI match endpoint (costs 2 credits per resume)
+        const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
+        const headers = await getAuthHeaders();
+
+        const response = await fetch('/.netlify/functions/ai-match', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            resumeText: plainText,
+            jobText: jobDescription
+          }),
+        });
+
+        // Handle insufficient credits (403)
+        if (response.status === 403) {
+          setShowUpgradeModal(true);
+          setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'error' as const, error: 'Insufficient credits' } : r));
+          return;
+        }
+
+        if (!response.ok) throw new Error(`Analysis failed: ${response.statusText}`);
+
+        const aiAnalysis = await response.json();
         setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, analysis: aiAnalysis, status: 'completed' as const } : r));
+
+        // Refetch credits after each resume analysis
+        setTimeout(() => refetchCredits(), 500);
       } else {
         setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'completed' as const } : r));
       }
     } catch (error) {
       setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'error' as const, error: (error as Error).message } : r));
     }
-  }, [jobDescription]);
+  }, [jobDescription, refetchCredits]);
+
+  // Wrapper function to show confirmation before processing
+  const processResume = useCallback((resumeId: string, file: File) => {
+    if (!jobDescription) {
+      // If no job description, process without credits (just parsing)
+      processResumeActual(resumeId, file);
+      return;
+    }
+    // Store pending resume for confirmation
+    setPendingResumeId(resumeId);
+    setShowConfirmModal(true);
+  }, [jobDescription, processResumeActual]);
+
+  // Handler for confirmed analysis
+  const handleConfirmAnalysis = async () => {
+    setShowConfirmModal(false);
+    if (pendingResumeId) {
+      const resume = resumes.find(r => r.id === pendingResumeId);
+      if (resume?.file) {
+        await processResumeActual(pendingResumeId, resume.file);
+      }
+      setPendingResumeId(null);
+    }
+  };
 
   const handleFiles = useCallback(async (files: FileList) => {
     const fileArray = Array.from(files).slice(0, MAX_FILES - resumes.length);
@@ -356,7 +412,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <GlassCard className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <GlassCircle size="lg" variant="purple" className="shadow-lg shadow-purple-500/20">
             <BarChart3 className="w-8 h-8 text-purple-400" />
@@ -383,7 +439,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
             </GlassButton>
           </div>
         )}
-      </div>
+      </GlassCard>
 
       {/* Upload Area */}
       {canUploadMore && (
@@ -394,8 +450,8 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
           className={cn(
             'group relative rounded-2xl border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer overflow-hidden',
             isDragging
-              ? 'border-emerald-500 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
-              : 'border-white/10 hover:border-emerald-500/40 hover:bg-white/5'
+              ? 'border-emerald-500 bg-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
+              : 'border-white/10 bg-black/60 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-black/70'
           )}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -465,7 +521,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
       {/* Comparison Table */}
       {jobDescription && sortedResumes.length > 0 && (
-        <GlassCard variant="elevated" className="overflow-hidden animate-fade-in">
+        <GlassCard className="overflow-hidden animate-fade-in">
           <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-purple-400" />
@@ -556,7 +612,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
       {/* Empty State */}
       {resumes.length === 0 && (
-        <GlassCard variant="subtle" className="mx-auto max-w-lg mt-12 bg-gradient-to-b from-white/5 to-transparent">
+        <GlassCard className="mx-auto max-w-lg mt-12">
           <div className="py-12 px-6 text-center">
             <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-6 transform rotate-12">
               <TrendingUp className="w-8 h-8 text-gray-400 opacity-50" />
@@ -570,6 +626,27 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
           </div>
         </GlassCard>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        creditsRemaining={credits?.remaining || 0}
+        dismissKey="watheq:upgradeDismissed-bulk"
+      />
+
+      {/* Credit Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={showConfirmModal}
+        onClose={() => {
+          setShowConfirmModal(false);
+          setPendingResumeId(null);
+        }}
+        onConfirm={handleConfirmAnalysis}
+        feature="ai_match"
+        currentCredits={credits?.remaining || 0}
+        isLoading={false}
+      />
     </div>
   );
 }

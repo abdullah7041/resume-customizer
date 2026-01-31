@@ -23,19 +23,33 @@
     "balance": "Credits",
     "remaining": "credits",
     "resetsIn": "Resets in {{time}}",
+    "resetsInWithDate": "Resets in {{days}} days ({{date}})",
+    "resetsSoon": "Resets soon",
     "confirm": {
       "title": "Confirm Action",
       "message": "This will use {{cost}} credits.",
       "current": "Current balance: {{remaining}} / {{total}}",
       "continue": "Continue ({{cost}} credits)",
-      "insufficient": "Insufficient credits. You need {{required}} but have {{available}}."
+      "insufficient": "Insufficient credits. You need {{required}} but have {{available}}.",
+      "waitlistCta": "Will notify you when Pro launches ."
     },
     "upgrade": {
       "title": "Upgrade to Premium",
       "lowCredits": "You're running low on credits ({{remaining}} remaining)",
       "comingSoon": "Coming Soon",
       "joinWaitlist": "Join Waitlist",
-      "earnTip": "Tip: Earn bonus credits by submitting feedback!"
+      "earnTip": "Tip: Earn bonus credits by submitting feedback!",
+      "emailLabel": "Get notified when Pro launches:",
+      "waitlistSuccess": "Thanks! We'll notify you when Pro launches.",
+      "badge": "EARLY ACCESS",
+      "invalidEmail": "Please enter a valid email address",
+      "subtitle": "Supercharge your resume optimization with higher limits and expert features.",
+      "proFeatures": "What you get",
+      "features": {
+        "credits": "100 credits/month",
+        "support": "Priority support",
+        "earlyAccess": "Early access to new features"
+      }
     },
     "usage": {
       "title": "Credit Usage",
@@ -56,7 +70,12 @@
     "creditsEarned": "Earned",
     "noReferralsYet": "Share your link to start earning credits!",
     "pendingReferrals": "{{count}} referral(s) pending activation",
-    "allCompleted": "All referrals are active! 🎉"
+    "allCompleted": "All referrals are active! 🎉",
+    "shareLinkedIn": "Share on LinkedIn",
+    "inviteEarn": "Invite & Earn",
+    "shareLink": "Share your unique link with friends.",
+    "youGet": "You get +5 credits",
+    "theyGet": "They get +5 credits"
   },
   "nav": {
     "home": "Home",
@@ -76,7 +95,8 @@
   },
   "header": {
     "feedback": "Your Feedback",
-    "badge": "Designed for Saudi ambition",
+    "badge": "Verified AI - No Fake Data",
+    "badgeAlt": "Designed for Saudi ambition",
     "heroTitle": "Watheq - AI Resume Optimizer",
     "heroDescription": "Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.",
     "workflow": {
@@ -109,39 +129,43 @@
     "features": {
       "smartParsing": {
         "label": "Smart Parsing",
-        "desc": "AI-powered extraction"
+        "desc": "Extract Arabic/English resumes in 30 seconds"
       },
       "matchScore": {
-        "label": "Match Score",
-        "desc": "Saudi market fit"
+        "label": "AI Match Score",
+        "desc": "Get 0-100 scores with AI insights"
       },
       "aiOptimization": {
         "label": "AI Optimization",
-        "desc": "Intelligent improvements"
+        "desc": "Rewrite without inventing fake data"
       },
       "keywords": {
         "label": "Keyword Analysis",
-        "desc": "ATS optimization"
+        "desc": "Beat ATS with strategic keywords"
       },
       "templates": {
         "label": "Pro Templates",
-        "desc": "Multiple formats"
+        "desc": "4 ATS-optimized PDF formats"
       },
       "interview": {
         "label": "Interview Prep",
-        "desc": "AI-generated Q&A"
+        "desc": "Role-specific questions in seconds"
       },
       "bulk": {
         "label": "Bulk Analysis",
-        "desc": "Compare versions"
+        "desc": "Compare multiple resume versions"
       },
       "coverLetter": {
         "label": "Cover Letters",
-        "desc": "AI-generated letters"
+        "desc": "Tailored letters for each role"
       },
       "vision2030": {
         "label": "Vision 2030",
-        "desc": "Saudi priority alignment"
+        "desc": "Align with Saudi national priorities"
+      },
+      "antiHallucination": {
+        "label": "Verified AI",
+        "desc": "No hallucinations, no fake experience"
       }
     }
   },
@@ -356,6 +380,34 @@
         "name": "Healthcare",
         "growth": "+32%"
       }
+    },
+    "comparison": {
+      "title": "Why Choose Watheq?",
+      "subtitle": "See how we stack up against generic resume tools",
+      "watheq": "Watheq",
+      "genericToolA": "Generic Tool A",
+      "genericToolB": "Generic Tool B",
+      "features": {
+        "vision2030": "Vision 2030 Alignment",
+        "antiHallucination": "Anti-Hallucination",
+        "arabicSupport": "Native Arabic Support",
+        "jobMatch": "AI Job Match",
+        "atsPassRate": "ATS Pass Rate",
+        "templates": "Professional Templates",
+        "interviewPrep": "Interview Preparation"
+      },
+      "values": {
+        "yes": "Yes",
+        "no": "No",
+        "partial": "Partial",
+        "unknown": "Unknown",
+        "watheqAts": "94%",
+        "toolAAts": "Unknown",
+        "toolBAts": "85%",
+        "watheqTemplates": "4 ATS-optimized",
+        "toolATemplates": "2 basic",
+        "toolBTemplates": "3 generic"
+      }
     }
   },
   "upload": {
@@ -462,16 +514,25 @@
     "emailPlaceholder": "Enter your email",
     "notify": "Notify Me",
     "subscribed": "✓ Subscribed!",
+    "waitlist": {
+      "alreadyJoined": "You're already on the waitlist!",
+      "error": "Failed to join waitlist. Please try again."
+    },
     "plans": {
       "free": {
         "name": "Free",
         "description": "Perfect for getting started",
         "features": [
-          "3 resume uploads per month",
-          "Basic keyword analysis",
-          "1 AI optimization",
-          "Standard templates",
-          "Vision 2030 alignment"
+          "15 credits monthly",
+          "AI Resume Analysis (2 credits)",
+          "Resume Optimization (5 credits)",
+          "Interview Prep (3 credits)",
+          "Cover Letter (4 credits)",
+          "Vision 2030 Alignment (2 credits)",
+          "Unlimited resume uploads (free)",
+          "Unlimited PDF exports (free)",
+          "4 professional templates",
+          "Referral rewards (5 credits per friend)"
         ]
       },
       "pro": {
@@ -703,6 +764,17 @@
       "title": "Vision 2030 Alignment",
       "viewDetails": "View Details",
       "learnMore": "Learn about Vision 2030"
+    },
+    "section": {
+      "clear": "Clear Results",
+      "cleared": "Results Cleared",
+      "clearedDesc": "Analysis results have been cleared.",
+      "viewRecommendations": "Recommendations",
+      "reanalyze": "Re-analyze (2 credits)",
+      "analyzing": "Analyzing...",
+      "analyzingDesc": "Analyzing your resume against Vision 2030 sectors...",
+      "complete": "Analysis Complete",
+      "completeDesc": "Your Vision 2030 alignment report is ready."
     },
     "summary": {
       "excellent": "Excellent Vision 2030 alignment!",

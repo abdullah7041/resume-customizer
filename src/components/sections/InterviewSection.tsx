@@ -19,6 +19,11 @@ import {
   Zap
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
+import { useUserCredits } from '../../hooks/useUserCredits';
+import { useFeatureTracking } from '../../hooks/useFeatureTracking';
+import { UpgradeModal } from '../Credits/UpgradeModal';
+import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { FeedbackModal } from '../Feedback/FeedbackModal';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
 const PREDICT_ENDPOINT = `${FUNCTION_BASE_PATH}/predict-questions`;
@@ -76,7 +81,7 @@ const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
 
 // STAR Method Tip component
 const STARMethodTip = () => (
-  <GlassCard variant="subtle" className="mb-8 border-emerald-500/30 bg-emerald-900/10">
+  <GlassCard className="mb-8 border-emerald-500/30">
     <div className="flex flex-col md:flex-row items-start gap-6">
       <div className="flex-shrink-0">
         <GlassCircle size="lg" className="bg-emerald-500/20 border-emerald-500/40">
@@ -98,7 +103,7 @@ const STARMethodTip = () => (
             { letter: 'A', word: 'Action', desc: 'What you did', icon: <Zap className="w-4 h-4" /> },
             { letter: 'R', word: 'Result', desc: 'Measurable outcome', icon: <Award className="w-4 h-4" /> }
           ].map((item, idx) => (
-            <GlassCard key={idx} variant="subtle" padding="sm" className="group hover:bg-emerald-500/10 transition-colors border-emerald-500/10">
+            <GlassCard key={idx} padding="sm" className="group border-emerald-500/10">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 group-hover:scale-110 transition-transform">
                   {item.letter}
@@ -179,6 +184,8 @@ export function InterviewSection({
   onUpdate
 }: InterviewSectionProps) {
   const { t } = useTranslation();
+  const { credits, refetch: refetchCredits } = useUserCredits();
+  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [roleLevel, setRoleLevel] = useState('');
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
@@ -186,6 +193,10 @@ export function InterviewSection({
   const [error, setError] = useState<string | null>(null);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
   const [savedAnswers, setSavedAnswers] = useState<Record<number, string>>({});
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [pendingRegenerate, setPendingRegenerate] = useState(false);
 
   // Extract questions from available sources
   const extractQuestionsFromData = useCallback(() => {
@@ -213,8 +224,8 @@ export function InterviewSection({
     return null;
   }, [matchAnalysis, resumeData]);
 
-  // Generate questions via API
-  const predictQuestions = useCallback(async (forceRegenerate = false) => {
+  // Generate questions via API (actual implementation)
+  const predictQuestionsActual = useCallback(async (forceRegenerate = false) => {
     if (!forceRegenerate) {
       const existingData = extractQuestionsFromData();
       if (existingData) {
@@ -235,21 +246,22 @@ export function InterviewSection({
     setError(null);
 
     try {
-      // Get beta code from localStorage
-      const betaCode = typeof window !== 'undefined' ? localStorage.getItem('watheq:beta_access') : null;
-
-      if (!betaCode) {
-        throw new Error('Beta code not found. Please sign in again.');
-      }
+      // Get authenticated headers (includes Authorization Bearer token)
+      const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
+      const headers = await getAuthHeaders();
 
       const response = await fetch(PREDICT_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Beta-Code': betaCode
-        },
+        headers,
         body: JSON.stringify({ jobDescription, resumeText: resumeText || '' }),
       });
+
+      // Handle insufficient credits (403)
+      if (response.status === 403) {
+        setShowUpgradeModal(true);
+        setIsLoading(false);
+        return;
+      }
 
       if (!response.ok) throw new Error(`Failed to predict questions: ${response.statusText}`);
       const data = await response.json();
@@ -284,21 +296,71 @@ export function InterviewSection({
           }
         });
       }
+
+      // Track feature use for feedback prompt
+      trackFeatureUse('interview');
+
+      // Check if we should show feedback modal (with 5-10 second delay for better UX)
+      if (shouldShowFeedback) {
+        const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
+        setTimeout(() => {
+          setShowFeedbackModal(true);
+        }, delay);
+      }
+
+      // Refetch credits to update balance (credits were consumed by backend)
+      setTimeout(() => refetchCredits(), 500);
     } catch (err) {
       setError((err as Error).message || t('sections.interview.errors.failed', 'Failed to generate questions'));
     } finally {
       setIsLoading(false);
     }
-  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, t]);
+  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, trackFeatureUse, shouldShowFeedback, t]);
 
-  // Auto-load on mount
+  // Wrapper function that shows confirmation modal first
+  const predictQuestions = (forceRegenerate = false) => {
+    if (!jobDescription) {
+      setError(t('sections.interview.errors.noJob', 'Please provide a job description first'));
+      return;
+    }
+    setPendingRegenerate(forceRegenerate);
+    setShowConfirmModal(true);
+  };
+
+  // Handler for confirmed interview prep action
+  const handleConfirmGenerate = async () => {
+    setShowConfirmModal(false);
+    await predictQuestionsActual(pendingRegenerate);
+    setPendingRegenerate(false);
+  };
+
+  // Auto-load on mount from props or localStorage
   useEffect(() => {
+    // First, try to load from props
     const existingData = extractQuestionsFromData();
     if (existingData) {
       const normalized = existingData.questions.map((q, i) => normalizeQuestion(q, i)).filter(Boolean) as Question[];
       setQuestions(normalized);
       setRoleLevel(existingData.roleLevel);
       setFocusAreas(existingData.focusAreas);
+      return;
+    }
+
+    // If no data from props, try localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.questions?.length) {
+            setQuestions(parsed.questions);
+            setRoleLevel(parsed.roleLevel || '');
+            setFocusAreas(parsed.focusAreas || []);
+          }
+        }
+      } catch (err) {
+        console.warn('[InterviewSection] Failed to load from localStorage:', err);
+      }
     }
   }, [extractQuestionsFromData]);
 
@@ -331,7 +393,7 @@ export function InterviewSection({
   // Empty state - no job description
   if (!jobDescription) {
     return (
-      <GlassCard variant="elevated">
+      <GlassCard className="relative overflow-hidden">
         <div className="py-12 text-center text-gray-500">
           <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <h3 className="text-lg font-semibold text-white mb-2">
@@ -346,7 +408,7 @@ export function InterviewSection({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <GlassCard variant="elevated">
+      <GlassCard className="relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <GlassCircle size="lg" variant="blue" className="bg-blue-500/10">
@@ -379,7 +441,7 @@ export function InterviewSection({
 
         {/* Role Insights */}
         {(roleLevel || focusAreas.length > 0) && (
-          <GlassCard variant="subtle" className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
+          <GlassCard className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
             {/* Decorative background gradients */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
@@ -473,11 +535,10 @@ export function InterviewSection({
             {questions.map((question, index) => (
               <GlassCard
                 key={index}
-                variant="elevated"
                 padding="none"
                 className={cn(
                   "overflow-hidden transition-all duration-300 border-white/5",
-                  expandedQuestions.has(index) ? "bg-white/5 ring-1 ring-emerald-500/30" : "hover:bg-white/5"
+                  expandedQuestions.has(index) ? "ring-1 ring-emerald-500/30" : "hover:border-white/10"
                 )}
               >
                 {/* Header / Question Summary */}
@@ -594,6 +655,33 @@ export function InterviewSection({
           </div>
         </div>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        creditsRemaining={credits?.remaining || 0}
+        dismissKey="watheq:upgradeDismissed-interview"
+      />
+
+      {/* Credit Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmGenerate}
+        feature="interview_prep"
+        currentCredits={credits?.remaining || 0}
+        isLoading={isLoading}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => {
+          setShowFeedbackModal(false);
+          dismissFeedback();
+        }}
+      />
     </div>
   );
 }

@@ -97,7 +97,7 @@ export function AuthGate({ children }: AuthGateProps) {
         </p>
       </div>
 
-      <GlassCard variant="elevated" className="w-full max-w-md">
+      <GlassCard className="w-full max-w-md">
         <div className="text-center mb-6">
           <h2 className="text-xl font-semibold text-white mb-2">
             {t('beta.title', 'Early Access')}

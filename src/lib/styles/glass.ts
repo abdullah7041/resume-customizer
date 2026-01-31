@@ -6,16 +6,16 @@
 
 export const glass = {
   // Primary glass card - neutral transparent background
-  card: 'bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl',
+  card: 'bg-black/80 backdrop-blur-xl border border-white/10 shadow-xl',
 
   // Light glass card (for contrast)
   cardLight: 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl',
 
   // Elevated glass (more prominent)
-  elevated: 'bg-black/50 backdrop-blur-2xl border border-white/15 shadow-2xl',
+  elevated: 'bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/15 shadow-2xl',
 
   // Subtle glass (less prominent)
-  subtle: 'bg-black/30 backdrop-blur-lg border border-white/10 shadow-lg',
+  subtle: 'bg-black/60 backdrop-blur-lg border border-white/10 shadow-lg',
 
   // Input fields
   input: 'bg-white/5 backdrop-blur-sm border border-white/10 focus:border-emerald-500/50 focus:bg-white/10',

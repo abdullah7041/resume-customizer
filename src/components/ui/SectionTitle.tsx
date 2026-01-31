@@ -14,7 +14,6 @@ interface SectionTitleProps {
 export default function SectionTitle({ eyebrow, title, description, icon, className }: SectionTitleProps) {
   return (
     <GlassCard
-      variant="subtle"
       padding="md"
       className={cn("text-left", className)}
     >

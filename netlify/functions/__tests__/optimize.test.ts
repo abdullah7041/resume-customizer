@@ -15,6 +15,17 @@ vi.mock('../../lib/sentry', () => ({
     captureError: vi.fn()
 }));
 
+vi.mock('../../lib/supabase-client', () => ({
+    getSupabaseClient: vi.fn(() => ({
+        auth: {
+            getUser: vi.fn().mockResolvedValue({
+                data: { user: { id: 'test-user-123' } },
+                error: null
+            })
+        }
+    }))
+}));
+
 vi.mock('@supabase/supabase-js', () => ({
     createClient: vi.fn(() => ({
         auth: {

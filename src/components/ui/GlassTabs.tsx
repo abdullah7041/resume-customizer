@@ -25,7 +25,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction }: Glass
       className="relative flex w-full items-center p-1.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl transition-all duration-300 hover:border-white/20 hover:bg-black/50"
       role="tablist"
     >
-      <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth px-1">
+      <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth px-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeValue === tab.value;
@@ -37,7 +37,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction }: Glass
               role="tab"
               aria-selected={isActive}
               className={cn(
-                'relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap outline-none select-none shrink-0',
+                'relative flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap outline-none select-none shrink-0',
                 isActive
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-1 ring-white/20 scale-[1.02]'
                   : 'text-gray-400 hover:text-white hover:bg-white/10 active:scale-95'

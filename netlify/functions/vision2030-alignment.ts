@@ -5,6 +5,8 @@ import { withRateLimit } from '../lib/rate-limiter';
 import { Vision2030RequestSchema, formatZodError } from '../lib/resume-schemas';
 import { initSentry, captureError } from '../lib/sentry';
 import { checkCredits, consumeCredits } from '../lib/credit-manager';
+import { getClientIP } from '../lib/ip-utils.js';
+import type { Vision2030AnalysisResponse } from '../../src/types/vision2030';
 
 initSentry();
 
@@ -98,10 +100,19 @@ const baseHandler: Handler = async (event) => {
 
   // Verify token and get authenticated user
   const token = authHeader.replace(/^Bearer\s+/i, '');
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
-  );
+
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Supabase configuration is missing' })
+    };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
   if (authError || !user) {
@@ -114,8 +125,12 @@ const baseHandler: Handler = async (event) => {
 
   const userId = user.id;
 
+  // Extract IP and email verification for anti-abuse checks
+  const ipAddress = getClientIP(event);
+  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+
   // Check credits BEFORE processing (2 credits for vision2030)
-  const creditCheck = await checkCredits(userId, 'vision2030');
+  const creditCheck = await checkCredits(userId, 'vision2030', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -130,8 +145,10 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
+  let rawBody: unknown;
+
   try {
-    const rawBody = JSON.parse(event.body || '{}');
+    rawBody = JSON.parse(event.body || '{}');
 
     // Validate request using Zod schema
     const parseResult = Vision2030RequestSchema.safeParse(rawBody);
@@ -158,35 +175,47 @@ const baseHandler: Handler = async (event) => {
       }
     ], Vision2030ResponseSchema, {
       temperature: 0.3,
-      maxTokens: 4096,
+      maxTokens: 16384,  // Increased to 16k to prevent JSON truncation (model supports up to 65k)
       schemaName: 'vision2030_analysis'
     });
 
-    console.log(`[vision2030-alignment] OpenRouter call took ${Date.now() - startTime}ms`);
+    const duration = Date.now() - startTime;
+    console.log(`[vision2030-alignment] OpenRouter call took ${duration}ms`);
+    console.log(`[vision2030-alignment] Response length: ${analysisJson.length} characters`);
 
     // Parse and validate AI response
-    let analysis;
+    let analysis: Vision2030AnalysisResponse;
     try {
-      analysis = JSON.parse(analysisJson);
+      analysis = JSON.parse(analysisJson) as Vision2030AnalysisResponse;
     } catch (parseError) {
       console.error('[vision2030-alignment] Failed to parse AI response:', parseError);
+      console.error('[vision2030-alignment] Response preview (first 500 chars):', analysisJson.substring(0, 500));
+      console.error('[vision2030-alignment] Response preview (last 500 chars):', analysisJson.substring(Math.max(0, analysisJson.length - 500)));
+
+      // Check if response was truncated
+      if (analysisJson.length > 0 && !analysisJson.trim().endsWith('}')) {
+        throw new Error('AI response was truncated - increase maxTokens or simplify prompt');
+      }
       throw new Error('AI response parsing failed');
     }
 
     // Consume credits AFTER successful analysis
-    await consumeCredits(userId, 'vision2030');
+    const creditResult = await consumeCredits(userId, 'vision2030');
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(analysis)
+      body: JSON.stringify({
+        ...analysis,
+        creditsRemaining: creditResult.creditsRemaining,
+      })
     };
 
   } catch (error) {
     console.error('[vision2030-alignment] Error:', error);
     captureError(error, {
       function: 'vision2030-alignment',
-      payload: JSON.parse(event.body || '{}')
+      payload: rawBody || {}
     });
 
     return {

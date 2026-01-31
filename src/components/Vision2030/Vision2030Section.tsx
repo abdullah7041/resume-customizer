@@ -3,14 +3,16 @@
  *
  * Full dedicated tab for Vision 2030 alignment analysis.
  * Costs 2 credits for detailed AI-powered sector analysis.
+ * Results are persisted in localStorage to survive tab navigation.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Sparkles, Info, FileText } from 'lucide-react';
+import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
 import { analyzeVision2030 } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserCredits } from '../../hooks/useUserCredits';
+import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { Vision2030AnalysisResponse } from '../../types/vision2030';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { SectorBreakdown } from './SectorBreakdown';
@@ -18,6 +20,10 @@ import { RecommendationsModal } from './RecommendationsModal';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCard } from '../ui/GlassCard';
 import EmptyState from '../ui/EmptyState';
+import { FeedbackModal } from '../Feedback/FeedbackModal';
+
+const VISION2030_STORAGE_KEY = 'watheq:vision2030Analysis';
+const VISION2030_ANALYZING_KEY = 'watheq:vision2030Analyzing';
 
 interface Vision2030SectionProps {
   resumeText?: string;
@@ -28,12 +34,78 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { credits, isLoading: creditsLoading, refetch: refreshCredits } = useUserCredits();
+  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
   const isArabic = i18n.language === 'ar';
 
-  const [analysis, setAnalysis] = useState<Vision2030AnalysisResponse | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // Initialize analysis from localStorage
+  const [analysis, setAnalysis] = useState<Vision2030AnalysisResponse | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem(VISION2030_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Also check if the stored analysis was for the same resume
+        if (parsed?.resumeHash && resumeText) {
+          // Simple hash comparison - use first 100 chars as quick identifier
+          const currentHash = resumeText.slice(0, 100);
+          if (parsed.resumeHash === currentHash) {
+            return parsed.analysis;
+          }
+        }
+        return parsed.analysis || null;
+      }
+    } catch (err) {
+      console.warn('[Vision2030Section] Failed to load cached analysis:', err);
+    }
+    return null;
+  });
+
+  // Initialize isAnalyzing from localStorage to persist loading state across tab switches
+  const [isAnalyzing, setIsAnalyzing] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem(VISION2030_ANALYZING_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
+  // Persist analysis to localStorage when it changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (analysis && resumeText) {
+      try {
+        localStorage.setItem(VISION2030_STORAGE_KEY, JSON.stringify({
+          analysis,
+          resumeHash: resumeText.slice(0, 100), // Store hash for resume matching
+          timestamp: new Date().toISOString(),
+        }));
+      } catch (err) {
+        console.warn('[Vision2030Section] Failed to cache analysis:', err);
+      }
+    }
+  }, [analysis, resumeText]);
+
+  // Timeout safeguard: if isAnalyzing was restored from localStorage but no
+  // actual API call completes within 60 seconds, clear the stuck state
+  useEffect(() => {
+    if (!isAnalyzing) return;
+
+    const timeout = setTimeout(() => {
+      console.warn('[Vision2030Section] Clearing stale analyzing state (timeout)');
+      setIsAnalyzing(false);
+      try {
+        localStorage.removeItem(VISION2030_ANALYZING_KEY);
+      } catch {
+        // Ignore
+      }
+    }, 60000); // 60 seconds timeout
+
+    return () => clearTimeout(timeout);
+  }, [isAnalyzing]);
 
   // Handle analyze action
   const handleAnalyze = useCallback(async () => {
@@ -46,9 +118,14 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       return;
     }
 
+    // Wait for credits to load before showing modal
+    if (creditsLoading) {
+      return;
+    }
+
     // Show confirmation modal
     setShowConfirmModal(true);
-  }, [resumeText, user, onToast, t]);
+  }, [resumeText, user, creditsLoading, onToast, t]);
 
   // Execute analysis after credit confirmation
   const executeAnalysis = useCallback(async () => {
@@ -56,6 +133,13 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
 
     setShowConfirmModal(false);
     setIsAnalyzing(true);
+
+    // Persist analyzing state so it survives tab switches
+    try {
+      localStorage.setItem(VISION2030_ANALYZING_KEY, 'true');
+    } catch {
+      // Ignore storage errors
+    }
 
     try {
       onToast?.({
@@ -67,11 +151,33 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       const result = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', null);
       setAnalysis(result);
 
+      // Save to storage immediately to persist result even if component unmounts (tab switch)
+      try {
+        localStorage.setItem(VISION2030_STORAGE_KEY, JSON.stringify({
+          analysis: result,
+          resumeHash: resumeText.slice(0, 100),
+          timestamp: new Date().toISOString(),
+        }));
+      } catch (err) {
+        console.warn('[Vision2030Section] Failed to save analysis immediately:', err);
+      }
+
       onToast?.({
         type: 'success',
         title: t('vision2030.section.complete', 'Analysis Complete'),
         description: t('vision2030.section.completeDesc', 'Your Vision 2030 alignment report is ready.'),
       });
+
+      // Track feature use for feedback prompt
+      trackFeatureUse('vision2030');
+
+      // Check if we should show feedback modal (with 5-10 second delay for better UX)
+      if (shouldShowFeedback) {
+        const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
+        setTimeout(() => {
+          setShowFeedbackModal(true);
+        }, delay);
+      }
 
       // Refresh credits after consumption
       await refreshCredits();
@@ -85,8 +191,14 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       });
     } finally {
       setIsAnalyzing(false);
+      // Clear analyzing state from storage
+      try {
+        localStorage.removeItem(VISION2030_ANALYZING_KEY);
+      } catch {
+        // Ignore storage errors
+      }
     }
-  }, [resumeText, isArabic, onToast, t, refreshCredits]);
+  }, [resumeText, isArabic, onToast, t, refreshCredits, trackFeatureUse, shouldShowFeedback]);
 
   // Get score color based on value
   const getScoreColor = (score: number) => {
@@ -118,7 +230,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       <GlassCard className="p-8">
         <div className="flex flex-col items-center justify-center space-y-4 py-12">
           <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl animate-pulse" />
+
             <div className="relative p-4 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
               <Sparkles className="w-8 h-8 text-emerald-400 animate-spin" />
             </div>
@@ -206,11 +318,33 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           <div className="flex gap-3 pt-4 border-t border-white/5">
             <GlassButton
               variant="secondary"
+              onClick={() => {
+                setAnalysis(null);
+                setIsAnalyzing(false);
+                try {
+                  localStorage.removeItem(VISION2030_STORAGE_KEY);
+                  localStorage.removeItem(VISION2030_ANALYZING_KEY);
+                } catch (err) {
+                  console.warn('[Vision2030Section] Failed to clear storage:', err);
+                }
+                onToast?.({
+                  type: 'success',
+                  title: t('vision2030.section.cleared', 'Results Cleared'),
+                  description: t('vision2030.section.clearedDesc', 'Analysis results have been cleared.'),
+                });
+              }}
+              className="px-3"
+              title={t('vision2030.section.clear', 'Clear Results')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </GlassButton>
+            <GlassButton
+              variant="secondary"
               onClick={() => setShowRecommendationsModal(true)}
               className="flex-1"
             >
               <Info className="w-4 h-4 me-2" />
-              {t('vision2030.section.viewRecommendations', 'View Recommendations')}
+              {t('vision2030.section.viewRecommendations', 'Recommendations')}
             </GlassButton>
             <GlassButton
               variant="primary"
@@ -237,6 +371,25 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           missingSuggestions={analysis.missingSuggestions}
           isArabic={isArabic}
         />
+
+        {/* Feedback Modal */}
+        <FeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => {
+            setShowFeedbackModal(false);
+            dismissFeedback();
+          }}
+        />
+
+        {/* Credit Confirmation Modal - needed for re-analyze */}
+        <ConfirmActionModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={executeAnalysis}
+          feature="vision2030"
+          currentCredits={credits?.remaining || 0}
+          isLoading={isAnalyzing}
+        />
       </div>
     );
   }
@@ -246,7 +399,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
     <GlassCard className="p-8">
       <div className="flex flex-col items-center justify-center space-y-6 py-12">
         <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-2xl animate-pulse" />
+
           <div className="relative p-6 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
             <Target className="w-12 h-12 text-emerald-400" />
           </div>
@@ -300,16 +453,14 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       </div>
 
       {/* Credit Confirmation Modal */}
-      {!creditsLoading && credits && (
-        <ConfirmActionModal
-          isOpen={showConfirmModal}
-          onClose={() => setShowConfirmModal(false)}
-          onConfirm={executeAnalysis}
-          feature="vision2030"
-          currentCredits={credits.remaining}
-          isLoading={isAnalyzing}
-        />
-      )}
+      <ConfirmActionModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAnalysis}
+        feature="vision2030"
+        currentCredits={credits?.remaining || 0}
+        isLoading={isAnalyzing}
+      />
     </GlassCard>
   );
 }

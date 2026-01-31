@@ -30,6 +30,8 @@ import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
+import { useFeatureTracking } from '../../hooks/useFeatureTracking';
+import { FeedbackModal } from '../Feedback/FeedbackModal';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 const resolveVariant = (score: number) => {
@@ -130,7 +132,9 @@ export function MatchSection({
   const [error, setError] = useState("");
   const [whyOpen, setWhyOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const { credits } = useUserCredits();
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const { credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -178,7 +182,18 @@ export function MatchSection({
       // Track match analysis run
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysis(result.score);
+        trackFeatureUse('match'); // Track for feedback prompt
+
+        // Check if we should show feedback modal (with 5-10 second delay for better UX)
+        if (shouldShowFeedback) {
+          const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
+          setTimeout(() => {
+            setShowFeedbackModal(true);
+          }, delay);
+        }
       }
+      // Refresh credits after consumption
+      setTimeout(() => refetchCredits(), 500);
     } catch (err) {
       setError((err as Error)?.message || t('sections.match.errors.analyzeFailed', 'We could not analyze this match.'));
     }
@@ -197,6 +212,12 @@ export function MatchSection({
       });
       return;
     }
+
+    // Wait for credits to load before showing modal
+    if (creditsLoading) {
+      return;
+    }
+
     setShowConfirmModal(true);
   };
 
@@ -230,7 +251,7 @@ export function MatchSection({
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Input Section */}
-        <GlassCard variant="elevated">
+        <GlassCard>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <GlassCircle size="md" variant="success">
@@ -282,7 +303,7 @@ export function MatchSection({
             onClick={handleAnalyze}
             disabled={buttonDisabled}
             isLoading={isAnalyzing}
-            className="w-full group relative overflow-hidden"
+            className="w-full group relative overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-none transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-emerald-900/20"
             variant="prominent"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
@@ -296,7 +317,7 @@ export function MatchSection({
         </GlassCard>
 
         {/* Results Section */}
-        <GlassCard variant="elevated">
+        <GlassCard>
           <div className="flex items-center gap-3 mb-6">
             <GlassCircle size="md" variant="blue">
               <TrendingUp className="w-5 h-5 text-blue-400" />
@@ -626,6 +647,15 @@ export function MatchSection({
         feature="ai_match"
         currentCredits={credits?.remaining || 0}
         isLoading={isAnalyzing}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => {
+          setShowFeedbackModal(false);
+          dismissFeedback();
+        }}
       />
     </>
   );

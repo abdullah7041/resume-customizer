@@ -21,8 +21,8 @@ export const FEATURE_COSTS = {
  * @returns {import('@supabase/supabase-js').SupabaseClient}
  */
 function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Missing Supabase credentials');
@@ -32,16 +32,53 @@ function getSupabaseClient() {
 }
 
 /**
+ * Check if IP has too many accounts (anti-abuse)
+ * @param {string} ipAddress - User's IP address
+ * @returns {Promise<boolean>} - True if IP is suspicious
+ */
+async function checkIPAbuse(ipAddress) {
+  if (!ipAddress) return false; // No IP tracking = allow
+
+  const supabase = getSupabaseClient();
+
+  // Count accounts from this IP in last 24 hours
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { count, error } = await supabase
+    .from('user_credits')
+    .select('user_id', { count: 'exact', head: true })
+    .contains('signup_metadata', { ip_address: ipAddress })
+    .gte('created_at', oneDayAgo);
+
+  if (error) {
+    console.warn('[CreditManager] IP check failed:', error);
+    return false; // Fail open (allow if check fails)
+  }
+
+  const accountsFromIP = count || 0;
+  if (accountsFromIP >= 3) {
+    console.warn(`[CreditManager] IP ${ipAddress} has ${accountsFromIP} accounts (suspicious)`);
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Get user's current credit balance
  * @param {string} userId - User ID
+ * @param {Object} options - Additional options
+ * @param {string} options.ipAddress - User's IP address for abuse detection
+ * @param {boolean} options.emailVerified - Whether user's email is verified
  * @returns {Promise<{credits_remaining: number, credits_total: number, last_reset_date: string} | null>}
  */
-export async function getUserCredits(userId) {
+export async function getUserCredits(userId, options = {}) {
+  const { ipAddress, emailVerified = true } = options;
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
     .from('user_credits')
-    .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date')
+    .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
     .eq('user_id', userId)
     .single();
 
@@ -49,15 +86,61 @@ export async function getUserCredits(userId) {
     // If user doesn't exist, initialize their credits
     if (error.code === 'PGRST116') {
       console.log(`[CreditManager] Initializing credits for user ${userId}`);
+
+      // ANTI-ABUSE CHECKS
+
+      // Check 1: Email must be verified
+      if (!emailVerified) {
+        console.warn(`[CreditManager] Email not verified for ${userId} - giving 0 credits`);
+        const { data: newCredits, error: insertError } = await supabase
+          .from('user_credits')
+          .insert({
+            user_id: userId,
+            credits_remaining: 0, // No credits until verified
+            credits_total: 0,
+            feedback_credits_earned: 0,
+            referral_credits_earned: 0,
+            last_reset_date: new Date().toISOString(),
+            signup_metadata: {
+              ip_address: ipAddress,
+              email_verified: false,
+              created_at: new Date().toISOString()
+            },
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('[CreditManager] Failed to initialize credits:', insertError);
+          throw new Error('Failed to initialize user credits');
+        }
+
+        return newCredits;
+      }
+
+      // Check 2: IP abuse detection
+      const isIPSuspicious = await checkIPAbuse(ipAddress);
+      const creditsToGive = isIPSuspicious ? 5 : 15; // Reduced credits for suspicious IPs
+
+      if (isIPSuspicious) {
+        console.warn(`[CreditManager] Suspicious IP detected for ${userId} - giving ${creditsToGive} credits instead of 15`);
+      }
+
       const { data: newCredits, error: insertError } = await supabase
         .from('user_credits')
         .insert({
           user_id: userId,
-          credits_remaining: 15,
-          credits_total: 15,
+          credits_remaining: creditsToGive,
+          credits_total: creditsToGive,
           feedback_credits_earned: 0,
           referral_credits_earned: 0,
           last_reset_date: new Date().toISOString(),
+          signup_metadata: {
+            ip_address: ipAddress,
+            email_verified: emailVerified,
+            is_suspicious: isIPSuspicious,
+            created_at: new Date().toISOString()
+          },
         })
         .select()
         .single();
@@ -81,9 +164,12 @@ export async function getUserCredits(userId) {
  * Check if user has sufficient credits for a feature
  * @param {string} userId - User ID
  * @param {keyof typeof FEATURE_COSTS} feature - Feature name
+ * @param {Object} options - Optional parameters for user initialization
+ * @param {string} options.ipAddress - User's IP address (for anti-abuse on first call)
+ * @param {boolean} options.emailVerified - Whether user's email is verified (for anti-abuse on first call)
  * @returns {Promise<{hasCredits: boolean, required: number, available: number}>}
  */
-export async function checkCredits(userId, feature) {
+export async function checkCredits(userId, feature, options = {}) {
   const requiredCredits = FEATURE_COSTS[feature];
 
   if (requiredCredits === undefined) {
@@ -95,7 +181,7 @@ export async function checkCredits(userId, feature) {
     return { hasCredits: true, required: 0, available: 0 };
   }
 
-  const credits = await getUserCredits(userId);
+  const credits = await getUserCredits(userId, options);
   const available = credits?.credits_remaining || 0;
 
   return {
@@ -184,6 +270,20 @@ export async function consumeCredits(userId, feature, amount = null) {
   }
 
   console.log(`[CreditManager] Consumed ${creditsToConsume} credits for ${feature}. Balance: ${creditsBefore} → ${creditsAfter}`);
+
+  // Trigger referral completion on first paid action (non-blocking)
+  if (creditsToConsume > 0) {
+    try {
+      const { completeReferral } = await import('./referral-manager.js');
+      const result = await completeReferral(userId);
+
+      if (result.completed) {
+        console.log(`[CreditManager] Referral completed. Awarded ${result.referrerReward} + ${result.refereeReward} credits`);
+      }
+    } catch (error) {
+      console.warn('[CreditManager] Referral completion failed (non-blocking):', error);
+    }
+  }
 
   return { success: true, creditsRemaining: creditsAfter };
 }

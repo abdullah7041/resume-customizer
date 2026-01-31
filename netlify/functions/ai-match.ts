@@ -5,6 +5,7 @@ import { withRateLimit } from "../lib/rate-limiter";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
 import { checkCredits, consumeCredits } from "../lib/credit-manager";
+import { getClientIP } from "../lib/ip-utils.js";
 
 initSentry();
 
@@ -14,8 +15,8 @@ let supabase: SupabaseClient | null = null;
 function getSupabaseClient(): SupabaseClient | null {
   if (supabase) return supabase;
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
     console.warn('[ai-match] Supabase credentials not configured - database features disabled');
@@ -66,8 +67,12 @@ const baseHandler: Handler = async (event) => {
 
   const userId = user.id;
 
+  // Extract IP and email verification for anti-abuse checks
+  const ipAddress = getClientIP(event);
+  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+
   // Check credits BEFORE processing (2 credits for ai_match)
-  const creditCheck = await checkCredits(userId, 'ai_match');
+  const creditCheck = await checkCredits(userId, 'ai_match', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -137,12 +142,15 @@ const baseHandler: Handler = async (event) => {
     };
 
     // Consume credits AFTER successful match
-    await consumeCredits(userId, 'ai_match');
+    const creditResult = await consumeCredits(userId, 'ai_match');
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(response),
+      body: JSON.stringify({
+        ...response,
+        creditsRemaining: creditResult.creditsRemaining,
+      }),
     };
 
   } catch (error) {

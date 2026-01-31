@@ -475,5 +475,421 @@ ${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${
 https://watheq.app
       `
     }
+  },
+
+  waitlistNotification: {
+    en: {
+      subject: '🎉 Watheq Pro is Now Available!',
+      html: (planType) => `
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watheq Pro Launch</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .feature-list { margin: 20px 0; }
+    .feature-item { display: flex; align-items: flex-start; margin: 12px 0; }
+    .feature-icon { width: 24px; height: 24px; margin-right: 12px; flex-shrink: 0; color: #006C35; }
+    .feature-text { color: #333; font-size: 14px; }
+    .cta-button { background-color: #006C35; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: 600; font-size: 16px; }
+    .price-box { background-color: #f0fdf4; border: 2px solid #006C35; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center; }
+    .price { font-size: 36px; font-weight: 700; color: #006C35; margin: 10px 0; }
+    .price-label { color: #666; font-size: 14px; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 Watheq Pro is Here!</h1>
+      <p>Thank you for your patience. We're excited to announce the launch!</p>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px;">Hi there,</p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        You signed up for our waitlist, and we're thrilled to let you know that <strong>Watheq Pro</strong> is now live!
+        Get unlimited access to all AI-powered features and take your resume optimization to the next level.
+      </p>
+
+      <div class="price-box">
+        <div class="price-label">Starting at</div>
+        <div class="price">35 SAR/month</div>
+        <div class="price-label">100 credits • No expiry</div>
+      </div>
+
+      <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 16px;">What's included in Watheq Pro:</h3>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>100 Credits Per Month</strong> - Analyze ~20 job applications</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>All AI Features</strong> - Match, Optimize, Cover Letters, Interview Prep</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>Vision 2030 Alignment</strong> - Align with Saudi Vision 2030 sectors</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>Priority Support</strong> - Get help faster when you need it</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>Early Access</strong> - Be the first to try new features</span>
+        </div>
+      </div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
+        <strong>Special Launch Offer:</strong> Upgrade in the next 7 days and get <strong>20% off</strong> your first month!
+      </p>
+
+      <div style="text-align: center;">
+        <a href="https://watheq.app/pricing" class="cta-button">Upgrade to Pro Now</a>
+      </div>
+
+      <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
+        Questions? Reply to this email or visit our <a href="https://watheq.app/help" style="color: #006C35;">Help Center</a>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>This email was sent because you joined the Watheq Pro waitlist</p>
+      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
+      <p>&copy; 2026 Watheq. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: (planType) => `
+Hi there,
+
+You signed up for our waitlist, and we're thrilled to let you know that Watheq Pro is now live!
+
+Get 100 credits per month to power your job search:
+- All AI Features (Match, Optimize, Cover Letters, Interview Prep)
+- Vision 2030 Alignment Analysis
+- Priority Support
+- Early Access to New Features
+
+Starting at 35 SAR/month
+
+Special Launch Offer: Upgrade in the next 7 days and get 20% off your first month!
+
+Upgrade now: https://watheq.app/pricing
+
+Questions? Reply to this email or visit https://watheq.app/help
+
+---
+Watheq Resume Optimizer
+https://watheq.app
+      `
+    },
+    ar: {
+      subject: '🎉 واثق برو متاح الآن!',
+      html: (planType) => `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إطلاق واثق برو</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; direction: rtl; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .feature-list { margin: 20px 0; }
+    .feature-item { display: flex; align-items: flex-start; margin: 12px 0; }
+    .feature-icon { width: 24px; height: 24px; margin-left: 12px; flex-shrink: 0; color: #006C35; }
+    .feature-text { color: #333; font-size: 14px; }
+    .cta-button { background-color: #006C35; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: 600; font-size: 16px; }
+    .price-box { background-color: #f0fdf4; border: 2px solid #006C35; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center; }
+    .price { font-size: 36px; font-weight: 700; color: #006C35; margin: 10px 0; }
+    .price-label { color: #666; font-size: 14px; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 واثق برو متاح الآن!</h1>
+      <p>شكراً لانتظارك. يسعدنا الإعلان عن الإطلاق!</p>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px;">مرحباً،</p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        لقد سجلت في قائمة الانتظار، ويسعدنا إخبارك بأن <strong>واثق برو</strong> أصبح متاحاً الآن!
+        احصل على 100 رصيد شهرياً لتحسين فرص توظيفك.
+      </p>
+
+      <div class="price-box">
+        <div class="price-label">يبدأ من</div>
+        <div class="price">35 ريال/شهر</div>
+        <div class="price-label">100 رصيد • لا ينتهي</div>
+      </div>
+
+      <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 16px;">ما يتضمنه واثق برو:</h3>
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>100 رصيد شهرياً</strong> - حلل ~20 طلب توظيف</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>جميع ميزات الذكاء الاصطناعي</strong> - مطابقة، تحسين، خطابات، تحضير مقابلات</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>مطابقة رؤية 2030</strong> - اربط سيرتك بقطاعات رؤية 2030</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>دعم ذو أولوية</strong> - احصل على مساعدة أسرع</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span class="feature-text"><strong>وصول مبكر</strong> - كن أول من يجرب الميزات الجديدة</span>
+        </div>
+      </div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
+        <strong>عرض الإطلاق الخاص:</strong> قم بالترقية خلال الـ 7 أيام القادمة واحصل على <strong>خصم 20%</strong> على الشهر الأول!
+      </p>
+
+      <div style="text-align: center;">
+        <a href="https://watheq.app/pricing" class="cta-button">قم بالترقية إلى برو الآن</a>
+      </div>
+
+      <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
+        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheq.app/help" style="color: #006C35;">مركز المساعدة</a>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>تم إرسال هذا البريد لأنك انضممت إلى قائمة انتظار واثق برو</p>
+      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
+      <p>&copy; 2026 واثق. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: (planType) => `
+مرحباً،
+
+لقد سجلت في قائمة الانتظار، ويسعدنا إخبارك بأن واثق برو أصبح متاحاً الآن!
+
+احصل على 100 رصيد شهرياً:
+- جميع ميزات الذكاء الاصطناعي (مطابقة، تحسين، خطابات، مقابلات)
+- مطابقة رؤية 2030
+- دعم ذو أولوية
+- وصول مبكر للميزات الجديدة
+
+35 ريال/شهر
+
+عرض الإطلاق الخاص: قم بالترقية خلال الـ 7 أيام القادمة واحصل على خصم 20% على الشهر الأول!
+
+قم بالترقية الآن: https://watheq.app/pricing
+
+أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheq.app/help
+
+---
+واثق - محسّن السيرة الذاتية
+https://watheq.app
+      `
+    }
+  },
+
+  waitlistConfirmation: {
+    en: {
+      subject: '✅ You\'re on the Watheq Pro Waitlist!',
+      html: `
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waitlist Confirmation</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .check-icon { width: 64px; height: 64px; background-color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-center; margin: 0 auto 20px; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="check-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <h1>You're on the Waitlist!</h1>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">
+        Thanks for your interest in <strong>Watheq Pro</strong>! You've been successfully added to our waitlist.
+      </p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
+        We're working hard to bring you unlimited AI-powered resume optimization tools. You'll be among the first to know when we launch!
+      </p>
+
+      <div style="background-color: #f0fdf4; border-left: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">What happens next?</p>
+        <ul style="margin: 0; padding-left: 20px; color: #666; font-size: 14px;">
+          <li>We'll email you when Pro launches</li>
+          <li>Early waitlist members get priority access</li>
+          <li>Special launch pricing for early adopters</li>
+        </ul>
+      </div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
+      </p>
+
+      <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+        Questions? Reply to this email or visit our <a href="https://watheq.app/help" style="color: #006C35;">Help Center</a>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
+      <p>&copy; 2026 Watheq. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: `
+You're on the Waitlist!
+
+Thanks for your interest in Watheq Pro! You've been successfully added to our waitlist.
+
+We're working hard to bring you unlimited AI-powered resume optimization tools. You'll be among the first to know when we launch!
+
+What happens next?
+- We'll email you when Pro launches
+- Early waitlist members get priority access
+- Special launch pricing for early adopters
+
+In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
+
+Questions? Reply to this email or visit https://watheq.app/help
+
+---
+Watheq Resume Optimizer
+https://watheq.app
+      `
+    },
+    ar: {
+      subject: '✅ تم تسجيلك في قائمة انتظار واثق برو!',
+      html: `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تأكيد الانضمام</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; direction: rtl; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .check-icon { width: 64px; height: 64px; background-color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-center; margin: 0 auto 20px; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="check-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <h1>تم تسجيلك في قائمة الانتظار!</h1>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">
+        شكراً لاهتمامك بـ <strong>واثق برو</strong>! تم إضافتك بنجاح إلى قائمة الانتظار.
+      </p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
+        نعمل بجد لنقدم لك أدوات تحسين السيرة الذاتية بالذكاء الاصطناعي بشكل غير محدود. ستكون من أوائل من يعلمون عند الإطلاق!
+      </p>
+
+      <div style="background-color: #f0fdf4; border-right: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">ما التالي؟</p>
+        <ul style="margin: 0; padding-right: 20px; color: #666; font-size: 14px;">
+          <li>سنرسل لك بريداً إلكترونياً عند إطلاق برو</li>
+          <li>أعضاء قائمة الانتظار الأوائل يحصلون على أولوية الوصول</li>
+          <li>أسعار إطلاق خاصة للمتبنين الأوائل</li>
+        </ul>
+      </div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        في هذه الأثناء، يمكنك الاستمرار في استخدام واثق مجاناً مع 15 رصيد شهري لتحسين سيرتك الذاتية!
+      </p>
+
+      <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheq.app/help" style="color: #006C35;">مركز المساعدة</a>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
+      <p>&copy; 2026 واثق. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: `
+تم تسجيلك في قائمة الانتظار!
+
+شكراً لاهتمامك بـ واثق برو! تم إضافتك بنجاح إلى قائمة الانتظار.
+
+نعمل بجد لنقدم لك أدوات تحسين السيرة الذاتية بالذكاء الاصطناعي بشكل غير محدود. ستكون من أوائل من يعلمون عند الإطلاق!
+
+ما التالي؟
+- سنرسل لك بريداً إلكترونياً عند إطلاق برو
+- أعضاء قائمة الانتظار الأوائل يحصلون على أولوية الوصول
+- أسعار إطلاق خاصة للمتبنين الأوائل
+
+في هذه الأثناء، يمكنك الاستمرار في استخدام واثق مجاناً مع 15 رصيد شهري لتحسين سيرتك الذاتية!
+
+أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheq.app/help
+
+---
+واثق - محسّن السيرة الذاتية
+https://watheq.app
+      `
+    }
   }
 };

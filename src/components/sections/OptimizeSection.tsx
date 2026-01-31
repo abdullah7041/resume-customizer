@@ -6,7 +6,6 @@ import { GlassButton } from '../ui/GlassButton';
 import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
 import { useRateLimit } from '../../hooks/useRateLimit';
-import { useFeedbackPrompt } from '../../lib/hooks/useFeedbackPrompt';
 import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
   Sparkles,
@@ -19,9 +18,7 @@ import {
   Info,
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
-import { FeedbackButtons } from '../ui/FeedbackButtons';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
-import type { SuggestionType } from '../../services/feedback';
 import type { OptimizationMetrics } from '../../types/templates';
 import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
 import { ScoreBreakdown, ScoreBreakdownData, CategoryScoresData } from '../ScoreBreakdown';
@@ -30,6 +27,10 @@ import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
+import { FeedbackModal } from '../Feedback/FeedbackModal';
+import { supabase } from '../../services/supabase';
+import { useAuth } from '../../hooks/useAuth';
+import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'airo:lastJobDescription';
@@ -160,10 +161,10 @@ export function OptimizeSection({
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const { credits } = useUserCredits();
-
-  // Feedback system hook
-  const { incrementFeatureUses } = useFeedbackPrompt();
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const { credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+  const { user } = useAuth();
+  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
 
   // Sync prop optimizations to store when they change
   // IMPORTANT: Merge with existing store state to preserve applied flags
@@ -401,9 +402,13 @@ export function OptimizeSection({
     setSessionId(newSessionId);
 
     try {
+      // Get authenticated headers (includes Authorization Bearer token)
+      const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
+      const headers = await getAuthHeaders();
+
       const response = await fetch('/.netlify/functions/optimize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           resumeText: resumeText || JSON.stringify(originalResume),
           // Get job description from localStorage (shared with MatchSection)
@@ -413,8 +418,15 @@ export function OptimizeSection({
         }),
       });
 
+      // Handle insufficient credits (403)
+      if (response.status === 403) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || (isArabic ? 'رصيدك غير كافٍ' : 'Insufficient credits'));
+      }
+
       if (!response.ok) {
-        throw new Error('Optimization failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || (isArabic ? 'فشل التحسين' : 'Optimization failed'));
       }
 
       const data = await response.json();
@@ -550,8 +562,44 @@ export function OptimizeSection({
         time_ms: performance.now() - startTime,
       });
 
-      // Increment feature usage for feedback system
-      incrementFeatureUses();
+      // Track feature use for feedback prompt
+      trackFeatureUse('optimize');
+
+      // Show feedback modal at milestones (if user hasn't reached max 3 submissions)
+      console.log('[OptimizeSection] Checking feedback prompt:', { shouldShowFeedback, userId: user?.id });
+      if (shouldShowFeedback && user?.id) {
+        try {
+          const { data: userCredits, error: creditsError } = await supabase
+            .from('user_credits')
+            .select('feedback_credits_earned')
+            .eq('user_id', user.id)
+            .single();
+
+          console.log('[OptimizeSection] Feedback credits query result:', { userCredits, creditsError });
+
+          // Only show if user has < 3 feedback submissions (max limit)
+          if (!userCredits || (userCredits.feedback_credits_earned ?? 0) < 3) {
+            console.log('[OptimizeSection] Showing feedback modal (milestone reached)');
+
+            // Add 5-10 second delay for better UX
+            const delay = 5000 + Math.random() * 5000;
+            setTimeout(() => {
+              setShowFeedbackModal(true);
+            }, delay);
+          } else {
+            console.log('[OptimizeSection] User has max feedback submissions, not showing modal');
+          }
+        } catch (error) {
+          // Default to showing modal on error (better UX)
+          console.error('[OptimizeSection] Failed to check feedback credits:', error);
+          const delay = 5000 + Math.random() * 5000;
+          setTimeout(() => {
+            setShowFeedbackModal(true);
+          }, delay);
+        }
+      } else {
+        console.log('[OptimizeSection] Not showing feedback modal:', { shouldShowFeedback, hasUser: !!user?.id });
+      }
 
       // Also update keyword suggestions from API response
       if (data.keywords) {
@@ -703,11 +751,17 @@ export function OptimizeSection({
       }
     } finally {
       setIsGenerating(false);
+      // Refresh credits after consumption
+      setTimeout(() => refetchCredits(), 500);
     }
   };
 
   // Wrapper function that shows confirmation modal first
   const handleGenerate = () => {
+    // Wait for credits to load before showing modal
+    if (creditsLoading) {
+      return;
+    }
     setShowConfirmModal(true);
   };
 
@@ -764,7 +818,7 @@ export function OptimizeSection({
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <GlassCard variant="elevated" className="overflow-hidden relative">
+      <GlassCard className="overflow-hidden relative">
         {/* Background Accents */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none" />
@@ -857,28 +911,30 @@ export function OptimizeSection({
               </GlassButton>
             )}
           </div>
-        </div>
+        </div >
 
         {/* Global Expand/Collapse for Cards */}
-        {optimizations.length > 0 && (
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={() => {
-                if (expandedCards.size === filteredOptimizations.length) {
-                  setExpandedCards(new Set());
-                } else {
-                  setExpandedCards(new Set(filteredOptimizations.map(o => o.sectionId)));
+        {
+          optimizations.length > 0 && (
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => {
+                  if (expandedCards.size === filteredOptimizations.length) {
+                    setExpandedCards(new Set());
+                  } else {
+                    setExpandedCards(new Set(filteredOptimizations.map(o => o.sectionId)));
+                  }
+                }}
+                className="text-[10px] font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md border border-white/5"
+              >
+                {expandedCards.size === filteredOptimizations.length
+                  ? (isArabic ? 'طي الكل' : 'Collapse All')
+                  : (isArabic ? 'توسيع الكل' : 'Expand All')
                 }
-              }}
-              className="text-[10px] font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md border border-white/5"
-            >
-              {expandedCards.size === filteredOptimizations.length
-                ? (isArabic ? 'طي الكل' : 'Collapse All')
-                : (isArabic ? 'توسيع الكل' : 'Expand All')
-              }
-            </button>
-          </div>
-        )}
+              </button>
+            </div>
+          )
+        }
 
         {/* Section Tabs */}
         <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 mb-6">
@@ -919,26 +975,30 @@ export function OptimizeSection({
         </div>
 
         {/* Error Message */}
-        {error && (
-          <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 backdrop-blur-sm">
-            <div className="p-2 bg-red-500/10 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-400" />
+        {
+          error && (
+            <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 backdrop-blur-sm">
+              <div className="p-2 bg-red-500/10 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+              </div>
+              <p className="text-sm font-medium text-red-400">{error}</p>
             </div>
-            <p className="text-sm font-medium text-red-400">{error}</p>
-          </div>
-        )}
+          )
+        }
 
         {/* No Resume Warning */}
-        {!hasResume && (
-          <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6 backdrop-blur-sm">
-            <div className="p-2 bg-amber-500/10 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-amber-400" />
+        {
+          !hasResume && (
+            <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6 backdrop-blur-sm">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+              </div>
+              <p className="text-sm font-medium text-amber-400">
+                {isArabic ? 'يرجى رفع سيرة ذاتية أولاً' : 'Please upload a resume first'}
+              </p>
             </div>
-            <p className="text-sm font-medium text-amber-400">
-              {isArabic ? 'يرجى رفع سيرة ذاتية أولاً' : 'Please upload a resume first'}
-            </p>
-          </div>
-        )}
+          )
+        }
 
         {/* Optimize Button */}
         <button
@@ -971,10 +1031,10 @@ export function OptimizeSection({
             )}
           </div>
         </button>
-      </GlassCard>
+      </GlassCard >
 
       {/* Keyword Focus Section - Manual Buckets */}
-      <GlassCard variant="elevated">
+      <GlassCard>
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-4 h-4 text-emerald-400" />
           <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400">
@@ -994,7 +1054,7 @@ export function OptimizeSection({
             const Icon = config.icon;
 
             return (
-              <div key={bucket} className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+              <div key={bucket} className="space-y-3 p-4 rounded-xl bg-black/40 border border-white/5 hover:border-white/10 transition-colors">
                 <div className="flex items-center justify-between">
                   <p className={`text-xs font-bold uppercase tracking-wider text-${config.color}-400 flex items-center gap-2`}>
                     <Icon className="w-3.5 h-3.5" />
@@ -1031,68 +1091,76 @@ export function OptimizeSection({
             );
           })}
         </div>
-      </GlassCard>
+      </GlassCard >
 
       {/* Score Breakdown */}
-      {optimizations.length > 0 && (
-        <ScoreBreakdown
-          data={optimizationMetrics.scoreBreakdown as ScoreBreakdownData | null}
-          categoryScores={optimizationMetrics.categoryScores as unknown as CategoryScoresData | undefined}
-          beforeScore={resultsSummaryData.beforeScore}
-          afterScore={resultsSummaryData.potentialScore}
-          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
-          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
-          className="mb-2"
-        />
-      )}
-
-      {/* Gap Analysis */}
-      {optimizations.length > 0 && (
-        optimizationMetrics.gapAnalysis &&
-          Array.isArray(optimizationMetrics.gapAnalysis) &&
-          optimizationMetrics.gapAnalysis.length > 0 ? (
-          <GapAnalysisCard
-            gaps={optimizationMetrics.gapAnalysis as GapItem[]}
+      {
+        optimizations.length > 0 && (
+          <ScoreBreakdown
+            data={optimizationMetrics.scoreBreakdown as ScoreBreakdownData | null}
+            categoryScores={optimizationMetrics.categoryScores as unknown as CategoryScoresData | undefined}
+            beforeScore={resultsSummaryData.beforeScore}
+            afterScore={resultsSummaryData.potentialScore}
+            isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
+            isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
             className="mb-2"
           />
-        ) : (
-          <GlassCard variant="subtle" padding="md" className="mb-2">
-            <div className="flex items-center gap-3 text-gray-400">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <Check className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-white">
-                  {isArabic ? 'لم يتم اكتشاف فجوات حرجة' : 'No Critical Gaps Detected'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {isArabic
-                    ? 'سيرتك الذاتية تتوافق جيدًا مع المتطلبات الأساسية. استمر في إضافة الكلمات المفتاحية المقترحة.'
-                    : 'Your resume aligns well with core requirements. Consider adding the suggested keywords above.'}
-                </p>
-              </div>
-            </div>
-          </GlassCard>
         )
-      )}
+      }
+
+      {/* Gap Analysis */}
+      {
+        optimizations.length > 0 && (
+          optimizationMetrics.gapAnalysis &&
+            Array.isArray(optimizationMetrics.gapAnalysis) &&
+            optimizationMetrics.gapAnalysis.length > 0 ? (
+            <GapAnalysisCard
+              gaps={optimizationMetrics.gapAnalysis as GapItem[]}
+              className="mb-2"
+            />
+          ) : (
+            <GlassCard padding="md" className="mb-2">
+              <div className="flex items-center gap-3 text-gray-400">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <Check className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    {isArabic ? 'لم يتم اكتشاف فجوات حرجة' : 'No Critical Gaps Detected'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {isArabic
+                      ? 'سيرتك الذاتية تتوافق جيدًا مع المتطلبات الأساسية. استمر في إضافة الكلمات المفتاحية المقترحة.'
+                      : 'Your resume aligns well with core requirements. Consider adding the suggested keywords above.'}
+                  </p>
+                </div>
+              </div>
+            </GlassCard>
+          )
+        )
+      }
 
       {/* Hidden Matches */}
-      {optimizationMetrics.keywordStrategy?.hiddenMatches &&
+      {
+        optimizationMetrics.keywordStrategy?.hiddenMatches &&
         (optimizationMetrics.keywordStrategy.hiddenMatches as HiddenMatch[]).length > 0 && (
           <HiddenMatchesCard
             matches={optimizationMetrics.keywordStrategy.hiddenMatches as HiddenMatch[]}
             className="mb-2"
           />
-        )}
+        )
+      }
 
       {/* Mirrored Keywords */}
-      {optimizationMetrics.keywordStrategy && (
-        <MirroredKeywordsCard
-          mirroredPhrases={(optimizationMetrics.keywordStrategy.mirroredPhrases as string[]) || []}
-          structuralChanges={(optimizationMetrics.keywordStrategy.structuralChanges as string[]) || []}
-          className="mb-2"
-        />
-      )}
+      {
+        optimizationMetrics.keywordStrategy && (
+          <MirroredKeywordsCard
+            mirroredPhrases={(optimizationMetrics.keywordStrategy.mirroredPhrases as string[]) || []}
+            structuralChanges={(optimizationMetrics.keywordStrategy.structuralChanges as string[]) || []}
+            className="mb-2"
+          />
+        )
+      }
 
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
@@ -1102,7 +1170,6 @@ export function OptimizeSection({
             {filteredOptimizations.map((opt, index) => (
               <GlassCard
                 key={opt.sectionId}
-                variant="elevated"
                 padding="none"
                 className={cn(
                   'overflow-hidden transition-all duration-300 border',
@@ -1280,17 +1347,6 @@ export function OptimizeSection({
                       )
                     )}
 
-                    {/* Feedback Buttons */}
-                    {sessionId && (
-                      <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
-                        <FeedbackButtons
-                          suggestionType={(['summary', 'experience', 'skills', 'keywords'].includes(opt.sectionType) ? opt.sectionType : 'summary') as SuggestionType}
-                          sectionIndex={index}
-                          sessionId={sessionId}
-                        />
-                      </div>
-                    )}
-
                     {/* Action Buttons */}
                     <div className="flex gap-3 mt-4">
                       {opt.applied ? (
@@ -1334,7 +1390,7 @@ export function OptimizeSection({
             ))}
           </div>
         ) : (
-          <GlassCard variant="subtle" padding="lg" className="border-dashed border-white/10">
+          <GlassCard padding="lg" className="border-dashed border-white/10">
             <div className="text-center text-gray-500 py-8">
               <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-8 h-8 text-gray-600" />
@@ -1351,24 +1407,28 @@ export function OptimizeSection({
       </div>
 
       {/* Rate Limit Banner */}
-      {isRateLimited && (
-        <RateLimitBanner
-          retryAfter={retryAfter}
-          onRetry={() => {
-            clearRateLimit();
-            handleGenerate();
-          }}
-          onDismiss={clearRateLimit}
-        />
-      )}
+      {
+        isRateLimited && (
+          <RateLimitBanner
+            retryAfter={retryAfter}
+            onRetry={() => {
+              clearRateLimit();
+              handleGenerate();
+            }}
+            onDismiss={clearRateLimit}
+          />
+        )
+      }
 
       {/* Optimization Loading Toast - Non-blocking */}
-      {isOptimizing && createPortal(
-        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-10 fade-in duration-500 pointer-events-auto">
-          <LoadingMessages type="optimize" estimatedTime={25000} />
-        </div>,
-        document.body
-      )}
+      {
+        isOptimizing && createPortal(
+          <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-10 fade-in duration-500 pointer-events-auto">
+            <LoadingMessages type="optimize" estimatedTime={25000} />
+          </div>,
+          document.body
+        )
+      }
 
       {/* Credit Confirmation Modal */}
       <ConfirmActionModal
@@ -1379,7 +1439,17 @@ export function OptimizeSection({
         currentCredits={credits?.remaining || 0}
         isLoading={isOptimizing}
       />
-    </div>
+
+      {/* Feedback Modal - triggered after 3 feature uses */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => {
+          console.log('[OptimizeSection] Feedback modal closed');
+          setShowFeedbackModal(false);
+          dismissFeedback(); // Mark as prompted for this session
+        }}
+      />
+    </div >
   );
 }
 

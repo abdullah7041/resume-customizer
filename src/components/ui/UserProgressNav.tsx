@@ -43,7 +43,23 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     const optimizationMetrics = useResumeStore((state) => state.optimizationMetrics);
     const optimizations = useResumeStore((state) => state.optimizations);
     const hasDownloaded = useResumeStore((state) => state.hasDownloaded);
-    const [isMinimized, setIsMinimized] = useState(true);
+    const [isMinimized, setIsMinimized] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const saved = localStorage.getItem('workflow-panel-minimized');
+        return saved !== null ? saved === 'true' : true;
+    });
+
+    // Persist minimized state preference
+    useEffect(() => {
+        localStorage.setItem('workflow-panel-minimized', String(isMinimized));
+    }, [isMinimized]);
+
+    // Track the highest step the user has seen to prevent auto-opening on refresh
+    const [lastSeenStep, setLastSeenStep] = useState(() => {
+        if (typeof window === 'undefined') return 0;
+        const saved = localStorage.getItem('workflow-panel-last-step');
+        return saved ? parseInt(saved, 10) : 0;
+    });
 
     // Drag state
     const [position, setPosition] = useState<Position>(getInitialPosition);
@@ -63,16 +79,18 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     if (hasOptimization) currentStepIndex = 3;
     if (hasDownloaded) currentStepIndex = 4;
 
-    const isFirstMount = useRef(true);
-
-    // Auto-expand when step changes
+    // Auto-expand only on FORWARD progress (when moving to a new step)
     useEffect(() => {
-        if (isFirstMount.current) {
-            isFirstMount.current = false;
-            return;
+        if (currentStepIndex > lastSeenStep) {
+            setIsMinimized(false);
+            setLastSeenStep(currentStepIndex);
+            localStorage.setItem('workflow-panel-last-step', String(currentStepIndex));
+        } else if (currentStepIndex !== lastSeenStep) {
+            // Sync without expanding if going backward or just syncing
+            setLastSeenStep(currentStepIndex);
+            localStorage.setItem('workflow-panel-last-step', String(currentStepIndex));
         }
-        setIsMinimized(false);
-    }, [currentStepIndex]);
+    }, [currentStepIndex, lastSeenStep]);
 
     // Save position to localStorage when it changes
     useEffect(() => {

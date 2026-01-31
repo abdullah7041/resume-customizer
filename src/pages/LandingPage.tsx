@@ -19,6 +19,7 @@ import {
   Users,
   Briefcase,
   GraduationCap,
+  ChevronDown,
 
 } from "lucide-react";
 import { GlassButton } from "../components/ui/GlassButton";
@@ -27,6 +28,7 @@ import { cn } from "../lib/utils/cn";
 import { VISION_2030_SECTORS } from "../lib/data/vision2030Skills";
 import Vision2030Modal from "../components/ui/Vision2030Modal";
 import { SectorIcon } from "../lib/utils/vision2030Icons";
+import { ComparisonTable } from "../components/ui/ComparisonTable";
 
 // Hook: Type writer effect for dynamic headlines
 function useTypewriter(phrases, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
@@ -111,25 +113,7 @@ function useAnimatedCounter(end, duration = 2000, startOnView = true) {
   return { count, ref };
 }
 
-// Component: Floating particles background
-function FloatingParticles() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(20)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-1 h-1 bg-emerald-400/30 rounded-full animate-float"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 5}s`,
-            animationDuration: `${8 + Math.random() * 4}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+
 
 // Component: Live resume transformation demo
 function ResumeTransformDemo() {
@@ -486,14 +470,14 @@ export default function LandingPage({ onGetStarted }) {
     <div className="w-full overflow-x-hidden bg-black text-white selection:bg-emerald-500/30 selection:text-emerald-200">
       {/* Background Ambience */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 blur-[120px] rounded-full mix-blend-screen animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 blur-[120px] rounded-full mix-blend-screen" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-500/10 blur-[120px] rounded-full mix-blend-screen" />
-        <div className="absolute top-[20%] right-[10%] w-[20%] h-[20%] bg-cyan-500/10 blur-[80px] rounded-full mix-blend-screen animate-float" />
-        <FloatingParticles />
+        <div className="absolute top-[20%] right-[10%] w-[20%] h-[20%] bg-cyan-500/10 blur-[80px] rounded-full mix-blend-screen" />
+
       </div>
 
       {/* Hero Section */}
-      <section className="relative z-10 min-h-[90vh] flex flex-col justify-center items-center px-4 py-20 overflow-hidden">
+      <section className="relative z-10 min-h-[75vh] flex flex-col justify-center items-center px-4 py-20 overflow-hidden">
 
         {/* Hero Content */}
         <div className="relative max-w-5xl mx-auto text-center space-y-8 md:space-y-12">
@@ -547,12 +531,18 @@ export default function LandingPage({ onGetStarted }) {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
-              {t("landing.hero.exportUnlimitedPDFs")}
+              No AI Hallucinations
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
               Vision 2030 Aligned
             </div>
+          </div>
+
+          {/* Scroll Indicator */}
+          <div className="pt-16 flex flex-col items-center gap-2 animate-bounce">
+            <span className="text-xs text-white/30 uppercase tracking-wider">Scroll to explore</span>
+            <ChevronDown className="w-5 h-5 text-white/20" />
           </div>
         </div>
       </section>
@@ -588,7 +578,7 @@ export default function LandingPage({ onGetStarted }) {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20 space-y-4">
             <div className="inline-block px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold tracking-wider uppercase mb-4">
-              Powerful Features
+              Core Capabilities
             </div>
             <h2 className="text-3xl md:text-5xl font-bold text-white">
               {t("landing.features.title")}
@@ -603,6 +593,25 @@ export default function LandingPage({ onGetStarted }) {
               <FeatureCard key={idx} feature={feature} />
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Comparison Table Section */}
+      <section className="relative z-10 py-24 md:py-32 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16 space-y-4">
+            <div className="inline-block px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold tracking-wider uppercase mb-4">
+              Competitive Advantage
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold text-white">
+              {t("landing.comparison.title")}
+            </h2>
+            <p className="max-w-2xl mx-auto text-xl text-white/60">
+              {t("landing.comparison.subtitle")}
+            </p>
+          </div>
+
+          <ComparisonTable />
         </div>
       </section>
 
@@ -651,8 +660,7 @@ export default function LandingPage({ onGetStarted }) {
             {/* Right Interactive/Stats Grid */}
             <div className="relative">
               {/* Decorative Ring */}
-              <div className="absolute -inset-10 border border-emerald-500/20 rounded-full animate-[spin_60s_linear_infinite]" />
-              <div className="absolute -inset-20 border border-dashed border-emerald-500/10 rounded-full animate-[spin_40s_linear_infinite_reverse]" />
+
 
               <div className="grid grid-cols-2 gap-4 relative">
                 {VISION_2030_SECTORS.slice(0, 4).map((sector, idx) => (

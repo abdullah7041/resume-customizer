@@ -6,7 +6,7 @@
  */
 
 import { createPortal } from 'react-dom';
-import { X, Target, Sparkles, TrendingUp, MessageSquare, Mail, FileText, Download, Coins, Clock } from 'lucide-react';
+import { X, Target, Sparkles, TrendingUp, MessageSquare, Mail, FileText, Download, Coins, Clock, Gift } from 'lucide-react';
 import { useEffect, useState, type ComponentType } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserCredits } from '../../hooks/useUserCredits';
@@ -21,6 +21,7 @@ import { ReferralStats } from '../Referrals/ReferralStats';
 interface CreditUsageModalProps {
   isOpen: boolean;
   onClose: () => void;
+  viewMode?: 'full' | 'invite-only';
 }
 
 const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
@@ -33,15 +34,16 @@ const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   export_template: Download,
 };
 
-export function CreditUsageModal({ isOpen, onClose }: CreditUsageModalProps) {
+export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditUsageModalProps) {
   const { user } = useAuth();
   const { credits } = useUserCredits();
   const { t } = useTranslation();
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Only fetch transactions if in full mode
   useEffect(() => {
-    if (!isOpen || !user) return;
+    if (!isOpen || !user || viewMode !== 'full') return;
 
     async function fetchTransactions() {
       try {
@@ -78,7 +80,7 @@ export function CreditUsageModal({ isOpen, onClose }: CreditUsageModalProps) {
     }
 
     fetchTransactions();
-  }, [isOpen, user]);
+  }, [isOpen, user, viewMode]);
 
   if (!isOpen) return null;
 
@@ -127,7 +129,8 @@ export function CreditUsageModal({ isOpen, onClose }: CreditUsageModalProps) {
       <div
         className={cn(
           glass.elevated,
-          'relative rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto'
+          'relative rounded-xl p-6 w-full max-h-[80vh] overflow-y-auto',
+          viewMode === 'full' ? 'max-w-2xl' : 'max-w-md'
         )}
         role="dialog"
         aria-modal="true"
@@ -136,12 +139,16 @@ export function CreditUsageModal({ isOpen, onClose }: CreditUsageModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-emerald-400" />
+            {viewMode === 'full' ? (
+              <Coins className="w-5 h-5 text-emerald-400" />
+            ) : (
+              <Gift className="w-5 h-5 text-emerald-400" />
+            )}
             <h3
               id="credit-usage-title"
               className="text-lg font-semibold text-white"
             >
-              {t('credits.usage.title')}
+              {viewMode === 'full' ? t('credits.usage.title') : t('referrals.inviteEarn')}
             </h3>
           </div>
           <button
@@ -153,125 +160,144 @@ export function CreditUsageModal({ isOpen, onClose }: CreditUsageModalProps) {
           </button>
         </div>
 
-        {/* Current Balance */}
-        {credits && (
-          <div className={cn(glass.card, 'p-6 mb-6 border-emerald-500/30')}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">
-                  {t('credits.balance')}
-                </p>
-                <p className="text-3xl font-bold text-white">
-                  {credits.remaining}{' '}
-                  <span className="text-lg text-gray-400">
-                    / {credits.total}
-                  </span>
-                </p>
+        {viewMode === 'full' ? (
+          <>
+            {/* Current Balance */}
+            {credits && (
+              <div className={cn(glass.card, 'p-6 mb-6 border-emerald-500/30')}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-gray-400 mb-1">
+                      {t('credits.balance')}
+                    </p>
+                    <p className="text-3xl font-bold text-white">
+                      {credits.remaining}{' '}
+                      <span className="text-lg text-gray-400">
+                        / {credits.total}
+                      </span>
+                    </p>
+                  </div>
+                  <Coins className="w-12 h-12 text-emerald-400 opacity-50" />
+                </div>
+
+                {/* Earned credits */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">
+                      {t('credits.usage.feedbackEarned')}
+                    </p>
+                    <p className="text-sm font-medium text-emerald-400">
+                      +{credits.feedbackCreditsEarned}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">
+                      {t('credits.usage.referralEarned')}
+                    </p>
+                    <p className="text-sm font-medium text-emerald-400">
+                      +{credits.referralCreditsEarned}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <Coins className="w-12 h-12 text-emerald-400 opacity-50" />
+            )}
+
+            {/* Referral Section */}
+            <div className="mb-6 space-y-4">
+              <ReferralStats />
+              <ReferralLink />
             </div>
 
-            {/* Earned credits */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">
-                  {t('credits.usage.feedbackEarned')}
-                </p>
-                <p className="text-sm font-medium text-emerald-400">
-                  +{credits.feedbackCreditsEarned}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-1">
-                  {t('credits.usage.referralEarned')}
-                </p>
-                <p className="text-sm font-medium text-emerald-400">
-                  +{credits.referralCreditsEarned}
-                </p>
+            {/* Transaction History */}
+            <div>
+              <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                {t('credits.usage.history')}
+              </h4>
+
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={cn(glass.card, 'p-4 animate-pulse')}
+                    >
+                      <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-white/10 rounded w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className={cn(glass.card, 'p-6 text-center')}>
+                  <p className="text-gray-400">
+                    {t('credits.usage.noTransactions')}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {transactions.map((tx) => {
+                    const Icon = FEATURE_ICONS[tx.feature] || Coins;
+                    const isPositive = tx.amount > 0;
+
+                    return (
+                      <div
+                        key={tx.id}
+                        className={cn(glass.card, 'p-4 flex items-center justify-between')}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(glass.badge.neutral, 'p-2')}>
+                            <Icon className="w-4 h-4 text-emerald-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">
+                              {tx.feature.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {formatDate(tx.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <p
+                            className={cn(
+                              'text-sm font-medium',
+                              getTransactionColor(tx.transactionType)
+                            )}
+                          >
+                            {isPositive ? '+' : ''}
+                            {tx.amount}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {tx.creditsAfter} total
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <p className="text-white/80">
+                {t('referrals.shareLink')}
+              </p>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                <span className="text-emerald-400 font-bold">{t('referrals.youGet')}</span>
+                <span className="text-white/40">•</span>
+                <span className="text-emerald-400 font-bold">{t('referrals.theyGet')}</span>
               </div>
             </div>
+            <ReferralLink />
           </div>
         )}
-
-        {/* Referral Section */}
-        <div className="mb-6 space-y-4">
-          <ReferralStats />
-          <ReferralLink />
-        </div>
-
-        {/* Transaction History */}
-        <div>
-          <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            {t('credits.usage.history')}
-          </h4>
-
-          {isLoading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className={cn(glass.card, 'p-4 animate-pulse')}
-                >
-                  <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
-                  <div className="h-3 bg-white/10 rounded w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className={cn(glass.card, 'p-6 text-center')}>
-              <p className="text-gray-400">
-                {t('credits.usage.noTransactions')}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {transactions.map((tx) => {
-                const Icon = FEATURE_ICONS[tx.feature] || Coins;
-                const isPositive = tx.amount > 0;
-
-                return (
-                  <div
-                    key={tx.id}
-                    className={cn(glass.card, 'p-4 flex items-center justify-between')}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(glass.badge.neutral, 'p-2')}>
-                        <Icon className="w-4 h-4 text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">
-                          {tx.feature.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {formatDate(tx.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <p
-                        className={cn(
-                          'text-sm font-medium',
-                          getTransactionColor(tx.transactionType)
-                        )}
-                      >
-                        {isPositive ? '+' : ''}
-                        {tx.amount}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {tx.creditsAfter} total
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
 
   return createPortal(modal, document.body);
 }
+

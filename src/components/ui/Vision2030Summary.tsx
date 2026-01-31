@@ -1,7 +1,7 @@
 // src/components/ui/Vision2030Summary.tsx
 // Quick-access Vision 2030 summary card for the main workspace
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Target, ChevronDown, Info, TrendingUp, Sparkles, Upload, Crosshair, Star, Zap, ThumbsUp, Rocket, Check } from 'lucide-react';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
@@ -20,7 +20,57 @@ interface Vision2030SummaryProps {
 export function Vision2030Summary({ resumeText, className = '' }: Vision2030SummaryProps) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
-    const [expanded, setExpanded] = useState(true);
+    // Smart state: Initialize based on persistence or default to collapsed
+    const [expanded, setExpanded] = useState(false);
+
+    // Persist state and handle auto-open on new resume
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const storageKey = 'watheq:vision2030_state';
+            const savedState = localStorage.getItem(storageKey);
+            const currentHash = resumeText ? resumeText.slice(0, 50) : 'demo';
+
+            if (savedState) {
+                const { isExpanded, hash } = JSON.parse(savedState);
+
+                // If this is a NEW resume (hash mismatch) and it's not the empty demo state
+                // Auto-expand because analysis is "needed"
+                if (hash !== currentHash && currentHash !== 'demo') {
+                    setExpanded(true);
+                    localStorage.setItem(storageKey, JSON.stringify({ isExpanded: true, hash: currentHash }));
+                } else {
+                    // Otherwise respect the user's last preference
+                    setExpanded(isExpanded);
+                }
+            } else {
+                // First time ever? Default to true if we have a resume, false if demo
+                // This ensures new users see the feature, but it doesn't annoy demo users
+                const initialExpanded = !!resumeText;
+                setExpanded(initialExpanded);
+                localStorage.setItem(storageKey, JSON.stringify({ isExpanded: initialExpanded, hash: currentHash }));
+            }
+        } catch (e) {
+            console.warn('Failed to restore Vision 2030 state', e);
+        }
+    }, [resumeText]);
+
+    const toggleExpanded = () => {
+        const newState = !expanded;
+        setExpanded(newState);
+
+        // Save preference
+        if (typeof window !== 'undefined') {
+            try {
+                const currentHash = resumeText ? resumeText.slice(0, 50) : 'demo';
+                localStorage.setItem('watheq:vision2030_state', JSON.stringify({
+                    isExpanded: newState,
+                    hash: currentHash
+                }));
+            } catch { }
+        }
+    };
     const [modalOpen, setModalOpen] = useState(false);
     const [calculationModalOpen, setCalculationModalOpen] = useState(false);
 
@@ -104,7 +154,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
             {/* Header - Always Visible */}
             <div
                 className={`p-5 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition-colors`}
-                onClick={() => setExpanded(!expanded)}
+                onClick={() => toggleExpanded()}
             >
                 <div className="flex items-center gap-4 rtl:flex-row-reverse">
                     <div className="relative">

@@ -29,7 +29,7 @@ export function MirroredKeywordsCard({
     };
 
     return (
-        <GlassCard className={className} variant="elevated">
+        <GlassCard className={className}>
             <div className="space-y-6">
                 {/* Mirrored Phrases */}
                 {mirroredPhrases && mirroredPhrases.length > 0 && (

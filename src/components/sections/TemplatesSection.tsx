@@ -12,6 +12,7 @@ import { analytics } from "../../services/analytics";
 
 import TemplateRenderer from "../templates/TemplateRenderer";
 import { GlassButton } from "../ui/GlassButton";
+import { GlassCard } from "../ui/GlassCard";
 import { LoadingMessages } from "../LoadingMessages";
 import { ManualDataEditor } from "../ui/ManualDataEditor";
 import { FormattingPanel } from "../ui/FormattingPanel";
@@ -294,7 +295,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   return (
     <div className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
       {/* Full-Width Preview */}
-      <div className="flex-1 flex flex-col bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0 relative group">
+      <GlassCard className="flex-1 flex flex-col backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
         <div className="flex items-center justify-between p-4 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
@@ -471,13 +472,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>,
           document.body
         )}
-      </div>
+      </GlassCard>
 
       {/* Manual Data Editor Modal */}
       <ManualDataEditor
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
       />
-    </div>
+    </div >
   );
 }

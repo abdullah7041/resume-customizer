@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown } from "lucide-react";
+import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown, Gift, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -10,33 +10,7 @@ import { CreditBalance } from "../Credits/CreditBalance";
 import { CreditUsageModal } from "../Credits/CreditUsageModal";
 
 
-// Floating particle component for ambient animation
-const FloatingParticle = ({ delay, duration, size, left, top }) => (
-  <div
-    className="absolute rounded-full bg-gradient-to-br from-emerald-400/20 to-teal-400/10 blur-sm animate-float pointer-events-none"
-    style={{
-      width: size,
-      height: size,
-      left: `${left}%`,
-      top: `${top}%`,
-      animationDelay: `${delay}s`,
-      animationDuration: `${duration}s`,
-    }}
-  />
-);
 
-// Glowing orb for background ambiance
-const GlowingOrb = ({ className, color = "emerald" }) => (
-  <div
-    className={cn(
-      "absolute rounded-full blur-3xl opacity-30 animate-pulse-slow pointer-events-none",
-      color === "emerald" && "bg-emerald-500",
-      color === "teal" && "bg-teal-500",
-      color === "cyan" && "bg-cyan-500",
-      className
-    )}
-  />
-);
 
 const containerClass = "app-shell w-full";
 
@@ -47,7 +21,7 @@ const getPrefersReducedMotion = () => {
 
 // Modern glass card styles - transparent black
 const glassCardClass =
-  "relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl transition-all duration-500";
+  "relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-xl transition-all duration-500";
 
 const glassCardHoverClass =
   "hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)] hover:translate-y-[-2px]";
@@ -76,6 +50,7 @@ export default function Header() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const mobileNavRef = useRef<HTMLDivElement>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
 
   // Mouse tracking for interactive gradient
   const handleMouseMove = useCallback((e) => {
@@ -205,25 +180,11 @@ export default function Header() {
     };
   }, []);
 
-  // Generate floating particles
-  const particles = useMemo(() =>
-    Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      delay: Math.random() * 5,
-      duration: 15 + Math.random() * 10,
-      size: 4 + Math.random() * 12,
-      left: Math.random() * 100,
-      top: Math.random() * 100,
-    })),
-    []);
 
+
+  // Feature cards organized by priority and category
   const featureCards = [
-    {
-      icon: Zap,
-      label: t("header.features.smartParsing.label"),
-      desc: t("header.features.smartParsing.desc"),
-      gradient: "from-yellow-400 to-orange-500",
-    },
+    // ===== CORE AI FEATURES (Top Priority - Trust & Intelligence) =====
     {
       icon: Target,
       label: t("header.features.matchScore.label"),
@@ -231,10 +192,25 @@ export default function Header() {
       gradient: "from-emerald-400 to-teal-500",
     },
     {
+      icon: ShieldCheck,
+      label: t("header.features.antiHallucination.label"),
+      desc: t("header.features.antiHallucination.desc"),
+      gradient: "from-emerald-400 to-green-500",
+      highlight: true,
+    },
+    {
       icon: Sparkles,
       label: t("header.features.aiOptimization.label"),
       desc: t("header.features.aiOptimization.desc"),
       gradient: "from-purple-400 to-pink-500",
+    },
+
+    // ===== WORKFLOW FEATURES (Secondary - Core Functionality) =====
+    {
+      icon: Zap,
+      label: t("header.features.smartParsing.label"),
+      desc: t("header.features.smartParsing.desc"),
+      gradient: "from-yellow-400 to-orange-500",
     },
     {
       icon: TrendingUp,
@@ -248,6 +224,8 @@ export default function Header() {
       desc: t("header.features.templates.desc"),
       gradient: "from-cyan-400 to-blue-500",
     },
+
+    // ===== ADVANCED FEATURES (Tertiary - Value-Added Services) =====
     {
       icon: MessageSquare,
       label: t("header.features.interview.label"),
@@ -326,15 +304,7 @@ export default function Header() {
           }}
         />
 
-        {/* Static glowing orbs */}
-        <GlowingOrb className="w-96 h-96 -top-20 -left-20" color="emerald" />
-        <GlowingOrb className="w-80 h-80 top-1/3 right-0" color="teal" />
-        <GlowingOrb className="w-64 h-64 bottom-20 left-1/4" color="cyan" />
 
-        {/* Floating particles */}
-        {!prefersReducedMotion && particles.map((p) => (
-          <FloatingParticle key={p.id} {...p} />
-        ))}
 
         {/* Animated grid pattern */}
         <div
@@ -366,6 +336,7 @@ export default function Header() {
             backgroundImage: `url('${skylineUrl}')`,
             backgroundSize: 'cover',
             backgroundPosition: '50% 35%',
+            filter: 'brightness(0.8)',
           }}
         />
       )}
@@ -423,21 +394,37 @@ export default function Header() {
             {/* Desktop: Language switcher, Feedback, and Auth button */}
             <div className="hidden md:flex items-center gap-3">
               <LanguageSwitcher />
-              {user && <CreditBalance onClick={() => setShowCreditModal(true)} />}
-              <a
-                href="https://tally.so/r/KYxEzV"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 border border-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all duration-300 hover:from-amber-400 hover:to-orange-400 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] hover:scale-105"
-              >
-                <MessageSquare className="h-4 w-4" />
-                <span>{t("header.feedback")}</span>
-              </a>
+              {user && (
+                <>
+                  <CreditBalance onClick={() => {
+                    setCreditModalMode('full');
+                    setShowCreditModal(true);
+                  }} />
+                  {/* Invite Friends Button */}
+                  <button
+                    onClick={() => {
+                      setCreditModalMode('invite-only');
+                      setShowCreditModal(true);
+                    }}
+                    className="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 transition-all duration-300 hover:scale-105 group shadow-md hover:shadow-emerald-500/20"
+                    title="Invite friends and earn 5 credits each!"
+                  >
+                    <Gift className="w-4 h-4" />
+                    <span className="text-sm font-bold">Invite</span>
+                    <span className="absolute -top-2 -right-2 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-emerald-400 to-teal-400 text-gray-900 rounded-full shadow-lg group-hover:scale-110 transition-transform">
+                      +5
+                    </span>
+                  </button>
+                </>
+              )}
+
               {user ? (
                 <GlassButton
                   onClick={signOut}
                   variant="secondary"
                   size="md"
+                  // Use dark background for better readability as requested
+                  className="bg-gray-900/80 hover:bg-black border-white/10 text-gray-200 hover:text-white shadow-md font-bold tracking-wide"
                   leftIcon={<LogOut className="h-4 w-4" />}
                 >
                   {t("common.signOut")}
@@ -447,8 +434,10 @@ export default function Header() {
                   onClick={signInWithGoogle}
                   variant="prominent"
                   size="md"
-                  leftIcon={<LogIn className="h-4 w-4" />}
+                  className="group relative overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-none transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-emerald-900/20 font-bold"
                 >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                  <LogIn className="h-4 w-4 mr-2" />
                   {t("common.signIn")}
                 </GlassButton>
               )}
@@ -500,7 +489,7 @@ export default function Header() {
             </div>
 
             {/* Feature cards - hidden on mobile */}
-            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 gap-4 [&>*:last-child:nth-child(3n+1)]:col-span-2 [&>*:last-child:nth-child(3n+1)]:md:max-w-md [&>*:last-child:nth-child(3n+1)]:md:mx-auto">
               {featureCards.map((card, idx) => (
                 <div
                   key={card.label}
@@ -658,28 +647,31 @@ export default function Header() {
 
               {/* Credit Balance */}
               {user && (
-                <div className="pb-4 border-b border-white/10">
+                <div className="pb-4 border-b border-white/10 space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">{t("credits.balance")}</p>
                   <CreditBalance onClick={() => {
+                    setCreditModalMode('full');
                     setShowCreditModal(true);
                     setMobileNavOpen(false);
                   }} />
+
+                  {/* Invite Friends Button (Mobile) */}
+                  <button
+                    onClick={() => {
+                      setCreditModalMode('invite-only');
+                      setShowCreditModal(true);
+                      setMobileNavOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 min-h-[48px] bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 transition-all duration-300 active:scale-[0.98] shadow-md"
+                  >
+                    <Gift className="w-5 h-5" />
+                    <span className="text-sm font-bold">Invite Friends</span>
+                    <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-emerald-400 to-teal-400 text-gray-900 rounded-full">
+                      +5 Credits
+                    </span>
+                  </button>
                 </div>
               )}
-
-              {/* Beta Feedback */}
-              <div className="pb-4 border-b border-white/10">
-                <a
-                  href="https://tally.so/r/KYxEzV"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileNavOpen(false)}
-                  className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all duration-300 hover:from-amber-400 hover:to-orange-400 active:scale-[0.98]"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>{t("header.feedback")}</span>
-                </a>
-              </div>
 
               {/* Auth Section */}
               <div className="pt-2 space-y-3">
@@ -689,7 +681,7 @@ export default function Header() {
                       signOut();
                       setMobileNavOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-white/5 border border-white/10 transition-all duration-300 hover:bg-white/10 active:scale-[0.98]"
+                    className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-200 hover:text-white bg-gray-900/80 border border-white/10 transition-all duration-300 hover:bg-black active:scale-[0.98]"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>{t("common.signOut")}</span>
@@ -732,6 +724,7 @@ export default function Header() {
       <CreditUsageModal
         isOpen={showCreditModal}
         onClose={() => setShowCreditModal(false)}
+        viewMode={creditModalMode}
       />
     </header>
   );

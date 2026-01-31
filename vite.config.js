@@ -1,10 +1,13 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
+  // Persistent cache for faster subsequent starts
+  cacheDir: 'node_modules/.vite',
+
   plugins: [
     react(),
     tailwindcss(),
@@ -106,6 +109,16 @@ export default defineConfig({
       "i18next",                 // i18n core
       "react-i18next",           // React bindings
       "mixpanel-browser",        // Analytics SDK
+      "@supabase/supabase-js",   // Auth SDK (3.2MB minified)
+      "zod",                     // Validation (1.8MB minified)
+      "clsx",                    // Utility (frequently used)
+      "tailwind-merge",          // CSS merging (frequently used)
+    ],
+    // Exclude Node.js-only dependencies that cause issues in dev
+    exclude: [
+      "iconv-lite",              // Causes ENOENT crash in Netlify CLI
+      "puppeteer-core",          // Server-only
+      "@sparticuz/chromium",     // Server-only (Lambda)
     ],
     esbuildOptions: {
       define: {

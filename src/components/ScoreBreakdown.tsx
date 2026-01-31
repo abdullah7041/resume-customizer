@@ -98,7 +98,7 @@ export function ScoreBreakdown({
         const totalScore = totalMax > 0 ? Math.round((rawTotal / totalMax) * 100) : rawTotal;
 
         return (
-            <GlassCard className={className} variant="elevated">
+            <GlassCard className={className}>
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>

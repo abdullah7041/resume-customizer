@@ -770,6 +770,11 @@ export const exportResumeToPdf = async ({
   variant = "styled",
   skipPrint = false,
 }) => {
+  // Check for browser environment
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    throw new Error('PDF export is only available in browser environments');
+  }
+
   const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
   const normalizedVariant = normalizeVariant(variant);
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);

@@ -13,7 +13,6 @@ interface EmptyStateProps {
 export default function EmptyState({ icon: Icon, title, description, actions, className }: EmptyStateProps) {
   return (
     <GlassCard
-      variant="elevated"
       padding="lg"
       className={cn("text-center", className)}
     >

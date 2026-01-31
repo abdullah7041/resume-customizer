@@ -185,7 +185,6 @@ export default function UploadCard({
 
   return (
     <GlassCard
-      variant="elevated"
       padding="lg"
       className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden"
     >

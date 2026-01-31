@@ -191,6 +191,9 @@ describe("getSkylineUrl", () => {
   });
 
   it("falls back to a Saudi gradient when env config is missing", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("VITE_ASSETS_BASE_URL", "");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { getSkylineUrl, __internal } = await loadModule();
     __internal.resetCache();
@@ -244,6 +247,7 @@ describe("getSkylineUrl", () => {
 
   it("memoizes the skyline URL across multiple calls", async () => {
     vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
     vi.stubEnv("VITE_BUILD_ID", "build-456");
     const { getSkylineUrl, __internal } = await loadModule();
     __internal.resetCache();

@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { X, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserCredits } from '../../hooks/useUserCredits';
+import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase';
 import { GlassButton } from '../ui/GlassButton';
@@ -68,6 +69,7 @@ const EMOJI_OPTIONS: EmojiOption[] = [
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { refetch: refreshCredits } = useUserCredits();
+  const { getSessionContext } = useFeatureTracking();
   const { i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
 
@@ -123,6 +125,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         throw new Error(isArabic ? 'فشل الحصول على رمز المصادقة' : 'Failed to get authentication token');
       }
 
+      // Get session context for analytics
+      const sessionContext = getSessionContext();
+
       // Call the submit-feedback endpoint
       const response = await fetch('/.netlify/functions/submit-feedback', {
         method: 'POST',
@@ -133,16 +138,29 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         body: JSON.stringify({
           emoji_rating: selectedRating,
           testimonial_text: testimonial || undefined,
-          context: 'web_ui',
+          context: sessionContext, // Rich context data for analytics
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || (isArabic ? 'فشل إرسال الملاحظات' : 'Failed to submit feedback'));
+      // Get response text first, then try to parse as JSON
+      const responseText = await response.text();
+      let result;
+
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        // If JSON parsing fails, the server likely returned an error as plain text
+        console.error('[FeedbackModal] Failed to parse response as JSON:', responseText);
+        throw new Error(
+          isArabic
+            ? `فشل في الاتصال بالخادم: ${responseText.substring(0, 100)}`
+            : `Server error: ${responseText.substring(0, 100)}`
+        );
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || (isArabic ? 'فشل إرسال الملاحظات' : 'Failed to submit feedback'));
+      }
 
       if (result.success) {
         setSuccessData({
@@ -163,7 +181,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, selectedRating, testimonial, isArabic, refreshCredits]);
+  }, [user, selectedRating, testimonial, isArabic, refreshCredits, getSessionContext]);
 
   if (!isOpen) return null;
 

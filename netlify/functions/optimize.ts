@@ -3,7 +3,8 @@ import { withRateLimit } from "../lib/rate-limiter";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
 import { checkCredits, consumeCredits } from "../lib/credit-manager";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "../lib/supabase-client";
+import { getClientIP } from "../lib/ip-utils.js";
 
 initSentry();
 
@@ -27,10 +28,18 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
 
   // Verify token and get authenticated user
   const token = authHeader.replace(/^Bearer\s+/i, '');
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Server configuration error. Please contact support."
+      })
+    };
+  }
+
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
   if (authError || !user) {
@@ -45,8 +54,12 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
 
   const userId = user.id;
 
+  // Extract IP and email verification for anti-abuse checks
+  const ipAddress = getClientIP(event);
+  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+
   // Check credits BEFORE processing (5 credits for optimize)
-  const creditCheck = await checkCredits(userId, 'optimize');
+  const creditCheck = await checkCredits(userId, 'optimize', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -261,7 +274,7 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
     ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
 
     // Consume credits AFTER successful optimization
-    await consumeCredits(userId, 'optimize');
+    const creditResult = await consumeCredits(userId, 'optimize');
 
     return {
       statusCode: 200,
@@ -282,6 +295,8 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
           matchedKeywords: matchedKeywords.slice(0, 15),
           reasoning: null,
         },
+        // Credit information
+        creditsRemaining: creditResult.creditsRemaining,
         // Gap Analysis - from AI response
         gapAnalysis: (optimization?.gap_analysis || []).map((gap: any) => ({
           requirement: gap.requirement || '',

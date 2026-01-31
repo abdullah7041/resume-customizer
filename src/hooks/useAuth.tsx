@@ -87,10 +87,11 @@ const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
   try {
     console.log("[useAuth] Tracking referral:", { referrerId, userId });
 
-    const response = await fetch("/.netlify/functions/track-referral", {
+    const response = await fetch("/.netlify/functions/referral-api", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        action: "track",
         referrer_id: referrerId,
         referee_id: userId,
         referee_email: userEmail || null,

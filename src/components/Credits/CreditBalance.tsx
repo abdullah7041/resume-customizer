@@ -17,26 +17,28 @@ interface CreditBalanceProps {
 
 export function CreditBalance({ onClick }: CreditBalanceProps) {
   const { credits, isLoading } = useUserCredits();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
 
-  // Calculate time until reset
-  const timeUntilReset = useMemo(() => {
-    if (!credits?.resetDate) return '';
+  // Calculate time until next reset (30 days from last_reset_date)
+  const resetInfo = useMemo(() => {
+    if (!credits?.resetDate) return { daysRemaining: 0, dateText: '' };
 
-    const resetDate = new Date(credits.resetDate);
+    const lastReset = new Date(credits.resetDate);
+    const nextReset = new Date(lastReset.getTime() + 30 * 24 * 60 * 60 * 1000); // Add 30 days
     const now = new Date();
-    const diffMs = resetDate.getTime() - now.getTime();
+    const diffMs = nextReset.getTime() - now.getTime();
 
-    if (diffMs <= 0) return 'Soon';
+    // Format the date based on locale
+    const locale = isArabic ? 'ar-SA' : 'en-US';
+    const dateText = nextReset.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+
+    if (diffMs <= 0) return { daysRemaining: 0, dateText };
 
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
-    if (days > 0) {
-      return `${days}d ${hours}h`;
-    }
-    return `${hours}h`;
-  }, [credits?.resetDate]);
+    return { daysRemaining: days, dateText };
+  }, [credits?.resetDate, isArabic]);
 
   // Color coding based on percentage
   const percentage = credits ? (credits.remaining / credits.total) * 100 : 0;
@@ -103,14 +105,14 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
         <span className={cn('text-sm font-extrabold tracking-wide', colorClasses.text)}>
           {credits.remaining} / {credits.total}
         </span>
-        {timeUntilReset && (
+        {resetInfo.dateText && (
           <span className={cn(
             "text-[10px] uppercase tracking-wider font-bold opacity-80",
             colorClasses.text
           )}>
-            {timeUntilReset === 'Soon'
+            {resetInfo.daysRemaining <= 0
               ? t('credits.resetsSoon', 'Resets soon')
-              : t('credits.resetsIn', { time: timeUntilReset })}
+              : t('credits.resetsInWithDate', { days: resetInfo.daysRemaining, date: resetInfo.dateText })}
           </span>
         )}
       </div>

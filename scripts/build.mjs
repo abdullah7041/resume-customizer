@@ -1,4 +1,3 @@
-/* eslint-env node */
 import { build } from "vite";
 
 process.env.VITE_BUILD_ID = Date.now().toString();

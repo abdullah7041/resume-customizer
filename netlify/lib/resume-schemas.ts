@@ -266,8 +266,18 @@ export function formatZodError(error: z.ZodError): string {
 }
 
 // ============================================
-// Feedback System Schemas
+// Feedback System Schemas (Best Practice 2026)
 // ============================================
+
+// Session context schema for analytics
+export const SessionContextSchema = z.object({
+    last_feature_used: z.enum(['match', 'optimize', 'vision2030', 'interview', 'cover-letter']).nullable(),
+    feature_sequence: z.array(z.enum(['match', 'optimize', 'vision2030', 'interview', 'cover-letter'])),
+    session_duration_seconds: z.number(),
+    total_lifetime_uses: z.number(),
+    current_milestone: z.number().nullable(),
+    user_segment: z.enum(['new_user', 'casual_user', 'regular_user', 'power_user']),
+}).optional();
 
 export const SubmitFeedbackRequestSchema = z.object({
     emoji_rating: z.enum(['love', 'happy', 'neutral', 'sad', 'terrible'], {
@@ -275,8 +285,10 @@ export const SubmitFeedbackRequestSchema = z.object({
     }),
     testimonial_text: z.string().max(500, 'Testimonial must be 500 characters or less').optional()
         .transform(val => val?.trim() || undefined),
-    context: z.string().max(200, 'Context must be 200 characters or less').optional()
-        .transform(val => val?.trim() || undefined),
+    context: z.union([
+        SessionContextSchema,
+        z.string().max(200).transform(val => val?.trim() || undefined), // Legacy support
+    ]).optional(),
 });
 
 export type SubmitFeedbackRequest = z.infer<typeof SubmitFeedbackRequestSchema>;

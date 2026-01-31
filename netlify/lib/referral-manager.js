@@ -1,174 +1,196 @@
 /**
  * Referral Management System
- * Handles referral tracking and credit distribution
+ *
+ * Handles referral tracking, completion, and reward distribution.
+ * Rewards: 5 credits to referrer + 5 credits to referee on first paid action.
+ * Uses user_credits table columns: referred_by_user_id, referral_completed, referral_completed_at
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { addCredits } from './credit-manager.js';
+
+const REFERRER_REWARD = 5;
+const REFEREE_REWARD = 5;
 
 /**
- * Initialize Supabase client with service role
- * @returns {import('@supabase/supabase-js').SupabaseClient}
+ * Get Supabase client for referral operations
  */
 function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing Supabase credentials');
+  if (!url || !key) {
+    throw new Error('[ReferralManager] Supabase credentials not configured');
   }
 
-  return createClient(supabaseUrl, supabaseServiceKey);
+  return createClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 }
 
 /**
- * Track a new referral (referee just signed up)
- * @param {string} referrerId - ID of the user who referred
- * @param {string} refereeId - ID of the new user (referee)
- * @param {string} [refereeEmail] - Email of the new user
- * @returns {Promise<{success: boolean, referralId: string}>}
+ * Track a referral relationship when a new user signs up with a referral code.
+ *
+ * @param {string} referrerCode - The referral code (format: USR-XXXXX)
+ * @param {string} refereeUserId - UUID of the new user being referred
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function trackReferral(referrerId, refereeId, refereeEmail = null) {
-  const supabase = getSupabaseClient();
-
-  // Verify both users exist
-  const { data: referrerData, error: referrerError } = await supabase
-    .from('user_credits')
-    .select('user_id')
-    .eq('user_id', referrerId)
-    .single();
-
-  if (referrerError || !referrerData) {
-    console.warn(`[ReferralManager] Referrer ${referrerId} not found or not initialized`);
-    // Don't fail - referrer might not have credits initialized yet
-  }
-
-  // Insert referral record
-  const { data: referralData, error: referralError } = await supabase
-    .from('referrals')
-    .insert({
-      referrer_id: referrerId,
-      referee_id: refereeId,
-      referee_email: refereeEmail,
-      status: 'pending', // Changes to 'completed' after first purchase/use
-      created_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
-
-  if (referralError) {
-    console.error('[ReferralManager] Failed to track referral:', referralError);
-    throw new Error('Failed to track referral');
-  }
-
-  console.log(`[ReferralManager] Tracked referral: ${referrerId} → ${refereeId}`);
-
-  return { success: true, referralId: referralData.id };
-}
-
-/**
- * Complete a referral and distribute credits
- * Call this after the referee has used a paid feature
- * @param {string} referrerId - ID of the referrer
- * @param {string} refereeId - ID of the referee
- * @returns {Promise<{success: boolean, creditsAwarded: number}>}
- */
-export async function completeReferral(referrerId, refereeId) {
-  const supabase = getSupabaseClient();
-  const REFERRAL_REWARD = 5; // Credits for the referrer
-
+export async function trackReferral(referrerCode, refereeUserId) {
   try {
-    // Find the referral record
-    const { data: referralData, error: fetchError } = await supabase
-      .from('referrals')
-      .select('id')
-      .eq('referrer_id', referrerId)
-      .eq('referee_id', refereeId)
-      .eq('status', 'pending')
+    const supabase = getSupabaseClient();
+
+    // Find referrer by code
+    const { data: referrerData, error: referrerError } = await supabase
+      .from('user_credits')
+      .select('user_id')
+      .eq('referral_code', referrerCode)
       .single();
 
-    if (fetchError || !referralData) {
-      console.warn(`[ReferralManager] No pending referral found for ${referrerId} → ${refereeId}`);
-      return { success: false, creditsAwarded: 0 };
+    if (referrerError || !referrerData) {
+      console.warn('[ReferralManager] Invalid referral code:', referrerCode);
+      return { success: false, error: 'Invalid referral code' };
     }
 
-    // Update referral status
+    const referrerId = referrerData.user_id;
+
+    // Update referee's record with referrer relationship
     const { error: updateError } = await supabase
-      .from('referrals')
+      .from('user_credits')
       .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
+        referred_by_user_id: referrerId,
+        referral_completed: false
       })
-      .eq('id', referralData.id);
+      .eq('user_id', refereeUserId);
 
     if (updateError) {
-      console.error('[ReferralManager] Failed to update referral status:', updateError);
-      throw new Error('Failed to complete referral');
+      console.error('[ReferralManager] Failed to track referral:', updateError);
+      return { success: false, error: 'Failed to track referral' };
     }
 
-    // Award credits to referrer
-    await addCredits(
-      referrerId,
-      REFERRAL_REWARD,
-      'referral_reward',
-      { referee_id: refereeId, referral_id: referralData.id }
-    );
-
-    console.log(`[ReferralManager] Completed referral: awarded ${REFERRAL_REWARD} credits to ${referrerId}`);
-
-    return { success: true, creditsAwarded: REFERRAL_REWARD };
+    console.log(`[ReferralManager] Tracked referral: ${referrerId} → ${refereeUserId}`);
+    return { success: true };
   } catch (error) {
-    console.error('[ReferralManager] Error completing referral:', error);
-    throw error;
+    console.error('[ReferralManager] trackReferral error:', error);
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Get referral stats for a user
- * @param {string} userId - User ID
- * @returns {Promise<{totalReferrals: number, completedReferrals: number, creditsEarned: number}>}
+ * Complete a referral when the referee performs their first paid action.
+ * Awards credits to both referrer and referee.
+ *
+ * @param {string} refereeUserId - UUID of the referee who performed the action
+ * @returns {Promise<{completed: boolean, referrerReward?: number, refereeReward?: number, error?: string}>}
+ */
+export async function completeReferral(refereeUserId) {
+  try {
+    const supabase = getSupabaseClient();
+
+    // Check if referral exists and is incomplete
+    const { data: refereeData, error: fetchError } = await supabase
+      .from('user_credits')
+      .select('referred_by_user_id, referral_completed')
+      .eq('user_id', refereeUserId)
+      .single();
+
+    if (fetchError || !refereeData) {
+      // No referral relationship - this is normal
+      return { completed: false };
+    }
+
+    const { referred_by_user_id: referrerId, referral_completed: alreadyCompleted } = refereeData;
+
+    // Skip if no referrer or already completed
+    if (!referrerId || alreadyCompleted) {
+      return { completed: false };
+    }
+
+    console.log(`[ReferralManager] Completing referral for referee ${refereeUserId}`);
+
+    // Award credits to referrer
+    const { error: referrerError } = await supabase.rpc('add_credits', {
+      p_user_id: referrerId,
+      p_amount: REFERRER_REWARD,
+      p_description: `Referral bonus: friend completed first action`,
+      p_transaction_type: 'referral_reward'
+    });
+
+    if (referrerError) {
+      console.error('[ReferralManager] Failed to reward referrer:', referrerError);
+      return { completed: false, error: 'Failed to reward referrer' };
+    }
+
+    // Award credits to referee
+    const { error: refereeError } = await supabase.rpc('add_credits', {
+      p_user_id: refereeUserId,
+      p_amount: REFEREE_REWARD,
+      p_description: `Referral bonus: welcome reward`,
+      p_transaction_type: 'referral_reward'
+    });
+
+    if (refereeError) {
+      console.error('[ReferralManager] Failed to reward referee:', refereeError);
+      return { completed: false, error: 'Failed to reward referee' };
+    }
+
+    // Mark referral as completed
+    const { error: completeError } = await supabase
+      .from('user_credits')
+      .update({
+        referral_completed: true,
+        referral_completed_at: new Date().toISOString()
+      })
+      .eq('user_id', refereeUserId);
+
+    if (completeError) {
+      console.error('[ReferralManager] Failed to mark referral complete:', completeError);
+      return { completed: false, error: 'Failed to mark complete' };
+    }
+
+    console.log(`[ReferralManager] Referral completed: ${referrerId} (+${REFERRER_REWARD}) and ${refereeUserId} (+${REFEREE_REWARD})`);
+
+    return {
+      completed: true,
+      referrerReward: REFERRER_REWARD,
+      refereeReward: REFEREE_REWARD
+    };
+  } catch (error) {
+    console.error('[ReferralManager] completeReferral error:', error);
+    return { completed: false, error: error.message };
+  }
+}
+
+/**
+ * Get referral statistics for a user.
+ *
+ * @param {string} userId - UUID of the user
+ * @returns {Promise<{total: number, completed: number, pending: number, creditsEarned: number}>}
  */
 export async function getReferralStats(userId) {
-  const supabase = getSupabaseClient();
+  try {
+    const supabase = getSupabaseClient();
 
-  const { data: referrals, error } = await supabase
-    .from('referrals')
-    .select('*')
-    .eq('referrer_id', userId);
+    // Count referrals by status
+    const { data, error } = await supabase
+      .from('user_credits')
+      .select('referral_completed')
+      .eq('referred_by_user_id', userId);
 
-  if (error) {
-    console.error('[ReferralManager] Failed to fetch referral stats:', error);
-    throw new Error('Failed to fetch referral stats');
+    if (error) {
+      console.error('[ReferralManager] Failed to fetch stats:', error);
+      return { total: 0, completed: 0, pending: 0, creditsEarned: 0 };
+    }
+
+    const total = data.length;
+    const completed = data.filter(r => r.referral_completed).length;
+    const pending = total - completed;
+    const creditsEarned = completed * REFERRER_REWARD;
+
+    return { total, completed, pending, creditsEarned };
+  } catch (error) {
+    console.error('[ReferralManager] getReferralStats error:', error);
+    return { total: 0, completed: 0, pending: 0, creditsEarned: 0 };
   }
-
-  const completed = referrals?.filter((r) => r.status === 'completed') || [];
-  const REFERRAL_REWARD = 5;
-
-  return {
-    totalReferrals: referrals?.length || 0,
-    completedReferrals: completed.length,
-    creditsEarned: completed.length * REFERRAL_REWARD,
-  };
-}
-
-/**
- * Get referral by code (for deep linking)
- * @param {string} referralCode - Unique referral code
- * @returns {Promise<{referrerId: string, referrerEmail: string} | null>}
- */
-export async function getReferralByCode(referralCode) {
-  const supabase = getSupabaseClient();
-
-  const { data, error } = await supabase
-    .from('referrals')
-    .select('referrer_id')
-    .eq('referral_code', referralCode)
-    .single();
-
-  if (error) {
-    console.warn(`[ReferralManager] Referral code not found: ${referralCode}`);
-    return null;
-  }
-
-  return data;
 }

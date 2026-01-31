@@ -18,6 +18,7 @@ import { CoverLetterSection } from "../sections/CoverLetterSection";
 import { PricingSection } from "../sections/PricingSection";
 import { Vision2030Section } from "../Vision2030/Vision2030Section";
 import { GlassTabs } from "../ui/GlassTabs";
+import { ComparisonTable } from "../ui/ComparisonTable";
 import Toast, { ToastContainer } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
 import { GlassButton } from "../ui/GlassButton";
@@ -28,8 +29,6 @@ import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supa
 import ViewTextModal from "../ui/ViewTextModal";
 import Vision2030Summary from "../ui/Vision2030Summary";
 import { useResumeStore } from "../../lib/stores/resumeStore";
-import { FeedbackModal } from "../Feedback/FeedbackModal";
-import { useFeedbackPrompt } from "../../lib/hooks/useFeedbackPrompt";
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
@@ -75,9 +74,6 @@ export default function MainContent() {
     user?.user_metadata?.tier === "premium" ||
     user?.app_metadata?.plan === "premium"
   );
-
-  // Feedback system hook
-  const { shouldShowFeedback, dismissFeedback } = useFeedbackPrompt();
 
   // Memoize tabs to avoid recreating on every render
   const tabs = useMemo(() => getTabsConfig(t), [t]);
@@ -878,17 +874,13 @@ export default function MainContent() {
   return (
     <main
       data-app-main
-      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32 -mt-16 sm:-mt-20 lg:-mt-24"
+      className="relative isolate z-20 min-h-screen pb-16 sm:pb-24 lg:pb-32"
     >
       <ToastContainer>{renderedToasts}</ToastContainer>
       <ViewTextModal
         isOpen={viewTextModalOpen}
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
-      />
-      <FeedbackModal
-        isOpen={shouldShowFeedback}
-        onClose={dismissFeedback}
       />
       <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
         <div className="rounded-2xl bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-7 lg:p-8 transition-shadow duration-300 hover:shadow-2xl">
@@ -994,6 +986,22 @@ export default function MainContent() {
             </div>
           </section>
         )}
+      </div>
+
+      {/* Comparison Table - shown for all users */}
+      <div className={`${containerClass} mt-16 mb-12`}>
+        <div className="text-center mb-12 space-y-4">
+          <div className="inline-block px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold tracking-wider uppercase">
+            {t("landing.comparison.title", "Competitive Advantage")}
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-white">
+            {t("landing.comparison.title", "Why Choose Watheq?")}
+          </h2>
+          <p className="max-w-2xl mx-auto text-lg text-white/60">
+            {t("landing.comparison.subtitle", "See how we stack up against generic resume tools")}
+          </p>
+        </div>
+        <ComparisonTable />
       </div>
 
       {/* Pricing Section - shown for all users */}

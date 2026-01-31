@@ -52,16 +52,16 @@ async function getUserFromToken(token: string) {
 }
 
 const handler: Handler = async (event) => {
-  // Only accept POST requests
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
-  }
-
+  // Wrap everything in try-catch to ensure JSON responses
   try {
+    // Only accept POST requests
+    if (event.httpMethod !== "POST") {
+      return {
+        statusCode: 405,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Method not allowed" }),
+      };
+    }
     // 1. AUTHENTICATION: Extract and verify Bearer token
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader?.startsWith("Bearer ")) {
@@ -147,18 +147,36 @@ const handler: Handler = async (event) => {
 
     console.log(`[submit-feedback] Feedback saved: ${savedFeedback.id}`);
 
-    // 4. AWARD CREDIT: Only for positive ratings (love or happy)
+    // 4. AWARD CREDIT: For ALL feedback (Best Practice 2026 - encourages honest feedback)
     let creditAwarded = false;
     let creditsRemaining = 0;
     let maxFeedbackCreditsReached = false;
     let creditError: string | undefined;
 
-    const isPositiveRating =
-      feedbackData.emoji_rating === "love" ||
-      feedbackData.emoji_rating === "happy";
-
-    if (isPositiveRating) {
+    // Award credits for all feedback submissions (positive and negative)
+    // This encourages users to give honest feedback instead of just positive ratings
+    {
       try {
+        // First ensure user has a credits record (in case trigger didn't fire)
+        const { data: existingCredits } = await supabase
+          .from("user_credits")
+          .select("user_id, feedback_credits_earned, credits_remaining")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!existingCredits) {
+          // Initialize credits for this user
+          console.log(`[submit-feedback] Initializing credits for user ${user.id}`);
+          await supabase.from("user_credits").insert({
+            user_id: user.id,
+            credits_remaining: 15,
+            credits_total: 15,
+            feedback_credits_earned: 0,
+            referral_credits_earned: 0,
+            last_reset_date: new Date().toISOString(),
+          });
+        }
+
         const creditResult = await addFeedbackCredits(user.id, {
           emoji_rating: feedbackData.emoji_rating,
           feedback_id: savedFeedback.id,
@@ -213,11 +231,16 @@ const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
+    // Catch any unexpected errors and return JSON
     console.error("[submit-feedback] Unexpected error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Internal server error" }),
+      body: JSON.stringify({
+        error: "Internal server error",
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      }),
     };
   }
 };

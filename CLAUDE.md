@@ -257,8 +257,11 @@ interface TemplateProps {
 | `parse-arabic-resume.ts` | Parse Arabic/bilingual resumes | OpenRouter: google/gemini-2.5-flash-lite |
 | `generate-pdf.ts` | Server-side PDF generation | N/A (Puppeteer) |
 | `batch-api.ts` | Bulk resume analysis | OpenRouter: google/gemini-2.5-flash |
-| `delete-user-data.ts` | GDPR compliance | N/A |
-| `export-user-data.ts` | GDPR compliance | N/A |
+| `user-data-api.ts` | GDPR compliance (unified endpoint) | N/A |
+| `referral-api.ts` | Referral system (unified endpoint) | N/A |
+| `waitlist-confirm.ts` | Waitlist email confirmation | N/A |
+| `notify-waitlist.ts` | Waitlist notification automation | N/A |
+| `dev-reset-credits.ts` | Development credit reset tool | N/A |
 
 **AI Provider Architecture**:
 - **Provider**: OpenRouter API (`openrouter-client.js`)
@@ -268,6 +271,17 @@ interface TemplateProps {
 - **Benefits**: Unified quota tracking, automatic failover, cost optimization through OpenRouter
 
 **Request Validation**: All endpoints use Zod schemas from `netlify/lib/resume-schemas.ts`
+
+**Shared Libraries** (`netlify/lib/`):
+- `supabase-client.ts` - Singleton Supabase client with fallback env vars
+- `openrouter-client.js` - Unified AI API client (replaces direct Google AI SDK)
+- `credit-manager.js` - Credit consumption and tracking
+- `email-service.js` - Email delivery via Resend
+- `email-templates.js` - Email template generation
+- `referral-manager.js` - Referral tracking and rewards
+- `rate-limiter.ts` - Upstash Redis-backed rate limiting
+- `ip-utils.js` - IP validation for abuse prevention
+- `sentry.js` - Error tracking integration
 
 **Rate Limiting** (`netlify/lib/rate-limiter.ts`):
 - Upstash Redis-backed sliding window (20 requests/min per IP)
@@ -513,9 +527,23 @@ npm run quality:parallel  # 2-3x faster than quality:check
 
 The following features were recently implemented:
 
+### UI/UX Improvements
 - **Page Break Indicators**: Toggleable page break markers in TemplatesSection (`PageBreakIndicator.tsx`)
 - **Language Selector**: Auto-detects English vs Arabic content with badge (`useResumeLanguage.ts`)
 - **Cache Key Performance**: FNV-1a hash with memoization (~2x faster than previous djb2)
+
+### Backend Infrastructure (Latest)
+- **Unified API Endpoints**: Consolidated GDPR (`user-data-api.ts`) and referral (`referral-api.ts`) functions
+- **Feedback System Upgrade**: Milestone-based prompts (3rd, 15th, 40th use) with rich analytics context
+- **Waitlist Feature**: Email confirmation workflow with Resend integration
+- **Abuse Prevention**: IP tracking and validation (`ip-utils.js`)
+- **Credits Context**: Global credit state management via React Context (`CreditsContext.tsx`)
+- **Shared Supabase Client**: Singleton pattern with fallback environment variables (`supabase-client.ts`)
+
+### Test Infrastructure
+- **Fixed 46 Test Failures**: Improved mocking for Supabase, Auth, and browser environments
+- **Environment Configuration**: Proper test env vars in `vitest.config.ts`
+- **100% Test Pass Rate**: All 298 tests passing with 0 failures
 
 ---
 

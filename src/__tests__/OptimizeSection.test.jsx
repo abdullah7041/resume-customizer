@@ -81,6 +81,9 @@ vi.mock('../services/supabase', () => ({
     supabase: {
         from: vi.fn(() => ({
             insert: vi.fn(() => Promise.resolve({ error: null })),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn(() => Promise.resolve({ data: { feedback_credits_earned: 0 }, error: null })),
         })),
     },
     AppError: class AppError extends Error {
@@ -88,17 +91,6 @@ vi.mock('../services/supabase', () => ({
             super(message);
             this.type = type;
         }
-    },
-}));
-
-// Mock feedback service
-vi.mock('../services/feedback', () => ({
-    submitFeedback: vi.fn(() => Promise.resolve()),
-    SuggestionType: {
-        SUMMARY: 'summary',
-        EXPERIENCE: 'experience',
-        SKILLS: 'skills',
-        KEYWORDS: 'keywords',
     },
 }));
 
@@ -120,6 +112,17 @@ vi.mock('../hooks/useUserCredits', () => ({
         showUpgrade: false,
         setShowUpgrade: vi.fn(),
         upgradeDismissedKey: null,
+    }),
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+    useAuth: () => ({
+        user: { id: 'test-user-123', email: 'test@example.com' },
+        loading: false,
+        signIn: vi.fn(),
+        signUp: vi.fn(),
+        signOut: vi.fn(),
+        session: { access_token: 'test-token' },
     }),
 }));
 

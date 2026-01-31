@@ -46,6 +46,9 @@
   timeout = 90  # PDF generation: Puppeteer browser launch can take 30-60s on cold start
   memory = 1024
 
+[functions."vision2030-alignment"]
+  timeout = 60  # Vision 2030 analysis: Gemini flash model with large prompt takes 30-40s
+
 # Scheduled Functions (Cron Jobs)
 [functions."cron-reset-credits"]
   timeout = 30

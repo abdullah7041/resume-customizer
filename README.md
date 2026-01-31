@@ -122,7 +122,7 @@ Unlike generic resume tools, Watheq is specifically optimized for:
 | Technology | Purpose |
 |------------|---------|
 | Netlify Functions | TypeScript serverless API |
-| Google Gemini API | AI processing (2.5-flash) |
+| OpenRouter API | AI processing (Google Gemini 2.5-flash) |
 | Supabase | Auth + Database + Storage |
 | Upstash Redis | Rate limiting |
 | Puppeteer | Server-side PDF generation |
@@ -175,14 +175,15 @@ Unlike generic resume tools, Watheq is specifically optimized for:
 │                   Netlify Functions (API)                   │
 ├──────────────┬──────────────┬──────────────┬───────────────┤
 │ parse-resume │   ai-match   │   optimize   │ generate-pdf  │
-│ extract-json │predict-ques  │ cover-letter │  batch-api    │
+│ extract-json │predict-ques  │ cover-letter │  user-data    │
+│ referral-api │ waitlist     │  batch-api   │ feedback      │
 └──────────────┴──────────────┴──────────────┴───────────────┘
                               │
           ┌───────────────────┼───────────────────┐
           ▼                   ▼                   ▼
    ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-   │   Gemini    │     │  Supabase   │     │   Upstash   │
-   │             │     │  Auth + DB  │     │    Redis    │
+   │ OpenRouter  │     │  Supabase   │     │   Upstash   │
+   │  (Gemini)   │     │  Auth + DB  │     │    Redis    │
    └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
@@ -225,7 +226,7 @@ resume-customizer/
 
 ### Technology Acknowledgments
 
-- **Google** — Gemini API for AI processing
+- **OpenRouter & Google** — AI processing infrastructure (Gemini 2.5)
 - **Supabase** — Backend infrastructure
 - **Netlify** — Serverless hosting
 - **Tailwind CSS** — Design system

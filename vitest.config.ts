@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
@@ -23,9 +23,15 @@ export default defineConfig({
     ],
     css: true,
     env: {
+      // Note: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are intentionally NOT set here
+      // to allow assets.test.ts to test fallback behavior. Netlify function tests that need
+      // Supabase credentials should mock the supabase-client module instead.
       VITE_ASSETS_BASE_URL: "",
-      VITE_SUPABASE_URL: "",
-      VITE_SUPABASE_ANON_KEY: "",
+      SUPABASE_URL: "https://test.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
+      OPENROUTER_API_KEY: "test-openrouter-key",
+      UPSTASH_REDIS_REST_URL: "https://test.upstash.io",
+      UPSTASH_REDIS_REST_TOKEN: "test-token",
     },
   },
 });

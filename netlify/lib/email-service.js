@@ -13,8 +13,11 @@ import { emailTemplates } from './email-templates.js';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Configuration
-const SENDER_EMAIL = 'noreply@watheq.app';
-const SENDER_NAME = 'Watheq';
+// IMPORTANT: To send emails to real users, you must verify your domain at https://resend.com/domains
+// Then set RESEND_SENDER_EMAIL to an email on your verified domain (e.g., noreply@watheq.app)
+// The default 'onboarding@resend.dev' only allows sending to YOUR verified email (the account owner)
+const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'onboarding@resend.dev';
+const SENDER_NAME = process.env.RESEND_SENDER_NAME || 'Watheq';
 
 /**
  * Send credits refreshed email
@@ -209,6 +212,112 @@ export async function sendTestEmail(testEmail) {
     return { success: true, messageId: response.data.id };
   } catch (error) {
     console.error('[email-service] Test email failed:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send waitlist notification email
+ * Called when Pro plan launches to notify waitlist users
+ *
+ * @param {string} userEmail - User's email address
+ * @param {string} language - Email language: 'en' or 'ar' (default: 'en')
+ * @param {string} planType - Plan type (e.g., 'pro', 'enterprise')
+ * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
+ */
+export async function sendWaitlistNotification(userEmail, language = 'en', planType = 'pro') {
+  try {
+    // Validate inputs
+    if (!userEmail || !isValidEmail(userEmail)) {
+      console.error('[email-service] Invalid email address:', userEmail);
+      return { success: false, error: 'Invalid email address' };
+    }
+
+    // Get template for language
+    const lang = language === 'ar' ? 'ar' : 'en';
+    const template = emailTemplates.waitlistNotification[lang];
+
+    if (!template) {
+      throw new Error(`Template not found for language: ${lang}`);
+    }
+
+    console.log('[email-service] Sending waitlist notification email', {
+      email: userEmail,
+      planType,
+      language: lang
+    });
+
+    // Send email via Resend
+    const response = await resend.emails.send({
+      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      to: userEmail,
+      subject: template.subject,
+      html: template.html(planType),
+      text: template.text(planType),
+      replyTo: 'support@watheq.app'
+    });
+
+    if (response.error) {
+      console.error('[email-service] Resend API error:', response.error);
+      return { success: false, error: response.error.message };
+    }
+
+    console.log('[email-service] Waitlist notification sent successfully', { messageId: response.data.id });
+    return { success: true, messageId: response.data.id };
+  } catch (error) {
+    console.error('[email-service] Failed to send waitlist notification:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send waitlist confirmation email
+ * Called immediately when user joins the waitlist
+ *
+ * @param {string} userEmail - User's email address
+ * @param {string} language - Email language: 'en' or 'ar' (default: 'en')
+ * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
+ */
+export async function sendWaitlistConfirmation(userEmail, language = 'en') {
+  try {
+    // Validate inputs
+    if (!userEmail || !isValidEmail(userEmail)) {
+      console.error('[email-service] Invalid email address:', userEmail);
+      return { success: false, error: 'Invalid email address' };
+    }
+
+    // Get template for language
+    const lang = language === 'ar' ? 'ar' : 'en';
+    const template = emailTemplates.waitlistConfirmation[lang];
+
+    if (!template) {
+      throw new Error(`Template not found for language: ${lang}`);
+    }
+
+    console.log('[email-service] Sending waitlist confirmation email', {
+      email: userEmail,
+      language: lang
+    });
+
+    // Send email via Resend
+    const response = await resend.emails.send({
+      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      to: userEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      replyTo: 'support@watheq.app'
+    });
+
+    if (response.error) {
+      console.error('[email-service] Resend API error:', response.error);
+      return { success: false, error: response.error.message };
+    }
+
+    console.log('[email-service] Waitlist confirmation sent successfully', { messageId: response.data.id });
+    return { success: true, messageId: response.data.id };
+  } catch (error) {
+    console.error('[email-service] Failed to send waitlist confirmation:', error);
     return { success: false, error: error.message };
   }
 }

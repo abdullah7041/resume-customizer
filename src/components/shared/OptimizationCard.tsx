@@ -18,7 +18,6 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
 
   return (
     <GlassCard
-      variant="subtle"
       padding="none"
       className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-500/30 dark:hover:border-emerald-400/30"
     >

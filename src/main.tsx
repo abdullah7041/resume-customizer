@@ -37,6 +37,7 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AuthProvider } from "./hooks/useAuth";
+import { CreditsProvider } from "./contexts/CreditsContext";
 import { analytics } from "./services/analytics";
 import "./lib/i18n";
 import "./index.css";
@@ -46,7 +47,9 @@ analytics.init();
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
-      <App />
+      <CreditsProvider>
+        <App />
+      </CreditsProvider>
     </AuthProvider>
   </StrictMode>
 );

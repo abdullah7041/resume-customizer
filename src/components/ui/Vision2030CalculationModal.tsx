@@ -33,7 +33,6 @@ export function Vision2030CalculationModal({
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-all duration-300">
       <GlassCard
         className="max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col p-0 border-white/10 shadow-2xl shadow-black/60 bg-[#0a0a0a]/95 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-        variant="elevated"
       >
         {/* Sticky Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl sticky top-0 z-20">

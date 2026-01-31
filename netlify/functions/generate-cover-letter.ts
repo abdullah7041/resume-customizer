@@ -3,7 +3,8 @@ import { withRateLimit } from "../lib/rate-limiter";
 import { CoverLetterRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
 import { checkCredits, consumeCredits } from "../lib/credit-manager";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "../lib/supabase-client";
+import { getClientIP } from "../lib/ip-utils.js";
 
 initSentry();
 
@@ -25,10 +26,18 @@ const baseHandler = async (event) => {
 
   // Verify token and get authenticated user
   const token = authHeader.replace(/^Bearer\s+/i, '');
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Server configuration error. Please contact support."
+      })
+    };
+  }
+
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
   if (authError || !user) {
@@ -41,8 +50,12 @@ const baseHandler = async (event) => {
 
   const userId = user.id;
 
+  // Extract IP and email verification for anti-abuse checks
+  const ipAddress = getClientIP(event);
+  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+
   // Check credits BEFORE processing (4 credits for cover_letter)
-  const creditCheck = await checkCredits(userId, 'cover_letter');
+  const creditCheck = await checkCredits(userId, 'cover_letter', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -75,12 +88,15 @@ const baseHandler = async (event) => {
     const result = await generateCoverLetter(resumeText, jobDescription);
 
     // Consume credits AFTER successful generation
-    await consumeCredits(userId, 'cover_letter');
+    const creditResult = await consumeCredits(userId, 'cover_letter');
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coverLetter: result.draft_text }),
+      body: JSON.stringify({
+        coverLetter: result.draft_text,
+        creditsRemaining: creditResult.creditsRemaining,
+      }),
     };
 
   } catch (error) {

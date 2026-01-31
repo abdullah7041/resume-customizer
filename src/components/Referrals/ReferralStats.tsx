@@ -35,7 +35,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
 
     async function fetchStats() {
       try {
-        const response = await fetch(`/.netlify/functions/get-referral-stats?user_id=${user.id}`);
+        const response = await fetch(`/.netlify/functions/referral-api?action=get-stats&user_id=${user.id}`);
         const data = await response.json();
 
         if (data.success) {

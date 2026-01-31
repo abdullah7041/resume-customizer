@@ -14,9 +14,10 @@ import {
     ChevronUp,
     Crown,
 } from "lucide-react";
-import { GlassCard } from "../ui/GlassCard";
 import SectionTitle from "../ui/SectionTitle";
+import { GlassCard } from "../ui/GlassCard";
 import { cn } from "../../lib/utils/cn";
+import { glass } from "../../lib/styles/glass";
 
 interface Feature {
     id: string;
@@ -128,8 +129,8 @@ const features: Feature[] = [
     },
 ];
 
-// Hero feature IDs - always visible
-const heroFeatureIds = ["keyword-analysis", "interview-prep", "vision-2030"];
+// Hero feature IDs - always visible (Empty to make all collapsible)
+const heroFeatureIds: string[] = []; // Changed from having items to empty to make all features collapsible
 const heroFeatures = features.filter((f) => heroFeatureIds.includes(f.id));
 const additionalFeatures = features.filter((f) => !heroFeatureIds.includes(f.id));
 
@@ -138,11 +139,10 @@ function FeatureCard({ feature }: { feature: Feature }) {
 
     return (
         <GlassCard
-            variant={feature.highlight ? "elevated" : "default"}
             className={cn(
-                "p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-gray-900/95 border border-gray-800",
+                "p-6 h-full transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
                 feature.highlight &&
-                "border-[#006C35]/50 shadow-[0_0_30px_rgba(0,108,53,0.2)]"
+                "border-[#006C35] shadow-[0_0_30px_rgba(0,108,53,0.2)]"
             )}
         >
             <div className="flex items-start gap-4">
@@ -164,7 +164,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
                         </h3>
                         {feature.highlight && (
                             <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-gray-900 text-xs font-bold shadow-lg animate-pulse"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-gray-900 text-xs font-bold shadow-lg"
                                 aria-label="Vision 2030 Featured"
                             >
                                 <Crown className="w-3 h-3" />
@@ -213,7 +213,7 @@ export default function FeaturesShowcase() {
                     eyebrow={t("showcase.eyebrow")}
                     title={t("showcase.title")}
                     description={t("showcase.subtitle")}
-                    className="text-center mb-6 bg-gray-900/95 border border-gray-800 [&_p]:text-gray-300"
+                    className={cn("text-center mb-6 rounded-2xl p-6 shadow-lg [&_p]:text-gray-300 bg-black border border-white/10")}
                 />
 
                 {/* Hero Features - Always visible (3-column grid) */}
@@ -227,7 +227,7 @@ export default function FeaturesShowcase() {
                 <div className="flex justify-center mt-8 relative z-10">
                     <button
                         onClick={() => setShowAllFeatures(!showAllFeatures)}
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-900/95 border border-emerald-500/50 rounded-xl text-emerald-400 hover:bg-gray-800 hover:text-emerald-300 hover:border-emerald-400 transition-all font-medium shadow-lg cursor-pointer"
+                        className={cn("flex items-center gap-2 px-6 py-3 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all font-medium shadow-lg cursor-pointer", glass.card)}
                         aria-expanded={showAllFeatures}
                         aria-controls="additional-features"
                         type="button"
@@ -252,7 +252,7 @@ export default function FeaturesShowcase() {
                     className={cn(
                         "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 overflow-hidden transition-all duration-500 ease-in-out",
                         showAllFeatures
-                            ? "max-h-[2000px] opacity-100 pb-4"
+                            ? "max-h-[2000px] opacity-90 pb-4"
                             : "max-h-0 opacity-0"
                     )}
                 >
