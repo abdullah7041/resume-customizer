@@ -281,7 +281,8 @@ const equalsSignature = (bytes, offset, signature) => {
 const inflateWithNode = async (bytes) => {
   if (typeof process !== "undefined" && process?.versions?.node && typeof Buffer === "function") {
     try {
-      const { inflateRawSync } = await import("node:zlib");
+      // Use require instead of dynamic import for serverless functions
+      const { inflateRawSync } = require("zlib");
       const buffer = Buffer.from(bytes);
       const inflated = inflateRawSync(buffer);
       return new Uint8Array(inflated.buffer, inflated.byteOffset, inflated.byteLength);
