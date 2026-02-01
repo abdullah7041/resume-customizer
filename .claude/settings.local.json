@@ -50,7 +50,10 @@
       "Bash(netlify status:*)",
       "Bash(netlify deploy:*)",
       "Bash(git restore:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(echo:*)"
     ]
   },
   "enableAllProjectMcpServers": false,

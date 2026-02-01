@@ -1,0 +1,15 @@
+# Minimal working Netlify configuration
+# Use this if the current netlify.toml continues to fail
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
