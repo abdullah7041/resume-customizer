@@ -45,7 +45,12 @@
       "Bash(git add:*)",
       "Bash(npm run quality:parallel:*)",
       "Bash(git commit:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(du:*)",
+      "Bash(netlify status:*)",
+      "Bash(netlify deploy:*)",
+      "Bash(git restore:*)",
+      "Bash(git push:*)"
     ]
   },
   "enableAllProjectMcpServers": false,
