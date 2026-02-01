@@ -9,12 +9,6 @@ const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 
-// Helper to get beta code from localStorage
-const getBetaCode = () => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('watheq:beta_access');
-};
-
 // Helper to get auth headers
 const getAuthHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
@@ -76,12 +70,6 @@ const fileToBase64 = async (file) => {
 
 export const parseResume = async (resumeInput) => {
   try {
-    const betaCode = getBetaCode();
-
-    if (!betaCode) {
-      throw new Error("Beta code not found. Please sign in again.");
-    }
-
     let payload;
     if (resumeInput instanceof File) {
       const base64 = await fileToBase64(resumeInput);
@@ -96,12 +84,11 @@ export const parseResume = async (resumeInput) => {
       payload = { kind: "text", value: resumeInput };
     }
 
+    const headers = await getAuthHeaders();
+
     const response = await fetch(PARSE_ENDPOINT, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Beta-Code": betaCode
-      },
+      headers,
       body: JSON.stringify(payload),
     }).catch(err => {
       // Handle network errors (like Connection Refused)
@@ -152,14 +139,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
   }
 
   try {
-    const betaCode = getBetaCode();
-
-    if (!betaCode) {
-      throw new Error("Beta code not found. Please sign in again.");
-    }
-
     const headers = await getAuthHeaders();
-    headers["X-Beta-Code"] = betaCode;
 
     const response = await fetch(MATCH_ENDPOINT, {
       method: "POST",
@@ -210,14 +190,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 
 export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => {
   try {
-    const betaCode = getBetaCode();
-
-    if (!betaCode) {
-      throw new Error("Beta code not found. Please sign in again.");
-    }
-
     const headers = await getAuthHeaders();
-    headers["X-Beta-Code"] = betaCode;
 
     const response = await fetch(OPTIMIZE_ENDPOINT, {
       method: "POST",
