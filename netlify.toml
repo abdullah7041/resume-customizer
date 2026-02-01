@@ -14,14 +14,35 @@
   NODE_VERSION = "20"
   # These VITE_ keys are public client-side keys (safe to expose in browser)
   SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_SENTRY_DSN,VITE_MIXPANEL_TOKEN"
+  # Optimize function bundling
+  NODE_OPTIONS = "--max-old-space-size=4096"
+
+# Build plugins for optimization
+[[plugins]]
+  package = "./netlify/plugins/optimize-build.js"
 
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
   # External modules to avoid bundling large dependencies
-  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium", "resend", "nanoid"]
+  external_node_modules = [
+    "@supabase/supabase-js",
+    "pdfjs-dist",
+    "axios",
+    "@netlify/functions",
+    "@sparticuz/chromium",
+    "puppeteer-core",
+    "resend",
+    "nanoid",
+    "@upstash/ratelimit",
+    "@upstash/redis",
+    "dotenv",
+    "@sentry/node"
+  ]
   # Included files for shared modules (now in netlify/lib/)
   included_files = ["netlify/lib/**"]
+  # Increase function bundle size limit
+  bundle_size_limit = "10mb"
 
 # Individual function configurations
 [functions."ai"]
