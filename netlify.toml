@@ -14,36 +14,47 @@
   NODE_VERSION = "20"
   # These VITE_ keys are public client-side keys (safe to expose in browser)
   SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_SENTRY_DSN,VITE_MIXPANEL_TOKEN"
-  # Optimize function bundling
-  NODE_OPTIONS = "--max-old-space-size=4096"
 
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
   # External modules to avoid bundling large dependencies
-  external_node_modules = [
-    "@supabase/supabase-js",
-    "pdfjs-dist",
-    "axios",
-    "@netlify/functions",
-    "@sparticuz/chromium",
-    "puppeteer-core",
-    "resend",
-    "nanoid",
-    "@upstash/ratelimit",
-    "@upstash/redis",
-    "dotenv",
-    "@sentry/node"
-  ]
+  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium", "resend", "nanoid"]
   # Included files for shared modules (now in netlify/lib/)
   included_files = ["netlify/lib/**"]
 
-# Note: Per-function timeout/memory is NOT configurable in netlify.toml
-# Function timeouts are managed by Netlify plan settings:
-# - Free/Starter: 10 seconds
-# - Pro: up to 26 seconds  
-# - For longer tasks, use background functions (15 min timeout)
-# Memory is fixed at 1024MB for all functions
+# Individual function configurations
+[functions."ai"]
+  timeout = 30
+
+[functions."ai-match"]
+  timeout = 30
+
+[functions."optimize"]
+  timeout = 60  # Increased for Gemini flash model processing (target: 20-25s, buffer for edge cases)
+
+[functions."generate-cover-letter"]
+  timeout = 30
+
+[functions."predict-questions"]
+  timeout = 30
+
+[functions."extract-resume-json"]
+  timeout = 60  # Increased for Gemini parsing (PDF data takes 30-45s, buffer for edge cases)
+
+[functions."generate-pdf"]
+  timeout = 90  # PDF generation: Puppeteer browser launch can take 30-60s on cold start
+  memory = 1024
+
+[functions."vision2030-alignment"]
+  timeout = 60  # Vision 2030 analysis: Gemini flash model with large prompt takes 30-40s
+
+# Scheduled Functions (Cron Jobs)
+[functions."cron-reset-credits"]
+  timeout = 30
+
+[functions."cron-monthly-summary"]
+  timeout = 30
 
 [[redirects]]
   from = "/*"
