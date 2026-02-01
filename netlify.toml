@@ -1,3 +1,10 @@
+# ============================================
+# DEPLOYMENT RELIABILITY CONFIGURATION
+# ============================================
+# Note: Lighthouse plugin has been removed to prevent deployment timeouts.
+# It was causing intermittent upload failures and adding significant build time.
+# If Lighthouse audits are needed, run them separately via CI or local testing.
+
 # Local development configuration
 [dev]
   # Increase function timeout for local development to match production
