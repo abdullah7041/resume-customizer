@@ -78,11 +78,3 @@
     # Cache Control (Long cache for hashed assets)
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Sentry build plugin for source maps
-# Requires SENTRY_ORG, SENTRY_PROJECT, and SENTRY_AUTH_TOKEN env vars in Netlify
-[[plugins]]
-  package = "@sentry/netlify-build-plugin"
-  
-  [plugins.inputs]
-    # Skip commit association (requires GitHub integration in Sentry)
-    skipSetCommits = true
