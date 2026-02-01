@@ -17,10 +17,6 @@
   # Optimize function bundling
   NODE_OPTIONS = "--max-old-space-size=4096"
 
-# Build plugins for optimization
-[[plugins]]
-  package = "./netlify/plugins/optimize-build.js"
-
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
