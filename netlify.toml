@@ -37,8 +37,6 @@
   ]
   # Included files for shared modules (now in netlify/lib/)
   included_files = ["netlify/lib/**"]
-  # Increase function bundle size limit
-  bundle_size_limit = "10mb"
 
 # Individual function configurations
 [functions."ai"]
