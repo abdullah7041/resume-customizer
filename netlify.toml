@@ -45,6 +45,11 @@
 # - For longer tasks, use background functions (15 min timeout)
 # Memory is fixed at 1024MB for all functions
 
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+  [plugins.inputs]
+    enabled = false
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
