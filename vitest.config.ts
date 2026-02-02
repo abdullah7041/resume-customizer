@@ -23,10 +23,11 @@ export default defineConfig({
     ],
     css: true,
     env: {
-      // Note: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are intentionally NOT set here
-      // to allow assets.test.ts to test fallback behavior. Netlify function tests that need
-      // Supabase credentials should mock the supabase-client module instead.
+      // Frontend Supabase credentials for client-side tests
+      VITE_SUPABASE_URL: "https://test.supabase.co",
+      VITE_SUPABASE_ANON_KEY: "test-anon-key",
       VITE_ASSETS_BASE_URL: "",
+      // Backend Supabase credentials for Netlify function tests
       SUPABASE_URL: "https://test.supabase.co",
       SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
       OPENROUTER_API_KEY: "test-openrouter-key",
