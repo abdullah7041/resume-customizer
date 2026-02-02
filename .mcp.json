@@ -10,19 +10,6 @@
     "supabase": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=cwcjeujextkwpmzdfzdz"
-    },
-    "netlify": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@netlify/mcp-server"
-      ],
-      "env": {
-        "NETLIFY_AUTH_TOKEN": "${NETLIFY_AUTH_TOKEN}"
-      }
     }
   }
 }

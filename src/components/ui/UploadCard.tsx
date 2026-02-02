@@ -188,7 +188,7 @@ export default function UploadCard({
       padding="lg"
       className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden"
     >
-      <header className="space-y-1.5 sm:space-y-2 text-center sm:text-left mb-6 sm:mb-8">
+      <header data-tour="upload-header" className="space-y-1.5 sm:space-y-2 text-center sm:text-left mb-6 sm:mb-8">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.15em] sm:tracking-[0.32em] text-gold-500">{t("upload.card.step")}</p>
         </div>
