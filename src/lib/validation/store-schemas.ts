@@ -10,52 +10,52 @@ import { z } from 'zod';
 // ============================================
 
 export const LocationSchema = z.object({
-    address: z.string().nullable().optional().transform(val => val ?? ''),
-    postalCode: z.string().nullable().optional().transform(val => val ?? ''),
-    city: z.string().nullable().optional().transform(val => val ?? '').default(''),
-    countryCode: z.string().nullable().optional().transform(val => val ?? '').default(''),
-    region: z.string().nullable().optional().transform(val => val ?? '').default(''),
+    address: z.string().nullish().transform(val => val ?? ''),
+    postalCode: z.string().nullish().transform(val => val ?? ''),
+    city: z.string().nullish().transform(val => val ?? '').default(''),
+    countryCode: z.string().nullish().transform(val => val ?? '').default(''),
+    region: z.string().nullish().transform(val => val ?? '').default(''),
 });
 
 export const ProfileSchema = z.object({
-    network: z.string().nullable().transform(val => val ?? ''),
-    username: z.string().nullable().transform(val => val ?? ''),
-    url: z.string().nullable().optional().transform(val => val ?? ''),
+    network: z.string().nullish().transform(val => val ?? ''),
+    username: z.string().nullish().transform(val => val ?? ''),
+    url: z.string().nullish().transform(val => val ?? ''),
 });
 
 export const BasicsSchema = z.object({
     name: z.string().min(1, 'Name is required'),
-    label: z.string().nullable().optional().transform(val => val ?? '').default(''),
-    image: z.string().nullable().optional().transform(val => val ?? ''),
-    email: z.string().nullable().optional().transform(val => val ?? '').default(''),
-    phone: z.string().nullable().optional().transform(val => val ?? '').default(''),
-    url: z.string().nullable().optional().transform(val => val ?? ''),
-    summary: z.string().nullable().optional().transform(val => val ?? '').default(''),
+    label: z.string().nullish().transform(val => val ?? '').default(''),
+    image: z.string().nullish().transform(val => val ?? ''),
+    email: z.string().nullish().transform(val => val ?? '').default(''),
+    phone: z.string().nullish().transform(val => val ?? '').default(''),
+    url: z.string().nullish().transform(val => val ?? ''),
+    summary: z.string().nullish().transform(val => val ?? '').default(''),
     location: LocationSchema.optional(),
     profiles: z.array(ProfileSchema).optional().default([]),
 });
 
 export const WorkSchema = z.object({
-    name: z.string().nullable().transform(val => val ?? ''),
-    position: z.string().nullable().transform(val => val ?? ''),
-    url: z.string().nullable().optional().transform(val => val ?? ''),
-    startDate: z.string().nullable().optional().transform(val => val ?? ''),
-    endDate: z.string().nullable().optional().transform(val => val ?? ''),
-    summary: z.string().nullable().optional().transform(val => val ?? ''),
-    location: z.string().nullable().optional().transform(val => val ?? ''),
-    highlights: z.array(z.string()).nullable().optional().transform(val => val ?? []),
+    name: z.string().nullish().transform(val => val ?? ''),
+    position: z.string().nullish().transform(val => val ?? ''),
+    url: z.string().nullish().transform(val => val ?? ''),
+    startDate: z.string().nullish().transform(val => val ?? ''),
+    endDate: z.string().nullish().transform(val => val ?? ''),
+    summary: z.string().nullish().transform(val => val ?? ''),
+    location: z.string().nullish().transform(val => val ?? ''),
+    highlights: z.array(z.string()).nullish().transform(val => val ?? []),
 });
 
 export const EducationSchema = z.object({
-    institution: z.string().nullable().transform(val => val ?? ''),
-    url: z.string().nullable().optional().transform(val => val ?? ''),
-    area: z.string().nullable().optional().transform(val => val ?? ''),
-    studyType: z.string().nullable().optional().transform(val => val ?? ''),
-    startDate: z.string().nullable().optional().transform(val => val ?? ''),
-    endDate: z.string().nullable().optional().transform(val => val ?? ''),
-    score: z.string().nullable().optional().transform(val => val ?? ''),
-    courses: z.array(z.string()).nullable().optional().transform(val => val ?? []),
-    highlights: z.array(z.string()).nullable().optional().transform(val => val ?? []),
+    institution: z.string().nullish().transform(val => val ?? ''),
+    url: z.string().nullish().transform(val => val ?? ''),
+    area: z.string().nullish().transform(val => val ?? ''),
+    studyType: z.string().nullish().transform(val => val ?? ''),
+    startDate: z.string().nullish().transform(val => val ?? ''),
+    endDate: z.string().nullish().transform(val => val ?? ''),
+    score: z.string().nullish().transform(val => val ?? ''),
+    courses: z.array(z.string()).nullish().transform(val => val ?? []),
+    highlights: z.array(z.string()).nullish().transform(val => val ?? []),
 });
 
 export const SkillSchema = z.object({
@@ -78,18 +78,18 @@ export const SkillsArraySchema = z.union([
 ]).optional().default([]);
 
 export const ProjectSchema = z.object({
-    name: z.string().nullable().transform(val => val ?? ''),
-    description: z.string().nullable().optional().transform(val => val ?? ''),
-    highlights: z.array(z.string()).nullable().optional().transform(val => val ?? []),
-    keywords: z.array(z.string()).nullable().optional().transform(val => val ?? []),
-    url: z.string().nullable().optional().transform(val => val ?? ''),
+    name: z.string().nullish().transform(val => val ?? ''),
+    description: z.string().nullish().transform(val => val ?? ''),
+    highlights: z.array(z.string()).nullish().transform(val => val ?? []),
+    keywords: z.array(z.string()).nullish().transform(val => val ?? []),
+    url: z.string().nullish().transform(val => val ?? ''),
 });
 
 export const CertificateSchema = z.object({
-    name: z.string().nullable().transform(val => val ?? ''),
-    date: z.string().nullable().optional().transform(val => val ?? ''),
-    issuer: z.string().nullable().optional().transform(val => val ?? ''),
-    url: z.string().nullable().optional().transform(val => val ?? ''),
+    name: z.string().nullish().transform(val => val ?? ''),
+    date: z.string().nullish().transform(val => val ?? ''),
+    issuer: z.string().nullish().transform(val => val ?? ''),
+    url: z.string().nullish().transform(val => val ?? ''),
 });
 
 export const LanguageSchema = z.object({

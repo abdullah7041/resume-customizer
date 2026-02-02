@@ -64,10 +64,16 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
                     };
                     setCredits(defaultCredits);
                     previousCreditsRef.current = defaultCredits;
+                    setError(null); // Clear any previous errors
                     return;
                 }
 
-                console.error('[CreditsContext] Fetch error:', fetchError);
+                console.error('[CreditsContext] Fetch error:', {
+                    message: fetchError.message,
+                    details: fetchError.details,
+                    hint: fetchError.hint,
+                    code: fetchError.code,
+                });
                 throw fetchError;
             }
 
@@ -96,9 +102,25 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
                 setCredits(newCredits);
             }
         } catch (err) {
-            console.error('[CreditsContext] Failed to fetch credits:', err);
-            if ((err as any)?.code !== 'PGRST116') {
-                setError(err instanceof Error ? err : new Error('Failed to fetch credits'));
+            const error = err as any;
+
+            // Enhanced error logging
+            console.error('[CreditsContext] Failed to fetch credits:', {
+                message: error?.message || 'Unknown error',
+                details: error?.details || 'No details available',
+                hint: error?.hint || '',
+                code: error?.code || '',
+            });
+
+            // Only set error state for non-PGRST116 errors
+            if (error?.code !== 'PGRST116') {
+                // Keep previous credits if available to avoid UI flash
+                if (!previousCreditsRef.current) {
+                    setError(err instanceof Error ? err : new Error('Failed to fetch credits'));
+                } else {
+                    // Silently fail but keep showing previous data
+                    console.warn('[CreditsContext] Using cached credits due to fetch failure');
+                }
             }
         } finally {
             setIsLoading(false);

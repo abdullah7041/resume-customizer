@@ -117,7 +117,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
   };
 
   const modal = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-md"
@@ -129,7 +129,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
       <div
         className={cn(
           glass.elevated,
-          'relative rounded-xl p-6 w-full max-h-[80vh] overflow-y-auto',
+          'relative rounded-xl p-4 sm:p-6 w-full max-h-[85vh] sm:max-h-[80vh] overflow-y-auto',
           viewMode === 'full' ? 'max-w-2xl' : 'max-w-md'
         )}
         role="dialog"

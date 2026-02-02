@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Step, CallBackProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,18 @@ export function useVision2030Tour() {
   const { t } = useTranslation();
   const [run, setRun] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check screen size for mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const steps: Step[] = useMemo(() => [
     {
@@ -17,8 +29,16 @@ export function useVision2030Tour() {
       placement: 'bottom',
       disableBeacon: true,
       disableOverlayClose: true,
-      hideCloseButton: false,
+      hideCloseButton: isMobile, // Hide close button on mobile to prevent overlap
       spotlightPadding: 10,
+      styles: {
+        options: {
+          zIndex: 10000,
+        },
+        tooltipTitle: {
+          paddingRight: isMobile ? '12px' : '36px', // Extra padding for close button on desktop
+        },
+      },
     },
     {
       target: '[data-tour="vision2030-calculate"]',
@@ -27,6 +47,15 @@ export function useVision2030Tour() {
       placement: 'top',
       disableBeacon: true,
       spotlightPadding: 10,
+      hideCloseButton: isMobile,
+      styles: {
+        options: {
+          zIndex: 10000,
+        },
+        tooltipTitle: {
+          paddingRight: isMobile ? '12px' : '36px',
+        },
+      },
     },
     {
       target: '[data-tour="vision2030-methodology"]',
@@ -35,8 +64,17 @@ export function useVision2030Tour() {
       placement: 'top',
       disableBeacon: true,
       spotlightPadding: 10,
+      hideCloseButton: isMobile,
+      styles: {
+        options: {
+          zIndex: 10000,
+        },
+        tooltipTitle: {
+          paddingRight: isMobile ? '12px' : '36px',
+        },
+      },
     },
-  ], [t]);
+  ], [t, isMobile]);
 
   const handleCallback = useCallback((data: CallBackProps) => {
     const { action, index, type, status } = data;

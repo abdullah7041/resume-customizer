@@ -154,14 +154,27 @@ const baseHandler: Handler = async (event) => {
     };
 
   } catch (error) {
-    console.error("Match error details:", error);
+    const errorDetails = error as any;
+    console.error("Match error details:", {
+      message: errorDetails?.message || 'Unknown error',
+      stack: errorDetails?.stack || 'No stack trace',
+      name: errorDetails?.name || 'Error',
+      code: errorDetails?.code || '',
+    });
+
     captureError(error, {
       function: 'ai-match',
       payload: JSON.parse(event.body || '{}'),
+      userId,
     });
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Failed to analyze match" }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Failed to analyze match",
+        message: errorDetails?.message || 'Unknown error occurred',
+      }),
     };
   }
 };

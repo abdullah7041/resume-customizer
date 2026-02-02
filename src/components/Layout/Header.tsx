@@ -621,7 +621,7 @@ export default function Header() {
       {/* Mobile Navigation Overlay */}
       {mobileNavOpen && (
         <div
-          className="fixed inset-0 z-50 md:hidden"
+          className="fixed inset-0 z-40 md:hidden"
           onClick={handleMobileNavOutsideClick}
           aria-modal="true"
           role="dialog"
@@ -632,7 +632,7 @@ export default function Header() {
           {/* Nav Panel - slides in from right */}
           <div
             ref={mobileNavRef}
-            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 border-l border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right"
+            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 border-l border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
           >
             {/* Header with close button */}
             <div className="flex items-center justify-between p-5 border-b border-white/10">
@@ -663,11 +663,13 @@ export default function Header() {
               {user && (
                 <div className="pb-4 border-b border-white/10 space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">{t("credits.balance")}</p>
-                  <CreditBalance onClick={() => {
-                    setCreditModalMode('full');
-                    setShowCreditModal(true);
-                    setMobileNavOpen(false);
-                  }} />
+                  <div className="min-h-[44px]">
+                    <CreditBalance onClick={() => {
+                      setCreditModalMode('full');
+                      setShowCreditModal(true);
+                      setMobileNavOpen(false);
+                    }} />
+                  </div>
 
                   {/* Invite Friends Button (Mobile) */}
                   <button

@@ -131,7 +131,7 @@ export function UpgradeModal({
   const liquidBg = "absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-gold-500/10 blur-3xl opacity-30 animate-[pulse_6s_ease-in-out_infinite]";
 
   const modal = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
       {/* Cinematic Backdrop with blur and subtle zoom effect */}
       <div
         className="fixed inset-0 bg-[#000000]/80 backdrop-blur-xl animate-in fade-in duration-500"
@@ -145,10 +145,11 @@ export function UpgradeModal({
       <div
         className={cn(
           "relative w-full max-w-lg overflow-hidden",
-          "rounded-3xl", // Extra large rounding
+          "rounded-2xl sm:rounded-3xl", // Responsive rounding
           "bg-gray-900/90", // Base dark layer
           "shadow-[0_0_80px_-20px_rgba(245,158,11,0.15)]", // Ambient gold glow
           "animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 ease-out", // Smooth entrance
+          "max-h-[90vh] overflow-y-auto", // Mobile: prevent overflow
           "group" // For hover effects
         )}
         role="dialog"
