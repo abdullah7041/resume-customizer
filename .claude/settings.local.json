@@ -53,7 +53,8 @@
       "Bash(git push:*)",
       "Bash(python:*)",
       "Bash(curl:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(taskkill:*)"
     ]
   },
   "enableAllProjectMcpServers": false,

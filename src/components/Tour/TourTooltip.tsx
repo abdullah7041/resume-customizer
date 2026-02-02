@@ -2,7 +2,7 @@ import { TooltipRenderProps } from 'react-joyride';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { cn } from '../../lib/utils/cn';
-import { X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function TourTooltip({
