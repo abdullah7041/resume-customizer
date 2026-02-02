@@ -36,15 +36,23 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
 
     // Use ref to track previous credits for comparison (avoid infinite loop)
     const previousCreditsRef = useRef<UserCredits | null>(null);
+    const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isFetchingRef = useRef(false);
 
-    const fetchCredits = useCallback(async () => {
+    const fetchCredits = useCallback(async (immediate = false) => {
+        // Prevent concurrent fetches
+        if (isFetchingRef.current && !immediate) {
+            return;
+        }
         if (!user) {
             setCredits(null);
             setIsLoading(false);
+            isFetchingRef.current = false;
             return;
         }
 
         try {
+            isFetchingRef.current = true;
             setIsLoading(true);
             const { data, error: fetchError } = await supabase
                 .from('user_credits')
@@ -124,15 +132,29 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             }
         } finally {
             setIsLoading(false);
+            isFetchingRef.current = false;
         }
     }, [user]);
 
-    // Initial fetch
-    useEffect(() => {
-        fetchCredits();
+    // Debounced version of fetchCredits for real-time updates
+    const debouncedFetchCredits = useCallback(() => {
+        // Clear any pending fetch
+        if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+        }
+
+        // Schedule a new fetch after 1 second of inactivity
+        fetchTimeoutRef.current = setTimeout(() => {
+            fetchCredits(false);
+        }, 1000);
     }, [fetchCredits]);
 
-    // Real-time subscription
+    // Initial fetch (immediate)
+    useEffect(() => {
+        fetchCredits(true);
+    }, [fetchCredits]);
+
+    // Real-time subscription with debouncing
     useEffect(() => {
         if (!user) return;
 
@@ -147,15 +169,20 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
                     filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-                    fetchCredits();
+                    // Use debounced version to prevent rapid updates
+                    debouncedFetchCredits();
                 }
             )
             .subscribe();
 
         return () => {
             subscription.unsubscribe();
+            // Clear any pending debounced fetches
+            if (fetchTimeoutRef.current) {
+                clearTimeout(fetchTimeoutRef.current);
+            }
         };
-    }, [user, fetchCredits]);
+    }, [user, debouncedFetchCredits]);
 
     // Upgrade modal threshold logic
     useEffect(() => {
@@ -189,7 +216,7 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
         credits,
         isLoading,
         error,
-        refetch: fetchCredits,
+        refetch: () => fetchCredits(true), // Always immediate when manually triggered
         showUpgrade,
         setShowUpgrade,
         upgradeDismissedKey,
