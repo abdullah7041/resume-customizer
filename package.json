@@ -91,7 +91,15 @@
   },
   "overrides": {
     "mailparser": "^3.9.1",
-    "tar": "^7.5.6"
+    "tar": "^7.5.6",
+    "react-joyride": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "react-floater": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   },
   "lint-staged": {
     "*.{ts,tsx}": [
