@@ -32,6 +32,7 @@ function getSupabaseClient() {
 
 /**
  * Track a referral relationship when a new user signs up with a referral code.
+ * Awards credits immediately to both referrer and referee.
  *
  * @param {string} referrerCode - The referral code (format: USR-XXXXX)
  * @param {string} refereeUserId - UUID of the new user being referred
@@ -55,12 +56,25 @@ export async function trackReferral(referrerCode, refereeUserId) {
 
     const referrerId = referrerData.user_id;
 
+    // Check if referee was already referred
+    const { data: existingReferral } = await supabase
+      .from('user_credits')
+      .select('referred_by_user_id, referral_completed')
+      .eq('user_id', refereeUserId)
+      .single();
+
+    if (existingReferral?.referred_by_user_id) {
+      console.warn('[ReferralManager] User already has a referrer');
+      return { success: false, error: 'Already referred by another user' };
+    }
+
     // Update referee's record with referrer relationship
     const { error: updateError } = await supabase
       .from('user_credits')
       .update({
         referred_by_user_id: referrerId,
-        referral_completed: false
+        referral_completed: true,
+        referral_completed_at: new Date().toISOString()
       })
       .eq('user_id', refereeUserId);
 
@@ -70,6 +84,69 @@ export async function trackReferral(referrerCode, refereeUserId) {
     }
 
     console.log(`[ReferralManager] Tracked referral: ${referrerId} → ${refereeUserId}`);
+
+    // Award credits immediately to both parties
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const referrer = authUsers?.users?.find(u => u.id === referrerId);
+    const referee = authUsers?.users?.find(u => u.id === refereeUserId);
+
+    // Award credits to referrer
+    const { error: referrerRewardError } = await supabase.rpc('add_credits', {
+      p_user_id: referrerId,
+      p_amount: REFERRER_REWARD,
+      p_description: `Referral bonus: ${referee?.email || 'friend'} signed up`,
+      p_transaction_type: 'referral_reward'
+    });
+
+    if (referrerRewardError) {
+      console.error('[ReferralManager] Failed to reward referrer:', referrerRewardError);
+    } else {
+      console.log(`[ReferralManager] Awarded ${REFERRER_REWARD} credits to referrer ${referrerId}`);
+    }
+
+    // Award credits to referee
+    const { error: refereeRewardError } = await supabase.rpc('add_credits', {
+      p_user_id: refereeUserId,
+      p_amount: REFEREE_REWARD,
+      p_description: `Referral bonus: welcome reward`,
+      p_transaction_type: 'referral_reward'
+    });
+
+    if (refereeRewardError) {
+      console.error('[ReferralManager] Failed to reward referee:', refereeRewardError);
+    } else {
+      console.log(`[ReferralManager] Awarded ${REFEREE_REWARD} credits to referee ${refereeUserId}`);
+    }
+
+    // Send email notifications (non-blocking)
+    try {
+      const { sendReferralRewardReferrer, sendReferralRewardReferee } = await import('./email-service.js');
+
+      // Send email to referrer
+      if (referrer?.email) {
+        const referrerName = referrer.user_metadata?.full_name || referrer.email.split('@')[0];
+        const refereeName = referee?.user_metadata?.full_name || referee?.email?.split('@')[0];
+        const language = referrer.user_metadata?.language || 'en';
+
+        sendReferralRewardReferrer(referrer.email, referrerName, refereeName, language).catch(err => {
+          console.warn('[ReferralManager] Failed to send referrer email:', err);
+        });
+      }
+
+      // Send email to referee
+      if (referee?.email) {
+        const refereeName = referee.user_metadata?.full_name || referee.email.split('@')[0];
+        const referrerName = referrer?.user_metadata?.full_name || referrer?.email?.split('@')[0];
+        const language = referee.user_metadata?.language || 'en';
+
+        sendReferralRewardReferee(referee.email, refereeName, referrerName, language).catch(err => {
+          console.warn('[ReferralManager] Failed to send referee email:', err);
+        });
+      }
+    } catch (emailError) {
+      console.warn('[ReferralManager] Email service unavailable:', emailError);
+    }
+
     return { success: true };
   } catch (error) {
     console.error('[ReferralManager] trackReferral error:', error);
@@ -79,7 +156,7 @@ export async function trackReferral(referrerCode, refereeUserId) {
 
 /**
  * Complete a referral when the referee performs their first paid action.
- * Awards credits to both referrer and referee.
+ * Awards credits to both referrer and referee and sends email notifications.
  *
  * @param {string} refereeUserId - UUID of the referee who performed the action
  * @returns {Promise<{completed: boolean, referrerReward?: number, refereeReward?: number, error?: string}>}
@@ -108,6 +185,11 @@ export async function completeReferral(refereeUserId) {
     }
 
     console.log(`[ReferralManager] Completing referral for referee ${refereeUserId}`);
+
+    // Get user details for emails
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const referrer = authUsers?.users?.find(u => u.id === referrerId);
+    const referee = authUsers?.users?.find(u => u.id === refereeUserId);
 
     // Award credits to referrer
     const { error: referrerError } = await supabase.rpc('add_credits', {
@@ -150,6 +232,36 @@ export async function completeReferral(refereeUserId) {
     }
 
     console.log(`[ReferralManager] Referral completed: ${referrerId} (+${REFERRER_REWARD}) and ${refereeUserId} (+${REFEREE_REWARD})`);
+
+    // Send email notifications (non-blocking)
+    try {
+      const { sendReferralRewardReferrer, sendReferralRewardReferee } = await import('./email-service.js');
+
+      // Send email to referrer
+      if (referrer?.email) {
+        const referrerName = referrer.user_metadata?.full_name || referrer.email.split('@')[0];
+        const refereeName = referee?.user_metadata?.full_name || referee?.email?.split('@')[0];
+        const language = referrer.user_metadata?.language || 'en';
+
+        sendReferralRewardReferrer(referrer.email, referrerName, refereeName, language).catch(err => {
+          console.warn('[ReferralManager] Failed to send referrer email:', err);
+        });
+      }
+
+      // Send email to referee
+      if (referee?.email) {
+        const refereeName = referee.user_metadata?.full_name || referee.email.split('@')[0];
+        const referrerName = referrer?.user_metadata?.full_name || referrer?.email?.split('@')[0];
+        const language = referee.user_metadata?.language || 'en';
+
+        sendReferralRewardReferee(referee.email, refereeName, referrerName, language).catch(err => {
+          console.warn('[ReferralManager] Failed to send referee email:', err);
+        });
+      }
+    } catch (emailError) {
+      console.warn('[ReferralManager] Email service unavailable:', emailError);
+      // Don't fail the entire operation if emails fail
+    }
 
     return {
       completed: true,

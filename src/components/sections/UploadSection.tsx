@@ -205,7 +205,7 @@ export default function UploadSection({
     const isSaved = status === 'success' || (!file && !!resumeDocument?.fileName);
 
     return (
-        <div className="space-y-6">
+        <div data-tour="upload" className="space-y-6">
             <UploadCard
                 fileName={fileName}
                 onFileSelect={handleFileSelect}

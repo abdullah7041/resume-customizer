@@ -86,12 +86,12 @@ export const emailTemplates = {
         <strong>Tip:</strong> You can earn more credits by inviting friends (5 bonus credits per referral) or leaving feedback on your experience.
       </p>
 
-      <a href="https://watheq.app" class="cta-button">Start Using Your Credits</a>
+      <a href="https://watheqai.app" class="cta-button">Start Using Your Credits</a>
     </div>
 
     <div class="footer">
       <p>This is an automated email from Watheq Resume Optimizer</p>
-      <p><a href="https://watheq.app">Visit Watheq</a> | <a href="https://watheq.app/settings">Manage Preferences</a></p>
+      <p><a href="https://watheqai.app">Visit Watheq</a> | <a href="https://watheqai.app/settings">Manage Preferences</a></p>
       <p>&copy; 2026 Watheq. All rights reserved.</p>
     </div>
   </div>
@@ -114,11 +114,11 @@ What you can do with your credits:
 
 Tip: You can earn more credits by inviting friends (5 bonus credits per referral) or leaving feedback.
 
-Start optimizing: https://watheq.app
+Start optimizing: https://watheqai.app
 
 ---
 Watheq Resume Optimizer
-https://watheq.app
+https://watheqai.app
       `
     },
     ar: {
@@ -197,12 +197,12 @@ https://watheq.app
         <strong>نصيحة:</strong> يمكنك الحصول على رصيد إضافي بدعوة الأصدقاء (5 رصيد مكافأة لكل إحالة) أو تقديم تعليقاتك على تجربتك.
       </p>
 
-      <a href="https://watheq.app" class="cta-button">ابدأ باستخدام رصيدك</a>
+      <a href="https://watheqai.app" class="cta-button">ابدأ باستخدام رصيدك</a>
     </div>
 
     <div class="footer">
       <p>هذا بريد إلكتروني تلقائي من الواثق</p>
-      <p><a href="https://watheq.app">زر الواثق</a> | <a href="https://watheq.app/settings">إدارة التفضيلات</a></p>
+      <p><a href="https://watheqai.app">زر الواثق</a> | <a href="https://watheqai.app/settings">إدارة التفضيلات</a></p>
       <p>&copy; 2026 الواثق. جميع الحقوق محفوظة.</p>
     </div>
   </div>
@@ -225,11 +225,11 @@ https://watheq.app
 
 نصيحة: احصل على رصيد إضافي بدعوة الأصدقاء أو تقديم تعليقات.
 
-ابدأ الآن: https://watheq.app
+ابدأ الآن: https://watheqai.app
 
 ---
 الواثق - محسّن السيرة الذاتية
-https://watheq.app
+https://watheqai.app
       `
     }
   },
@@ -321,7 +321,7 @@ https://watheq.app
         Want more credits? Invite friends and earn 5 bonus credits per referral!
       </p>
 
-      <a href="https://watheq.app" class="cta-button">Continue Optimizing</a>
+      <a href="https://watheqai.app" class="cta-button">Continue Optimizing</a>
     </div>
 
     <div class="footer">
@@ -348,11 +348,11 @@ ${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${
 Tip: Next month's credits will be available on ${stats.nextResetDate || 'your signup anniversary'}.
 Want more credits? Invite friends and earn 5 bonus credits per referral!
 
-Continue optimizing: https://watheq.app
+Continue optimizing: https://watheqai.app
 
 ---
 Watheq Resume Optimizer
-https://watheq.app
+https://watheqai.app
       `
     },
     ar: {
@@ -441,7 +441,7 @@ https://watheq.app
         هل تريد رصيد إضافي؟ ادعُ أصدقاءك واكسب 5 رصيد مكافأة لكل إحالة!
       </p>
 
-      <a href="https://watheq.app" class="cta-button">استمر في التحسين</a>
+      <a href="https://watheqai.app" class="cta-button">استمر في التحسين</a>
     </div>
 
     <div class="footer">
@@ -468,11 +468,11 @@ ${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${
 نصيحة: سيكون رصيد الشهر القادم متاحاً في ${stats.nextResetDate || 'تاريخ تسجيلك'}.
 هل تريد رصيد إضافي؟ ادعُ أصدقاءك واكسب 5 رصيد مكافأة لكل إحالة!
 
-استمر في التحسين: https://watheq.app
+استمر في التحسين: https://watheqai.app
 
 ---
 الواثق - محسّن السيرة الذاتية
-https://watheq.app
+https://watheqai.app
       `
     }
   },
@@ -555,17 +555,17 @@ https://watheq.app
       </p>
 
       <div style="text-align: center;">
-        <a href="https://watheq.app/pricing" class="cta-button">Upgrade to Pro Now</a>
+        <a href="https://watheqai.app/pricing" class="cta-button">Upgrade to Pro Now</a>
       </div>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
-        Questions? Reply to this email or visit our <a href="https://watheq.app/help" style="color: #006C35;">Help Center</a>
+        Questions? Reply to this email or visit our <a href="https://watheqai.app/help" style="color: #006C35;">Help Center</a>
       </p>
     </div>
 
     <div class="footer">
       <p>This email was sent because you joined the Watheq Pro waitlist</p>
-      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
       <p>&copy; 2026 Watheq. All rights reserved.</p>
     </div>
   </div>
@@ -587,13 +587,13 @@ Starting at 35 SAR/month
 
 Special Launch Offer: Upgrade in the next 7 days and get 20% off your first month!
 
-Upgrade now: https://watheq.app/pricing
+Upgrade now: https://watheqai.app/pricing
 
-Questions? Reply to this email or visit https://watheq.app/help
+Questions? Reply to this email or visit https://watheqai.app/help
 
 ---
 Watheq Resume Optimizer
-https://watheq.app
+https://watheqai.app
       `
     },
     ar: {
@@ -673,17 +673,17 @@ https://watheq.app
       </p>
 
       <div style="text-align: center;">
-        <a href="https://watheq.app/pricing" class="cta-button">قم بالترقية إلى برو الآن</a>
+        <a href="https://watheqai.app/pricing" class="cta-button">قم بالترقية إلى برو الآن</a>
       </div>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
-        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheq.app/help" style="color: #006C35;">مركز المساعدة</a>
+        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheqai.app/help" style="color: #006C35;">مركز المساعدة</a>
       </p>
     </div>
 
     <div class="footer">
       <p>تم إرسال هذا البريد لأنك انضممت إلى قائمة انتظار واثق برو</p>
-      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
       <p>&copy; 2026 واثق. جميع الحقوق محفوظة.</p>
     </div>
   </div>
@@ -705,13 +705,13 @@ https://watheq.app
 
 عرض الإطلاق الخاص: قم بالترقية خلال الـ 7 أيام القادمة واحصل على خصم 20% على الشهر الأول!
 
-قم بالترقية الآن: https://watheq.app/pricing
+قم بالترقية الآن: https://watheqai.app/pricing
 
-أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheq.app/help
+أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheqai.app/help
 
 ---
 واثق - محسّن السيرة الذاتية
-https://watheq.app
+https://watheqai.app
       `
     }
   },
@@ -771,12 +771,12 @@ https://watheq.app
       </p>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-        Questions? Reply to this email or visit our <a href="https://watheq.app/help" style="color: #006C35;">Help Center</a>
+        Questions? Reply to this email or visit our <a href="https://watheqai.app/help" style="color: #006C35;">Help Center</a>
       </p>
     </div>
 
     <div class="footer">
-      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
       <p>&copy; 2026 Watheq. All rights reserved.</p>
     </div>
   </div>
@@ -797,11 +797,11 @@ What happens next?
 
 In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
 
-Questions? Reply to this email or visit https://watheq.app/help
+Questions? Reply to this email or visit https://watheqai.app/help
 
 ---
 Watheq Resume Optimizer
-https://watheq.app
+https://watheqai.app
       `
     },
     ar: {
@@ -858,12 +858,12 @@ https://watheq.app
       </p>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheq.app/help" style="color: #006C35;">مركز المساعدة</a>
+        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheqai.app/help" style="color: #006C35;">مركز المساعدة</a>
       </p>
     </div>
 
     <div class="footer">
-      <p><a href="https://watheq.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
       <p>&copy; 2026 واثق. جميع الحقوق محفوظة.</p>
     </div>
   </div>
@@ -884,11 +884,329 @@ https://watheq.app
 
 في هذه الأثناء، يمكنك الاستمرار في استخدام واثق مجاناً مع 15 رصيد شهري لتحسين سيرتك الذاتية!
 
-أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheq.app/help
+أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheqai.app/help
 
 ---
 واثق - محسّن السيرة الذاتية
-https://watheq.app
+https://watheqai.app
+      `
+    }
+  },
+
+  referralRewardReferrer: {
+    en: {
+      subject: '🎉 You Earned 5 Credits from Your Referral!',
+      html: (userName, refereeName) => `
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Referral Reward</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .credits-badge { background-color: #10b981; color: white; font-size: 48px; font-weight: 700; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 20px auto; }
+    .cta-button { background-color: #006C35; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: 600; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 Referral Reward Unlocked!</h1>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px;">Hi <strong>${userName}</strong>,</p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        Great news! ${refereeName ? `<strong>${refereeName}</strong>` : 'Your friend'} just used Watheq and completed their first action. As a thank you for the referral, we've added <strong>5 bonus credits</strong> to your account!
+      </p>
+
+      <div class="credits-badge">+5</div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center; margin: 20px 0;">
+        Keep sharing your referral link to earn more credits!
+      </p>
+
+      <div style="text-align: center;">
+        <a href="https://watheqai.app" class="cta-button">Use Your Credits Now</a>
+      </div>
+
+      <div style="background-color: #f0fdf4; border-left: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 Pro Tip</p>
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          Share your referral link with more friends! Each successful referral earns you 5 credits. Find your referral link in your account settings.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
+      <p>&copy; 2026 Watheq. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: (userName, refereeName) => `
+Hi ${userName},
+
+Great news! ${refereeName || 'Your friend'} just used Watheq and completed their first action. As a thank you for the referral, we've added 5 bonus credits to your account!
+
++5 Credits Added
+
+Keep sharing your referral link to earn more credits!
+
+Use your credits now: https://watheqai.app
+
+Pro Tip: Each successful referral earns you 5 credits. Find your referral link in your account settings.
+
+---
+Watheq Resume Optimizer
+https://watheqai.app
+      `
+    },
+    ar: {
+      subject: '🎉 حصلت على 5 رصيد من إحالتك!',
+      html: (userName, refereeName) => `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مكافأة الإحالة</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; direction: rtl; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .credits-badge { background-color: #10b981; color: white; font-size: 48px; font-weight: 700; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 20px auto; }
+    .cta-button { background-color: #006C35; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: 600; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 حصلت على مكافأة الإحالة!</h1>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px;">مرحباً <strong>${userName}</strong>,</p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        أخبار رائعة! ${refereeName ? `<strong>${refereeName}</strong>` : 'صديقك'} استخدم واثق للتو وأكمل إجراءه الأول. كشكر لك على الإحالة، أضفنا <strong>5 رصيد إضافي</strong> إلى حسابك!
+      </p>
+
+      <div class="credits-badge">+5</div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center; margin: 20px 0;">
+        استمر في مشاركة رابط الإحالة الخاص بك لكسب المزيد من الرصيد!
+      </p>
+
+      <div style="text-align: center;">
+        <a href="https://watheqai.app" class="cta-button">استخدم رصيدك الآن</a>
+      </div>
+
+      <div style="background-color: #f0fdf4; border-right: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 نصيحة محترف</p>
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          شارك رابط الإحالة الخاص بك مع المزيد من الأصدقاء! كل إحالة ناجحة تكسبك 5 رصيد. ابحث عن رابط الإحالة في إعدادات حسابك.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
+      <p>&copy; 2026 واثق. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: (userName, refereeName) => `
+مرحباً ${userName},
+
+أخبار رائعة! ${refereeName || 'صديقك'} استخدم واثق للتو وأكمل إجراءه الأول. كشكر لك على الإحالة، أضفنا 5 رصيد إضافي إلى حسابك!
+
++5 رصيد تمت إضافته
+
+استمر في مشاركة رابط الإحالة الخاص بك لكسب المزيد من الرصيد!
+
+استخدم رصيدك الآن: https://watheqai.app
+
+نصيحة محترف: كل إحالة ناجحة تكسبك 5 رصيد. ابحث عن رابط الإحالة في إعدادات حسابك.
+
+---
+واثق - محسّن السيرة الذاتية
+https://watheqai.app
+      `
+    }
+  },
+
+  referralRewardReferee: {
+    en: {
+      subject: '🎁 Welcome Bonus: 5 Free Credits Added!',
+      html: (userName, referrerName) => `
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome Bonus</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .credits-badge { background-color: #10b981; color: white; font-size: 48px; font-weight: 700; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 20px auto; }
+    .cta-button { background-color: #006C35; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: 600; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎁 Welcome Bonus!</h1>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px;">Hi <strong>${userName}</strong>,</p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        Thanks for joining Watheq! ${referrerName ? `Since you were referred by <strong>${referrerName}</strong>, ` : ''}We've added <strong>5 bonus credits</strong> to your account to help you get started!
+      </p>
+
+      <div class="credits-badge">+5</div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center; margin: 20px 0;">
+        Use your credits to optimize your resume and land your dream job!
+      </p>
+
+      <div style="text-align: center;">
+        <a href="https://watheqai.app" class="cta-button">Start Optimizing</a>
+      </div>
+
+      <div style="background-color: #f0fdf4; border-left: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 Earn More Credits</p>
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          You can earn 5 more credits by inviting your friends too! Find your referral link in your account settings.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">Visit Watheq</a></p>
+      <p>&copy; 2026 Watheq. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: (userName, referrerName) => `
+Hi ${userName},
+
+Thanks for joining Watheq! ${referrerName ? `Since you were referred by ${referrerName}, ` : ''}We've added 5 bonus credits to your account to help you get started!
+
++5 Credits Added
+
+Use your credits to optimize your resume and land your dream job!
+
+Start optimizing: https://watheqai.app
+
+Earn More Credits: You can earn 5 more credits by inviting your friends too! Find your referral link in your account settings.
+
+---
+Watheq Resume Optimizer
+https://watheqai.app
+      `
+    },
+    ar: {
+      subject: '🎁 مكافأة الترحيب: تمت إضافة 5 رصيد مجاني!',
+      html: (userName, referrerName) => `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مكافأة الترحيب</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; direction: rtl; }
+    .container { max-width: 600px; margin: 0; auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #006C35 0%, #005a2d 100%); color: white; padding: 40px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .content { padding: 40px 30px; }
+    .credits-badge { background-color: #10b981; color: white; font-size: 48px; font-weight: 700; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 20px auto; }
+    .cta-button { background-color: #006C35; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: 600; }
+    .footer { background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { margin: 8px 0; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎁 مكافأة الترحيب!</h1>
+    </div>
+
+    <div class="content">
+      <p style="color: #333; font-size: 16px;">مرحباً <strong>${userName}</strong>,</p>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6;">
+        شكراً لانضمامك إلى واثق! ${referrerName ? `بما أن <strong>${referrerName}</strong> أحالك، ` : ''}أضفنا <strong>5 رصيد إضافي</strong> إلى حسابك لمساعدتك على البدء!
+      </p>
+
+      <div class="credits-badge">+5</div>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center; margin: 20px 0;">
+        استخدم رصيدك لتحسين سيرتك الذاتية والحصول على وظيفة أحلامك!
+      </p>
+
+      <div style="text-align: center;">
+        <a href="https://watheqai.app" class="cta-button">ابدأ التحسين</a>
+      </div>
+
+      <div style="background-color: #f0fdf4; border-right: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 اكسب المزيد من الرصيد</p>
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          يمكنك كسب 5 رصيد إضافي بدعوة أصدقائك أيضاً! ابحث عن رابط الإحالة في إعدادات حسابك.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><a href="https://watheqai.app" style="color: #006C35; text-decoration: none;">زُر واثق</a></p>
+      <p>&copy; 2026 واثق. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text: (userName, referrerName) => `
+مرحباً ${userName},
+
+شكراً لانضمامك إلى واثق! ${referrerName ? `بما أن ${referrerName} أحالك، ` : ''}أضفنا 5 رصيد إضافي إلى حسابك لمساعدتك على البدء!
+
++5 رصيد تمت إضافته
+
+استخدم رصيدك لتحسين سيرتك الذاتية والحصول على وظيفة أحلامك!
+
+ابدأ التحسين: https://watheqai.app
+
+اكسب المزيد من الرصيد: يمكنك كسب 5 رصيد إضافي بدعوة أصدقائك أيضاً! ابحث عن رابط الإحالة في إعدادات حسابك.
+
+---
+واثق - محسّن السيرة الذاتية
+https://watheqai.app
       `
     }
   }

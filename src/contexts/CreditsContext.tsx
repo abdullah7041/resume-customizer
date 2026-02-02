@@ -5,7 +5,7 @@
  * Ensures CreditBalance in Header and modals always show the same values.
  */
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import type { UserCredits } from '../types/credits';
@@ -34,6 +34,9 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
     const [showUpgrade, setShowUpgrade] = useState(false);
     const [upgradeDismissedKey, setUpgradeDismissedKey] = useState<string | null>(null);
 
+    // Use ref to track previous credits for comparison (avoid infinite loop)
+    const previousCreditsRef = useRef<UserCredits | null>(null);
+
     const fetchCredits = useCallback(async () => {
         if (!user) {
             setCredits(null);
@@ -52,13 +55,15 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             if (fetchError) {
                 // Handle "No rows found" (PGRST116) by defaulting to 0 credits
                 if (fetchError.code === 'PGRST116') {
-                    setCredits({
+                    const defaultCredits = {
                         remaining: 0,
                         total: 0,
                         feedbackCreditsEarned: 0,
                         referralCreditsEarned: 0,
                         resetDate: new Date().toISOString(),
-                    });
+                    };
+                    setCredits(defaultCredits);
+                    previousCreditsRef.current = defaultCredits;
                     return;
                 }
 
@@ -67,13 +72,28 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             }
 
             if (data) {
-                setCredits({
+                const newCredits = {
                     remaining: data.credits_remaining,
                     total: data.credits_total,
                     feedbackCreditsEarned: data.feedback_credits_earned,
                     referralCreditsEarned: data.referral_credits_earned || 0,
                     resetDate: data.last_reset_date,
-                });
+                };
+
+                // Detect referral credit increases using ref (not state)
+                const prevCredits = previousCreditsRef.current;
+                if (prevCredits && newCredits.referralCreditsEarned > prevCredits.referralCreditsEarned) {
+                    const creditsAdded = (newCredits.referralCreditsEarned - prevCredits.referralCreditsEarned) * 5;
+                    console.log(`[CreditsContext] Referral credits increased by ${creditsAdded}`);
+
+                    // Dispatch custom event for toast notification
+                    window.dispatchEvent(new CustomEvent('referralCreditsEarned', {
+                        detail: { creditsAdded }
+                    }));
+                }
+
+                previousCreditsRef.current = newCredits;
+                setCredits(newCredits);
             }
         } catch (err) {
             console.error('[CreditsContext] Failed to fetch credits:', err);

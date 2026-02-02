@@ -7,12 +7,14 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import Joyride from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
 import { analyzeVision2030 } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { useFeatureTracking } from '../../hooks/useFeatureTracking';
+import { useVision2030Tour } from '../../hooks/useVision2030Tour';
 import { Vision2030AnalysisResponse } from '../../types/vision2030';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { SectorBreakdown } from './SectorBreakdown';
@@ -21,6 +23,8 @@ import { GlassButton } from '../ui/GlassButton';
 import { GlassCard } from '../ui/GlassCard';
 import EmptyState from '../ui/EmptyState';
 import { FeedbackModal } from '../Feedback/FeedbackModal';
+import { Vision2030CalculationModal } from '../ui/Vision2030CalculationModal';
+import { TourTooltip } from '../Tour/TourTooltip';
 
 const VISION2030_STORAGE_KEY = 'watheq:vision2030Analysis';
 const VISION2030_ANALYZING_KEY = 'watheq:vision2030Analyzing';
@@ -72,6 +76,17 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showCalculationModal, setShowCalculationModal] = useState(false);
+
+  // Vision 2030 tour
+  const { run, steps, stepIndex, handleCallback, startTour } = useVision2030Tour();
+
+  // Start tour when component mounts (first time only)
+  useEffect(() => {
+    if (resumeText) {
+      startTour();
+    }
+  }, [resumeText, startTour]);
 
   // Persist analysis to localStorage when it changes
   useEffect(() => {
@@ -405,7 +420,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           </div>
         </div>
 
-        <div className="text-center space-y-2 max-w-lg">
+        <div data-tour="vision2030-intro" className="text-center space-y-2 max-w-lg">
           <h2 className="text-2xl font-bold text-white">
             {t('vision2030.section.title', 'Vision 2030 Alignment Analysis')}
           </h2>
@@ -416,6 +431,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
 
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
           <GlassButton
+            data-tour="vision2030-calculate"
             variant="primary"
             onClick={handleAnalyze}
             disabled={creditsLoading || !user}
@@ -423,6 +439,15 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           >
             <Sparkles className="w-4 h-4 me-2" />
             {t('vision2030.section.analyze', 'Analyze Resume (2 credits)')}
+          </GlassButton>
+          <GlassButton
+            data-tour="vision2030-methodology"
+            variant="secondary"
+            onClick={() => setShowCalculationModal(true)}
+            className="flex-shrink-0"
+          >
+            <Info className="w-4 h-4 me-2" />
+            {t('vision2030.section.howCalculated', 'How is this calculated?')}
           </GlassButton>
         </div>
 
@@ -460,6 +485,36 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         feature="vision2030"
         currentCredits={credits?.remaining || 0}
         isLoading={isAnalyzing}
+      />
+
+      {/* Calculation Methodology Modal */}
+      <Vision2030CalculationModal
+        isOpen={showCalculationModal}
+        onClose={() => setShowCalculationModal(false)}
+      />
+
+      {/* Vision 2030 Tour */}
+      <Joyride
+        steps={steps}
+        run={run}
+        stepIndex={stepIndex}
+        continuous
+        showProgress
+        showSkipButton
+        callback={handleCallback}
+        disableScrolling={false}
+        spotlightClicks={false}
+        tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
+        locale={{
+          back: isArabic ? 'السابق' : 'Back',
+          close: isArabic ? 'إغلاق' : 'Close',
+          last: isArabic ? 'إنهاء' : 'Finish',
+          next: isArabic ? 'التالي' : 'Next',
+          skip: isArabic ? 'تخطي الجولة' : 'Skip Tour',
+        }}
+        floaterProps={{
+          disableAnimation: true,
+        }}
       />
     </GlassCard>
   );

@@ -14,10 +14,22 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Configuration
 // IMPORTANT: To send emails to real users, you must verify your domain at https://resend.com/domains
-// Then set RESEND_SENDER_EMAIL to an email on your verified domain (e.g., noreply@watheq.app)
-// The default 'onboarding@resend.dev' only allows sending to YOUR verified email (the account owner)
-const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'onboarding@resend.dev';
+// Then set RESEND_SENDER_EMAIL to an email on your verified domain (e.g., noreply@watheqai.app)
+// Using watheqai.app as the verified domain
+const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'noreply@watheqai.app';
 const SENDER_NAME = process.env.RESEND_SENDER_NAME || 'Watheq';
+const REPLY_TO_EMAIL = 'support@watheqai.app';
+
+/**
+ * Get common email headers to improve deliverability
+ */
+function getEmailHeaders() {
+  return {
+    'X-Entity-Ref-ID': `watheq-${Date.now()}`,
+    'X-Mailer': 'Watheq Resume Optimizer',
+    'List-Unsubscribe': `<mailto:${REPLY_TO_EMAIL}?subject=Unsubscribe>`,
+  };
+}
 
 /**
  * Send credits refreshed email
@@ -69,7 +81,7 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
       subject: template.subject,
       html: template.html(userName, credits),
       text: template.text(userName, credits),
-      replyTo: 'support@watheq.app'
+      replyTo: 'support@watheqai.app'
     });
 
     if (response.error) {
@@ -156,7 +168,7 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
       subject: template.subject,
       html: template.html(userName, defaultStats),
       text: template.text(userName, defaultStats),
-      replyTo: 'support@watheq.app'
+      replyTo: 'support@watheqai.app'
     });
 
     if (response.error) {
@@ -254,7 +266,7 @@ export async function sendWaitlistNotification(userEmail, language = 'en', planT
       subject: template.subject,
       html: template.html(planType),
       text: template.text(planType),
-      replyTo: 'support@watheq.app'
+      replyTo: 'support@watheqai.app'
     });
 
     if (response.error) {
@@ -306,7 +318,12 @@ export async function sendWaitlistConfirmation(userEmail, language = 'en') {
       subject: template.subject,
       html: template.html,
       text: template.text,
-      replyTo: 'support@watheq.app'
+      replyTo: REPLY_TO_EMAIL,
+      headers: getEmailHeaders(),
+      tags: [
+        { name: 'category', value: 'waitlist' },
+        { name: 'language', value: lang }
+      ]
     });
 
     if (response.error) {
@@ -318,6 +335,140 @@ export async function sendWaitlistConfirmation(userEmail, language = 'en') {
     return { success: true, messageId: response.data.id };
   } catch (error) {
     console.error('[email-service] Failed to send waitlist confirmation:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send referral reward email to referrer
+ * Called when a referred user completes their first paid action
+ *
+ * @param {string} userEmail - Referrer's email address
+ * @param {string} userName - Referrer's display name
+ * @param {string} refereeName - Referee's display name (optional)
+ * @param {string} language - Email language: 'en' or 'ar' (default: 'en')
+ * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
+ */
+export async function sendReferralRewardReferrer(userEmail, userName, refereeName, language = 'en') {
+  try {
+    // Validate inputs
+    if (!userEmail || !isValidEmail(userEmail)) {
+      console.error('[email-service] Invalid email address:', userEmail);
+      return { success: false, error: 'Invalid email address' };
+    }
+
+    if (!userName) {
+      console.error('[email-service] Missing userName');
+      return { success: false, error: 'Missing userName' };
+    }
+
+    // Get template for language
+    const lang = language === 'ar' ? 'ar' : 'en';
+    const template = emailTemplates.referralRewardReferrer[lang];
+
+    if (!template) {
+      throw new Error(`Template not found for language: ${lang}`);
+    }
+
+    console.log('[email-service] Sending referral reward email to referrer', {
+      email: userEmail,
+      name: userName,
+      refereeName,
+      language: lang
+    });
+
+    // Send email via Resend
+    const response = await resend.emails.send({
+      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      to: userEmail,
+      subject: template.subject,
+      html: template.html(userName, refereeName),
+      text: template.text(userName, refereeName),
+      replyTo: REPLY_TO_EMAIL,
+      headers: getEmailHeaders(),
+      tags: [
+        { name: 'category', value: 'referral' },
+        { name: 'type', value: 'referrer_reward' },
+        { name: 'language', value: lang }
+      ]
+    });
+
+    if (response.error) {
+      console.error('[email-service] Resend API error:', response.error);
+      return { success: false, error: response.error.message };
+    }
+
+    console.log('[email-service] Referral reward email sent successfully', { messageId: response.data.id });
+    return { success: true, messageId: response.data.id };
+  } catch (error) {
+    console.error('[email-service] Failed to send referral reward email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send referral reward email to referee
+ * Called when a referred user completes their first paid action
+ *
+ * @param {string} userEmail - Referee's email address
+ * @param {string} userName - Referee's display name
+ * @param {string} referrerName - Referrer's display name (optional)
+ * @param {string} language - Email language: 'en' or 'ar' (default: 'en')
+ * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
+ */
+export async function sendReferralRewardReferee(userEmail, userName, referrerName, language = 'en') {
+  try {
+    // Validate inputs
+    if (!userEmail || !isValidEmail(userEmail)) {
+      console.error('[email-service] Invalid email address:', userEmail);
+      return { success: false, error: 'Invalid email address' };
+    }
+
+    if (!userName) {
+      console.error('[email-service] Missing userName');
+      return { success: false, error: 'Missing userName' };
+    }
+
+    // Get template for language
+    const lang = language === 'ar' ? 'ar' : 'en';
+    const template = emailTemplates.referralRewardReferee[lang];
+
+    if (!template) {
+      throw new Error(`Template not found for language: ${lang}`);
+    }
+
+    console.log('[email-service] Sending referral reward email to referee', {
+      email: userEmail,
+      name: userName,
+      referrerName,
+      language: lang
+    });
+
+    // Send email via Resend
+    const response = await resend.emails.send({
+      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      to: userEmail,
+      subject: template.subject,
+      html: template.html(userName, referrerName),
+      text: template.text(userName, referrerName),
+      replyTo: REPLY_TO_EMAIL,
+      headers: getEmailHeaders(),
+      tags: [
+        { name: 'category', value: 'referral' },
+        { name: 'type', value: 'referee_reward' },
+        { name: 'language', value: lang }
+      ]
+    });
+
+    if (response.error) {
+      console.error('[email-service] Resend API error:', response.error);
+      return { success: false, error: response.error.message };
+    }
+
+    console.log('[email-service] Referral reward email sent successfully', { messageId: response.data.id });
+    return { success: true, messageId: response.data.id };
+  } catch (error) {
+    console.error('[email-service] Failed to send referral reward email:', error);
     return { success: false, error: error.message };
   }
 }

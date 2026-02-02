@@ -89,17 +89,22 @@ const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "track",
-        referrer_id: referrerId,
+        referral_code: referrerId,
         referee_id: userId,
-        referee_email: userEmail || null,
       }),
     });
 
     if (response.ok) {
       localStorage.removeItem("watheq:pending_referrer_id");
+      console.log("[useAuth] Referral tracked successfully");
+
+      // Dispatch event to notify credits were earned
+      window.dispatchEvent(new CustomEvent('referralCreditsEarned', {
+        detail: { creditsAdded: 5 }
+      }));
     } else {
       const errorData = await response.json();
-      console.warn("[useAuth] Failed to track referral:", errorData);
+      console.error("[useAuth] Failed to track referral:", errorData);
     }
   } catch (error) {
     console.error("[useAuth] Error tracking referral:", error);

@@ -14,14 +14,16 @@ interface GlassTabsProps {
   activeValue: string;
   onTabChange: (value: string) => void;
   rightAction?: React.ReactNode;
+  'data-tour'?: string;
 }
 
-export function GlassTabs({ tabs, activeValue, onTabChange, rightAction }: GlassTabsProps) {
+export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-tour': dataTour }: GlassTabsProps) {
   const { i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
 
   return (
     <nav
+      data-tour={dataTour}
       className="relative flex w-full items-center p-1.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl transition-all duration-300 hover:border-white/20 hover:bg-black/50"
       role="tablist"
     >

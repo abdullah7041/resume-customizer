@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import Joyride from "react-joyride";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
 
@@ -10,6 +11,8 @@ import { UserProgressNav } from "./components/ui/UserProgressNav";
 import { migrateStorageKeys } from "./lib/utils/storage-migration";
 import { UpgradeModal } from "./components/Credits/UpgradeModal";
 import { useUserCredits } from "./hooks/useUserCredits";
+import { useOnboardingTour } from "./hooks/useOnboardingTour";
+import { TourTooltip } from "./components/Tour/TourTooltip";
 
 export default function App() {
   // Run storage migration once on app initialization
@@ -19,6 +22,9 @@ export default function App() {
 
   // Credit system integration
   const { credits, showUpgrade, setShowUpgrade, upgradeDismissedKey } = useUserCredits();
+
+  // Onboarding tour
+  const { run, steps, stepIndex, handleCallback } = useOnboardingTour();
 
   return (
     <DirectionProvider>
@@ -37,6 +43,32 @@ export default function App() {
           onClose={() => setShowUpgrade(false)}
           creditsRemaining={credits?.remaining || 0}
           dismissKey={upgradeDismissedKey || ''}
+        />
+
+        {/* Onboarding Tour */}
+        <Joyride
+          steps={steps}
+          run={run}
+          stepIndex={stepIndex}
+          continuous
+          showProgress
+          showSkipButton
+          callback={handleCallback}
+          disableScrolling={false}
+          spotlightClicks={false}
+          tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
+          locale={{
+            back: 'Back',
+            close: 'Close',
+            last: 'Finish',
+            next: 'Next',
+            skip: 'Skip Tour',
+          }}
+          floaterProps={{
+            disableAnimation: true,
+            disableFlip: true,
+            offset: 20,
+          }}
         />
       </div>
     </DirectionProvider>

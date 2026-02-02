@@ -405,12 +405,17 @@ export default function Header() {
               <LanguageSwitcher />
               {user && (
                 <>
-                  <CreditBalance onClick={() => {
-                    setCreditModalMode('full');
-                    setShowCreditModal(true);
-                  }} />
+                  <div data-tour="credits" className="inline-block">
+                    <CreditBalance
+                      onClick={() => {
+                        setCreditModalMode('full');
+                        setShowCreditModal(true);
+                      }}
+                    />
+                  </div>
                   {/* Invite Friends Button */}
                   <button
+                    data-tour="referral"
                     onClick={() => {
                       setCreditModalMode('invite-only');
                       setShowCreditModal(true);

@@ -57,7 +57,7 @@ async function handleGetLink(userId: string) {
     }
 
     // Build full referral URL
-    const baseUrl = process.env.URL || 'https://watheq.app';
+    const baseUrl = process.env.URL || 'https://watheqai.app';
     const referralUrl = `${baseUrl}?ref=${referralCode}`;
 
     return { referralCode, referralUrl };

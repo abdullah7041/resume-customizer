@@ -27,7 +27,7 @@ import { ParallaxContainer } from "../ui/ParallaxSection";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
 import ViewTextModal from "../ui/ViewTextModal";
-import Vision2030Summary from "../ui/Vision2030Summary";
+// Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
 
@@ -177,6 +177,23 @@ export default function MainContent() {
       timers.clear();
     };
   }, []);
+
+  // Listen for referral credit notifications
+  useEffect(() => {
+    const handleReferralCredits = (event) => {
+      const { creditsAdded } = event.detail;
+      pushToast({
+        title: t('credits.referralEarned', '🎉 Referral Bonus Earned!'),
+        description: t('credits.referralEarnedDesc', `You earned ${creditsAdded} credits from a successful referral. Keep sharing!`),
+        type: 'success',
+      });
+    };
+
+    window.addEventListener('referralCreditsEarned', handleReferralCredits);
+    return () => {
+      window.removeEventListener('referralCreditsEarned', handleReferralCredits);
+    };
+  }, [pushToast, t]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -761,6 +778,7 @@ export default function MainContent() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
             <GlassTabs
+              data-tour="features"
               tabs={tabs}
               activeValue={activeTab}
               onTabChange={handleTabChange}
@@ -778,14 +796,6 @@ export default function MainContent() {
             />
           </div>
         </div>
-        {/* Hero Section & Vision Summary - Only visible on Resume tab */}
-        {activeTab === 'resume' && (
-          <>
-            {/* Space for future dashboard widgets or specific messages if needed */}
-            {/* Vision 2030 Quick Access Summary */}
-            <Vision2030Summary resumeText={resumeData?.plainText} className="mb-6" />
-          </>
-        )}
 
         <div className="relative min-h-[420px] sm:min-h-[480px] rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-5 lg:p-6 transition-shadow duration-300 hover:shadow-2xl">
           {activeTab === "resume" && (
