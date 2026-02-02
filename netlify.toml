@@ -28,7 +28,9 @@
   # External modules to avoid bundling large dependencies
   external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium", "resend", "nanoid"]
   # Included files for shared modules (now in netlify/lib/)
-  included_files = ["netlify/lib/**"]
+  # Included files for shared modules (now in netlify/lib/)
+  # included_files = ["netlify/lib/**"] - REMOVED: esbuild handles this, and this causes massive duplication
+
 
 # Individual function configurations
 [functions."ai"]
