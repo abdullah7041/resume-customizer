@@ -26,7 +26,8 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
   # External modules to avoid bundling large dependencies
-  external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium", "resend", "nanoid"]
+  # External modules to avoid bundling large dependencies
+  # external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium", "resend", "nanoid"] - REMOVED: Scoped to specific functions below
   # Included files for shared modules (now in netlify/lib/)
   # Included files for shared modules (now in netlify/lib/)
   # included_files = ["netlify/lib/**"] - REMOVED: esbuild handles this, and this causes massive duplication
@@ -49,9 +50,11 @@
   timeout = 30
 
 [functions."extract-resume-json"]
+  external_node_modules = ["pdfjs-dist"]
   timeout = 60  # Increased for Gemini parsing (PDF data takes 30-45s, buffer for edge cases)
 
 [functions."generate-pdf"]
+  external_node_modules = ["@sparticuz/chromium"]
   timeout = 90  # PDF generation: Puppeteer browser launch can take 30-60s on cold start
   memory = 1024
 
