@@ -310,26 +310,26 @@ export type EndpointRateLimitConfig = {
  * Stricter limits for "Flash" model endpoints to prevent quota exhaustion and timeouts
  */
 export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
-  // File processing is expensive (OCR, parsing) - uses 'lite' model
-  "parse-resume": { maxRequests: 10 },
-  "extract-resume-json": { maxRequests: 10 },
+  // File processing (OCR, parsing) - INCREASED from 10 to 20 for better UX
+  "parse-resume": { maxRequests: 20 },
+  "extract-resume-json": { maxRequests: 20 },
 
-  // AI endpoints using "Flash" model (slower, higher quality)
-  "ai-match": { maxRequests: 10 },        // Flash model for matching
-  "generate-cover-letter": { maxRequests: 5 },  // Flash model
+  // AI endpoints using "Flash" model - INCREASED from 10 to 15
+  "ai-match": { maxRequests: 15 },        // Flash model for matching
+  "generate-cover-letter": { maxRequests: 10 },  // Flash model - INCREASED from 5 to 10
 
-  // AI endpoints using "Flash" model (higher quality, slower - 20-25s response)
-  "optimize": { maxRequests: 5 },         // Flash model - prevent timeout cascades, ensure quality
-  "vision2030-alignment": { maxRequests: 5 },  // Flash model - deep contextual analysis
+  // AI endpoints using "Flash" model - INCREASED from 5 to 10
+  "optimize": { maxRequests: 10 },         // Flash model - better UX while preventing abuse
+  "vision2030-alignment": { maxRequests: 10 },  // Flash model - deep contextual analysis
 
-  // Generation endpoints using "Lite" model (faster)
-  "predict-questions": { maxRequests: 10 },  // Uses 'lite' model - can handle more traffic
+  // Generation endpoints using "Lite" model (already fast, keep at 10)
+  "predict-questions": { maxRequests: 10 },  // Uses 'lite' model
 
-  // Feedback system - prevent spam
-  "submit-feedback": { maxRequests: 5 },  // Prevent rapid feedback submissions
+  // Feedback system - INCREASED from 5 to 10
+  "submit-feedback": { maxRequests: 10 },  // Allow more feedback submissions
 
-  // Batch processing (very expensive)
-  "batch-api": { maxRequests: 5 },
+  // Batch processing - INCREASED from 5 to 8
+  "batch-api": { maxRequests: 8 },
 
   // Default for unlisted endpoints
   default: { maxRequests: 30 },
@@ -404,6 +404,12 @@ async function checkRateLimit(
   event: HandlerEvent,
   endpoint: string
 ): Promise<{ allowed: boolean; response?: HandlerResponse }> {
+  // DEVELOPMENT MODE: Bypass rate limits for localhost/Netlify dev
+  if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {
+    console.log('[rate-limiter] Development mode - bypassing rate limits');
+    return { allowed: true };
+  }
+
   const clientId = getClientIdentifier(event);
   const limiter = getRateLimiter();
   const config = ENDPOINT_RATE_LIMITS[endpoint] || ENDPOINT_RATE_LIMITS.default;

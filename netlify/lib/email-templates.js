@@ -122,14 +122,14 @@ https://watheqai.app
       `
     },
     ar: {
-      subject: '✨ تم تحديث رصيد الواثق الخاص بك!',
+      subject: '✨ أبشرك! رصيدك في واثق تجدّد',
       html: (userName, credits) => `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تحديث الرصيد</title>
+  <title>تجديد الرصيد</title>
   <style>
     body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; direction: rtl; }
     .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -153,23 +153,23 @@ https://watheqai.app
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎉 تم تحديث رصيدك!</h1>
-      <p>تم تحديث مخصصك الشهري من الرصيد</p>
+      <h1>🎉 أبشرك! رصيدك تجدّد</h1>
+      <p>رصيدك الشهري صار جاهز في حسابك</p>
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">مرحباً <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">حيّاك الله <strong>${userName}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        أخبار سارة! تم تحديث رصيدك الشهري من الواثق. لديك الآن مجموعة جديدة من الرصيد لتحسين سيرتك الذاتية والحصول على وظيفة أحلامك.
+        جايبين لك علوم زينة! رصيدك الشهري في واثق تجدّد. الحين يمديك ترجع تضبط سيرتك الذاتية وتزيد فرصك الوظيفية.
       </p>
 
       <div class="credits-box">
         <div class="credits-amount">${credits}</div>
-        <div class="credits-label">رصيد متاح لهذا الشهر</div>
+        <div class="credits-label">رصيد متاح في حسابك</div>
       </div>
 
-      <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 16px;">ماذا يمكنك أن تفعل برصيدك:</h3>
+      <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 16px;">وش تقدر تسوي برصيدك:</h3>
       <div class="feature-list">
         <div class="feature-item">
           <span class="feature-icon">✓</span>
@@ -194,38 +194,38 @@ https://watheqai.app
       </div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-        <strong>نصيحة:</strong> يمكنك الحصول على رصيد إضافي بدعوة الأصدقاء (5 رصيد مكافأة لكل إحالة) أو تقديم تعليقاتك على تجربتك.
+        <strong>نصيحة:</strong> تبي رصيد زيادة؟ ادعُ أخوياك واكسب 5 رصيد مكافأة لكل واحد يسجل، أو عطنا رايك في تجربتك.
       </p>
 
-      <a href="https://watheqai.app" class="cta-button">ابدأ باستخدام رصيدك</a>
+      <a href="https://watheqai.app" class="cta-button">يلا نبدأ</a>
     </div>
 
     <div class="footer">
-      <p>هذا بريد إلكتروني تلقائي من الواثق</p>
-      <p><a href="https://watheqai.app">زر الواثق</a> | <a href="https://watheqai.app/settings">إدارة التفضيلات</a></p>
-      <p>&copy; 2026 الواثق. جميع الحقوق محفوظة.</p>
+      <p>هذي رسالة آلية من واثق</p>
+      <p><a href="https://watheqai.app">زور واثق</a> | <a href="https://watheqai.app/settings">إعداداتك</a></p>
+      <p>&copy; 2026 واثق. جميع الحقوق محفوظة.</p>
     </div>
   </div>
 </body>
 </html>
       `,
       text: (userName, credits) => `
-مرحباً ${userName},
+حيّاك الله ${userName},
 
-أخبار سارة! تم تحديث رصيدك الشهري من الواثق.
+أبشرك! رصيدك الشهري في واثق تجدّد.
 
-لديك الآن ${credits} رصيد متاح.
+عندك الحين ${credits} رصيد جاهز في حسابك.
 
-ماذا يمكنك أن تفعل برصيدك:
+وش تقدر تسوي برصيدك:
 - مطابقة السيرة الذاتية (رصيد 2) - حلل مدى توافق سيرتك مع الوظيفة
 - تحسين السيرة الذاتية (رصيد 5) - احصل على اقتراحات ذكية
 - توافق رؤية 2030 (رصيد 2) - اكتشف كيف تتوافق مع رؤية 2030
 - إعداد المقابلات (رصيد 3) - أنشئ أسئلة محتملة للمقابلة
 - إنشاء خطاب التقديم (رصيد 4) - اكتب خطابات مخصصة
 
-نصيحة: احصل على رصيد إضافي بدعوة الأصدقاء أو تقديم تعليقات.
+نصيحة: تبي رصيد زيادة؟ ادعُ أخوياك واكسب 5 رصيد مكافأة، أو عطنا رايك.
 
-ابدأ الآن: https://watheqai.app
+يلا نبدأ: https://watheqai.app
 
 ---
 الواثق - محسّن السيرة الذاتية
@@ -356,14 +356,14 @@ https://watheqai.app
       `
     },
     ar: {
-      subject: '📊 ملخص استخدام الواثق الشهري',
+      subject: '📊 ملخص استخدامك الشهري في واثق',
       html: (userName, stats) => `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ملخص الاستخدام الشهري</title>
+  <title>ملخص شهرك معنا</title>
   <style>
     body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; direction: rtl; }
     .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -386,43 +386,43 @@ https://watheqai.app
 <body>
   <div class="container">
     <div class="header">
-      <h1>📊 ملخص استخدامك الشهري</h1>
-      <p>ملخص نشاطك على الواثق هذا الشهر</p>
+      <h1>📊 ملخص شهرك معنا</h1>
+      <p>وش سويت في واثق هالشهر؟</p>
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">مرحباً <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">حيّاك الله <strong>${userName}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        إليك ملخص استخدامك لرصيد الواثق هذا الشهر. استمر في التحسين!
+        جبنا لك علوم استخدامك لرصيد واثق هالشهر. فالك التوفيق!
       </p>
 
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-value">${stats.totalUsed || 0}</div>
-          <div class="stat-label">الرصيد المستخدم</div>
+          <div class="stat-label">نقاط استخدمتها</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${stats.remaining || 0}</div>
-          <div class="stat-label">الرصيد المتبقي</div>
+          <div class="stat-label">الباقي لك</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${stats.totalActions || 0}</div>
-          <div class="stat-label">الإجراءات المنفذة</div>
+          <div class="stat-label">حركات سويتها</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${Math.round((stats.usagePercentage || 0) * 100) / 100}%</div>
-          <div class="stat-label">استخدام الرصيد</div>
+          <div class="stat-label">نسبة استخدامك</div>
         </div>
       </div>
 
-      <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 16px;">توزيع حسب الميزة:</h3>
+      <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 16px;">تفاصيلها:</h3>
       <table class="usage-table">
         <thead>
           <tr>
-            <th>الميزة</th>
-            <th>مرات الاستخدام</th>
-            <th>الرصيد المستخدم</th>
+            <th>الخدمة</th>
+            <th>كم مرة؟</th>
+            <th>كم صرفت؟</th>
           </tr>
         </thead>
         <tbody>
@@ -432,16 +432,16 @@ https://watheqai.app
             <td>${data.count || 0}</td>
             <td>${data.credits || 0}</td>
           </tr>
-          `).join('') : '<tr><td colspan="3" style="text-align: center; color: #999;">لا توجد بيانات استخدام</td></tr>'}
+          `).join('') : '<tr><td colspan="3" style="text-align: center; color: #999;">ما استخدمت شي للحين</td></tr>'}
         </tbody>
       </table>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; background-color: #f9f9f9; padding: 15px; border-radius: 4px;">
-        <strong>💡 نصيحة:</strong> سيكون رصيد الشهر القادم متاحاً في <strong>${stats.nextResetDate || 'تاريخ تسجيلك'}</strong>.
-        هل تريد رصيد إضافي؟ ادعُ أصدقاءك واكسب 5 رصيد مكافأة لكل إحالة!
+        <strong>💡 تلميحة:</strong> رصيدك الجاي بينزل في تاريخ <strong>${stats.nextResetDate || 'تاريخ تسجيلك'}</strong>.
+        تبي نقاط زيادة؟ اعزِم ربعك واكسب 5 نقاط لكل واحد يسجل!
       </p>
 
-      <a href="https://watheqai.app" class="cta-button">استمر في التحسين</a>
+      <a href="https://watheqai.app" class="cta-button">كمّل تضبيط سيرتك</a>
     </div>
 
     <div class="footer">
@@ -453,22 +453,22 @@ https://watheqai.app
 </html>
       `,
       text: (userName, stats) => `
-مرحباً ${userName},
+حيّاك الله ${userName},
 
-إليك ملخص استخدامك الشهري على الواثق:
+إليك ملخص استخدامك هالشهر في واثق:
 
-الرصيد المستخدم: ${stats.totalUsed || 0}
-الرصيد المتبقي: ${stats.remaining || 0}
-الإجراءات المنفذة: ${stats.totalActions || 0}
-استخدام الرصيد: ${Math.round((stats.usagePercentage || 0) * 100) / 100}%
+نقاط استخدمتها: ${stats.totalUsed || 0}
+الباقي لك: ${stats.remaining || 0}
+حركات سويتها: ${stats.totalActions || 0}
+نسبة استخدامك: ${Math.round((stats.usagePercentage || 0) * 100) / 100}%
 
-توزيع حسب الميزة:
-${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${feature}: ${data.count || 0} مرة (${data.credits || 0} رصيد)`).join('\n') : 'لا توجد بيانات استخدام'}
+التفاصيل:
+${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${feature}: ${data.count || 0} مرة (${data.credits || 0} نقطة)`).join('\n') : 'ما فيه بيانات'}
 
-نصيحة: سيكون رصيد الشهر القادم متاحاً في ${stats.nextResetDate || 'تاريخ تسجيلك'}.
-هل تريد رصيد إضافي؟ ادعُ أصدقاءك واكسب 5 رصيد مكافأة لكل إحالة!
+تلميحة: رصيدك الجاي بينزل في ${stats.nextResetDate || 'تاريخ تسجيلك'}.
+تبي نقاط زيادة؟ اعزِم ربعك واكسب 5 نقاط لكل واحد يسجل!
 
-استمر في التحسين: https://watheqai.app
+كمّل تضبيط سيرتك: https://watheqai.app
 
 ---
 الواثق - محسّن السيرة الذاتية
@@ -626,22 +626,22 @@ https://watheqai.app
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎉 واثق برو متاح الآن!</h1>
-      <p>شكراً لانتظارك. يسعدنا الإعلان عن الإطلاق!</p>
+      <h1>🎉 أبشرك! واثق برو وصل!</h1>
+      <p>يعطيك العافية على صبرك. متحمسين نعلن لك الخبر!</p>
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">مرحباً،</p>
+      <p style="color: #333; font-size: 16px;">يا هلا فيك،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        لقد سجلت في قائمة الانتظار، ويسعدنا إخبارك بأن <strong>واثق برو</strong> أصبح متاحاً الآن!
-        احصل على 100 رصيد شهرياً لتحسين فرص توظيفك.
+        سجلت معنا في قائمة الانتظار، واليوم نفرحك ونقول لك <strong>واثق برو</strong> صار جاهز!
+        اضمن لك 100 رصيد شهرياً وعيش تجربة مختلفة في تحسين فرصك الوظيفية.
       </p>
 
       <div class="price-box">
-        <div class="price-label">يبدأ من</div>
+        <div class="price-label">تبدأ من</div>
         <div class="price">35 ريال/شهر</div>
-        <div class="price-label">100 رصيد • لا ينتهي</div>
+        <div class="price-label">100 نقطة • ما تنتهي</div>
       </div>
 
       <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 16px;">ما يتضمنه واثق برو:</h3>
@@ -669,11 +669,11 @@ https://watheqai.app
       </div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-        <strong>عرض الإطلاق الخاص:</strong> قم بالترقية خلال الـ 7 أيام القادمة واحصل على <strong>خصم 20%</strong> على الشهر الأول!
+        <strong>عرض خاص للإطلاق:</strong> رقّي حسابك خلال الـ 7 أيام الجاية وخذ <strong>خصم 20%</strong> على أول شهر!
       </p>
 
       <div style="text-align: center;">
-        <a href="https://watheqai.app/pricing" class="cta-button">قم بالترقية إلى برو الآن</a>
+        <a href="https://watheqai.app/pricing" class="cta-button">رقّي لـ برو الحين</a>
       </div>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
@@ -691,21 +691,21 @@ https://watheqai.app
 </html>
       `,
       text: (planType) => `
-مرحباً،
+حيّا الله من جانا،
 
-لقد سجلت في قائمة الانتظار، ويسعدنا إخبارك بأن واثق برو أصبح متاحاً الآن!
+سجلت معنا في قائمة الانتظار، واليوم نعلن لك أن واثق برو صار جاهز!
 
-احصل على 100 رصيد شهرياً:
-- جميع ميزات الذكاء الاصطناعي (مطابقة، تحسين، خطابات، مقابلات)
+خذلك 100 رصيد شهرياً:
+- كل ميزات الذكاء الاصطناعي (مطابقة، تحسين، خطابات، مقابلات)
 - مطابقة رؤية 2030
-- دعم ذو أولوية
-- وصول مبكر للميزات الجديدة
+- دعم فني خاص لك
+- تجربة الميزات الجديدة قبل الكل
 
 35 ريال/شهر
 
-عرض الإطلاق الخاص: قم بالترقية خلال الـ 7 أيام القادمة واحصل على خصم 20% على الشهر الأول!
+عرض خاص: رقّي حسابك خلال الـ 7 أيام الجاية ولك خصم 20% على أول شهر!
 
-قم بالترقية الآن: https://watheqai.app/pricing
+رقّي حسابك الحين: https://watheqai.app/pricing
 
 أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheqai.app/help
 
@@ -741,9 +741,7 @@ https://watheqai.app
   <div class="container">
     <div class="header">
       <div class="check-icon">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
+        <span style="font-size: 32px; line-height: 32px;">✓</span>
       </div>
       <h1>You're on the Waitlist!</h1>
     </div>
@@ -828,37 +826,35 @@ https://watheqai.app
   <div class="container">
     <div class="header">
       <div class="check-icon">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
+        <span style="font-size: 32px; line-height: 32px;">✓</span>
       </div>
-      <h1>تم تسجيلك في قائمة الانتظار!</h1>
+      <h1>أبشر! حجزنا لك مكان</h1>
     </div>
 
     <div class="content">
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        شكراً لاهتمامك بـ <strong>واثق برو</strong>! تم إضافتك بنجاح إلى قائمة الانتظار.
+        يعطيك العافية على اهتمامك بـ <strong>واثق برو</strong>! سجلناك معنا في القائمة وأمورك في السليم.
       </p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-        نعمل بجد لنقدم لك أدوات تحسين السيرة الذاتية بالذكاء الاصطناعي بشكل غير محدود. ستكون من أوائل من يعلمون عند الإطلاق!
+        جالسين نشتغل ليل نهار عشان نقدم لك أدوات تضبط سيرتك بالذكاء الاصطناعي بلا حدود. وبتكون (إن شاء الله) من أول الناس اللي يدرون وقت الإطلاق!
       </p>
 
       <div style="background-color: #f0fdf4; border-right: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
-        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">ما التالي؟</p>
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">وش اللي بيصير بعدين؟</p>
         <ul style="margin: 0; padding-right: 20px; color: #666; font-size: 14px;">
-          <li>سنرسل لك بريداً إلكترونياً عند إطلاق برو</li>
-          <li>أعضاء قائمة الانتظار الأوائل يحصلون على أولوية الوصول</li>
-          <li>أسعار إطلاق خاصة للمتبنين الأوائل</li>
+          <li>بنرسل لك إيميل أول ما نطلق "برو"</li>
+          <li>لك الأولوية في تجربة الخدمة</li>
+          <li>ولك سعر خاص لأنك من الأوائل</li>
         </ul>
       </div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        في هذه الأثناء، يمكنك الاستمرار في استخدام واثق مجاناً مع 15 رصيد شهري لتحسين سيرتك الذاتية!
+        بين ما نجهز، يمديك تستخدم واثق مجاناً (عندك 15 رصيد شهري) وتضبط أمورك!
       </p>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheqai.app/help" style="color: #006C35;">مركز المساعدة</a>
+        عندك استفسار؟ رد على هالإيميل أو مرّ على <a href="https://watheqai.app/help" style="color: #006C35;">مركز المساعدة</a>
       </p>
     </div>
 
@@ -871,18 +867,18 @@ https://watheqai.app
 </html>
       `,
       text: `
-تم تسجيلك في قائمة الانتظار!
+أبشر! حجزنا لك مكان في القائمة
 
-شكراً لاهتمامك بـ واثق برو! تم إضافتك بنجاح إلى قائمة الانتظار.
+يعطيك العافية على اهتمامك بـ واثق برو! سجلناك معنا في القائمة وأمورك تمام.
 
-نعمل بجد لنقدم لك أدوات تحسين السيرة الذاتية بالذكاء الاصطناعي بشكل غير محدود. ستكون من أوائل من يعلمون عند الإطلاق!
+جالسين نشتغل عشان نقدم لك أدوات تضبط سيرتك بالذكاء الاصطناعي بلا حدود. وبتكون من أول الناس اللي يدرون وقت الإطلاق!
 
-ما التالي؟
-- سنرسل لك بريداً إلكترونياً عند إطلاق برو
-- أعضاء قائمة الانتظار الأوائل يحصلون على أولوية الوصول
-- أسعار إطلاق خاصة للمتبنين الأوائل
+وش اللي بيصير بعدين؟
+- بنرسل لك إيميل أول ما نطلق "برو"
+- لك الأولوية في تجربة الخدمة
+- ولك سعر خاص لأنك من الأوائل
 
-في هذه الأثناء، يمكنك الاستمرار في استخدام واثق مجاناً مع 15 رصيد شهري لتحسين سيرتك الذاتية!
+بين ما نجهز، يمديك تستخدم واثق مجاناً (عندك 15 رصيد شهري) وتضبط أمورك!
 
 أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheqai.app/help
 
@@ -973,7 +969,7 @@ https://watheqai.app
       `
     },
     ar: {
-      subject: '🎉 حصلت على 5 رصيد من إحالتك!',
+      subject: '🎉 جاك 5 رصيد هدية!',
       html: (userName, refereeName) => `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -996,30 +992,30 @@ https://watheqai.app
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎉 حصلت على مكافأة الإحالة!</h1>
+      <h1>🎉 تستاهل المكافأة!</h1>
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">مرحباً <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">يا هلا <strong>${userName}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        أخبار رائعة! ${refereeName ? `<strong>${refereeName}</strong>` : 'صديقك'} استخدم واثق للتو وأكمل إجراءه الأول. كشكر لك على الإحالة، أضفنا <strong>5 رصيد إضافي</strong> إلى حسابك!
+        علوم طيبة! ${refereeName ? `<strong>${refereeName}</strong>` : 'خويك'} استخدم واثق عن طريقك وضبّط وضعه. وعشان كذا، لك منا <strong>5 نقاط إضافية</strong> في حسابك تستاهلها!
       </p>
 
       <div class="credits-badge">+5</div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center; margin: 20px 0;">
-        استمر في مشاركة رابط الإحالة الخاص بك لكسب المزيد من الرصيد!
+        لا يوقف الخير عندك، انشر الرابط بين ربعك وزد رصيدك!
       </p>
 
       <div style="text-align: center;">
-        <a href="https://watheqai.app" class="cta-button">استخدم رصيدك الآن</a>
+        <a href="https://watheqai.app" class="cta-button">استخدم رصيدك الحين</a>
       </div>
 
       <div style="background-color: #f0fdf4; border-right: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
-        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 نصيحة محترف</p>
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 تلميحة</p>
         <p style="margin: 0; color: #666; font-size: 14px;">
-          شارك رابط الإحالة الخاص بك مع المزيد من الأصدقاء! كل إحالة ناجحة تكسبك 5 رصيد. ابحث عن رابط الإحالة في إعدادات حسابك.
+          كل واحد يسجل عن طريقك، يجيك 5 نقاط. ادخل إعدادات حسابك وانسخ رابط الدعوة.
         </p>
       </div>
     </div>
@@ -1033,17 +1029,17 @@ https://watheqai.app
 </html>
       `,
       text: (userName, refereeName) => `
-مرحباً ${userName},
+حيّاك الله ${userName},
 
-أخبار رائعة! ${refereeName || 'صديقك'} استخدم واثق للتو وأكمل إجراءه الأول. كشكر لك على الإحالة، أضفنا 5 رصيد إضافي إلى حسابك!
+علوم طيبة! ${refereeName || 'خويك'} استخدم واثق عن طريقك. وعشان كذا، لك منا 5 نقاط إضافية في حسابك تستاهلها!
 
-+5 رصيد تمت إضافته
++5 رصيد وصلك
 
-استمر في مشاركة رابط الإحالة الخاص بك لكسب المزيد من الرصيد!
+لا يوقف الخير عندك، انشر الرابط بين ربعك وزد رصيدك!
 
-استخدم رصيدك الآن: https://watheqai.app
+استخدم رصيدك الحين: https://watheqai.app
 
-نصيحة محترف: كل إحالة ناجحة تكسبك 5 رصيد. ابحث عن رابط الإحالة في إعدادات حسابك.
+تلميحة: كل واحد يسجل عن طريقك، يجيك 5 نقاط. ادخل إعدادات حسابك وانسخ رابط الدعوة.
 
 ---
 واثق - محسّن السيرة الذاتية
@@ -1132,7 +1128,7 @@ https://watheqai.app
       `
     },
     ar: {
-      subject: '🎁 مكافأة الترحيب: تمت إضافة 5 رصيد مجاني!',
+      subject: '🎁 وصلتك 5 نقاط هدية ترحيبية!',
       html: (userName, referrerName) => `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -1155,30 +1151,30 @@ https://watheqai.app
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎁 مكافأة الترحيب!</h1>
+      <h1>🎁 حياك الله في واثق!</h1>
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">مرحباً <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">يا هلا وسهلا <strong>${userName}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        شكراً لانضمامك إلى واثق! ${referrerName ? `بما أن <strong>${referrerName}</strong> أحالك، ` : ''}أضفنا <strong>5 رصيد إضافي</strong> إلى حسابك لمساعدتك على البدء!
+        نوّرت واثق! ${referrerName ? `وبما أنك جاي من طرف <strong>${referrerName}</strong>، ` : ''}حطينا لك <strong>5 نقاط إضافية</strong> في حسابك كبداية قوية لك!
       </p>
 
       <div class="credits-badge">+5</div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center; margin: 20px 0;">
-        استخدم رصيدك لتحسين سيرتك الذاتية والحصول على وظيفة أحلامك!
+        استفد من رصيدك واضبط سيرتك الذاتية عشان تلقى وظيفة أحلامك!
       </p>
 
       <div style="text-align: center;">
-        <a href="https://watheqai.app" class="cta-button">ابدأ التحسين</a>
+        <a href="https://watheqai.app" class="cta-button">يلا نبدأ</a>
       </div>
 
       <div style="background-color: #f0fdf4; border-right: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
-        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 اكسب المزيد من الرصيد</p>
+        <p style="color: #006C35; font-weight: 600; margin: 0 0 8px 0;">💡 تبي نقاط زود؟</p>
         <p style="margin: 0; color: #666; font-size: 14px;">
-          يمكنك كسب 5 رصيد إضافي بدعوة أصدقائك أيضاً! ابحث عن رابط الإحالة في إعدادات حسابك.
+          يمديك تكسب 5 نقاط زيادة إذا عزمت أخوياك! تلقى رابط الدعوة في إعدادات حسابك.
         </p>
       </div>
     </div>
@@ -1192,17 +1188,17 @@ https://watheqai.app
 </html>
       `,
       text: (userName, referrerName) => `
-مرحباً ${userName},
+يا هلا وسهلا ${userName},
 
-شكراً لانضمامك إلى واثق! ${referrerName ? `بما أن ${referrerName} أحالك، ` : ''}أضفنا 5 رصيد إضافي إلى حسابك لمساعدتك على البدء!
+نوّرت واثق! ${referrerName ? `وبما أنك جاي من طرف ${referrerName}، ` : ''}حطينا لك 5 نقاط إضافية في حسابك كبداية قوية لك!
 
-+5 رصيد تمت إضافته
++5 نقاط وصلتك
 
-استخدم رصيدك لتحسين سيرتك الذاتية والحصول على وظيفة أحلامك!
+استفد من رصيدك واضبط سيرتك الذاتية عشان تلقى وظيفة أحلامك!
 
-ابدأ التحسين: https://watheqai.app
+يلا نبدأ: https://watheqai.app
 
-اكسب المزيد من الرصيد: يمكنك كسب 5 رصيد إضافي بدعوة أصدقائك أيضاً! ابحث عن رابط الإحالة في إعدادات حسابك.
+تبي نقاط زيادة؟ يمديك تكسب 5 نقاط زيادة إذا عزمت أخوياك! تلقى رابط الدعوة في إعدادات حسابك.
 
 ---
 واثق - محسّن السيرة الذاتية

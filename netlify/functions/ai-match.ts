@@ -93,10 +93,13 @@ const baseHandler: Handler = async (event) => {
     // Validate request using Zod schema
     const parseResult = MatchRequestSchema.safeParse(rawBody);
     if (!parseResult.success) {
+      const validationError = formatZodError(parseResult.error);
+      console.error('[ai-match] Validation failed:', validationError);
+      console.error('[ai-match] Received payload keys:', Object.keys(rawBody));
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: formatZodError(parseResult.error) })
+        body: JSON.stringify({ error: validationError })
       };
     }
 

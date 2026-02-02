@@ -51,7 +51,7 @@ async function getUserFromToken(token: string) {
   }
 }
 
-const handler: Handler = async (event) => {
+const handleFeedbackSubmission: Handler = async (event) => {
   // Wrap everything in try-catch to ensure JSON responses
   try {
     // Only accept POST requests
@@ -246,4 +246,4 @@ const handler: Handler = async (event) => {
 };
 
 // Wrap with rate limiting (5 req/min per IP)
-export const handle = withRateLimit("submit-feedback", handler);
+export const handler = withRateLimit("submit-feedback", handleFeedbackSubmission);

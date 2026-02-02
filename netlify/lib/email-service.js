@@ -14,9 +14,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Configuration
 // IMPORTANT: To send emails to real users, you must verify your domain at https://resend.com/domains
-// Then set RESEND_SENDER_EMAIL to an email on your verified domain (e.g., noreply@watheqai.app)
-// Using watheqai.app as the verified domain
-const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'noreply@watheqai.app';
+// Using hello@ instead of noreply@ for better deliverability and trust signals (2026 best practice)
+// See: https://resend.com/docs/dashboard/domains/dmarc
+const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'hello@watheqai.app';
 const SENDER_NAME = process.env.RESEND_SENDER_NAME || 'Watheq';
 const REPLY_TO_EMAIL = 'support@watheqai.app';
 

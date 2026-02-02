@@ -95,7 +95,8 @@ export async function trackReferral(referrerCode, refereeUserId) {
       p_user_id: referrerId,
       p_amount: REFERRER_REWARD,
       p_description: `Referral bonus: ${referee?.email || 'friend'} signed up`,
-      p_transaction_type: 'referral_reward'
+      p_transaction_type: 'referral_reward',
+      p_feature: 'referral_reward'
     });
 
     if (referrerRewardError) {
@@ -109,7 +110,8 @@ export async function trackReferral(referrerCode, refereeUserId) {
       p_user_id: refereeUserId,
       p_amount: REFEREE_REWARD,
       p_description: `Referral bonus: welcome reward`,
-      p_transaction_type: 'referral_reward'
+      p_transaction_type: 'referral_reward',
+      p_feature: 'referral_reward'
     });
 
     if (refereeRewardError) {
