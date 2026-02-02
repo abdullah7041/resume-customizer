@@ -1163,7 +1163,7 @@
     "vision2030": {
       "steps": {
         "intro": {
-          "title": "🇸🇦 Vision 2030 Alignment",
+          "title": "Vision 2030 Alignment",
           "content": "This AI-powered feature analyzes how your resume aligns with Saudi Vision 2030 priorities. It costs 2 credits and provides detailed insights."
         },
         "calculate": {
