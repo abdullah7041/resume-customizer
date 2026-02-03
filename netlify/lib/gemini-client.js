@@ -528,7 +528,11 @@ ${resumeText}`;
   try {
     console.log(`[OpenRouter] Optimizing with ${MODELS.flash}`);
     const messages = [{ role: 'user', content: prompt }];
-    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384 });
+    // Use 70s timeout for optimize (function has 75s Netlify timeout)
+    const text = await callOpenRouter('flash', messages, schema, {
+      maxTokens: 16384,
+      timeoutMs: 70000
+    });
     console.log(`[OpenRouter] Optimize response length: ${text.length} chars`);
 
     let parsed;
@@ -573,7 +577,11 @@ ${resumeText}`;
 
   try {
     const messages = [{ role: 'user', content: prompt }];
-    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384 });
+    // Use 40s timeout for ai-match (function has 45s Netlify timeout)
+    const text = await callOpenRouter('flash', messages, schema, {
+      maxTokens: 16384,
+      timeoutMs: 40000
+    });
     console.log(`[OpenRouter] Match response: ${text.length} chars`);
 
     let parsed;

@@ -39,11 +39,15 @@ function convertGoogleSchemaToOpenRouter(googleSchema) {
  * @param {'lite' | 'flash'} modelType - Model to use
  * @param {Array} messages - Array of {role, content} messages
  * @param {Object} jsonSchema - Optional JSON schema for structured output
- * @param {Object} options - Additional options (temperature, maxTokens, etc.)
+ * @param {Object} options - Additional options (temperature, maxTokens, timeoutMs, etc.)
  * @returns {Promise<string>} - Response text (JSON string if schema provided)
  */
 export async function callOpenRouter(modelType, messages, jsonSchema = null, options = {}) {
   const model = MODELS[modelType] || MODELS.flash;
+
+  // Timeout configuration: 25s default (leaves 5s buffer for Netlify's 30s limit)
+  // Can be overridden via options.timeoutMs for functions with longer Netlify timeouts
+  const TIMEOUT_MS = options.timeoutMs ?? 25000;
 
   const requestBody = {
     model,
@@ -65,7 +69,11 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
     };
   }
 
-  console.log(`[OpenRouter] Calling ${model} with ${messages.length} messages${jsonSchema ? ' (structured output)' : ''}`);
+  console.log(`[OpenRouter] Calling ${model} with ${messages.length} messages${jsonSchema ? ' (structured output)' : ''} (timeout: ${TIMEOUT_MS}ms)`);
+
+  // AbortController for timeout protection
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
     const response = await fetch(OPENROUTER_URL, {
@@ -76,7 +84,8 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
         'HTTP-Referer': process.env.SITE_URL || 'https://watheq.netlify.app',
         'X-Title': 'Watheq Resume Optimizer'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -98,8 +107,20 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
     return content;
 
   } catch (error) {
+    // Handle timeout errors specifically
+    if (error.name === 'AbortError') {
+      console.error(`[OpenRouter] Request timed out after ${TIMEOUT_MS}ms`);
+      const timeoutError = new Error('AI request timed out. The service is taking longer than expected. Please try again.');
+      timeoutError.name = 'TimeoutError';
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+
     console.error('[OpenRouter] API call failed:', error);
     throw error;
+  } finally {
+    // Always clear timeout to prevent memory leaks
+    clearTimeout(timeoutId);
   }
 }
 

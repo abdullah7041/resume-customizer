@@ -168,6 +168,7 @@ const baseHandler: Handler = async (event) => {
     const aiPrompt = buildVision2030Prompt(resumeText, jobDescription, language);
 
     // Call OpenRouter with structured output for consistent response format
+    // Use 85s timeout (function has 90s Netlify timeout, leaves 5s buffer)
     const analysisJson = await callOpenRouter('flash', [
       {
         role: 'user',
@@ -176,7 +177,8 @@ const baseHandler: Handler = async (event) => {
     ], Vision2030ResponseSchema, {
       temperature: 0.3,
       maxTokens: 16384,  // Increased to 16k to prevent JSON truncation (model supports up to 65k)
-      schemaName: 'vision2030_analysis'
+      schemaName: 'vision2030_analysis',
+      timeoutMs: 85000  // 85s timeout for large prompt processing
     });
 
     const duration = Date.now() - startTime;
@@ -213,16 +215,29 @@ const baseHandler: Handler = async (event) => {
 
   } catch (error) {
     console.error('[vision2030-alignment] Error:', error);
-    captureError(error, {
-      function: 'vision2030-alignment',
-      payload: rawBody || {}
-    });
+
+    // Don't send timeout errors to Sentry (expected behavior under load)
+    if (error.name !== 'TimeoutError') {
+      captureError(error, {
+        function: 'vision2030-alignment',
+        payload: rawBody || {}
+      });
+    }
+
+    // Return 504 for timeout errors, 500 for other errors
+    const isTimeout = error.name === 'TimeoutError' || error.status === 504;
 
     return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
+      statusCode: isTimeout ? 504 : 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(isTimeout && { 'Retry-After': '30' })
+      },
       body: JSON.stringify({
-        error: 'Failed to analyze Vision 2030 alignment'
+        error: isTimeout
+          ? 'Analysis timed out. The AI service is taking longer than expected. Please try again.'
+          : 'Failed to analyze Vision 2030 alignment',
+        retryable: isTimeout
       })
     };
   }

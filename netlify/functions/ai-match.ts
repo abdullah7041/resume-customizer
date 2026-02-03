@@ -165,18 +165,30 @@ const baseHandler: Handler = async (event) => {
       code: errorDetails?.code || '',
     });
 
-    captureError(error, {
-      function: 'ai-match',
-      payload: JSON.parse(event.body || '{}'),
-      userId,
-    });
+    // Don't send timeout errors to Sentry (expected behavior under load)
+    if (errorDetails?.name !== 'TimeoutError') {
+      captureError(error, {
+        function: 'ai-match',
+        payload: JSON.parse(event.body || '{}'),
+        userId,
+      });
+    }
+
+    // Return 504 for timeout errors, 500 for other errors
+    const isTimeout = errorDetails?.name === 'TimeoutError' || errorDetails?.status === 504;
 
     return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
+      statusCode: isTimeout ? 504 : 500,
+      headers: {
+        "Content-Type": "application/json",
+        ...(isTimeout && { 'Retry-After': '30' })
+      },
       body: JSON.stringify({
-        error: "Failed to analyze match",
+        error: isTimeout
+          ? 'Analysis timed out. The AI service is taking longer than expected. Please try again.'
+          : "Failed to analyze match",
         message: errorDetails?.message || 'Unknown error occurred',
+        retryable: isTimeout
       }),
     };
   }

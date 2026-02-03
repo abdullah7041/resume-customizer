@@ -339,14 +339,32 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
     };
 
   } catch (error) {
+    const errorDetails = error as any;
     console.error("Optimization error:", error);
-    captureError(error, {
-      function: 'optimize',
-      payload: JSON.parse(event.body || '{}'),
-    });
+
+    // Don't send timeout errors to Sentry (expected behavior under load)
+    if (errorDetails?.name !== 'TimeoutError') {
+      captureError(error, {
+        function: 'optimize',
+        payload: JSON.parse(event.body || '{}'),
+      });
+    }
+
+    // Return 504 for timeout errors, 500 for other errors
+    const isTimeout = errorDetails?.name === 'TimeoutError' || errorDetails?.status === 504;
+
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Failed to optimize resume" }),
+      statusCode: isTimeout ? 504 : 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(isTimeout && { 'Retry-After': '30' })
+      },
+      body: JSON.stringify({
+        error: isTimeout
+          ? 'Optimization timed out. The AI service is taking longer than expected. Please try again.'
+          : 'Failed to optimize resume',
+        retryable: isTimeout
+      }),
     };
   }
 };

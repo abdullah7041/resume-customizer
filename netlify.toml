@@ -38,10 +38,10 @@
   timeout = 30
 
 [functions."ai-match"]
-  timeout = 30
+  timeout = 45  # Increased: Flash model can take 20-30s, buffer for retries
 
 [functions."optimize"]
-  timeout = 60  # Increased for Gemini flash model processing (target: 20-25s, buffer for edge cases)
+  timeout = 75  # Increased: Complex schema + flash model (target: 30-40s, buffer for retries)
 
 [functions."generate-cover-letter"]
   timeout = 30
@@ -59,7 +59,7 @@
   memory = 1024
 
 [functions."vision2030-alignment"]
-  timeout = 60  # Vision 2030 analysis: Gemini flash model with large prompt takes 30-40s
+  timeout = 90  # Increased: Large prompt (280+ lines) + flash model takes 30-50s, buffer for retries
 
 # Scheduled Functions (Cron Jobs)
 [functions."cron-reset-credits"]
