@@ -21,12 +21,26 @@ export function useOnboardingTour() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Check if tour should run
+  // Check if tour should run (wait for credit balance to render)
   useEffect(() => {
     const hasCompletedTour = localStorage.getItem(STORAGE_KEY);
-    if (!hasCompletedTour) {
-      setRun(true);
-    }
+    if (hasCompletedTour) return;
+
+    // Wait for the credit balance element to be in the DOM before starting tour
+    const checkElement = () => {
+      const creditElement = document.querySelector('[data-tour="credits"]');
+      if (creditElement) {
+        setRun(true);
+      } else {
+        // Retry after a short delay if element not found
+        setTimeout(checkElement, 500);
+      }
+    };
+
+    // Start checking after a short delay to allow initial render
+    const timeoutId = setTimeout(checkElement, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const steps: Step[] = useMemo(() => [
@@ -34,12 +48,15 @@ export function useOnboardingTour() {
       target: '[data-tour="credits"]',
       content: t('tour.onboarding.steps.credits.content'),
       title: t('tour.onboarding.steps.credits.title'),
-      placement: 'bottom-start',
+      placement: 'bottom',
       disableBeacon: true,
       disableOverlayClose: true,
-      disableScrollParentFix: true, // Fix positioning for fixed header elements
+      disableScrolling: true, // Disable scrolling for fixed header element
       hideCloseButton: isMobile, // Hide close button on mobile to prevent overlap
       spotlightPadding: 8,
+      floaterProps: {
+        disableAnimation: false,
+      },
       styles: {
         options: {
           zIndex: 10000,

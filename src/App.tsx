@@ -56,7 +56,7 @@ export default function App() {
           callback={handleCallback}
           disableScrolling={false}
           scrollToFirstStep
-          scrollOffset={100}
+          scrollOffset={20}
           spotlightClicks={false}
           tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
           locale={{
@@ -67,9 +67,8 @@ export default function App() {
             skip: 'Skip Tour',
           }}
           floaterProps={{
-            disableAnimation: true,
-            disableFlip: true,
-            offset: 20,
+            disableAnimation: false,
+            offset: 10,
           }}
         />
       </div>
