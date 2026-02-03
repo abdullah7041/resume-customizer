@@ -102,6 +102,9 @@ const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
       window.dispatchEvent(new CustomEvent('referralCreditsEarned', {
         detail: { creditsAdded: 5 }
       }));
+
+      // Trigger immediate credits refresh
+      window.dispatchEvent(new Event('refreshCredits'));
     } else {
       const errorData = await response.json();
       console.error("[useAuth] Failed to track referral:", errorData);

@@ -7,6 +7,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { addCredits } from './credit-manager.js';
 
 const REFERRER_REWARD = 5;
 const REFEREE_REWARD = 5;
@@ -90,34 +91,26 @@ export async function trackReferral(referrerCode, refereeUserId) {
     const referrer = authUsers?.users?.find(u => u.id === referrerId);
     const referee = authUsers?.users?.find(u => u.id === refereeUserId);
 
-    // Award credits to referrer
-    const { error: referrerRewardError } = await supabase.rpc('add_credits', {
-      p_user_id: referrerId,
-      p_amount: REFERRER_REWARD,
-      p_description: `Referral bonus: ${referee?.email || 'friend'} signed up`,
-      p_transaction_type: 'referral_reward',
-      p_feature: 'referral_reward'
-    });
-
-    if (referrerRewardError) {
-      console.error('[ReferralManager] Failed to reward referrer:', referrerRewardError);
-    } else {
+    // Award credits to referrer using credit-manager (avoids RPC migration dependency)
+    try {
+      await addCredits(referrerId, REFERRER_REWARD, 'referral_reward', {
+        description: `Referral bonus: ${referee?.email || 'friend'} signed up`,
+        referee_email: referee?.email,
+      });
       console.log(`[ReferralManager] Awarded ${REFERRER_REWARD} credits to referrer ${referrerId}`);
+    } catch (referrerRewardError) {
+      console.error('[ReferralManager] Failed to reward referrer:', referrerRewardError);
     }
 
-    // Award credits to referee
-    const { error: refereeRewardError } = await supabase.rpc('add_credits', {
-      p_user_id: refereeUserId,
-      p_amount: REFEREE_REWARD,
-      p_description: `Referral bonus: welcome reward`,
-      p_transaction_type: 'referral_reward',
-      p_feature: 'referral_reward'
-    });
-
-    if (refereeRewardError) {
-      console.error('[ReferralManager] Failed to reward referee:', refereeRewardError);
-    } else {
+    // Award credits to referee using credit-manager (avoids RPC migration dependency)
+    try {
+      await addCredits(refereeUserId, REFEREE_REWARD, 'referral_reward', {
+        description: `Referral bonus: welcome reward`,
+        referrer_email: referrer?.email,
+      });
       console.log(`[ReferralManager] Awarded ${REFEREE_REWARD} credits to referee ${refereeUserId}`);
+    } catch (refereeRewardError) {
+      console.error('[ReferralManager] Failed to reward referee:', refereeRewardError);
     }
 
     // Send email notifications (non-blocking)

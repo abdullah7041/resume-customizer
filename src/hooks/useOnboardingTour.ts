@@ -37,6 +37,7 @@ export function useOnboardingTour() {
       placement: 'bottom-start',
       disableBeacon: true,
       disableOverlayClose: true,
+      disableScrollParentFix: true, // Fix positioning for fixed header elements
       hideCloseButton: isMobile, // Hide close button on mobile to prevent overlap
       spotlightPadding: 8,
       styles: {

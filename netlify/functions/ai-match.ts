@@ -103,10 +103,10 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobDesc } = parseResult.data;
+    const { resumeText, jobText } = parseResult.data;
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
-    const match = await processMatchOnly(resumeText, jobDesc);
+    const match = await processMatchOnly(resumeText, jobText);
 
     // Save to database if user is authenticated and Supabase is configured
     if (userId && client) {
@@ -114,7 +114,7 @@ const baseHandler: Handler = async (event) => {
         await client.from('job_matches').insert({
           user_id: userId,
           resume_text: resumeText.substring(0, 5000), // Truncate for storage
-          job_text: jobDesc.substring(0, 5000), // Truncate for storage
+          job_text: jobText.substring(0, 5000), // Truncate for storage
           score: match.score,
           missing_keywords: match.missingKeywords,
           suggestions: match.strongMatches,

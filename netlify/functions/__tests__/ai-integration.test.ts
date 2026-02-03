@@ -88,7 +88,7 @@ describe('AI Integration Functions', () => {
             const event = {
                 httpMethod: 'POST',
                 headers: { 'Authorization': 'Bearer test-token' },
-                body: JSON.stringify({ resumeText: 'test' }) // Missing jobDesc
+                body: JSON.stringify({ resumeText: 'test' }) // Missing jobText
             } as Partial<HandlerEvent>;
 
             const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
@@ -107,7 +107,7 @@ describe('AI Integration Functions', () => {
             const event = {
                 httpMethod: 'POST',
                 headers: { 'Authorization': 'Bearer test-token' },
-                body: JSON.stringify({ resumeText: 'resume', jobDesc: 'job' })
+                body: JSON.stringify({ resumeText: 'resume', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
             const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;

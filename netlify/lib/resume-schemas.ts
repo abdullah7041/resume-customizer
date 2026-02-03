@@ -193,7 +193,7 @@ export const ParseResumeRequestSchema = z.discriminatedUnion("kind", [
 
 export const MatchRequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required"),
-    jobDesc: z.string().min(1, "Job description is required"),
+    jobText: z.string().min(1, "Job description is required"),  // Changed from jobDesc to match frontend
 });
 
 export const OptimizeRequestSchema = z.object({

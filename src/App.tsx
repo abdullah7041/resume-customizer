@@ -55,6 +55,8 @@ export default function App() {
           showSkipButton
           callback={handleCallback}
           disableScrolling={false}
+          scrollToFirstStep
+          scrollOffset={100}
           spotlightClicks={false}
           tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
           locale={{

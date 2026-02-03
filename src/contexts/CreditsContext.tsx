@@ -184,6 +184,19 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
         };
     }, [user, debouncedFetchCredits]);
 
+    // Listen for manual credit refresh events (e.g., after referral tracking)
+    useEffect(() => {
+        const handleRefreshCredits = () => {
+            console.log('[CreditsContext] Manual refresh triggered');
+            fetchCredits(true); // Immediate fetch
+        };
+
+        window.addEventListener('refreshCredits', handleRefreshCredits);
+        return () => {
+            window.removeEventListener('refreshCredits', handleRefreshCredits);
+        };
+    }, [fetchCredits]);
+
     // Upgrade modal threshold logic
     useEffect(() => {
         if (!credits) return;
