@@ -58,16 +58,18 @@ describe('parseResume', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
-          'X-Beta-Code': 'WATHEQ01'
+          'Content-Type': 'application/json'
         })
       })
     );
   });
 
   it('throws when parse fails', async () => {
+    // Use 400 (client error) to avoid retries
     global.fetch.mockResolvedValueOnce({
       ok: false,
-      json: () => Promise.resolve({ error: 'Parse failed' }),
+      status: 400,
+      json: async () => ({ error: 'Parse failed' }),
     });
     await expect(parseResume('   ')).rejects.toThrow('Parse failed');
   });
@@ -95,9 +97,9 @@ describe('analyzeResume', () => {
     expect(global.fetch).toHaveBeenCalledWith('/.netlify/functions/ai-match', expect.objectContaining({
       method: 'POST',
       headers: expect.objectContaining({
-        'X-Beta-Code': 'WATHEQ01'
+        'Content-Type': 'application/json'
       }),
-      body: JSON.stringify({ resumeText: 'resume text', jobDesc: 'job text' })
+      body: JSON.stringify({ resumeText: 'resume text', jobText: 'job text' })
     }));
     expect(result.score).toBe(82);
   });
@@ -125,7 +127,7 @@ describe('optimizeResume', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
-          'X-Beta-Code': 'WATHEQ01'
+          'Content-Type': 'application/json'
         }),
         body: JSON.stringify({ resumeText: 'resume', jobText: 'job' })
       })

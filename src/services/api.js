@@ -14,13 +14,21 @@ const getAuthHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.warn('[API] Failed to retrieve auth session:', sessionError.message);
+    }
+
     if (session?.access_token) {
       headers.Authorization = `Bearer ${session.access_token}`;
+      console.log('[API] Auth token attached to request');
+    } else {
+      console.warn('[API] No active session found - request will be sent without authentication');
     }
   } catch (error) {
-    // Silent fail - auth is optional for most endpoints
-    void error;
+    console.error('[API] Unexpected error retrieving auth session:', error);
+    // Don't throw - allow the endpoint to decide if auth is required
   }
 
   return headers;
@@ -42,19 +50,31 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
     } catch (error) {
       lastError = error;
 
-      // Don't retry on 4xx errors (client errors, auth failures, validation)
-      if (error.status >= 400 && error.status < 500) {
+      // Always retry on 502/504 errors (Bad Gateway / Gateway Timeout)
+      const isRetryableServerError = error.status === 502 || error.status === 504 || error.retryable === true;
+
+      // Don't retry on 4xx errors EXCEPT 429 (rate limit)
+      // 401, 403, 404, 400 are client errors and should not be retried
+      if (error.status >= 400 && error.status < 500 && error.status !== 429) {
+        console.log(`[API Retry] Client error ${error.status} detected - not retrying`);
         throw error;
       }
 
       // Don't retry on quota exceeded
       if (error.quotaExceeded) {
+        console.log('[API Retry] Quota exceeded - not retrying');
         throw error;
       }
 
       // Don't retry on last attempt
       if (attempt === maxRetries) {
+        console.log(`[API Retry] Max retries (${maxRetries}) reached - giving up`);
         break;
+      }
+
+      // Log retry reason
+      if (isRetryableServerError) {
+        console.log(`[API Retry] Retryable server error detected (${error.status || 'unknown'})`);
       }
 
       // Calculate delay with exponential backoff + jitter
@@ -80,17 +100,44 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
 
 // Helper to handle responses
 const handleResponse = async (response) => {
+  // Parse JSON response body first (needed for error messages)
+  const data = await response.json().catch(() => ({}));
+
   // Handle rate limiting (429 Too Many Requests)
   if (response.status === 429) {
     const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
-    const error = new Error(`Too many requests. Please wait ${retryAfter} seconds.`);
+    const error = new Error(data.error || `Too many requests. Please wait ${retryAfter} seconds.`);
     error.type = 'RATE_LIMITED';
     error.retryAfter = retryAfter;
     error.status = 429;
     throw error;
   }
 
-  const data = await response.json().catch(() => ({}));
+  // Handle authentication errors
+  if (response.status === 401) {
+    const error = new Error(data.error || "Authentication required. Please sign in again.");
+    error.status = 401;
+    error.type = 'AUTH_REQUIRED';
+    throw error;
+  }
+
+  // Handle Bad Gateway errors (502) - often caused by timeouts
+  if (response.status === 502) {
+    const error = new Error(data.error || "Service temporarily unavailable. Retrying automatically...");
+    error.status = 502;
+    error.type = 'BAD_GATEWAY';
+    error.retryable = true;
+    throw error;
+  }
+
+  // Handle Gateway Timeout errors (504)
+  if (response.status === 504) {
+    const error = new Error(data.error || "Request timed out. Retrying automatically...");
+    error.status = 504;
+    error.type = 'GATEWAY_TIMEOUT';
+    error.retryable = true;
+    throw error;
+  }
 
   if (!response.ok) {
     // Preserve quota metadata from error response
@@ -230,21 +277,34 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
       // Enrich error with status for retry logic
       error.status = error.status || 500;
 
-      // Capture error in Sentry
-      Sentry.captureException(error, {
-        tags: { api_function: 'analyzeResumeWithAI' },
-        contexts: {
-          request: {
-            quota_exceeded: error.quotaExceeded || false,
-            has_resume: !!resumeText,
-            has_job_desc: !!jobDescription
+      // Capture error in Sentry (but skip for auth errors)
+      if (error.status !== 401) {
+        Sentry.captureException(error, {
+          tags: { api_function: 'analyzeResumeWithAI' },
+          contexts: {
+            request: {
+              quota_exceeded: error.quotaExceeded || false,
+              has_resume: !!resumeText,
+              has_job_desc: !!jobDescription,
+              error_type: error.type || 'unknown'
+            }
           }
-        }
-      });
+        });
+      }
+
+      // Handle authentication errors
+      if (error.status === 401 || error.type === 'AUTH_REQUIRED') {
+        throw new Error('Authentication expired. Please sign out and sign in again.');
+      }
 
       // Handle quota exceeded
       if (error.quotaExceeded) {
         throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} analyses.`);
+      }
+
+      // Handle timeout/gateway errors with better messaging
+      if (error.status === 502 || error.status === 504) {
+        throw new Error('AI service is experiencing high load. We automatically retried but the request still timed out. Please try again in a moment.');
       }
 
       // Re-throw the error so the caller (MainContent) can show proper failure notification

@@ -163,6 +163,7 @@ const baseHandler: Handler = async (event) => {
       stack: errorDetails?.stack || 'No stack trace',
       name: errorDetails?.name || 'Error',
       code: errorDetails?.code || '',
+      status: errorDetails?.status || 'unknown',
     });
 
     // Don't send timeout errors to Sentry (expected behavior under load)
@@ -188,10 +189,13 @@ const baseHandler: Handler = async (event) => {
       },
       body: JSON.stringify({
         error: isTimeout
-          ? 'Analysis timed out. Retrying automatically...'
-          : "Failed to analyze match",
+          ? 'Analysis timed out due to high AI service load. This is automatically retried - please wait.'
+          : "Failed to analyze match. Please try again.",
         message: errorDetails?.message || 'Unknown error occurred',
-        retryable: isTimeout
+        retryable: isTimeout,
+        troubleshooting: isTimeout
+          ? 'The AI service (OpenRouter) is experiencing delays. Automatic retries are in progress.'
+          : 'Check your network connection and authentication status. If the issue persists, contact support.'
       }),
     };
   }
