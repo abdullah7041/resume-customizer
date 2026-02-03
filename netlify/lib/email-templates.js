@@ -558,8 +558,7 @@ https://watheqai.app
         <a href="https://watheqai.app/pricing" class="cta-button">Upgrade to Pro Now</a>
       </div>
 
-      <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
-        Questions? Reply to this email or visit our <a href="https://watheqai.app/help" style="color: #006C35;">Help Center</a>
+        Questions? Reply to this email.
       </p>
     </div>
 
@@ -589,7 +588,7 @@ Special Launch Offer: Upgrade in the next 7 days and get 20% off your first mont
 
 Upgrade now: https://watheqai.app/pricing
 
-Questions? Reply to this email or visit https://watheqai.app/help
+Upgrade now: https://watheqai.app/pricing
 
 ---
 Watheq Resume Optimizer
@@ -677,7 +676,7 @@ https://watheqai.app
       </div>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
-        أسئلة؟ رد على هذا البريد أو قم بزيارة <a href="https://watheqai.app/help" style="color: #006C35;">مركز المساعدة</a>
+        &nbsp;
       </p>
     </div>
 
@@ -707,7 +706,7 @@ https://watheqai.app
 
 رقّي حسابك الحين: https://watheqai.app/pricing
 
-أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheqai.app/help
+رقّي حسابك الحين: https://watheqai.app/pricing
 
 ---
 واثق - محسّن السيرة الذاتية
@@ -718,13 +717,15 @@ https://watheqai.app
 
   waitlistConfirmation: {
     en: {
-      subject: '✅ You\'re on the Watheq Pro Waitlist!',
+      subject: '✅ Welcome to Watheq Pro Waitlist - You\'re In!',
       html: `
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
   <title>Waitlist Confirmation</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
@@ -769,7 +770,7 @@ https://watheqai.app
       </p>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-        Questions? Reply to this email or visit our <a href="https://watheqai.app/help" style="color: #006C35;">Help Center</a>
+        &nbsp;
       </p>
     </div>
 
@@ -795,7 +796,7 @@ What happens next?
 
 In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
 
-Questions? Reply to this email or visit https://watheqai.app/help
+In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
 
 ---
 Watheq Resume Optimizer
@@ -803,13 +804,15 @@ https://watheqai.app
       `
     },
     ar: {
-      subject: '✅ تم تسجيلك في قائمة انتظار واثق برو!',
+      subject: '✅ أهلاً بك في قائمة انتظار واثق برو - تم التسجيل!',
       html: `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
   <title>تأكيد الانضمام</title>
   <style>
     body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; direction: rtl; }
@@ -825,8 +828,8 @@ https://watheqai.app
 <body>
   <div class="container">
     <div class="header">
-      <div class="check-icon">
-        <span style="font-size: 32px; line-height: 32px;">✓</span>
+      <div class="check-icon" style="background-color: transparent; width: auto; height: auto;">
+        <span style="font-size: 40px; line-height: 48px; color: white; font-weight: bold; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">واثق</span>
       </div>
       <h1>أبشر! حجزنا لك مكان</h1>
     </div>
@@ -850,11 +853,11 @@ https://watheqai.app
       </div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        بين ما نجهز، يمديك تستخدم واثق مجاناً (عندك 15 رصيد شهري) وتضبط أمورك!
+        على ما نجهز، يمديك تستخدم واثق مجاناً (عندك 15 رصيد شهري) وتضبط أمورك!
       </p>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-        عندك استفسار؟ رد على هالإيميل أو مرّ على <a href="https://watheqai.app/help" style="color: #006C35;">مركز المساعدة</a>
+        &nbsp;
       </p>
     </div>
 
@@ -878,9 +881,9 @@ https://watheqai.app
 - لك الأولوية في تجربة الخدمة
 - ولك سعر خاص لأنك من الأوائل
 
-بين ما نجهز، يمديك تستخدم واثق مجاناً (عندك 15 رصيد شهري) وتضبط أمورك!
+على ما نجهز، يمديك تستخدم واثق مجاناً (عندك 15 رصيد شهري) وتضبط أمورك!
 
-أسئلة؟ رد على هذا البريد أو قم بزيارة https://watheqai.app/help
+على ما نجهز، يمديك تستخدم واثق مجاناً (عندك 15 رصيد شهري) وتضبط أمورك!
 
 ---
 واثق - محسّن السيرة الذاتية

@@ -17,17 +17,34 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Using hello@ instead of noreply@ for better deliverability and trust signals (2026 best practice)
 // See: https://resend.com/docs/dashboard/domains/dmarc
 const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'hello@watheqai.app';
-const SENDER_NAME = process.env.RESEND_SENDER_NAME || 'Watheq';
+const SENDER_NAME_EN = process.env.RESEND_SENDER_NAME || 'Watheq';
+const SENDER_NAME_AR = 'واثق';
+
+/**
+ * Get sender name based on language
+ * @param {string} language - 'en' or 'ar'
+ * @returns {string} Sender name
+ */
+function getSenderName(language) {
+  return language === 'ar' ? SENDER_NAME_AR : SENDER_NAME_EN;
+}
 const REPLY_TO_EMAIL = 'support@watheqai.app';
 
 /**
  * Get common email headers to improve deliverability
+ * These headers help prevent emails from being marked as spam
  */
-function getEmailHeaders() {
+function getEmailHeaders(category = 'transactional') {
   return {
     'X-Entity-Ref-ID': `watheq-${Date.now()}`,
     'X-Mailer': 'Watheq Resume Optimizer',
+    'X-Priority': '3', // Normal priority (1=high, 3=normal, 5=low)
+    'X-MSMail-Priority': 'Normal',
+    'Importance': 'Normal',
     'List-Unsubscribe': `<mailto:${REPLY_TO_EMAIL}?subject=Unsubscribe>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    'Precedence': 'bulk',
+    'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
   };
 }
 
@@ -76,7 +93,7 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
 
     // Send email via Resend
     const response = await resend.emails.send({
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
       html: template.html(userName, credits),
@@ -163,7 +180,7 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
 
     // Send email via Resend
     const response = await resend.emails.send({
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
       html: template.html(userName, defaultStats),
@@ -210,7 +227,7 @@ export async function sendTestEmail(testEmail) {
 
   try {
     const response = await resend.emails.send({
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      from: `${SENDER_NAME_EN} <${SENDER_EMAIL}>`,
       to: testEmail,
       subject: 'Test Email - Watheq',
       html: '<h1>Test Email</h1><p>If you received this, Resend is working correctly!</p>',
@@ -261,7 +278,7 @@ export async function sendWaitlistNotification(userEmail, language = 'en', planT
 
     // Send email via Resend
     const response = await resend.emails.send({
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
       html: template.html(planType),
@@ -311,17 +328,18 @@ export async function sendWaitlistConfirmation(userEmail, language = 'en') {
       language: lang
     });
 
-    // Send email via Resend
+    // Send email via Resend with enhanced deliverability settings
     const response = await resend.emails.send({
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
       replyTo: REPLY_TO_EMAIL,
-      headers: getEmailHeaders(),
+      headers: getEmailHeaders('waitlist'),
       tags: [
         { name: 'category', value: 'waitlist' },
+        { name: 'type', value: 'confirmation' },
         { name: 'language', value: lang }
       ]
     });
@@ -379,7 +397,7 @@ export async function sendReferralRewardReferrer(userEmail, userName, refereeNam
 
     // Send email via Resend
     const response = await resend.emails.send({
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
       html: template.html(userName, refereeName),
@@ -446,7 +464,7 @@ export async function sendReferralRewardReferee(userEmail, userName, referrerNam
 
     // Send email via Resend
     const response = await resend.emails.send({
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
       html: template.html(userName, referrerName),
