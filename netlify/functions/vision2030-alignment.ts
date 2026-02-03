@@ -127,7 +127,7 @@ const baseHandler: Handler = async (event) => {
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
 
   // Check credits BEFORE processing (2 credits for vision2030)
   const creditCheck = await checkCredits(userId, 'vision2030', { ipAddress, emailVerified });
@@ -231,11 +231,14 @@ const baseHandler: Handler = async (event) => {
       statusCode: isTimeout ? 504 : 500,
       headers: {
         'Content-Type': 'application/json',
-        ...(isTimeout && { 'Retry-After': '30' })
+        ...(isTimeout && {
+          'Retry-After': '30',
+          'X-Timeout-Location': 'openrouter-api'
+        })
       },
       body: JSON.stringify({
         error: isTimeout
-          ? 'Analysis timed out. The AI service is taking longer than expected. Please try again.'
+          ? 'Analysis timed out. Retrying automatically...'
           : 'Failed to analyze Vision 2030 alignment',
         retryable: isTimeout
       })

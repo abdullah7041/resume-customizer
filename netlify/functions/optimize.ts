@@ -1,3 +1,4 @@
+import { Handler } from '@netlify/functions';
 import { optimizeResume } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas";
@@ -8,7 +9,7 @@ import { getClientIP } from "../lib/ip-utils.js";
 
 initSentry();
 
-const baseHandler = async (event: { httpMethod: string; body: any; headers: any }) => {
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -56,7 +57,7 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
 
   // Check credits BEFORE processing (5 credits for optimize)
   const creditCheck = await checkCredits(userId, 'optimize', { ipAddress, emailVerified });
@@ -357,11 +358,14 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any 
       statusCode: isTimeout ? 504 : 500,
       headers: {
         'Content-Type': 'application/json',
-        ...(isTimeout && { 'Retry-After': '30' })
+        ...(isTimeout && {
+          'Retry-After': '30',
+          'X-Timeout-Location': 'openrouter-api'
+        })
       },
       body: JSON.stringify({
         error: isTimeout
-          ? 'Optimization timed out. The AI service is taking longer than expected. Please try again.'
+          ? 'Optimization timed out. Retrying automatically...'
           : 'Failed to optimize resume',
         retryable: isTimeout
       }),

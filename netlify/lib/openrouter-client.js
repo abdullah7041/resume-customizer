@@ -45,9 +45,9 @@ function convertGoogleSchemaToOpenRouter(googleSchema) {
 export async function callOpenRouter(modelType, messages, jsonSchema = null, options = {}) {
   const model = MODELS[modelType] || MODELS.flash;
 
-  // Timeout configuration: 25s default (leaves 5s buffer for Netlify's 30s limit)
+  // Timeout configuration: 40s default (provides buffer for 60s Netlify timeout)
   // Can be overridden via options.timeoutMs for functions with longer Netlify timeouts
-  const TIMEOUT_MS = options.timeoutMs ?? 25000;
+  const TIMEOUT_MS = options.timeoutMs ?? 40000;
 
   const requestBody = {
     model,
@@ -110,7 +110,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
     // Handle timeout errors specifically
     if (error.name === 'AbortError') {
       console.error(`[OpenRouter] Request timed out after ${TIMEOUT_MS}ms`);
-      const timeoutError = new Error('AI request timed out. The service is taking longer than expected. Please try again.');
+      const timeoutError = new Error(`OpenRouter API request timed out after ${TIMEOUT_MS}ms. The AI service may be experiencing high load. This is automatically retried on the client.`);
       timeoutError.name = 'TimeoutError';
       timeoutError.status = 504;
       throw timeoutError;

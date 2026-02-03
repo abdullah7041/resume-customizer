@@ -346,7 +346,7 @@ CRITICAL REMINDERS:
     const fullPrompt = `${systemInstruction}\n\n${prompt}\n\nRESUME CONTENT:\n${inputData}`;
 
     const messages = [{ role: 'user', content: fullPrompt }];
-    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 8192 });
+    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 8192, timeoutMs: 50000 });
     const parsed = sanitizeAndParseJSON(text);
 
     // CRITICAL FIX: Safely extract plainText as string
@@ -528,10 +528,10 @@ ${resumeText}`;
   try {
     console.log(`[OpenRouter] Optimizing with ${MODELS.flash}`);
     const messages = [{ role: 'user', content: prompt }];
-    // Use 70s timeout for optimize (function has 75s Netlify timeout)
+    // Use 100s timeout for optimize (function has 120s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
-      timeoutMs: 70000
+      timeoutMs: 100000
     });
     console.log(`[OpenRouter] Optimize response length: ${text.length} chars`);
 
@@ -577,10 +577,10 @@ ${resumeText}`;
 
   try {
     const messages = [{ role: 'user', content: prompt }];
-    // Use 40s timeout for ai-match (function has 45s Netlify timeout)
+    // Use 65s timeout for ai-match (function has 90s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
-      timeoutMs: 40000
+      timeoutMs: 65000
     });
     console.log(`[OpenRouter] Match response: ${text.length} chars`);
 
@@ -647,7 +647,7 @@ ${resumeText}`;
 
   try {
     const messages = [{ role: 'user', content: prompt }];
-    const text = await callOpenRouter('lite', messages, schema, { temperature: 0.3, maxTokens: 4096 });
+    const text = await callOpenRouter('lite', messages, schema, { temperature: 0.3, maxTokens: 4096, timeoutMs: 50000 });
     console.log(`[OpenRouter] Interview prep response: ${text.length} chars`);
 
     let parsed;
@@ -703,7 +703,7 @@ Return ONLY the cover letter text in the draft_text field.
 
   try {
     const messages = [{ role: 'user', content: prompt }];
-    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384 });
+    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384, timeoutMs: 50000 });
     console.log(`[OpenRouter] Cover letter response: ${text.length} chars`);
 
     let parsed;

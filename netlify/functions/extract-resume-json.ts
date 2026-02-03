@@ -203,6 +203,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     });
 
     // Provide more specific error messages based on the error type
+    const isTimeout = (error as any)?.name === 'TimeoutError' || errorMessage.includes("timeout");
     let userMessage = "Failed to parse resume";
     if (errorMessage.includes("API key")) {
       userMessage = "AI service configuration error";
@@ -210,15 +211,24 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       userMessage = "AI service is currently busy. Please try again in a moment.";
     } else if (errorMessage.includes("JSON") || errorMessage.includes("parse")) {
       userMessage = "Failed to parse AI response. Please try again.";
-    } else if (errorMessage.includes("timeout") || errorMessage.includes("network")) {
+    } else if (isTimeout) {
+      userMessage = "Parsing timed out. Retrying automatically...";
+    } else if (errorMessage.includes("network")) {
       userMessage = "Network error. Please check your connection and try again.";
     }
 
     return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
+      statusCode: isTimeout ? 504 : 500,
+      headers: {
+        "Content-Type": "application/json",
+        ...(isTimeout && {
+          'Retry-After': '30',
+          'X-Timeout-Location': 'openrouter-api'
+        })
+      },
       body: JSON.stringify({
         error: userMessage,
+        retryable: isTimeout,
         details: process.env.NODE_ENV === "development" ? errorMessage : undefined
       }),
     };

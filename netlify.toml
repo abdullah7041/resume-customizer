@@ -38,20 +38,20 @@
   timeout = 30
 
 [functions."ai-match"]
-  timeout = 45  # Increased: Flash model can take 20-30s, buffer for retries
+  timeout = 90  # Increased: OpenRouter timeout 65s + 25s cleanup buffer
 
 [functions."optimize"]
-  timeout = 75  # Increased: Complex schema + flash model (target: 30-40s, buffer for retries)
+  timeout = 120  # Increased: OpenRouter timeout 100s + 20s cleanup buffer
 
 [functions."generate-cover-letter"]
-  timeout = 30
+  timeout = 60  # Increased: OpenRouter timeout 50s + 10s buffer
 
 [functions."predict-questions"]
-  timeout = 30
+  timeout = 60  # Increased: OpenRouter timeout 50s + 10s buffer
 
 [functions."extract-resume-json"]
   external_node_modules = ["pdfjs-dist"]
-  timeout = 60  # Increased for Gemini parsing (PDF data takes 30-45s, buffer for edge cases)
+  timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer for parsing
 
 [functions."generate-pdf"]
   external_node_modules = ["@sparticuz/chromium"]
@@ -59,7 +59,10 @@
   memory = 1024
 
 [functions."vision2030-alignment"]
-  timeout = 90  # Increased: Large prompt (280+ lines) + flash model takes 30-50s, buffer for retries
+  timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer
+
+[functions."parse-arabic-resume"]
+  timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer
 
 # Scheduled Functions (Cron Jobs)
 [functions."cron-reset-credits"]

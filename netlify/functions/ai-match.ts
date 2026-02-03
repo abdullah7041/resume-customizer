@@ -181,11 +181,14 @@ const baseHandler: Handler = async (event) => {
       statusCode: isTimeout ? 504 : 500,
       headers: {
         "Content-Type": "application/json",
-        ...(isTimeout && { 'Retry-After': '30' })
+        ...(isTimeout && {
+          'Retry-After': '30',
+          'X-Timeout-Location': 'openrouter-api'
+        })
       },
       body: JSON.stringify({
         error: isTimeout
-          ? 'Analysis timed out. The AI service is taking longer than expected. Please try again.'
+          ? 'Analysis timed out. Retrying automatically...'
           : "Failed to analyze match",
         message: errorDetails?.message || 'Unknown error occurred',
         retryable: isTimeout
