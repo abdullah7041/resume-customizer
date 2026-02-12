@@ -366,6 +366,93 @@ export const resumeTemplates = [
       }
     }
   }
+  ,
+  {
+    id: "executive-professional",
+    name: "Executive Professional",
+    category: TEMPLATE_CATEGORIES.EXECUTIVE,
+    description: "Elegant serif design for senior leadership and executive roles. Navy blue accents with centered header.",
+    atsScore: 100,
+    preview: {
+      layout: "single-column",
+      colorScheme: "navy",
+      font: "serif"
+    },
+    structure: {
+      header: {
+        includePhoto: false,
+        layout: "centered",
+        fields: ["name", "title", "contact", "phone", "email", "linkedin"]
+      },
+      sections: [
+        {
+          id: "summary",
+          title: "Professional Summary",
+          type: "paragraph",
+          placeholder: "Senior executive with X+ years leading [domain]. Proven track record in [achievement].",
+          maxLength: 300,
+          required: true
+        },
+        {
+          id: "experience",
+          title: "Professional Experience",
+          type: "timeline",
+          placeholder: "Position Title\nCompany Name | Location\nStart Date - End Date\n• Strategic achievement with measurable impact",
+          required: true,
+          format: {
+            showDuration: true,
+            bulletStyle: "filled-circle"
+          }
+        },
+        {
+          id: "skills",
+          title: "Core Competencies",
+          type: "categorized",
+          placeholder: "Category: Skill 1, Skill 2, Skill 3",
+          format: {
+            categories: ["Leadership", "Strategic", "Technical"]
+          }
+        },
+        {
+          id: "education",
+          title: "Education",
+          type: "timeline",
+          placeholder: "Degree | University | Year",
+          required: true
+        },
+        {
+          id: "certifications",
+          title: "Certifications",
+          type: "list",
+          placeholder: "Certification Name - Issuing Organization (Year)",
+          optional: true
+        },
+        {
+          id: "languages",
+          title: "Languages",
+          type: "proficiency",
+          placeholder: "English (Native) • Arabic (Professional)",
+          optional: true
+        }
+      ]
+    },
+    formatting: {
+      fontSize: {
+        name: "26pt",
+        sectionTitle: "13pt",
+        body: "10.5pt"
+      },
+      spacing: {
+        sectionGap: "14px",
+        lineHeight: "1.5"
+      },
+      colors: {
+        primary: "#1a4f7a",
+        secondary: "#2a6fa0",
+        text: "#1a1a1a"
+      }
+    }
+  }
 ];
 
 /**

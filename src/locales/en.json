@@ -437,6 +437,10 @@
         "parsing": "Parsing resume with AI…",
         "success": "Resume ready!",
         "error": "We couldn't process that file."
+      },
+      "saudi": {
+        "label": "Are you Saudi?",
+        "description": "\"Saudi\" will be added to your resume summary for Saudization ATS"
       }
     },
     "stage": {
@@ -978,6 +982,64 @@
         "medium": "Medium",
         "hard": "Hard",
         "count": "Number of Questions"
+      },
+      "regenerateBehavioral": "Regenerate Behavioral",
+      "generateBehavioral": "Generate Behavioral Questions",
+      "regenerateTechnical": "Regenerate Technical",
+      "generateTechnical": "Generate Technical Questions",
+      "starMethod": {
+        "title": "Use the STAR Method",
+        "recommended": "Recommended",
+        "description": "Structure your answers for maximum impact. This proven framework helps you tell compelling stories that demonstrate your skills effectively.",
+        "steps": {
+          "situation": {
+            "title": "Situation",
+            "desc": "Set the context"
+          },
+          "task": {
+            "title": "Task",
+            "desc": "Your responsibility"
+          },
+          "action": {
+            "title": "Action",
+            "desc": "What you did"
+          },
+          "result": {
+            "title": "Result",
+            "desc": "Measurable outcome"
+          }
+        }
+      },
+      "typesDescription": {
+        "behavioral": {
+          "label": "Behavioral:",
+          "desc": "Soft skills, leadership, teamwork (suitable for all companies)"
+        },
+        "technical": {
+          "label": "Technical:",
+          "desc": "Deep technical skills, system design, algorithms (for rigorous tech interviews)"
+        }
+      },
+      "starTips": {
+        "header": "How to answer using STAR:",
+        "behavioral": {
+          "situation": "Briefly describe the project/challenge context",
+          "task": "Explain your specific role and what was expected",
+          "action": "Detail the steps YOU took (use 'I', not 'we')",
+          "result": "Quantify the outcome: %, $, time saved, etc."
+        },
+        "situational": {
+          "situation": "Reference a specific instance when you did this",
+          "task": "What problem were you solving?",
+          "action": "Walk through your methodology step-by-step",
+          "result": "What was the measurable improvement?"
+        },
+        "default": {
+          "situation": "Set the scene with relevant context",
+          "task": "Define what you needed to accomplish",
+          "action": "Describe your specific contributions",
+          "result": "Share concrete, quantifiable outcomes"
+        }
       }
     },
     "bulkAnalysis": {
@@ -1000,8 +1062,33 @@
       }
     },
     "coverLetter": {
-      "title": "Cover Letter",
-      "subtitle": "Generate a tailored cover letter for your application",
+      "title": "Cover Letter Generator",
+      "subtitle": "Create a compelling, tailored cover letter using AI",
+      "emptyTitle": "Missing Information",
+      "emptyDesc": "Upload your resume and add a job description to generate a tailored cover letter.",
+      "companyName": "Company Name",
+      "companyPlaceholder": "e.g., Aramco",
+      "hiringManager": "Hiring Manager",
+      "managerPlaceholder": "e.g., Abdullah Al-Otaibi",
+      "signatureName": "Signature Name",
+      "signatureNamePlaceholder": "Your full name",
+      "signatureHint": "Auto-filled from your resume. Edit if needed.",
+      "tone": "Select Tone",
+      "generate": "Generate Cover Letter",
+      "regenerate": "Regenerate Cover Letter",
+      "generating": "Crafting your letter...",
+      "craftingTitle": "AI is writing...",
+      "crafting": "Analyzing your resume and job description to create the perfect cover letter.",
+      "yourLetter": "Your Cover Letter",
+      "words": "words",
+      "toneLabel": "tone",
+      "highlights": "Key Highlights Included",
+      "tipLabel": "Pro Tip",
+      "tipText": "Review and edit the generated text to add your personal touch before sending.",
+      "errors": {
+        "missing": "Please provide both resume and job description",
+        "failed": "Failed to generate cover letter"
+      },
       "inputs": {
         "company": "Company Name",
         "position": "Position",
@@ -1013,8 +1100,6 @@
           "enthusiastic": "Enthusiastic"
         }
       },
-      "generate": "Generate Cover Letter",
-      "generating": "Writing your cover letter...",
       "result": {
         "title": "Your Cover Letter",
         "copy": "Copy",

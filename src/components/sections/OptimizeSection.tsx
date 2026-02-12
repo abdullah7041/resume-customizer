@@ -16,6 +16,7 @@ import {
   ArrowLeftRight,
   AlertCircle,
   Info,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
@@ -148,6 +149,8 @@ export function OptimizeSection({
     setOptimizationMetrics,
     resetOptimizationMetrics,
     getCachedAnalysis,
+    setCachedAnalysis,
+    baselineMatchScore,
   } = useResumeStore();
 
   // Use props or store
@@ -162,7 +165,9 @@ export function OptimizeSection({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const { credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+  const [isAutoVerifying, setIsAutoVerifying] = useState(false);
+  const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
+  const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
   const { user } = useAuth();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
 
@@ -275,7 +280,9 @@ export function OptimizeSection({
         : '';
 
       if (jobDescription) {
-        const cachedAnalysis = getCachedAnalysis(resumeText, jobDescription);
+        // CRITICAL: Get original (non-optimized) score for beforeScore
+        // Cast to any to work around Zustand type inference limitation
+        const cachedAnalysis = (getCachedAnalysis as any)(resumeText, jobDescription, false);
         if (cachedAnalysis?.score) {
           setOptimizationMetrics({
             beforeScore: cachedAnalysis.score,
@@ -325,13 +332,17 @@ export function OptimizeSection({
       : '';
 
     // Try to get the cached match analysis score first (this is the 78% from Match section)
+    // CRITICAL: Always get the ORIGINAL (non-optimized) score for "before" comparison
+    // Pass false to override showOptimized state and get the original cached score
+    // Cast to any to work around Zustand type inference limitation
     const cachedAnalysis = resumeText && jobDescription
-      ? getCachedAnalysis(resumeText, jobDescription)
+      ? (getCachedAnalysis as any)(resumeText, jobDescription, false)
       : null;
 
-    // Priority: 1. Store metrics (from API or cache restore), 2. Current cache, 3. Resume meta, 4. Default fallback
-    // Note: optimizationMetrics.beforeScore is the source of truth - populated from API response or cache restoration
-    const beforeScore = optimizationMetrics.beforeScore ??
+    // Priority: 1. Baseline score (true original), 2. Store metrics, 3. Current cache, 4. Resume meta, 5. Default fallback
+    // Baseline score is the source of truth - it's stored on first analysis and never changes unless user uploads a new resume
+    const beforeScore = baselineMatchScore ??
+      optimizationMetrics.beforeScore ??
       cachedAnalysis?.score ??
       ((originalResume?.meta as Record<string, unknown> | undefined)?.match_score as number) ??
       DEFAULT_FALLBACK_SCORE;
@@ -343,22 +354,28 @@ export function OptimizeSection({
     // FIX: Use explicit null check, not truthy check, because improvement can be 0 (valid value)
     const isPlaceholderImprovement = optimizationMetrics.improvement === null || optimizationMetrics.improvement === undefined;
 
-    // Recalculate after score based on applied optimizations
-    // API gives us the "potential" score, but we adjust based on what's actually applied
+    // Calculate projected after score based on applied optimizations
+    // This is an ESTIMATE only - use "Verify Match Score" for genuine re-analysis
     const appliedRatio = optimizations.length > 0
       ? appliedCount / optimizations.length
       : 0;
 
     const maxImprovement = optimizationMetrics.improvement ?? 15;
     const actualImprovement = Math.round(maxImprovement * appliedRatio);
-    const afterScore = Math.min(beforeScore + actualImprovement, 95);
+    const afterScore = beforeScore + actualImprovement;
 
-    // Potential score is also adjusted to use the correct base
-    const potentialAfterScore = Math.min(beforeScore + (optimizationMetrics.improvement ?? maxImprovement), 95);
+    // Potential score uses the estimated improvement (no artificial cap)
+    const potentialAfterScore = beforeScore + (optimizationMetrics.improvement ?? maxImprovement);
+
+    // Use verified score if available, otherwise show projected estimate
+    const isScoreVerified = verifiedScore !== null || (optimizationMetrics.afterScore !== null && optimizationMetrics.afterScore !== undefined);
+    const displayAfterScore = isScoreVerified
+      ? (verifiedScore ?? optimizationMetrics.afterScore ?? afterScore)
+      : afterScore;
 
     return {
       beforeScore,
-      afterScore,
+      afterScore: displayAfterScore,
       potentialScore: potentialAfterScore,
       totalOptimizations: optimizations.length,
       appliedOptimizations: appliedCount,
@@ -373,8 +390,10 @@ export function OptimizeSection({
       // Bug Fix: Expose placeholder status to UI
       isPlaceholderScore,
       isPlaceholderImprovement,
+      // Verified vs projected
+      isScoreVerified,
     };
-  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis]);
+  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore, verifiedScore]);
 
 
   // Generate optimizations from API
@@ -581,8 +600,9 @@ export function OptimizeSection({
       // Capture match scoring data for Results Summary
       if (data.matchScoring) {
         metricsToUpdate.beforeScore = data.matchScoring.beforeScore;
-        metricsToUpdate.afterScore = data.matchScoring.afterScore;
-        metricsToUpdate.improvement = data.matchScoring.improvement;
+        // Use estimatedImprovement from backend (no fake afterScore)
+        metricsToUpdate.improvement = data.matchScoring.estimatedImprovement ?? data.matchScoring.improvement ?? null;
+        metricsToUpdate.afterScore = data.matchScoring.afterScore ?? null;
         metricsToUpdate.jdKeywords = data.matchScoring.jdKeywords || [];
         metricsToUpdate.matchedKeywords = data.matchScoring.matchedKeywords || [];
         metricsToUpdate.reasoning = data.matchScoring.reasoning;
@@ -595,6 +615,9 @@ export function OptimizeSection({
           metricsToUpdate.beforeScore = cachedAnalysis.score;
           metricsToUpdate.hasJobDescription = true;
         }
+        // Fix A: Set improvement to 0 so ScoreBreakdown doesn't show "—"
+        // Auto-verify will replace this with the genuine value shortly
+        metricsToUpdate.improvement = 0;
       }
 
       // Capture gap analysis from API response
@@ -681,6 +704,58 @@ export function OptimizeSection({
         }
       }
 
+      // Auto-verify: Run AI re-analysis on the optimized resume (non-fatal)
+      const jobDescription = typeof window !== 'undefined'
+        ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+        : '';
+
+      if (jobDescription.trim()) {
+        try {
+          setIsAutoVerifying(true);
+
+          // Fix B3: Save each optimization's applied state before blanket apply/revert
+          const storeState = useResumeStore.getState();
+          const savedAppliedStates = storeState.optimizations.map(o => ({ sectionId: o.sectionId, applied: o.applied }));
+          storeState.applyAllOptimizations();
+          const optimizedResume = storeState.getActiveResume();
+          // Restore original applied states instead of blanket revert
+          savedAppliedStates.forEach(({ sectionId, applied }) => {
+            if (applied) {
+              storeState.applyOptimization(sectionId);
+            } else {
+              storeState.revertOptimization(sectionId);
+            }
+          });
+
+          if (optimizedResume) {
+            const { analyzeResumeWithAI } = await import('../../services/api');
+            const optimizedText = JSON.stringify(optimizedResume);
+            const result = await analyzeResumeWithAI(optimizedText, jobDescription);
+
+            if (result?.score) {
+              const beforeScore = metricsToUpdate.beforeScore ?? resultsSummaryData.beforeScore;
+              setVerifiedScore(result.score);
+              // Update metrics with genuine verified scores
+              setOptimizationMetrics({
+                afterScore: result.score,
+                improvement: result.score - beforeScore,
+              });
+              // Cache the verified score under the optimized key (forceIsOptimized: true)
+              setCachedAnalysis(optimizedText, jobDescription, {
+                score: result.score,
+                matchedKeywords: result.topHits || [],
+                missingKeywords: result.missingKeywords || [],
+              }, true);
+            }
+          }
+        } catch (verifyErr) {
+          // Auto-verify is non-fatal - optimization still succeeds
+          console.warn('[OptimizeSection] Auto-verify failed (non-fatal):', verifyErr);
+        } finally {
+          setIsAutoVerifying(false);
+        }
+      }
+
     } catch (err) {
       console.error('Optimization error:', err);
       // Check if this is a rate limit error
@@ -717,6 +792,7 @@ export function OptimizeSection({
     }
     // Also reset all optimization metrics to clear stale data
     resetOptimizationMetrics();
+    setVerifiedScore(null);
     setSessionId(null);
   };
 
@@ -851,29 +927,6 @@ export function OptimizeSection({
           </div>
         </div >
 
-        {/* Global Expand/Collapse for Cards */}
-        {
-          optimizations.length > 0 && (
-            <div className="flex justify-end mb-2">
-              <button
-                onClick={() => {
-                  if (expandedCards.size === filteredOptimizations.length) {
-                    setExpandedCards(new Set());
-                  } else {
-                    setExpandedCards(new Set(filteredOptimizations.map(o => o.sectionId)));
-                  }
-                }}
-                className="text-[10px] font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md border border-white/5"
-              >
-                {expandedCards.size === filteredOptimizations.length
-                  ? (isArabic ? 'طي الكل' : 'Collapse All')
-                  : (isArabic ? 'توسيع الكل' : 'Expand All')
-                }
-              </button>
-            </div>
-          )
-        }
-
         {/* Section Tabs */}
         <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 mb-6">
           <div className="flex items-center gap-2 p-1 bg-black/20 rounded-xl border border-white/5">
@@ -961,7 +1014,12 @@ export function OptimizeSection({
                 <Sparkles className="w-5 h-5 text-purple-300 group-hover:text-white transition-colors" />
                 <span className="text-white font-bold tracking-wide">
                   {hasResume
-                    ? t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')
+                    ? (
+                      <>
+                        {t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')}
+                        <span className="ml-2 text-xs opacity-75">(5 {t('common.credits', 'credits')})</span>
+                      </>
+                    )
                     : t('sections.optimize.runMatchFirst', 'Upload Resume First')
                   }
                 </span>
@@ -1031,20 +1089,88 @@ export function OptimizeSection({
         </div>
       </GlassCard >
 
-      {/* Score Breakdown */}
+      {/* Score Summary — Prominent Top Card */}
+      {optimizations.length > 0 && (
+        <GlassCard className="mb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col items-center flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
+                {isArabic ? 'الحالي' : 'Current Score'}
+              </span>
+              <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore ? 'text-gray-600 italic' : 'text-white'}`}>
+                {resultsSummaryData.isPlaceholderScore ? '—' : `${resultsSummaryData.beforeScore}%`}
+              </span>
+            </div>
+
+            {/* Improvement Arrow */}
+            <div className="flex flex-col items-center px-4">
+              {!resultsSummaryData.isPlaceholderImprovement && !resultsSummaryData.isPlaceholderScore ? (
+                <>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-bold text-emerald-400">
+                      +{resultsSummaryData.afterScore - resultsSummaryData.beforeScore}%
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                  <span className="text-gray-600 text-lg">→</span>
+                </div>
+              )}
+            </div>
+
+            {/* After Score */}
+            <div className="flex flex-col items-center flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
+                {isArabic ? 'المُحسَّن' : 'Optimized Score'}
+              </span>
+              <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
+                ? 'text-gray-600 italic'
+                : 'bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent'
+                }`}>
+                {resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
+                  ? '—'
+                  : `${resultsSummaryData.afterScore}%`}
+              </span>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Score Breakdown — Detailed Category View */}
       {
         optimizations.length > 0 && (
           <ScoreBreakdown
             data={optimizationMetrics.scoreBreakdown as ScoreBreakdownData | null}
             categoryScores={optimizationMetrics.categoryScores as unknown as CategoryScoresData | undefined}
             beforeScore={resultsSummaryData.beforeScore}
-            afterScore={resultsSummaryData.potentialScore}
+            afterScore={resultsSummaryData.afterScore}
             isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
             isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
             className="mb-2"
           />
         )
       }
+
+      {/* Auto-Verify Loading Indicator */}
+      {isAutoVerifying && (
+        <GlassCard padding="md" className="mb-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">
+                {isArabic ? 'جاري التحقق التلقائي من النتيجة...' : 'Auto-verifying match score...'}
+              </p>
+              <p className="text-xs text-gray-500">
+                {isArabic ? 'تحليل السيرة الذاتية المحسّنة بالذكاء الاصطناعي' : 'Running AI re-analysis on your optimized resume'}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      )}
 
       {/* Gap Analysis */}
       {
@@ -1102,6 +1228,40 @@ export function OptimizeSection({
 
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
+
+        {filteredOptimizations.length > 0 && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => {
+                const filteredIds = filteredOptimizations.map(o => o.sectionId);
+                // Check if all filtered items are expanded
+                const allExpanded = filteredIds.every(id => expandedCards.has(id));
+
+                if (allExpanded) {
+                  // Collapse all filtered items
+                  setExpandedCards(prev => {
+                    const next = new Set(prev);
+                    filteredIds.forEach(id => next.delete(id));
+                    return next;
+                  });
+                } else {
+                  // Expand all filtered items
+                  setExpandedCards(prev => {
+                    const next = new Set(prev);
+                    filteredIds.forEach(id => next.add(id));
+                    return next;
+                  });
+                }
+              }}
+              className="text-[10px] font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md border border-white/5"
+            >
+              {filteredOptimizations.every(o => expandedCards.has(o.sectionId))
+                ? (isArabic ? 'طي الكل' : 'Collapse All')
+                : (isArabic ? 'توسيع الكل' : 'Expand All')
+              }
+            </button>
+          </div>
+        )}
 
         {filteredOptimizations.length > 0 ? (
           <div className="grid gap-4">
@@ -1374,7 +1534,6 @@ export function OptimizeSection({
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmOptimize}
         feature="optimize"
-        currentCredits={credits?.remaining || 0}
         isLoading={isOptimizing}
       />
 

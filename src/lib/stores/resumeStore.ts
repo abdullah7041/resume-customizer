@@ -26,30 +26,40 @@ const cacheKeyMemo = new Map<string, string>();
 /**
  * Generate a cache key from resume and job description
  * Uses FNV-1a hash with memoization for performance
+ * CRITICAL: Now includes isOptimized flag to prevent cache collisions
  */
-const generateCacheKey = (resumeText: string, jobDescription: string): string => {
-  // Use shorter fingerprints (first 50 chars + length) for faster processing
-  const key = `${(resumeText || '').slice(0, 50)}|${(resumeText || '').length}|${(jobDescription || '').slice(0, 50)}|${(jobDescription || '').length}`;
+const generateCacheKey = (resumeText: string, jobDescription: string, isOptimized: boolean = false): string => {
+  // Use FULL text for hash to prevent collisions between original/optimized versions
+  // Include isOptimized flag to separate cache entries
+  const fullKey = `${resumeText || ''}|${jobDescription || ''}|${isOptimized ? 'opt' : 'orig'}`;
 
-  // Check memo cache first
-  const cached = cacheKeyMemo.get(key);
+  // Check memo cache first (key now includes optimization flag)
+  const memoKey = `${fullKey.slice(0, 100)}|${fullKey.length}|${isOptimized}`;
+  const cached = cacheKeyMemo.get(memoKey);
   if (cached) return cached;
 
   // FNV-1a hash - faster than djb2 and works with Arabic
   let hash = 2166136261;
-  for (let i = 0; i < key.length; i++) {
-    hash ^= key.charCodeAt(i);
+  for (let i = 0; i < fullKey.length; i++) {
+    hash ^= fullKey.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
 
-  const result = `cache-${(hash >>> 0).toString(36)}-${key.length}`;
+  const result = `match-${(hash >>> 0).toString(36)}`;
 
   // Memoize result (limit size to prevent memory leak)
-  cacheKeyMemo.set(key, result);
+  cacheKeyMemo.set(memoKey, result);
   if (cacheKeyMemo.size > 100) {
     const firstKey = cacheKeyMemo.keys().next().value;
     if (firstKey) cacheKeyMemo.delete(firstKey);
   }
+
+  console.log('[ResumeStore] Cache key generated:', {
+    isOptimized,
+    resumeLength: resumeText?.length || 0,
+    jdLength: jobDescription?.length || 0,
+    cacheKey: result
+  });
 
   return result;
 };
@@ -84,6 +94,8 @@ export const useResumeStore = create<ResumeState>()(
         },
         scoreBreakdown: null,
       },
+      baselineMatchScore: null, // Original resume's match score (before any optimizations)
+      isSaudiNational: false, // Saudi nationality flag for Saudization ATS
       showOptimized: false, // Start with original
       selectedTemplate: 'modern-professional',
       displayOptions: {
@@ -98,6 +110,7 @@ export const useResumeStore = create<ResumeState>()(
         marginBottom: 0.5,    // inches
         marginSide: 0.6,      // inches
         showPageBreaks: false, // Page break indicators off by default
+        boldKeywords: true,    // Bold important keywords in DOCX exports (default: enabled)
       },
       hasDownloaded: false,
       contentLanguage: null, // Detected from resume text
@@ -262,13 +275,20 @@ export const useResumeStore = create<ResumeState>()(
           return null;
         }
 
-        // If not showing optimized, return original
+        // If not showing optimized, return original (with Saudi prepend if applicable)
         if (!state.showOptimized) {
+          if (state.isSaudiNational && state.originalResume.basics?.summary) {
+            if (!state.originalResume.basics.summary.toLowerCase().startsWith('saudi')) {
+              const cloned = structuredClone(state.originalResume) as ResumeSchema;
+              cloned.basics!.summary = `Saudi ${cloned.basics!.summary}`;
+              return cloned;
+            }
+          }
           return state.originalResume;
         }
 
-        // Deep clone to avoid mutating original
-        const merged = JSON.parse(JSON.stringify(state.originalResume)) as ResumeSchema;
+        // Deep clone to avoid mutating original - use structuredClone (2-3x faster than JSON)
+        const merged = structuredClone(state.originalResume) as ResumeSchema;
 
         // Type-safe value extraction helpers
         const getStringValue = (val: unknown): string => {
@@ -504,15 +524,29 @@ export const useResumeStore = create<ResumeState>()(
               // Handle certification optimizations similarly
               let found = false;
 
+              console.log(`[ResumeStore] Attempting to merge certification optimization:`, {
+                originalValue: originalValue.substring(0, 100),
+                optimizedValue: optimizedValue.substring(0, 100),
+                certificatesCount: merged.certificates?.length || 0,
+                certificateNames: merged.certificates?.map(c => c.name) || []
+              });
+
               if (merged.certificates) {
                 for (let certIdx = 0; certIdx < merged.certificates.length; certIdx++) {
                   const cert = merged.certificates[certIdx];
                   if (cert.name) {
                     const matchResult = fuzzyTextMatch(originalValue, cert.name);
+                    console.log(`[ResumeStore] Checking cert ${certIdx}:`, {
+                      certName: cert.name,
+                      matched: matchResult.matched,
+                      confidence: matchResult.confidence,
+                      matchType: matchResult.matchType
+                    });
                     if (matchResult.matched) {
                       merged.certificates[certIdx].name = optimizedValue;
                       found = true;
                       diagnostics.appliedCount++;
+                      console.log(`[ResumeStore] ✅ Certification matched and updated!`);
                       break;
                     }
                   }
@@ -528,7 +562,9 @@ export const useResumeStore = create<ResumeState>()(
                 });
                 console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
                   originalPreview: originalValue.substring(0, 60),
+                  optimizedPreview: optimizedValue.substring(0, 60),
                   sectionId: opt.sectionId,
+                  availableCerts: merged.certificates?.map(c => c.name) || []
                 });
               }
               break;
@@ -544,40 +580,76 @@ export const useResumeStore = create<ResumeState>()(
           console.warn('[ResumeStore] Merge diagnostics:', diagnostics);
         }
 
+        // Saudi nationality: prepend "Saudi" to summary for Saudization ATS
+        if (state.isSaudiNational && merged.basics?.summary) {
+          if (!merged.basics.summary.toLowerCase().startsWith('saudi')) {
+            merged.basics.summary = `Saudi ${merged.basics.summary}`;
+          }
+        }
+
         return merged;
       },
 
       // Analysis caching methods
-      getCachedAnalysis: (resumeText: string, jobDescription: string): CachedAnalysis | null => {
+      getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean): CachedAnalysis | null => {
         const state = get();
-        const cacheKey = generateCacheKey(resumeText, jobDescription);
+        // Allow explicit override of isOptimized flag for specific lookups
+        // This is needed when OptimizeSection wants the original score regardless of current showOptimized state
+        const isOptimized = forceIsOptimized !== undefined ? forceIsOptimized : state.showOptimized;
+        const cacheKey = generateCacheKey(resumeText, jobDescription, isOptimized);
         const cached = state.analysisCache[cacheKey];
 
         if (!cached) {
+          console.log('[ResumeStore] Cache miss for', { isOptimized, fromState: state.showOptimized, forced: forceIsOptimized !== undefined });
           return null;
         }
 
         // Check if cache is still valid
         const age = Date.now() - cached.timestamp;
         if (age > CACHE_TTL_MS) {
+          console.log('[ResumeStore] Cache expired (age:', Math.round(age / 1000), 'seconds)');
           return null;
         }
 
+        console.log('[ResumeStore] Cache hit! Score:', cached.score, 'Age:', Math.round(age / 1000), 'seconds', 'isOptimized:', isOptimized);
         return cached;
       },
 
-      setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>) => {
-        const cacheKey = generateCacheKey(resumeText, jobDescription);
+      setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => {
+        const state = get();
+        // Fix B2: Allow explicit override of isOptimized flag, matching getCachedAnalysis
+        const isOptimized = forceIsOptimized !== undefined ? forceIsOptimized : state.showOptimized;
+        const cacheKey = generateCacheKey(resumeText, jobDescription, isOptimized);
 
-        set((state) => ({
-          analysisCache: {
+        console.log('[ResumeStore] Caching analysis:', {
+          isOptimized,
+          score: analysis.score,
+          cacheKey
+        });
+
+        set((state) => {
+          const newCache = {
             ...state.analysisCache,
             [cacheKey]: {
               ...analysis,
               timestamp: Date.now(),
             },
-          },
-        }));
+          };
+
+          // Evict oldest entries if cache exceeds 10 entries
+          const MAX_CACHE_SIZE = 10;
+          const cacheEntries = Object.entries(newCache);
+          if (cacheEntries.length > MAX_CACHE_SIZE) {
+            // Sort by timestamp (oldest first) and keep only newest MAX_CACHE_SIZE
+            const sortedEntries = cacheEntries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+            const keepEntries = sortedEntries.slice(-MAX_CACHE_SIZE);
+            return {
+              analysisCache: Object.fromEntries(keepEntries),
+            };
+          }
+
+          return { analysisCache: newCache };
+        });
       },
 
       clearAnalysisCache: () => {
@@ -623,7 +695,17 @@ export const useResumeStore = create<ResumeState>()(
 
       setContentLanguage: (lang) => set({ contentLanguage: lang }),
 
+      setBaselineMatchScore: (score: number) => {
+        console.log('[ResumeStore] Setting baseline match score:', score);
+        set({ baselineMatchScore: score });
+      },
+
+      setSaudiNational: (value: boolean) => {
+        set({ isSaudiNational: value, hasDownloaded: false });
+      },
+
       clearAll: () => {
+        cacheKeyMemo.clear();
         set({
           originalResume: null,
           parsedResumeText: null,
@@ -649,11 +731,13 @@ export const useResumeStore = create<ResumeState>()(
             scoreBreakdown: null,
             categoryScores: null,
           },
+          baselineMatchScore: null,
           showOptimized: false,
         });
       },
 
       resetForNewUpload: () => {
+        cacheKeyMemo.clear();
         set({
           originalResume: null,
           parsedResumeText: null,
@@ -679,6 +763,7 @@ export const useResumeStore = create<ResumeState>()(
             scoreBreakdown: null,
             categoryScores: null,
           },
+          baselineMatchScore: null,
           showOptimized: false,
         });
       },
@@ -698,6 +783,10 @@ export const useResumeStore = create<ResumeState>()(
         hasDownloaded: state.hasDownloaded,
         // Persist analysisCache so match analysis score survives refresh
         analysisCache: state.analysisCache,
+        // Persist baseline score so it survives refresh
+        baselineMatchScore: state.baselineMatchScore,
+        // Persist Saudi nationality flag
+        isSaudiNational: state.isSaudiNational,
       }),
       // Custom merge to properly handle nested optimizationMetrics
       merge: (persistedState, currentState) => {
@@ -724,8 +813,16 @@ export const useResumeStore = create<ResumeState>()(
  * Selector hooks for common use cases
  */
 export const useActiveResume = () => {
-  const getActiveResume = useResumeStore((state) => state.getActiveResume);
-  return getActiveResume();
+  // Fixed: Subscribe to actual state fields that affect the active resume
+  // This ensures re-renders happen when the merged resume changes
+  return useResumeStore((state) => {
+    // Trigger re-render when any of these change:
+    // - originalResume (base data)
+    // - optimizations (array reference or applied states)
+    // - showOptimized (toggle flag)
+    // - isSaudiNational (affects summary)
+    return state.getActiveResume();
+  });
 };
 
 export const useShowOptimized = () =>

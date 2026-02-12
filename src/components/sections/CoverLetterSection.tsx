@@ -16,16 +16,20 @@ import {
   BookOpen,
   Palette,
   Loader2,
-  Edit3
+  Edit3,
+  UserCircle
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { cn } from '../../lib/utils/cn';
 import { analytics } from '../../services/analytics';
+import { useResumeStore } from '../../lib/stores/resumeStore';
+import { splitTextWithKeywords, shouldApplyBolding } from '../../lib/utils/keywordBolder';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { UpgradeModal } from '../Credits/UpgradeModal';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { FeedbackModal } from '../Feedback/FeedbackModal';
+import type { ResumeSchema } from '../../types/resume';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
 const GENERATE_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-cover-letter`;
@@ -35,7 +39,11 @@ const STORAGE_KEY = 'airo:coverLetter';
 interface CoverLetterSectionProps {
   resumeText?: string;
   jobDescription?: string;
+  resumeData?: ResumeSchema | null;
 }
+
+// Company name and hiring manager extraction functions removed
+// These fields should be manually entered by the user, not auto-filled
 
 // === Tone options ===
 const tones = [
@@ -45,7 +53,7 @@ const tones = [
   { value: 'creative', label: 'Creative', labelAr: 'إبداعي', icon: Palette, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' }
 ];
 
-export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSectionProps) {
+export function CoverLetterSection({ resumeText, jobDescription, resumeData }: CoverLetterSectionProps) {
   const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
@@ -64,6 +72,9 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [signatureName, setSignatureName] = useState('');
+
+  // Auto-fill tracking removed - fields are now manual entry only
 
   // Load from localStorage
   useEffect(() => {
@@ -77,6 +88,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
           setHiringManager(data.hiringManager || '');
           setTone(data.tone || 'professional');
           setKeyHighlights(data.keyHighlights || []);
+          setSignatureName(data.signatureName || '');
         } catch (e) {
           console.error('Failed to load cover letter:', e);
         }
@@ -84,10 +96,28 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
     }
   }, []);
 
+  // Auto-fill signature from resume data
+  useEffect(() => {
+    if (resumeData?.basics?.name && !signatureName) {
+      setSignatureName(resumeData.basics.name);
+    }
+  }, [resumeData?.basics?.name, signatureName]);
+
   // Update word count
   useEffect(() => {
     setWordCount(coverLetter ? coverLetter.trim().split(/\s+/).length : 0);
   }, [coverLetter]);
+
+  // Auto-fill useEffect removed - company name and hiring manager should be manually entered
+
+  // Simple change handlers for manual entry
+  const handleCompanyChange = (value: string) => {
+    setCompanyName(value);
+  };
+
+  const handleManagerChange = (value: string) => {
+    setHiringManager(value);
+  };
 
   const generateCoverLetterActual = useCallback(async () => {
     if (!resumeText || !jobDescription) {
@@ -157,6 +187,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
           hiringManager,
           tone,
           keyHighlights: data.keyHighlights,
+          signatureName,
           generatedAt: new Date().toISOString()
         }));
       }
@@ -207,12 +238,35 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   };
 
   const downloadCoverLetter = async () => {
+    // Get keywords and bold preference from store
+    const store = useResumeStore.getState();
+    const keywords = store.optimizationMetrics?.jdKeywords || [];
+    const boldKeywordsFlag = store.displayOptions?.boldKeywords ?? true;
+
     // Dynamic import docx to reduce bundle size
     const { Document, Packer, Paragraph, TextRun, AlignmentType, convertInchesToTwip, LineRuleType } = await import('docx');
 
     // Professional font settings - Times New Roman 12pt (size in half-points: 12 * 2 = 24)
     const fontConfig = { font: 'Times New Roman', size: 24 };
     const lineSpacing = { line: 276, lineRule: LineRuleType.AUTO }; // 1.15 line spacing
+
+    // Helper to create TextRuns with keyword bolding
+    const createTextRuns = (text: string): any[] => {
+      const applyBolding = shouldApplyBolding(keywords, boldKeywordsFlag);
+
+      if (!applyBolding) {
+        return [new TextRun({ text, ...fontConfig })];
+      }
+
+      const segments = splitTextWithKeywords(text, keywords, 15); // Top 15 keywords
+      return segments.map(segment =>
+        new TextRun({
+          text: segment.text,
+          ...fontConfig,
+          bold: segment.bold,
+        })
+      );
+    };
 
     // Remove any existing greeting from the cover letter content to avoid duplication
     let cleanedContent = coverLetter.trim();
@@ -248,16 +302,31 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
       spacing: { after: 280, ...lineSpacing }
     }));
 
-    // Body paragraphs (justified, proper spacing)
+    // Body paragraphs (justified, proper spacing, with keyword bolding)
     contentParagraphs.forEach(para => {
       const trimmed = para.trim();
       if (!trimmed) return;
       docChildren.push(new Paragraph({
-        children: [new TextRun({ text: trimmed, ...fontConfig })],
+        children: createTextRuns(trimmed),
         spacing: { after: 280, ...lineSpacing },
         alignment: AlignmentType.JUSTIFIED
       }));
     });
+
+    // Signature
+    if (signatureName) {
+      // "Sincerely,"
+      docChildren.push(new Paragraph({
+        children: [new TextRun({ text: 'Sincerely,', ...fontConfig })],
+        spacing: { after: 600, ...lineSpacing } // Extra space before signature
+      }));
+
+      // Signature name (bold)
+      docChildren.push(new Paragraph({
+        children: [new TextRun({ text: signatureName, bold: true, ...fontConfig })],
+        spacing: { after: 200, ...lineSpacing }
+      }));
+    }
 
     const doc = new Document({
       sections: [{
@@ -276,9 +345,24 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
     });
 
     const blob = await Packer.toBlob(doc);
-    const filename = companyName
-      ? `cover-letter-${companyName.toLowerCase().replace(/\s+/g, '-')}.docx`
-      : `cover-letter-${Date.now()}.docx`;
+
+    // Generate filename with username and company name
+    const username = resumeData?.basics?.name
+      ?.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '') // Remove special chars
+      || 'user';
+
+    const companySlug = companyName
+      ?.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      || '';
+
+    const filename = companySlug
+      ? `cover-letter-${username}-${companySlug}.docx`
+      : `cover-letter-${username}.docx`;
+
     saveAs(blob, filename);
   };
 
@@ -324,17 +408,33 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
             <GlassInput
               label={`${t('sections.coverLetter.companyName', 'Company Name')} (${t('common.optional', 'Optional')})`}
               value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              onChange={(e) => handleCompanyChange(e.target.value)}
               placeholder={t('sections.coverLetter.companyPlaceholder', 'e.g., Aramco')}
               leftIcon={<Briefcase className="w-4 h-4" />}
             />
             <GlassInput
               label={`${t('sections.coverLetter.hiringManager', 'Hiring Manager')} (${t('common.optional', 'Optional')})`}
               value={hiringManager}
-              onChange={(e) => setHiringManager(e.target.value)}
+              onChange={(e) => handleManagerChange(e.target.value)}
               placeholder={t('sections.coverLetter.managerPlaceholder', 'e.g., Abdullah Al-Otaibi')}
-              leftIcon={<UserIcon className="w-4 h-4" />}
+              leftIcon={<UserCircle className="w-4 h-4" />}
             />
+          </div>
+
+          {/* Signature Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              {t('sections.coverLetter.signatureName', 'Signature Name')}
+            </label>
+            <GlassInput
+              value={signatureName}
+              onChange={(e) => setSignatureName(e.target.value)}
+              placeholder={t('sections.coverLetter.signatureNamePlaceholder', 'Your full name')}
+              leftIcon={<UserCircle className="w-4 h-4" />}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {t('sections.coverLetter.signatureHint', 'Auto-filled from your resume. Edit if needed.')}
+            </p>
           </div>
 
           {/* Tone Selector */}
@@ -397,7 +497,10 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
             ) : (
               <div className="flex items-center justify-center gap-2">
                 <Wand2 className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-                <span>{coverLetter ? t('sections.coverLetter.regenerate', 'Regenerate Cover Letter') : t('sections.coverLetter.generate', 'Generate Cover Letter')}</span>
+                <span>
+                  {coverLetter ? t('sections.coverLetter.regenerate', 'Regenerate Cover Letter') : t('sections.coverLetter.generate', 'Generate Cover Letter')}
+                  <span className="ml-2 text-xs opacity-75">(4 {t('common.credits', 'credits')})</span>
+                </span>
               </div>
             )}
             {!isGenerating && (
@@ -541,6 +644,14 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
                         </p>
                       ))
                     }
+
+                    {/* Signature */}
+                    {signatureName && (
+                      <div className="mt-8">
+                        <p className="mb-1">Sincerely,</p>
+                        <p className="mt-4 font-semibold">{signatureName}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -572,7 +683,6 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmGenerate}
         feature="cover_letter"
-        currentCredits={credits?.remaining || 0}
         isLoading={isGenerating}
       />
 
@@ -588,7 +698,7 @@ export function CoverLetterSection({ resumeText, jobDescription }: CoverLetterSe
   );
 }
 
-function UserIcon(props: any) {
+function _UserIcon(props: any) {
   return (
     <svg
       {...props}

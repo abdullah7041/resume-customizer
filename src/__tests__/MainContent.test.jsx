@@ -178,7 +178,7 @@ describe("MainContent resume parsing", () => {
     });
 
     expect(parseResumeMock).toHaveBeenCalledTimes(1);
-    expect(parseResumeMock).toHaveBeenCalledWith(file);
+    expect(parseResumeMock).toHaveBeenCalledWith(file, expect.any(Object));
     expect(parsed).toMatchObject({
       storagePath: "user-123/resume.pdf",
       storageBucket: "resumes",
@@ -196,7 +196,7 @@ describe("MainContent resume parsing", () => {
       await resumeUploadMockProps.current.onParseResume({ kind: "text", value: "My resume" });
     });
 
-    expect(parseResumeMock).toHaveBeenCalledWith("My resume");
+    expect(parseResumeMock).toHaveBeenCalledWith("My resume", expect.any(Object));
   });
 
   it("persists resume data with minor control characters (relaxed validation)", () => {

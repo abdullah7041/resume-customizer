@@ -37,7 +37,7 @@ interface Vision2030SectionProps {
 export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const { credits, isLoading: creditsLoading, refetch: refreshCredits } = useUserCredits();
+  const { credits: _credits, isLoading: creditsLoading, refetch: refreshCredits } = useUserCredits();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
   const isArabic = i18n.language === 'ar';
 
@@ -402,7 +402,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           onClose={() => setShowConfirmModal(false)}
           onConfirm={executeAnalysis}
           feature="vision2030"
-          currentCredits={credits?.remaining || 0}
           isLoading={isAnalyzing}
         />
       </div>
@@ -483,7 +482,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         onClose={() => setShowConfirmModal(false)}
         onConfirm={executeAnalysis}
         feature="vision2030"
-        currentCredits={credits?.remaining || 0}
         isLoading={isAnalyzing}
       />
 

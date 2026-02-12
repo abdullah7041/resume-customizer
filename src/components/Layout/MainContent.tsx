@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, MessageSquare, Mail, LayoutTemplate, Trash2 } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
@@ -30,6 +30,7 @@ import ViewTextModal from "../ui/ViewTextModal";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
+
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
@@ -221,13 +222,42 @@ export default function MainContent() {
     }
   }, [resumeData]);
 
-  // Persist job description to localStorage  
+  // Persist job description to localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (jobDescription) {
       window.localStorage.setItem(JOB_STORAGE_KEY, jobDescription);
     }
   }, [jobDescription]);
+
+  // Warn user before closing tab with unsaved changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Check if there are applied optimizations that might not be exported
+      const hasUnsavedChanges = optimizations.some((o) => o.applied);
+
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = t(
+          "workspace.unsavedChanges",
+          "You have applied optimizations that may not be saved. Are you sure you want to leave?"
+        );
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [optimizations, t]);
+
+  // Show session recovery toast on mount if data was restored
+  // Session recovery removed - was showing incorrect dates
+  // Data is auto-loaded from Zustand persist, no toast needed
+  useEffect(() => {
+    // Reserved for future session recovery implementation
+  }, []);
 
   const handleTabChange = useCallback((value) => {
     setActiveTab(value);
@@ -254,7 +284,14 @@ export default function MainContent() {
     setPreviewUsed(true);
   }, []);
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const handleClearAllData = useCallback(() => {
+    // Show confirmation modal instead of deleting immediately
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const confirmDeleteAllData = useCallback(() => {
     if (typeof window === "undefined") return;
 
     // Clear all stored data
@@ -269,6 +306,8 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setActiveTab("resume");
+
+    setShowDeleteConfirm(false);
 
     pushToast({
       type: "success",
@@ -349,7 +388,7 @@ export default function MainContent() {
   }, []);
 
   const handleParseResume = useCallback(
-    async (resumeInput) => {
+    async (resumeInput, signal?: AbortSignal) => {
       const { parseInput, storage, fileName } = normalizeResumePayload(resumeInput);
 
       // Clear old localStorage data to prevent corruption issues
@@ -369,7 +408,7 @@ export default function MainContent() {
         );
 
         setFlowProgress(48);
-        const parsed = await parseResume(parseInput);
+        const parsed = await parseResume(parseInput, { signal });
         setFlowProgress(88);
         const enriched =
           parsed
@@ -440,29 +479,50 @@ export default function MainContent() {
           { id: TOAST_IDS.match }
         );
         const trimmedJob = jobDescriptionInput.trim();
-        const result = await analyzeResumeWithAI(resumeData.plainText, trimmedJob);
+
+        // Fix B1: Always analyze the ORIGINAL resume text for match scoring
+        // This prevents the optimized score (e.g. 87) from leaking into match analysis
+        // when showOptimized is true after optimization + download
+        const { parsedResumeText, showOptimized } = useResumeStore.getState();
+        const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
+
+        console.log('[MainContent] Analyzing Resume:', {
+          textLength: resumeTextToAnalyze.length,
+          showOptimized,
+        });
+
+        const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob);
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
 
         // Cache the match analysis score so OptimizeSection can read it
         // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
         if (result && typeof result.score === 'number') {
-          const { setCachedAnalysis, setOptimizationMetrics, parsedResumeText } = useResumeStore.getState();
-          // CRITICAL: Use parsedResumeText from Zustand store for cache key consistency
-          // OptimizeSection reads from parsedResumeText, so we must use the same source
-          const cacheResumeText = parsedResumeText || resumeData.plainText;
-          setCachedAnalysis(cacheResumeText, trimmedJob, {
+          const { setCachedAnalysis, setOptimizationMetrics, baselineMatchScore, setBaselineMatchScore } = useResumeStore.getState();
+          // CRITICAL: Cache using the SAME text we used for analysis
+          // This ensures cache key matches what we analyzed (original or optimized)
+          setCachedAnalysis(resumeTextToAnalyze, trimmedJob, {
             score: result.score,
             matchedKeywords: result.matchedKeywords || result.topHits || [],
             missingKeywords: result.missingKeywords || [],
             suggestions: result.suggestions || [],
             reasoning: result.reasoning || '',
           });
-          // Also update optimizationMetrics.beforeScore so it takes priority in OptimizeSection
-          setOptimizationMetrics({
-            beforeScore: result.score,
-            hasJobDescription: true,
-          });
+
+          // Only update beforeScore when analyzing ORIGINAL resume (not optimized)
+          // This prevents optimized analysis from polluting the baseline score
+          if (!showOptimized) {
+            setOptimizationMetrics({
+              beforeScore: result.score,
+              hasJobDescription: true,
+            });
+          }
+
+          // Store baseline score if this is the first analysis of an original (not optimized) resume
+          if (!showOptimized && baselineMatchScore === null) {
+            setBaselineMatchScore(result.score);
+            console.log('[MainContent] Stored baseline score:', result.score);
+          }
         }
 
         pushToast(
@@ -570,8 +630,13 @@ export default function MainContent() {
           setOptimizationMetrics({
             ...(result.matchScoring && {
               beforeScore: result.matchScoring.beforeScore,
-              afterScore: result.matchScoring.afterScore,
-              improvement: result.matchScoring.improvement,
+              afterScore: result.matchScoring.afterScore
+                ?? (result.matchScoring.beforeScore != null && (result.matchScoring.estimatedImprovement ?? result.matchScoring.improvement) != null
+                  ? result.matchScoring.beforeScore + (result.matchScoring.estimatedImprovement ?? result.matchScoring.improvement)
+                  : null),
+              improvement: result.matchScoring.improvement
+                ?? result.matchScoring.estimatedImprovement
+                ?? null,
               jdKeywords: result.matchScoring.jdKeywords || [],
               matchedKeywords: result.matchScoring.matchedKeywords || [],
               reasoning: result.matchScoring.reasoning,
@@ -663,6 +728,11 @@ export default function MainContent() {
     });
   }, [pushToast, t]);
 
+  // Memoized callback for InterviewSection to avoid re-renders
+  const handleResumeDataUpdate = useCallback((updates) => {
+    setResumeData(prev => ({ ...prev, ...updates }));
+  }, []);
+
   const handleExportPdf = useCallback(
     async (variant, exportMethod = "supabase") => {
       if (!resumeData?.plainText) {
@@ -731,7 +801,7 @@ export default function MainContent() {
         } else {
           // Fallback to print dialog if Supabase is not available or user not signed in
           await exportResumeToPdf({
-            resumeDocument: resumeData,
+            resumeDocument: mergedResume || resumeData,
             jobDescription,
             matchAnalysis,
             optimizations,
@@ -852,7 +922,7 @@ export default function MainContent() {
               resumeText={resumeData?.plainText || ""}
               matchAnalysis={matchAnalysis}
               resumeData={resumeData}
-              onUpdate={(updates) => setResumeData(prev => ({ ...prev, ...updates }))}
+              onUpdate={handleResumeDataUpdate}
             />
           )}
           {activeTab === "bulk" && (
@@ -864,6 +934,7 @@ export default function MainContent() {
             <CoverLetterSection
               resumeText={resumeData?.plainText || ""}
               jobDescription={jobDescription}
+              resumeData={resumeData}
             />
           )}
         </div>
@@ -892,6 +963,38 @@ export default function MainContent() {
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
       />
+
+      {/* Delete All Data Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border border-white/10 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6 text-amber-500" />
+              {t("workspace.deleteAllConfirm.title", "Delete All Data?")}
+            </h3>
+            <p className="text-gray-400 mb-6">
+              {t(
+                "workspace.deleteAllConfirm.description",
+                "This will permanently delete your uploaded resume, optimizations, and all saved progress. This action cannot be undone."
+              )}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors text-white font-medium"
+              >
+                {t("common.cancel", "Cancel")}
+              </button>
+              <button
+                onClick={confirmDeleteAllData}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+              >
+                {t("workspace.deleteAllConfirm.confirm", "Delete All")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
         <div className="rounded-2xl bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-7 lg:p-8 transition-shadow duration-300 hover:shadow-2xl">
           {flowProgress > 0 && (

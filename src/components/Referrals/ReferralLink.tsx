@@ -69,7 +69,7 @@ export function ReferralLink({ className }: ReferralLinkProps) {
     }
     const isArabic = i18n.language === 'ar';
     const message = isArabic
-      ? `جرّب واثق - أداة AI لتحسين السيرة الذاتية!\n\n${referralUrl}`
+      ? `جرّب واثق - أداة AI لتحسين سيرتك الذاتيةومطابقتها مع رؤية 2030!\n\n${referralUrl}`
       : `Try Watheq - AI Resume Optimizer!\n\n${referralUrl}`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
@@ -83,7 +83,7 @@ export function ReferralLink({ className }: ReferralLinkProps) {
     }
     const isArabic = i18n.language === 'ar';
     const message = isArabic
-      ? `جرّب واثق - أداة AI سعودية لتحسين السيرة الذاتية ومطابقتها مع رؤية 2030!\n\n${referralUrl}\n\n#رؤية_2030 #واثق`
+      ? `جرّب واثق - أداة AI سعودية لتحسين سيرتك الذاتية ومطابقتها مع رؤية 2030!\n\n${referralUrl}\n\n#رؤية_2030 #واثق`
       : `Try Watheq - Saudi AI Resume Optimizer aligned with Vision 2030!\n\n${referralUrl}\n\n#Vision2030 #Watheq`;
 
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;

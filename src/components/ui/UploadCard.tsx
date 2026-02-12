@@ -84,6 +84,8 @@ export default function UploadCard({
   onTextChange,
   isSaved,
   onCancel,
+  isSaudiNational,
+  onSaudiNationalChange,
 }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
@@ -243,6 +245,16 @@ export default function UploadCard({
         </p>
       </div>
 
+      {/* File Type & Best Practices Info */}
+      <div className="mt-4 text-center space-y-2">
+        <p className="text-xs text-gray-400">
+          {t('upload.card.supportedFormats', 'Supported formats: PDF, DOCX, TXT')} • {t('upload.card.maxSizeLabel', 'Max size: 5MB')}
+        </p>
+        <p className="text-xs text-gray-500">
+          {t('upload.card.bestPractice', 'For best results, use a PDF with selectable text (not scanned images)')}
+        </p>
+      </div>
+
       <input
         ref={inputRef}
         type="file"
@@ -371,7 +383,39 @@ export default function UploadCard({
         )
       }
 
-      <div className="mt-8 pt-6 border-t border-white/5 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
+      {isSaved && (
+        <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <label className="relative flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-white/5 cursor-pointer hover:bg-white/[0.07] transition-all group overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/0 group-hover:to-emerald-500/0 transition-all duration-500" />
+
+            <div className="flex items-center gap-3 relative z-10 w-full sm:w-auto">
+              <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
+                <span className="text-xl drop-shadow-md">🇸🇦</span>
+              </div>
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-sm font-semibold text-white group-hover:text-emerald-100 transition-colors truncate">
+                  {t('upload.card.saudi.label')}
+                </span>
+                <span className="text-[10px] sm:text-xs text-emerald-200/60 font-medium truncate sm:whitespace-normal">
+                  {t('upload.card.saudi.description')}
+                </span>
+              </div>
+            </div>
+
+            <div className="relative z-10 shrink-0 ms-auto">
+              <input
+                type="checkbox"
+                checked={isSaudiNational}
+                onChange={(e) => onSaudiNationalChange?.(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-white/10 rounded-full peer peer-focus:ring-2 peer-focus:ring-emerald-500/30 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+            </div>
+          </label>
+        </div>
+      )}
+
+      <div className="mt-6 pt-6 border-t border-white/5 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
         <GlassButton
           variant="ghost"
           onClick={onFileClear}

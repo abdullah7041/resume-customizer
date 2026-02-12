@@ -8,12 +8,13 @@ export type TemplateId =
   | 'modern-professional'
   | 'classic-traditional'
   | 'technical-engineer'
-  | 'ats-optimized';
+  | 'ats-optimized'
+  | 'executive-professional';
 
 /**
  * Template category for filtering
  */
-export type TemplateCategory = 'modern' | 'classic' | 'technical';
+export type TemplateCategory = 'modern' | 'classic' | 'technical' | 'ats' | 'executive';
 
 /**
  * Template configuration metadata
@@ -173,6 +174,8 @@ export interface DisplayOptions {
   marginSide: number;     // inches (0.3-1.0)
   // Page break indicators
   showPageBreaks: boolean;
+  // Keyword bolding (DOCX exports)
+  boldKeywords: boolean;  // Bold important keywords from job description (default: true)
 }
 
 /**
@@ -195,6 +198,12 @@ export interface ResumeState {
 
   // Optimization metrics for Results Summary
   optimizationMetrics: OptimizationMetrics;
+
+  // Baseline match score (original resume's score before any optimizations)
+  baselineMatchScore: number | null;
+
+  // Saudi nationality flag for Saudization ATS
+  isSaudiNational: boolean;
 
   // View state
   showOptimized: boolean;
@@ -227,7 +236,7 @@ export interface ResumeState {
 
   // Cache actions
   getCachedAnalysis: (resumeText: string, jobDescription: string) => CachedAnalysis | null;
-  setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>) => void;
+  setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => void;
   clearAnalysisCache: () => void;
 
   // Display options actions
@@ -236,6 +245,12 @@ export interface ResumeState {
 
   // Language detection
   setContentLanguage: (lang: ContentLanguage) => void;
+
+  // Baseline score tracking
+  setBaselineMatchScore: (score: number) => void;
+
+  // Saudi nationality
+  setSaudiNational: (value: boolean) => void;
 }
 
 /**

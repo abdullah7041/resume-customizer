@@ -83,10 +83,19 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
       };
     }
 
-    const { resumeText, jobDescription } = parseResult.data;
+    const { resumeText, jobDescription, questionType = 'mixed' } = parseResult.data;
+
+    // Validate questionType
+    if (!['behavioral', 'technical', 'mixed'].includes(questionType)) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: 'Invalid questionType. Must be "behavioral", "technical", or "mixed".' })
+      };
+    }
 
     // Use dedicated interview question prediction function
-    const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription);
+    const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription, questionType);
 
     // Consume credits AFTER successful prediction
     const creditResult = await consumeCredits(userId, 'interview_prep');
@@ -104,9 +113,16 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
 
   } catch (error) {
     console.error("Predict questions error:", error);
+    // Strip PII before sending to Sentry - only send metadata
+    const rawBody = JSON.parse(event.body || '{}');
     captureError(error, {
       function: 'predict-questions',
-      payload: JSON.parse(event.body || '{}'),
+      payload: {
+        resumeTextLength: rawBody.resumeText?.length || 0,
+        jobDescriptionLength: rawBody.jobDescription?.length || 0,
+        hasResumeText: Boolean(rawBody.resumeText),
+        hasJobDescription: Boolean(rawBody.jobDescription),
+      },
     });
     return {
       statusCode: 500,

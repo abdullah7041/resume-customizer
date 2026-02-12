@@ -1,5 +1,5 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
 
 // Default display options if not provided
@@ -65,6 +65,7 @@ export function TechnicalEngineer({
         borderBottom: '1px dashed #e5e7eb',
         paddingBottom: '4px',
         marginBottom: `${opts.paragraphSpacing}px`,
+        breakAfter: 'avoid' as const,
     };
 
     return (
@@ -109,7 +110,12 @@ export function TechnicalEngineer({
                 <div className="flex flex-wrap gap-4 text-gray-500" style={{ fontSize: fs(10) }}>
                     {basics.email && <span>{basics.email}</span>}
                     {basics.phone && <span>{basics.phone}</span>}
-                    {basics.location?.city && <span>{basics.location.city}</span>}
+                    {basics.location?.city && (
+                        <span>
+                            {basics.location.city}
+                            {basics.location?.region && `, ${basics.location.region}`}
+                        </span>
+                    )}
                     {linkedInUrl && <span>{linkedInUrl.replace('https://', '').replace('www.', '')}</span>}
                     {portfolioUrl && <span>{portfolioUrl.replace('https://', '').replace('www.', '')}</span>}
                 </div>
@@ -196,7 +202,7 @@ export function TechnicalEngineer({
                     </h2>
                     <div className="space-y-4">
                         {work.map((job, i) => (
-                            <div key={i}>
+                            <div key={i} style={{ breakInside: 'avoid' }}>
                                 <div className="flex justify-between items-baseline mb-1">
                                     <h3
                                         className="text-gray-900"
@@ -214,6 +220,7 @@ export function TechnicalEngineer({
                                 </div>
                                 <p className="text-gray-500 mb-2" style={{ fontSize: fs(11) }}>
                                     {safeString(job.name)}
+                                    {job.location && ` | ${job.location}`}
                                 </p>
                                 {job.highlights && job.highlights.length > 0 && (
                                     <ul className="space-y-1 ps-4">
@@ -248,7 +255,7 @@ export function TechnicalEngineer({
                     </h2>
                     <div className="space-y-3">
                         {projects.map((project, i) => (
-                            <div key={i}>
+                            <div key={i} style={{ breakInside: 'avoid' }}>
                                 <h3
                                     className="text-gray-900"
                                     style={{
@@ -295,7 +302,7 @@ export function TechnicalEngineer({
                     </h2>
                     <div className="space-y-3">
                         {education.map((edu, i) => (
-                            <div key={i}>
+                            <div key={i} style={{ breakInside: 'avoid' }}>
                                 <div className="flex justify-between items-baseline">
                                     <div>
                                         <h3
@@ -399,11 +406,14 @@ export function TechnicalEngineer({
                         {getSectionLabel('languages')}
                     </h2>
                     <div className="flex flex-wrap gap-3">
-                        {languages.map((lang, i) => (
-                            <span key={i} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
-                                <strong>{lang.language}</strong>: {lang.fluency}
-                            </span>
-                        ))}
+                        {languages.map((lang, i) => {
+                            const { language, fluency } = safeLang(lang);
+                            return (
+                                <span key={i} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
+                                    <strong>{language}</strong>{fluency ? `: ${fluency}` : ''}
+                                </span>
+                            );
+                        })}
                     </div>
                 </section>
             )}

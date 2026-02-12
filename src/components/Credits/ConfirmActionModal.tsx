@@ -14,13 +14,13 @@ import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { FEATURE_COSTS, FEATURE_LABELS, type FeatureName } from '../../types/credits';
 import { supabase } from '../../services/supabase';
+import { useUserCredits } from '../../hooks/useUserCredits';
 
 interface ConfirmActionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
   feature: FeatureName;
-  currentCredits: number;
   isLoading?: boolean;
 }
 
@@ -29,10 +29,10 @@ export function ConfirmActionModal({
   onClose,
   onConfirm,
   feature,
-  currentCredits,
   isLoading = false,
 }: ConfirmActionModalProps) {
   const { t, i18n } = useTranslation();
+  const { credits } = useUserCredits();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -40,6 +40,7 @@ export function ConfirmActionModal({
 
   if (!isOpen) return null;
 
+  const currentCredits = credits?.remaining || 0;
   const cost = FEATURE_COSTS[feature];
   const canProceed = currentCredits >= cost;
   const featureLabel = FEATURE_LABELS[feature];

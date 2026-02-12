@@ -92,12 +92,31 @@ npm run quality:parallel  # Runs automatically via post-task hook
 - Choose only popular & proven tech stacks
 - Write in plain, easy-to-understand English
 - Prefer fewer lines of code
+- When fixing bugs related to scoring, AI calculations, or data consistency, always trace the ENTIRE data flow from source to display before implementing fixes. Never assume the bug is at the surface level - investigate the underlying logic first.
+- Before implementing any fix for score-related features, ask the user to confirm: 1) What the expected score should be, 2) What the current incorrect score is, 3) Where in the pipeline the score originates.
+- For this codebase: scores should be genuine calculations, not random or placeholder values. Always verify AI-generated scores reflect actual analysis.
 
-## Agent Skills (AUTO-LOADED)
+## Available Skills (Invoke with /skill-name)
 
-- **best-practices**: (`.agent/skills/best-practices/SKILL.md`) - Contains MCP optimization, task decomposition, research protocol
-- **vibe-coding**: (`.agent/skills/vibe-coding/SKILL.md`) - High-velocity development patterns
-- **mcp-toolbox**: (`.agent/skills/mcp-toolbox/SKILL.md`) - MCP server reference
+**Debugging & Quality**:
+- **debug-score**: (`.claude/skills/debug-score.md`) - Systematic scoring bug analysis with root cause tracing
+- **fix-lint**: (`.claude/commands/fix-lint.md`) - Auto-fix linting issues
+- **test-component**: (`.claude/commands/test-component.md`) - Run tests for specific component
+
+**Development Workflows**:
+- **vibe-coding**: (`.claude/skills/vibe-coding.md`) - High-velocity development patterns
+- **decompose-task**: (`.claude/commands/decompose-task.md`) - Break complex tasks into parallel subtasks
+
+**Reference Guides**:
+- **mcp-toolbox**: (`.claude/skills/mcp-toolbox.md`) - MCP server optimization guide
+- **typescript-strict**: (`.claude/skills/typescript-strict.md`) - TypeScript standards
+- **tailwind-patterns**: (`.claude/skills/tailwind-patterns.md`) - CSS patterns
+- **react-best-practices**: (`.claude/skills/react-best-practices.md`) - React conventions
+
+**Configuration**:
+- [.claude/README.md](.claude/README.md) - Complete configuration guide
+- [.claude/QUICK_REFERENCE.md](.claude/QUICK_REFERENCE.md) - Fast command reference
+- [.claude/IMPLEMENTATION_SUMMARY.md](.claude/IMPLEMENTATION_SUMMARY.md) - Recent improvements
 
 **Additional Resources**:
 - [CLAUDE_CODE_BEST_PRACTICES.md](CLAUDE_CODE_BEST_PRACTICES.md) - Complete 2026 best practices
@@ -105,6 +124,8 @@ npm run quality:parallel  # Runs automatically via post-task hook
 - [AI_ALTERNATIVES.md](AI_ALTERNATIVES.md) - Cline, Continue.dev, Aider
 - [API_COST_ANALYSIS.md](API_COST_ANALYSIS.md) - Budget optimization
 - [TASKS_FEATURE_GUIDE.md](TASKS_FEATURE_GUIDE.md) - New Tasks feature
+
+**Note**: Skills are NOT auto-loaded into context. Invoke them with `/skill-name` when needed to save tokens.
 
 ## MANDATORY: Post-Task Quality Protocol
 
@@ -579,3 +600,4 @@ The following features were recently implemented:
 ---
 
 **Remember:** All protocols above are AUTOMATIC and MANDATORY. Quality checks are enforced. There is no "skipping" these steps.
+

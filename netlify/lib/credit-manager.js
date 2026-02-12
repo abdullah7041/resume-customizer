@@ -120,10 +120,10 @@ export async function getUserCredits(userId, options = {}) {
 
       // Check 2: IP abuse detection
       const isIPSuspicious = await checkIPAbuse(ipAddress);
-      const creditsToGive = isIPSuspicious ? 5 : 15; // Reduced credits for suspicious IPs
+      const creditsToGive = isIPSuspicious ? 5 : 20; // Reduced credits for suspicious IPs
 
       if (isIPSuspicious) {
-        console.warn(`[CreditManager] Suspicious IP detected for ${userId} - giving ${creditsToGive} credits instead of 15`);
+        console.warn(`[CreditManager] Suspicious IP detected for ${userId} - giving ${creditsToGive} credits instead of 20`);
       }
 
       const { data: newCredits, error: insertError } = await supabase

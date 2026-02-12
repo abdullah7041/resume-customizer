@@ -97,6 +97,27 @@ export function safeString(value: unknown): string {
 }
 
 /**
+ * Normalize a language entry that may be a string, JSON string, or object
+ * Returns { language: string, fluency: string | null }
+ */
+export function safeLang(lang: unknown): { language: string; fluency: string | null } {
+  if (typeof lang === 'string') {
+    try {
+      const parsed = JSON.parse(lang);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return { language: String(parsed.language || ''), fluency: parsed.fluency ? String(parsed.fluency) : null };
+      }
+    } catch { /* not JSON */ }
+    return { language: lang, fluency: null };
+  }
+  if (typeof lang === 'object' && lang !== null) {
+    const obj = lang as Record<string, unknown>;
+    return { language: String(obj.language || ''), fluency: obj.fluency ? String(obj.fluency) : null };
+  }
+  return { language: String(lang), fluency: null };
+}
+
+/**
  * Format contact info as pipe-separated string (ATS standard)
  */
 export function formatContactLine(basics: ResumeSchema['basics']): string {

@@ -1,12 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { TFunction } from 'i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
 import {
   MessageSquare,
   Lightbulb,
-  RefreshCw,
   AlertCircle,
   Sparkles,
   Monitor,
@@ -16,7 +16,10 @@ import {
   ChevronDown,
   Loader2,
   Award,
-  Zap
+  Zap,
+  Brain,
+  Code,
+  RotateCcw
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { useUserCredits } from '../../hooks/useUserCredits';
@@ -27,7 +30,7 @@ import { FeedbackModal } from '../Feedback/FeedbackModal';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
 const PREDICT_ENDPOINT = `${FUNCTION_BASE_PATH}/predict-questions`;
-const STORAGE_KEY = 'airo:interviewQuestions';
+const STORAGE_KEY = 'watheq:interviewQuestions';
 
 // === Types ===
 interface Question {
@@ -36,6 +39,7 @@ interface Question {
   difficulty: string;
   category: string;
   answerFramework?: string;
+  skills_tested?: string[];
 }
 
 interface InterviewSectionProps {
@@ -80,83 +84,126 @@ const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
 };
 
 // STAR Method Tip component
-const STARMethodTip = () => (
-  <GlassCard className="mb-8 border-emerald-500/30">
-    <div className="flex flex-col md:flex-row items-start gap-6">
-      <div className="flex-shrink-0">
-        <GlassCircle size="lg" className="bg-emerald-500/20 border-emerald-500/40">
-          <Lightbulb className="w-6 h-6 text-emerald-300" />
-        </GlassCircle>
-      </div>
-      <div className="flex-1 w-full">
-        <h4 className="text-lg font-bold text-emerald-300 mb-2 flex items-center gap-2">
-          Use the STAR Method
-          <span className="text-xs font-normal text-emerald-400/70 border border-emerald-500/30 px-2 py-0.5 rounded-full">Recommended</span>
-        </h4>
-        <p className="text-white/80 leading-relaxed mb-6 max-w-2xl">
-          Structure your answers for maximum impact. This proven framework helps you tell compelling stories that demonstrate your skills effectively.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { letter: 'S', word: 'Situation', desc: 'Set the context', icon: <Target className="w-4 h-4" /> },
-            { letter: 'T', word: 'Task', desc: 'Your responsibility', icon: <FileSpreadsheet className="w-4 h-4" /> },
-            { letter: 'A', word: 'Action', desc: 'What you did', icon: <Zap className="w-4 h-4" /> },
-            { letter: 'R', word: 'Result', desc: 'Measurable outcome', icon: <Award className="w-4 h-4" /> }
-          ].map((item, idx) => (
-            <GlassCard key={idx} padding="sm" className="group border-emerald-500/10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 group-hover:scale-110 transition-transform">
-                  {item.letter}
+const STARMethodTip = () => {
+  const { t } = useTranslation();
+
+  return (
+    <GlassCard className="mb-8 border-emerald-500/30">
+      <div className="flex flex-col md:flex-row items-start gap-6">
+        <div className="flex-shrink-0">
+          <GlassCircle size="lg" className="bg-emerald-500/20 border-emerald-500/40">
+            <Lightbulb className="w-6 h-6 text-emerald-300" />
+          </GlassCircle>
+        </div>
+        <div className="flex-1 w-full">
+          <h4 className="text-lg font-bold text-emerald-300 mb-2 flex items-center gap-2">
+            {t('sections.interview.starMethod.title')}
+            <span className="text-xs font-normal text-emerald-400/70 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+              {t('sections.interview.starMethod.recommended')}
+            </span>
+          </h4>
+          <p className="text-white/80 leading-relaxed mb-6 max-w-2xl">
+            {t('sections.interview.starMethod.description')}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { letter: 'S', word: t('sections.interview.starMethod.steps.situation.title'), desc: t('sections.interview.starMethod.steps.situation.desc'), icon: <Target className="w-4 h-4" /> },
+              { letter: 'T', word: t('sections.interview.starMethod.steps.task.title'), desc: t('sections.interview.starMethod.steps.task.desc'), icon: <FileSpreadsheet className="w-4 h-4" /> },
+              { letter: 'A', word: t('sections.interview.starMethod.steps.action.title'), desc: t('sections.interview.starMethod.steps.action.desc'), icon: <Zap className="w-4 h-4" /> },
+              { letter: 'R', word: t('sections.interview.starMethod.steps.result.title'), desc: t('sections.interview.starMethod.steps.result.desc'), icon: <Award className="w-4 h-4" /> }
+            ].map((item, idx) => (
+              <GlassCard key={idx} padding="sm" className="group border-emerald-500/10">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 group-hover:scale-110 transition-transform">
+                    {item.letter}
+                  </div>
+                  <span className="text-emerald-200 font-semibold">{item.word}</span>
                 </div>
-                <span className="text-emerald-200 font-semibold">{item.word}</span>
-              </div>
-              <p className="text-xs text-white/60 ps-1">{item.desc}</p>
-            </GlassCard>
-          ))}
+                <p className="text-xs text-white/60 ps-1">{item.desc}</p>
+              </GlassCard>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  </GlassCard>
-);
+    </GlassCard>
+  );
+};
 
 // Get contextual STAR tips based on question type
-const getSTARTips = (q: string) => {
+const getSTARTips = (q: string, t: TFunction) => {
   const lower = q.toLowerCase();
+
   if (lower.includes('describe') || lower.includes('tell me about')) {
     return {
-      situation: 'Briefly describe the project/challenge context',
-      task: "Explain your specific role and what was expected",
-      action: "Detail the steps YOU took (use 'I', not 'we')",
-      result: 'Quantify the outcome: %, $, time saved, etc.'
+      situation: t('sections.interview.starTips.behavioral.situation'),
+      task: t('sections.interview.starTips.behavioral.task'),
+      action: t('sections.interview.starTips.behavioral.action'),
+      result: t('sections.interview.starTips.behavioral.result')
     };
   }
   if (lower.includes('how do you') || lower.includes('how would you')) {
     return {
-      situation: 'Reference a specific instance when you did this',
-      task: 'What problem were you solving?',
-      action: 'Walk through your methodology step-by-step',
-      result: 'What was the measurable improvement?'
+      situation: t('sections.interview.starTips.situational.situation'),
+      task: t('sections.interview.starTips.situational.task'),
+      action: t('sections.interview.starTips.situational.action'),
+      result: t('sections.interview.starTips.situational.result')
     };
   }
   // Default tips
   return {
-    situation: 'Set the scene with relevant context',
-    task: 'Define what you needed to accomplish',
-    action: 'Describe your specific contributions',
-    result: 'Share concrete, quantifiable outcomes'
+    situation: t('sections.interview.starTips.default.situation'),
+    task: t('sections.interview.starTips.default.task'),
+    action: t('sections.interview.starTips.default.action'),
+    result: t('sections.interview.starTips.default.result')
   };
+};
+
+// Helper function to infer skills from question text (backward compatibility)
+const inferSkillsFromQuestion = (questionText: string, type: string): string[] => {
+  const lower = questionText.toLowerCase();
+  const skills: string[] = [];
+
+  // Behavioral indicators
+  if (lower.includes('team') || lower.includes('leadership')) skills.push('Leadership');
+  if (lower.includes('conflict') || lower.includes('disagree')) skills.push('Conflict Resolution');
+  if (lower.includes('pressure') || lower.includes('deadline')) skills.push('Time Management');
+  if (lower.includes('problem') || lower.includes('challenge')) skills.push('Problem Solving');
+  if (lower.includes('communicate') || lower.includes('presentation')) skills.push('Communication');
+
+  // Technical indicators
+  if (type === 'technical') {
+    if (lower.includes('react')) skills.push('React');
+    if (lower.includes('typescript') || lower.includes('javascript')) skills.push('TypeScript');
+    if (lower.includes('python')) skills.push('Python');
+    if (lower.includes('sql') || lower.includes('database')) skills.push('SQL');
+    if (lower.includes('system design') || lower.includes('architecture')) skills.push('System Design');
+    if (!skills.length) skills.push('Technical Knowledge');
+  }
+
+  // Default fallback for behavioral/situational questions
+  if (skills.length === 0 && (type === 'behavioral' || type === 'situational')) {
+    skills.push('Communication', 'Critical Thinking');
+  }
+
+  return skills.slice(0, 3); // Max 3 skills
 };
 
 // Normalize question - handles different data formats
 const normalizeQuestion = (question: unknown, index: number): Question | null => {
   if (typeof question === 'object' && question !== null) {
     const q = question as Record<string, unknown>;
+    const questionText = (q.question || q.text || `Question ${index + 1}`) as string;
+    const type = (q.type || 'general') as string;
+
     return {
-      question: (q.question || q.text || `Question ${index + 1}`) as string,
-      type: (q.type || 'general') as string,
+      question: questionText,
+      type,
       difficulty: (q.difficulty || 'medium') as string,
       category: (q.category || 'General') as string,
-      answerFramework: (q.answerFramework || q.answer_framework || '') as string
+      answerFramework: (q.answerFramework || q.answer_framework || '') as string,
+      skills_tested: Array.isArray(q.skills_tested)
+        ? q.skills_tested.map(s => String(s)).filter(Boolean)
+        : inferSkillsFromQuestion(questionText, type)
     };
   }
   if (typeof question === 'string' && question.trim()) {
@@ -171,7 +218,14 @@ const normalizeQuestion = (question: unknown, index: number): Question | null =>
     if (lowerQ.includes('senior') || lowerQ.includes('complex')) difficulty = 'hard';
     else if (lowerQ.includes('basic') || lowerQ.includes('simple')) difficulty = 'easy';
 
-    return { question: question.trim(), type, difficulty, category: 'Interview', answerFramework: '' };
+    return {
+      question: question.trim(),
+      type,
+      difficulty,
+      category: 'Interview',
+      answerFramework: '',
+      skills_tested: inferSkillsFromQuestion(question.trim(), type)
+    };
   }
   return null;
 };
@@ -184,6 +238,9 @@ export function InterviewSection({
   onUpdate
 }: InterviewSectionProps) {
   const { t } = useTranslation();
+  // Language detection available for future RTL support
+  // const { i18n } = useTranslation();
+  // const isArabic = i18n.language === 'ar';
   const { credits, refetch: refetchCredits } = useUserCredits();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -197,6 +254,23 @@ export function InterviewSection({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [pendingRegenerate, setPendingRegenerate] = useState(false);
+  const [skillFilter, setSkillFilter] = useState<string | null>(null);
+
+  // Get unique skills from all questions
+  const uniqueSkills = useMemo(() => {
+    const allSkills = questions.flatMap(q => q.skills_tested || []);
+    return Array.from(new Set(allSkills)).sort();
+  }, [questions]);
+
+  // Filter questions by selected skill
+  const filteredQuestions = useMemo(() => {
+    if (!skillFilter) return questions;
+    return questions.filter(q => q.skills_tested?.includes(skillFilter));
+  }, [questions, skillFilter]);
+
+  // Count questions for each skill
+  const getSkillCount = (skill: string) =>
+    questions.filter(q => q.skills_tested?.includes(skill)).length;
 
   // Extract questions from available sources
   const extractQuestionsFromData = useCallback(() => {
@@ -225,7 +299,7 @@ export function InterviewSection({
   }, [matchAnalysis, resumeData]);
 
   // Generate questions via API (actual implementation)
-  const predictQuestionsActual = useCallback(async (forceRegenerate = false) => {
+  const predictQuestionsActual = useCallback(async (questionType: 'behavioral' | 'technical' = 'behavioral', forceRegenerate = false) => {
     if (!forceRegenerate) {
       const existingData = extractQuestionsFromData();
       if (existingData) {
@@ -253,7 +327,11 @@ export function InterviewSection({
       const response = await fetch(PREDICT_ENDPOINT, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ jobDescription, resumeText: resumeText || '' }),
+        body: JSON.stringify({
+          jobDescription,
+          resumeText: resumeText || '',
+          questionType
+        }),
       });
 
       // Handle insufficient credits (403)
@@ -317,12 +395,16 @@ export function InterviewSection({
     }
   }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, trackFeatureUse, shouldShowFeedback, t]);
 
+  // State to track which question type was selected
+  const [pendingQuestionType, setPendingQuestionType] = useState<'behavioral' | 'technical'>('behavioral');
+
   // Wrapper function that shows confirmation modal first
-  const predictQuestions = (forceRegenerate = false) => {
+  const predictQuestions = (questionType: 'behavioral' | 'technical', forceRegenerate = false) => {
     if (!jobDescription) {
       setError(t('sections.interview.errors.noJob', 'Please provide a job description first'));
       return;
     }
+    setPendingQuestionType(questionType);
     setPendingRegenerate(forceRegenerate);
     setShowConfirmModal(true);
   };
@@ -330,7 +412,7 @@ export function InterviewSection({
   // Handler for confirmed interview prep action
   const handleConfirmGenerate = async () => {
     setShowConfirmModal(false);
-    await predictQuestionsActual(pendingRegenerate);
+    await predictQuestionsActual(pendingQuestionType, pendingRegenerate);
     setPendingRegenerate(false);
   };
 
@@ -390,6 +472,19 @@ export function InterviewSection({
     link.click();
   };
 
+  // Clear interview cache and reset state
+  const clearInterviewCache = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    setQuestions([]);
+    setRoleLevel('');
+    setFocusAreas([]);
+    setSavedAnswers({});
+    setExpandedQuestions(new Set());
+    setError(null);
+  };
+
   // Empty state - no job description
   if (!jobDescription) {
     return (
@@ -430,9 +525,13 @@ export function InterviewSection({
                   <FileSpreadsheet className="w-4 h-4 me-2" />
                   {t('sections.interview.export', 'Export')}
                 </GlassButton>
-                <GlassButton variant="secondary" onClick={() => predictQuestions(true)} disabled={isLoading}>
-                  <RefreshCw className={cn('w-4 h-4 me-2', isLoading && 'animate-spin')} />
-                  {t('sections.interview.regenerate', 'Regenerate')}
+                <GlassButton
+                  variant="secondary"
+                  onClick={clearInterviewCache}
+                  className="text-gray-400 hover:text-red-400 hover:border-red-400/30"
+                >
+                  <RotateCcw className="w-4 h-4 me-2" />
+                  {t('sections.interview.clear', 'Clear')}
                 </GlassButton>
               </>
             )}
@@ -486,22 +585,58 @@ export function InterviewSection({
           </div>
         )}
 
-        {/* Generate Button */}
-        {questions.length === 0 && !isLoading && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]">
-              <Sparkles className="w-10 h-10 text-emerald-400" />
+        {/* Always show generate buttons when job description exists */}
+        {!isLoading && (
+          <div className={questions.length === 0 ? "text-center py-12" : "mb-6"}>
+            {questions.length === 0 && (
+              <>
+                <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]">
+                  <Sparkles className="w-10 h-10 text-emerald-400" />
+                </div>
+                <h4 className="text-2xl font-bold text-white mb-2">
+                  {t('sections.interview.readyTitle', 'Prepare for Your Interview')}
+                </h4>
+                <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
+                  {t('sections.interview.readyDesc', 'Generate AI-predicted interview questions based on the job description.')}
+                </p>
+              </>
+            )}
+
+            {/* Two Question Type Buttons - Always visible */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-2xl mx-auto mb-4">
+              <GlassButton
+                size={questions.length === 0 ? "lg" : "md"}
+                onClick={() => predictQuestions('behavioral', true)}
+                disabled={isLoading}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-900/20"
+              >
+                <Brain className="w-5 h-5 me-2" />
+                {questions.length > 0
+                  ? t('sections.interview.regenerateBehavioral')
+                  : t('sections.interview.generateBehavioral')}
+                <span className="ml-2 text-xs opacity-75">(3 {t('common.credits', 'credits')})</span>
+              </GlassButton>
+
+              <GlassButton
+                size={questions.length === 0 ? "lg" : "md"}
+                onClick={() => predictQuestions('technical', true)}
+                disabled={isLoading}
+                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white border-0 shadow-lg shadow-purple-900/20"
+              >
+                <Code className="w-5 h-5 me-2" />
+                {questions.length > 0
+                  ? t('sections.interview.regenerateTechnical')
+                  : t('sections.interview.generateTechnical')}
+                <span className="ml-2 text-xs opacity-75">(3 {t('common.credits', 'credits')})</span>
+              </GlassButton>
             </div>
-            <h4 className="text-2xl font-bold text-white mb-2">
-              {t('sections.interview.readyTitle', 'Prepare for Your Interview')}
-            </h4>
-            <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
-              {t('sections.interview.readyDesc', 'Generate AI-predicted interview questions based on the job description.')}
+
+            {/* Explanatory Text */}
+            <p className="text-xs text-gray-500 max-w-2xl mx-auto text-center leading-relaxed">
+              <strong>{t('sections.interview.typesDescription.behavioral.label')}</strong> {t('sections.interview.typesDescription.behavioral.desc')}
+              <br />
+              <strong>{t('sections.interview.typesDescription.technical.label')}</strong> {t('sections.interview.typesDescription.technical.desc')}
             </p>
-            <GlassButton size="lg" onClick={() => predictQuestions(false)} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-900/20">
-              <MessageSquare className="w-5 h-5 me-2" />
-              {t('sections.interview.generate', 'Generate Questions')}
-            </GlassButton>
           </div>
         )}
 
@@ -526,13 +661,68 @@ export function InterviewSection({
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               {t('sections.interview.questionsTitle', 'Predicted Questions')}
               <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-xs font-normal">
-                {questions.length}
+                {skillFilter ? filteredQuestions.length : questions.length}
               </span>
             </h3>
           </div>
 
+          {/* Skill Filter */}
+          {uniqueSkills.length > 0 && (
+            <div className="mb-6 p-5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-sm font-semibold text-white/90 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-emerald-400" />
+                  {t('sections.interview.filterBySkill', 'Filter by Skill')}
+                </label>
+                <span className="text-xs text-white/40 font-medium px-2 py-1 bg-white/5 rounded-full border border-white/5">
+                  {uniqueSkills.length} {t('common.skills', 'Skills')}
+                </span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2.5">
+                <button
+                  onClick={() => setSkillFilter(null)}
+                  className={cn(
+                    'group relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border flex items-center gap-2',
+                    skillFilter === null
+                      ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                      : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/20'
+                  )}
+                >
+                  <span>{t('sections.interview.all', 'All')}</span>
+                  <span className={cn(
+                    "text-xs py-0.5 px-1.5 rounded-full transition-colors",
+                    skillFilter === null ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/80"
+                  )}>
+                    {questions.length}
+                  </span>
+                </button>
+                {uniqueSkills.map(skill => (
+                  <button
+                    key={skill}
+                    onClick={() => setSkillFilter(skill)}
+                    className={cn(
+                      'group relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border flex items-center gap-2',
+                      skillFilter === skill
+                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                        : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/20'
+                    )}
+                  >
+                    <span>{skill}</span>
+                    <span className={cn(
+                      "text-xs py-0.5 px-1.5 rounded-full transition-colors",
+                      skillFilter === skill ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/80"
+                    )}>
+                      {getSkillCount(skill)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
-            {questions.map((question, index) => (
+            {filteredQuestions.map((question, index) => (
               <GlassCard
                 key={index}
                 padding="none"
@@ -588,6 +778,26 @@ export function InterviewSection({
                   <div className="px-5 pb-5 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="h-px w-full bg-white/5 mb-4" />
 
+                    {/* Skills Being Evaluated */}
+                    {question.skills_tested && question.skills_tested.length > 0 && (
+                      <div className="p-3 bg-blue-500/5 rounded-lg border border-blue-500/10">
+                        <h5 className="text-xs font-bold text-blue-400 mb-2 flex items-center gap-2">
+                          <Target className="w-3.5 h-3.5" />
+                          {t('sections.interview.skillsEvaluated', 'Skills Being Evaluated')}
+                        </h5>
+                        <div className="flex flex-wrap gap-2">
+                          {question.skills_tested.map((skill, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 text-blue-300 border border-blue-500/20 hover:bg-white/10 transition-colors cursor-default"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* STAR Guidance for this question */}
                     <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
                       <div className="flex items-center gap-2 mb-3">
@@ -595,31 +805,37 @@ export function InterviewSection({
                           <Lightbulb className="w-3.5 h-3.5 text-emerald-300" />
                         </GlassCircle>
                         <span className="text-sm font-bold text-emerald-400">
-                          How to answer using STAR:
+                          {t('sections.interview.starTips.header')}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div className="space-y-1">
-                          <div className="flex gap-2">
-                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
-                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).situation}</span>
+                      {(() => {
+                        // Call getSTARTips once and destructure (was called 4x before)
+                        const starTips = getSTARTips(question.question, t);
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div className="space-y-1">
+                              <div className="flex gap-2">
+                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
+                                <span className="text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
+                                <span className="text-white/70 text-xs leading-relaxed">{starTips.task}</span>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex gap-2">
+                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
+                                <span className="text-white/70 text-xs leading-relaxed">{starTips.action}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
+                                <span className="text-white/70 text-xs leading-relaxed">{starTips.result}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
-                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).task}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex gap-2">
-                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
-                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).action}</span>
-                          </div>
-                          <div className="flex gap-2">
-                            <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
-                            <span className="text-white/70 text-xs leading-relaxed">{getSTARTips(question.question).result}</span>
-                          </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
 
                     {question.answerFramework && (
@@ -670,7 +886,6 @@ export function InterviewSection({
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmGenerate}
         feature="interview_prep"
-        currentCredits={credits?.remaining || 0}
         isLoading={isLoading}
       />
 

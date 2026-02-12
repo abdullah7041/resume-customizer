@@ -191,32 +191,38 @@ export const ParseResumeRequestSchema = z.discriminatedUnion("kind", [
     ParseResumeFileRequestSchema,
 ]);
 
+// Size limits to prevent abuse (resumes typically < 10k chars, JDs < 15k chars)
+const MAX_RESUME_LENGTH = 50000; // ~50KB text
+const MAX_JOB_LENGTH = 30000;    // ~30KB text
+const MAX_NAME_LENGTH = 200;
+
 export const MatchRequestSchema = z.object({
-    resumeText: z.string().min(1, "Resume text is required"),
-    jobText: z.string().min(1, "Job description is required"),  // Changed from jobDesc to match frontend
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
+    jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
 });
 
 export const OptimizeRequestSchema = z.object({
-    resumeText: z.string().min(1, "Resume text is required"),
-    jobText: z.string().min(1, "Job text is required"),
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
+    jobText: z.string().min(1, "Job text is required").max(MAX_JOB_LENGTH, "Job text too large"),
 });
 
 export const PredictQuestionsRequestSchema = z.object({
-    resumeText: z.string().min(1, "Resume text is required"),
-    jobDescription: z.string().min(1, "Job description is required"),
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
+    jobDescription: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
+    questionType: z.enum(['behavioral', 'technical', 'mixed']).optional().default('mixed'),
 });
 
 export const CoverLetterRequestSchema = z.object({
-    resumeText: z.string().min(1, "Resume text is required"),
-    jobDescription: z.string().min(1, "Job description is required"),
-    companyName: z.string().optional(),
-    hiringManager: z.string().optional(),
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
+    jobDescription: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
+    companyName: z.string().max(MAX_NAME_LENGTH).optional(),
+    hiringManager: z.string().max(MAX_NAME_LENGTH).optional(),
 });
 
 export const Vision2030RequestSchema = z.object({
-    resumeText: z.string().min(1, "Resume text is required"),
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
-    jobDescription: z.string().optional(),
+    jobDescription: z.string().max(MAX_JOB_LENGTH, "Job description too large").optional(),
 });
 
 // ============================================

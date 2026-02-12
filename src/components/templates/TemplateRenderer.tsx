@@ -31,17 +31,18 @@ const safeRender = (value, fallback = "") => {
   return String(value);
 };
 
+// Move icons map outside component to avoid recreation on every render
+const CONTACT_ICONS = {
+  email: Mail,
+  phone: Phone,
+  linkedin: Linkedin,
+  github: Github,
+  portfolio: ExternalLink,
+  location: MapPin,
+} as const;
+
 const ContactIcon = ({ type }) => {
-
-  const icons = {
-    email: Mail,
-    phone: Phone,
-    linkedin: Linkedin,
-    github: Github,
-    portfolio: ExternalLink,
-    address: MapPin
-  };
-
+  const icons = CONTACT_ICONS;
   const Icon = icons[type] || ExternalLink;
   return <Icon className="w-4 h-4" />;
 };
@@ -253,21 +254,25 @@ const ListSection = ({ section, items }) => {
 const SectionRenderer = ({ section, userData }) => {
   const content = userData[section.id];
 
-  const renderers = {
-    paragraph: () => <ParagraphSection section={section} content={content} />,
-    timeline: () => <TimelineSection section={section} items={content} />,
-    grid: () => <GridSection section={section} items={content} />,
-    categorized: () => <CategorizedSection section={section} data={content} />,
-    tags: () => <TagsSection section={section} tags={content} />,
-    list: () => <ListSection section={section} items={content} />,
-    "simple-list": () => <ListSection section={section} items={content} />,
-    showcase: () => <TimelineSection section={section} items={content} />,
-    gallery: () => <GridSection section={section} items={content} />,
-    text: () => <p className="text-gray-700 dark:text-gray-300">{safeRender(content, section.placeholder)}</p>,
-    formal: () => <ParagraphSection section={section} content={content} />
-  };
+  // Memoize renderer lookup to avoid recreating functions on every render
+  const Renderer = useMemo(() => {
+    const renderers = {
+      paragraph: () => <ParagraphSection section={section} content={content} />,
+      timeline: () => <TimelineSection section={section} items={content} />,
+      grid: () => <GridSection section={section} items={content} />,
+      categorized: () => <CategorizedSection section={section} data={content} />,
+      tags: () => <TagsSection section={section} tags={content} />,
+      list: () => <ListSection section={section} items={content} />,
+      "simple-list": () => <ListSection section={section} items={content} />,
+      showcase: () => <TimelineSection section={section} items={content} />,
+      gallery: () => <GridSection section={section} items={content} />,
+      text: () => <p className="text-gray-700 dark:text-gray-300">{safeRender(content, section.placeholder)}</p>,
+      formal: () => <ParagraphSection section={section} content={content} />
+    };
 
-  const Renderer = renderers[section.type] || renderers.paragraph;
+    return renderers[section.type] || renderers.paragraph;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- section.type is sufficient, full section object causes unnecessary re-renders
+  }, [section.type, content]);
 
   return (
     <div className="mb-6">
@@ -336,16 +341,22 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
   // Get display options from store (user's formatting preferences)
   const displayOptions = useResumeStore((state) => state.displayOptions);
 
-  // MERGE: Ensure we have the full data set (Original + AI Suggestions)
-  const optimization = aiAnalysisResult || userData.meta?.aiAnalysisResult || {};
-  const mergedData = mergeResumeData(userData, { optimization });
+  // Memoize mergeResumeData call to avoid recomputation on every render
+  const finalData = useMemo(() => {
+    // MERGE: Ensure we have the full data set (Original + AI Suggestions)
+    const optimization = aiAnalysisResult || userData.meta?.aiAnalysisResult || {};
+    const mergedData = mergeResumeData(userData, { optimization });
 
-  // Fallback to userData if merge failed (e.g., missing basics)
-  const finalData = mergedData || userData;
+    // Fallback to userData if merge failed (e.g., missing basics)
+    return mergedData || userData;
+  }, [userData, aiAnalysisResult]);
 
   // Use registry to get the correct component by template ID
-  const templateId = template.id as TemplateId;
-  const TemplateComponent = getTemplate(templateId);
+  // Memoize to avoid repeated map lookup
+  const TemplateComponent = useMemo(() => {
+    const templateId = template.id as TemplateId;
+    return getTemplate(templateId);
+  }, [template.id]);
 
   // CSS variables for formatting - applied to all templates
   const formattingStyles = {
@@ -362,7 +373,7 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
 
   // Check if this is a known template from the registry
   // If so, use the proper component with the resume prop structure
-  if (['modern-professional', 'classic-traditional', 'technical-engineer', 'ats-optimized'].includes(template.id)) {
+  if (['modern-professional', 'classic-traditional', 'technical-engineer', 'ats-optimized', 'executive-professional'].includes(template.id)) {
     // Registry templates expect { resume, displayOptions } props
     return (
       <div

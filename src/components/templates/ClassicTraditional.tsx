@@ -1,5 +1,5 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
 
 // Default display options if not provided
@@ -67,6 +67,7 @@ export function ClassicTraditional({
     borderBottom: '1px solid #1a1a1a',
     paddingBottom: '4px',
     marginBottom: `${opts.paragraphSpacing}px`,
+    breakAfter: 'avoid' as const,
   };
 
   return (
@@ -103,7 +104,13 @@ export function ClassicTraditional({
           </p>
         )}
         <p className="text-gray-500 mb-1" style={{ fontSize: fs(10) }}>
-          {[basics.email, basics.phone, basics.location?.city].filter(Boolean).join('  |  ')}
+          {[
+            basics.email,
+            basics.phone,
+            basics.location?.city && basics.location?.region
+              ? `${basics.location.city}, ${basics.location.region}`
+              : basics.location?.city,
+          ].filter(Boolean).join('  |  ')}
         </p>
         {(linkedInUrl || portfolioUrl) && (
           <p className="text-gray-400" style={{ fontSize: fs(10) }}>
@@ -156,7 +163,7 @@ export function ClassicTraditional({
           </h2>
           <div className="space-y-4">
             {work.map((job, i) => (
-              <div key={i}>
+              <div key={i} style={{ breakInside: 'avoid' }}>
                 <div className="flex justify-between items-baseline mb-1">
                   <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700' }}>
                     {safeString(job.position)}
@@ -167,6 +174,7 @@ export function ClassicTraditional({
                 </div>
                 <p className="text-gray-600 italic mb-2" style={{ fontSize: fs(11) }}>
                   {safeString(job.name)}
+                  {job.location && ` | ${job.location}`}
                 </p>
                 {job.highlights && job.highlights.length > 0 && (
                   <ul className="space-y-1 ps-4">
@@ -211,7 +219,7 @@ export function ClassicTraditional({
           </h2>
           <div className="space-y-3">
             {education.map((edu, i) => (
-              <div key={i}>
+              <div key={i} style={{ breakInside: 'avoid' }}>
                 <div className="flex justify-between">
                   <div>
                     <h3 className="text-gray-900" style={{ fontSize: fs(10.5), fontWeight: '700' }}>
@@ -312,10 +320,13 @@ export function ClassicTraditional({
           </h2>
           <div className="space-y-3">
             {projects.map((project, i) => (
-              <div key={i}>
+              <div key={i} style={{ breakInside: 'avoid' }}>
                 <h3 className="text-gray-900" style={{ fontSize: fs(11), fontWeight: '700' }}>
                   {safeString(project.name)}
                 </h3>
+                {project.description && (
+                  <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5) }}>{project.description}</p>
+                )}
                 {project.highlights && project.highlights.length > 0 && (
                   <ul className="space-y-1 ps-4">
                     {project.highlights.map((h, j) => (
@@ -391,7 +402,7 @@ export function ClassicTraditional({
             {getSectionLabel('languages')}
           </h2>
           <p className="text-gray-600" style={{ fontSize: fs(10.5) }}>
-            {languages.map((lang) => `${lang.language} (${lang.fluency})`).join(', ')}
+            {languages.map((lang) => { const { language, fluency } = safeLang(lang); return fluency ? `${language} (${fluency})` : language; }).join(', ')}
           </p>
         </section>
       )}

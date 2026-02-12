@@ -27,7 +27,7 @@ interface ParsedResumeResult {
 }
 
 interface UploadSectionProps {
-    onParseResume: (resumeInput: { file?: File; plainText?: string }) => Promise<ParsedResumeResult>;
+    onParseResume: (resumeInput: { file?: File; plainText?: string }, signal?: AbortSignal) => Promise<ParsedResumeResult>;
     resumeDocument: ResumeDocument | null;
     onToast: (toast: Toast) => void;
     onClear: () => void;
@@ -48,9 +48,10 @@ export default function UploadSection({
 
     // Ref for tracking active parse request to support cancellation
     const parseRequestActive = useRef(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     // Get store actions
-    const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload } = useResumeStore();
+    const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload, isSaudiNational, setSaudiNational } = useResumeStore();
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
@@ -90,6 +91,12 @@ export default function UploadSection({
 
     const handleCancel = useCallback(() => {
         if (status === 'uploading' || status === 'parsing') {
+            // Abort the fetch request
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+                abortControllerRef.current = null;
+            }
+
             parseRequestActive.current = false;
             setStatus('idle');
             setProgress(0);
@@ -118,6 +125,11 @@ export default function UploadSection({
 
         try {
             parseRequestActive.current = true;
+
+            // Create new AbortController for this upload
+            abortControllerRef.current = new AbortController();
+            const signal = abortControllerRef.current.signal;
+
             // CRITICAL: Reset previous resume data before processing new upload
             resetForNewUpload();
             setWarnings([]);
@@ -130,7 +142,7 @@ export default function UploadSection({
             setStatus('parsing');
             setProgress(60);
 
-            const result = await onParseResume(input);
+            const result = await onParseResume(input, signal);
 
             // Check if request was cancelled
             if (!parseRequestActive.current) {
@@ -180,6 +192,12 @@ export default function UploadSection({
                 title: 'Resume parsed successfully',
             });
         } catch (err) {
+            // Handle user-initiated cancellation silently
+            if (err && (err as Error & { cancelled?: boolean }).cancelled) {
+                console.log('[Upload] Upload cancelled by user');
+                return;
+            }
+
             if (!parseRequestActive.current) return;
 
             setStatus('error');
@@ -219,7 +237,11 @@ export default function UploadSection({
                 onTextChange={handleTextChange}
                 isSaved={isSaved}
                 onCancel={handleCancel}
+                isSaudiNational={isSaudiNational}
+                onSaudiNationalChange={setSaudiNational}
             />
+
+
 
             {/* Validation Warnings */}
             {warnings.length > 0 && status === 'success' && (

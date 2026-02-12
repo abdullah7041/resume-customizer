@@ -1,5 +1,5 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
 import { useDirection } from '../providers/DirectionProvider';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
 
@@ -78,6 +78,7 @@ export function ATSOptimized({
         borderBottom: '1px solid #9ca3af',
         paddingBottom: '4px',
         marginBottom: `${opts.paragraphSpacing}px`,
+        breakAfter: 'avoid' as const,
     };
 
     return (
@@ -140,7 +141,7 @@ export function ATSOptimized({
                         {getSectionLabel('workExperience')}
                     </h2>
                     {work.map((job, index) => (
-                        <div key={index} className="mb-4">
+                        <div key={index} className="mb-4" style={{ breakInside: 'avoid' }}>
                             <div className="flex justify-between items-baseline">
                                 <div>
                                     <span className="font-semibold" style={{ fontSize: fs(12) }}>{safeString(job.position)}</span>
@@ -175,7 +176,7 @@ export function ATSOptimized({
                         {getSectionLabel('keyProjects')}
                     </h2>
                     {projects.map((project, index) => (
-                        <div key={index} className="mb-3">
+                        <div key={index} className="mb-3" style={{ breakInside: 'avoid' }}>
                             <p className="font-semibold" style={{ fontSize: fs(11) }}>{safeString(project.name)}</p>
                             {project.description && (
                                 <p className="text-black" style={{ fontSize: fs(10.5) }}>{project.description}</p>
@@ -202,7 +203,7 @@ export function ATSOptimized({
                         {getSectionLabel('education')}
                     </h2>
                     {education.map((edu, index) => (
-                        <div key={index} className="mb-3">
+                        <div key={index} className="mb-3" style={{ breakInside: 'avoid' }}>
                             <div className="flex justify-between">
                                 <div>
                                     <span className="font-semibold" style={{ fontSize: fs(10.5) }}>{safeString(edu.studyType)}</span>
@@ -238,11 +239,23 @@ export function ATSOptimized({
                     <h2 className="text-black" style={headingStyle}>
                         {getSectionLabel('certificationsTraining')}
                     </h2>
-                    <p style={{ fontSize: fs(10.5) }}>
-                        {certificates.map(cert =>
-                            typeof cert === 'string' ? cert : safeString(cert.name)
-                        ).filter(Boolean).join(' • ')}
-                    </p>
+                    <div className="space-y-2">
+                        {certificates.map((cert, index) => (
+                            <div key={index} className="flex justify-between items-baseline">
+                                <div>
+                                    <span className="font-semibold" style={{ fontSize: fs(10.5) }}>
+                                        {typeof cert === 'string' ? cert : safeString(cert.name)}
+                                    </span>
+                                    {typeof cert !== 'string' && cert.issuer && (
+                                        <span className="text-black" style={{ fontSize: fs(10.5) }}> | {cert.issuer}</span>
+                                    )}
+                                </div>
+                                {typeof cert !== 'string' && cert.date && (
+                                    <span className="text-black" style={{ fontSize: fs(10) }}>{cert.date}</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </section>
             )}
 
@@ -253,9 +266,10 @@ export function ATSOptimized({
                         {getSectionLabel('languages')}
                     </h2>
                     <p style={{ fontSize: fs(10.5) }}>
-                        {languages.map(lang =>
-                            `${safeString(lang.language)}${lang.fluency ? ` (${lang.fluency})` : ''}`
-                        ).join(' • ')}
+                        {languages.map(lang => {
+                            const { language, fluency } = safeLang(lang);
+                            return `${language}${fluency ? ` (${fluency})` : ''}`;
+                        }).join(' • ')}
                     </p>
                 </section>
             )}

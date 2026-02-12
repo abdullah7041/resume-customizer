@@ -4,6 +4,7 @@ import { ModernProfessional } from './ModernProfessional';
 import { ClassicTraditional } from './ClassicTraditional';
 import { TechnicalEngineer } from './TechnicalEngineer';
 import { ATSOptimized } from './ATSOptimized';
+import { ExecutiveProfessional } from './ExecutiveProfessional';
 
 /**
  * Template component registry
@@ -14,6 +15,7 @@ export const TEMPLATES: Record<TemplateId, TemplateComponent> = {
   'classic-traditional': ClassicTraditional as TemplateComponent,
   'technical-engineer': TechnicalEngineer as TemplateComponent,
   'ats-optimized': ATSOptimized as TemplateComponent,
+  'executive-professional': ExecutiveProfessional as TemplateComponent,
 };
 
 /**
@@ -60,6 +62,16 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
     descriptionAr: 'تنسيق عمود واحد محسّن لأنظمة تتبع المتقدمين',
     isAtsOptimized: true,
     previewColor: '#059669', // emerald-600
+  },
+  {
+    id: 'executive-professional',
+    name: 'Executive Professional',
+    nameAr: 'تنفيذي احترافي',
+    category: 'executive',
+    description: 'Elegant serif design for senior leadership and executive roles',
+    descriptionAr: 'تصميم أنيق بخطوط سيريف للمناصب القيادية والتنفيذية',
+    isAtsOptimized: true,
+    previewColor: '#1a4f7a',
   },
 ];
 

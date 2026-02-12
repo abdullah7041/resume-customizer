@@ -44,7 +44,7 @@ const handler: Handler = async (event) => {
       const { data, error } = await supabase
         .from('user_credits')
         .update({
-          credits_remaining: 15,
+          credits_remaining: 20,
           last_reset_date: new Date().toISOString(),
         })
         .eq('user_id', userId)
@@ -67,7 +67,7 @@ const handler: Handler = async (event) => {
       const { count, error } = await supabase
         .from('user_credits')
         .update({
-          credits_remaining: 15,
+          credits_remaining: 20,
           last_reset_date: new Date().toISOString(),
         })
         .neq('user_id', '00000000-0000-0000-0000-000000000000'); // Update all real users

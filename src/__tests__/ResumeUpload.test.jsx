@@ -85,11 +85,12 @@ describe("ResumeUpload", () => {
       fireEvent.click(submitButton);
     });
 
-    // UploadSection passes { file } to onParseResume
+    // UploadSection passes { file } and AbortSignal to onParseResume
     expect(onParseResume).toHaveBeenCalledWith(
       expect.objectContaining({
         file,
-      })
+      }),
+      expect.any(AbortSignal)
     );
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({ type: "success", title: "Resume parsed successfully" })

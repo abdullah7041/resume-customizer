@@ -143,10 +143,10 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             clearTimeout(fetchTimeoutRef.current);
         }
 
-        // Schedule a new fetch after 1 second of inactivity
+        // Schedule a new fetch after 300ms of inactivity (faster updates)
         fetchTimeoutRef.current = setTimeout(() => {
             fetchCredits(false);
-        }, 1000);
+        }, 300);
     }, [fetchCredits]);
 
     // Initial fetch (immediate)

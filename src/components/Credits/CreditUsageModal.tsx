@@ -6,7 +6,7 @@
  */
 
 import { createPortal } from 'react-dom';
-import { X, Target, Sparkles, TrendingUp, MessageSquare, Mail, FileText, Download, Coins, Clock, Gift } from 'lucide-react';
+import { X, Target, Sparkles, TrendingUp, MessageSquare, Mail, FileText, Download, Coins, Clock, Gift, RefreshCw } from 'lucide-react';
 import { useEffect, useState, type ComponentType } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserCredits } from '../../hooks/useUserCredits';
@@ -36,10 +36,11 @@ const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
 
 export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditUsageModalProps) {
   const { user } = useAuth();
-  const { credits } = useUserCredits();
+  const { credits, refetch } = useUserCredits();
   const { t } = useTranslation();
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Only fetch transactions if in full mode
   useEffect(() => {
@@ -108,11 +109,25 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
         return 'text-red-400';
       case 'feedback_reward':
       case 'referral_reward':
+      case 'celebration_bonus':
         return 'text-emerald-400';
       case 'monthly_reset':
         return 'text-blue-400';
       default:
         return 'text-gray-400';
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      console.log('[CreditUsageModal] Credits refreshed successfully');
+    } catch (error) {
+      console.error('[CreditUsageModal] Failed to refresh credits:', error);
+    } finally {
+      // Small delay for visual feedback
+      setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
@@ -151,13 +166,29 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
               {viewMode === 'full' ? t('credits.usage.title') : t('referrals.inviteEarn')}
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-            aria-label="Close dialog"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={cn(
+                "text-gray-400 hover:text-emerald-400 transition-all",
+                isRefreshing && "animate-spin text-emerald-400"
+              )}
+              aria-label="Refresh credits"
+              title="Refresh credits"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors"
+              aria-label="Close dialog"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {viewMode === 'full' ? (

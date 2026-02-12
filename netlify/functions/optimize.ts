@@ -255,15 +255,9 @@ const baseHandler: Handler = async (event) => {
       throw new Error('AI optimization failed to calculate match score');
     }
 
-    // Score improvement logic:
-    // - Base: +3% per optimization card (capped at +20%)
-    // - Keywords: +1% per added keyword (capped at +8%)
-    // - Max improvement: +25%, Max score: 95%
-    const cardBonus = Math.min(cards.length * 3, 20);
+    // Estimated improvement hint (non-binding - genuine re-analysis replaces this)
     const addKeywords = optimization?.missing_keywords || [];
-    const keywordBonus = Math.min(addKeywords.length * 1, 8);
-    const totalImprovement = Math.min(cardBonus + keywordBonus, 25);
-    const afterScore = Math.min(beforeScore + totalImprovement, 95);
+    const estimatedImprovement = Math.min(cards.length * 2, 15);
 
     // Extract JD-matched keywords (keywords resume already has that match JD)
     const matchedKeywords = optimization?.keywords_to_keep || [];
@@ -290,8 +284,7 @@ const baseHandler: Handler = async (event) => {
         // Match scoring for Results Summary
         matchScoring: {
           beforeScore: Math.round(beforeScore),
-          afterScore: Math.round(afterScore),
-          improvement: Math.round(totalImprovement),
+          estimatedImprovement: Math.round(estimatedImprovement),
           jdKeywords: jdKeywords.slice(0, 20), // Cap at 20 for UI
           matchedKeywords: matchedKeywords.slice(0, 15),
           reasoning: null,
@@ -345,9 +338,16 @@ const baseHandler: Handler = async (event) => {
 
     // Don't send timeout errors to Sentry (expected behavior under load)
     if (errorDetails?.name !== 'TimeoutError') {
+      // Strip PII before sending to Sentry - only send metadata
+      const rawBody = JSON.parse(event.body || '{}');
       captureError(error, {
         function: 'optimize',
-        payload: JSON.parse(event.body || '{}'),
+        payload: {
+          resumeTextLength: rawBody.resumeText?.length || 0,
+          jobTextLength: rawBody.jobText?.length || 0,
+          hasResumeText: Boolean(rawBody.resumeText),
+          hasJobText: Boolean(rawBody.jobText),
+        },
       });
     }
 

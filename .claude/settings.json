@@ -6,13 +6,12 @@
             ".agent/AUTOMATIC_PROTOCOLS.md"
         ]
     },
-    "postTask": {
-        "commands": [
-            {
-                "command": "npm run quality:parallel",
-                "description": "Run linting, TypeScript checks, and tests in parallel (2-3x faster)",
-                "enabled": true
-            }
-        ]
-    }
+    "env": {
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    },
+    "hooks": {},
+    "preCommit": [
+        "npx tsc --noEmit",
+        "npm run lint"
+    ]
 }

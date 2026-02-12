@@ -24,7 +24,6 @@ import { cn } from '../../lib/utils/cn';
 import { analytics } from '../../services/analytics';
 import Tooltip from '../ui/Tooltip';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
-import { MatchSkeleton } from './MatchSection.skeleton';
 import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
 import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
@@ -32,6 +31,7 @@ import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { FeedbackModal } from '../Feedback/FeedbackModal';
+import { useResumeStore } from '../../lib/stores/resumeStore';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 const resolveVariant = (score: number) => {
@@ -123,6 +123,7 @@ export function MatchSection({
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
+  const { showOptimized } = useResumeStore();
 
   // === STATE FROM features/JobMatch.tsx ===
   const [jobText, setJobText] = useState(() => {
@@ -133,7 +134,7 @@ export function MatchSection({
   const [whyOpen, setWhyOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const { credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+  const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
 
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -308,7 +309,12 @@ export function MatchSection({
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
             <Sparkles className={cn("w-4 h-4 me-2", isAnalyzing && "animate-spin")} />
-            {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : t('sections.match.analyze', 'Analyze Match with AI')}
+            {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
+              <>
+                {t('sections.match.analyze', 'Analyze Match with AI')}
+                <span className="ml-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>
+              </>
+            )}
           </GlassButton>
 
           {disabledHint && (
@@ -328,7 +334,36 @@ export function MatchSection({
           </div>
 
           {isAnalyzing ? (
-            <MatchSkeleton />
+            <div className="flex flex-col items-center justify-center p-12 space-y-4">
+              <div className="relative">
+                <svg className="animate-spin h-20 w-20 text-emerald-500" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-emerald-300 animate-pulse" />
+              </div>
+              <h4 className="text-lg font-semibold text-white mb-2">
+                {t('sections.match.analyzingTitle', 'Analyzing Match...')}
+              </h4>
+              <p className="text-sm text-gray-400 text-center max-w-md">
+                {t(
+                  'sections.match.analyzingDesc',
+                  'AI is comparing your resume against job requirements. This takes 10-20 seconds.'
+                )}
+              </p>
+            </div>
           ) : hasResults && score !== null ? (
             <div className="flex flex-col h-full gap-5">
               {/* Score Ring Display - Fixed at top */}
@@ -427,6 +462,18 @@ export function MatchSection({
                         )}
                       </p>
                     </div>
+
+                    {/* Optimized Resume Warning Banner */}
+                    {showOptimized && score !== null && (
+                      <div className="w-full p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                        <p className="text-sm text-emerald-300 text-center">
+                          ✅ {isArabic
+                            ? `تحليل السيرة الذاتية المحسّنة. إذا قمت بالتصدير وإعادة الرفع، توقّع نتيجة حوالي ${score}.`
+                            : `Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around ${score}.`
+                          }
+                        </p>
+                      </div>
+                    )}
 
                     {/* Score Breakdown Button */}
                     <button
@@ -645,7 +692,6 @@ export function MatchSection({
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmMatch}
         feature="ai_match"
-        currentCredits={credits?.remaining || 0}
         isLoading={isAnalyzing}
       />
 

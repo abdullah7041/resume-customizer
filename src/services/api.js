@@ -169,7 +169,7 @@ const fileToBase64 = async (file) => {
   return btoa(binary);
 };
 
-export const parseResume = async (resumeInput) => {
+export const parseResume = async (resumeInput, options = {}) => {
   return retryWithBackoff(async () => {
     try {
       let payload;
@@ -192,6 +192,7 @@ export const parseResume = async (resumeInput) => {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
+        signal: options.signal, // Add AbortController signal support
       }).catch(err => {
         // Handle network errors (like Connection Refused)
         if (err.message === "Failed to fetch") {
@@ -206,6 +207,14 @@ export const parseResume = async (resumeInput) => {
       return data.document;
 
     } catch (error) {
+      // Handle user-initiated cancellation
+      if (error.name === 'AbortError') {
+        console.log('[API] Upload cancelled by user');
+        const cancelError = new Error('Upload cancelled');
+        cancelError.cancelled = true;
+        throw cancelError;
+      }
+
       console.error("Parse failed:", error);
 
       // Enrich error with status for retry logic
@@ -224,7 +233,7 @@ export const parseResume = async (resumeInput) => {
 
       // Handle quota exceeded errors with user-friendly message
       if (error.quotaExceeded) {
-        throw new Error(`Upload limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} uploads.`);
+        throw new Error(`Upload limit reached (${error.used}/${error.limit} used). Create a new account or upgrade for more uploads.`);
       }
 
       throw error;
@@ -299,7 +308,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 
       // Handle quota exceeded
       if (error.quotaExceeded) {
-        throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} analyses.`);
+        throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Upgrade your account for unlimited analyses.`);
       }
 
       // Handle timeout/gateway errors with better messaging
@@ -348,7 +357,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => 
 
       // Handle quota exceeded errors with user-friendly message
       if (error.quotaExceeded) {
-        throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Each beta code allows ${error.limit} optimizations.`);
+        throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Upgrade your account for unlimited optimizations.`);
       }
 
       throw error;

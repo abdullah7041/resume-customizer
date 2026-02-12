@@ -5,11 +5,12 @@ import { cn } from '../../lib/utils/cn';
 interface GlassInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  helperText?: string;
   leftIcon?: React.ReactNode;
 }
 
 export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
-  ({ label, error, leftIcon, className, ...props }, ref) => {
+  ({ label, error, helperText, leftIcon, className, ...props }, ref) => {
     return (
       <div className="space-y-1.5">
         {label && (
@@ -40,6 +41,9 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
         </div>
         {error && (
           <p className="text-sm text-red-400">{error}</p>
+        )}
+        {!error && helperText && (
+          <p className="text-xs text-emerald-400">{helperText}</p>
         )}
       </div>
     );

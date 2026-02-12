@@ -5,6 +5,8 @@
 import type { Handler } from "@netlify/functions";
 import chromium from "@sparticuz/chromium";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
+import { withRateLimit } from "../lib/rate-limiter";
+import { getSupabaseClient } from "../lib/supabase-client";
 
 import { existsSync } from "fs";
 
@@ -93,9 +95,57 @@ async function getBrowser() {
   return browserInstance;
 }
 
-export const handler: Handler = async (event) => {
+// Valid template IDs - must match registry
+const VALID_TEMPLATE_IDS = [
+  'modern-professional',
+  'classic-traditional',
+  'technical-engineer',
+  'ats-optimized',
+  'executive-professional'
+] as const;
+
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  // Extract auth token from header
+  const authHeader = event.headers.authorization || event.headers.Authorization;
+
+  if (!authHeader) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Authentication required. Please sign in."
+      })
+    };
+  }
+
+  // Verify token and get authenticated user
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Server configuration error. Please contact support."
+      })
+    };
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+  if (authError || !user) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Invalid or expired authentication token"
+      })
+    };
   }
 
   let page: Page | null = null; // Declare outside try block for cleanup access
@@ -107,9 +157,29 @@ export const handler: Handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: "Missing html" }) };
     }
 
+    // Validate templateId to prevent header injection
+    const sanitizedTemplateId = VALID_TEMPLATE_IDS.includes(templateId)
+      ? templateId
+      : 'modern-professional';
+
     // Get browser from pool (eliminates cold start on subsequent requests)
     const browser = await getBrowser();
     page = await browser.newPage();
+
+    // Block external resource requests (fonts, images, stylesheets) to speed up rendering
+    // The HTML is self-contained from the client — no external dependencies needed
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const type = req.resourceType();
+      if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
+
+    // Disable JavaScript to prevent script execution from client-provided HTML
+    await page.setJavaScriptEnabled(false);
 
     // Use domcontentloaded since HTML is pre-rendered from client
     // No need to wait for network resources (fonts already loaded in client)
@@ -125,10 +195,19 @@ export const handler: Handler = async (event) => {
         [data-no-print] { display: none !important; }
         
         /* Page break prevention - keep individual items together, not whole sections */
-        li, p, h1, h2, h3, h4 { 
-          page-break-inside: avoid !important; 
+        li, p, h1, h2, h3, h4 {
+          page-break-inside: avoid !important;
           break-inside: avoid !important;
         }
+
+        /* Keep section entries together (work, education, project blocks) */
+        section > div > div { break-inside: avoid !important; page-break-inside: avoid !important; }
+
+        /* Keep headings attached to following content */
+        h2 { break-after: avoid !important; page-break-after: avoid !important; }
+
+        /* Keep header block together */
+        header { break-inside: avoid !important; page-break-inside: avoid !important; }
         
         /* Tailwind border utilities (not loaded without stylesheet) */
         .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
@@ -169,12 +248,18 @@ export const handler: Handler = async (event) => {
     // Short stabilization delay for layout
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    // Generate PDF - Use A4 to match template dimensions, no extra margins (templates have their own padding)
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
-    });
+    // Generate PDF with 60s safety timeout (Netlify fn has 90s limit)
+    const PDF_TIMEOUT_MS = 60_000;
+    const pdfBuffer = await Promise.race([
+      page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`PDF generation timed out after ${PDF_TIMEOUT_MS / 1000}s`)), PDF_TIMEOUT_MS)
+      ),
+    ]);
 
     // Close page but keep browser alive for pooling
     await page.close();
@@ -183,7 +268,7 @@ export const handler: Handler = async (event) => {
       statusCode: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="resume-${templateId}.pdf"`,
+        "Content-Disposition": `attachment; filename="resume-${sanitizedTemplateId}.pdf"`,
       },
       body: Buffer.from(pdfBuffer).toString("base64"),
       isBase64Encoded: true,
@@ -200,7 +285,10 @@ export const handler: Handler = async (event) => {
 
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "PDF generation failed", details: String(error) }),
+      body: JSON.stringify({ error: "PDF generation failed. Please try again." }),
     };
   }
 };
+
+// Wrap with rate limiting (10 requests/min for PDF generation)
+export const handler = withRateLimit(baseHandler, { requestsPerMinute: 10 });

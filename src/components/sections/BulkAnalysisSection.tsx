@@ -470,8 +470,11 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
             <h4 className="text-xl font-semibold text-white mb-2">
               {t('sections.bulk.uploadTitle', 'Upload Resume Files')}
             </h4>
-            <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">
+            <p className="text-sm text-gray-400 mb-2 max-w-sm mx-auto">
               {t('sections.bulk.uploadDesc', 'Drag & drop or click to browse. Supports PDF & DOCX up to 5MB.')}
+            </p>
+            <p className="text-xs text-emerald-400/80 mb-6">
+              {t('sections.bulk.creditCost', '2 credits per resume analysis')}
             </p>
 
             <input
@@ -644,7 +647,6 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
         }}
         onConfirm={handleConfirmAnalysis}
         feature="ai_match"
-        currentCredits={credits?.remaining || 0}
         isLoading={false}
       />
     </div>

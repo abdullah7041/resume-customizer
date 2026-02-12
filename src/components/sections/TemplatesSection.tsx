@@ -5,7 +5,7 @@ import { useState, useMemo, useLayoutEffect, useRef, useCallback, type MouseEven
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal, FileText, Info } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -21,6 +21,7 @@ import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
+import type { TemplateId } from "../../types/templates";
 
 // Fallback sample data - ONLY used when no resume is uploaded
 const SAMPLE_RESUME: Partial<ResumeSchema> = {
@@ -62,6 +63,35 @@ const SAMPLE_RESUME: Partial<ResumeSchema> = {
   languages: [{ language: 'English', fluency: 'Fluent' }],
 };
 
+/**
+ * Generate a smart filename from resume data
+ * Format: Name_Position.ext (e.g., Abdullah_Bin_Ahmed_Full-Stack.pdf)
+ * Falls back to resume-template-date.ext
+ */
+function getSmartFilename(resume: Partial<ResumeSchema> | null, templateId: string, ext: string): string {
+  if (!resume?.basics?.name) {
+    const date = new Date().toISOString().split('T')[0];
+    return `resume-${templateId}-${date}.${ext}`;
+  }
+
+  const name = resume.basics.name
+    .trim()
+    .replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '') // Keep alphanumeric, Arabic, spaces, hyphens
+    .replace(/\s+/g, '_');
+
+  let position = '';
+  if (resume.basics.label) {
+    // Take first segment before comma or slash
+    position = resume.basics.label
+      .split(/[,/]/)[0]
+      .trim()
+      .replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '')
+      .replace(/\s+/g, '-');
+  }
+
+  return position ? `${name}_${position}.${ext}` : `${name}_Resume.${ext}`;
+}
+
 interface TemplateGalleryProps {
   resumeData?: ResumeSchema | null;
   optimizationData?: unknown;
@@ -72,6 +102,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const { t } = useTranslation();
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
   const [isHoveringSelector, setIsHoveringSelector] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [scale, setScale] = useState(1);
@@ -87,6 +118,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     originalResume: storeOriginalResume,
     optimizations,  // Subscribe to optimizations - triggers re-render when optimizations change
     showOptimized,
+    // isSaudiNational is used by getActiveResume internally
     getActiveResume,
     setSelectedTemplate: setStoreTemplate,
     displayOptions,
@@ -106,12 +138,15 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const useStoreData = Boolean(storeOriginalResume) || hasAppliedOptimizations || showOptimized || !propResumeData;
 
   // Compute active resume reactively
-  // IMPORTANT: Include storeOriginalResume to trigger re-render on manual edits
+  // Fixed: Call getActiveResume() directly without memoizing on the function reference
+  // The function itself is stable, but we need to recompute when the data it depends on changes
   const storeActiveResume = useMemo(() => {
     if (!useStoreData) return null;
+    // getActiveResume() internally uses showOptimized, optimizations, isSaudiNational, originalResume
+    // We rely on getActiveResume being a stable Zustand getter that internally handles reactivity
     return getActiveResume();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- All deps trigger re-render when store changes
-  }, [getActiveResume, showOptimized, optimizations, useStoreData, storeOriginalResume]);
+     
+  }, [useStoreData, getActiveResume]);
 
   // Determine which resume to use
   const resumeData = useStoreData
@@ -121,16 +156,47 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Filter to only active templates (Modern, Classic, Technical)
   const activeTemplates = useMemo(() => {
-    const allowedCategories = [TEMPLATE_CATEGORIES.MODERN, TEMPLATE_CATEGORIES.CLASSIC, TEMPLATE_CATEGORIES.TECHNICAL];
+    const allowedCategories = [TEMPLATE_CATEGORIES.MODERN, TEMPLATE_CATEGORIES.CLASSIC, TEMPLATE_CATEGORIES.TECHNICAL, TEMPLATE_CATEGORIES.EXECUTIVE];
     return resumeTemplates.filter(t => allowedCategories.includes(t.category));
   }, []);
 
   // Merged data for display - reactive to all state changes
   const displayData = useMemo((): Partial<ResumeSchema> => {
-    return useStoreData
+    const data = useStoreData
       ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
       : (propResumeData || SAMPLE_RESUME);
-  }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
+
+    // Debug logging only in development
+    if (import.meta.env.DEV) {
+      const appliedCount = optimizations.filter(o => o.applied).length;
+      const isExportingOptimized = !!storeActiveResume && showOptimized && appliedCount > 0;
+
+      console.group('[TemplatesSection] Export Data Verification');
+      console.log('📊 Export Settings:', {
+        showOptimized,
+        usingStoreData: useStoreData,
+        hasActiveResume: !!storeActiveResume,
+        hasOptimizations: optimizations.length > 0,
+        appliedOptimizationsCount: appliedCount
+      });
+      console.log('✅ Will Export:', isExportingOptimized ? 'OPTIMIZED version' : 'ORIGINAL version');
+
+      if (showOptimized && appliedCount === 0) {
+        console.warn('⚠️ WARNING: showOptimized=true but no optimizations applied! Will export original.');
+      }
+
+      if (!showOptimized && appliedCount > 0) {
+        console.warn('⚠️ WARNING: You have applied optimizations but showOptimized=false! Toggle "Show Optimized" ON to export optimized version.');
+      }
+
+      if (isExportingOptimized) {
+        console.log('🎯 Scenario B Ready: This export will contain optimized content. Re-upload this PDF to verify score improvement.');
+      }
+      console.groupEnd();
+    }
+
+    return data;
+  }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData, showOptimized, optimizations]);
 
   // Calculate optimal initial scale based on viewport
   useLayoutEffect(() => {
@@ -236,9 +302,29 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       return;
     }
 
+    // Log export details for Scenario B verification
+    const appliedCount = optimizations.filter(o => o.applied).length;
+    const isExportingOptimized = showOptimized && appliedCount > 0;
+
+    console.group('[PDF Export] Starting Download');
+    console.log('📥 Export Type:', isExportingOptimized ? '✅ OPTIMIZED' : '📄 ORIGINAL');
+    console.log('Settings:', {
+      showOptimized,
+      appliedOptimizations: appliedCount,
+      templateId: selectedTemplate.id,
+      timestamp: new Date().toISOString()
+    });
+
+    if (isExportingOptimized) {
+      console.log('🎯 Scenario B Test: This PDF contains optimized content. Re-upload to verify higher score!');
+    } else if (appliedCount > 0 && !showOptimized) {
+      console.error('❌ ERROR: You have applied optimizations but "Show Optimized" is OFF! Toggle it ON to export optimized version.');
+    }
+    console.groupEnd();
+
     setIsDownloading(true);
 
-    const filename = `resume-${selectedTemplate.id}-${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
 
     try {
       // Capture rendered HTML from preview container
@@ -280,6 +366,35 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     }
   };
 
+  // Download DOCX using docx library (client-side)
+  const handleDownloadDocx = async () => {
+    if (isDownloadingDocx || !hasRealResume || !resumeData) return;
+
+    setIsDownloadingDocx(true);
+    try {
+      // Get keywords and bold preference from store
+      const store = useResumeStore.getState();
+      const keywords = store.optimizationMetrics?.jdKeywords || [];
+      const boldKeywords = store.displayOptions?.boldKeywords ?? true;
+
+      const { exportResumeAsDocx } = await import('../../services/exportDocx');
+      const blob = await exportResumeAsDocx(resumeData as ResumeSchema, {
+        keywords,
+        boldKeywords,
+        templateId: selectedTemplate.id as TemplateId,
+      });
+      const filename = getSmartFilename(resumeData, selectedTemplate.id, 'docx');
+      saveAs(blob, filename);
+
+      analytics.trackExport(selectedTemplate.id, 'docx');
+      useResumeStore.getState().setHasDownloaded(true);
+    } catch (err) {
+      console.error('DOCX Download failed:', err);
+    } finally {
+      setIsDownloadingDocx(false);
+    }
+  };
+
   const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
     setSelectedTemplate(template);
     setStoreTemplate(template.id as any);
@@ -303,7 +418,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             <h3 className="text-lg font-bold text-white transition-opacity duration-300">{selectedTemplate.name}</h3>
             <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
               <Sparkles className="w-4 h-4 text-emerald-400" />
-              {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`)}
+              {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
               {contentLanguage && (
                 <span className="ms-2 px-2 py-0.5 bg-white/10 rounded text-xs font-medium">
                   {contentLanguage === 'ar'
@@ -315,6 +430,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               )}
             </p>
           </div>
+
+          <KeywordBoldingToggle />
 
           <div className="flex gap-3">
             <GlassButton
@@ -335,6 +452,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             >
               {isDownloading ? t('sections.templates.generating', 'Generating...') : (
                 <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
+              )}
+            </GlassButton>
+
+            <GlassButton
+              onClick={handleDownloadDocx}
+              variant="secondary"
+              disabled={!hasRealResume || isDownloadingDocx}
+              className="border border-white/20"
+            >
+              {isDownloadingDocx ? t('sections.templates.generating', 'Generating...') : (
+                <><FileText className="w-4 h-4 me-2" />{t('sections.templates.downloadDocx', 'DOCX')}</>
               )}
             </GlassButton>
           </div>
@@ -480,5 +608,43 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         onClose={() => setIsEditorOpen(false)}
       />
     </div >
+  );
+}
+
+/**
+ * Keyword Bolding Toggle Component
+ * Separated to avoid React Hooks rules violations (hooks can't be conditional)
+ */
+function KeywordBoldingToggle() {
+  const { t } = useTranslation();
+  const hasKeywords = useResumeStore(state => state.optimizationMetrics.jdKeywords.length > 0);
+  const boldKeywords = useResumeStore(state => state.displayOptions.boldKeywords);
+
+  if (!hasKeywords) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2 mt-3 mb-2 px-1">
+      <input
+        type="checkbox"
+        id="bold-keywords-toggle"
+        checked={boldKeywords}
+        onChange={(e) => {
+          useResumeStore.getState().setDisplayOptions({ boldKeywords: e.target.checked });
+        }}
+        className="w-4 h-4 text-emerald-600 bg-white/10 border-white/30 rounded focus:ring-emerald-500 focus:ring-offset-0 focus:ring-2 cursor-pointer"
+      />
+      <label htmlFor="bold-keywords-toggle" className="text-sm text-white/80 cursor-pointer select-none">
+        {t('sections.templates.boldKeywords', 'Bold important keywords in DOCX exports')}
+      </label>
+      <div className="relative inline-flex" onMouseEnter={(e) => { const tip = e.currentTarget.querySelector('[data-tooltip]') as HTMLElement; if (tip) tip.style.display = 'block'; }} onMouseLeave={(e) => { const tip = e.currentTarget.querySelector('[data-tooltip]') as HTMLElement; if (tip) tip.style.display = 'none'; }}>
+        <Info className="w-4 h-4 text-white/40 hover:text-white/60 cursor-help transition-colors" />
+        <div data-tooltip style={{ display: 'none' }} className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white/90 text-xs rounded-lg shadow-xl border border-white/10 z-50 pointer-events-none">
+          {t('sections.templates.boldKeywordsTooltip', 'Emphasizes top 15 keywords from job description in downloaded DOCX files (resume + cover letter)')}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/90" />
+        </div>
+      </div>
+    </div>
   );
 }
