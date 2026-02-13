@@ -529,7 +529,7 @@
         "name": "Free",
         "description": "Perfect for getting started",
         "features": [
-          "15 credits monthly",
+          "20 credits monthly",
           "AI Resume Analysis (2 credits)",
           "Resume Optimization (5 credits)",
           "Interview Prep (3 credits)",
@@ -1229,7 +1229,7 @@
       "steps": {
         "credits": {
           "title": "💰 Your Credit Balance",
-          "content": "You start with 15 credits. Use them to access AI-powered features like resume optimization, job matching, and interview prep. Credits refresh monthly!"
+          "content": "You start with 20 credits. Use them to access AI-powered features like resume optimization, job matching, and interview prep. Credits refresh monthly!"
         },
         "upload": {
           "title": "📄 Upload Your Resume",
