@@ -196,7 +196,17 @@ export function MatchSection({
       // Refresh credits after consumption
       setTimeout(() => refetchCredits(), 500);
     } catch (err) {
-      setError((err as Error)?.message || t('sections.match.errors.analyzeFailed', 'We could not analyze this match.'));
+      const msg = (err as Error)?.message || t('sections.match.errors.analyzeFailed', 'We could not analyze this match.');
+      setError(msg);
+
+      // Show info toast for degraded-service errors
+      if (msg.includes('high load') || msg.includes('timed out') || msg.includes('wait 30 seconds')) {
+        onToast?.({
+          type: 'info',
+          title: t('sections.match.errors.serviceOverloaded', 'AI service is busy'),
+          description: t('sections.match.errors.serviceOverloadedDesc', 'The AI service is experiencing high demand. Please wait a moment and try again.'),
+        });
+      }
     }
   };
 
@@ -225,7 +235,12 @@ export function MatchSection({
   // Handler for confirmed match analysis action
   const handleConfirmMatch = async () => {
     setShowConfirmModal(false);
-    await handleAnalyzeActual();
+    try {
+      await handleAnalyzeActual();
+    } catch (err) {
+      console.error('[MatchSection] handleConfirmMatch rejected:', err);
+      setError((err as Error)?.message || t('sections.match.errors.analyzeFailed', 'We could not analyze this match.'));
+    }
   };
 
   // Computed values

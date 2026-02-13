@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState, useRef, createContext, useContext } from "react";
 import { supabase } from "../services/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -117,7 +117,7 @@ const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [lastUserId, setLastUserId] = useState<string | null>(null);
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Capture referral parameter on mount
@@ -129,24 +129,24 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
 
       // Track referral for new signups
-      if (currentUser && !lastUserId && _event === "SIGNED_IN") {
+      if (currentUser && !lastUserIdRef.current && _event === "SIGNED_IN") {
         trackReferralAfterSignup(currentUser.id, currentUser.email);
       }
 
-      setLastUserId(currentUser?.id || null);
+      lastUserIdRef.current = currentUser?.id || null;
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
-      setLastUserId(currentUser?.id || null);
+      lastUserIdRef.current = currentUser?.id || null;
       setLoading(false);
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [lastUserId]);
+  }, []);
 
   const signInWithGoogle = async () => {
     const redirectUrl = resolveRedirectUrl();

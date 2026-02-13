@@ -1,6 +1,7 @@
 // src/services/api.js
 import { supabase } from './supabase';
 import * as Sentry from '@sentry/react';
+import { isCircuitOpen, recordFailure, recordSuccess } from '../lib/utils/circuit-breaker';
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
@@ -170,6 +171,9 @@ const fileToBase64 = async (file) => {
 };
 
 export const parseResume = async (resumeInput, options = {}) => {
+  if (isCircuitOpen('openrouter-ai')) {
+    throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
+  }
   return retryWithBackoff(async () => {
     try {
       let payload;
@@ -204,6 +208,7 @@ export const parseResume = async (resumeInput, options = {}) => {
       });
 
       const data = await handleResponse(response);
+      recordSuccess('openrouter-ai');
       return data.document;
 
     } catch (error) {
@@ -236,6 +241,13 @@ export const parseResume = async (resumeInput, options = {}) => {
         throw new Error(`Upload limit reached (${error.used}/${error.limit} used). Create a new account or upgrade for more uploads.`);
       }
 
+      // Handle timeout/gateway errors with consistent messaging
+      if (error.status === 502 || error.status === 504) {
+        recordFailure('openrouter-ai');
+        throw new Error('AI service is experiencing high load. We automatically retried but the request still timed out. Please try again in a moment.');
+      }
+
+      recordFailure('openrouter-ai');
       throw error;
     }
   }, 3, 2000); // 3 retries, 2s base delay
@@ -255,6 +267,10 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
     throw new Error("Paste the job description");
   }
 
+  if (isCircuitOpen('openrouter-ai')) {
+    throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
+  }
+
   return retryWithBackoff(async () => {
     try {
       const headers = await getAuthHeaders();
@@ -267,6 +283,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 
       const data = await handleResponse(response);
 
+      recordSuccess('openrouter-ai');
       // Sanitize response to match expected frontend format and handle potential NaN/nulls
       return {
         ...data,
@@ -313,9 +330,11 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 
       // Handle timeout/gateway errors with better messaging
       if (error.status === 502 || error.status === 504) {
+        recordFailure('openrouter-ai');
         throw new Error('AI service is experiencing high load. We automatically retried but the request still timed out. Please try again in a moment.');
       }
 
+      recordFailure('openrouter-ai');
       // Re-throw the error so the caller (MainContent) can show proper failure notification
       // The UI needs to know when analysis fails to inform the user
       throw error;
@@ -324,6 +343,9 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
 };
 
 export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => {
+  if (isCircuitOpen('openrouter-ai')) {
+    throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
+  }
   return retryWithBackoff(async () => {
     try {
       const headers = await getAuthHeaders();
@@ -335,6 +357,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => 
       });
 
       const data = await handleResponse(response);
+      recordSuccess('openrouter-ai');
       return data;
 
     } catch (error) {
@@ -360,6 +383,13 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => 
         throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Upgrade your account for unlimited optimizations.`);
       }
 
+      // Handle timeout/gateway errors with consistent messaging
+      if (error.status === 502 || error.status === 504) {
+        recordFailure('openrouter-ai');
+        throw new Error('AI service is experiencing high load. We automatically retried but the request still timed out. Please try again in a moment.');
+      }
+
+      recordFailure('openrouter-ai');
       throw error;
     }
   }, 3, 2000); // 3 retries, 2s base delay

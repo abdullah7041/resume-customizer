@@ -46,7 +46,11 @@ export function ConfirmActionModal({
   const featureLabel = FEATURE_LABELS[feature];
 
   const handleConfirm = async () => {
-    await onConfirm();
+    try {
+      await onConfirm();
+    } catch (err) {
+      console.error('[ConfirmActionModal] onConfirm rejected:', err);
+    }
   };
 
   const handleSubmitWaitlist = async (e: { preventDefault: () => void }) => {

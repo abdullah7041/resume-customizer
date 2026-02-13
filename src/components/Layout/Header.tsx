@@ -296,7 +296,7 @@ export default function Header() {
       <div className="absolute inset-0 -z-10 overflow-hidden">
         {/* Interactive gradient that follows mouse */}
         <div
-          className="absolute w-[800px] h-[800px] rounded-full blur-[120px] opacity-20 transition-all duration-1000 ease-out"
+          className="absolute w-[600px] h-[600px] rounded-full blur-[60px] opacity-15 transition-all duration-1000 ease-out"
           style={{
             background: "radial-gradient(circle, rgba(16,185,129,0.4) 0%, transparent 70%)",
             left: `${mousePosition.x - 20}%`,
@@ -337,7 +337,7 @@ export default function Header() {
             backgroundImage: `url('${skylineUrl}')`,
             backgroundSize: 'cover',
             backgroundPosition: '50% 35%',
-            filter: 'brightness(0.8)',
+            opacity: 0.8,
           }}
         />
       )}

@@ -88,6 +88,7 @@
   html {
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
   }
 
   /* View Transitions API support for smooth theme switching */
@@ -645,7 +646,6 @@
     pointer-events: none;
     overflow: hidden;
     filter: saturate(1.04) brightness(0.98);
-    will-change: transform, opacity;
     transform: translateY(0) scale(1);
   }
 
