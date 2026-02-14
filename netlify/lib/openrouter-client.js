@@ -39,12 +39,19 @@ function convertGoogleSchemaToOpenRouter(googleSchema) {
 }
 
 /**
- * Check if an error is a provider-level failure that warrants fallback
- * (502 Bad Gateway, 503 Service Unavailable, network errors)
+ * Check if an error is a provider-level failure that warrants fallback.
+ * Broadened to catch auth failures (401/403), timeouts, and all 5xx errors
+ * so that the Gemini fallback is triggered in more failure scenarios.
  */
 function isFallbackEligible(error) {
+  // Check HTTP status code directly (set by callOpenRouterDirect)
+  const status = error.status;
+  if (status === 401 || status === 403 || status === 408 || (status >= 500 && status <= 599)) {
+    return true;
+  }
+
   const msg = error.message || '';
-  // OpenRouter Clerk auth failures, gateway errors, network failures
+  // OpenRouter Clerk auth failures, gateway errors, network failures, timeouts
   return (
     msg.includes('502') ||
     msg.includes('503') ||
@@ -52,7 +59,9 @@ function isFallbackEligible(error) {
     msg.includes('Clerk') ||
     msg.includes('Failed to fetch') ||
     msg.includes('ECONNREFUSED') ||
-    msg.includes('ENOTFOUND')
+    msg.includes('ENOTFOUND') ||
+    msg.includes('ETIMEDOUT') ||
+    msg.includes('socket hang up')
   );
 }
 
@@ -223,7 +232,12 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
           }
         }
 
-        // No fallback available or error not eligible — re-throw
+        // No fallback available or error not eligible — log why and re-throw
+        if (!GEMINI_API_KEY) {
+          console.warn(`[AI Client] No GEMINI_API_KEY set — cannot fall back from OpenRouter error: ${openRouterError.message}`);
+        } else {
+          console.warn(`[AI Client] OpenRouter error not fallback-eligible (status: ${openRouterError.status}): ${openRouterError.message}`);
+        }
         throw openRouterError;
       }
     }

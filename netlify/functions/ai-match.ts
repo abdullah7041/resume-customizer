@@ -1,33 +1,18 @@
 import { Handler } from '@netlify/functions';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { processMatchOnly } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas";
 import { initSentry, captureError } from "../lib/sentry";
 import { checkCredits, consumeCredits } from "../lib/credit-manager";
 import { getClientIP } from "../lib/ip-utils.js";
+import { getSupabaseClient } from "../lib/supabase-client";
 
 initSentry();
 
-// Lazy-initialized Supabase client (avoids module-level errors when env vars are missing)
-let supabase: SupabaseClient | null = null;
-
-function getSupabaseClient(): SupabaseClient | null {
-  if (supabase) return supabase;
-
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    console.warn('[ai-match] Supabase credentials not configured - database features disabled');
-    return null;
-  }
-
-  supabase = createClient(url, key);
-  return supabase;
-}
-
 const baseHandler: Handler = async (event) => {
+  // Outer try-catch prevents ANY uncaught exception from escaping the handler
+  // (uncaught exceptions cause Netlify to return 502 Bad Gateway)
+  try {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -197,6 +182,21 @@ const baseHandler: Handler = async (event) => {
         troubleshooting: isTimeout
           ? 'The AI service (OpenRouter) is experiencing delays. Automatic retries are in progress.'
           : 'Check your network connection and authentication status. If the issue persists, contact support.'
+      }),
+    };
+  }
+
+  } catch (outerError) {
+    // This catches ANY uncaught error (e.g., from checkCredits, getClientIP, getSupabaseClient)
+    // Without this, the error escapes the handler and Netlify returns 502
+    console.error('[ai-match] Uncaught handler error:', outerError);
+    captureError(outerError, { function: 'ai-match', phase: 'outer-catch' });
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "An unexpected error occurred. Please try again.",
+        message: outerError instanceof Error ? outerError.message : String(outerError),
       }),
     };
   }

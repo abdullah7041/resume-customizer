@@ -376,6 +376,7 @@ function initUpstash(): void {
       limiter: Ratelimit.slidingWindow(20, "60 s"),
       analytics: true,
       prefix: "resume-optimizer",
+      timeout: 3000, // 3s timeout — fail open if Redis is slow/unavailable
     });
     console.log("[rate-limiter] ✓ Initialized Upstash rate limiter and Redis client");
   } catch (err) {
@@ -414,21 +415,10 @@ async function checkRateLimit(
   const limiter = getRateLimiter();
   const config = ENDPOINT_RATE_LIMITS[endpoint] || ENDPOINT_RATE_LIMITS.default;
 
-  // If Upstash is not configured, return error (no fallback)
+  // If Upstash is not configured, allow requests through (graceful degradation)
   if (!limiter) {
-    console.error(`[rate-limiter] Upstash not configured - blocking request to ${endpoint}`);
-    return {
-      allowed: false,
-      response: {
-        statusCode: 503,
-        headers: {
-          ...RATE_LIMIT_HEADERS,
-        },
-        body: JSON.stringify({
-          error: "Rate limiting service unavailable. Please contact administrator.",
-        }),
-      },
-    };
+    console.warn(`[rate-limiter] Upstash not configured — allowing request to ${endpoint} (no rate limiting)`);
+    return { allowed: true };
   }
 
   try {
@@ -472,11 +462,27 @@ async function checkRateLimit(
  *   // Your handler logic
  * });
  */
+// Track whether startup diagnostics have been logged (once per cold start)
+let startupDiagnosticsLogged = false;
+
 export function withRateLimit(
   endpoint: string,
   handler: Handler
 ): Handler {
   return async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
+    // Log startup diagnostics once per cold start (helps diagnose 502s)
+    if (!startupDiagnosticsLogged) {
+      startupDiagnosticsLogged = true;
+      console.log(`[rate-limiter] Startup diagnostics for "${endpoint}":`, {
+        UPSTASH_REDIS_REST_URL: !!process.env.UPSTASH_REDIS_REST_URL,
+        UPSTASH_REDIS_REST_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+        OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
+        GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+        SUPABASE_URL: !!process.env.SUPABASE_URL,
+        NODE_ENV: process.env.NODE_ENV || 'not set',
+      });
+    }
+
     // Skip rate limiting for OPTIONS (CORS preflight)
     if (event.httpMethod === "OPTIONS") {
       const result = await handler(event, context);
