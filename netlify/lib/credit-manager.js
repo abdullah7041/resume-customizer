@@ -249,8 +249,8 @@ export async function consumeCredits(userId, feature, amount = null) {
     throw new Error('Failed to consume credits');
   }
 
-  // 3. Log transaction
-  const { error: logError } = await supabase
+  // 3. Log transaction (fire-and-forget to avoid blocking response)
+  supabase
     .from('credit_transactions')
     .insert({
       user_id: userId,
@@ -262,12 +262,11 @@ export async function consumeCredits(userId, feature, amount = null) {
       metadata: {
         timestamp: new Date().toISOString(),
       },
+    })
+    .catch((logError) => {
+      console.error('[CreditManager] Failed to log transaction:', logError);
+      // Non-blocking: transaction logging failure doesn't affect credit consumption
     });
-
-  if (logError) {
-    console.error('[CreditManager] Failed to log transaction:', logError);
-    // Don't fail the operation if logging fails
-  }
 
   console.log(`[CreditManager] Consumed ${creditsToConsume} credits for ${feature}. Balance: ${creditsBefore} → ${creditsAfter}`);
 
