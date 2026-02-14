@@ -173,7 +173,7 @@ export function PricingSection() {
             <UpgradeModal
                 isOpen={showUpgradeModal}
                 onClose={() => setShowUpgradeModal(false)}
-                creditsRemaining={15}
+                creditsRemaining={20}
                 dismissKey="watheq:pricingWaitlist"
                 source="pricing"
             />

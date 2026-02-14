@@ -766,7 +766,7 @@ https://watheqai.app
       </div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
+        In the meantime, you can continue using Watheq for free with 20 monthly credits to optimize your resume!
       </p>
 
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
@@ -794,9 +794,9 @@ What happens next?
 - Early waitlist members get priority access
 - Special launch pricing for early adopters
 
-In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
+In the meantime, you can continue using Watheq for free with 20 monthly credits to optimize your resume!
 
-In the meantime, you can continue using Watheq for free with 15 monthly credits to optimize your resume!
+In the meantime, you can continue using Watheq for free with 20 monthly credits to optimize your resume!
 
 ---
 Watheq Resume Optimizer

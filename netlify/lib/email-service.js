@@ -54,7 +54,7 @@ function getEmailHeaders(category = 'transactional') {
  *
  * @param {string} userEmail - User's email address
  * @param {string} userName - User's display name
- * @param {number} credits - New credit amount (usually 15)
+ * @param {number} credits - New credit amount (usually 20)
  * @param {string} language - Email language: 'en' or 'ar' (default: 'en')
  * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
  */

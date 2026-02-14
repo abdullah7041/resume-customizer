@@ -52,7 +52,7 @@ describe('CreditManager', () => {
     it('returns user credits when found', async () => {
       const mockCredits = {
         credits_remaining: 15,
-        credits_total: 15,
+        credits_total: 20,
         feedback_credits_earned: 0,
         referral_credits_earned: 0,
         last_reset_date: '2026-01-25T00:00:00Z',
@@ -76,7 +76,7 @@ describe('CreditManager', () => {
       const mockNewCredits = {
         user_id: 'user-456',
         credits_remaining: 15,
-        credits_total: 15,
+        credits_total: 20,
         feedback_credits_earned: 0,
         referral_credits_earned: 0,
         last_reset_date: expect.any(String),
@@ -107,7 +107,7 @@ describe('CreditManager', () => {
 
       expect(result).toMatchObject({
         credits_remaining: 15,
-        credits_total: 15,
+        credits_total: 20,
       });
     });
 
@@ -133,7 +133,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 10, credits_total: 15 },
+              data: { credits_remaining: 10, credits_total: 20 },
               error: null,
             }),
           }),
@@ -154,7 +154,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 3, credits_total: 15 },
+              data: { credits_remaining: 3, credits_total: 20 },
               error: null,
             }),
           }),
@@ -197,7 +197,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 10, credits_total: 15 },
+              data: { credits_remaining: 10, credits_total: 20 },
               error: null,
             }),
           }),
@@ -234,7 +234,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 10, credits_total: 15 },
+              data: { credits_remaining: 10, credits_total: 20 },
               error: null,
             }),
           }),
@@ -274,7 +274,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 3, credits_total: 15 },
+              data: { credits_remaining: 3, credits_total: 20 },
               error: null,
             }),
           }),
@@ -310,7 +310,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 10, credits_total: 15 },
+              data: { credits_remaining: 10, credits_total: 20 },
               error: null,
             }),
           }),
@@ -344,7 +344,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 10, credits_total: 15 },
+              data: { credits_remaining: 10, credits_total: 20 },
               error: null,
             }),
           }),
@@ -380,7 +380,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 15, credits_total: 15 },
+              data: { credits_remaining: 15, credits_total: 20 },
               error: null,
             }),
           }),
@@ -414,7 +414,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 10, credits_total: 15 },
+              data: { credits_remaining: 10, credits_total: 20 },
               error: null,
             }),
           }),
@@ -444,7 +444,7 @@ describe('CreditManager', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { credits_remaining: 15, credits_total: 15 },
+              data: { credits_remaining: 15, credits_total: 20 },
               error: null,
             }),
           }),
