@@ -178,7 +178,7 @@ const baseHandler: Handler = async (event) => {
       temperature: 0.3,
       maxTokens: 16384,  // Increased to 16k to prevent JSON truncation (model supports up to 65k)
       schemaName: 'vision2030_analysis',
-      timeoutMs: 85000  // 85s timeout for large prompt processing
+      timeoutMs: 50000  // 50s timeout for large prompt processing (20s buffer before Netlify 70s limit)
     });
 
     const duration = Date.now() - startTime;
