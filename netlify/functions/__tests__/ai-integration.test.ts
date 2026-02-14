@@ -45,6 +45,10 @@ const mockCreditManager = {
 };
 
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
+vi.mock('../../lib/openrouter-client', () => ({
+    callOpenRouter: vi.fn().mockResolvedValue('{}'),
+    MODELS: { lite: 'google/gemini-2.5-flash-lite', flash: 'google/gemini-2.5-flash' }
+}));
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/sentry', () => mockSentry);
 vi.mock('@supabase/supabase-js', () => mockSupabase);
@@ -82,7 +86,7 @@ describe('AI Integration Functions', () => {
         beforeEach(async () => {
             const mod = await import('../ai-match');
             aiMatchHandler = mod.handler;
-        });
+        }, 30000);
 
         it('validates input schema', async () => {
             const event = {
