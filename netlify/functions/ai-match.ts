@@ -120,14 +120,17 @@ const baseHandler: Handler = async (event) => {
     // This prevents database latency from eating into the 90s Netlify timeout
     if (userId && client) {
       // Fire-and-forget: don't await, don't block response
-      client.from('job_matches').insert({
-        user_id: userId,
-        resume_text: resumeText.substring(0, 5000), // Truncate for storage
-        job_text: jobText.substring(0, 5000), // Truncate for storage
-        score: match.score,
-        missing_keywords: match.missingKeywords,
-        suggestions: match.strongMatches,
-      }).catch((dbError) => {
+      // Note: Supabase query builder returns PromiseLike (no .catch), so wrap with Promise.resolve
+      Promise.resolve(
+        client.from('job_matches').insert({
+          user_id: userId,
+          resume_text: resumeText.substring(0, 5000), // Truncate for storage
+          job_text: jobText.substring(0, 5000), // Truncate for storage
+          score: match.score,
+          missing_keywords: match.missingKeywords,
+          suggestions: match.strongMatches,
+        })
+      ).catch((dbError: Error) => {
         // Non-blocking DB error - just log it
         console.warn('[ai-match] Background DB insert failed:', dbError.message);
       });
