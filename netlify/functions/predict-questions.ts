@@ -5,6 +5,7 @@ import { initSentry, captureError } from "../lib/sentry";
 import { checkCredits, consumeCredits } from "../lib/credit-manager";
 import { getSupabaseClient } from "../lib/supabase-client";
 import { getClientIP } from "../lib/ip-utils.js";
+import { detectVulnerabilities } from "../lib/vulnerability-detector";
 
 initSentry();
 
@@ -83,7 +84,7 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
       };
     }
 
-    const { resumeText, jobDescription, questionType = 'mixed' } = parseResult.data;
+    const { resumeText, jobDescription, questionType = 'mixed', workHistory } = parseResult.data;
 
     // Validate questionType
     if (!['behavioral', 'technical', 'mixed'].includes(questionType)) {
@@ -94,8 +95,13 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
       };
     }
 
+    // Detect career vulnerabilities from structured work history
+    const vulnerabilities = workHistory?.length
+      ? detectVulnerabilities(workHistory)
+      : [];
+
     // Use dedicated interview question prediction function
-    const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription, questionType);
+    const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription, questionType, vulnerabilities);
 
     // Consume credits AFTER successful prediction
     const creditResult = await consumeCredits(userId, 'interview_prep');

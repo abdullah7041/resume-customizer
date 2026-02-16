@@ -206,10 +206,18 @@ export const OptimizeRequestSchema = z.object({
     jobText: z.string().min(1, "Job text is required").max(MAX_JOB_LENGTH, "Job text too large"),
 });
 
+export const WorkHistoryEntrySchema = z.object({
+    name: z.string(),
+    position: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
+});
+
 export const PredictQuestionsRequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
     jobDescription: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     questionType: z.enum(['behavioral', 'technical', 'mixed']).optional().default('mixed'),
+    workHistory: z.array(WorkHistoryEntrySchema).optional(),
 });
 
 export const CoverLetterRequestSchema = z.object({

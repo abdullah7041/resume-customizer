@@ -19,7 +19,9 @@ import {
   Zap,
   Brain,
   Code,
-  RotateCcw
+  RotateCcw,
+  ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { useUserCredits } from '../../hooks/useUserCredits';
@@ -27,6 +29,7 @@ import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { UpgradeModal } from '../Credits/UpgradeModal';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { FeedbackModal } from '../Feedback/FeedbackModal';
+import type { VulnerabilityType } from '../../types/analysis';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
 const PREDICT_ENDPOINT = `${FUNCTION_BASE_PATH}/predict-questions`;
@@ -40,6 +43,15 @@ interface Question {
   category: string;
   answerFramework?: string;
   skills_tested?: string[];
+  coachingTip?: string;
+  vulnerabilityType?: VulnerabilityType;
+}
+
+interface WorkEntry {
+  name?: string;
+  position?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface InterviewSectionProps {
@@ -53,6 +65,8 @@ interface InterviewSectionProps {
     };
   };
   resumeData?: {
+    work?: WorkEntry[];
+    data?: { work?: WorkEntry[] };
     meta?: {
       interview_prep?: {
         predicted_questions?: Question[];
@@ -203,7 +217,9 @@ const normalizeQuestion = (question: unknown, index: number): Question | null =>
       answerFramework: (q.answerFramework || q.answer_framework || '') as string,
       skills_tested: Array.isArray(q.skills_tested)
         ? q.skills_tested.map(s => String(s)).filter(Boolean)
-        : inferSkillsFromQuestion(questionText, type)
+        : inferSkillsFromQuestion(questionText, type),
+      coachingTip: (q.coachingTip || q.coaching_tip || '') as string || undefined,
+      vulnerabilityType: (q.vulnerabilityType || q.vulnerability_type) as VulnerabilityType | undefined,
     };
   }
   if (typeof question === 'string' && question.trim()) {
@@ -256,17 +272,26 @@ export function InterviewSection({
   const [pendingRegenerate, setPendingRegenerate] = useState(false);
   const [skillFilter, setSkillFilter] = useState<string | null>(null);
 
-  // Get unique skills from all questions
+  // Get unique skills from standard questions (vulnerability questions have their own section)
   const uniqueSkills = useMemo(() => {
-    const allSkills = questions.flatMap(q => q.skills_tested || []);
+    const allSkills = questions.filter(q => !q.vulnerabilityType).flatMap(q => q.skills_tested || []);
     return Array.from(new Set(allSkills)).sort();
   }, [questions]);
 
-  // Filter questions by selected skill
+  // Split questions into vulnerability and standard groups
+  const vulnerabilityQuestions = useMemo(() =>
+    questions.filter(q => q.vulnerabilityType),
+  [questions]);
+
+  const standardQuestions = useMemo(() =>
+    questions.filter(q => !q.vulnerabilityType),
+  [questions]);
+
+  // Filter standard questions by selected skill
   const filteredQuestions = useMemo(() => {
-    if (!skillFilter) return questions;
-    return questions.filter(q => q.skills_tested?.includes(skillFilter));
-  }, [questions, skillFilter]);
+    if (!skillFilter) return standardQuestions;
+    return standardQuestions.filter(q => q.skills_tested?.includes(skillFilter));
+  }, [standardQuestions, skillFilter]);
 
   // Count questions for each skill
   const getSkillCount = (skill: string) =>
@@ -324,13 +349,20 @@ export function InterviewSection({
       const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
       const headers = await getAuthHeaders();
 
+      // Extract structured work history for vulnerability detection
+      const workEntries = (resumeData?.work || resumeData?.data?.work || [])
+        .filter((w): w is WorkEntry & { name: string; position: string; startDate: string; endDate: string } =>
+          Boolean(w.name && w.position && w.startDate && w.endDate)
+        );
+
       const response = await fetch(PREDICT_ENDPOINT, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           jobDescription,
           resumeText: resumeText || '',
-          questionType
+          questionType,
+          ...(workEntries.length > 0 && { workHistory: workEntries }),
         }),
       });
 
@@ -657,12 +689,180 @@ export function InterviewSection({
           {/* STAR Method Tip */}
           <STARMethodTip />
 
+          {/* Vulnerability Questions Section */}
+          {vulnerabilityQuestions.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1 mb-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5" />
+                    {t('sections.interview.vulnerability.title', 'Career Vulnerability Questions')}
+                    <span className="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full text-xs font-normal border border-amber-500/30">
+                      {vulnerabilityQuestions.length}
+                    </span>
+                  </h3>
+                </div>
+                <p className="text-xs text-amber-400/60">
+                  {t('sections.interview.vulnerability.subtitle', 'Questions targeting potential red flags in your career timeline')}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {vulnerabilityQuestions.map((question, index) => {
+                  const globalIdx = questions.indexOf(question);
+                  return (
+                    <GlassCard
+                      key={`vuln-${index}`}
+                      padding="none"
+                      className={cn(
+                        "overflow-hidden transition-all duration-300 border-amber-500/20",
+                        expandedQuestions.has(globalIdx) ? "ring-1 ring-amber-500/30" : "hover:border-amber-500/30"
+                      )}
+                    >
+                      <div
+                        className="p-5 flex items-start gap-4 cursor-pointer"
+                        onClick={() => toggleQuestion(globalIdx)}
+                      >
+                        <div className="mt-1">
+                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm font-bold">
+                            {index + 1}
+                          </span>
+                        </div>
+
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between gap-4 mb-2">
+                            <h4 className={cn(
+                              "font-semibold text-white/90 leading-relaxed transition-colors",
+                              expandedQuestions.has(globalIdx) ? "text-amber-300" : ""
+                            )}>
+                              {question.question}
+                            </h4>
+                            <button className={cn(
+                              "p-2 rounded-full transition-all duration-300",
+                              expandedQuestions.has(globalIdx) ? "bg-amber-500/20 text-amber-400 rotate-180" : "bg-white/5 text-gray-400 hover:bg-white/10"
+                            )}>
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <DifficultyBadge difficulty={question.difficulty} />
+                            {question.vulnerabilityType && (
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                                <ShieldAlert className="w-3 h-3" />
+                                {t(`sections.interview.vulnerability.types.${question.vulnerabilityType}`, question.vulnerabilityType)}
+                              </span>
+                            )}
+                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                              {question.category}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {expandedQuestions.has(globalIdx) && (
+                        <div className="px-5 pb-5 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="h-px w-full bg-amber-500/10 mb-4" />
+
+                          {/* Coaching Tip */}
+                          {question.coachingTip && (
+                            <div className="p-4 bg-amber-500/5 rounded-xl border border-amber-500/15">
+                              <div className="flex items-center gap-2 mb-2">
+                                <GlassCircle size="sm" className="bg-amber-500/20">
+                                  <Lightbulb className="w-3.5 h-3.5 text-amber-300" />
+                                </GlassCircle>
+                                <span className="text-sm font-bold text-amber-400">
+                                  {t('sections.interview.vulnerability.coachingTip', 'Coaching Tip')}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-300 leading-relaxed ps-9">{question.coachingTip}</p>
+                            </div>
+                          )}
+
+                          {/* STAR Guidance */}
+                          <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+                            <div className="flex items-center gap-2 mb-3">
+                              <GlassCircle size="sm" className="bg-emerald-500/20">
+                                <Lightbulb className="w-3.5 h-3.5 text-emerald-300" />
+                              </GlassCircle>
+                              <span className="text-sm font-bold text-emerald-400">
+                                {t('sections.interview.starTips.header')}
+                              </span>
+                            </div>
+                            {(() => {
+                              const starTips = getSTARTips(question.question, t);
+                              return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                  <div className="space-y-1">
+                                    <div className="flex gap-2">
+                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
+                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
+                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.task}</span>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex gap-2">
+                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
+                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.action}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
+                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.result}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Practice answer */}
+                          <div className="pt-2">
+                            <label className="block text-sm font-medium text-gray-300 mb-2 flex justify-between">
+                              {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
+                              <span className="text-xs text-gray-500 font-normal">Private to you</span>
+                            </label>
+                            <textarea
+                              value={savedAnswers[globalIdx] || ''}
+                              onChange={(e) => setSavedAnswers(prev => ({ ...prev, [globalIdx]: e.target.value }))}
+                              placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}
+                              className="w-full h-32 p-4 rounded-xl bg-black/20 border border-white/10 text-white placeholder-gray-600 resize-y focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all font-sans text-sm leading-relaxed"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </GlassCard>
+                  );
+                })}
+              </div>
+            </div>
+          ) : questions.length > 0 ? (
+            /* No vulnerabilities detected — positive message */
+            <GlassCard className="border-emerald-500/20">
+              <div className="flex items-center gap-4 py-2">
+                <GlassCircle size="md" className="bg-emerald-500/15 border-emerald-500/30">
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                </GlassCircle>
+                <div>
+                  <h4 className="text-sm font-bold text-emerald-300">
+                    {t('sections.interview.vulnerability.noVulnerabilities', 'No red flags detected in your career timeline')}
+                  </h4>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {t('sections.interview.vulnerability.noVulnerabilitiesDesc', 'Your career progression looks consistent. Focus on the standard questions below.')}
+                  </p>
+                </div>
+              </div>
+            </GlassCard>
+          ) : null}
+
           <div className="flex flex-col gap-1 mb-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 {t('sections.interview.questionsTitle', 'Predicted Questions')}
                 <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-xs font-normal">
-                  {skillFilter ? filteredQuestions.length : questions.length}
+                  {skillFilter ? filteredQuestions.length : standardQuestions.length}
                 </span>
               </h3>
             </div>

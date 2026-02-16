@@ -1040,6 +1040,20 @@
           "action": "Describe your specific contributions",
           "result": "Share concrete, quantifiable outcomes"
         }
+      },
+      "vulnerability": {
+        "title": "Career Vulnerability Questions",
+        "subtitle": "Questions targeting potential red flags in your career timeline",
+        "noVulnerabilities": "No red flags detected in your career timeline",
+        "noVulnerabilitiesDesc": "Your career progression looks consistent. Focus on the standard questions below.",
+        "coachingTip": "Coaching Tip",
+        "types": {
+          "short_tenure": "Short Tenure",
+          "gap": "Career Gap",
+          "pivot": "Career Pivot",
+          "job_hopping": "Job Hopping",
+          "demotion": "Demotion Signal"
+        }
       }
     },
     "bulkAnalysis": {

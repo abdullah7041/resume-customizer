@@ -52,6 +52,25 @@ export interface MatchAnalysisResponse {
 }
 
 /**
+ * Career vulnerability types detected from work history
+ */
+export type VulnerabilityType = 'short_tenure' | 'gap' | 'pivot' | 'job_hopping' | 'demotion';
+
+/**
+ * Interview question with optional vulnerability coaching
+ */
+export interface InterviewQuestion {
+  question: string;
+  type: string;
+  difficulty: string;
+  category: string;
+  answerFramework?: string;
+  skills_tested?: string[];
+  coachingTip?: string;
+  vulnerabilityType?: VulnerabilityType;
+}
+
+/**
  * Model types for Gemini API
  */
 export type GeminiModelType = 'flash' | 'lite';
