@@ -657,13 +657,19 @@ export function InterviewSection({
           {/* STAR Method Tip */}
           <STARMethodTip />
 
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              {t('sections.interview.questionsTitle', 'Predicted Questions')}
-              <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-xs font-normal">
-                {skillFilter ? filteredQuestions.length : questions.length}
-              </span>
-            </h3>
+          <div className="flex flex-col gap-1 mb-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                {t('sections.interview.questionsTitle', 'Predicted Questions')}
+                <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-xs font-normal">
+                  {skillFilter ? filteredQuestions.length : questions.length}
+                </span>
+              </h3>
+            </div>
+            <p className="flex items-center gap-1.5 text-xs text-emerald-400/60">
+              <Target className="h-3 w-3" />
+              {t('trust.interviewQuestions')}
+            </p>
           </div>
 
           {/* Skill Filter */}

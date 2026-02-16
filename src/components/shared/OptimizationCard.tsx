@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Clipboard, ClipboardCheck, FileText, Sparkles, ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Clipboard, ClipboardCheck, FileText, Sparkles, Target, ChevronDown } from "lucide-react";
 import { GlassButton } from "../ui/GlassButton";
 import { GlassCard } from "../ui/GlassCard";
 import { cn } from "../../lib/utils/cn";
 
 export default function OptimizationCard({ card, onCopy, disabledActions = false, viewMode = "split" }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
 
@@ -61,10 +63,16 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
         <div className="overflow-hidden">
           <div className="space-y-3 p-4 pt-0">
             <div className="space-y-3">
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-gold-500">
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
-                Recommendation
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-gold-500">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  Recommendation
+                </p>
+                <span className="flex items-center gap-1 text-xs text-emerald-400/60">
+                  <Target className="h-3 w-3" aria-hidden="true" />
+                  {t('trust.optimizationBadge')}
+                </span>
+              </div>
               <p className="text-sm leading-relaxed text-ink">
                 {card?.suggestion}
               </p>

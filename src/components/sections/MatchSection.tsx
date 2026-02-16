@@ -476,6 +476,10 @@ export function MatchSection({
                               : t('sections.match.results.weakMessage', 'Consider tailoring your experience to the job requirements.')
                         )}
                       </p>
+                      <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-emerald-400/60">
+                        <Target className="h-3 w-3" />
+                        {t('trust.matchAnalysis')}
+                      </p>
                     </div>
 
                     {/* Optimized Resume Warning Banner */}
