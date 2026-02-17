@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
@@ -13,7 +13,10 @@ import {
     Download,
     Plus,
     Zap,
+    Share2,
 } from 'lucide-react';
+
+const ShareScoreCard = lazy(() => import('../ui/ShareScoreCard'));
 
 interface OptimizationResultsSummaryProps {
     // Scores
@@ -292,6 +295,8 @@ export function OptimizationResultsSummary({
     const improvement = afterScore - beforeScore;
     const hasImprovement = improvement > 0;
     const allApplied = appliedOptimizations === totalOptimizations;
+    const showShareButton = hasJobDescription && improvement > 10;
+    const [showShareCard, setShowShareCard] = useState(false);
 
     // Get applied sections summary
     const appliedSections = useMemo(() => {
@@ -573,9 +578,37 @@ export function OptimizationResultsSummary({
                                 {isArabic ? 'تصدير PDF' : 'Export PDF'}
                             </GlassButton>
                         )}
+
+                        {showShareButton && (
+                            <GlassButton
+                                variant="secondary"
+                                size="md"
+                                onClick={() => {
+                                    analytics.track('share_card_opened', {
+                                        before_score: beforeScore,
+                                        after_score: afterScore,
+                                        improvement,
+                                    });
+                                    setShowShareCard(true);
+                                }}
+                                leftIcon={<Share2 className="w-4 h-4" />}
+                            >
+                                {isArabic ? 'شارك نتيجتك' : 'Share Your Result'}
+                            </GlassButton>
+                        )}
                     </div>
                 </div>
             </GlassCard>
+
+            {showShareCard && (
+                <Suspense fallback={null}>
+                    <ShareScoreCard
+                        beforeScore={beforeScore}
+                        afterScore={afterScore}
+                        onClose={() => setShowShareCard(false)}
+                    />
+                </Suspense>
+            )}
         </div>
     );
 }
