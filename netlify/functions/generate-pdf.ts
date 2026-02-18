@@ -290,5 +290,4 @@ const baseHandler: Handler = async (event) => {
   }
 };
 
-// Wrap with rate limiting (10 requests/min for PDF generation)
-export const handler = withRateLimit(baseHandler, { requestsPerMinute: 10 });
+export const handler = withRateLimit("generate-pdf", baseHandler);
