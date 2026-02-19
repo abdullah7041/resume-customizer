@@ -11,7 +11,7 @@ interface ShareScoreCardProps {
     onClose: () => void;
 }
 
-const WATHEQ_URL = 'https://watheq.sa';
+const WATHEQ_URL = 'https://watheqai.app';
 
 function ShareCardVisual({
     beforeScore,

@@ -281,11 +281,11 @@ export function InterviewSection({
   // Split questions into vulnerability and standard groups
   const vulnerabilityQuestions = useMemo(() =>
     questions.filter(q => q.vulnerabilityType),
-  [questions]);
+    [questions]);
 
   const standardQuestions = useMemo(() =>
     questions.filter(q => !q.vulnerabilityType),
-  [questions]);
+    [questions]);
 
   // Filter standard questions by selected skill
   const filteredQuestions = useMemo(() => {
@@ -866,8 +866,8 @@ export function InterviewSection({
                 </span>
               </h3>
             </div>
-            <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400/90 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
-              <Target className="h-3 w-3" />
+            <p className="inline-flex items-center gap-2 text-sm font-medium text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-full">
+              <Target className="h-4 w-4" />
               {t('trust.interviewQuestions')}
             </p>
           </div>
@@ -884,21 +884,21 @@ export function InterviewSection({
                   {uniqueSkills.length} {t('common.skills', 'Skills')}
                 </span>
               </div>
-              
-              <div className="flex flex-wrap gap-2.5">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 <button
                   onClick={() => setSkillFilter(null)}
                   className={cn(
-                    'group relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border flex items-center gap-2',
+                    'group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border flex items-center justify-between',
                     skillFilter === null
                       ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
                       : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/20'
                   )}
                 >
-                  <span>{t('sections.interview.all', 'All')}</span>
+                  <span className="truncate">{t('sections.interview.all', 'All')}</span>
                   <span className={cn(
-                    "text-xs py-0.5 px-1.5 rounded-full transition-colors",
-                    skillFilter === null ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/80"
+                    "text-xs py-0.5 px-2 rounded-full transition-colors font-semibold ml-2 min-w-[1.5rem] text-center",
+                    skillFilter === null ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/90"
                   )}>
                     {questions.length}
                   </span>
@@ -908,16 +908,16 @@ export function InterviewSection({
                     key={skill}
                     onClick={() => setSkillFilter(skill)}
                     className={cn(
-                      'group relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border flex items-center gap-2',
+                      'group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border flex items-center justify-between',
                       skillFilter === skill
                         ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
                         : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/20'
                     )}
                   >
-                    <span>{skill}</span>
+                    <span className="truncate text-start" title={skill}>{skill}</span>
                     <span className={cn(
-                      "text-xs py-0.5 px-1.5 rounded-full transition-colors",
-                      skillFilter === skill ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/80"
+                      "text-xs py-0.5 px-2 rounded-full transition-colors font-semibold ml-2 min-w-[1.5rem] text-center",
+                      skillFilter === skill ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/90"
                     )}>
                       {getSkillCount(skill)}
                     </span>

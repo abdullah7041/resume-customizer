@@ -97,7 +97,7 @@
   },
   "header": {
     "feedback": "Your Feedback",
-    "badge": "Verified AI - No Fake Data",
+    "badge": "Verified AI - Real Data",
     "badgeAlt": "Designed for Saudi ambition",
     "heroTitle": "Watheq - AI Resume Optimizer",
     "heroDescription": "Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.",
@@ -147,7 +147,7 @@
       },
       "templates": {
         "label": "Pro Templates",
-        "desc": "4 ATS-optimized PDF formats"
+        "desc": "5 ATS-optimized PDF formats"
       },
       "interview": {
         "label": "Interview Prep",
@@ -406,7 +406,7 @@
         "watheqAts": "94%",
         "toolAAts": "Unknown",
         "toolBAts": "85%",
-        "watheqTemplates": "4 ATS-optimized",
+        "watheqTemplates": "5 ATS-optimized",
         "toolATemplates": "2 basic",
         "toolBTemplates": "3 generic"
       }
@@ -537,7 +537,7 @@
           "Vision 2030 Alignment (2 credits)",
           "Unlimited resume uploads (free)",
           "Unlimited PDF exports (free)",
-          "4 professional templates",
+          "5 professional templates",
           "Referral rewards (5 credits per friend)"
         ]
       },
