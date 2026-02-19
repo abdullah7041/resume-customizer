@@ -866,7 +866,7 @@ export function InterviewSection({
                 </span>
               </h3>
             </div>
-            <p className="flex items-center gap-1.5 text-xs text-emerald-400/60">
+            <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400/90 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
               <Target className="h-3 w-3" />
               {t('trust.interviewQuestions')}
             </p>

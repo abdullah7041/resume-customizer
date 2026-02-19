@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
@@ -17,7 +17,10 @@ import {
   AlertCircle,
   Info,
   TrendingUp,
+  Share2,
 } from 'lucide-react';
+
+const ShareScoreCard = lazy(() => import('../ui/ShareScoreCard'));
 import { cn } from '../../lib/utils/cn';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import type { OptimizationMetrics } from '../../types/templates';
@@ -166,6 +169,7 @@ export function OptimizeSection({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
   const { user } = useAuth();
@@ -1135,7 +1139,41 @@ export function OptimizeSection({
               </span>
             </div>
           </div>
+
+          {/* Share button — only for meaningful improvements with real scores */}
+          {!resultsSummaryData.isPlaceholderScore &&
+            !resultsSummaryData.isPlaceholderImprovement &&
+            resultsSummaryData.afterScore - resultsSummaryData.beforeScore > 10 && (
+              <div className="flex justify-center mt-3 pt-3 border-t border-white/5">
+                <GlassButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    analytics.track('share_card_opened', {
+                      before_score: resultsSummaryData.beforeScore,
+                      after_score: resultsSummaryData.afterScore,
+                      improvement: resultsSummaryData.afterScore - resultsSummaryData.beforeScore,
+                    });
+                    setShowShareCard(true);
+                  }}
+                  leftIcon={<Share2 className="w-3.5 h-3.5" />}
+                >
+                  {isArabic ? 'شارك نتيجتك' : 'Share Your Result'}
+                </GlassButton>
+              </div>
+            )}
         </GlassCard>
+      )}
+
+      {/* Share Score Card Modal */}
+      {showShareCard && (
+        <Suspense fallback={null}>
+          <ShareScoreCard
+            beforeScore={resultsSummaryData.beforeScore}
+            afterScore={resultsSummaryData.afterScore}
+            onClose={() => setShowShareCard(false)}
+          />
+        </Suspense>
       )}
 
       {/* Score Breakdown — Detailed Category View */}

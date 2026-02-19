@@ -68,7 +68,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                   Recommendation
                 </p>
-                <span className="flex items-center gap-1 text-xs text-emerald-400/60">
+                <span className="flex items-center gap-1 text-xs text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                   <Target className="h-3 w-3" aria-hidden="true" />
                   {t('trust.optimizationBadge')}
                 </span>
