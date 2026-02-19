@@ -54,13 +54,6 @@ const generateCacheKey = (resumeText: string, jobDescription: string, isOptimize
     if (firstKey) cacheKeyMemo.delete(firstKey);
   }
 
-  console.log('[ResumeStore] Cache key generated:', {
-    isOptimized,
-    resumeLength: resumeText?.length || 0,
-    jdLength: jobDescription?.length || 0,
-    cacheKey: result
-  });
-
   return result;
 };
 
@@ -524,29 +517,15 @@ export const useResumeStore = create<ResumeState>()(
               // Handle certification optimizations similarly
               let found = false;
 
-              console.log(`[ResumeStore] Attempting to merge certification optimization:`, {
-                originalValue: originalValue.substring(0, 100),
-                optimizedValue: optimizedValue.substring(0, 100),
-                certificatesCount: merged.certificates?.length || 0,
-                certificateNames: merged.certificates?.map(c => c.name) || []
-              });
-
               if (merged.certificates) {
                 for (let certIdx = 0; certIdx < merged.certificates.length; certIdx++) {
                   const cert = merged.certificates[certIdx];
                   if (cert.name) {
                     const matchResult = fuzzyTextMatch(originalValue, cert.name);
-                    console.log(`[ResumeStore] Checking cert ${certIdx}:`, {
-                      certName: cert.name,
-                      matched: matchResult.matched,
-                      confidence: matchResult.confidence,
-                      matchType: matchResult.matchType
-                    });
                     if (matchResult.matched) {
                       merged.certificates[certIdx].name = optimizedValue;
                       found = true;
                       diagnostics.appliedCount++;
-                      console.log(`[ResumeStore] ✅ Certification matched and updated!`);
                       break;
                     }
                   }
@@ -600,18 +579,15 @@ export const useResumeStore = create<ResumeState>()(
         const cached = state.analysisCache[cacheKey];
 
         if (!cached) {
-          console.log('[ResumeStore] Cache miss for', { isOptimized, fromState: state.showOptimized, forced: forceIsOptimized !== undefined });
           return null;
         }
 
         // Check if cache is still valid
         const age = Date.now() - cached.timestamp;
         if (age > CACHE_TTL_MS) {
-          console.log('[ResumeStore] Cache expired (age:', Math.round(age / 1000), 'seconds)');
           return null;
         }
 
-        console.log('[ResumeStore] Cache hit! Score:', cached.score, 'Age:', Math.round(age / 1000), 'seconds', 'isOptimized:', isOptimized);
         return cached;
       },
 
@@ -620,12 +596,6 @@ export const useResumeStore = create<ResumeState>()(
         // Fix B2: Allow explicit override of isOptimized flag, matching getCachedAnalysis
         const isOptimized = forceIsOptimized !== undefined ? forceIsOptimized : state.showOptimized;
         const cacheKey = generateCacheKey(resumeText, jobDescription, isOptimized);
-
-        console.log('[ResumeStore] Caching analysis:', {
-          isOptimized,
-          score: analysis.score,
-          cacheKey
-        });
 
         set((state) => {
           const newCache = {
@@ -696,7 +666,6 @@ export const useResumeStore = create<ResumeState>()(
       setContentLanguage: (lang) => set({ contentLanguage: lang }),
 
       setBaselineMatchScore: (score: number) => {
-        console.log('[ResumeStore] Setting baseline match score:', score);
         set({ baselineMatchScore: score });
       },
 

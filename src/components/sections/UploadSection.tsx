@@ -194,7 +194,6 @@ export default function UploadSection({
         } catch (err) {
             // Handle user-initiated cancellation silently
             if (err && (err as Error & { cancelled?: boolean }).cancelled) {
-                console.log('[Upload] Upload cancelled by user');
                 return;
             }
 

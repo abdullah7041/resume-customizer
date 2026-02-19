@@ -23,7 +23,6 @@ const getAuthHeaders = async () => {
 
     if (session?.access_token) {
       headers.Authorization = `Bearer ${session.access_token}`;
-      console.log('[API] Auth token attached to request');
     } else {
       console.warn('[API] No active session found - request will be sent without authentication');
     }
@@ -57,33 +56,24 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
       // Don't retry on 4xx errors EXCEPT 429 (rate limit)
       // 401, 403, 404, 400 are client errors and should not be retried
       if (error.status >= 400 && error.status < 500 && error.status !== 429) {
-        console.log(`[API Retry] Client error ${error.status} detected - not retrying`);
         throw error;
       }
 
       // Don't retry on quota exceeded
       if (error.quotaExceeded) {
-        console.log('[API Retry] Quota exceeded - not retrying');
         throw error;
       }
 
       // Don't retry on last attempt
       if (attempt === maxRetries) {
-        console.log(`[API Retry] Max retries (${maxRetries}) reached - giving up`);
         break;
       }
 
       // Log retry reason
-      if (isRetryableServerError) {
-        console.log(`[API Retry] Retryable server error detected (${error.status || 'unknown'})`);
-      }
-
       // Calculate delay with exponential backoff + jitter
       const exponentialDelay = baseDelay * Math.pow(2, attempt);
       const jitter = Math.random() * 1000; // 0-1000ms jitter
       const delay = exponentialDelay + jitter;
-
-      console.log(`[API Retry] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${Math.round(delay)}ms...`);
 
       // Respect Retry-After header if present
       const retryAfter = error.retryAfter;
@@ -214,7 +204,6 @@ export const parseResume = async (resumeInput, options = {}) => {
     } catch (error) {
       // Handle user-initiated cancellation
       if (error.name === 'AbortError') {
-        console.log('[API] Upload cancelled by user');
         const cancelError = new Error('Upload cancelled');
         cancelError.cancelled = true;
         throw cancelError;

@@ -98,8 +98,6 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
                 const prevCredits = previousCreditsRef.current;
                 if (prevCredits && newCredits.referralCreditsEarned > prevCredits.referralCreditsEarned) {
                     const creditsAdded = (newCredits.referralCreditsEarned - prevCredits.referralCreditsEarned) * 5;
-                    console.log(`[CreditsContext] Referral credits increased by ${creditsAdded}`);
-
                     // Dispatch custom event for toast notification
                     window.dispatchEvent(new CustomEvent('referralCreditsEarned', {
                         detail: { creditsAdded }
@@ -187,7 +185,6 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
     // Listen for manual credit refresh events (e.g., after referral tracking)
     useEffect(() => {
         const handleRefreshCredits = () => {
-            console.log('[CreditsContext] Manual refresh triggered');
             fetchCredits(true); // Immediate fetch
         };
 

@@ -486,11 +486,6 @@ export default function MainContent() {
         const { parsedResumeText, showOptimized } = useResumeStore.getState();
         const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
 
-        console.log('[MainContent] Analyzing Resume:', {
-          textLength: resumeTextToAnalyze.length,
-          showOptimized,
-        });
-
         const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob);
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
@@ -521,7 +516,6 @@ export default function MainContent() {
           // Store baseline score if this is the first analysis of an original (not optimized) resume
           if (!showOptimized && baselineMatchScore === null) {
             setBaselineMatchScore(result.score);
-            console.log('[MainContent] Stored baseline score:', result.score);
           }
         }
 

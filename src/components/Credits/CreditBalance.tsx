@@ -83,7 +83,6 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
     setIsRefreshing(true);
     try {
       await refetch();
-      console.log('[CreditBalance] Credits refreshed successfully');
     } catch (error) {
       console.error('[CreditBalance] Failed to refresh credits:', error);
     } finally {

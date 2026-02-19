@@ -96,8 +96,6 @@ const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
 
     if (response.ok) {
       localStorage.removeItem("watheq:pending_referrer_id");
-      console.log("[useAuth] Referral tracked successfully");
-
       // Dispatch event to notify credits were earned
       window.dispatchEvent(new CustomEvent('referralCreditsEarned', {
         detail: { creditsAdded: 5 }

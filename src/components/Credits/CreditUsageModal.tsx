@@ -122,7 +122,6 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
     setIsRefreshing(true);
     try {
       await refetch();
-      console.log('[CreditUsageModal] Credits refreshed successfully');
     } catch (error) {
       console.error('[CreditUsageModal] Failed to refresh credits:', error);
     } finally {

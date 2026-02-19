@@ -174,28 +174,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       const appliedCount = optimizations.filter(o => o.applied).length;
       const isExportingOptimized = !!storeActiveResume && showOptimized && appliedCount > 0;
 
-      console.group('[TemplatesSection] Export Data Verification');
-      console.log('📊 Export Settings:', {
-        showOptimized,
-        usingStoreData: useStoreData,
-        hasActiveResume: !!storeActiveResume,
-        hasOptimizations: optimizations.length > 0,
-        appliedOptimizationsCount: appliedCount
-      });
-      console.log('✅ Will Export:', isExportingOptimized ? 'OPTIMIZED version' : 'ORIGINAL version');
-
-      if (showOptimized && appliedCount === 0) {
-        console.warn('⚠️ WARNING: showOptimized=true but no optimizations applied! Will export original.');
-      }
-
-      if (!showOptimized && appliedCount > 0) {
-        console.warn('⚠️ WARNING: You have applied optimizations but showOptimized=false! Toggle "Show Optimized" ON to export optimized version.');
-      }
-
-      if (isExportingOptimized) {
-        console.log('🎯 Scenario B Ready: This export will contain optimized content. Re-upload this PDF to verify score improvement.');
-      }
-      console.groupEnd();
+      // Dev verification intentionally removed
     }
 
     return data;
@@ -310,22 +289,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     // Log export details for Scenario B verification
     const appliedCount = optimizations.filter(o => o.applied).length;
     const isExportingOptimized = showOptimized && appliedCount > 0;
-
-    console.group('[PDF Export] Starting Download');
-    console.log('📥 Export Type:', isExportingOptimized ? '✅ OPTIMIZED' : '📄 ORIGINAL');
-    console.log('Settings:', {
-      showOptimized,
-      appliedOptimizations: appliedCount,
-      templateId: selectedTemplate.id,
-      timestamp: new Date().toISOString()
-    });
-
-    if (isExportingOptimized) {
-      console.log('🎯 Scenario B Test: This PDF contains optimized content. Re-upload to verify higher score!');
-    } else if (appliedCount > 0 && !showOptimized) {
-      console.error('❌ ERROR: You have applied optimizations but "Show Optimized" is OFF! Toggle it ON to export optimized version.');
-    }
-    console.groupEnd();
 
     setIsDownloading(true);
 
