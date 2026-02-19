@@ -58,7 +58,7 @@ export function recordSuccess(key: string): void {
     state.failures = 0;
     state.lastFailure = 0;
     if (state.openedAt) {
-      console.log(`[CircuitBreaker] Circuit CLOSED for "${key}" after success`);
+      console.warn(`[CircuitBreaker] Circuit CLOSED for "${key}" after success`);
     }
     state.openedAt = null;
   }
@@ -76,7 +76,7 @@ export function isCircuitOpen(key: string): boolean {
     // Cooldown expired — allow a probe request (half-open)
     state.openedAt = null;
     state.failures = 0;
-    console.log(`[CircuitBreaker] Circuit HALF-OPEN for "${key}" — allowing probe`);
+    console.warn(`[CircuitBreaker] Circuit HALF-OPEN for "${key}" — allowing probe`);
     return false;
   }
 
