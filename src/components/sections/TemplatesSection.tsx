@@ -1,11 +1,11 @@
 // src/components/sections/TemplatesSection.tsx
 // Resume template gallery with floating overlay template selector
 
-import { useState, useMemo, useLayoutEffect, useRef, useCallback, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
+import { useState, useMemo, useLayoutEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal, FileText, Info } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal, FileText, Info, ArrowLeftRight } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -18,6 +18,8 @@ import { ManualDataEditor } from "../ui/ManualDataEditor";
 import { FormattingPanel } from "../ui/FormattingPanel";
 import { PageBreakOverlay, A4_PAGE_HEIGHT_PX } from "../ui/PageBreakIndicator";
 import { useResumeLanguage } from "../../hooks/useResumeLanguage";
+
+const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -105,6 +107,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
   const [isHoveringSelector, setIsHoveringSelector] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
 
@@ -210,8 +213,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       const availableWidth = width - 24;
 
       if (width < 640) { // Mobile
-        // Scale to fit full A4 width within available viewport
-        const mobileScale = availableWidth / a4WidthPx;
+        // Account for outer card padding (p-4 = 16px * 2) + inner scroll container padding (p-3 = 12px * 2)
+        const totalPadding = 16 * 2 + 12 * 2; // 56px
+        const mobileAvailable = width - totalPadding;
+        const mobileScale = mobileAvailable / a4WidthPx;
         setScale(Math.max(mobileScale, 0.35)); // Min 0.35 for very small screens
       } else if (width < 768) { // Tablet
         setScale(0.75);
@@ -413,45 +418,107 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       <GlassCard className="flex-1 flex flex-col backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
-        <div className="flex items-center justify-between p-4 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
-          <div>
-            <h3 className="text-lg font-bold text-white transition-opacity duration-300">{selectedTemplate.name}</h3>
-            <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
-              {contentLanguage && (
-                <span className="ms-2 px-2 py-0.5 bg-white/10 rounded text-xs font-medium">
-                  {contentLanguage === 'ar'
-                    ? t('sections.templates.languageArabic', 'العربية')
-                    : contentLanguage === 'mixed'
-                      ? t('sections.templates.languageMixed', 'Mixed')
-                      : t('sections.templates.languageEnglish', 'English')}
-                </span>
+        <div className="flex flex-col gap-3 p-4 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
+          {/* Top row: title + desktop buttons */}
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <h3 className="text-lg font-bold text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
+              <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
+                {contentLanguage && (
+                  <span className="ms-2 px-2 py-0.5 bg-white/10 rounded text-xs font-medium">
+                    {contentLanguage === 'ar'
+                      ? t('sections.templates.languageArabic', 'العربية')
+                      : contentLanguage === 'mixed'
+                        ? t('sections.templates.languageMixed', 'Mixed')
+                        : t('sections.templates.languageEnglish', 'English')}
+                  </span>
+                )}
+              </p>
+            </div>
+
+            {/* Desktop-only action buttons */}
+            <div className="hidden md:flex gap-3">
+              <GlassButton
+                onClick={() => setIsEditorOpen(true)}
+                variant="secondary"
+                disabled={!hasRealResume}
+                className="border border-white/20"
+              >
+                <Edit3 className="w-4 h-4 me-2" />
+                {t('sections.templates.editData', 'Edit Data')}
+              </GlassButton>
+
+              {hasAppliedOptimizations && (
+                <GlassButton
+                  onClick={() => setIsCompareOpen(true)}
+                  variant="secondary"
+                  className="border border-white/20"
+                >
+                  <ArrowLeftRight className="w-4 h-4 me-2" />
+                  {t('sections.templates.compare', 'View Changes')}
+                </GlassButton>
               )}
-            </p>
+
+              <GlassButton
+                onClick={handleDownloadPdf}
+                variant="primary"
+                disabled={!hasRealResume || isDownloading}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-lg"
+              >
+                {isDownloading ? t('sections.templates.generating', 'Generating...') : (
+                  <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
+                )}
+              </GlassButton>
+
+              <GlassButton
+                onClick={handleDownloadDocx}
+                variant="secondary"
+                disabled={!hasRealResume || isDownloadingDocx}
+                className="border border-white/20"
+              >
+                {isDownloadingDocx ? t('sections.templates.generating', 'Generating...') : (
+                  <><FileText className="w-4 h-4 me-2" />{t('sections.templates.downloadDocx', 'DOCX')}</>
+                )}
+              </GlassButton>
+            </div>
           </div>
 
-          <KeywordBoldingToggle />
-
-          <div className="flex gap-3">
+          {/* Mobile-only action row: compact icon buttons */}
+          <div className="flex md:hidden gap-2">
             <GlassButton
               onClick={() => setIsEditorOpen(true)}
               variant="secondary"
               disabled={!hasRealResume}
-              className="border border-white/20"
+              size="sm"
+              className="border border-white/20 flex-1"
             >
-              <Edit3 className="w-4 h-4 me-2" />
-              {t('sections.templates.editData', 'Edit Data')}
+              <Edit3 className="w-4 h-4 me-1" />
+              <span className="text-xs">{t('sections.templates.editData', 'Edit Data')}</span>
             </GlassButton>
+
+            {hasAppliedOptimizations && (
+              <GlassButton
+                onClick={() => setIsCompareOpen(true)}
+                variant="secondary"
+                size="sm"
+                className="border border-white/20 flex-1"
+              >
+                <ArrowLeftRight className="w-4 h-4 me-1" />
+                <span className="text-xs">{t('sections.templates.compare', 'Changes')}</span>
+              </GlassButton>
+            )}
 
             <GlassButton
               onClick={handleDownloadPdf}
               variant="primary"
               disabled={!hasRealResume || isDownloading}
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-lg"
+              size="sm"
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg flex-1"
             >
-              {isDownloading ? t('sections.templates.generating', 'Generating...') : (
-                <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
+              {isDownloading ? <span className="text-xs">{t('sections.templates.generating', '...')}</span> : (
+                <><Download className="w-4 h-4 me-1" /><span className="text-xs">PDF</span></>
               )}
             </GlassButton>
 
@@ -459,17 +526,20 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               onClick={handleDownloadDocx}
               variant="secondary"
               disabled={!hasRealResume || isDownloadingDocx}
-              className="border border-white/20"
+              size="sm"
+              className="border border-white/20 flex-1"
             >
-              {isDownloadingDocx ? t('sections.templates.generating', 'Generating...') : (
-                <><FileText className="w-4 h-4 me-2" />{t('sections.templates.downloadDocx', 'DOCX')}</>
+              {isDownloadingDocx ? <span className="text-xs">...</span> : (
+                <><FileText className="w-4 h-4 me-1" /><span className="text-xs">DOCX</span></>
               )}
             </GlassButton>
           </div>
+
+          <KeywordBoldingToggle />
         </div>
 
-        {/* Zoom Controls Overlay - RTL aware: left in Arabic, right in LTR */}
-        <div className="absolute top-24 right-4 md:right-6 rtl:right-auto rtl:left-4 rtl:md:left-6 z-30 flex flex-col gap-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
+        {/* Zoom Controls Overlay - hidden on mobile (auto-fit), shown on desktop on hover */}
+        <div className="hidden md:flex absolute top-24 right-4 md:right-6 rtl:right-auto rtl:left-4 rtl:md:left-6 z-30 flex-col gap-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handleZoomIn}
             className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
@@ -543,22 +613,27 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               <div
                 className={cn(
                   "fixed z-50 flex justify-center",
-                  isDragging ? "cursor-grabbing" : "cursor-grab",
+                  // Desktop: draggable with hover opacity
+                  "md:cursor-grab",
+                  isDragging && "md:cursor-grabbing",
                   "transition-opacity duration-200",
-                  isHoveringSelector || isDragging ? "opacity-100" : "opacity-70"
+                  // Mobile: always full opacity; Desktop: fade unless hovered/dragged
+                  "opacity-100 md:opacity-70",
+                  (isHoveringSelector || isDragging) && "md:opacity-100"
                 )}
                 style={{
-                  bottom: `calc(24px - ${barPosition.y}px)`,
+                  bottom: `calc(max(24px, env(safe-area-inset-bottom, 0px) + 8px) - ${barPosition.y}px)`,
                   left: `calc(50% + ${barPosition.x}px)`,
                   transform: 'translateX(-50%)',
+                  maxWidth: 'calc(100vw - 16px)',
                 }}
                 onMouseEnter={() => setIsHoveringSelector(true)}
                 onMouseLeave={() => !isDragging && setIsHoveringSelector(false)}
               >
-                <div className="flex items-center gap-1 px-2 py-2 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
-                  {/* Drag Handle */}
+                <div className="flex items-center gap-1 px-2 py-2 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl overflow-x-auto max-w-full no-scrollbar">
+                  {/* Drag Handle - hidden on mobile for space */}
                   <div
-                    className="p-2 text-white/50 hover:text-white cursor-grab active:cursor-grabbing touch-none"
+                    className="hidden md:block p-2 text-white/50 hover:text-white cursor-grab active:cursor-grabbing touch-none shrink-0"
                     onMouseDown={handleDragStart}
                     onTouchStart={handleDragStart}
                   >
@@ -573,7 +648,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                         key={template.id}
                         onClick={() => handleSelectTemplate(template)}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200",
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0",
                           isSelected
                             ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md scale-105"
                             : "text-white/70 hover:text-white hover:bg-white/10"
@@ -607,6 +682,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
       />
+
+      {/* Resume Diff View Modal */}
+      {isCompareOpen && (
+        <Suspense fallback={null}>
+          <ResumeDiffView
+            isOpen={isCompareOpen}
+            onClose={() => setIsCompareOpen(false)}
+            optimizations={optimizations}
+          />
+        </Suspense>
+      )}
     </div >
   );
 }
@@ -625,7 +711,7 @@ function KeywordBoldingToggle() {
   }
 
   return (
-    <div className="flex items-center gap-2 mt-3 mb-2 px-1">
+    <div className="flex items-center gap-2 px-1">
       <input
         type="checkbox"
         id="bold-keywords-toggle"

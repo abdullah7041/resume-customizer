@@ -301,14 +301,13 @@ export default function UploadCard({
 
       {isSaved && fileName && (
         <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-ink shadow-[0_4px_20px_-4px_rgba(16,185,129,0.2)] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
-              {/* Check icon (manual SVG to avoid import issues if verify fails otherwise, but I will try use CheckCircle later or just SVG here for safety) */}
               <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <span className="font-bold text-emerald-100">Resume Ready & Saved</span>
               <span className="truncate text-xs text-emerald-200/80 font-mono">{fileName}</span>
             </div>
@@ -329,11 +328,11 @@ export default function UploadCard({
       {/* File Selected Indicator (Not Saved Yet) */}
       {fileName && !isSaved && (
         <div className="mt-6 flex items-center justify-between rounded-xl border border-blue-500/30 bg-blue-500/10 px-5 py-4 text-sm text-ink shadow-[0_4px_20px_-4px_rgba(59,130,246,0.2)] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 border border-blue-500/30">
               <FileText className="h-5 w-5 text-blue-400" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <span className="font-bold text-blue-100">Ready to Prepare</span>
               <span className="truncate text-xs text-blue-200/80 font-mono">{fileName}</span>
             </div>
@@ -388,7 +387,7 @@ export default function UploadCard({
           <label className="relative flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-white/5 cursor-pointer hover:bg-white/[0.07] transition-all group overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/0 group-hover:to-emerald-500/0 transition-all duration-500" />
 
-            <div className="flex items-center gap-3 relative z-10 w-full sm:w-auto">
+            <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
               <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
                 <span className="text-xl drop-shadow-md">🇸🇦</span>
               </div>
