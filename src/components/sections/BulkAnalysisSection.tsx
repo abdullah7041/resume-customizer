@@ -185,7 +185,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   const [isDragging, setIsDragging] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingResumeId, setPendingResumeId] = useState<string | null>(null);
+  const [pendingResumeIds, setPendingResumeIds] = useState<string[]>([]);
 
   // Save to localStorage
   useEffect(() => {
@@ -243,7 +243,13 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
         if (!response.ok) throw new Error(`Analysis failed: ${response.statusText}`);
 
         const aiAnalysis = await response.json();
-        setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, analysis: aiAnalysis, status: 'completed' as const } : r));
+        // Normalize: backend returns strongMatches/matched_keywords, UI expects topHits/matchedKeywords
+        const normalizedAnalysis: ResumeAnalysis = {
+          ...aiAnalysis,
+          topHits: aiAnalysis.topHits || aiAnalysis.strongMatches || aiAnalysis.matched_keywords || [],
+          matchedKeywords: aiAnalysis.matchedKeywords || aiAnalysis.strongMatches || aiAnalysis.matched_keywords || [],
+        };
+        setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, analysis: normalizedAnalysis, status: 'completed' as const } : r));
 
         // Refetch credits after each resume analysis
         setTimeout(() => refetchCredits(), 500);
@@ -255,28 +261,32 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     }
   }, [jobDescription, refetchCredits]);
 
-  // Wrapper function to show confirmation before processing
-  const processResume = useCallback((resumeId: string, file: File) => {
+  // Wrapper: collect all pending resume IDs and show one confirmation modal
+  const processResume = useCallback((resumeId: string, _file: File) => {
     if (!jobDescription) {
       // If no job description, process without credits (just parsing)
-      processResumeActual(resumeId, file);
+      processResumeActual(resumeId, _file);
       return;
     }
-    // Store pending resume for confirmation
-    setPendingResumeId(resumeId);
+    // Accumulate pending IDs — modal shown once for the batch
+    setPendingResumeIds(prev => [...prev, resumeId]);
     setShowConfirmModal(true);
   }, [jobDescription, processResumeActual]);
 
-  // Handler for confirmed analysis
+  // Handler for confirmed analysis — processes ALL pending resumes
   const handleConfirmAnalysis = async () => {
     setShowConfirmModal(false);
-    if (pendingResumeId) {
-      const resume = resumes.find(r => r.id === pendingResumeId);
-      if (resume?.file) {
-        await processResumeActual(pendingResumeId, resume.file);
-      }
-      setPendingResumeId(null);
-    }
+    const ids = [...pendingResumeIds];
+    setPendingResumeIds([]);
+    await Promise.all(
+      ids.map(id => {
+        const resume = resumes.find(r => r.id === id);
+        if (resume?.file) {
+          return processResumeActual(id, resume.file);
+        }
+        return Promise.resolve();
+      })
+    );
   };
 
   const handleFiles = useCallback(async (files: FileList) => {
@@ -643,7 +653,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
         isOpen={showConfirmModal}
         onClose={() => {
           setShowConfirmModal(false);
-          setPendingResumeId(null);
+          setPendingResumeIds([]);
         }}
         onConfirm={handleConfirmAnalysis}
         feature="ai_match"
