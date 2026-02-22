@@ -302,21 +302,40 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       // Get fully rendered HTML including computed styles
       const html = previewElement.outerHTML;
 
-      const response = await fetch('/.netlify/functions/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          html,
-          templateId: selectedTemplate.id,
-        }),
-      });
+      // Try server-side PDF generation first (higher quality, Puppeteer-based)
+      let serverSuccess = false;
+      try {
+        const { getAuthHeaders } = await import('../../services/api');
+        const headers = await getAuthHeaders();
+        const response = await fetch('/.netlify/functions/generate-pdf', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            html,
+            templateId: selectedTemplate.id,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('PDF generation failed');
+        if (response.ok) {
+          const blob = await response.blob();
+          saveAs(blob, filename);
+          serverSuccess = true;
+        }
+      } catch {
+        // Server unavailable — fall through to client-side
       }
 
-      const blob = await response.blob();
-      saveAs(blob, filename);
+      // Client-side fallback: open print dialog (works offline, no server needed)
+      if (!serverSuccess) {
+        const { exportResumeToPdf } = await import('../../services/exportPdf');
+        await exportResumeToPdf({
+          resumeDocument: resumeData,
+          matchAnalysis: null,
+          optimizations: null,
+          keywords: null,
+          variant: 'styled',
+        });
+      }
 
       // Track PDF export
       analytics.trackExport(selectedTemplate.id, 'pdf');
@@ -325,9 +344,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
       console.error("PDF Download failed:", err);
-      // TODO: Show user-facing error toast
     } finally {
-      // Restore scroll
       setIsDownloading(false);
     }
   };

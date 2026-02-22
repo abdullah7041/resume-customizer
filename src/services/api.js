@@ -11,7 +11,7 @@ const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 
 // Helper to get auth headers
-const getAuthHeaders = async () => {
+export const getAuthHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
 
   try {

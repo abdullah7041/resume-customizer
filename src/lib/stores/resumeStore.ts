@@ -113,7 +113,7 @@ export const useResumeStore = create<ResumeState>()(
         // Zod validation at store boundary
         const validation = validateResume(resume);
         if (!validation.success) {
-          console.warn('[ResumeStore] ⚠️ Resume validation issues:', validation.error);
+          if (import.meta.env.DEV) console.warn('[ResumeStore] ⚠️ Resume validation issues:', validation.error);
           // Still allow storage but log the issues for debugging
         }
 
@@ -149,7 +149,7 @@ export const useResumeStore = create<ResumeState>()(
 
         // Warn if text seems too short
         if (length > 0 && length < 100) {
-          console.warn('[ResumeStore] ⚠️ WARNING: Parsed text is very short! This may indicate a PDF extraction issue.');
+          if (import.meta.env.DEV) console.warn('[ResumeStore] ⚠️ WARNING: Parsed text is very short! This may indicate a PDF extraction issue.');
         }
 
         set({
@@ -168,7 +168,7 @@ export const useResumeStore = create<ResumeState>()(
         // Zod validation at store boundary
         const validation = validateOptimization(fullOptimization);
         if (!validation.success) {
-          console.warn('[ResumeStore] ⚠️ Optimization validation issues:', validation.error);
+          if (import.meta.env.DEV) console.warn('[ResumeStore] ⚠️ Optimization validation issues:', validation.error);
           // Still allow storage but log the issues
         }
 
@@ -363,7 +363,7 @@ export const useResumeStore = create<ResumeState>()(
                   sectionId: opt.sectionId,
                   originalPreview: originalValue.substring(0, 60),
                 });
-                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
                   originalPreview: originalValue.substring(0, 60),
                   sectionId: opt.sectionId,
                 });
@@ -413,7 +413,7 @@ export const useResumeStore = create<ResumeState>()(
                   sectionId: opt.sectionId,
                   originalPreview: originalValue.substring(0, 60),
                 });
-                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
                   originalPreview: originalValue.substring(0, 60),
                   sectionId: opt.sectionId,
                 });
@@ -473,7 +473,7 @@ export const useResumeStore = create<ResumeState>()(
                   sectionId: opt.sectionId,
                   originalPreview: originalValue.substring(0, 60),
                 });
-                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
                   originalPreview: originalValue.substring(0, 60),
                   sectionId: opt.sectionId,
                 });
@@ -539,7 +539,7 @@ export const useResumeStore = create<ResumeState>()(
                   sectionId: opt.sectionId,
                   originalPreview: originalValue.substring(0, 60),
                 });
-                console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
+                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
                   originalPreview: originalValue.substring(0, 60),
                   optimizedPreview: optimizedValue.substring(0, 60),
                   sectionId: opt.sectionId,
@@ -550,13 +550,13 @@ export const useResumeStore = create<ResumeState>()(
             }
 
             default:
-              console.warn(`[ResumeStore] Unknown sectionType: ${opt.sectionType}`);
+              if (import.meta.env.DEV) console.warn(`[ResumeStore] Unknown sectionType: ${opt.sectionType}`);
           }
         }
 
         // Log merge diagnostics for debugging
         if (diagnostics.failedCount > 0) {
-          console.warn('[ResumeStore] Merge diagnostics:', diagnostics);
+          if (import.meta.env.DEV) console.warn('[ResumeStore] Merge diagnostics:', diagnostics);
         }
 
         // Saudi nationality: prepend "Saudi" to summary for Saudization ATS

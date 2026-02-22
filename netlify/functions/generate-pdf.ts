@@ -6,7 +6,7 @@ import type { Handler } from "@netlify/functions";
 import chromium from "@sparticuz/chromium";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { withRateLimit } from "../lib/rate-limiter";
-import { getSupabaseClient } from "../lib/supabase-client";
+
 
 import { existsSync } from "fs";
 
@@ -109,44 +109,8 @@ const baseHandler: Handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  // Extract auth token from header
-  const authHeader = event.headers.authorization || event.headers.Authorization;
-
-  if (!authHeader) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Authentication required. Please sign in."
-      })
-    };
-  }
-
-  // Verify token and get authenticated user
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-  const supabase = getSupabaseClient();
-
-  if (!supabase) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Server configuration error. Please contact support."
-      })
-    };
-  }
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Invalid or expired authentication token"
-      })
-    };
-  }
+  // Auth is optional for PDF generation — rate limiting via withRateLimit prevents abuse.
+  // PDF is a stateless HTML→PDF render, no AI credits or user data accessed.
 
   let page: Page | null = null; // Declare outside try block for cleanup access
 
