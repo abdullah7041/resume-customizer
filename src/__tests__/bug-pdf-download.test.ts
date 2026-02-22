@@ -16,11 +16,15 @@ describe('PDF download auth bug', () => {
     // Must use getAuthHeaders for the server call
     const hasFetchWithAuth = source.includes('getAuthHeaders') && source.includes('generate-pdf');
 
-    // Must have client-side fallback (exportResumeToPdf uses window.print)
-    const hasClientFallback = source.includes('exportResumeToPdf');
+    // Must have client-side fallback using print with the same preview HTML
+    const hasClientFallback = source.includes('window.print') || source.includes('.print()');
+
+    // Must build self-contained HTML with inlined styles (not raw outerHTML)
+    const hasInlinedHtml = source.includes('buildInlinedHtml');
 
     expect(hasFetchWithAuth).toBe(true);
     expect(hasClientFallback).toBe(true);
+    expect(hasInlinedHtml).toBe(true);
   });
 });
 

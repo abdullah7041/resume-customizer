@@ -94,6 +94,67 @@ function getSmartFilename(resume: Partial<ResumeSchema> | null, templateId: stri
   return position ? `${name}_${position}.${ext}` : `${name}_Resume.${ext}`;
 }
 
+/**
+ * Build a self-contained HTML document from the preview element with all
+ * computed styles inlined. This eliminates Tailwind class dependencies and
+ * keeps the payload small enough for the Netlify function (< 6MB).
+ */
+function buildInlinedHtml(element: HTMLElement): string {
+  // Clone and inline computed styles on every element
+  const clone = element.cloneNode(true) as HTMLElement;
+
+  const inlineStyles = (source: HTMLElement, target: HTMLElement) => {
+    const computed = window.getComputedStyle(source);
+    // Only inline non-default properties to keep size small
+    const dominated = [
+      'color', 'background-color', 'background-image', 'background',
+      'font-family', 'font-size', 'font-weight', 'font-style',
+      'line-height', 'letter-spacing', 'text-align', 'text-decoration', 'text-transform',
+      'display', 'flex-direction', 'flex-wrap', 'align-items', 'justify-content', 'gap',
+      'grid-template-columns', 'grid-template-rows', 'grid-column', 'grid-row',
+      'width', 'max-width', 'min-width', 'height', 'max-height', 'min-height',
+      'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+      'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+      'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+      'border-radius', 'border-color', 'border-width', 'border-style',
+      'position', 'top', 'right', 'bottom', 'left',
+      'overflow', 'white-space', 'word-break', 'text-overflow',
+      'box-sizing', 'opacity', 'visibility', 'list-style-type',
+      'column-count', 'column-gap',
+    ];
+    let style = '';
+    for (const prop of dominated) {
+      const value = computed.getPropertyValue(prop);
+      if (value && value !== 'none' && value !== 'normal' && value !== 'auto' && value !== '0px'
+        && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') {
+        style += `${prop}:${value};`;
+      }
+    }
+    if (style) target.setAttribute('style', style);
+    target.removeAttribute('class');
+
+    const sourceChildren = source.children;
+    const targetChildren = target.children;
+    for (let i = 0; i < sourceChildren.length; i++) {
+      if (sourceChildren[i] instanceof HTMLElement && targetChildren[i] instanceof HTMLElement) {
+        inlineStyles(sourceChildren[i] as HTMLElement, targetChildren[i] as HTMLElement);
+      }
+    }
+  };
+
+  inlineStyles(element, clone);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff}
+svg{display:inline-block;vertical-align:middle}
+</style></head>
+<body>${clone.outerHTML}</body>
+</html>`;
+}
+
 interface TemplateGalleryProps {
   resumeData?: ResumeSchema | null;
   optimizationData?: unknown;
@@ -294,15 +355,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
     try {
       // Capture rendered HTML from preview container
-      const previewElement = document.querySelector('[data-resume-preview]');
+      const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
       if (!previewElement) {
         throw new Error('Preview not found - unable to capture HTML');
       }
 
-      // Get fully rendered HTML including computed styles
-      const html = previewElement.outerHTML;
+      // Build self-contained HTML with inlined computed styles.
+      // Raw outerHTML contains Tailwind class names that Puppeteer can't resolve
+      // without the full stylesheet, and the payload can exceed Netlify's 6MB limit.
+      const html = buildInlinedHtml(previewElement);
 
-      // Try server-side PDF generation first (higher quality, Puppeteer-based)
+      // Try server-side PDF generation (Puppeteer-based, pixel-perfect)
       let serverSuccess = false;
       try {
         const { getAuthHeaders } = await import('../../services/api');
@@ -320,21 +383,25 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           const blob = await response.blob();
           saveAs(blob, filename);
           serverSuccess = true;
+        } else if (import.meta.env.DEV) {
+          const text = await response.text();
+          console.warn('[PDF] Server returned', response.status, text);
         }
-      } catch {
-        // Server unavailable — fall through to client-side
+      } catch (serverErr) {
+        if (import.meta.env.DEV) console.warn('[PDF] Server unavailable, using print fallback:', serverErr);
       }
 
-      // Client-side fallback: open print dialog (works offline, no server needed)
+      // Client-side fallback: open print dialog with the same preview HTML
       if (!serverSuccess) {
-        const { exportResumeToPdf } = await import('../../services/exportPdf');
-        await exportResumeToPdf({
-          resumeDocument: resumeData,
-          matchAnalysis: null,
-          optimizations: null,
-          keywords: null,
-          variant: 'styled',
-        });
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.addEventListener('load', () => {
+            printWindow.print();
+            setTimeout(() => printWindow.close(), 1000);
+          });
+        }
       }
 
       // Track PDF export

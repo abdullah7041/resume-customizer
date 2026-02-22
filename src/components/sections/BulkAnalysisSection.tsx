@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF and jspdf-autotable are dynamically imported in exportComparison() to avoid bundling ~344 KB in the main chunk
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
@@ -335,7 +334,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     setResumes(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  const exportComparison = () => {
+  const exportComparison = async () => {
+    const { jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+
     const completedResumes = resumes.filter(r => r.status === 'completed' && r.analysis);
     const sortedResumes = [...completedResumes].sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
 
@@ -385,7 +387,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     });
 
     // Missing Keywords per Resume
-    let currentY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || tableStartY + 50;
+    let currentY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || tableStartY + 50;
 
     sortedResumes.forEach((resume, idx) => {
       const missing = resume.analysis?.missingKeywords || [];
