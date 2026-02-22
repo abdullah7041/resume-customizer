@@ -190,8 +190,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       const a4WidthPx = 793;
 
       if (width < 640) { // Mobile
-        // Account for outer card padding (p-4 = 16px * 2) + inner scroll container padding (p-3 = 12px * 2)
-        const totalPadding = 16 * 2 + 12 * 2; // 56px
+        // MainContent p-4 (32px) + GlassCard border (2px) + scroll container p-2 (16px) = 50px
+        const totalPadding = 16 * 2 + 2 + 8 * 2; // 50px
         const mobileAvailable = width - totalPadding;
         const mobileScale = mobileAvailable / a4WidthPx;
         setScale(Math.max(mobileScale, 0.35)); // Min 0.35 for very small screens
@@ -376,15 +376,15 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   return (
     <div className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
       {/* Full-Width Preview */}
-      <GlassCard className="flex-1 flex flex-col backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0 relative group">
+      <GlassCard padding="none" className="flex-1 flex flex-col backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
-        <div className="flex flex-col gap-3 p-4 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
+        <div className="flex flex-col gap-2 p-3 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
           {/* Top row: title + desktop buttons */}
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <h3 className="text-lg font-bold text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
-              <p className="text-sm text-white/60 flex items-center gap-1.5 mt-1">
+              <h3 className="text-base md:text-lg font-bold text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
+              <p className="text-xs md:text-sm text-white/60 flex items-center gap-1.5 mt-0.5">
                 <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
                 {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
                 {contentLanguage && (
@@ -446,17 +446,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             </div>
           </div>
 
-          {/* Mobile-only action row: icon buttons with short labels */}
-          <div className="flex md:hidden gap-1.5">
+          {/* Mobile-only action row */}
+          <div className="flex md:hidden flex-wrap gap-1.5">
             <GlassButton
               onClick={handleDownloadPdf}
               variant="primary"
               disabled={!hasRealResume || isDownloading}
               size="sm"
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg px-3"
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
-              <Download className="w-4 h-4 shrink-0" />
-              <span className="text-xs ms-1">PDF</span>
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span className="ms-1">PDF</span>
             </GlassButton>
 
             <GlassButton
@@ -464,10 +464,21 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               variant="secondary"
               disabled={!hasRealResume || isDownloadingDocx}
               size="sm"
-              className="border border-white/20 px-3"
+              className="border border-white/20 !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
-              <FileText className="w-4 h-4 shrink-0" />
-              <span className="text-xs ms-1">DOCX</span>
+              <FileText className="w-3.5 h-3.5 shrink-0" />
+              <span className="ms-1">DOCX</span>
+            </GlassButton>
+
+            <GlassButton
+              onClick={() => setIsEditorOpen(true)}
+              variant="secondary"
+              disabled={!hasRealResume}
+              size="sm"
+              className="border border-white/20 !px-2.5 !py-1.5 !rounded-lg !text-xs"
+            >
+              <Edit3 className="w-3.5 h-3.5 shrink-0" />
+              <span className="ms-1">{t('sections.templates.editData', 'Edit')}</span>
             </GlassButton>
 
             {hasAppliedOptimizations && (
@@ -475,25 +486,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 onClick={() => setIsCompareOpen(true)}
                 variant="secondary"
                 size="sm"
-                className="border border-white/20 px-3"
-                title={t('sections.templates.compare', 'View Changes')}
+                className="border border-white/20 !px-2.5 !py-1.5 !rounded-lg !text-xs"
               >
-                <ArrowLeftRight className="w-4 h-4 shrink-0" />
-                <span className="text-xs ms-1">{t('sections.templates.compare', 'Changes')}</span>
+                <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
+                <span className="ms-1">{t('sections.templates.compare', 'Changes')}</span>
               </GlassButton>
             )}
-
-            <GlassButton
-              onClick={() => setIsEditorOpen(true)}
-              variant="secondary"
-              disabled={!hasRealResume}
-              size="sm"
-              className="border border-white/20 px-3"
-              title={t('sections.templates.editData', 'Edit Data')}
-            >
-              <Edit3 className="w-4 h-4 shrink-0" />
-              <span className="text-xs ms-1">{t('sections.templates.editData', 'Edit')}</span>
-            </GlassButton>
           </div>
 
           <KeywordBoldingToggle />
@@ -545,7 +543,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
 
           {/* Resume Preview - Right Side - Fit on screen, use zoom controls */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 md:p-6">
             <div className="w-full flex justify-center pb-32 md:pb-20 pt-4">
               {/* Dynamic Scale Wrapper - centered and fit to viewport */}
               <div
