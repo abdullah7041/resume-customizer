@@ -309,7 +309,7 @@ export default function UploadCard({
             </div>
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-emerald-100">Resume Ready & Saved</span>
-              <span className="truncate text-xs text-emerald-200/80 font-mono">{fileName}</span>
+              <span className="text-xs text-emerald-200/80 font-mono break-all line-clamp-2">{fileName}</span>
             </div>
           </div>
 
@@ -334,7 +334,7 @@ export default function UploadCard({
             </div>
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-blue-100">Ready to Prepare</span>
-              <span className="truncate text-xs text-blue-200/80 font-mono">{fileName}</span>
+              <span className="text-xs text-blue-200/80 font-mono break-all line-clamp-2">{fileName}</span>
             </div>
           </div>
 
@@ -384,24 +384,24 @@ export default function UploadCard({
 
       {isSaved && (
         <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
-          <label className="relative flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-white/5 cursor-pointer hover:bg-white/[0.07] transition-all group overflow-hidden">
+          <label className="relative flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border border-white/10 bg-white/5 cursor-pointer hover:bg-white/[0.07] transition-all group overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/0 group-hover:to-emerald-500/0 transition-all duration-500" />
 
             <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
-              <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
-                <span className="text-xl drop-shadow-md">🇸🇦</span>
+              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
+                <span className="text-lg sm:text-xl drop-shadow-md">🇸🇦</span>
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-sm font-semibold text-white group-hover:text-emerald-100 transition-colors truncate">
+                <span className="text-sm font-semibold text-white group-hover:text-emerald-100 transition-colors">
                   {t('upload.card.saudi.label')}
                 </span>
-                <span className="text-[10px] sm:text-xs text-emerald-200/60 font-medium truncate sm:whitespace-normal">
+                <span className="text-[10px] sm:text-xs text-emerald-200/60 font-medium">
                   {t('upload.card.saudi.description')}
                 </span>
               </div>
             </div>
 
-            <div className="relative z-10 shrink-0 ms-auto">
+            <div className="relative z-10 shrink-0">
               <input
                 type="checkbox"
                 checked={isSaudiNational}

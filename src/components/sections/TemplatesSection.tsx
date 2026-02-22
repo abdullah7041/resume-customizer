@@ -5,7 +5,7 @@ import { useState, useMemo, useLayoutEffect, useRef, useCallback, lazy, Suspense
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal, FileText, Info, ArrowLeftRight } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal, FileText, ArrowLeftRight } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -188,8 +188,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       const width = window.innerWidth;
       // A4 width in pixels at 96 DPI = 210mm * 96 / 25.4 ≈ 793px
       const a4WidthPx = 793;
-      // Account for padding (p-3 = 12px on each side = 24px total)
-      const availableWidth = width - 24;
 
       if (width < 640) { // Mobile
         // Account for outer card padding (p-4 = 16px * 2) + inner scroll container padding (p-3 = 12px * 2)
@@ -448,41 +446,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             </div>
           </div>
 
-          {/* Mobile-only action row: compact icon buttons */}
-          <div className="flex md:hidden gap-2">
-            <GlassButton
-              onClick={() => setIsEditorOpen(true)}
-              variant="secondary"
-              disabled={!hasRealResume}
-              size="sm"
-              className="border border-white/20 flex-1"
-            >
-              <Edit3 className="w-4 h-4 me-1" />
-              <span className="text-xs">{t('sections.templates.editData', 'Edit Data')}</span>
-            </GlassButton>
-
-            {hasAppliedOptimizations && (
-              <GlassButton
-                onClick={() => setIsCompareOpen(true)}
-                variant="secondary"
-                size="sm"
-                className="border border-white/20 flex-1"
-              >
-                <ArrowLeftRight className="w-4 h-4 me-1" />
-                <span className="text-xs">{t('sections.templates.compare', 'Changes')}</span>
-              </GlassButton>
-            )}
-
+          {/* Mobile-only action row: icon buttons with short labels */}
+          <div className="flex md:hidden gap-1.5">
             <GlassButton
               onClick={handleDownloadPdf}
               variant="primary"
               disabled={!hasRealResume || isDownloading}
               size="sm"
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg flex-1"
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg px-3"
             >
-              {isDownloading ? <span className="text-xs">{t('sections.templates.generating', '...')}</span> : (
-                <><Download className="w-4 h-4 me-1" /><span className="text-xs">PDF</span></>
-              )}
+              <Download className="w-4 h-4 shrink-0" />
+              <span className="text-xs ms-1">PDF</span>
             </GlassButton>
 
             <GlassButton
@@ -490,11 +464,35 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               variant="secondary"
               disabled={!hasRealResume || isDownloadingDocx}
               size="sm"
-              className="border border-white/20 flex-1"
+              className="border border-white/20 px-3"
             >
-              {isDownloadingDocx ? <span className="text-xs">...</span> : (
-                <><FileText className="w-4 h-4 me-1" /><span className="text-xs">DOCX</span></>
-              )}
+              <FileText className="w-4 h-4 shrink-0" />
+              <span className="text-xs ms-1">DOCX</span>
+            </GlassButton>
+
+            {hasAppliedOptimizations && (
+              <GlassButton
+                onClick={() => setIsCompareOpen(true)}
+                variant="secondary"
+                size="sm"
+                className="border border-white/20 px-3"
+                title={t('sections.templates.compare', 'View Changes')}
+              >
+                <ArrowLeftRight className="w-4 h-4 shrink-0" />
+                <span className="text-xs ms-1">{t('sections.templates.compare', 'Changes')}</span>
+              </GlassButton>
+            )}
+
+            <GlassButton
+              onClick={() => setIsEditorOpen(true)}
+              variant="secondary"
+              disabled={!hasRealResume}
+              size="sm"
+              className="border border-white/20 px-3"
+              title={t('sections.templates.editData', 'Edit Data')}
+            >
+              <Edit3 className="w-4 h-4 shrink-0" />
+              <span className="text-xs ms-1">{t('sections.templates.editData', 'Edit')}</span>
             </GlassButton>
           </div>
 
@@ -674,7 +672,7 @@ function KeywordBoldingToggle() {
   }
 
   return (
-    <div className="flex items-center gap-2 px-1">
+    <label htmlFor="bold-keywords-toggle" className="flex items-center gap-2 px-1 cursor-pointer select-none">
       <input
         type="checkbox"
         id="bold-keywords-toggle"
@@ -682,18 +680,11 @@ function KeywordBoldingToggle() {
         onChange={(e) => {
           useResumeStore.getState().setDisplayOptions({ boldKeywords: e.target.checked });
         }}
-        className="w-4 h-4 text-emerald-600 bg-white/10 border-white/30 rounded focus:ring-emerald-500 focus:ring-offset-0 focus:ring-2 cursor-pointer"
+        className="w-4 h-4 shrink-0 text-emerald-600 bg-white/10 border-white/30 rounded focus:ring-emerald-500 focus:ring-offset-0 focus:ring-2 cursor-pointer"
       />
-      <label htmlFor="bold-keywords-toggle" className="text-sm text-white/80 cursor-pointer select-none">
+      <span className="text-xs sm:text-sm text-white/80">
         {t('sections.templates.boldKeywords', 'Bold important keywords in DOCX exports')}
-      </label>
-      <div className="relative inline-flex" onMouseEnter={(e) => { const tip = e.currentTarget.querySelector('[data-tooltip]') as HTMLElement; if (tip) tip.style.display = 'block'; }} onMouseLeave={(e) => { const tip = e.currentTarget.querySelector('[data-tooltip]') as HTMLElement; if (tip) tip.style.display = 'none'; }}>
-        <Info className="w-4 h-4 text-white/40 hover:text-white/60 cursor-help transition-colors" />
-        <div data-tooltip style={{ display: 'none' }} className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white/90 text-xs rounded-lg shadow-xl border border-white/10 z-50 pointer-events-none">
-          {t('sections.templates.boldKeywordsTooltip', 'Emphasizes top 15 keywords from job description in downloaded DOCX files (resume + cover letter)')}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/90" />
-        </div>
-      </div>
-    </div>
+      </span>
+    </label>
   );
 }
