@@ -7,8 +7,7 @@ import { useConsentStore } from '../../lib/stores/consentStore';
 import { analytics } from '../../services/analytics';
 
 export function ConsentBanner() {
-  const { t, i18n } = useTranslation();
-  const isRTL = i18n.dir() === 'rtl';
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const { hasConsented, acceptAll, rejectAll } = useConsentStore();
 
@@ -29,7 +28,7 @@ export function ConsentBanner() {
         'fixed z-50 transition-all duration-500 ease-out transform',
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none',
         'bottom-4 sm:bottom-6',
-        isRTL ? 'left-4 sm:left-6' : 'right-4 sm:right-6',
+        'end-4 sm:end-6',
         'w-[calc(100vw-32px)] sm:w-[380px]'
       )}
     >

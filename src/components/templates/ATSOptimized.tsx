@@ -1,6 +1,5 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
-import { useDirection } from '../providers/DirectionProvider';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
 
 // Default display options if not provided
@@ -29,7 +28,6 @@ export function ATSOptimized({
     displayOptions,
 }: TemplateProps) {
     const getSectionLabel = useSectionLabel();
-    const { isRTL } = useDirection();
 
     // Merge displayOptions with defaults
     const opts = { ...DEFAULT_OPTIONS, ...displayOptions };
@@ -158,7 +156,7 @@ export function ATSOptimized({
                                 <ul className="mt-2 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
                                     {job.highlights.map((highlight, hIndex) => (
                                         <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
-                                            <span className={isRTL ? 'ml-2' : 'mr-2'}>•</span>
+                                            <span className="me-2">•</span>
                                             <span>{highlight}</span>
                                         </li>
                                     ))}
@@ -185,7 +183,7 @@ export function ATSOptimized({
                                 <ul className="mt-1 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
                                     {project.highlights.map((highlight, hIndex) => (
                                         <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
-                                            <span className={isRTL ? 'ml-2' : 'mr-2'}>•</span>
+                                            <span className="me-2">•</span>
                                             <span>{highlight}</span>
                                         </li>
                                     ))}
@@ -222,7 +220,7 @@ export function ATSOptimized({
                                 <ul className="mt-1 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
                                     {edu.highlights.map((highlight, hIndex) => (
                                         <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
-                                            <span className={isRTL ? 'ml-2' : 'mr-2'}>•</span>
+                                            <span className="me-2">•</span>
                                             <span>{highlight}</span>
                                         </li>
                                     ))}

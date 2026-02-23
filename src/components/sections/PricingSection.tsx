@@ -32,14 +32,13 @@ const plans: PlanConfig[] = [
 
 export function PricingSection() {
     const { t, i18n } = useTranslation();
-    const isRTL = i18n.language === 'ar';
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     return (
         <section
             id="pricing"
             className="py-6 sm:py-10"
-            dir={isRTL ? 'rtl' : 'ltr'}
+            dir={i18n.dir()}
         >
             <div className="space-y-6">
                 {/* Section Header */}

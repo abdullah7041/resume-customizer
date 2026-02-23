@@ -582,7 +582,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         </div>
 
         {/* Zoom Controls Overlay - hidden on mobile (auto-fit), shown on desktop on hover */}
-        <div className="hidden md:flex absolute top-24 right-4 md:right-6 rtl:right-auto rtl:left-4 rtl:md:left-6 z-30 flex-col gap-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
+        <div className="hidden md:flex absolute top-24 end-4 md:end-6 z-30 flex-col gap-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handleZoomIn}
             className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
