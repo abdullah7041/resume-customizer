@@ -19,12 +19,12 @@ const getPrefersReducedMotion = () => {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 };
 
-// Modern glass card styles - transparent black
+// Modern premium glass card styles
 const glassCardClass =
-  "relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-xl transition-all duration-500";
+  "relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 backdrop-blur-xl shadow-xl transition-all duration-500";
 
 const glassCardHoverClass =
-  "hover:border-emerald-400/30 hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)] hover:translate-y-[-2px]";
+  "hover:border-emerald-400/40 hover:shadow-[0_8px_32px_rgba(16,185,129,0.25)] hover:-translate-y-1";
 
 // Icon circle with glow effect
 const iconCircleClass =
@@ -470,11 +470,11 @@ export default function Header() {
         </nav>
 
         {/* Hero section */}
-        <div className={`${containerClass} flex-1 grid items-start gap-4 sm:gap-8 py-4 sm:py-10 lg:py-8 md:grid-cols-[1.5fr_1fr] lg:gap-12`}>
+        <div className={`${containerClass} flex-1 grid items-start gap-4 sm:gap-6 py-4 sm:py-6 lg:py-6 grid-cols-1 md:grid-cols-[1.5fr_1fr] lg:gap-8`}>
           {/* Left column - Main content */}
           <div
             className={cn(
-              "space-y-5 sm:space-y-8 transform-gpu text-center sm:text-left",
+              "space-y-4 sm:space-y-6 transform-gpu text-center sm:text-left",
               prefersReducedMotion
                 ? "opacity-100"
                 : "transition-all duration-700 ease-out",
@@ -502,8 +502,8 @@ export default function Header() {
               </p>
             </div>
 
-            {/* Feature cards - hidden on mobile */}
-            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 gap-4 [&>*:last-child:nth-child(3n+1)]:col-span-2 [&>*:last-child:nth-child(3n+1)]:md:max-w-md [&>*:last-child:nth-child(3n+1)]:md:mx-auto">
+            {/* Feature cards - beautiful responsive grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 [&>*:last-child:nth-child(3n+1)]:col-span-1 [&>*:last-child:nth-child(3n+1)]:md:col-span-2 [&>*:last-child:nth-child(3n+1)]:md:max-w-md [&>*:last-child:nth-child(3n+1)]:md:mx-auto">
               {featureCards.map((card, idx) => (
                 <div
                   key={card.label}
@@ -563,7 +563,7 @@ export default function Header() {
           <div
             className={cn(
               glassCardClass,
-              "p-4 sm:p-6 lg:p-8 self-start hidden md:block",
+              "p-6 sm:p-6 lg:p-8 self-start w-full",
               prefersReducedMotion
                 ? ""
                 : "transition-all duration-700 ease-out",
@@ -581,7 +581,7 @@ export default function Header() {
               <h2 className="text-xl font-bold text-white">{t("header.workflow.title")}</h2>
             </div>
 
-            <ul className="space-y-7 relative">
+            <ul className="space-y-4 relative">
               {/* Connector Line */}
               <div className="absolute left-[1.5rem] top-4 bottom-4 w-px bg-gradient-to-b from-emerald-500/50 via-teal-500/20 to-transparent" />
 

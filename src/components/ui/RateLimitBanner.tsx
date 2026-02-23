@@ -9,7 +9,6 @@ interface RateLimitBannerProps {
 
 export function RateLimitBanner({ retryAfter, onRetry, onDismiss }: RateLimitBannerProps) {
     const { t, i18n } = useTranslation();
-    const isRTL = i18n.language === 'ar';
     const [countdown, setCountdown] = useState(retryAfter);
     const [canRetry, setCanRetry] = useState(false);
 
@@ -37,7 +36,7 @@ export function RateLimitBanner({ retryAfter, onRetry, onDismiss }: RateLimitBan
             className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 
                  bg-amber-500/10 border border-amber-500/30 rounded-xl p-4
                  backdrop-blur-md shadow-lg z-50"
-            dir={isRTL ? 'rtl' : 'ltr'}
+            dir={i18n.dir()}
         >
             <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 w-10 h-10 bg-amber-500/20 rounded-full 

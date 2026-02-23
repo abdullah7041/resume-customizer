@@ -38,6 +38,7 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
     const previousCreditsRef = useRef<UserCredits | null>(null);
     const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isFetchingRef = useRef(false);
+    const hasLoadedOnceRef = useRef(false);
 
     const fetchCredits = useCallback(async (immediate = false) => {
         // Prevent concurrent fetches
@@ -53,7 +54,10 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
 
         try {
             isFetchingRef.current = true;
-            setIsLoading(true);
+            // Only show loading state on initial fetch to prevent layout shift
+            if (!hasLoadedOnceRef.current) {
+                setIsLoading(true);
+            }
             const { data, error: fetchError } = await supabase
                 .from('user_credits')
                 .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date')
@@ -131,6 +135,7 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
         } finally {
             setIsLoading(false);
             isFetchingRef.current = false;
+            hasLoadedOnceRef.current = true;
         }
     }, [user]);
 

@@ -42,10 +42,10 @@ export function Vision2030CalculationModal({
             </div>
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight">
-                {isArabic ? 'منهجية الحساب' : 'Calculation Methodology'}
+                {isArabic ? 'كيف حسبناها؟' : 'Calculation Methodology'}
               </h2>
               <p className="text-xs text-white/70">
-                {isArabic ? 'كيف نقيم توافقك مع الرؤية' : 'How we score your alignment'}
+                {isArabic ? 'وشلون نقيم توافقك مع الرؤية' : 'How we score your alignment'}
               </p>
             </div>
           </div>
@@ -66,11 +66,11 @@ export function Vision2030CalculationModal({
               <Target className="w-40 h-40" />
             </div>
             <h3 className="text-lg font-semibold text-white mb-2 relative z-10">
-              {isArabic ? 'الهدف من التحليل' : 'Analysis Objective'}
+              {isArabic ? 'وش الهدف من هالتحليل؟' : 'Analysis Objective'}
             </h3>
             <p className="text-white/90 leading-relaxed text-sm relative z-10 max-w-2xl">
               {isArabic
-                ? 'نقوم بتحليل سيرتك الذاتية لمطابقة مهاراتك مع أولويات رؤية 2030. النتيجة تعكس مدى توافقك مع ١١ قطاعاً اقتصادياً رئيسياً، مع التركيز على الجودة والعمق بدلاً من الكمية.'
+                ? 'نشيك على سيرتك عشان نطابق مهاراتك مع أولويات رؤية 2030. نتيجتك تعكس وش كثر أنت ضابط دورك في ١١ قطاع اقتصادي أساسي، ونركز على الكيف والعمق أكثر من الكم.'
                 : 'We analyze your resume to match your skills with Vision 2030 priorities. Your score reflects alignment across 11 key economic sectors, prioritizing depth and specialization over broad, shallow matches.'
               }
             </p>
@@ -79,7 +79,7 @@ export function Vision2030CalculationModal({
           {/* The 3-Step Process (Cards) */}
           <section>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white/60 mb-4 flex items-center gap-2">
-              {isArabic ? 'كيف نعمل' : 'How It Works'}
+              {isArabic ? 'كيف نضبطك' : 'How It Works'}
               <div className="h-px bg-white/10 flex-1" />
             </h3>
 
@@ -90,11 +90,11 @@ export function Vision2030CalculationModal({
                   <Target className="w-4 h-4 text-blue-400" />
                 </div>
                 <h4 className="font-semibold text-white mb-1.5 text-sm">
-                  {isArabic ? '١. المطابقة الذكية' : '1. Smart Matching'}
+                  {isArabic ? '١. مطابقة ذكية' : '1. Smart Matching'}
                 </h4>
                 <p className="text-[11px] text-white/70 leading-relaxed">
                   {isArabic
-                    ? 'نبحث عن الكلمات المفتاحية ونقوم بوزنها (١-٣) حسب الأهمية، مع إزالة التكرار لضمان الدقة.'
+                    ? 'ندور على الكلمات المفتاحية ونعطيها وزن (١-٣) على حسب أهميتها، ونشيل التكرار عشان نضمن لك دقة الحسبة.'
                     : 'We scan and weight keywords (1-3) based on importance, removing duplicates for accuracy.'
                   }
                 </p>
@@ -106,11 +106,11 @@ export function Vision2030CalculationModal({
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                 </div>
                 <h4 className="font-semibold text-white mb-1.5 text-sm">
-                  {isArabic ? '٢. منحنى التشجيع' : '2. Encouragement Curve'}
+                  {isArabic ? '٢. تحفيز ودفعة معنوية' : '2. Encouragement Curve'}
                 </h4>
                 <p className="text-[11px] text-white/70 leading-relaxed">
                   {isArabic
-                    ? 'نطبق معادلة رياضية ترفع الدرجات المنخفضة، بحيث تبدأ النتائج من ٦٠٪ كحد أدنى تحفيزي.'
+                    ? 'نستخدم حسبة ترفع الدرجات النازلة، بحيث إن أقل نتيجة تبدأ من ٦٠٪ عشان تتحفز وتكمل تحسين.'
                     : 'We apply a curve to boost lower raw scores, setting a 60% motivational floor for everyone.'
                   }
                 </p>
@@ -122,11 +122,11 @@ export function Vision2030CalculationModal({
                   <PieChart className="w-4 h-4 text-amber-400" />
                 </div>
                 <h4 className="font-semibold text-white mb-1.5 text-sm">
-                  {isArabic ? '٣. قاعدة ٧٠/٣٠' : '3. The 70/30 Rule'}
+                  {isArabic ? '٣. الأولوية لتخصصك' : '3. The 70/30 Rule'}
                 </h4>
                 <p className="text-[11px] text-white/70 leading-relaxed">
                   {isArabic
-                    ? '٧٠٪ من نتيجتك تعتمد على أفضل ٣ قطاعات لديك، و٣٠٪ على التنوع العام. التخصص هو المفتاح.'
+                    ? '٧٠٪ من نتيجتك تعتمد على أقوى ٣ قطاعات عندك، و٣٠٪ على تنوعك بشكل عام. التخصص هو اللي يفرق.'
                     : '70% of your score comes from your top 3 sectors. We reward specialized experts over generalists.'
                   }
                 </p>
@@ -137,7 +137,7 @@ export function Vision2030CalculationModal({
           {/* Design Philosophy Grid */}
           <section>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white/60 mb-4 flex items-center gap-2">
-              {isArabic ? 'فلسفة التصميم' : 'Design Philosophy'}
+              {isArabic ? 'كيف صممناها لك' : 'Design Philosophy'}
               <div className="h-px bg-white/10 flex-1" />
             </h3>
 
@@ -145,23 +145,23 @@ export function Vision2030CalculationModal({
               {[
                 {
                   icon: CheckCircle2,
-                  title: isArabic ? 'الحد الأدنى ٦٠٪' : '60% Minimum Floor',
-                  desc: isArabic ? 'يمنع الإحباط ويشجع على التحسين.' : 'Prevents discouragement, encourages action.'
+                  title: isArabic ? 'أقل شي ٦٠٪' : '60% Minimum Floor',
+                  desc: isArabic ? 'عشان ما تحبط وتتحمس تطور نفسك.' : 'Prevents discouragement, encourages action.'
                 },
                 {
                   icon: Lightbulb,
-                  title: isArabic ? 'اقتراحات ذكية' : 'Smart Suggestions',
-                  desc: isArabic ? 'نقترح مهارات "مجاورة" لمسارك الحالي.' : 'We suggest "adjacent" skills for growth.'
+                  title: isArabic ? 'اقتراحات في الصميم' : 'Smart Suggestions',
+                  desc: isArabic ? 'نقترح لك مهارات قريبة من مجالك عشان تتطور.' : 'We suggest "adjacent" skills for growth.'
                 },
                 {
                   icon: ShieldCheck,
-                  title: isArabic ? 'التركيز على العمق' : 'Depth over Breadth',
-                  desc: isArabic ? 'التميز في مجال واحد أفضل من التشتت.' : 'Mastery in one field beats average in all.'
+                  title: isArabic ? 'العمق مو الكم' : 'Depth over Breadth',
+                  desc: isArabic ? 'تكون بطل في مجال واحد أحسن من إنك تتشتت.' : 'Mastery in one field beats average in all.'
                 },
                 {
                   icon: ShieldCheck,
-                  title: isArabic ? 'خصوصية تامة' : 'Total Privacy',
-                  desc: isArabic ? 'التحليل يتم على جهازك ١٠٠٪.' : 'Analysis happens 100% locally on your device.'
+                  title: isArabic ? 'أمان وخصوصية' : 'Total Privacy',
+                  desc: isArabic ? 'كل التحليل يصير على جهازك ١٠٠٪، أمانك مضمون.' : 'Analysis happens 100% locally on your device.'
                 }
               ].map((item, idx) => (
                 <div key={idx} className="flex gap-3 p-3 rounded-lg bg-white/[0.04] border border-white/5">
@@ -180,15 +180,15 @@ export function Vision2030CalculationModal({
             <div className="grid grid-cols-3 gap-2 text-center divide-x divide-white/10 rtl:divide-x-reverse">
               <div className="px-2">
                 <div className="text-amber-400 font-bold text-base">60-69%</div>
-                <div className="text-[10px] uppercase tracking-wide text-white/60 mt-1">{isArabic ? 'جيد' : 'Good'}</div>
+                <div className="text-[10px] uppercase tracking-wide text-white/60 mt-1">{isArabic ? 'يمشي الحال' : 'Good'}</div>
               </div>
               <div className="px-2">
                 <div className="text-emerald-400 font-bold text-base">70-84%</div>
-                <div className="text-[10px] uppercase tracking-wide text-white/60 mt-1">{isArabic ? 'قوي' : 'Strong'}</div>
+                <div className="text-[10px] uppercase tracking-wide text-white/60 mt-1">{isArabic ? 'كفو' : 'Strong'}</div>
               </div>
               <div className="px-2">
                 <div className="text-blue-400 font-bold text-base">85%+</div>
-                <div className="text-[10px] uppercase tracking-wide text-white/60 mt-1">{isArabic ? 'خبير' : 'Expert'}</div>
+                <div className="text-[10px] uppercase tracking-wide text-white/60 mt-1">{isArabic ? 'معلم' : 'Expert'}</div>
               </div>
             </div>
           </section>
@@ -201,7 +201,7 @@ export function Vision2030CalculationModal({
             onClick={onClose}
             className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:-translate-y-0.5 transition-all text-xs"
           >
-            {isArabic ? 'فهمت' : 'Got it, thanks'}
+            {isArabic ? 'تم، يعطيك العافية' : 'Got it, thanks'}
           </button>
         </div>
       </GlassCard>

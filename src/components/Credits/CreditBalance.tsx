@@ -92,7 +92,7 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse bg-white/5 h-9 w-32 rounded-lg" />
+      <div className="animate-pulse bg-white/5 h-9 w-32 min-w-[140px] rounded-lg" />
     );
   }
 

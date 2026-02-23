@@ -68,7 +68,8 @@
       "Bash(npx netlify status)",
       "WebFetch(domain:status.openrouter.ai)",
       "Bash(npx netlify:*)",
-      "Bash(npx netlify env:get:*)"
+      "Bash(npx netlify env:get:*)",
+      "Bash(sort:*)"
     ]
   },
   "enableAllProjectMcpServers": false,

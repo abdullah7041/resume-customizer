@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { useDirection } from '../components/providers/DirectionProvider';
 
 export function PrivacyPolicy() {
   const { t, i18n } = useTranslation();
-  const { isRTL } = useDirection();
   const isArabic = i18n.language === 'ar';
 
   return (
@@ -46,7 +44,7 @@ export function PrivacyPolicy() {
           <div className="space-y-4">
             <div>
               <h3 className="font-medium text-gray-800">{t('privacy.sections.dataCollected.personal.title')}</h3>
-              <ul className={`${isRTL ? 'list-disc list-inside' : 'list-disc list-inside'} text-gray-600 mt-2 space-y-1`}>
+              <ul className={"list-disc list-inside text-gray-600 mt-2 space-y-1"}>
                 <li>{t('privacy.sections.dataCollected.personal.items.name')}</li>
                 <li>{t('privacy.sections.dataCollected.personal.items.email')}</li>
                 <li>{t('privacy.sections.dataCollected.personal.items.phone')}</li>
@@ -55,7 +53,7 @@ export function PrivacyPolicy() {
             </div>
             <div>
               <h3 className="font-medium text-gray-800">{t('privacy.sections.dataCollected.technical.title')}</h3>
-              <ul className={`${isRTL ? 'list-disc list-inside' : 'list-disc list-inside'} text-gray-600 mt-2 space-y-1`}>
+              <ul className={"list-disc list-inside text-gray-600 mt-2 space-y-1"}>
                 <li>{t('privacy.sections.dataCollected.technical.items.ip')}</li>
                 <li>{t('privacy.sections.dataCollected.technical.items.browser')}</li>
                 <li>{t('privacy.sections.dataCollected.technical.items.device')}</li>
