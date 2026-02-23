@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import Joyride from "react-joyride";
+import { lazy, Suspense, useEffect } from "react";
+const Joyride = lazy(() => import("react-joyride"));
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
 
@@ -46,31 +46,33 @@ export default function App() {
         />
 
         {/* Onboarding Tour */}
-        <Joyride
-          steps={steps}
-          run={run}
-          stepIndex={stepIndex}
-          continuous
-          showProgress
-          showSkipButton
-          callback={handleCallback}
-          disableScrolling={false}
-          scrollToFirstStep
-          scrollOffset={20}
-          spotlightClicks={false}
-          tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
-          locale={{
-            back: 'Back',
-            close: 'Close',
-            last: 'Finish',
-            next: 'Next',
-            skip: 'Skip Tour',
-          }}
-          floaterProps={{
-            disableAnimation: false,
-            offset: 10,
-          }}
-        />
+        <Suspense fallback={null}>
+          <Joyride
+            steps={steps}
+            run={run}
+            stepIndex={stepIndex}
+            continuous
+            showProgress
+            showSkipButton
+            callback={handleCallback}
+            disableScrolling={false}
+            scrollToFirstStep
+            scrollOffset={20}
+            spotlightClicks={false}
+            tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
+            locale={{
+              back: 'Back',
+              close: 'Close',
+              last: 'Finish',
+              next: 'Next',
+              skip: 'Skip Tour',
+            }}
+            floaterProps={{
+              disableAnimation: false,
+              offset: 10,
+            }}
+          />
+        </Suspense>
       </div>
     </DirectionProvider>
   );

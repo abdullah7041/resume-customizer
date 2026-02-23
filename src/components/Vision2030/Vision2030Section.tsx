@@ -6,8 +6,8 @@
  * Results are persisted in localStorage to survive tab navigation.
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import Joyride from 'react-joyride';
+import { lazy, Suspense, useState, useCallback, useEffect } from 'react';
+const Joyride = lazy(() => import('react-joyride'));
 import { useTranslation } from 'react-i18next';
 import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
 import { analyzeVision2030 } from '../../services/api';
@@ -492,28 +492,30 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       />
 
       {/* Vision 2030 Tour */}
-      <Joyride
-        steps={steps}
-        run={run}
-        stepIndex={stepIndex}
-        continuous
-        showProgress
-        showSkipButton
-        callback={handleCallback}
-        disableScrolling={false}
-        spotlightClicks={false}
-        tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
-        locale={{
-          back: isArabic ? 'السابق' : 'Back',
-          close: isArabic ? 'إغلاق' : 'Close',
-          last: isArabic ? 'إنهاء' : 'Finish',
-          next: isArabic ? 'التالي' : 'Next',
-          skip: isArabic ? 'تخطي الجولة' : 'Skip Tour',
-        }}
-        floaterProps={{
-          disableAnimation: true,
-        }}
-      />
+      <Suspense fallback={null}>
+        <Joyride
+          steps={steps}
+          run={run}
+          stepIndex={stepIndex}
+          continuous
+          showProgress
+          showSkipButton
+          callback={handleCallback}
+          disableScrolling={false}
+          spotlightClicks={false}
+          tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
+          locale={{
+            back: isArabic ? 'السابق' : 'Back',
+            close: isArabic ? 'إغلاق' : 'Close',
+            last: isArabic ? 'إنهاء' : 'Finish',
+            next: isArabic ? 'التالي' : 'Next',
+            skip: isArabic ? 'تخطي الجولة' : 'Skip Tour',
+          }}
+          floaterProps={{
+            disableAnimation: true,
+          }}
+        />
+      </Suspense>
     </GlassCard>
   );
 }
