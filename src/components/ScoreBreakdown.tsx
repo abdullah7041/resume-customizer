@@ -95,10 +95,11 @@ export function ScoreBreakdown({
             { key: 'soft_skills' as const, label: isArabic ? 'المهارات الشخصية' : 'Soft Skills' }
         ];
 
-        // Calculate normalized total score as percentage out of 100
-        const rawTotal = categories.reduce((sum, cat) => sum + (categoryScores[cat.key]?.score || 0), 0);
-        const totalMax = categories.reduce((sum, cat) => sum + (categoryScores[cat.key]?.max || 25), 0);
-        const totalScore = totalMax > 0 ? Math.round((rawTotal / totalMax) * 100) : rawTotal;
+        // Use the authoritative match analysis score as the displayed total.
+        // The AI's category scores don't always sum consistently with its overall
+        // score (e.g., categories sum to 25% while overall score is 15%).
+        // beforeScore comes from the match analysis and is the source of truth.
+        const totalScore = isPlaceholderScore ? 0 : beforeScore;
 
         return (
             <GlassCard className={className}>

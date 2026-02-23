@@ -101,11 +101,15 @@ const baseHandler: Handler = async (event) => {
       missingKeywords: match.missingKeywords,
       strongMatches: match.strongMatches,
       matched_keywords: match.strongMatches,
-      recommendations: match.missingKeywords.slice(0, 5),
+      recommendations: match.missingKeywords.slice(0, 5).map((k: string) =>
+        language === 'ar' ? `أضف "${k}" إلى سيرتك الذاتية` : `Consider adding "${k}" to your resume`
+      ),
       overallAssessment: match.reasoning,
       explanation: {
         reason: match.reasoning,
-        tips: match.missingKeywords.map((k: string) => `Consider adding ${k}`)
+        tips: match.missingKeywords.map((k: string) =>
+          language === 'ar' ? `أضف "${k}" إلى سيرتك الذاتية` : `Consider adding "${k}" to your resume`
+        )
       },
       categoryScores: match.categoryScores || null,
       interviewPrep: null,
