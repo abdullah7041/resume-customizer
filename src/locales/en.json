@@ -17,7 +17,9 @@
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "byAuthor": "By Abdullah bin Ahmed",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "copy": "Copy",
+    "copied": "Copied!"
   },
   "credits": {
     "balance": "Credits",
@@ -479,7 +481,11 @@
       "moderate": "Moderate Gap",
       "minor": "Minor Gap",
       "currentState": "Current State",
-      "recommendation": "Recommendation"
+      "recommendation": "Recommendation",
+      "collapseAll": "Collapse All",
+      "expandAll": "Expand All",
+      "criticalCount": "Critical",
+      "moderateCount": "Moderate"
     },
     "scoreBreakdown": {
       "title": "Score Breakdown",
@@ -854,7 +860,12 @@
     "revert": "Revert",
     "applyAll": "Apply All",
     "noSuggestions": "No suggestions",
-    "analyzing": "Analyzing..."
+    "analyzing": "Analyzing...",
+    "suggested": "Suggested",
+    "recommendation": "Recommendation",
+    "before": "Before",
+    "after": "After",
+    "optimizedView": "Optimized View"
   },
   "sections": {
     "resume": {
@@ -886,7 +897,55 @@
       },
       "analyze": "Analyze Match",
       "analyzing": "Analyzing...",
-      "noResume": "Please upload a resume first"
+      "noResume": "Please upload a resume first",
+      "variant": {
+        "strongMatch": "Strong Match",
+        "goodStart": "Good Start",
+        "needsWork": "Needs Work"
+      },
+      "categoryScores": {
+        "hardSkills": "Hard Skills",
+        "experience": "Experience",
+        "education": "Education",
+        "softSkills": "Soft Skills",
+        "hardSkillsDesc": "Matching technical keywords",
+        "experienceDesc": "Job titles & years relevance",
+        "educationDesc": "Degree & field match",
+        "softSkillsDesc": "Behavioral & leadership traits"
+      },
+      "variantLabels": {
+        "strongMatch": "Strong Match",
+        "goodStart": "Good Start",
+        "needsWork": "Needs Work"
+      },
+      "optimizedBanner": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.",
+      "scoreLabel": "Score"
+    },
+    "optimizationResults": {
+      "title": "Optimization Results",
+      "subtitle": "How your resume improved to match the job",
+      "matchScore": "Match Score",
+      "before": "Before",
+      "after": "After",
+      "improvementsFound": "Improvements Found",
+      "applied": "Applied",
+      "scoreBoost": "Score Boost",
+      "potentialBoost": "Up to +{{points}}% possible",
+      "keywordsAdded": "Keywords Added to Match JD",
+      "keywordsMatching": "Keywords Already Matching JD",
+      "more": "more",
+      "improvementsApplied": "Improvements Applied",
+      "sectionLabels": {
+        "headline": "Headline optimized for ATS",
+        "summary": "Summary rewritten with impact",
+        "experience": "Experience bullets quantified",
+        "skills": "Skills aligned with requirements",
+        "education": "Education section enhanced",
+        "projects": "Projects highlighted effectively"
+      },
+      "applyAll": "Apply All ({{remaining}} remaining)",
+      "exportPdf": "Export PDF",
+      "shareResult": "Share Your Result"
     },
     "optimize": {
       "title": "Optimize",
@@ -907,10 +966,76 @@
       "status": {
         "original": "Original",
         "optimized": "Optimized",
-        "applied": "Applied"
+        "applied": "Applied",
+        "pending": "Pending"
       },
       "generating": "Generating optimizations...",
-      "noChanges": "No optimizations available"
+      "noChanges": "No optimizations available",
+      "tabs": {
+        "all": "All Sections",
+        "headline": "Headline",
+        "summary": "Summary",
+        "experience": "Experience",
+        "skills": "Skills",
+        "projects": "Projects",
+        "certifications": "Certifications"
+      },
+      "chipLabels": {
+        "add": "Add to Resume",
+        "neutral": "Keep as is",
+        "remove": "Consider Removing"
+      },
+      "noKeywords": "No keywords identified",
+      "collapseAll": "Collapse All",
+      "expandAll": "Expand All",
+      "noHeadline": "No headline",
+      "noSummary": "No summary",
+      "noOptimizations": "No optimizations were generated. The AI may need more context.",
+      "emptyOptimizations": "The AI returned empty suggestions. Please try again.",
+      "failedGenerate": "Failed to generate optimizations",
+      "uploadFirst": "Please upload a resume first",
+      "optimizingResume": "Optimizing Resume...",
+      "currentScore": "Current Score",
+      "optimizedScore": "Optimized Score",
+      "shareResult": "Share Your Result",
+      "revert": "Revert",
+      "applyAll": "Apply All",
+      "privateToYou": "Private to you",
+      "autoVerifying": "Auto-verifying match score...",
+      "autoVerifyDesc": "Running AI re-analysis on your optimized resume",
+      "noGapsDetected": "No Critical Gaps Detected",
+      "originalContent": "Original Content",
+      "optimizedVersion": "Optimized Version",
+      "revertChanges": "Revert Changes",
+      "applySuggestion": "Apply Suggestion",
+      "compare": "Compare",
+      "skillsRecommendationTooltip": "These are recommendations only and will not be added to your resume",
+      "results": {
+        "title": "Optimization Results",
+        "subtitle": "How your resume improved to match the job",
+        "matchScore": "Match Score",
+        "before": "Before",
+        "after": "After",
+        "improvementsFound": "Improvements Found",
+        "applied": "Applied",
+        "scoreBoost": "Score Boost",
+        "potentialScore": "Up to +{{points}}% possible",
+        "keywordsAdded": "Keywords Added to Match JD",
+        "keywordsMatching": "Keywords Already Matching JD",
+        "more": "more",
+        "improvementsApplied": "Improvements Applied",
+        "applyAllRemaining": "Apply All ({{count}} remaining)",
+        "exportPdf": "Export PDF",
+        "sectionLabels": {
+          "headline": "Headline optimized for ATS",
+          "summary": "Summary rewritten with impact",
+          "experience": "Experience bullets quantified",
+          "skills": "Skills aligned with requirements",
+          "education": "Education section enhanced",
+          "projects": "Projects highlighted effectively"
+        }
+      },
+      "optimizedResumeWarning": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}."
     },
     "keywords": {
       "title": "Keywords",
@@ -1054,6 +1179,15 @@
           "job_hopping": "Job Hopping",
           "demotion": "Demotion Signal"
         }
+      },
+      "privateToYou": "Private to you",
+      "csvHeaders": {
+        "number": "#",
+        "question": "Question",
+        "type": "Type",
+        "difficulty": "Difficulty",
+        "category": "Category",
+        "answer": "Your Answer"
       }
     },
     "bulkAnalysis": {

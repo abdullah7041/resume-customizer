@@ -99,7 +99,7 @@ describe('analyzeResume', () => {
       headers: expect.objectContaining({
         'Content-Type': 'application/json'
       }),
-      body: JSON.stringify({ resumeText: 'resume text', jobText: 'job text' })
+      body: JSON.stringify({ resumeText: 'resume text', jobText: 'job text', language: 'en' })
     }));
     expect(result.score).toBe(82);
   });
@@ -129,7 +129,7 @@ describe('optimizeResume', () => {
         headers: expect.objectContaining({
           'Content-Type': 'application/json'
         }),
-        body: JSON.stringify({ resumeText: 'resume', jobText: 'job' })
+        body: JSON.stringify({ resumeText: 'resume', jobText: 'job', language: 'en' })
       })
     );
     expect(result.source).toBe('gemini');

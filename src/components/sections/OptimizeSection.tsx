@@ -42,15 +42,7 @@ const LAST_JOB_KEY = 'airo:lastJobDescription';
 // Default match score when no analysis is available (represents neutral/baseline match)
 const DEFAULT_FALLBACK_SCORE = 55;
 
-// === Keyword bucket labels ===
-const CHIP_LABELS = {
-  add: "Add",
-  addAr: "أضف",
-  neutral: "Keep",
-  neutralAr: "احتفظ",
-  remove: "De-emphasize",
-  removeAr: "قلل التأكيد",
-};
+// Keyword bucket labels are now in i18n: sections.optimize.chipLabels.*
 
 // === Types ===
 // Extended interface that supports both legacy format and new OptimizationResult format
@@ -408,7 +400,7 @@ export function OptimizeSection({
     }
 
     if (!resumeText && !originalResume) {
-      setError(isArabic ? 'يرجى رفع سيرة ذاتية أولاً' : 'Please upload a resume first');
+      setError(t('sections.optimize.runMatchFirst', 'Please upload a resume first'));
       return;
     }
 
@@ -438,18 +430,19 @@ export function OptimizeSection({
           jobText: typeof window !== 'undefined'
             ? window.localStorage.getItem(LAST_JOB_KEY) || ''
             : '',
+          language: i18n.language,
         }),
       });
 
       // Handle insufficient credits (403)
       if (response.status === 403) {
         const errorData = await response.json();
-        throw new Error(errorData.error || (isArabic ? 'رصيدك غير كافٍ' : 'Insufficient credits'));
+        throw new Error(errorData.error || t('credits.confirm.insufficient', 'Insufficient credits'));
       }
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || (isArabic ? 'فشل التحسين' : 'Optimization failed'));
+        throw new Error(errorData.error || t('toasts.optimizationFailed', 'Optimization failed'));
       }
 
       const data = await response.json();
@@ -495,7 +488,7 @@ export function OptimizeSection({
             sectionId: `certifications-${index}`,
             sectionType: 'certifications',
             // Show recommendation as "optimized" (right side) with empty original (left side)
-            original: isArabic ? 'شهادة موصى بها' : 'Recommended Certification',
+            original: t('optimization.recommendation', 'Recommended Certification'),
             optimized: `${cert.name || ''} (${cert.issuer || ''}) - ${cert.relevance || ''}`,
             applied: false, // Certifications are display-only, never applied
           });
@@ -509,7 +502,7 @@ export function OptimizeSection({
           newOptimizations.push({
             sectionId: 'headline',
             sectionType: 'headline',
-            original: originalResume?.basics?.label || (isArabic ? 'لا يوجد عنوان' : 'No headline'),
+            original: originalResume?.basics?.label || t('sections.optimize.noOriginal', 'No headline'),
             optimized: data.headline,
             applied: false,
           });
@@ -519,7 +512,7 @@ export function OptimizeSection({
           newOptimizations.push({
             sectionId: 'summary',
             sectionType: 'summary',
-            original: originalResume?.basics?.summary || (isArabic ? 'لا يوجد ملخص' : 'No summary'),
+            original: originalResume?.basics?.summary || t('sections.optimize.noOriginal', 'No summary'),
             optimized: data.summary,
             applied: false,
           });
@@ -528,7 +521,7 @@ export function OptimizeSection({
 
       // Validate that we have meaningful optimizations
       if (newOptimizations.length === 0) {
-        throw new Error(isArabic ? 'لم يتم إنشاء تحسينات. قد يحتاج الذكاء الاصطناعي إلى مزيد من السياق.' : 'No optimizations were generated. The AI may need more context.');
+        throw new Error(t('optimization.noSuggestions', 'No optimizations were generated. The AI may need more context.'));
       }
 
       // Check if any optimizations have valid content
@@ -539,7 +532,7 @@ export function OptimizeSection({
       });
 
       if (!hasValidContent) {
-        throw new Error(isArabic ? 'حصل الذكاء الاصطناعي على اقتراحات فارغة. يرجى المحاولة مرة أخرى.' : 'The AI returned empty suggestions. Please try again.');
+        throw new Error(t('optimization.noSuggestions', 'The AI returned empty suggestions. Please try again.'));
       }
 
       setOptimizations(newOptimizations);
@@ -764,7 +757,7 @@ export function OptimizeSection({
       console.error('Optimization error:', err);
       // Check if this is a rate limit error
       if (!handleRateLimitError(err)) {
-        setError(err instanceof Error ? err.message : (isArabic ? 'فشل في توليد التحسينات' : 'Failed to generate optimizations'));
+        setError(err instanceof Error ? err.message : t('toasts.optimizationFailed', 'Failed to generate optimizations'));
       }
     } finally {
       setIsGenerating(false);
@@ -817,13 +810,13 @@ export function OptimizeSection({
 
   // Section tabs for filtering
   const tabs = [
-    { id: 'all', label: 'All Sections', labelAr: 'جميع الأقسام' },
-    { id: 'headline', label: 'Headline', labelAr: 'العنوان' },
-    { id: 'summary', label: 'Summary', labelAr: 'الملخص' },
-    { id: 'experience', label: 'Experience', labelAr: 'الخبرة' },
-    { id: 'skills', label: 'Skills', labelAr: 'المهارات' },
-    { id: 'projects', label: 'Projects', labelAr: 'المشاريع' },
-    { id: 'certifications', label: 'Certifications', labelAr: 'الشهادات' },
+    { id: 'all', label: t('sections.optimize.tabs.all', 'All Sections') },
+    { id: 'headline', label: t('sections.optimize.tabs.headline', 'Headline') },
+    { id: 'summary', label: t('sections.optimize.tabs.summary', 'Summary') },
+    { id: 'experience', label: t('sections.optimize.tabs.experience', 'Experience') },
+    { id: 'skills', label: t('sections.optimize.tabs.skills', 'Skills') },
+    { id: 'projects', label: t('sections.optimize.tabs.projects', 'Projects') },
+    { id: 'certifications', label: t('sections.optimize.tabs.certifications', 'Certifications') },
   ];
 
   const [activeSection, setActiveSection] = useState<'all' | 'headline' | 'summary' | 'experience' | 'skills' | 'projects' | 'certifications'>('all');
@@ -870,7 +863,7 @@ export function OptimizeSection({
                     onClick={revertAllOptimizations}
                     className="text-xs font-medium text-gray-400 hover:text-white transition-colors px-2"
                   >
-                    {isArabic ? 'تراجع' : 'Revert'}
+                    {t('optimization.revert', 'Revert')}
                   </button>
                 )}
 
@@ -886,7 +879,7 @@ export function OptimizeSection({
                       : "text-emerald-400 hover:text-emerald-300"
                   )}
                 >
-                  {isArabic ? 'تطبيق الكل' : 'Apply All'}
+                  {t('optimization.applyAll', 'Apply All')}
                 </button>
               </div>
             )}
@@ -956,7 +949,7 @@ export function OptimizeSection({
                     <div className="absolute inset-0 bg-white/10 rounded-lg shadow-sm border border-white/5" />
                   )}
                   <span className="relative z-10">
-                    {isArabic ? tab.labelAr : tab.label}
+                    {tab.label}
                     {tab.id !== 'all' && hasItems && (
                       <span className="ml-2 text-xs opacity-60 bg-white/10 px-1.5 py-0.5 rounded-full">
                         {optimizations.filter(o => o.sectionType === tab.id).length}
@@ -989,7 +982,7 @@ export function OptimizeSection({
                 <AlertCircle className="w-5 h-5 text-amber-400" />
               </div>
               <p className="text-sm font-medium text-amber-400">
-                {isArabic ? 'يرجى رفع سيرة ذاتية أولاً' : 'Please upload a resume first'}
+                {t('sections.optimize.uploadFirst', 'Please upload a resume first')}
               </p>
             </div>
           )
@@ -1010,7 +1003,7 @@ export function OptimizeSection({
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span className="text-white font-semibold tracking-wide">
-                  {isArabic ? 'جاري التحسين...' : 'Optimizing Resume...'}
+                  {t('sections.optimize.optimizingResume', 'Optimizing Resume...')}
                 </span>
               </>
             ) : (
@@ -1058,7 +1051,7 @@ export function OptimizeSection({
                 <div className="flex items-center justify-between">
                   <p className={`text-xs font-bold uppercase tracking-wider text-${config.color}-400 flex items-center gap-2`}>
                     <Icon className="w-3.5 h-3.5" />
-                    {isArabic ? CHIP_LABELS[`${bucket} Ar` as keyof typeof CHIP_LABELS] : CHIP_LABELS[bucket]}
+                    {t(`sections.optimize.chipLabels.${bucket}`)}
                   </p>
                   <span className="text-[10px] font-medium text-gray-500 bg-black/20 px-2 py-0.5 rounded-full">
                     {items.length}
@@ -1083,7 +1076,7 @@ export function OptimizeSection({
                     ))
                   ) : (
                     <span className="text-xs text-gray-600 italic py-1">
-                      {isArabic ? 'لا توجد عناصر' : 'No keywords identified'}
+                      {t('sections.optimize.noKeywords', 'No keywords identified')}
                     </span>
                   )}
                 </div>
@@ -1099,7 +1092,7 @@ export function OptimizeSection({
           <div className="flex items-center justify-between">
             <div className="flex flex-col items-center flex-1">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
-                {isArabic ? 'الحالي' : 'Current Score'}
+                {t('sections.optimize.currentScore', 'Current Score')}
               </span>
               <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore ? 'text-gray-600 italic' : 'text-white'}`}>
                 {resultsSummaryData.isPlaceholderScore ? '—' : `${resultsSummaryData.beforeScore}%`}
@@ -1127,7 +1120,7 @@ export function OptimizeSection({
             {/* After Score */}
             <div className="flex flex-col items-center flex-1">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
-                {isArabic ? 'المُحسَّن' : 'Optimized Score'}
+                {t('sections.optimize.optimizedScore', 'Optimized Score')}
               </span>
               <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
                 ? 'text-gray-600 italic'
@@ -1158,7 +1151,7 @@ export function OptimizeSection({
                   }}
                   leftIcon={<Share2 className="w-3.5 h-3.5" />}
                 >
-                  {isArabic ? 'شارك نتيجتك' : 'Share Your Result'}
+                  {t('sections.optimize.shareResult', 'Share Your Result')}
                 </GlassButton>
               </div>
             )}
@@ -1200,10 +1193,10 @@ export function OptimizeSection({
             </div>
             <div>
               <p className="text-sm font-medium text-white">
-                {isArabic ? 'جاري التحقق التلقائي من النتيجة...' : 'Auto-verifying match score...'}
+                {t('sections.optimize.autoVerifying', 'Auto-verifying match score...')}
               </p>
               <p className="text-xs text-gray-500">
-                {isArabic ? 'تحليل السيرة الذاتية المحسّنة بالذكاء الاصطناعي' : 'Running AI re-analysis on your optimized resume'}
+                {t('sections.optimize.autoVerifyingDesc', 'Running AI re-analysis on your optimized resume')}
               </p>
             </div>
           </div>
@@ -1228,7 +1221,7 @@ export function OptimizeSection({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">
-                    {isArabic ? 'لم يتم اكتشاف فجوات حرجة' : 'No Critical Gaps Detected'}
+                    {t('sections.optimize.noGapsDetected', 'No Critical Gaps Detected')}
                   </p>
                   <p className="text-xs text-gray-500">
                     {isArabic
@@ -1294,8 +1287,8 @@ export function OptimizeSection({
               className="text-[10px] font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md border border-white/5"
             >
               {filteredOptimizations.every(o => expandedCards.has(o.sectionId))
-                ? (isArabic ? 'طي الكل' : 'Collapse All')
-                : (isArabic ? 'توسيع الكل' : 'Expand All')
+                ? t('sections.optimize.collapseAll', 'Collapse All')
+                : t('sections.optimize.expandAll', 'Expand All')
               }
             </button>
           </div>
@@ -1344,11 +1337,9 @@ export function OptimizeSection({
                               const expIndex = filteredOptimizations
                                 .filter(o => o.sectionType === 'experience')
                                 .findIndex(o => o.sectionId === opt.sectionId);
-                              return `${isArabic ? 'الخبرة' : 'Experience'} ${expIndex !== -1 ? expIndex + 1 : ''}`;
+                              return `${t('sections.optimize.tabs.experience', 'Experience')} ${expIndex !== -1 ? expIndex + 1 : ''}`;
                             })()
-                            : isArabic
-                              ? tabs.find(t => t.id === opt.sectionType)?.labelAr
-                              : opt.sectionType
+                            : t(`sections.optimize.tabs.${opt.sectionType}`, opt.sectionType)
                           }
                         </span>
                         {/* Status Badge */}
@@ -1359,8 +1350,8 @@ export function OptimizeSection({
                             : 'bg-white/5 border-white/10 text-gray-400'
                         )}>
                           {opt.applied
-                            ? (isArabic ? 'مُطبّق' : 'Applied')
-                            : (isArabic ? 'معلق' : 'Pending')
+                            ? t('sections.optimize.status.applied', 'Applied')
+                            : t('sections.optimize.status.pending', 'Pending')
                           }
                         </span>
 
@@ -1396,7 +1387,7 @@ export function OptimizeSection({
                           ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
                           : "hover:bg-white/10 text-gray-400 hover:text-white"
                       )}
-                      title={isArabic ? 'مقارنة' : 'Compare'}
+                      title={t('sections.optimize.compare', 'Compare')}
                     >
                       <ArrowLeftRight className="w-4 h-4" />
                     </button>
@@ -1419,7 +1410,7 @@ export function OptimizeSection({
                         <div className="p-4 bg-red-500/5 rounded-xl border border-red-500/10">
                           <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                            {isArabic ? 'الأصلي' : 'Original Content'}
+                            {t('sections.optimize.originalContent', 'Original Content')}
                           </p>
                           <div className="text-sm text-gray-300 font-mono text-xs leading-relaxed opacity-80 bg-black/20 p-3 rounded-lg">
                             {Array.isArray(opt.original)
@@ -1431,7 +1422,7 @@ export function OptimizeSection({
                         <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
                           <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            {isArabic ? 'المحسّن' : 'Optimized Version'}
+                            {t('sections.optimize.optimizedVersion', 'Optimized Version')}
                           </p>
                           <div className="text-sm text-gray-200 font-mono text-xs leading-relaxed bg-black/20 p-3 rounded-lg shadow-inner">
                             {Array.isArray(opt.optimized)
@@ -1493,7 +1484,7 @@ export function OptimizeSection({
                           leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
                           className="flex-1 hover:bg-red-500/10 hover:text-red-400"
                         >
-                          {isArabic ? 'التراجع' : 'Revert Changes'}
+                          {t('sections.optimize.revertChanges', 'Revert Changes')}
                         </GlassButton>
                       ) : (
                         <GlassButton
@@ -1506,7 +1497,7 @@ export function OptimizeSection({
                           leftIcon={<Check className="w-3.5 h-3.5" />}
                           className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-0"
                         >
-                          {isArabic ? 'تطبيق' : 'Apply Suggestion'}
+                          {t('sections.optimize.applySuggestion', 'Apply Suggestion')}
                         </GlassButton>
                       )}
 

@@ -84,7 +84,7 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
       };
     }
 
-    const { resumeText, jobDescription, questionType = 'mixed', workHistory } = parseResult.data;
+    const { resumeText, jobDescription, questionType = 'mixed', workHistory, language } = parseResult.data;
 
     // Validate questionType
     if (!['behavioral', 'technical', 'mixed'].includes(questionType)) {
@@ -101,7 +101,7 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
       : [];
 
     // Use dedicated interview question prediction function
-    const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription, questionType, vulnerabilities);
+    const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription, questionType, vulnerabilities, language);
 
     // Consume credits AFTER successful prediction
     const creditResult = await consumeCredits(userId, 'interview_prep');

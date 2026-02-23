@@ -166,7 +166,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
 };
 
 export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
   const [resumes, setResumes] = useState<Resume[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -228,7 +228,8 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
           headers,
           body: JSON.stringify({
             resumeText: plainText,
-            jobText: jobDescription
+            jobText: jobDescription,
+            language: i18n.language,
           }),
         });
 
@@ -258,7 +259,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     } catch (error) {
       setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'error' as const, error: (error as Error).message } : r));
     }
-  }, [jobDescription, refetchCredits]);
+  }, [jobDescription, refetchCredits, i18n.language]);
 
   // Wrapper: collect all pending resume IDs and show one confirmation modal
   const processResume = useCallback((resumeId: string, _file: File) => {

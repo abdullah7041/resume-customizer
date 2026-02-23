@@ -21,30 +21,26 @@ const severityConfig = {
         color: 'text-red-400',
         bg: 'bg-red-500/10',
         border: 'border-red-500/30',
-        label: 'Critical Gap',
-        labelAr: 'فجوة حرجة'
+        labelKey: 'critical' as const,
     },
     moderate: {
         icon: AlertCircle,
         color: 'text-amber-400',
         bg: 'bg-amber-500/10',
         border: 'border-amber-500/30',
-        label: 'Moderate Gap',
-        labelAr: 'فجوة متوسطة'
+        labelKey: 'moderate' as const,
     },
     minor: {
         icon: Info,
         color: 'text-blue-400',
         bg: 'bg-blue-500/10',
         border: 'border-blue-500/30',
-        label: 'Minor Gap',
-        labelAr: 'فجوة بسيطة'
+        labelKey: 'minor' as const,
     }
 };
 
 export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) {
-    const { t, i18n } = useTranslation();
-    const isArabic = i18n.language === 'ar';
+    const { t } = useTranslation();
     // Change to Set for multiple expanded items
     const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set([0]));
 
@@ -94,12 +90,12 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
                         <div className="flex gap-2 text-sm">
                             {criticalCount > 0 && (
                                 <span className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold">
-                                    {criticalCount} {isArabic ? 'حرجة' : 'Critical'}
+                                    {criticalCount} {t('optimize.gapAnalysis.criticalCount', 'Critical')}
                                 </span>
                             )}
                             {moderateCount > 0 && (
                                 <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold">
-                                    {moderateCount} {isArabic ? 'متوسطة' : 'Moderate'}
+                                    {moderateCount} {t('optimize.gapAnalysis.moderateCount', 'Moderate')}
                                 </span>
                             )}
                         </div>
@@ -111,8 +107,8 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
                                 className="px-2 py-1 text-[10px] font-medium text-gray-400 hover:text-white transition-colors"
                             >
                                 {allExpanded
-                                    ? (isArabic ? 'طي الكل' : 'Collapse All')
-                                    : (isArabic ? 'توسيع الكل' : 'Expand All')
+                                    ? t('optimize.gapAnalysis.collapseAll', 'Collapse All')
+                                    : t('optimize.gapAnalysis.expandAll', 'Expand All')
                                 }
                             </button>
                         </div>
@@ -148,7 +144,7 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-4">
                                             <span className={`text-[10px] font-bold uppercase tracking-wider ${config.color} opacity-80`}>
-                                                {isArabic ? config.labelAr : config.label}
+                                                {t(`optimize.gapAnalysis.${config.labelKey}`)}
                                             </span>
                                             <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                                         </div>

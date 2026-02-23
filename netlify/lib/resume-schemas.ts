@@ -199,11 +199,13 @@ const MAX_NAME_LENGTH = 200;
 export const MatchRequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
     jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
+    language: z.enum(["en", "ar"]).optional().default("en"),
 });
 
 export const OptimizeRequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
     jobText: z.string().min(1, "Job text is required").max(MAX_JOB_LENGTH, "Job text too large"),
+    language: z.enum(["en", "ar"]).optional().default("en"),
 });
 
 export const WorkHistoryEntrySchema = z.object({
@@ -218,6 +220,7 @@ export const PredictQuestionsRequestSchema = z.object({
     jobDescription: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     questionType: z.enum(['behavioral', 'technical', 'mixed']).optional().default('mixed'),
     workHistory: z.array(WorkHistoryEntrySchema).optional(),
+    language: z.enum(["en", "ar"]).optional().default("en"),
 });
 
 export const CoverLetterRequestSchema = z.object({
@@ -225,6 +228,8 @@ export const CoverLetterRequestSchema = z.object({
     jobDescription: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     companyName: z.string().max(MAX_NAME_LENGTH).optional(),
     hiringManager: z.string().max(MAX_NAME_LENGTH).optional(),
+    tone: z.enum(['professional', 'enthusiastic', 'formal', 'creative']).optional(),
+    language: z.enum(["en", "ar"]).optional().default("en"),
 });
 
 export const Vision2030RequestSchema = z.object({

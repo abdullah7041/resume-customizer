@@ -474,7 +474,7 @@ CRITICAL REMINDERS:
  * @param {string} jobDescription - Job description text.
  * @returns {Promise<object>} - Optimization suggestions with original and improved content.
  */
-export async function optimizeResume(resumeText, jobDescription) {
+export async function optimizeResume(resumeText, jobDescription, language = 'en') {
   const schema = {
     type: "object",
     properties: {
@@ -535,9 +535,11 @@ ${jobDescription}
 ${resumeText}
 </resume_text>`;
 
+  const langInstruction = language === 'ar' ? `\n\nLANGUAGE INSTRUCTION: You MUST write ALL text fields in Arabic. This includes: issue, rationale, improved text, suggestion, current_state, recommendation, and relevance fields. Keep JSON keys and technical keywords (programming languages, tools, certifications like "AWS", "Python", "React") in English. Write all descriptive and explanatory content in formal Arabic.` : '';
+
   try {
     console.log(`[OpenRouter] Optimizing with ${MODELS.flash}`);
-    const messages = [{ role: 'user', content: prompt }];
+    const messages = [{ role: 'user', content: prompt + langInstruction }];
     // Use 100s timeout for optimize (function has 120s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
@@ -562,7 +564,7 @@ ${resumeText}
  * @param {string} jobDescription - Job description text.
  * @returns {Promise<object>} - Match score, keywords, and reasoning.
  */
-export async function processMatchOnly(resumeText, jobDescription) {
+export async function processMatchOnly(resumeText, jobDescription, language = 'en') {
   console.log(`[Gemini] Fast match analysis with ${MODELS.flash}`);
 
   const schema = {
@@ -627,8 +629,10 @@ ${resumeText}
 
 Analyze step by step, then provide your final score.`;
 
+  const langInstruction = language === 'ar' ? `\n\nLANGUAGE INSTRUCTION: Write the "reasoning" field in Arabic. Keep keywords (strongMatches, missingKeywords) in English for ATS compatibility.` : '';
+
   try {
-    const messages = [{ role: 'user', content: prompt }];
+    const messages = [{ role: 'user', content: prompt + langInstruction }];
     // Use 65s timeout for ai-match (function has 90s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
@@ -661,7 +665,7 @@ Analyze step by step, then provide your final score.`;
  * @param {string} questionType - Type of questions: 'behavioral', 'technical', or 'mixed' (default).
  * @returns {Promise<object>} - Interview prep data with questions and focus areas.
  */
-export async function predictInterviewQuestions(resumeText, jobDescription, questionType = 'mixed', vulnerabilities = []) {
+export async function predictInterviewQuestions(resumeText, jobDescription, questionType = 'mixed', vulnerabilities = [], language = 'en') {
   console.log(`[Gemini] Predicting interview questions (${questionType}) with ${MODELS.lite}, vulnerabilities: ${vulnerabilities.length}`);
 
   const schema = {
@@ -795,8 +799,10 @@ ${jobDescription}
 ${resumeText}
 </resume_text>`;
 
+  const langInstruction = language === 'ar' ? `\n\nLANGUAGE INSTRUCTION: Write question text, coaching_tip, and category fields in Arabic. Keep enum values (type, difficulty, vulnerability_type) and skills_tested in English.` : '';
+
   try {
-    const messages = [{ role: 'user', content: prompt }];
+    const messages = [{ role: 'user', content: prompt + langInstruction }];
     const text = await callOpenRouter('lite', messages, schema, { temperature: 0.3, maxTokens: 4096, timeoutMs: 50000 });
     console.log(`[OpenRouter] Interview prep response: ${text.length} chars`);
 
@@ -821,7 +827,7 @@ ${resumeText}
  * @param {string} jobDescription - Job description text.
  * @returns {Promise<{ draft_text: string }>} - Generated cover letter.
  */
-export async function generateCoverLetter(resumeText, jobDescription) {
+export async function generateCoverLetter(resumeText, jobDescription, language = 'en') {
   console.log(`[Gemini] Generating cover letter with ${MODELS.flash}`);
 
   const schema = {
@@ -851,8 +857,10 @@ ${resumeText}
 Return ONLY the cover letter text in the draft_text field.
 7. CRITICAL: Use double newlines (\n\n) to separate paragraphs. Do NOT write a single block of text.`;
 
+  const langInstruction = language === 'ar' ? `\n\nLANGUAGE INSTRUCTION: Write the entire cover letter in formal business Arabic. Use proper Arabic letter formatting conventions. Address the recipient appropriately in Arabic.` : '';
+
   try {
-    const messages = [{ role: 'user', content: prompt }];
+    const messages = [{ role: 'user', content: prompt + langInstruction }];
     const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384, timeoutMs: 50000 });
     console.log(`[OpenRouter] Cover letter response: ${text.length} chars`);
 

@@ -88,13 +88,13 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText } = parseResult.data;
+    const { resumeText, jobText, language } = parseResult.data;
 
     // Add timeout logging
     const startTime = Date.now();
 
     // Use dedicated optimizeResume function for faster, focused optimization
-    const optimization = await optimizeResume(resumeText, jobText);
+    const optimization = await optimizeResume(resumeText, jobText, language);
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);
     console.log('[optimize] AI response summary:', {

@@ -482,7 +482,11 @@
       "moderate": "فجوة متوسطة",
       "minor": "فجوة بسيطة",
       "currentState": "الحالة الحالية",
-      "recommendation": "التوصية"
+      "recommendation": "التوصية",
+      "collapseAll": "طي الكل",
+      "expandAll": "توسيع الكل",
+      "criticalCount": "حرجة",
+      "moderateCount": "متوسطة"
     },
     "scoreBreakdown": {
       "title": "تفصيل النتيجة",
@@ -728,28 +732,29 @@
     "section": {
       "title": "تحليل التوافق مع رؤية 2030",
       "subtitle": "شف كيف خبراتك ومهاراتك تركب مع أهداف الرؤية الاستراتيجية",
-      "description": "اكتشف مدى توافق خبراتك ومهاراتك مع القطاعات الاستراتيجية لرؤية المملكة 2030. احصل على رؤى وتوصيات مدعومة بالذكاء الاصطناعي.",
-      "analyze": "تحليل السيرة الذاتية (2 نقطة)",
-      "analyzing": "جاري التحليل...",
-      "analyzingDesc": "جاري تحليل سيرتك الذاتية مقابل قطاعات رؤية 2030...",
-      "analyzingProgress": "جاري تحليل توافق مهاراتك مع القطاعات الاستراتيجية لرؤية المملكة 2030...",
-      "noResume": "السيرة الذاتية مطلوبة",
-      "noResumeDesc": "الرجاء رفع السيرة الذاتية أولاً.",
-      "complete": "اكتمل التحليل",
-      "completeDesc": "تقرير توافق رؤية 2030 جاهز.",
-      "failed": "فشل التحليل",
-      "failedDesc": "فشل تحليل توافق الرؤية. حاول مرة أخرى.",
-      "yourAlignment": "توافقك مع رؤية 2030",
-      "careerPath": "المسار المهني المكتشف",
-      "overallScore": "النتيجة النهائية",
-      "topSectors": "أعلى القطاعات توافقاً",
-      "viewRecommendations": "عرض التوصيات",
-      "reanalyze": "إعادة التحليل (2 نقطة)",
-      "included": "يشمل التالي:",
-      "feature1": "نتيجة التوافق العام مع قطاعات الرؤية",
-      "feature2": "تفصيل القطاعات مع المهارات المتطابقة",
-      "feature3": "توصيات مخصصة لتحسين التوافق",
-      "feature4": "كلمات ومصطلحات للإضافة (عربي + إنجليزي)"
+      "description": "شف وش كثر خبراتك ومهاراتك تخدم قطاعات رؤية 2030. خذ لك نظرة وتوصيات تضبطك بالذكاء الاصطناعي.",
+      "analyze": "حلل سيرتك (2 نقطة)",
+      "analyzing": "دقايق نحلل...",
+      "analyzingDesc": "جالسين نشيك سيرتك مع قطاعات رؤية 2030...",
+      "analyzingProgress": "نرتب مهاراتك ونشوف توافقها مع قطاعات الرؤية الاستراتيجية...",
+      "noResume": "أرفق سيرتك أول",
+      "noResumeDesc": "يا ليت ترفع سيرتك الذاتية أول شي.",
+      "complete": "التحليل جاهز",
+      "completeDesc": "تقريرك لتوافق رؤية 2030 جاهز وتقدر تشوفه.",
+      "failed": "التحليل ما زبط",
+      "failedDesc": "معليش، ما زبط تحليل الرؤية. جرب مرة ثانية.",
+      "yourAlignment": "توافقك مع الرؤية",
+      "careerPath": "مسارك المهني المبين معنا",
+      "overallScore": "نتيجتك النهائية",
+      "topSectors": "أقوى القطاعات اللي تركب معك",
+      "viewRecommendations": "شف التوصيات",
+      "reanalyze": "حلل من جديد (2 نقطة)",
+      "included": "وش يشمل:",
+      "feature1": "نتيجتك العامة ومدى توافقك مع قطاعات الرؤية",
+      "feature2": "تفصيل القطاعات الزينة لك ومهاراتك المقبولة فيها",
+      "feature3": "توصيات مفصلة عشان ترفع نسبة توافقك",
+      "feature4": "كلمات ومصطلحات ضروري تضيفها (عربي + إنجليزي)",
+      "howCalculated": "كيف حسبنا هالنتيجة؟"
     },
     "title": "توافق رؤية 2030",
     "resultsAlignment": "مدى توافقك مع الرؤية",
@@ -872,7 +877,12 @@
     "revert": "تراجع",
     "applyAll": "تطبيق الكل",
     "noSuggestions": "لا توجد اقتراحات",
-    "analyzing": "يحلل..."
+    "analyzing": "يحلل...",
+    "suggested": "مُقترح",
+    "recommendation": "توصية",
+    "before": "قبل",
+    "after": "بعد",
+    "optimizedView": "العرض المحسّن"
   },
   "sections": {
     "resume": {
@@ -900,11 +910,62 @@
         "score": "نسبة التطابق",
         "keywords": "الكلمات المفتاحية الموجودة",
         "missing": "الكلمات المفتاحية المفقودة",
-        "suggestions": "الاقتراحات"
+        "suggestions": "الاقتراحات",
+        "calculation": {
+          "title": "كيف حسبناها؟"
+        }
       },
       "analyze": "تحليل المطابقة",
       "analyzing": "يحلل...",
-      "noResume": "لو سمحت ارفع السيرة الذاتية أولاً"
+      "noResume": "لو سمحت ارفع السيرة الذاتية أولاً",
+      "categoryScores": {
+        "hardSkills": "المهارات التقنية",
+        "experience": "الخبرة",
+        "education": "التعليم",
+        "softSkills": "المهارات الشخصية",
+        "hardSkillsDesc": "مطابقة الكلمات المفتاحية التقنية",
+        "experienceDesc": "المسميات الوظيفية وسنوات الخبرة",
+        "educationDesc": "الدرجة العلمية ومجال الدراسة",
+        "softSkillsDesc": "السمات الشخصية والقيادية"
+      },
+      "variant": {
+        "strongMatch": "تطابق قوي",
+        "goodStart": "بداية جيدة",
+        "needsWork": "يحتاج تحسين"
+      },
+      "variantLabels": {
+        "strongMatch": "تطابق قوي",
+        "goodStart": "بداية جيدة",
+        "needsWork": "يحتاج تحسين"
+      },
+      "optimizedBanner": "تحليل السيرة الذاتية المحسّنة. إذا قمت بالتصدير وإعادة الرفع، توقّع نتيجة حوالي {{score}}.",
+      "scoreLabel": "النتيجة"
+    },
+    "optimizationResults": {
+      "title": "ملخص نتائج التحسين",
+      "subtitle": "كيف تحسنت سيرتك الذاتية لتتناسب مع الوظيفة",
+      "matchScore": "نسبة التطابق",
+      "before": "قبل",
+      "after": "بعد",
+      "improvementsFound": "تحسينات متاحة",
+      "applied": "تم تطبيقها",
+      "scoreBoost": "تحسن النسبة",
+      "potentialBoost": "حتى +{{points}}% ممكن",
+      "keywordsAdded": "الكلمات المفتاحية المضافة لمطابقة الوظيفة",
+      "keywordsMatching": "الكلمات المتطابقة مع الوظيفة",
+      "more": "المزيد",
+      "improvementsApplied": "التحسينات المطبقة",
+      "sectionLabels": {
+        "headline": "تم تحسين العنوان لأنظمة ATS",
+        "summary": "تمت إعادة كتابة الملخص بتأثير",
+        "experience": "تم تحديد كمي لنقاط الخبرة",
+        "skills": "تم مواءمة المهارات مع المتطلبات",
+        "education": "تم تحسين قسم التعليم",
+        "projects": "تم إبراز المشاريع بفعالية"
+      },
+      "applyAll": "تطبيق الكل ({{remaining}} متبقي)",
+      "exportPdf": "تصدير PDF",
+      "shareResult": "شارك نتيجتك"
     },
     "optimize": {
       "title": "صقل كل قسم",
@@ -946,7 +1007,46 @@
         "pending": "معلق"
       },
       "generating": "ينشئ التحسينات...",
-      "noChanges": "لا توجد تحسينات متاحة"
+      "noChanges": "لا توجد تحسينات متاحة",
+      "tabs": {
+        "all": "جميع الأقسام",
+        "headline": "العنوان",
+        "summary": "الملخص",
+        "experience": "الخبرة",
+        "skills": "المهارات",
+        "projects": "المشاريع",
+        "certifications": "الشهادات"
+      },
+      "chipLabels": {
+        "add": "أضف للسيرة",
+        "neutral": "احتفظ كما هي",
+        "remove": "قلل التأكيد"
+      },
+      "noKeywords": "لا توجد كلمات مفتاحية",
+      "collapseAll": "طي الكل",
+      "expandAll": "توسيع الكل",
+      "noHeadline": "لا يوجد عنوان",
+      "noSummary": "لا يوجد ملخص",
+      "noOptimizations": "لم يتم إنشاء تحسينات. قد يحتاج الذكاء الاصطناعي إلى مزيد من السياق.",
+      "emptyOptimizations": "حصل الذكاء الاصطناعي على اقتراحات فارغة. يرجى المحاولة مرة أخرى.",
+      "failedGenerate": "فشل في توليد التحسينات",
+      "uploadFirst": "يرجى رفع سيرة ذاتية أولاً",
+      "optimizingResume": "جاري التحسين...",
+      "currentScore": "الحالي",
+      "optimizedScore": "المُحسَّن",
+      "shareResult": "شارك نتيجتك",
+      "revert": "تراجع",
+      "applyAll": "تطبيق الكل",
+      "privateToYou": "خاص بك",
+      "autoVerifying": "جاري التحقق التلقائي من النتيجة...",
+      "autoVerifyDesc": "تحليل السيرة الذاتية المحسّنة بالذكاء الاصطناعي",
+      "noGapsDetected": "لم يتم اكتشاف فجوات حرجة",
+      "originalContent": "الأصلي",
+      "optimizedVersion": "المحسّن",
+      "revertChanges": "التراجع",
+      "applySuggestion": "تطبيق",
+      "compare": "مقارنة",
+      "skillsRecommendationTooltip": "هذه توصيات فقط ولن تُضاف تلقائياً إلى سيرتك الذاتية"
     },
     "keywords": {
       "title": "الكلمات المفتاحية",
@@ -1140,6 +1240,15 @@
           "job_hopping": "تنقل وظيفي متكرر",
           "demotion": "إشارة تراجع وظيفي"
         }
+      },
+      "privateToYou": "خاص بك",
+      "csvHeaders": {
+        "number": "#",
+        "question": "السؤال",
+        "type": "النوع",
+        "difficulty": "الصعوبة",
+        "category": "الفئة",
+        "answer": "إجابتك"
       }
     },
     "bulk": {

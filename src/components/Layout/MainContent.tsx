@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle } from "lucide-react";
 import {
@@ -8,21 +8,24 @@ import {
 } from "../../services/api.js";
 import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
-import { MatchSection } from "../sections/MatchSection";
-import { OptimizeSection } from "../sections/OptimizeSection";
-// KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 import TemplateGallery from "../sections/TemplatesSection";
-import { InterviewSection } from "../sections/InterviewSection";
-import { BulkAnalysisSection } from "../sections/BulkAnalysisSection";
-import { CoverLetterSection } from "../sections/CoverLetterSection";
-import { PricingSection } from "../sections/PricingSection";
-import { Vision2030Section } from "../Vision2030/Vision2030Section";
+// KeywordsSection removed from MVP navigation - functionality merged into Optimize section
+
+// Lazy-loaded tab sections — each gets its own chunk
+const MatchSection = lazy(() => import("../sections/MatchSection").then(m => ({ default: m.MatchSection })));
+const OptimizeSection = lazy(() => import("../sections/OptimizeSection").then(m => ({ default: m.OptimizeSection })));
+const InterviewSection = lazy(() => import("../sections/InterviewSection").then(m => ({ default: m.InterviewSection })));
+const BulkAnalysisSection = lazy(() => import("../sections/BulkAnalysisSection").then(m => ({ default: m.BulkAnalysisSection })));
+const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").then(m => ({ default: m.CoverLetterSection })));
+const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
+const PricingSection = lazy(() => import("../sections/PricingSection").then(m => ({ default: m.PricingSection })));
+const LandingPage = lazy(() => import("../../pages/LandingPage"));
+
 import { GlassTabs } from "../ui/GlassTabs";
 import { ComparisonTable } from "../ui/ComparisonTable";
 import Toast, { ToastContainer } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
 import { GlassButton } from "../ui/GlassButton";
-import LandingPage from "../../pages/LandingPage";
 import { ParallaxContainer } from "../ui/ParallaxSection";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
@@ -30,6 +33,16 @@ import ViewTextModal from "../ui/ViewTextModal";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
+
+/** Lightweight skeleton shown while lazy sections load */
+function SectionSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-8 w-48 rounded-lg bg-white/10" />
+      <div className="h-64 w-full rounded-xl bg-white/5" />
+    </div>
+  );
+}
 
 
 const getTabsConfig = (t) => [
@@ -69,7 +82,7 @@ const scheduleTimeout = (callback, delay) => {
 };
 
 export default function MainContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
   const isPremium = Boolean(
     user?.user_metadata?.is_premium ||
@@ -486,7 +499,7 @@ export default function MainContent() {
         const { parsedResumeText, showOptimized } = useResumeStore.getState();
         const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
 
-        const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob);
+        const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language);
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
 
@@ -545,7 +558,7 @@ export default function MainContent() {
         setIsAnalyzing(false);
       }
     },
-    [pushToast, resumeData, t]
+    [i18n.language, pushToast, resumeData, t]
   );
 
   const handleOptimize = useCallback(
@@ -577,6 +590,7 @@ export default function MainContent() {
             jobDesc: jobDescription,
             mode,
             preview: !isPremium,
+            language: i18n.language,
           }
         );
 
@@ -689,7 +703,7 @@ export default function MainContent() {
         setIsOptimizing(false);
       }
     },
-    [isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData, t]
+    [i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData, t]
   );
 
   const handleCopy = useCallback(
@@ -871,37 +885,43 @@ export default function MainContent() {
             />
           )}
           {activeTab === "match" && (
-            <MatchSection
-              onAnalyzeMatchAI={handleAnalyzeMatchAI}
-              matchAnalysis={matchAnalysis}
-              isAnalyzing={isAnalyzing}
-              hasResume={Boolean(resumeData?.plainText)}
-              resumeText={resumeData?.plainText || ''}
-              onToast={pushToast}
-              onClear={handleClearMatch}
-            />
+            <Suspense fallback={<SectionSkeleton />}>
+              <MatchSection
+                onAnalyzeMatchAI={handleAnalyzeMatchAI}
+                matchAnalysis={matchAnalysis}
+                isAnalyzing={isAnalyzing}
+                hasResume={Boolean(resumeData?.plainText)}
+                resumeText={resumeData?.plainText || ''}
+                onToast={pushToast}
+                onClear={handleClearMatch}
+              />
+            </Suspense>
           )}
           {activeTab === "vision2030" && (
-            <Vision2030Section
-              resumeText={resumeData?.plainText || ''}
-              onToast={pushToast}
-            />
+            <Suspense fallback={<SectionSkeleton />}>
+              <Vision2030Section
+                resumeText={resumeData?.plainText || ''}
+                onToast={pushToast}
+              />
+            </Suspense>
           )}
           {activeTab === "optimize" && (
-            <OptimizeSection
-              isPremium={isPremium}
-              optimizations={optimizations}
-              keywords={optimizationKeywords}
-              isOptimizing={isOptimizing}
-              onOptimize={handleOptimize}
-              onCopy={handleCopy}
-              previewUsed={previewUsed}
-              onUpgrade={handleUpgrade}
-              onExport={handleExportPdf}
-              canExport={Boolean(resumeData?.plainText)}
-              hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
-              onClear={handleClearOptimizations}
-            />
+            <Suspense fallback={<SectionSkeleton />}>
+              <OptimizeSection
+                isPremium={isPremium}
+                optimizations={optimizations}
+                keywords={optimizationKeywords}
+                isOptimizing={isOptimizing}
+                onOptimize={handleOptimize}
+                onCopy={handleCopy}
+                previewUsed={previewUsed}
+                onUpgrade={handleUpgrade}
+                onExport={handleExportPdf}
+                canExport={Boolean(resumeData?.plainText)}
+                hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
+                onClear={handleClearOptimizations}
+              />
+            </Suspense>
           )}
 
           {activeTab === "templates" && (
@@ -911,25 +931,31 @@ export default function MainContent() {
             />
           )}
           {activeTab === "interview" && (
-            <InterviewSection
-              jobDescription={jobDescription}
-              resumeText={resumeData?.plainText || ""}
-              matchAnalysis={matchAnalysis}
-              resumeData={resumeData}
-              onUpdate={handleResumeDataUpdate}
-            />
+            <Suspense fallback={<SectionSkeleton />}>
+              <InterviewSection
+                jobDescription={jobDescription}
+                resumeText={resumeData?.plainText || ""}
+                matchAnalysis={matchAnalysis}
+                resumeData={resumeData}
+                onUpdate={handleResumeDataUpdate}
+              />
+            </Suspense>
           )}
           {activeTab === "bulk" && (
-            <BulkAnalysisSection
-              jobDescription={jobDescription}
-            />
+            <Suspense fallback={<SectionSkeleton />}>
+              <BulkAnalysisSection
+                jobDescription={jobDescription}
+              />
+            </Suspense>
           )}
           {activeTab === "cover-letter" && (
-            <CoverLetterSection
-              resumeText={resumeData?.plainText || ""}
-              jobDescription={jobDescription}
-              resumeData={resumeData}
-            />
+            <Suspense fallback={<SectionSkeleton />}>
+              <CoverLetterSection
+                resumeText={resumeData?.plainText || ""}
+                jobDescription={jobDescription}
+                resumeData={resumeData}
+              />
+            </Suspense>
           )}
         </div>
 
@@ -1011,15 +1037,17 @@ export default function MainContent() {
           ) : user ? (
             workspace
           ) : showLanding ? (
-            <LandingPage
-              onGetStarted={() => {
-                if (typeof window !== "undefined") {
-                  window.localStorage.setItem("watheq:landingSeen", "true");
-                }
-                // Directly trigger sign-in instead of showing sign-in empty state
-                signInWithGoogle();
-              }}
-            />
+            <Suspense fallback={<SectionSkeleton />}>
+              <LandingPage
+                onGetStarted={() => {
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("watheq:landingSeen", "true");
+                  }
+                  // Directly trigger sign-in instead of showing sign-in empty state
+                  signInWithGoogle();
+                }}
+              />
+            </Suspense>
           ) : (
             <EmptyState
               icon={UserPlus}
@@ -1113,7 +1141,9 @@ export default function MainContent() {
 
       {/* Pricing Section - shown for all users */}
       <div className={`${containerClass} mt-2`}>
-        <PricingSection />
+        <Suspense fallback={<SectionSkeleton />}>
+          <PricingSection />
+        </Suspense>
       </div>
     </main>
   );

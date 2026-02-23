@@ -242,7 +242,7 @@ export const parseResume = async (resumeInput, options = {}) => {
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
+export const analyzeResumeWithAI = async (resumeText, jobDescription, language = 'en') => {
   if (!resumeText?.plainText && typeof resumeText !== "string") {
     throw new Error("Resume text is required");
   }
@@ -267,7 +267,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
       const response = await fetch(MATCH_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDescription }),
+        body: JSON.stringify({ resumeText, jobText: jobDescription, language }),
       });
 
       const data = await handleResponse(response);
@@ -331,7 +331,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription) => {
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en' }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -342,7 +342,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview }) => 
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language }),
       });
 
       const data = await handleResponse(response);

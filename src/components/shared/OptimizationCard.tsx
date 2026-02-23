@@ -42,7 +42,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden rounded-pill border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-3 py-1 text-xs font-semibold text-emerald-500 sm:inline-flex">
-            Suggested
+            {t('optimization.suggested', 'Suggested')}
           </span>
           <button
             type="button"
@@ -66,7 +66,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
               <div className="flex items-center justify-between">
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-gold-500">
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
-                  Recommendation
+                  {t('optimization.recommendation', 'Recommendation')}
                 </p>
                 <span className="flex items-center gap-1 text-xs text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                   <Target className="h-3 w-3" aria-hidden="true" />
@@ -89,7 +89,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
 
               {viewMode === "split" && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft/80">Before</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink-soft/80">{t('optimization.before', 'Before')}</p>
                   <div className="h-full rounded-lg border border-[color:var(--glass-border)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] px-4 py-3 text-sm leading-relaxed text-ink">
                     <p>{card?.exampleBefore ?? "Original bullet pending."}</p>
                   </div>
@@ -99,7 +99,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-400">
-                    {viewMode === "split" ? "After" : "Optimized View"}
+                    {viewMode === "split" ? t('optimization.after', 'After') : t('optimization.optimizedView', 'Optimized View')}
                   </p>
                   <GlassButton
                     variant="secondary"
@@ -108,7 +108,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
                     className="text-xs h-7 px-3"
                   >
                     {copied ? <ClipboardCheck className="w-3 h-3 me-1" /> : <Clipboard className="w-3 h-3 me-1" />}
-                    {copied ? "Copied" : "Copy"}
+                    {copied ? t('common.copied', 'Copied') : t('common.copy', 'Copy')}
                   </GlassButton>
                 </div>
                 <div className="relative h-full overflow-hidden rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm leading-relaxed text-ink shadow-[0_0_15px_-3px_rgba(16,185,129,0.1)] dark:border-emerald-400/20 dark:bg-emerald-400/5">

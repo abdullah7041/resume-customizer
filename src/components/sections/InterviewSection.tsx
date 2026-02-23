@@ -253,10 +253,7 @@ export function InterviewSection({
   resumeData,
   onUpdate
 }: InterviewSectionProps) {
-  const { t } = useTranslation();
-  // Language detection available for future RTL support
-  // const { i18n } = useTranslation();
-  // const isArabic = i18n.language === 'ar';
+  const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -362,6 +359,7 @@ export function InterviewSection({
           jobDescription,
           resumeText: resumeText || '',
           questionType,
+          language: i18n.language,
           ...(workEntries.length > 0 && { workHistory: workEntries }),
         }),
       });
@@ -425,7 +423,7 @@ export function InterviewSection({
     } finally {
       setIsLoading(false);
     }
-  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, trackFeatureUse, shouldShowFeedback, t]);
+  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, trackFeatureUse, shouldShowFeedback, t, i18n.language]);
 
   // State to track which question type was selected
   const [pendingQuestionType, setPendingQuestionType] = useState<'behavioral' | 'technical'>('behavioral');
@@ -487,7 +485,14 @@ export function InterviewSection({
   };
 
   const exportQuestions = () => {
-    const headers = ['#', 'Question', 'Type', 'Difficulty', 'Category', 'Your Answer'];
+    const headers = [
+      t('sections.interview.csvHeaders.number', '#'),
+      t('sections.interview.csvHeaders.question', 'Question'),
+      t('sections.interview.csvHeaders.type', 'Type'),
+      t('sections.interview.csvHeaders.difficulty', 'Difficulty'),
+      t('sections.interview.csvHeaders.category', 'Category'),
+      t('sections.interview.csvHeaders.answer', 'Your Answer'),
+    ];
     const rows = questions.map((q, idx) => [
       idx + 1,
       `"${(q.question || '').replace(/"/g, '""')}"`,
@@ -822,7 +827,7 @@ export function InterviewSection({
                           <div className="pt-2">
                             <label className="block text-sm font-medium text-gray-300 mb-2 flex justify-between">
                               {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
-                              <span className="text-xs text-gray-500 font-normal">Private to you</span>
+                              <span className="text-xs text-gray-500 font-normal">{t('sections.interview.privateToYou', 'Private to you')}</span>
                             </label>
                             <textarea
                               value={savedAnswers[globalIdx] || ''}
@@ -1061,7 +1066,7 @@ export function InterviewSection({
                     <div className="pt-2">
                       <label className="block text-sm font-medium text-gray-300 mb-2 flex justify-between">
                         {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
-                        <span className="text-xs text-gray-500 font-normal">Private to you</span>
+                        <span className="text-xs text-gray-500 font-normal">{t('sections.interview.privateToYou', 'Private to you')}</span>
                       </label>
                       <textarea
                         value={savedAnswers[index] || ''}

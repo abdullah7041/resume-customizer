@@ -67,8 +67,7 @@ function AnimatedScore({
     label: string;
     variant: 'before' | 'after'
 }) {
-    const { i18n } = useTranslation();
-    const isArabic = i18n.language === 'ar';
+    const { t } = useTranslation();
 
     // Determine color based on score
     const getScoreColor = (s: number, isAfter: boolean) => {
@@ -106,7 +105,7 @@ function AnimatedScore({
                 <span className="text-2xl text-gray-500 ml-1">%</span>
             </div>
             <span className="text-sm text-gray-400 mt-1">
-                {isArabic ? 'نسبة التطابق' : 'Match Score'}
+                {t('sections.optimizationResults.matchScore', 'Match Score')}
             </span>
         </div>
     );
@@ -288,8 +287,7 @@ export function OptimizationResultsSummary({
     onApplyAll,
     vision2030,
 }: OptimizationResultsSummaryProps) {
-    const { t, i18n } = useTranslation();
-    const isArabic = i18n.language === 'ar';
+    const { t } = useTranslation();
 
     // Calculate improvement
     const improvement = afterScore - beforeScore;
@@ -303,17 +301,9 @@ export function OptimizationResultsSummary({
         return optimizationsBySection
             .filter(s => s.applied > 0)
             .map(s => {
-                const sectionLabels: Record<string, { en: string; ar: string }> = {
-                    headline: { en: 'Headline optimized for ATS', ar: 'تم تحسين العنوان لأنظمة ATS' },
-                    summary: { en: 'Summary rewritten with impact', ar: 'تمت إعادة كتابة الملخص بتأثير' },
-                    experience: { en: 'Experience bullets quantified', ar: 'تم تحديد كمي لنقاط الخبرة' },
-                    skills: { en: 'Skills aligned with requirements', ar: 'تم مواءمة المهارات مع المتطلبات' },
-                    education: { en: 'Education section enhanced', ar: 'تم تحسين قسم التعليم' },
-                    projects: { en: 'Projects highlighted effectively', ar: 'تم إبراز المشاريع بفعالية' },
-                };
-                return sectionLabels[s.section] || { en: s.section, ar: s.section };
+                return t(`sections.optimizationResults.sectionLabels.${s.section}`, s.section);
             });
-    }, [optimizationsBySection]);
+    }, [optimizationsBySection, t]);
 
     // Track visibility
     useMemo(() => {
@@ -350,13 +340,10 @@ export function OptimizationResultsSummary({
                         </div>
                         <div>
                             <h3 className="text-xl font-semibold text-white">
-                                {isArabic ? 'ملخص نتائج التحسين' : 'Optimization Results'}
+                                {t('sections.optimizationResults.title', 'Optimization Results')}
                             </h3>
                             <p className="text-sm text-gray-400">
-                                {isArabic
-                                    ? 'كيف تحسنت سيرتك الذاتية لتتناسب مع الوظيفة'
-                                    : 'How your resume improved to match the job'
-                                }
+                                {t('sections.optimizationResults.subtitle', 'How your resume improved to match the job')}
                             </p>
                         </div>
                     </div>
@@ -366,7 +353,7 @@ export function OptimizationResultsSummary({
                         <div className="flex items-center justify-center gap-4 mb-8">
                             <AnimatedScore
                                 score={beforeScore}
-                                label={isArabic ? 'قبل' : 'Before'}
+                                label={t('sections.optimizationResults.before', 'Before')}
                                 variant="before"
                             />
 
@@ -379,7 +366,7 @@ export function OptimizationResultsSummary({
 
                             <AnimatedScore
                                 score={afterScore}
-                                label={isArabic ? 'بعد' : 'After'}
+                                label={t('sections.optimizationResults.after', 'After')}
                                 variant="after"
                             />
                         </div>
@@ -398,7 +385,7 @@ export function OptimizationResultsSummary({
                             </div>
                             <p className="text-2xl font-bold text-white">{totalOptimizations}</p>
                             <p className="text-xs text-gray-400">
-                                {isArabic ? 'تحسينات متاحة' : 'Improvements Found'}
+                                {t('sections.optimizationResults.improvementsFound', 'Improvements Found')}
                             </p>
                         </div>
 
@@ -408,7 +395,7 @@ export function OptimizationResultsSummary({
                             </div>
                             <p className="text-2xl font-bold text-white">{appliedOptimizations}</p>
                             <p className="text-xs text-gray-400">
-                                {isArabic ? 'تم تطبيقها' : 'Applied'}
+                                {t('sections.optimizationResults.applied', 'Applied')}
                             </p>
                         </div>
 
@@ -420,15 +407,12 @@ export function OptimizationResultsSummary({
                                 {hasJobDescription ? `+${improvement}%` : '-'}
                             </p>
                             <p className="text-xs text-gray-400">
-                                {isArabic ? 'تحسن النسبة' : 'Score Boost'}
+                                {t('sections.optimizationResults.scoreBoost', 'Score Boost')}
                             </p>
                             {/* Show potential if not all applied */}
                             {potentialScore && potentialScore > afterScore && (
                                 <p className="text-xs text-emerald-400 mt-1">
-                                    {isArabic
-                                        ? `حتى +${potentialScore - beforeScore}% ممكن`
-                                        : `Up to +${potentialScore - beforeScore}% possible`
-                                    }
+                                    {t('sections.optimizationResults.potentialBoost', 'Up to +{{points}}% possible', { points: potentialScore - beforeScore })}
                                 </p>
                             )}
                         </div>
@@ -465,10 +449,7 @@ export function OptimizationResultsSummary({
                             <div className="flex items-center gap-2 mb-3">
                                 <Plus className="w-4 h-4 text-emerald-400" />
                                 <h4 className="text-sm font-medium text-gray-300">
-                                    {isArabic
-                                        ? 'الكلمات المفتاحية المضافة لمطابقة الوظيفة'
-                                        : 'Keywords Added to Match JD'
-                                    }
+                                    {t('sections.optimizationResults.keywordsAdded', 'Keywords Added to Match JD')}
                                 </h4>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -489,7 +470,7 @@ export function OptimizationResultsSummary({
                                 ))}
                                 {keywordsAdded.length > 10 && (
                                     <span className="px-3 py-1.5 text-sm text-gray-400">
-                                        +{keywordsAdded.length - 10} {isArabic ? 'المزيد' : 'more'}
+                                        +{keywordsAdded.length - 10} {t('sections.optimizationResults.more', 'more')}
                                     </span>
                                 )}
                             </div>
@@ -502,10 +483,7 @@ export function OptimizationResultsSummary({
                             <div className="flex items-center gap-2 mb-3">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                                 <h4 className="text-sm font-medium text-gray-300">
-                                    {isArabic
-                                        ? 'الكلمات المتطابقة مع الوظيفة'
-                                        : 'Keywords Already Matching JD'
-                                    }
+                                    {t('sections.optimizationResults.keywordsMatching', 'Keywords Already Matching JD')}
                                 </h4>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -519,7 +497,7 @@ export function OptimizationResultsSummary({
                                 ))}
                                 {matchedKeywords.length > 8 && (
                                     <span className="px-3 py-1.5 text-sm text-gray-400">
-                                        +{matchedKeywords.length - 8} {isArabic ? 'المزيد' : 'more'}
+                                        +{matchedKeywords.length - 8} {t('sections.optimizationResults.more', 'more')}
                                     </span>
                                 )}
                             </div>
@@ -530,7 +508,7 @@ export function OptimizationResultsSummary({
                     {appliedSections.length > 0 && (
                         <div className="mb-6">
                             <h4 className="text-sm font-medium text-gray-300 mb-3">
-                                {isArabic ? 'التحسينات المطبقة' : 'Improvements Applied'}
+                                {t('sections.optimizationResults.improvementsApplied', 'Improvements Applied')}
                             </h4>
                             <div className="space-y-2">
                                 {appliedSections.map((section, idx) => (
@@ -539,7 +517,7 @@ export function OptimizationResultsSummary({
                                         className="flex items-center gap-2 text-sm text-gray-300"
                                     >
                                         <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                                        <span>{isArabic ? section.ar : section.en}</span>
+                                        <span>{section}</span>
                                     </div>
                                 ))}
                             </div>
@@ -558,10 +536,7 @@ export function OptimizationResultsSummary({
                                 }}
                                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
                             >
-                                {isArabic
-                                    ? `تطبيق الكل (${totalOptimizations - appliedOptimizations} متبقي)`
-                                    : `Apply All (${totalOptimizations - appliedOptimizations} remaining)`
-                                }
+                                {t('sections.optimizationResults.applyAll', 'Apply All ({{remaining}} remaining)', { remaining: totalOptimizations - appliedOptimizations })}
                             </GlassButton>
                         )}
 
@@ -575,7 +550,7 @@ export function OptimizationResultsSummary({
                                 }}
                                 leftIcon={<Download className="w-4 h-4" />}
                             >
-                                {isArabic ? 'تصدير PDF' : 'Export PDF'}
+                                {t('sections.optimizationResults.exportPdf', 'Export PDF')}
                             </GlassButton>
                         )}
 
@@ -593,7 +568,7 @@ export function OptimizationResultsSummary({
                                 }}
                                 leftIcon={<Share2 className="w-4 h-4" />}
                             >
-                                {isArabic ? 'شارك نتيجتك' : 'Share Your Result'}
+                                {t('sections.optimizationResults.shareResult', 'Share Your Result')}
                             </GlassButton>
                         )}
                     </div>

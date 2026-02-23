@@ -88,10 +88,10 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText } = parseResult.data;
+    const { resumeText, jobText, language } = parseResult.data;
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
-    const match = await processMatchOnly(resumeText, jobText);
+    const match = await processMatchOnly(resumeText, jobText, language);
 
     // Map to frontend expected format
     const response = {

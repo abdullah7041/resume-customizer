@@ -41,8 +41,7 @@ const resolveVariant = (score: number) => {
       glow: "bg-emerald-500/30",
       strokeStart: "#10B981",
       strokeEnd: "#34D399",
-      label: "Strong Match",
-      labelAr: "تطابق قوي",
+      label: "strongMatch",
       icon: Target,
       text: "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
     };
@@ -53,8 +52,7 @@ const resolveVariant = (score: number) => {
       glow: "bg-amber-500/20",
       strokeStart: "#F59E0B",
       strokeEnd: "#FBBF24",
-      label: "Good Start",
-      labelAr: "بداية جيدة",
+      label: "goodStart",
       icon: Zap,
       text: "text-amber-400"
     };
@@ -64,8 +62,7 @@ const resolveVariant = (score: number) => {
     glow: "bg-rose-500/20",
     strokeStart: "#F43F5E",
     strokeEnd: "#FB7185",
-    label: "Needs Work",
-    labelAr: "يحتاج تحسين",
+    label: "needsWork",
     icon: Wrench,
     text: "text-rose-400"
   };
@@ -121,8 +118,7 @@ export function MatchSection({
   onToast,
   onClear
 }: MatchSectionProps) {
-  const { t, i18n } = useTranslation();
-  const isArabic = i18n.language === 'ar';
+  const { t } = useTranslation();
   const { showOptimized } = useResumeStore();
 
   // === STATE FROM features/JobMatch.tsx ===
@@ -446,7 +442,7 @@ export function MatchSection({
                         )}
                         <div className="flex flex-col items-center justify-center text-center relative z-10">
                           <Tooltip
-                            content={`${score}/100 - ${isArabic ? variant.labelAr : variant.label}`}
+                            content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`}
                             position="bottom"
                           >
                             <div className="flex flex-col items-center cursor-help">
@@ -455,7 +451,7 @@ export function MatchSection({
                                 duration={1500}
                                 className="text-5xl font-black text-white tracking-tight drop-shadow-lg"
                               />
-                              <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest mt-[-2px]">Score</span>
+                              <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest mt-[-2px]">{t('sections.match.scoreLabel', 'Score')}</span>
                             </div>
                           </Tooltip>
                         </div>
@@ -465,7 +461,7 @@ export function MatchSection({
                     {/* Score Label */}
                     <div className="text-center">
                       <p className={cn('text-sm font-bold uppercase tracking-[0.2em]', variant.text)}>
-                        {isArabic ? variant.labelAr : variant.label}
+                        {t(`sections.match.variant.${variant.label}`, variant.label)}
                       </p>
                       <p className="mt-1 text-sm text-white/80">
                         {matchAnalysis?.reasoning || (
@@ -486,10 +482,7 @@ export function MatchSection({
                     {showOptimized && score !== null && (
                       <div className="w-full p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                         <p className="text-sm text-emerald-300 text-center">
-                          ✅ {isArabic
-                            ? `تحليل السيرة الذاتية المحسّنة. إذا قمت بالتصدير وإعادة الرفع، توقّع نتيجة حوالي ${score}.`
-                            : `Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around ${score}.`
-                          }
+                          ✅ {t('sections.match.optimizedBanner', 'Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.', { score })}
                         </p>
                       </div>
                     )}
@@ -528,10 +521,10 @@ export function MatchSection({
                     {matchAnalysis?.categoryScores ? (
                       <div className="space-y-3">
                         {[
-                          { key: 'hard_skills', label: isArabic ? 'المهارات التقنية' : 'Hard Skills', color: 'bg-blue-500', text: 'text-blue-400', icon: Code2 },
-                          { key: 'experience', label: isArabic ? 'الخبرة' : 'Experience', color: 'bg-purple-500', text: 'text-purple-400', icon: Briefcase },
-                          { key: 'education', label: isArabic ? 'التعليم' : 'Education', color: 'bg-amber-500', text: 'text-amber-400', icon: GraduationCap },
-                          { key: 'soft_skills', label: isArabic ? 'المهارات الشخصية' : 'Soft Skills', color: 'bg-emerald-500', text: 'text-emerald-400', icon: Users }
+                          { key: 'hard_skills', i18nKey: 'hardSkills', color: 'bg-blue-500', text: 'text-blue-400', icon: Code2 },
+                          { key: 'experience', i18nKey: 'experience', color: 'bg-purple-500', text: 'text-purple-400', icon: Briefcase },
+                          { key: 'education', i18nKey: 'education', color: 'bg-amber-500', text: 'text-amber-400', icon: GraduationCap },
+                          { key: 'soft_skills', i18nKey: 'softSkills', color: 'bg-emerald-500', text: 'text-emerald-400', icon: Users }
                         ].map(cat => {
                           const data = matchAnalysis.categoryScores?.[cat.key as keyof typeof matchAnalysis.categoryScores];
                           if (!data) return null;
@@ -543,7 +536,7 @@ export function MatchSection({
                               <div className="flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2">
                                   <CatIcon className={cn("w-3.5 h-3.5", cat.text)} />
-                                  <span className="text-white/80 font-medium">{cat.label}</span>
+                                  <span className="text-white/80 font-medium">{t(`sections.match.categoryScores.${cat.i18nKey}`)}</span>
                                 </div>
                                 <span className={cn("font-bold", cat.text)}>{data.score}/{data.max}</span>
                               </div>
@@ -568,20 +561,20 @@ export function MatchSection({
                       </p>
                       <div className="grid grid-cols-2 gap-2 text-[10px] text-white/60">
                         <div>
-                          <span className="text-blue-400 font-medium block mb-0.5">{isArabic ? 'المهارات التقنية' : 'Hard Skills'}</span>
-                          {isArabic ? 'مطابقة الكلمات المفتاحية التقنية' : 'Matching technical keywords'}
+                          <span className="text-blue-400 font-medium block mb-0.5">{t('sections.match.categoryScores.hardSkills', 'Hard Skills')}</span>
+                          {t('sections.match.categoryScores.hardSkillsDesc', 'Matching technical keywords')}
                         </div>
                         <div>
-                          <span className="text-purple-400 font-medium block mb-0.5">{isArabic ? 'الخبرة' : 'Experience'}</span>
-                          {isArabic ? 'المسميات الوظيفية وسنوات الخبرة' : 'Job titles & years relevance'}
+                          <span className="text-purple-400 font-medium block mb-0.5">{t('sections.match.categoryScores.experience', 'Experience')}</span>
+                          {t('sections.match.categoryScores.experienceDesc', 'Job titles & years relevance')}
                         </div>
                         <div>
-                          <span className="text-amber-400 font-medium block mb-0.5">{isArabic ? 'التعليم' : 'Education'}</span>
-                          {isArabic ? 'الدرجة العلمية ومجال الدراسة' : 'Degree & field match'}
+                          <span className="text-amber-400 font-medium block mb-0.5">{t('sections.match.categoryScores.education', 'Education')}</span>
+                          {t('sections.match.categoryScores.educationDesc', 'Degree & field match')}
                         </div>
                         <div>
-                          <span className="text-emerald-400 font-medium block mb-0.5">{isArabic ? 'المهارات الشخصية' : 'Soft Skills'}</span>
-                          {isArabic ? 'السمات الشخصية والقيادية' : 'Behavioral & leadership traits'}
+                          <span className="text-emerald-400 font-medium block mb-0.5">{t('sections.match.categoryScores.softSkills', 'Soft Skills')}</span>
+                          {t('sections.match.categoryScores.softSkillsDesc', 'Behavioral & leadership traits')}
                         </div>
                       </div>
                     </div>
