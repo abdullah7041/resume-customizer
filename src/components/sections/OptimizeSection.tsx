@@ -594,9 +594,17 @@ export function OptimizeSection({
       // Initialize accumulator for consolidated update
       const metricsToUpdate: Partial<OptimizationMetrics> = {};
 
+      // Check if match analysis already provided an authoritative baseline score.
+      // The optimize API independently re-calculates match_score which can differ
+      // significantly from the match analysis (e.g., 77% vs 15%).
+      const existingBaseline = useResumeStore.getState().baselineMatchScore;
+
       // Capture match scoring data for Results Summary
       if (data.matchScoring) {
-        metricsToUpdate.beforeScore = data.matchScoring.beforeScore;
+        // Only use optimize API's beforeScore as FALLBACK
+        if (existingBaseline === null) {
+          metricsToUpdate.beforeScore = data.matchScoring.beforeScore;
+        }
         // Use estimatedImprovement from backend (no fake afterScore)
         metricsToUpdate.improvement = data.matchScoring.estimatedImprovement ?? data.matchScoring.improvement ?? null;
         metricsToUpdate.afterScore = data.matchScoring.afterScore ?? null;
@@ -632,8 +640,11 @@ export function OptimizeSection({
         metricsToUpdate.scoreBreakdown = data.scoreBreakdown;
       }
 
-      // Capture category scores from API response
-      if (data.categoryScores) {
+      // Capture category scores from API response — only as fallback
+      // When a match analysis has already run, its category scores (displayed in
+      // MatchSection) are authoritative. The optimize API's scores come from a
+      // different AI call and can diverge significantly.
+      if (data.categoryScores && existingBaseline === null) {
         metricsToUpdate.categoryScores = data.categoryScores;
       }
 
@@ -730,7 +741,7 @@ export function OptimizeSection({
             const result = await analyzeResumeWithAI(optimizedText, jobDescription);
 
             if (result?.score) {
-              const beforeScore = metricsToUpdate.beforeScore ?? resultsSummaryData.beforeScore;
+              const beforeScore = existingBaseline ?? metricsToUpdate.beforeScore ?? resultsSummaryData.beforeScore;
               setVerifiedScore(result.score);
               // Update metrics with genuine verified scores
               setOptimizationMetrics({

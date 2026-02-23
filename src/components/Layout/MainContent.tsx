@@ -517,19 +517,22 @@ export default function MainContent() {
             reasoning: result.reasoning || '',
           });
 
-          // Only update beforeScore when analyzing ORIGINAL resume (not optimized)
-          // This prevents optimized analysis from polluting the baseline score
-          if (!showOptimized) {
-            setOptimizationMetrics({
-              beforeScore: result.score,
-              hasJobDescription: true,
-            });
-          }
+          // Always save match analysis score — line 500 already ensures we analyze
+          // the ORIGINAL resume text regardless of showOptimized state.
+          // Previous guards (!showOptimized) caused a bug where the match score (15%)
+          // was never saved, letting the optimize API overwrite it with its own score (77%).
+          setOptimizationMetrics({
+            beforeScore: result.score,
+            hasJobDescription: true,
+            // Store match analysis categoryScores so ScoreBreakdown uses
+            // authoritative scores instead of the optimize API's divergent ones.
+            ...(result.categoryScores && { categoryScores: result.categoryScores }),
+          });
 
-          // Store baseline score if this is the first analysis of an original (not optimized) resume
-          if (!showOptimized && baselineMatchScore === null) {
-            setBaselineMatchScore(result.score);
-          }
+          // Always update baseline score on each match analysis of the original resume.
+          // The old guard (baselineMatchScore === null) prevented updates when the user
+          // re-analyzed with a different job description.
+          setBaselineMatchScore(result.score);
         }
 
         pushToast(
