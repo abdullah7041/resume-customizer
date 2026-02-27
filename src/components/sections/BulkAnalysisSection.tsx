@@ -273,20 +273,17 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     setShowConfirmModal(true);
   }, [jobDescription, processResumeActual]);
 
-  // Handler for confirmed analysis — processes ALL pending resumes
+  // Handler for confirmed analysis — processes resumes sequentially to avoid API rate limits
   const handleConfirmAnalysis = async () => {
     setShowConfirmModal(false);
     const ids = [...pendingResumeIds];
     setPendingResumeIds([]);
-    await Promise.all(
-      ids.map(id => {
-        const resume = resumes.find(r => r.id === id);
-        if (resume?.file) {
-          return processResumeActual(id, resume.file);
-        }
-        return Promise.resolve();
-      })
-    );
+    for (const id of ids) {
+      const resume = resumes.find(r => r.id === id);
+      if (resume?.file) {
+        await processResumeActual(id, resume.file);
+      }
+    }
   };
 
   const handleFiles = useCallback(async (files: FileList) => {
@@ -310,7 +307,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     }));
 
     setResumes(prev => [...prev, ...newResumes]);
-    await Promise.all(newResumes.map(resume => processResume(resume.id, resume.file!)));
+    // Process sequentially to avoid overwhelming the API with concurrent requests
+    for (const resume of newResumes) {
+      await processResume(resume.id, resume.file!);
+    }
   }, [resumes.length, processResume]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {

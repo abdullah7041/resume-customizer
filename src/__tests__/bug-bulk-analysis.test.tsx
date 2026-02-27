@@ -213,4 +213,71 @@ describe('BulkAnalysisSection', () => {
       }, { timeout: 5000 });
     });
   });
+
+  describe('Bug: concurrent requests cause rate limit errors', () => {
+    it('should process resumes sequentially to avoid overwhelming the API', async () => {
+      // Track concurrent calls - if resumes are processed in parallel,
+      // multiple parseResume calls will be active simultaneously
+      let activeCalls = 0;
+      let maxConcurrentCalls = 0;
+
+      mockParseResume.mockImplementation(async () => {
+        activeCalls++;
+        maxConcurrentCalls = Math.max(maxConcurrentCalls, activeCalls);
+        // Simulate some async work
+        await new Promise(resolve => setTimeout(resolve, 50));
+        activeCalls--;
+        return { plainText: 'Test resume content' };
+      });
+
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        activeCalls++;
+        maxConcurrentCalls = Math.max(maxConcurrentCalls, activeCalls);
+        await new Promise(resolve => setTimeout(resolve, 50));
+        activeCalls--;
+        return {
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({
+            score: 75,
+            coverage: 0.75,
+            strongMatches: ['Python', 'SQL'],
+            missingKeywords: ['Docker'],
+            creditsRemaining: 90,
+          }),
+        };
+      });
+
+      const { container } = render(
+        <BulkAnalysisSection jobDescription="Looking for Python SQL Docker engineer" />
+      );
+
+      // Upload 3 files at once
+      const files = [
+        new File(['resume 1'], 'resume1.pdf', { type: 'application/pdf' }),
+        new File(['resume 2'], 'resume2.pdf', { type: 'application/pdf' }),
+        new File(['resume 3'], 'resume3.pdf', { type: 'application/pdf' }),
+      ];
+      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+      await act(async () => {
+        fireEvent.change(input, { target: { files } });
+      });
+
+      // Confirm the batch
+      await waitFor(() => {
+        const confirmButton = screen.queryByText(/confirm/i);
+        if (confirmButton) fireEvent.click(confirmButton);
+      });
+
+      // Wait for all to complete
+      await waitFor(() => {
+        expect(screen.getAllByText('Ready').length).toBe(3);
+      }, { timeout: 10000 });
+
+      // Sequential processing should never have more than 1 active call at a time
+      // (parseResume + fetch are interleaved for one resume before the next starts)
+      expect(maxConcurrentCalls).toBeLessThanOrEqual(1);
+    });
+  });
 });
