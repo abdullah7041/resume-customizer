@@ -16,11 +16,11 @@ const REFEREE_REWARD = 5;
  * Get Supabase client for referral operations
  */
 function getSupabaseClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    throw new Error('[ReferralManager] Supabase credentials not configured');
+    throw new Error('[ReferralManager] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
 
   return createClient(url, key, {

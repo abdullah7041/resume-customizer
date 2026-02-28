@@ -248,7 +248,8 @@ describe('TemplatesSection', () => {
             const buttons = screen.getAllByRole('button');
             expect(buttons.length).toBeGreaterThan(0);
             buttons.forEach(button => {
-                expect(button).toBeVisible();
+                // Verify keyboard accessibility: buttons should have a tabIndex >= 0
+                expect(button.tabIndex).toBeGreaterThanOrEqual(0);
             });
         });
 
