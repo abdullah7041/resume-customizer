@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 
-interface GlassCardProps {
+interface GlassCardProps extends HTMLMotionProps<"div"> {
   children: ReactNode;
   variant?: 'default' | 'light' | 'elevated' | 'subtle';
   className?: string;
@@ -30,6 +31,7 @@ export function GlassCard({
   className,
   padding = 'md',
   rounded = '2xl',
+  ...props
 }: GlassCardProps) {
   const variantStyles = {
     default: glass.card,
@@ -39,16 +41,26 @@ export function GlassCard({
   };
 
   return (
-    <div
+    <motion.div
+      whileHover={{
+        y: -3,
+        rotateX: 1.5,
+        rotateY: -1.5,
+        boxShadow: '0 24px 60px -20px rgba(1, 10, 12, 0.9), 0 16px 40px -24px rgba(9, 96, 84, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
+        transition: { type: "spring", stiffness: 300, damping: 20 }
+      }}
       className={cn(
         variantStyles[variant],
         paddingMap[padding],
         roundedMap[rounded],
+        "transform-gpu will-change-transform perspective-1000",
         className
       )}
+      {...props}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
+
 

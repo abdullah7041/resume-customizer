@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 const Joyride = lazy(() => import("react-joyride"));
+import { MotionConfig } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
 
@@ -27,54 +28,56 @@ export default function App() {
   const { run, steps, stepIndex, handleCallback } = useOnboardingTour();
 
   return (
-    <DirectionProvider>
-      <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-gradient-to-b from-[rgba(11,107,58,0.92)] via-[rgba(20,99,86,0.95)] to-[rgba(12,83,53,0.97)] dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
-        <OfflineIndicator />
-        <EnvironmentBadge />
-        <Header />
-        <UserProgressNav />
+    <MotionConfig reducedMotion="user">
+      <DirectionProvider>
+        <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-gradient-to-b from-[rgba(11,107,58,0.92)] via-[rgba(20,99,86,0.95)] to-[rgba(12,83,53,0.97)] dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
+          <OfflineIndicator />
+          <EnvironmentBadge />
+          <Header />
+          <UserProgressNav />
 
-        <MainContent />
-        <ConsentBanner />
+          <MainContent />
+          <ConsentBanner />
 
-        {/* Credit Upgrade Modal */}
-        <UpgradeModal
-          isOpen={showUpgrade}
-          onClose={() => setShowUpgrade(false)}
-          creditsRemaining={credits?.remaining || 0}
-          dismissKey={upgradeDismissedKey || ''}
-        />
-
-        {/* Onboarding Tour */}
-        <Suspense fallback={null}>
-          <Joyride
-            steps={steps}
-            run={run}
-            stepIndex={stepIndex}
-            continuous
-            showProgress
-            showSkipButton
-            callback={handleCallback}
-            disableScrolling={false}
-            scrollToFirstStep
-            scrollOffset={20}
-            spotlightClicks={false}
-            tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
-            locale={{
-              back: 'Back',
-              close: 'Close',
-              last: 'Finish',
-              next: 'Next',
-              skip: 'Skip Tour',
-            }}
-            floaterProps={{
-              disableAnimation: false,
-              offset: 10,
-            }}
+          {/* Credit Upgrade Modal */}
+          <UpgradeModal
+            isOpen={showUpgrade}
+            onClose={() => setShowUpgrade(false)}
+            creditsRemaining={credits?.remaining || 0}
+            dismissKey={upgradeDismissedKey || ''}
           />
-        </Suspense>
-      </div>
-    </DirectionProvider>
+
+          {/* Onboarding Tour */}
+          <Suspense fallback={null}>
+            <Joyride
+              steps={steps}
+              run={run}
+              stepIndex={stepIndex}
+              continuous
+              showProgress
+              showSkipButton
+              callback={handleCallback}
+              disableScrolling={false}
+              scrollToFirstStep
+              scrollOffset={20}
+              spotlightClicks={false}
+              tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
+              locale={{
+                back: 'Back',
+                close: 'Close',
+                last: 'Finish',
+                next: 'Next',
+                skip: 'Skip Tour',
+              }}
+              floaterProps={{
+                disableAnimation: false,
+                offset: 10,
+              }}
+            />
+          </Suspense>
+        </div>
+      </DirectionProvider>
+    </MotionConfig>
   );
 }
 

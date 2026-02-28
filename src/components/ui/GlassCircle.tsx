@@ -1,9 +1,10 @@
 // src/components/ui/GlassCircle.tsx
 // Unified glass circle component for consistent icon containers with prominent glow
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { cn } from '../../lib/utils/cn';
 import type { ReactNode } from 'react';
 
-interface GlassCircleProps {
+interface GlassCircleProps extends HTMLMotionProps<"div"> {
     children: ReactNode;
     size?: 'sm' | 'md' | 'lg' | 'xl';
     variant?: 'default' | 'success' | 'warning' | 'info' | 'purple' | 'blue' | 'indigo';
@@ -60,16 +61,19 @@ export function GlassCircle({
     children,
     size = 'md',
     variant = 'default',
-    className
+    className,
+    ...props
 }: GlassCircleProps) {
     const styles = variantStyles[variant];
 
     return (
-        <div
+        <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
             className={cn(
                 'flex items-center justify-center rounded-xl',
-                'backdrop-blur-xl transition-all duration-300',
-                'hover:scale-105',
+                'backdrop-blur-xl',
                 sizeClasses[size],
                 className
             )}
@@ -78,10 +82,12 @@ export function GlassCircle({
                 border: styles.border,
                 boxShadow: styles.boxShadow
             }}
+            {...props}
         >
             {children}
-        </div>
+        </motion.div>
     );
 }
 
 export default GlassCircle;
+

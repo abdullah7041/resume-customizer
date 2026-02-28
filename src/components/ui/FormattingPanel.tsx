@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Type, FileText, RotateCcw, Sparkles } from 'lucide-react';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { cn } from '../../lib/utils/cn';
@@ -43,6 +44,23 @@ const COMPACT_FIT = {
     marginSide: 0.5,
 };
 
+// Panel variants for spring animation
+const panelVariants = {
+    expanded: {
+        width: 288,
+        transition: { type: "spring" as const, stiffness: 350, damping: 25, mass: 0.8 }
+    },
+    collapsed: {
+        width: 56,
+        transition: { type: "spring" as const, stiffness: 350, damping: 25, mass: 0.8 }
+    }
+};
+
+const contentVariants = {
+    hidden: { opacity: 0, y: -10, transition: { duration: 0.1 } },
+    visible: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 400, damping: 20, delay: 0.1 } }
+};
+
 interface SliderControlProps {
     label: string;
     value: number;
@@ -62,14 +80,16 @@ function SliderControl({ label, value, min, max, step, unit, onChange }: SliderC
                     {value}{unit}
                 </span>
             </div>
-            <input
+            <motion.input
+                whileHover={{ scaleY: 1.2 }}
+                whileTap={{ scaleY: 1.5 }}
                 type="range"
                 min={min}
                 max={max}
                 step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:bg-white/20 transition-colors"
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:bg-white/20 transition-all origin-left"
             />
         </div>
     );
@@ -91,189 +111,219 @@ export function FormattingPanel() {
     };
 
     return (
-        <div className={cn(
-            "neu-card rounded-2xl overflow-hidden transition-all duration-300",
-            isExpanded ? "w-72" : "w-14"
-        )}>
+        <motion.div
+            variants={panelVariants}
+            initial="expanded"
+            animate={isExpanded ? "expanded" : "collapsed"}
+            className={cn(
+                "neu-card rounded-2xl overflow-hidden will-change-[width]"
+            )}
+        >
             {/* Header Toggle */}
-            <button
+            <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
             >
                 <div className="flex items-center gap-2">
-                    <Type className="w-5 h-5 text-emerald-400" />
-                    {isExpanded && (
-                        <span className="font-semibold text-white">
-                            {isArabic ? 'التنسيق' : 'Formatting'}
-                        </span>
-                    )}
+                    <Type className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <AnimatePresence>
+                        {isExpanded && (
+                            <motion.span
+                                initial={{ opacity: 0, width: 0 }}
+                                animate={{ opacity: 1, width: "auto" }}
+                                exit={{ opacity: 0, width: 0 }}
+                                className="font-semibold text-white whitespace-nowrap overflow-hidden"
+                            >
+                                {isArabic ? 'التنسيق' : 'Formatting'}
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
                 </div>
-                {isExpanded ? (
+                <motion.div
+                    animate={{ rotate: isExpanded ? 0 : 180 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
                     <ChevronUp className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-                ) : (
-                    <ChevronDown className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-                )}
-            </button>
+                </motion.div>
+            </motion.button>
 
             {/* Expanded Content */}
-            {isExpanded && (
-                <div className="px-4 pb-4 space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {/* Font Formatting Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-white/50">
-                            <Type className="w-4 h-4" />
-                            <span className="text-xs font-medium uppercase tracking-wider">
-                                {isArabic ? 'تنسيق الخط' : 'Font Formatting'}
-                            </span>
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        variants={contentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="hidden"
+                        className="px-4 pb-4 space-y-6 origin-top overflow-hidden"
+                    >
+                        {/* Font Formatting Section */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-white/50">
+                                <Type className="w-4 h-4" />
+                                <span className="text-xs font-medium uppercase tracking-wider">
+                                    {isArabic ? 'تنسيق الخط' : 'Font Formatting'}
+                                </span>
+                            </div>
+
+                            {/* Font Style Dropdown */}
+                            <div className="space-y-2">
+                                <label className="text-sm text-white/70">
+                                    {isArabic ? 'نوع الخط' : 'Font Style'}
+                                </label>
+                                <motion.select
+                                    whileTap={{ scale: 0.98 }}
+                                    value={displayOptions.fontFamily}
+                                    onChange={(e) => setDisplayOptions({ fontFamily: e.target.value })}
+                                    className="w-full px-3 py-2 neu-inset rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
+                                >
+                                    {FONT_OPTIONS.map((font) => (
+                                        <option key={font.value} value={font.value} className="bg-gray-900">
+                                            {font.label}
+                                        </option>
+                                    ))}
+                                </motion.select>
+                            </div>
+
+                            <SliderControl
+                                label={isArabic ? 'حجم الخط' : 'Font Size'}
+                                value={displayOptions.baseFontSize}
+                                min={9}
+                                max={12}
+                                step={0.5}
+                                unit="pt"
+                                onChange={(v) => setDisplayOptions({ baseFontSize: v })}
+                            />
+
+                            <SliderControl
+                                label={isArabic ? 'حجم العناوين' : 'Heading Size'}
+                                value={displayOptions.headingSize}
+                                min={12}
+                                max={18}
+                                step={0.5}
+                                unit="pt"
+                                onChange={(v) => setDisplayOptions({ headingSize: v })}
+                            />
                         </div>
 
-                        {/* Font Style Dropdown */}
-                        <div className="space-y-2">
-                            <label className="text-sm text-white/70">
-                                {isArabic ? 'نوع الخط' : 'Font Style'}
-                            </label>
-                            <select
-                                value={displayOptions.fontFamily}
-                                onChange={(e) => setDisplayOptions({ fontFamily: e.target.value })}
-                                className="w-full px-3 py-2 neu-inset rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
-                            >
-                                {FONT_OPTIONS.map((font) => (
-                                    <option key={font.value} value={font.value} className="bg-gray-900">
-                                        {font.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* Divider */}
+                        <div className="border-t border-dashed border-white/10" />
 
-                        <SliderControl
-                            label={isArabic ? 'حجم الخط' : 'Font Size'}
-                            value={displayOptions.baseFontSize}
-                            min={9}
-                            max={12}
-                            step={0.5}
-                            unit="pt"
-                            onChange={(v) => setDisplayOptions({ baseFontSize: v })}
-                        />
+                        {/* Document Formatting Section */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-white/50">
+                                <FileText className="w-4 h-4" />
+                                <span className="text-xs font-medium uppercase tracking-wider">
+                                    {isArabic ? 'تنسيق المستند' : 'Document Formatting'}
+                                </span>
+                            </div>
 
-                        <SliderControl
-                            label={isArabic ? 'حجم العناوين' : 'Heading Size'}
-                            value={displayOptions.headingSize}
-                            min={12}
-                            max={18}
-                            step={0.5}
-                            unit="pt"
-                            onChange={(v) => setDisplayOptions({ headingSize: v })}
-                        />
-                    </div>
+                            <SliderControl
+                                label={isArabic ? 'تباعد الأقسام' : 'Section Spacing'}
+                                value={displayOptions.sectionSpacing}
+                                min={4}
+                                max={20}
+                                step={1}
+                                unit="px"
+                                onChange={(v) => setDisplayOptions({ sectionSpacing: v })}
+                            />
 
-                    {/* Divider */}
-                    <div className="border-t border-dashed border-white/10" />
+                            <SliderControl
+                                label={isArabic ? 'تباعد الفقرات' : 'Paragraph Spacing'}
+                                value={displayOptions.paragraphSpacing}
+                                min={2}
+                                max={12}
+                                step={1}
+                                unit="px"
+                                onChange={(v) => setDisplayOptions({ paragraphSpacing: v })}
+                            />
 
-                    {/* Document Formatting Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-white/50">
-                            <FileText className="w-4 h-4" />
-                            <span className="text-xs font-medium uppercase tracking-wider">
-                                {isArabic ? 'تنسيق المستند' : 'Document Formatting'}
-                            </span>
-                        </div>
+                            <SliderControl
+                                label={isArabic ? 'تباعد الأسطر' : 'Line Spacing'}
+                                value={displayOptions.lineHeight}
+                                min={1.2}
+                                max={2.0}
+                                step={0.05}
+                                unit=""
+                                onChange={(v) => setDisplayOptions({ lineHeight: v })}
+                            />
 
-                        <SliderControl
-                            label={isArabic ? 'تباعد الأقسام' : 'Section Spacing'}
-                            value={displayOptions.sectionSpacing}
-                            min={4}
-                            max={20}
-                            step={1}
-                            unit="px"
-                            onChange={(v) => setDisplayOptions({ sectionSpacing: v })}
-                        />
+                            <SliderControl
+                                label={isArabic ? 'الهوامش العلوية/السفلية' : 'Top & Bottom Margin'}
+                                value={displayOptions.marginTop}
+                                min={0.3}
+                                max={1.0}
+                                step={0.1}
+                                unit="in"
+                                onChange={(v) => setDisplayOptions({ marginTop: v, marginBottom: v })}
+                            />
 
-                        <SliderControl
-                            label={isArabic ? 'تباعد الفقرات' : 'Paragraph Spacing'}
-                            value={displayOptions.paragraphSpacing}
-                            min={2}
-                            max={12}
-                            step={1}
-                            unit="px"
-                            onChange={(v) => setDisplayOptions({ paragraphSpacing: v })}
-                        />
+                            <SliderControl
+                                label={isArabic ? 'الهوامش الجانبية' : 'Side Margins'}
+                                value={displayOptions.marginSide}
+                                min={0.3}
+                                max={1.0}
+                                step={0.1}
+                                unit="in"
+                                onChange={(v) => setDisplayOptions({ marginSide: v })}
+                            />
 
-                        <SliderControl
-                            label={isArabic ? 'تباعد الأسطر' : 'Line Spacing'}
-                            value={displayOptions.lineHeight}
-                            min={1.2}
-                            max={2.0}
-                            step={0.05}
-                            unit=""
-                            onChange={(v) => setDisplayOptions({ lineHeight: v })}
-                        />
-
-                        <SliderControl
-                            label={isArabic ? 'الهوامش العلوية/السفلية' : 'Top & Bottom Margin'}
-                            value={displayOptions.marginTop}
-                            min={0.3}
-                            max={1.0}
-                            step={0.1}
-                            unit="in"
-                            onChange={(v) => setDisplayOptions({ marginTop: v, marginBottom: v })}
-                        />
-
-                        <SliderControl
-                            label={isArabic ? 'الهوامش الجانبية' : 'Side Margins'}
-                            value={displayOptions.marginSide}
-                            min={0.3}
-                            max={1.0}
-                            step={0.1}
-                            unit="in"
-                            onChange={(v) => setDisplayOptions({ marginSide: v })}
-                        />
-
-                        {/* Page Break Toggle */}
-                        <div className="flex items-center justify-between pt-2">
-                            <span className="text-sm text-white/70">
-                                {isArabic ? 'إظهار فواصل الصفحات' : 'Show Page Breaks'}
-                            </span>
-                            <button
-                                onClick={() => setDisplayOptions({ showPageBreaks: !displayOptions.showPageBreaks })}
-                                className={cn(
-                                    "relative w-10 h-5 rounded-full transition-colors",
-                                    displayOptions.showPageBreaks
-                                        ? "bg-emerald-500"
-                                        : "bg-white/20"
-                                )}
-                            >
-                                <span
+                            {/* Page Break Toggle */}
+                            <div className="flex items-center justify-between pt-2">
+                                <span className="text-sm text-white/70">
+                                    {isArabic ? 'إظهار فواصل الصفحات' : 'Show Page Breaks'}
+                                </span>
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setDisplayOptions({ showPageBreaks: !displayOptions.showPageBreaks })}
                                     className={cn(
-                                        "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm",
-                                        displayOptions.showPageBreaks && "translate-x-5"
+                                        "relative w-10 h-5 rounded-full transition-colors",
+                                        displayOptions.showPageBreaks
+                                            ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                                            : "bg-white/20 shadow-inner"
                                     )}
-                                />
-                            </button>
+                                >
+                                    <motion.span
+                                        animate={{ x: displayOptions.showPageBreaks ? (isArabic ? -20 : 20) : 0 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                        className={cn(
+                                            "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm"
+                                        )}
+                                    />
+                                </motion.button>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Quick Actions */}
-                    <div className="space-y-2">
-                        {/* Recommended Fit Button - Primary CTA */}
-                        <button
-                            onClick={handleCompactFit}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 btn-metal rounded-lg text-white text-sm font-medium"
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            {isArabic ? 'ضبط تلقائي مُحسَّن' : 'Recommended Fit'}
-                        </button>
+                        {/* Quick Actions */}
+                        <div className="space-y-2">
+                            {/* Recommended Fit Button - Primary CTA */}
+                            <motion.button
+                                whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(16,185,129,0.2)' }}
+                                whileTap={{ scale: 0.96 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                                onClick={handleCompactFit}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 btn-metal rounded-lg text-white text-sm font-medium"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                {isArabic ? 'ضبط تلقائي مُحسَّن' : 'Recommended Fit'}
+                            </motion.button>
 
-                        {/* Reset Button - Secondary */}
-                        <button
-                            onClick={handleReset}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 btn-spring neu-inset hover:bg-white/5 rounded-lg text-white/70 hover:text-white text-sm"
-                        >
-                            <RotateCcw className="w-4 h-4" />
-                            {isArabic ? 'إعادة تعيين' : 'Reset to Defaults'}
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
+                            {/* Reset Button - Secondary */}
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.96 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                                onClick={handleReset}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 btn-spring neu-inset hover:bg-white/5 rounded-lg text-white/70 hover:text-white text-sm"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                {isArabic ? 'إعادة تعيين' : 'Reset to Defaults'}
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 }

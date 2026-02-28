@@ -1,6 +1,7 @@
 import { TrendingUp, Code2, Briefcase, GraduationCap, Users, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from './ui/GlassCard';
 
 // New categorical scores structure
@@ -116,131 +117,165 @@ export function ScoreBreakdown({
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="flex flex-col items-end">
-                                <div className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                    className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent"
+                                >
                                     {totalScore}
-                                </div>
+                                </motion.div>
                                 <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     {t('optimize.scoreBreakdown.outOf', 'Out of 100')}
                                 </span>
                             </div>
-                            <button
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => setExpanded(!expanded)}
                                 className="p-1 rounded-lg hover:bg-white/5 transition-colors text-gray-400 hover:text-white"
                             >
-                                {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                            </button>
+                                <motion.div
+                                    animate={{ rotate: expanded ? 0 : 180 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                >
+                                    <ChevronUp className="w-5 h-5" />
+                                </motion.div>
+                            </motion.button>
                         </div>
                     </div>
 
-                    {expanded && (
-                        <>
-                            {/* Category Bars */}
-                            <div className="space-y-3">
-                                {categories.map((cat) => {
-                                    const catData = categoryScores[cat.key];
-                                    if (!catData) return null;
+                    <AnimatePresence initial={false}>
+                        {expanded && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="overflow-hidden"
+                            >
+                                {/* Category Bars */}
+                                <div className="space-y-3 pt-2">
+                                    {categories.map((cat, idx) => {
+                                        const catData = categoryScores[cat.key];
+                                        if (!catData) return null;
 
-                                    const config = CATEGORY_CONFIG[cat.key];
-                                    const Icon = config.icon;
-                                    // Ensure percentage doesn't exceed 100 visually
-                                    const percentage = Math.min((catData.score / catData.max) * 100, 100);
+                                        const config = CATEGORY_CONFIG[cat.key];
+                                        const Icon = config.icon;
+                                        // Ensure percentage doesn't exceed 100 visually
+                                        const percentage = Math.min((catData.score / catData.max) * 100, 100);
 
-                                    return (
-                                        <div key={cat.key} className="group relative p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all duration-300">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg ${config.bgClass}`}>
-                                                        <Icon className={`w-4 h-4 ${config.colorClass}`} />
+                                        return (
+                                            <motion.div
+                                                key={cat.key}
+                                                initial={{ x: -20, opacity: 0 }}
+                                                animate={{ x: 0, opacity: 1 }}
+                                                transition={{ delay: idx * 0.1, type: "spring", stiffness: 300, damping: 20 }}
+                                                className="group relative p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors duration-300"
+                                            >
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-2 rounded-lg ${config.bgClass}`}>
+                                                            <Icon className={`w-4 h-4 ${config.colorClass}`} />
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-sm font-medium text-white block">
+                                                                {cat.label}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <span className="text-sm font-medium text-white block">
-                                                            {cat.label}
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className={`text-base font-bold ${config.colorClass}`}>
+                                                            {catData.score}
                                                         </span>
+                                                        <span className="text-xs text-gray-500">/{catData.max}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className={`text-base font-bold ${config.colorClass}`}>
-                                                        {catData.score}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">/{catData.max}</span>
-                                                </div>
-                                            </div>
 
-                                            <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden ring-1 ring-white/5">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${config.barClass}`}
-                                                    style={{ width: `${percentage}%` }}
-                                                >
-                                                    {/* Auto shimmer on load, hover shimmer for interaction */}
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 animate-[shimmer_2s_infinite]" />
+                                                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden ring-1 ring-white/5">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${percentage}%` }}
+                                                        transition={{
+                                                            type: "spring",
+                                                            stiffness: 60,
+                                                            damping: 15,
+                                                            delay: 0.2 + (idx * 0.1)
+                                                        }}
+                                                        className={`h-full rounded-full relative overflow-hidden ${config.barClass}`}
+                                                    >
+                                                        {/* Auto shimmer on load, hover shimmer for interaction */}
+                                                        <motion.div
+                                                            animate={{ x: ['-100%', '200%'] }}
+                                                            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
+                                                        />
+                                                    </motion.div>
                                                 </div>
-                                            </div>
 
-                                            {catData.reasoning && (
-                                                <p className="mt-3 text-xs text-gray-400 leading-relaxed pl-1 border-l-2 border-white/5">
-                                                    {catData.reasoning}
-                                                </p>
-                                            )}
+                                                {catData.reasoning && (
+                                                    <p className="mt-3 text-xs text-gray-400 leading-relaxed pl-1 border-l-2 border-white/5">
+                                                        {catData.reasoning}
+                                                    </p>
+                                                )}
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Calculation Logic Footer - Grid Layout */}
+                                <div className="mt-6 pt-5 border-t border-white/5 pb-2">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Info className="w-4 h-4 text-blue-400" />
+                                        <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                                            {t ? t('sections.match.calculation.title', 'Scoring Logic') : 'Scoring Logic'}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                                            <span className="text-xs font-bold text-blue-400 block mb-1">
+                                                {isArabic ? 'المهارات التقنية' : 'Hard Skills'}
+                                            </span>
+                                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                                                {isArabic
+                                                    ? 'يقيس تطابق الكلمات المفتاحية التقنية والأدوات المذكورة في الوصف الوظيفي.'
+                                                    : 'Measures the match of technical keywords and tools mentioned in the job description.'}
+                                            </p>
                                         </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Calculation Logic Footer - Grid Layout */}
-                            <div className="mt-6 pt-5 border-t border-white/5">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Info className="w-4 h-4 text-blue-400" />
-                                    <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                                        {t ? t('sections.match.calculation.title', 'Scoring Logic') : 'Scoring Logic'}
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                                        <span className="text-xs font-bold text-blue-400 block mb-1">
-                                            {isArabic ? 'المهارات التقنية' : 'Hard Skills'}
-                                        </span>
-                                        <p className="text-[11px] text-gray-400 leading-relaxed">
-                                            {isArabic
-                                                ? 'يقيس تطابق الكلمات المفتاحية التقنية والأدوات المذكورة في الوصف الوظيفي.'
-                                                : 'Measures the match of technical keywords and tools mentioned in the job description.'}
-                                        </p>
-                                    </div>
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                                        <span className="text-xs font-bold text-purple-400 block mb-1">
-                                            {isArabic ? 'الخبرة' : 'Experience'}
-                                        </span>
-                                        <p className="text-[11px] text-gray-400 leading-relaxed">
-                                            {isArabic
-                                                ? 'يحلل المسميات الوظيفية السابقة وسنوات الخبرة ومدى صلتها بالدور المطلوب.'
-                                                : 'Analyzes past job titles, years of experience, and relevance to the target role.'}
-                                        </p>
-                                    </div>
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                                        <span className="text-xs font-bold text-amber-400 block mb-1">
-                                            {isArabic ? 'التعليم' : 'Education'}
-                                        </span>
-                                        <p className="text-[11px] text-gray-400 leading-relaxed">
-                                            {isArabic
-                                                ? 'يتحقق من المستوى الأكاديمي ومجال الدراسة للتأكد من استيفاء المتطلبات.'
-                                                : 'Checks academic level and field of study to ensure requirements are met.'}
-                                        </p>
-                                    </div>
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                                        <span className="text-xs font-bold text-emerald-400 block mb-1">
-                                            {isArabic ? 'المهارات الشخصية' : 'Soft Skills'}
-                                        </span>
-                                        <p className="text-[11px] text-gray-400 leading-relaxed">
-                                            {isArabic
-                                                ? 'يكتشف السمات الشخصية والقيادية والتواصل من خلال سياق سيرتك الذاتية.'
-                                                : 'Detects behavioral, leadership, and communication traits from your resume context.'}
-                                        </p>
+                                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                                            <span className="text-xs font-bold text-purple-400 block mb-1">
+                                                {isArabic ? 'الخبرة' : 'Experience'}
+                                            </span>
+                                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                                                {isArabic
+                                                    ? 'يحلل المسميات الوظيفية السابقة وسنوات الخبرة ومدى صلتها بالدور المطلوب.'
+                                                    : 'Analyzes past job titles, years of experience, and relevance to the target role.'}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                                            <span className="text-xs font-bold text-amber-400 block mb-1">
+                                                {isArabic ? 'التعليم' : 'Education'}
+                                            </span>
+                                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                                                {isArabic
+                                                    ? 'يتحقق من المستوى الأكاديمي ومجال الدراسة للتأكد من استيفاء المتطلبات.'
+                                                    : 'Checks academic level and field of study to ensure requirements are met.'}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                                            <span className="text-xs font-bold text-emerald-400 block mb-1">
+                                                {isArabic ? 'المهارات الشخصية' : 'Soft Skills'}
+                                            </span>
+                                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                                                {isArabic
+                                                    ? 'يكتشف السمات الشخصية والقيادية والتواصل من خلال سياق سيرتك الذاتية.'
+                                                    : 'Detects behavioral, leadership, and communication traits from your resume context.'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-
-
-                        </>
-                    )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </GlassCard>
         );
@@ -319,3 +354,4 @@ export function ScoreBreakdown({
         </GlassCard>
     );
 }
+
