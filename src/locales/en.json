@@ -442,7 +442,7 @@
       },
       "saudi": {
         "label": "Are you Saudi?",
-        "description": "\"Saudi\" will be added to your resume summary for Saudization ATS"
+        "description": "Adds \"Saudi\" to your resume summary to align with Saudization ATS filters"
       }
     },
     "stage": {
