@@ -90,7 +90,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
   };
 
   return (
-    <div className={cn("w-full overflow-hidden rounded-2xl border border-white/10 bg-black/20 backdrop-blur-sm", className)}>
+    <div className={cn("w-full overflow-hidden neu-card", className)}>
       <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         <div className="min-w-[640px]">
           {/* Header */}
@@ -136,7 +136,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
                 key={idx}
                 className={cn(
                   "grid grid-cols-4 transition-colors hover:bg-white/5",
-                  idx % 2 === 0 ? "bg-transparent" : "bg-white/[0.02]" // Zebra striping
+                  idx % 2 === 0 ? "bg-transparent" : "bg-black/20" // Zebra striping ledger style
                 )}
               >
                 {/* Feature Name */}

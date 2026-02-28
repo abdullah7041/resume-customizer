@@ -21,10 +21,10 @@ const getPrefersReducedMotion = () => {
 
 // Modern premium glass card styles
 const glassCardClass =
-  "relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 backdrop-blur-xl shadow-xl transition-all duration-500";
+  "neu-card group";
 
 const glassCardHoverClass =
-  "hover:border-emerald-400/40 hover:shadow-[0_8px_32px_rgba(16,185,129,0.25)] hover:-translate-y-1";
+  "neu-card-hover";
 
 // Icon circle with glow effect
 const iconCircleClass =
@@ -420,7 +420,7 @@ export default function Header() {
                       setCreditModalMode('invite-only');
                       setShowCreditModal(true);
                     }}
-                    className="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 transition-all duration-300 hover:scale-105 group shadow-md hover:shadow-emerald-500/20"
+                    className="btn-spring relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 group shadow-md hover:shadow-emerald-500/20"
                     title="Invite friends and earn 5 credits each!"
                   >
                     <Gift className="w-4 h-4" />
@@ -448,7 +448,7 @@ export default function Header() {
                   onClick={signInWithGoogle}
                   variant="prominent"
                   size="md"
-                  className="group relative overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-none transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-emerald-900/20 font-bold"
+                  className="group relative font-bold"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                   <LogIn className="h-4 w-4 mr-2" />
@@ -678,7 +678,7 @@ export default function Header() {
                       setShowCreditModal(true);
                       setMobileNavOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 min-h-[48px] bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 transition-all duration-300 active:scale-[0.98] shadow-md"
+                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 min-h-[48px] bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 shadow-md"
                   >
                     <Gift className="w-5 h-5" />
                     <span className="text-sm font-bold">Invite Friends</span>
@@ -697,7 +697,7 @@ export default function Header() {
                       signOut();
                       setMobileNavOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-200 hover:text-white bg-gray-900/80 border border-white/10 transition-all duration-300 hover:bg-black active:scale-[0.98]"
+                    className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-200 hover:text-white bg-gray-900/80 border border-white/10 hover:bg-black"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>{t("common.signOut")}</span>
@@ -708,7 +708,7 @@ export default function Header() {
                       signInWithGoogle();
                       setMobileNavOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300 hover:from-emerald-400 hover:to-teal-400 active:scale-[0.98]"
+                    className="btn-metal w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white"
                   >
                     <LogIn className="h-4 w-4" />
                     <span>{t("common.signIn")}</span>

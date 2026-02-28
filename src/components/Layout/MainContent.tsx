@@ -878,7 +878,7 @@ export default function MainContent() {
           </div>
         </div>
 
-        <div className="relative min-h-[420px] sm:min-h-[480px] rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-5 lg:p-6 transition-shadow duration-300 hover:shadow-2xl">
+        <div className="neu-card relative min-h-[420px] sm:min-h-[480px] p-4 sm:p-5 lg:p-6 transition-shadow duration-300 group">
           {activeTab === "resume" && (
             <UploadSection
               onParseResume={handleParseResume}
@@ -1019,7 +1019,7 @@ export default function MainContent() {
         </div>
       )}
       <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="rounded-2xl bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-7 lg:p-8 transition-shadow duration-300 hover:shadow-2xl">
+        <div className="neu-card p-4 sm:p-7 lg:p-8 transition-shadow duration-300 group">
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
               <div

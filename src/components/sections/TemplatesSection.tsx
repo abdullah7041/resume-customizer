@@ -209,7 +209,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     // getActiveResume() internally uses showOptimized, optimizations, isSaudiNational, originalResume
     // We rely on getActiveResume being a stable Zustand getter that internally handles reactivity
     return getActiveResume();
-     
+
   }, [useStoreData, getActiveResume]);
 
   // Determine which resume to use
@@ -460,7 +460,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   return (
     <div className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
       {/* Full-Width Preview */}
-      <GlassCard padding="none" className="flex-1 flex flex-col backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden min-h-0 relative group">
+      <GlassCard padding="none" className="flex-1 flex flex-col neu-card rounded-2xl overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
         <div className="flex flex-col gap-2 p-3 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
@@ -510,7 +510,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 onClick={handleDownloadPdf}
                 variant="primary"
                 disabled={!hasRealResume || isDownloading}
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border-0 shadow-lg"
+                className="btn-metal border-0"
               >
                 {isDownloading ? t('sections.templates.generating', 'Generating...') : (
                   <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
@@ -673,7 +673,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 onMouseEnter={() => setIsHoveringSelector(true)}
                 onMouseLeave={() => !isDragging && setIsHoveringSelector(false)}
               >
-                <div className="flex items-center gap-1 px-2 py-2 bg-black/90 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl overflow-x-auto max-w-full no-scrollbar">
+                <div className="flex items-center gap-1 px-2 py-2 neu-card rounded-full max-w-full no-scrollbar overflow-x-auto shadow-2xl">
                   {/* Drag Handle - hidden on mobile for space */}
                   <div
                     className="hidden md:block p-2 text-white/50 hover:text-white cursor-grab active:cursor-grabbing touch-none shrink-0"
@@ -693,8 +693,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0",
                           isSelected
-                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md scale-105"
-                            : "text-white/70 hover:text-white hover:bg-white/10"
+                            ? "btn-metal text-white scale-105"
+                            : "text-white/70 hover:text-white hover:bg-white/10 btn-spring"
                         )}
                       >
                         {isSelected && <Check className="w-3 h-3" />}

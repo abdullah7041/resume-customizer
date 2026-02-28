@@ -315,7 +315,7 @@ export function MatchSection({
             onClick={handleAnalyze}
             disabled={buttonDisabled}
             isLoading={isAnalyzing}
-            className="w-full group relative overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-none transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-emerald-900/20"
+            className="w-full group relative font-bold"
             variant="prominent"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
@@ -435,7 +435,7 @@ export function MatchSection({
                       </svg>
 
                       {/* Inner Score */}
-                      <div className="absolute inset-4 grid place-items-center rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md shadow-inner shadow-white/5 overflow-hidden">
+                      <div className="absolute inset-4 grid place-items-center gauge-badge overflow-hidden">
                         {/* Inner highlight pulse */}
                         {score >= 70 && (
                           <div className="absolute inset-0 bg-emerald-500/20 animate-pulse" />

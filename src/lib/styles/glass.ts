@@ -6,32 +6,32 @@
 
 export const glass = {
   // Primary glass card - neutral transparent background
-  card: 'bg-black/80 backdrop-blur-xl border border-white/10 shadow-xl',
+  card: 'neu-card',
 
   // Light glass card (for contrast)
-  cardLight: 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl',
+  cardLight: 'neu-card',
 
   // Elevated glass (more prominent)
-  elevated: 'bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/15 shadow-2xl',
+  elevated: 'neu-card shadow-2xl',
 
   // Subtle glass (less prominent)
-  subtle: 'bg-black/60 backdrop-blur-lg border border-white/10 shadow-lg',
+  subtle: 'neu-card opacity-95',
 
   // Input fields
   input: 'bg-white/5 backdrop-blur-sm border border-white/10 focus:border-emerald-500/50 focus:bg-white/10',
 
   // Buttons
   button: {
-    primary: 'bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20',
-    prominent: 'bg-gradient-to-br from-royal-600 to-emerald-700 hover:from-royal-500 hover:to-emerald-600 text-white shadow-lg shadow-royal-500/25 border border-emerald-400/20',
-    secondary: 'bg-white/5 hover:bg-white/10 text-white border border-white/10 backdrop-blur-md',
-    ghost: 'hover:bg-white/5 text-gray-300 hover:text-white',
+    primary: 'btn-metal',
+    prominent: 'btn-metal shadow-lg shadow-emerald-500/20',
+    secondary: 'btn-spring bg-gray-900/80 hover:bg-black border border-white/10 text-white shadow-md backdrop-blur-md',
+    ghost: 'btn-spring hover:bg-white/5 text-gray-300 hover:text-white',
   },
 
   // Tabs
   tab: {
-    active: 'bg-emerald-600/20 text-emerald-400 border-emerald-500',
-    inactive: 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border-transparent',
+    active: 'tab-embossed active',
+    inactive: 'tab-embossed',
   },
 
   // Badge/Tag

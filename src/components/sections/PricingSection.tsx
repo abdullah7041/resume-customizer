@@ -62,9 +62,9 @@ export function PricingSection() {
                                     variant='default'
                                     padding="lg"
                                     className={cn(
-                                        "flex flex-col h-full transition-all duration-500 relative overflow-hidden",
-                                        "hover:shadow-[0_8px_32px_rgba(16,185,129,0.1)] hover:-translate-y-1",
-                                        plan.active && "border-emerald-500/30 shadow-[0_8px_32px_rgba(16,185,129,0.15)]",
+                                        "neu-card flex flex-col h-full transition-all duration-500 relative overflow-hidden group/card",
+                                        "hover:-translate-y-1",
+                                        plan.active && "border-emerald-500/40",
                                         plan.comingSoon && "opacity-80 hover:opacity-100 bg-gray-900/90 border-white/5",
                                         "p-6 sm:p-8"
                                     )}

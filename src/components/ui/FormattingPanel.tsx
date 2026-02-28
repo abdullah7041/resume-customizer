@@ -92,7 +92,7 @@ export function FormattingPanel() {
 
     return (
         <div className={cn(
-            "bg-gradient-to-b from-gray-900/80 to-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden transition-all duration-300",
+            "neu-card rounded-2xl overflow-hidden transition-all duration-300",
             isExpanded ? "w-72" : "w-14"
         )}>
             {/* Header Toggle */}
@@ -135,7 +135,7 @@ export function FormattingPanel() {
                             <select
                                 value={displayOptions.fontFamily}
                                 onChange={(e) => setDisplayOptions({ fontFamily: e.target.value })}
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
+                                className="w-full px-3 py-2 neu-inset rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
                             >
                                 {FONT_OPTIONS.map((font) => (
                                     <option key={font.value} value={font.value} className="bg-gray-900">
@@ -257,7 +257,7 @@ export function FormattingPanel() {
                         {/* Recommended Fit Button - Primary CTA */}
                         <button
                             onClick={handleCompactFit}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-500/30 rounded-lg text-white text-sm font-medium transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 btn-metal rounded-lg text-white text-sm font-medium"
                         >
                             <Sparkles className="w-4 h-4" />
                             {isArabic ? 'ضبط تلقائي مُحسَّن' : 'Recommended Fit'}
@@ -266,7 +266,7 @@ export function FormattingPanel() {
                         {/* Reset Button - Secondary */}
                         <button
                             onClick={handleReset}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm transition-all"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 btn-spring neu-inset hover:bg-white/5 rounded-lg text-white/70 hover:text-white text-sm"
                         >
                             <RotateCcw className="w-4 h-4" />
                             {isArabic ? 'إعادة تعيين' : 'Reset to Defaults'}
