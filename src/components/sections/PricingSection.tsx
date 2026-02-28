@@ -43,10 +43,10 @@ export function PricingSection() {
             <div className="space-y-6">
                 {/* Section Header */}
                 <div className="text-center space-y-4">
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">
                         {t('pricing.title')}
                     </h2>
-                    <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto">
+                    <p className="text-lg sm:text-xl text-gray-600 dark:text-white/70 max-w-2xl mx-auto">
                         {t('pricing.subtitle')}
                     </p>
                 </div>
@@ -65,7 +65,7 @@ export function PricingSection() {
                                         "neu-card flex flex-col h-full transition-all duration-500 relative overflow-hidden group/card",
                                         "hover:-translate-y-1",
                                         plan.active && "border-emerald-500/40",
-                                        plan.comingSoon && "opacity-80 hover:opacity-100 bg-gray-900/90 border-white/5",
+                                        plan.comingSoon && "opacity-80 hover:opacity-100 bg-gray-100 dark:bg-gray-900/90 border-gray-200 dark:border-white/5",
                                         "p-6 sm:p-8"
                                     )}
                                 >
@@ -82,10 +82,10 @@ export function PricingSection() {
                                                     <plan.icon className="w-6 h-6 text-white" />
                                                 </GlassCircle>
                                                 <div>
-                                                    <h3 className="text-xl font-bold text-white tracking-tight">
+                                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                                                         {t(`pricing.plans.${plan.key}.name`)}
                                                     </h3>
-                                                    <p className="text-sm text-emerald-100/60 font-medium">
+                                                    <p className="text-sm text-emerald-700 dark:text-emerald-100/60 font-medium">
                                                         {t(`pricing.plans.${plan.key}.description`)}
                                                     </p>
                                                 </div>
@@ -102,12 +102,12 @@ export function PricingSection() {
                                         <div className="flex items-baseline gap-1 py-2">
                                             {plan.key === 'free' ? (
                                                 <>
-                                                    <span className="text-5xl font-extrabold text-white tracking-tight drop-shadow-sm">$0</span>
-                                                    <span className="text-emerald-100/50 font-medium text-lg ml-1">{t('pricing.forever')}</span>
+                                                    <span className="text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">$0</span>
+                                                    <span className="text-gray-500 dark:text-emerald-100/50 font-medium text-lg ml-1">{t('pricing.forever')}</span>
                                                 </>
                                             ) : (
                                                 <div className="flex flex-col">
-                                                    <span className="text-lg font-medium text-white/50">
+                                                    <span className="text-lg font-medium text-gray-500 dark:text-white/50">
                                                         {t('pricing.comingSoon')}
                                                     </span>
                                                 </div>
@@ -125,7 +125,7 @@ export function PricingSection() {
                                                         )}>
                                                             <Check className="w-3.5 h-3.5" />
                                                         </div>
-                                                        <span className="text-sm leading-relaxed transition-colors text-emerald-50/80 group-hover/item:text-white">
+                                                        <span className="text-sm leading-relaxed transition-colors text-gray-600 dark:text-emerald-50/80 group-hover/item:text-gray-900 dark:group-hover/item:text-white">
                                                             {feature}
                                                         </span>
                                                     </li>
@@ -133,7 +133,7 @@ export function PricingSection() {
                                             </ul>
                                         ) : (
                                             <div className="flex-1 flex items-center justify-center py-8">
-                                                <p className="text-white/40 text-sm">
+                                                <p className="text-gray-500 dark:text-white/40 text-sm">
                                                     {t('pricing.detailsComingSoon', 'Details will be announced soon')}
                                                 </p>
                                             </div>
@@ -154,7 +154,7 @@ export function PricingSection() {
                                                     variant="secondary"
                                                     size="lg"
                                                     onClick={() => setShowUpgradeModal(true)}
-                                                    className="w-full border-white/5 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white transition-colors"
+                                                    className="w-full border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-white/40 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white transition-colors"
                                                 >
                                                     {t('pricing.joinWaitlist')}
                                                 </GlassButton>

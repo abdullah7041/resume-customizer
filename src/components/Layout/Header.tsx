@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown, Gift, ShieldCheck } from "lucide-react";
+import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown, Gift, ShieldCheck, Sun, Moon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
 import { CreditUsageModal } from "../Credits/CreditUsageModal";
+import { useTheme } from "../../hooks/useTheme";
 
 
 
@@ -52,6 +53,8 @@ export default function Header() {
   const mobileNavRef = useRef<HTMLDivElement>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
+
+  const [theme, toggleTheme] = useTheme();
 
   // Mouse tracking for interactive gradient
   const handleMouseMove = useCallback((e) => {
@@ -289,7 +292,7 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate flex flex-col overflow-hidden text-white h-auto pb-4"
+      className="hero-bg-animate relative isolate flex flex-col overflow-hidden text-gray-900 dark:text-white h-auto pb-4"
       onMouseMove={handleMouseMove}
     >
       {/* Animated background effects */}
@@ -345,7 +348,7 @@ export default function Header() {
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col">
         {/* Top navigation bar */}
-        <nav className="border-b border-white/5">
+        <nav className="border-b border-gray-200 dark:border-white/5">
           <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-5`}>
             {/* Logo section */}
             <div className="flex items-center gap-4 group">
@@ -361,7 +364,7 @@ export default function Header() {
 
               {/* Brand text */}
               <div className="flex flex-col">
-                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] bg-gradient-to-r from-emerald-200 via-white to-teal-200 bg-clip-text text-transparent uppercase drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] bg-gradient-to-r from-emerald-600 via-gray-800 to-teal-600 dark:from-emerald-200 dark:via-white dark:to-teal-200 bg-clip-text text-transparent uppercase drop-shadow-[0_0_10px_rgba(16,185,129,0.15)] dark:drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                   {t("common.appName")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -372,7 +375,7 @@ export default function Header() {
                     href="https://www.linkedin.com/in/3binahmed/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center text-emerald-200/80 hover:text-[#0A66C2] transition-all duration-300 hover:scale-110"
+                    className="inline-flex items-center justify-center text-emerald-700/80 dark:text-emerald-200/80 hover:text-[#0A66C2] dark:hover:text-[#0A66C2] transition-all duration-300 hover:scale-110"
                     aria-label="Visit LinkedIn profile"
                   >
                     <Linkedin className="h-6 w-6" />
@@ -384,7 +387,7 @@ export default function Header() {
             {/* Badge - moved from Hero - Now clickable with flip animation */}
             <button
               onClick={() => setBadgeFlipped(!badgeFlipped)}
-              className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg ml-4 cursor-pointer hover:border-emerald-400/30 transition-all duration-300 hover:scale-105 group"
+              className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-gray-300/40 dark:border-white/10 shadow-lg ml-4 cursor-pointer hover:border-emerald-400/30 transition-all duration-300 hover:scale-105 group"
               aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
               title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
             >
@@ -402,6 +405,13 @@ export default function Header() {
 
             {/* Desktop: Language switcher, Feedback, and Auth button */}
             <div className="hidden md:flex items-center gap-3">
+              <button
+                onClick={toggleTheme}
+                className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/40 dark:bg-white/5 border border-gray-300/40 dark:border-white/10 text-gray-700 dark:text-white transition-all duration-300 hover:bg-emerald-500/10 dark:hover:bg-white/10"
+                aria-label="Toggle Theme"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
+              </button>
               <LanguageSwitcher />
               {user && (
                 <>
@@ -460,7 +470,7 @@ export default function Header() {
             {/* Mobile: Hamburger menu button */}
             <button
               onClick={() => setMobileNavOpen(true)}
-              className="md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+              className="md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/40 dark:bg-white/5 border border-gray-300/40 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
               aria-label="Open navigation menu"
               aria-expanded={mobileNavOpen}
             >
@@ -494,10 +504,10 @@ export default function Header() {
                 <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-emerald-500/90 to-teal-600/90 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.3)] ring-1 ring-white/20">
                   <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight">{t("header.heroTitle")}</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{t("header.heroTitle")}</h1>
               </div>
 
-              <p className="text-base sm:text-lg text-emerald-50/70 leading-relaxed font-light">
+              <p className="text-base sm:text-lg text-gray-600 dark:text-emerald-50/70 leading-relaxed font-light">
                 {t("header.heroDescription")}
               </p>
             </div>
@@ -547,11 +557,11 @@ export default function Header() {
 
                   <p className={cn(
                     "text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5",
-                    card.highlight ? "text-[#4ade80] drop-shadow-[0_0_8px_rgba(74,222,128,0.4)]" : "text-emerald-400/80"
+                    card.highlight ? "text-[#006C35] dark:text-[#4ade80] drop-shadow-[0_0_8px_rgba(74,222,128,0.2)] dark:drop-shadow-[0_0_8px_rgba(74,222,128,0.4)]" : "text-emerald-700/80 dark:text-emerald-400/80"
                   )}>
                     {card.label}
                   </p>
-                  <p className="text-sm font-medium text-white/90 leading-snug">
+                  <p className="text-sm font-medium text-gray-700 dark:text-white/90 leading-snug">
                     {card.desc}
                   </p>
                 </div>
@@ -578,7 +588,7 @@ export default function Header() {
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                 <ArrowRight className="h-5 w-5 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-white">{t("header.workflow.title")}</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("header.workflow.title")}</h2>
             </div>
 
             <ul className="space-y-4 relative">
@@ -602,10 +612,10 @@ export default function Header() {
                   </div>
 
                   <div className="flex-1 pt-1.5 transition-transform duration-300 group-hover:translate-x-1">
-                    <p className="font-bold text-white group-hover:text-emerald-300 transition-colors duration-300 text-base">
+                    <p className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors duration-300 text-base">
                       {step.title}
                     </p>
-                    <p className="text-sm text-emerald-100/50 mt-1 leading-relaxed group-hover:text-emerald-100/70 transition-colors">
+                    <p className="text-sm text-gray-600 dark:text-emerald-100/50 mt-1 leading-relaxed dark:group-hover:text-emerald-100/70 transition-colors">
                       {step.desc}
                     </p>
                   </div>
@@ -642,13 +652,23 @@ export default function Header() {
                 </div>
                 <span className="text-sm font-bold text-white">{t("common.appName")}</span>
               </div>
-              <button
-                onClick={() => setMobileNavOpen(false)}
-                className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
-                aria-label="Close navigation menu"
-              >
-                <X className="h-5 w-5" />
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleTheme}
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+                  aria-label="Toggle Theme"
+                >
+                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-emerald-400" />}
+                </button>
+                <button
+                  onClick={() => setMobileNavOpen(false)}
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+                  aria-label="Close navigation menu"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Nav content */}

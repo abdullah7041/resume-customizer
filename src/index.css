@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light dark;
     --app-shell-max: 1280px;
     --app-shell-gutter: clamp(1rem, 4vw, 3rem);
     --font-family: 'Inter', sans-serif;
@@ -361,7 +361,7 @@
   }
 
   .card {
-    background-color: #ffffff;
+    background-color: var(--surface);
     border-radius: 1rem;
     box-shadow: var(--shadow-soft);
     padding: 1.5rem;
@@ -421,7 +421,7 @@
   }
 
   .text-shadow-hero {
-    text-shadow: 0 4px 18px rgba(2, 20, 11, 0.55);
+    text-shadow: 0 4px 18px rgba(2, 20, 11, 0.15);
   }
 
   /* Dark mode hero text shadow */
@@ -654,9 +654,9 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(180deg,
-        rgba(25, 206, 112, 0.28) 0%,
-        rgba(20, 99, 86, 0.22) 50%,
-        rgba(12, 83, 53, 0.28) 100%);
+        rgba(230, 247, 241, 0.9) 0%,
+        rgba(215, 237, 230, 0.7) 50%,
+        rgba(196, 224, 216, 0.9) 100%);
     opacity: 1;
     pointer-events: none;
     z-index: 1;

@@ -46,7 +46,7 @@ export function GlassCard({
         y: -3,
         rotateX: 1.5,
         rotateY: -1.5,
-        boxShadow: '0 24px 60px -20px rgba(1, 10, 12, 0.9), 0 16px 40px -24px rgba(9, 96, 84, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
+        boxShadow: '0 24px 60px -20px var(--shadow-card), 0 16px 40px -24px rgba(9, 96, 84, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
         transition: { type: "spring", stiffness: 300, damping: 20 }
       }}
       className={cn(

@@ -57,8 +57,8 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
   const renderCell = (value: string, isWatheq = false) => {
     if (value === "yes") {
       return (
-        <div className={cn("flex items-center justify-center gap-2", isWatheq ? "text-emerald-400" : "text-white/80")}>
-          <div className={cn("p-1 rounded-full", isWatheq ? "bg-emerald-500/20" : "bg-white/10")}>
+        <div className={cn("flex items-center justify-center gap-2", isWatheq ? "text-emerald-600 dark:text-emerald-400" : "text-gray-500 dark:text-white/80")}>
+          <div className={cn("p-1 rounded-full", isWatheq ? "bg-emerald-500/10 dark:bg-emerald-500/20" : "bg-gray-200 dark:bg-white/10")}>
             <Check className="w-4 h-4" strokeWidth={3} />
           </div>
           <span className="text-sm font-semibold">{t("landing.comparison.values.yes")}</span>
@@ -67,7 +67,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
     }
     if (value === "no") {
       return (
-        <div className="flex items-center justify-center gap-2 text-white/40">
+        <div className="flex items-center justify-center gap-2 text-gray-400 dark:text-white/40">
           <X className="w-5 h-5" />
           <span className="text-sm">{t("landing.comparison.values.no")}</span>
         </div>
@@ -75,7 +75,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
     }
     if (value === "partial") {
       return (
-        <div className="flex items-center justify-center gap-2 text-yellow-400/80">
+        <div className="flex items-center justify-center gap-2 text-yellow-600 dark:text-yellow-400/80">
           <Minus className="w-5 h-5" />
           <span className="text-sm">{t("landing.comparison.values.partial")}</span>
         </div>
@@ -83,7 +83,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
     }
     // Custom text value
     return (
-      <div className={cn("text-center text-sm", isWatheq ? "font-bold text-emerald-300" : "text-white/60")}>
+      <div className={cn("text-center text-sm", isWatheq ? "font-bold text-emerald-600 dark:text-emerald-300" : "text-gray-500 dark:text-white/60")}>
         {value}
       </div>
     );
@@ -91,38 +91,38 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
 
   return (
     <div className={cn("w-full overflow-hidden neu-card", className)}>
-      <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
         <div className="min-w-[640px]">
           {/* Header */}
-          <div className="grid grid-cols-4 border-b border-white/10 bg-white/5">
+          <div className="grid grid-cols-4 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
             <div className="p-4 flex items-end">
               {/* Empty features header for cleaner look */}
             </div>
 
             {/* Watheq Column Header */}
-            <div className="p-4 relative bg-emerald-900/10">
+            <div className="p-4 relative bg-emerald-500/5 dark:bg-emerald-900/10">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
               <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
-                  <span className="text-2xl font-bold bg-gradient-to-br from-emerald-200 to-emerald-500 bg-clip-text text-transparent">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 dark:from-emerald-500/20 dark:to-teal-500/10 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
+                  <span className="text-2xl font-bold bg-gradient-to-br from-emerald-500 to-emerald-700 dark:from-emerald-200 dark:to-emerald-500 bg-clip-text text-transparent">
                     {t("landing.comparison.watheq").charAt(0)}
                   </span>
                 </div>
-                <span className="text-lg font-bold text-emerald-100">{t("landing.comparison.watheq")}</span>
+                <span className="text-lg font-bold text-emerald-700 dark:text-emerald-100">{t("landing.comparison.watheq")}</span>
               </div>
             </div>
 
             {/* Tool A */}
-            <div className="p-4 flex flex-col items-center justify-center gap-2 text-white/40">
-              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+            <div className="p-4 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-white/40">
+              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 border border-gray-300 dark:border-white/10 flex items-center justify-center">
                 <span className="font-semibold">A</span>
               </div>
               <span className="text-sm">{t("landing.comparison.genericToolA")}</span>
             </div>
 
             {/* Tool B */}
-            <div className="p-4 flex flex-col items-center justify-center gap-2 text-white/40">
-              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+            <div className="p-4 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-white/40">
+              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 border border-gray-300 dark:border-white/10 flex items-center justify-center">
                 <span className="font-semibold">B</span>
               </div>
               <span className="text-sm">{t("landing.comparison.genericToolB")}</span>
@@ -130,18 +130,18 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
           </div>
 
           {/* Table Body */}
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-gray-200 dark:divide-white/5">
             {comparisonData.map((row, idx) => (
               <div
                 key={idx}
                 className={cn(
-                  "grid grid-cols-4 transition-colors hover:bg-white/5",
-                  idx % 2 === 0 ? "bg-transparent" : "bg-black/20" // Zebra striping ledger style
+                  "grid grid-cols-4 transition-colors hover:bg-gray-100 dark:hover:bg-white/5",
+                  idx % 2 === 0 ? "bg-transparent" : "bg-gray-50/50 dark:bg-black/20" // Zebra striping ledger style
                 )}
               >
                 {/* Feature Name */}
                 <div className="p-4 flex items-center">
-                  <span className="text-base font-medium text-white/90">{row.feature}</span>
+                  <span className="text-base font-medium text-gray-800 dark:text-white/90">{row.feature}</span>
                 </div>
 
                 {/* Watheq Data */}

@@ -124,9 +124,9 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
     // --- Renderers ---
 
     const renderEmptyState = (message: string) => (
-        <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-white/10 rounded-xl bg-white/5">
-            <LayoutTemplate className="w-12 h-12 text-white/20 mb-4" />
-            <p className="text-white/50">{message}</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-gray-300 dark:border-white/10 rounded-xl bg-gray-50/50 dark:bg-white/5">
+            <LayoutTemplate className="w-12 h-12 text-gray-300 dark:text-white/20 mb-4" />
+            <p className="text-gray-500 dark:text-white/50">{message}</p>
         </div>
     );
 
@@ -161,11 +161,11 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                 />
             </div>
             <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
                     {isArabic ? 'الملخص المهني' : 'Professional Summary'}
                 </label>
                 <textarea
-                    className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none transition-all"
+                    className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none transition-all"
                     value={localResume?.basics?.summary || ''}
                     onChange={(e) => updateNestedState('basics.summary', e.target.value)}
                 />
@@ -184,7 +184,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             return (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-emerald-400">
+                        <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                             {isArabic ? 'تعديل الخبرة' : 'Edit Experience'}
                         </h3>
                         <GlassButton variant="ghost" size="sm" onClick={() => setEditingIndex(null)}>
@@ -216,11 +216,11 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
                             {isArabic ? 'الإنجازات (واحد في كل سطر)' : 'Highlights (one per line)'}
                         </label>
                         <textarea
-                            className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
+                            className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
                             value={(item.highlights || []).join('\n')}
                             onChange={(e) => updateItem('work', editingIndex, 'highlights', e.target.value.split('\n'))}
                         />
@@ -240,22 +240,22 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     renderEmptyState(isArabic ? 'لم تتم إضافة خبرات بعد' : 'No experience added yet')
                 ) : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
                             <div>
-                                <h4 className="font-semibold text-white">{item.position || (isArabic ? 'منصب غير محدد' : 'Untitled Position')}</h4>
-                                <p className="text-sm text-white/60">{item.name} • {item.startDate} - {item.endDate}</p>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.position || (isArabic ? 'منصب غير محدد' : 'Untitled Position')}</h4>
+                                <p className="text-sm text-gray-500 dark:text-white/60">{item.name} • {item.startDate} - {item.endDate}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                     onClick={() => setEditingIndex(idx)}
-                                    className="p-2 rounded-lg bg-white/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                    className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                                     title={isArabic ? 'تعديل' : 'Edit'}
                                 >
                                     <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={() => removeItem('work', idx)}
-                                    className="p-2 rounded-lg bg-white/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                                    className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20 transition-colors"
                                     title={isArabic ? 'حذف' : 'Delete'}
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -265,7 +265,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     ))
                 )}
                 <GlassButton
-                    className="w-full border-dashed border-white/20 hover:border-emerald-500/50 hover:text-emerald-400"
+                    className="w-full border-dashed border-gray-300 dark:border-white/20 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 text-gray-600 dark:text-white"
                     variant="ghost"
                     onClick={() => addItem('work', { name: '', position: '', startDate: '', endDate: '', highlights: [] })}
                 >
@@ -287,7 +287,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             return (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-emerald-400">
+                        <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                             {isArabic ? 'تعديل التعليم' : 'Edit Education'}
                         </h3>
                         <GlassButton variant="ghost" size="sm" onClick={() => setEditingIndex(null)}>
@@ -338,21 +338,21 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لم تتم إضافة تعليم بعد' : 'No education added yet') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
                             <div>
-                                <h4 className="font-semibold text-white">{item.institution || (isArabic ? 'مؤسسة غير محددة' : 'Untitled Institution')}</h4>
-                                <p className="text-sm text-white/60">{item.studyType} in {item.area}</p>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.institution || (isArabic ? 'مؤسسة غير محددة' : 'Untitled Institution')}</h4>
+                                <p className="text-sm text-gray-500 dark:text-white/60">{item.studyType} in {item.area}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                     onClick={() => setEditingIndex(idx)}
-                                    className="p-2 rounded-lg bg-white/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                    className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                                 >
                                     <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={() => removeItem('education', idx)}
-                                    className="p-2 rounded-lg bg-white/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                                    className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20 transition-colors"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -361,7 +361,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     ))
                 )}
                 <GlassButton
-                    className="w-full border-dashed border-white/20 hover:border-emerald-500/50 hover:text-emerald-400"
+                    className="w-full border-dashed border-gray-300 dark:border-white/20 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 text-gray-600 dark:text-white"
                     variant="ghost"
                     onClick={() => addItem('education', { institution: '', studyType: '', area: '', startDate: '', endDate: '' })}
                 >
@@ -409,14 +409,14 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     renderEmptyState(isArabic ? 'لم تتم إضافة مهارات بعد' : 'No skills added yet')
                 ) : (
                     consolidatedItems.map((item, idx) => (
-                        <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
+                        <div key={idx} className="p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl space-y-3">
                             <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-emerald-400">
+                                <label className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                                     {item.name || (isArabic ? `فئة ${idx + 1}` : `Category ${idx + 1}`)}
                                 </label>
                                 <button
                                     onClick={() => removeItem('skills', idx)}
-                                    className="text-white/40 hover:text-red-400 transition-colors"
+                                    className="text-gray-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -427,7 +427,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                 placeholder={isArabic ? 'اسم الفئة (مثال: لغات البرمجة)' : 'Category Name (e.g., Programming)'}
                             />
                             <textarea
-                                className="w-full min-h-[160px] px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-y"
+                                className="w-full min-h-[160px] px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-y"
                                 value={(item.keywords || []).join(', ')}
                                 onChange={(e) => {
                                     const keywords = e.target.value.split(/[,،]+/).map(k => k.trim()).filter(Boolean);
@@ -439,7 +439,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     ))
                 )}
                 <GlassButton
-                    className="w-full border-dashed border-white/20 hover:border-emerald-500/50 hover:text-emerald-400"
+                    className="w-full border-dashed border-gray-300 dark:border-white/20 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 text-gray-600 dark:text-white"
                     variant="ghost"
                     onClick={() => addItem('skills', { name: '', keywords: [] })}
                 >
@@ -461,7 +461,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             return (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-emerald-400">
+                        <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                             {isArabic ? 'تعديل المشروع' : 'Edit Project'}
                         </h3>
                         <GlassButton variant="ghost" size="sm" onClick={() => setEditingIndex(null)}>
@@ -474,11 +474,11 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         onChange={(e) => updateItem('projects', editingIndex, 'name', e.target.value)}
                     />
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
                             {isArabic ? 'الوصف' : 'Description'}
                         </label>
                         <textarea
-                            className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
+                            className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
                             value={item.description || ''}
                             onChange={(e) => updateItem('projects', editingIndex, 'description', e.target.value)}
                         />
@@ -501,20 +501,20 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لم تتم إضافة مشاريع' : 'No projects added yet') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
                             <div>
-                                <h4 className="font-semibold text-white">{item.name || 'Untitled Project'}</h4>
-                                <p className="text-sm text-white/60 line-clamp-1">{item.description}</p>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.name || 'Untitled Project'}</h4>
+                                <p className="text-sm text-gray-500 dark:text-white/60 line-clamp-1">{item.description}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-white/10 text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => removeItem('projects', idx)} className="p-2 rounded-lg bg-white/10 text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => removeItem('projects', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ))
                 )}
                 <GlassButton
-                    className="w-full border-dashed border-white/20 hover:border-emerald-500/50 hover:text-emerald-400"
+                    className="w-full border-dashed border-gray-300 dark:border-white/20 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 text-gray-600 dark:text-white"
                     variant="ghost"
                     onClick={() => addItem('projects', { name: '', description: '', url: '' })}
                 >
@@ -536,7 +536,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             return (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-emerald-400">
+                        <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                             {isArabic ? 'تعديل الشهادة' : 'Edit Certification'}
                         </h3>
                         <GlassButton variant="ghost" size="sm" onClick={() => setEditingIndex(null)}>
@@ -572,20 +572,20 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لا توجد شهادات' : 'No certifications added') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
                             <div>
-                                <h4 className="font-semibold text-white">{item.name || 'Untitled'}</h4>
-                                <p className="text-sm text-white/60">{item.issuer}</p>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.name || 'Untitled'}</h4>
+                                <p className="text-sm text-gray-500 dark:text-white/60">{item.issuer}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-white/10 text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => removeItem('certificates', idx)} className="p-2 rounded-lg bg-white/10 text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => removeItem('certificates', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ))
                 )}
                 <GlassButton
-                    className="w-full border-dashed border-white/20 hover:border-emerald-500/50 hover:text-emerald-400"
+                    className="w-full border-dashed border-gray-300 dark:border-white/20 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 text-gray-600 dark:text-white"
                     variant="ghost"
                     onClick={() => addItem('certificates', { name: '', issuer: '', date: '' })}
                 >
@@ -607,7 +607,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             return (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-emerald-400">
+                        <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                             {isArabic ? 'تعديل اللغة' : 'Edit Language'}
                         </h3>
                         <GlassButton variant="ghost" size="sm" onClick={() => setEditingIndex(null)}>
@@ -638,20 +638,20 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لا توجد لغات' : 'No languages added') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
                             <div>
-                                <h4 className="font-semibold text-white">{item.language || 'Unknown'}</h4>
-                                <p className="text-sm text-white/60">{item.fluency}</p>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.language || 'Unknown'}</h4>
+                                <p className="text-sm text-gray-500 dark:text-white/60">{item.fluency}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-white/10 text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => removeItem('languages', idx)} className="p-2 rounded-lg bg-white/10 text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => removeItem('languages', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ))
                 )}
                 <GlassButton
-                    className="w-full border-dashed border-white/20 hover:border-emerald-500/50 hover:text-emerald-400"
+                    className="w-full border-dashed border-gray-300 dark:border-white/20 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 text-gray-600 dark:text-white"
                     variant="ghost"
                     onClick={() => addItem('languages', { language: '', fluency: '' })}
                 >
@@ -664,10 +664,10 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
 
     const renderDisplay = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="p-6 bg-white/5 border border-white/10 rounded-xl space-y-4">
+            <div className="p-6 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-white">{isArabic ? 'حجم الخط' : 'Font Size'}</h3>
-                    <span className="px-3 py-1 bg-white/10 rounded-full text-sm text-emerald-400 font-mono">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{isArabic ? 'حجم الخط' : 'Font Size'}</h3>
+                    <span className="px-3 py-1 bg-black/5 dark:bg-white/10 rounded-full text-sm text-emerald-600 dark:text-emerald-400 font-mono">
                         {Math.round(localFontSize * 100)}%
                     </span>
                 </div>
@@ -685,20 +685,20 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
 
-                <div className="flex justify-between text-xs text-white/50">
+                <div className="flex justify-between text-xs text-gray-500 dark:text-white/50">
                     <span>Small (80%)</span>
                     <span>Standard (100%)</span>
                     <span>Large (120%)</span>
                 </div>
-                <p className="text-sm text-white/50 pt-2 border-t border-white/5">
+                <p className="text-sm text-gray-500 dark:text-white/50 pt-2 border-t border-gray-200 dark:border-white/5">
                     {isArabic
                         ? 'يتحكم هذا الإعداد في كثافة المعلومات في السيرة الذاتية.'
                         : 'This controls the information density of your resume.'}
                 </p>
 
                 {/* Live Font Size Preview */}
-                <div className="mt-4 p-4 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-xs text-white/40 mb-2">
+                <div className="mt-4 p-4 bg-white dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">
+                    <p className="text-xs text-gray-500 dark:text-white/40 mb-2">
                         {isArabic ? 'معاينة حجم الخط:' : 'Font Size Preview:'}
                     </p>
                     <div
@@ -732,13 +732,13 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
     };
 
     const content = (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-            <GlassCard className="w-full max-w-5xl h-[85vh] flex overflow-hidden p-0 border-white/10 shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <GlassCard className="w-full max-w-5xl h-[85vh] flex overflow-hidden p-0 border-gray-300 dark:border-white/10 shadow-2xl bg-white/80 dark:bg-white/5">
 
                 {/* Sidebar Navigation */}
-                <div className="w-20 md:w-64 flex-shrink-0 border-r border-white/10 bg-black/20 flex flex-col">
-                    <div className="p-6 border-b border-white/10 hidden md:block">
-                        <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 text-transparent bg-clip-text">
+                <div className="w-20 md:w-64 flex-shrink-0 border-r border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-black/20 flex flex-col">
+                    <div className="p-6 border-b border-gray-200 dark:border-white/10 hidden md:block">
+                        <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-400 text-transparent bg-clip-text">
                             {isArabic ? 'المحرر' : 'Editor'}
                         </h2>
                     </div>
@@ -754,14 +754,14 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                     className={cn(
                                         "w-full flex items-center gap-3 px-6 py-3 transition-all relative",
                                         isActive
-                                            ? "text-emerald-400 bg-emerald-500/10"
-                                            : "text-white/60 hover:text-white hover:bg-white/5"
+                                            ? "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10"
+                                            : "text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/5"
                                     )}
                                 >
                                     {isActive && (
                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-r-full" />
                                     )}
-                                    <Icon className={cn("w-5 h-5", isActive && "text-emerald-400")} />
+                                    <Icon className={cn("w-5 h-5", isActive && "text-emerald-600 dark:text-emerald-400")} />
                                     <span className="hidden md:block font-medium">
                                         {isArabic ? tab.labelAr : tab.labelEn}
                                     </span>
@@ -770,24 +770,24 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         })}
                     </div>
 
-                    <div className="p-4 border-t border-white/10 md:hidden flex justify-center">
-                        <button onClick={onClose} className="p-2 text-white/50 hover:text-white">
+                    <div className="p-4 border-t border-gray-200 dark:border-white/10 md:hidden flex justify-center">
+                        <button onClick={onClose} className="p-2 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white">
                             <X className="w-6 h-6" />
                         </button>
                     </div>
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-white/5 to-transparent">
+                <div className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-white to-gray-50 dark:from-white/5 dark:to-transparent">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-white/10">
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10">
                         <div>
-                            <h2 className="text-2xl font-bold text-white">
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                                 {isArabic
                                     ? TABS.find(t => t.id === activeTab)?.labelAr
                                     : TABS.find(t => t.id === activeTab)?.labelEn}
                             </h2>
-                            <p className="text-sm text-white/50 hidden md:block">
+                            <p className="text-sm text-gray-500 dark:text-white/50 hidden md:block">
                                 {isArabic ? 'قم بتخصيص سيرتك الذاتية بسهولة' : 'Customize your resume details'}
                             </p>
                         </div>

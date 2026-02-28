@@ -75,8 +75,8 @@ function SliderControl({ label, value, min, max, step, unit, onChange }: SliderC
     return (
         <div className="space-y-2">
             <div className="flex justify-between items-center">
-                <span className="text-sm text-white/70">{label}</span>
-                <span className="text-sm font-mono text-emerald-400 bg-white/5 px-2 py-0.5 rounded">
+                <span className="text-sm text-gray-700 dark:text-white/70">{label}</span>
+                <span className="text-sm font-mono text-emerald-600 dark:text-emerald-400 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">
                     {value}{unit}
                 </span>
             </div>
@@ -89,7 +89,7 @@ function SliderControl({ label, value, min, max, step, unit, onChange }: SliderC
                 step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:bg-white/20 transition-all origin-left"
+                className="w-full h-1.5 bg-gray-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:bg-gray-300 dark:hover:bg-white/20 transition-all origin-left"
             />
         </div>
     );
@@ -133,7 +133,7 @@ export function FormattingPanel() {
                                 initial={{ opacity: 0, width: 0 }}
                                 animate={{ opacity: 1, width: "auto" }}
                                 exit={{ opacity: 0, width: 0 }}
-                                className="font-semibold text-white whitespace-nowrap overflow-hidden"
+                                className="font-semibold text-gray-900 dark:text-white whitespace-nowrap overflow-hidden"
                             >
                                 {isArabic ? 'التنسيق' : 'Formatting'}
                             </motion.span>
@@ -144,7 +144,7 @@ export function FormattingPanel() {
                     animate={{ rotate: isExpanded ? 0 : 180 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                    <ChevronUp className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+                    <ChevronUp className="w-4 h-4 text-gray-400 group-hover:text-gray-900 dark:text-white/50 dark:group-hover:text-white transition-colors" />
                 </motion.div>
             </motion.button>
 
@@ -160,7 +160,7 @@ export function FormattingPanel() {
                     >
                         {/* Font Formatting Section */}
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-white/50">
+                            <div className="flex items-center gap-2 text-gray-500 dark:text-white/50">
                                 <Type className="w-4 h-4" />
                                 <span className="text-xs font-medium uppercase tracking-wider">
                                     {isArabic ? 'تنسيق الخط' : 'Font Formatting'}
@@ -169,17 +169,17 @@ export function FormattingPanel() {
 
                             {/* Font Style Dropdown */}
                             <div className="space-y-2">
-                                <label className="text-sm text-white/70">
+                                <label className="text-sm text-gray-700 dark:text-white/70">
                                     {isArabic ? 'نوع الخط' : 'Font Style'}
                                 </label>
                                 <motion.select
                                     whileTap={{ scale: 0.98 }}
                                     value={displayOptions.fontFamily}
                                     onChange={(e) => setDisplayOptions({ fontFamily: e.target.value })}
-                                    className="w-full px-3 py-2 neu-inset rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
+                                    className="w-full px-3 py-2 neu-inset rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
                                 >
                                     {FONT_OPTIONS.map((font) => (
-                                        <option key={font.value} value={font.value} className="bg-gray-900">
+                                        <option key={font.value} value={font.value} className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
                                             {font.label}
                                         </option>
                                     ))}
@@ -208,11 +208,11 @@ export function FormattingPanel() {
                         </div>
 
                         {/* Divider */}
-                        <div className="border-t border-dashed border-white/10" />
+                        <div className="border-t border-dashed border-gray-300 dark:border-white/10" />
 
                         {/* Document Formatting Section */}
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-white/50">
+                            <div className="flex items-center gap-2 text-gray-500 dark:text-white/50">
                                 <FileText className="w-4 h-4" />
                                 <span className="text-xs font-medium uppercase tracking-wider">
                                     {isArabic ? 'تنسيق المستند' : 'Document Formatting'}
@@ -271,7 +271,7 @@ export function FormattingPanel() {
 
                             {/* Page Break Toggle */}
                             <div className="flex items-center justify-between pt-2">
-                                <span className="text-sm text-white/70">
+                                <span className="text-sm text-gray-700 dark:text-white/70">
                                     {isArabic ? 'إظهار فواصل الصفحات' : 'Show Page Breaks'}
                                 </span>
                                 <motion.button
@@ -281,7 +281,7 @@ export function FormattingPanel() {
                                         "relative w-10 h-5 rounded-full transition-colors",
                                         displayOptions.showPageBreaks
                                             ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]"
-                                            : "bg-white/20 shadow-inner"
+                                            : "bg-gray-300 dark:bg-white/20 shadow-inner"
                                     )}
                                 >
                                     <motion.span
@@ -315,7 +315,7 @@ export function FormattingPanel() {
                                 whileTap={{ scale: 0.96 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
                                 onClick={handleReset}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 btn-spring neu-inset hover:bg-white/5 rounded-lg text-white/70 hover:text-white text-sm"
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 btn-spring neu-inset hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-gray-600 hover:text-gray-900 dark:text-white/70 dark:hover:text-white text-sm"
                             >
                                 <RotateCcw className="w-4 h-4" />
                                 {isArabic ? 'إعادة تعيين' : 'Reset to Defaults'}

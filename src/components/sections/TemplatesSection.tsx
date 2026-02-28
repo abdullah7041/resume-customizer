@@ -463,12 +463,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       <GlassCard padding="none" className="flex-1 flex flex-col neu-card rounded-2xl overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
-        <div className="flex flex-col gap-2 p-3 md:p-5 border-b border-white/10 relative z-20 bg-gray-900/50 backdrop-blur-sm">
+        <div className="flex flex-col gap-2 p-3 md:p-5 border-b border-gray-200 dark:border-white/10 relative z-20 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
           {/* Top row: title + desktop buttons */}
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <h3 className="text-base md:text-lg font-bold text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
-              <p className="text-xs md:text-sm text-white/60 flex items-center gap-1.5 mt-0.5">
+              <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
+              <p className="text-xs md:text-sm text-gray-500 dark:text-white/60 flex items-center gap-1.5 mt-0.5">
                 <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
                 {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
                 {contentLanguage && (
@@ -489,7 +489,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 onClick={() => setIsEditorOpen(true)}
                 variant="secondary"
                 disabled={!hasRealResume}
-                className="border border-white/20"
+                className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white"
               >
                 <Edit3 className="w-4 h-4 me-2" />
                 {t('sections.templates.editData', 'Edit Data')}
@@ -510,7 +510,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 onClick={handleDownloadPdf}
                 variant="primary"
                 disabled={!hasRealResume || isDownloading}
-                className="btn-metal border-0"
+                className="btn-metal border border-emerald-500/30 text-emerald-900 dark:text-white"
               >
                 {isDownloading ? t('sections.templates.generating', 'Generating...') : (
                   <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
@@ -521,7 +521,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 onClick={handleDownloadDocx}
                 variant="secondary"
                 disabled={!hasRealResume || isDownloadingDocx}
-                className="border border-white/20"
+                className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white"
               >
                 {isDownloadingDocx ? t('sections.templates.generating', 'Generating...') : (
                   <><FileText className="w-4 h-4 me-2" />{t('sections.templates.downloadDocx', 'DOCX')}</>
@@ -548,7 +548,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               variant="secondary"
               disabled={!hasRealResume || isDownloadingDocx}
               size="sm"
-              className="border border-white/20 !px-2.5 !py-1.5 !rounded-lg !text-xs"
+              className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />
               <span className="ms-1">DOCX</span>
@@ -559,7 +559,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               variant="secondary"
               disabled={!hasRealResume}
               size="sm"
-              className="border border-white/20 !px-2.5 !py-1.5 !rounded-lg !text-xs"
+              className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
               <Edit3 className="w-3.5 h-3.5 shrink-0" />
               <span className="ms-1">{t('sections.templates.editData', 'Edit')}</span>
@@ -582,25 +582,25 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         </div>
 
         {/* Zoom Controls Overlay - hidden on mobile (auto-fit), shown on desktop on hover */}
-        <div className="hidden md:flex absolute top-24 end-4 md:end-6 z-30 flex-col gap-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
+        <div className="hidden md:flex absolute top-24 end-4 md:end-6 z-30 flex-col gap-2 bg-white/70 dark:bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-gray-300/50 dark:border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handleZoomIn}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-colors active:scale-95"
             title={t('common.zoomIn', 'Zoom In')}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-colors active:scale-95"
             title={t('common.zoomOut', 'Zoom Out')}
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <div className="h-px bg-white/10 my-0.5" />
+          <div className="h-px bg-gray-300 dark:bg-white/10 my-0.5" />
           <button
             onClick={handleResetZoom}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-colors active:scale-95"
             title={t('common.resetZoom', 'Reset Zoom')}
           >
             <RotateCcw className="w-4 h-4" />
@@ -619,7 +619,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         )}
 
         {/* Preview Area with Formatting Panel */}
-        <div className="relative flex-1 flex overflow-hidden bg-gradient-to-br from-gray-900/50 to-gray-800/30 min-h-0">
+        <div className="relative flex-1 flex overflow-hidden bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-gray-900/50 dark:to-gray-800/30 min-h-0">
 
           {/* Formatting Panel - Left Side */}
           <div className="hidden md:block flex-shrink-0 p-3 overflow-y-auto">
@@ -676,7 +676,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 <div className="flex items-center gap-1 px-2 py-2 neu-card rounded-full max-w-full no-scrollbar overflow-x-auto shadow-2xl">
                   {/* Drag Handle - hidden on mobile for space */}
                   <div
-                    className="hidden md:block p-2 text-white/50 hover:text-white cursor-grab active:cursor-grabbing touch-none shrink-0"
+                    className="hidden md:block p-2 text-gray-400 hover:text-gray-900 dark:text-white/50 dark:hover:text-white cursor-grab active:cursor-grabbing touch-none shrink-0"
                     onMouseDown={handleDragStart}
                     onTouchStart={handleDragStart}
                   >
@@ -693,8 +693,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0",
                           isSelected
-                            ? "btn-metal text-white scale-105"
-                            : "text-white/70 hover:text-white hover:bg-white/10 btn-spring"
+                            ? "btn-metal text-emerald-900 dark:text-white scale-105 shadow-md border-emerald-500/30"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-black/5 dark:text-white/70 dark:hover:text-white dark:hover:bg-white/10 btn-spring"
                         )}
                       >
                         {isSelected && <Check className="w-3 h-3" />}

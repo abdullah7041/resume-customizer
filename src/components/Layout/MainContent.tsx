@@ -1129,13 +1129,13 @@ export default function MainContent() {
       {/* Comparison Table - shown for all users */}
       <div className={`${containerClass} mt-16 mb-12`}>
         <div className="text-center mb-12 space-y-4">
-          <div className="inline-block px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold tracking-wider uppercase">
+          <div className="inline-block px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-semibold tracking-wider uppercase">
             {t("landing.comparison.title", "Competitive Advantage")}
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
             {t("landing.comparison.title", "Why Choose Watheq?")}
           </h2>
-          <p className="max-w-2xl mx-auto text-lg text-white/60">
+          <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-white/60">
             {t("landing.comparison.subtitle", "See how we stack up against generic resume tools")}
           </p>
         </div>

@@ -52,7 +52,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         whileTap={{
           scale: 0.96,
           y: 1, // Slight downward shift
-          boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 rgba(16, 185, 129, 0)',
+          boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.1), inset 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 0 rgba(16, 185, 129, 0)',
           transition: springTransition
         }}
         className={cn(
