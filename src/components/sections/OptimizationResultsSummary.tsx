@@ -339,7 +339,7 @@ export function OptimizationResultsSummary({
                             <Target className="w-6 h-6 text-emerald-400" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-semibold text-white">
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                                 {t('sections.optimizationResults.title', 'Optimization Results')}
                             </h3>
                             <p className="text-sm text-gray-400">

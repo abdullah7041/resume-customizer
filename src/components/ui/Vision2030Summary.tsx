@@ -141,7 +141,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                     <h4 className="text-sm font-semibold text-amber-400 mb-1">
                         {t('vision2030.demoMode', 'Example Analysis')}
                     </h4>
-                    <p className="text-xs text-white/70 leading-relaxed">
+                    <p className="text-xs text-gray-600 dark:text-white/70 leading-relaxed">
                         {t('vision2030.demoBanner', 'This shows how a well-optimized resume aligns with Vision 2030. Upload yours to see your personal score!')}
                     </p>
                 </div>
@@ -173,7 +173,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
 
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-lg text-white tracking-tight">
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">
                                 {t('vision2030.title', 'Vision 2030 Alignment')}
                             </h3>
 
@@ -188,7 +188,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                 <Info className="w-4 h-4 text-white/40 hover:text-emerald-400 transition-colors" />
                             </button>
                         </div>
-                        <p className="text-sm text-white/50 font-light">
+                        <p className="text-sm text-gray-400 dark:text-white/50 font-light">
                             {t('vision2030.subtitle', 'How your skills align with Saudi priorities')}
                         </p>
                     </div>
@@ -233,7 +233,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                             {getEncouragementMessage(analysis.overallScore).message}
                                         </span>
                                     </div>
-                                    <span className="text-xs text-white/40 font-mono">
+                                    <span className="text-xs text-gray-400 dark:text-white/40 font-mono">
                                         {analysis.overallScore}/100
                                     </span>
                                 </div>
@@ -275,7 +275,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-3">
                                     <TrendingUp className="w-4 h-4 text-emerald-400" />
-                                    <span className="text-sm font-semibold text-white/90">
+                                    <span className="text-sm font-semibold text-gray-800 dark:text-white/90">
                                         {isArabic ? 'جميع القطاعات' : 'Sector Analysis'}
                                     </span>
                                 </div>
@@ -284,23 +284,23 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                         <div
                                             key={sector.sectorId}
                                             className={`flex items-center justify-between p-2.5 rounded-lg border transition-all duration-300 group ${sector.score > 0
-                                                ? 'bg-gradient-to-r from-white/10 to-white/5 border-white/10 hover:border-emerald-500/30'
-                                                : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                                                ? 'bg-gradient-to-r from-gray-200/50 dark:from-white/10 to-gray-100 dark:to-white/5 border-gray-200 dark:border-white/10 hover:border-emerald-500/30'
+                                                : 'bg-white/[0.02] border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-1.5 rounded-md ${sector.score > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/20'}`}>
+                                                <div className={`p-1.5 rounded-md ${sector.score > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-100 dark:bg-white/5 text-gray-300 dark:text-white/20'}`}>
                                                     <SectorIcon
                                                         sectorId={sector.sectorId}
                                                         className="w-3.5 h-3.5"
                                                     />
                                                 </div>
-                                                <span className={`text-xs font-medium ${sector.score > 0 ? 'text-white/90' : 'text-white/40'
+                                                <span className={`text-xs font-medium ${sector.score > 0 ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-white/40'
                                                     }`}>
                                                     {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
                                                 </span>
                                             </div>
-                                            <span className={`text-xs font-bold ${sector.score > 0 ? 'text-emerald-400' : 'text-white/20'
+                                            <span className={`text-xs font-bold ${sector.score > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300 dark:text-white/20'
                                                 }`}>
                                                 {sector.score}%
                                             </span>
@@ -318,7 +318,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                     <div>
                                         <div className="flex items-center gap-2 mb-3">
                                             <Sparkles className="w-4 h-4 text-emerald-400" />
-                                            <span className="text-sm font-semibold text-white/90">
+                                            <span className="text-sm font-semibold text-gray-800 dark:text-white/90">
                                                 {t('vision2030.matchedSkills', 'Matched Vision 2030 Skills')}
                                             </span>
                                         </div>
@@ -326,7 +326,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                             {analysis.matchedSkills.map((skill, index) => (
                                                 <div
                                                     key={index}
-                                                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 flex items-center gap-1.5 shadow-sm shadow-emerald-900/20"
+                                                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 shadow-sm shadow-emerald-900/20"
                                                 >
                                                     <Check className="w-3 h-3 text-emerald-500" />
                                                     {isArabic ? skill.skillNameAr : skill.skillNameEn}

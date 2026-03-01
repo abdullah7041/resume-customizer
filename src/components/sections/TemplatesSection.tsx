@@ -469,10 +469,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             <div className="min-w-0">
               <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
               <p className="text-xs md:text-sm text-gray-500 dark:text-white/60 flex items-center gap-1.5 mt-0.5">
-                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
                 {contentLanguage && (
-                  <span className="ms-2 px-2 py-0.5 bg-white/10 rounded text-xs font-medium">
+                  <span className="ms-2 px-2 py-0.5 bg-gray-200/50 dark:bg-white/10 rounded text-xs font-medium">
                     {contentLanguage === 'ar'
                       ? t('sections.templates.languageArabic', 'العربية')
                       : contentLanguage === 'mixed'
@@ -499,7 +499,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 <GlassButton
                   onClick={() => setIsCompareOpen(true)}
                   variant="secondary"
-                  className="border border-white/20"
+                  className="border border-gray-300 dark:border-white/20"
                 >
                   <ArrowLeftRight className="w-4 h-4 me-2" />
                   {t('sections.templates.compare', 'View Changes')}
@@ -570,7 +570,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 onClick={() => setIsCompareOpen(true)}
                 variant="secondary"
                 size="sm"
-                className="border border-white/20 !px-2.5 !py-1.5 !rounded-lg !text-xs"
+                className="border border-gray-300 dark:border-white/20 !px-2.5 !py-1.5 !rounded-lg !text-xs"
               >
                 <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
                 <span className="ms-1">{t('sections.templates.compare', 'Changes')}</span>
@@ -762,9 +762,9 @@ function KeywordBoldingToggle() {
         onChange={(e) => {
           useResumeStore.getState().setDisplayOptions({ boldKeywords: e.target.checked });
         }}
-        className="w-4 h-4 shrink-0 text-emerald-600 bg-white/10 border-white/30 rounded focus:ring-emerald-500 focus:ring-offset-0 focus:ring-2 cursor-pointer"
+        className="w-4 h-4 shrink-0 text-emerald-600 bg-gray-200/50 dark:bg-white/10 border-gray-300 dark:border-white/30 rounded focus:ring-emerald-500 focus:ring-offset-0 focus:ring-2 cursor-pointer"
       />
-      <span className="text-xs sm:text-sm text-white/80">
+      <span className="text-xs sm:text-sm text-gray-700 dark:text-white/80">
         {t('sections.templates.boldKeywords', 'Bold important keywords in DOCX exports')}
       </span>
     </label>

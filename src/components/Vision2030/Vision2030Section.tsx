@@ -250,10 +250,10 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
               <Sparkles className="w-8 h-8 text-emerald-400 animate-spin" />
             </div>
           </div>
-          <h3 className="text-lg font-semibold text-white">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {t('vision2030.section.analyzing', 'Analyzing...')}
           </h3>
-          <p className="text-sm text-white/60 max-w-md text-center">
+          <p className="text-sm text-gray-500 dark:text-white/60 max-w-md text-center">
             {t('vision2030.section.analyzingProgress', 'Analyzing your resume against Saudi Vision 2030 strategic sectors...')}
           </p>
         </div>
@@ -273,11 +273,11 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                 <Target className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {t('vision2030.section.yourAlignment', 'Your Vision 2030 Alignment')}
                 </h2>
-                <p className="text-sm text-white/60">
-                  {t('vision2030.section.careerPath', 'Detected Career Path')}: <span className="font-medium text-white/80">{isArabic ? analysis.detectedCareer.archetypeNameAr : analysis.detectedCareer.archetypeNameEn}</span>
+                <p className="text-sm text-gray-500 dark:text-white/60">
+                  {t('vision2030.section.careerPath', 'Detected Career Path')}: <span className="font-medium text-gray-700 dark:text-white/80">{isArabic ? analysis.detectedCareer.archetypeNameAr : analysis.detectedCareer.archetypeNameEn}</span>
                 </p>
               </div>
             </div>
@@ -285,7 +285,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
             {/* Overall Score */}
             <div className={`px-6 py-4 rounded-xl border backdrop-blur-md ${getScoreBg(analysis.overallScore)}`}>
               <div className="flex flex-col items-center">
-                <span className="text-xs text-white/50 uppercase tracking-wider mb-1">
+                <span className="text-xs text-gray-400 dark:text-white/50 uppercase tracking-wider mb-1">
                   {t('vision2030.section.overallScore', 'Overall Score')}
                 </span>
                 <span className={`text-3xl font-bold ${getScoreColor(analysis.overallScore)}`}>
@@ -297,7 +297,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
 
           {/* Top Sectors */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-3 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               {t('vision2030.section.topSectors', 'Top Aligned Sectors')}
             </h3>
@@ -308,10 +308,10 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                 .map((sector) => (
                   <div
                     key={sector.sectorId}
-                    className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-emerald-500/30 transition-all"
+                    className="p-4 rounded-lg bg-gradient-to-br from-gray-100 dark:from-white/5 to-gray-50 dark:to-white/[0.02] border border-gray-200 dark:border-white/10 hover:border-emerald-500/30 transition-all"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white/90">
+                      <span className="text-sm font-medium text-gray-800 dark:text-white/90">
                         {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
                       </span>
                       <span className={`text-lg font-bold ${getScoreColor(sector.score)}`}>
@@ -420,10 +420,10 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         </div>
 
         <div data-tour="vision2030-intro" className="text-center space-y-2 max-w-lg">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             {t('vision2030.section.title', 'Vision 2030 Alignment Analysis')}
           </h2>
-          <p className="text-white/60">
+          <p className="text-gray-500 dark:text-white/60">
             {t('vision2030.section.description', 'Discover how your skills and experience align with Saudi Vision 2030 strategic sectors. Get AI-powered insights and recommendations.')}
           </p>
         </div>
@@ -452,10 +452,10 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
 
         {/* Info about what's included */}
         <div className="mt-8 p-4 rounded-xl bg-white/[0.02] border border-white/5 max-w-lg">
-          <h4 className="text-sm font-semibold text-white/90 mb-3">
+          <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-3">
             {t('vision2030.section.included', "What's Included:")}
           </h4>
-          <ul className="space-y-2 text-sm text-white/60">
+          <ul className="space-y-2 text-sm text-gray-500 dark:text-white/60">
             <li className="flex items-start gap-2">
               <span className="text-emerald-400">✓</span>
               <span>{t('vision2030.section.feature1', 'Overall alignment score across all Vision 2030 sectors')}</span>

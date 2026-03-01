@@ -115,7 +115,7 @@ export function BottomSheet({
                 ref={sheetRef}
                 className={cn(
                     "absolute bottom-0 left-0 right-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800",
-                    "rounded-t-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]",
+                    "rounded-t-2xl border-t border-gray-200 dark:border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]",
                     "animate-slide-up transition-transform duration-200",
                     heightClasses[height]
                 )}

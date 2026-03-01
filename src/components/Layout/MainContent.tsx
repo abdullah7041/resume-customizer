@@ -38,8 +38,8 @@ import { mergeResumeData } from "../../lib/utils/resumeUtils";
 function SectionSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
-      <div className="h-8 w-48 rounded-lg bg-white/10" />
-      <div className="h-64 w-full rounded-xl bg-white/5" />
+      <div className="h-8 w-48 rounded-lg bg-gray-200 dark:bg-white/10" />
+      <div className="h-64 w-full rounded-xl bg-gray-100 dark:bg-white/5" />
     </div>
   );
 }
@@ -1071,7 +1071,7 @@ export default function MainContent() {
         </div>
         {isDev && aiDebug && (
           <section className="text-xs text-ink-500 dark:text-surface-50/70">
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-5">
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 backdrop-blur-md shadow-xl p-4 sm:p-5">
               <p className="font-semibold uppercase tracking-[0.24em] text-emerald-500">AI Debug</p>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-7">
                 <div>

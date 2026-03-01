@@ -56,8 +56,8 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               className={cn(
                 'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap outline-none select-none shrink-0 z-10',
                 isActive
-                  ? 'text-white drop-shadow-md'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'text-gray-900 dark:text-white drop-shadow-md'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               )}
             >
               {/* Animated active indicator background */}
@@ -88,7 +88,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
       </div>
 
       {rightAction && (
-        <div className="flex-shrink-0 flex items-center pl-1 ml-1 border-l border-white/10">
+        <div className="flex-shrink-0 flex items-center pl-1 ml-1 border-l border-gray-200 dark:border-white/10">
           {rightAction}
         </div>
       )}

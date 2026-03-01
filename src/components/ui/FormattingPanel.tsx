@@ -123,10 +123,10 @@ export function FormattingPanel() {
             <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group"
             >
                 <div className="flex items-center gap-2">
-                    <Type className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <Type className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <AnimatePresence>
                         {isExpanded && (
                             <motion.span

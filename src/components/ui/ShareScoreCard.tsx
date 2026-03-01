@@ -266,9 +266,9 @@ export function ShareScoreCard({ beforeScore, afterScore, jobTitle, onClose }: S
     }, [isArabic, getShareText, beforeScore, afterScore, improvement]);
 
     const getScoreColor = (score: number) => {
-        if (score >= 80) return 'text-emerald-400';
-        if (score >= 60) return 'text-yellow-400';
-        return 'text-orange-400';
+        if (score >= 80) return 'text-emerald-600 dark:text-emerald-400';
+        if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
+        return 'text-orange-600 dark:text-orange-400';
     };
 
     const modal = (
@@ -284,14 +284,14 @@ export function ShareScoreCard({ beforeScore, afterScore, jobTitle, onClose }: S
 
             {/* Modal overlay */}
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-black/80 backdrop-blur-sm"
                 onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
             >
-                <div className="relative w-[min(90vw,420px)] bg-[#0a0a0a]/95 rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                <div className="relative w-[min(90vw,420px)] bg-white dark:bg-[#0a0a0a]/95 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden">
                     {/* Close button */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white transition-colors"
                         aria-label="Close"
                     >
                         <X className="w-4 h-4" />

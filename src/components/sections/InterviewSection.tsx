@@ -116,7 +116,7 @@ const STARMethodTip = () => {
               {t('sections.interview.starMethod.recommended')}
             </span>
           </h4>
-          <p className="text-white/80 leading-relaxed mb-6 max-w-2xl">
+          <p className="text-gray-700 dark:text-white/80 leading-relaxed mb-6 max-w-2xl">
             {t('sections.interview.starMethod.description')}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -133,7 +133,7 @@ const STARMethodTip = () => {
                   </div>
                   <span className="text-emerald-200 font-semibold">{item.word}</span>
                 </div>
-                <p className="text-xs text-white/60 ps-1">{item.desc}</p>
+                <p className="text-xs text-gray-500 dark:text-white/60 ps-1">{item.desc}</p>
               </GlassCard>
             ))}
           </div>
@@ -528,7 +528,7 @@ export function InterviewSection({
       <GlassCard className="relative overflow-hidden">
         <div className="py-12 text-center text-gray-500">
           <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <h3 className="text-lg font-semibold text-white mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             {t('sections.interview.noJobTitle', 'No Job Description')}
           </h3>
           <p>{t('sections.interview.noJobDesc', 'Add a job description in the Match tab to generate interview questions.')}</p>
@@ -547,7 +547,7 @@ export function InterviewSection({
               <MessageSquare className="w-6 h-6 text-blue-400" />
             </GlassCircle>
             <div>
-              <h3 className="text-xl font-bold text-white">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                 {t('sections.interview.title', 'Interview Preparation')}
               </h3>
               <p className="text-sm text-gray-400">
@@ -588,7 +588,7 @@ export function InterviewSection({
               </GlassCircle>
               <div>
                 <p className="text-sm text-gray-400 mb-1 font-medium">{t('sections.interview.roleLevel', 'Role Level')}</p>
-                <p className="text-xl font-bold text-white capitalize">{roleLevel || 'Mid-Senior'}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white capitalize">{roleLevel || 'Mid-Senior'}</p>
               </div>
             </div>
 
@@ -600,7 +600,7 @@ export function InterviewSection({
                 <p className="text-sm text-gray-400 mb-2 font-medium">{t('sections.interview.focusAreas', 'Focus Areas')}</p>
                 <div className="flex flex-wrap gap-2">
                   {focusAreas.length > 0 ? focusAreas.map((area, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-white/5 hover:bg-white/10 text-emerald-300 border border-emerald-500/20 rounded-full text-xs font-medium transition-colors cursor-default backdrop-blur-sm">
+                    <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-white/5 hover:bg-gray-200/50 dark:hover:bg-white/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 rounded-full text-xs font-medium transition-colors cursor-default backdrop-blur-sm">
                       {area}
                     </span>
                   )) : (
@@ -630,7 +630,7 @@ export function InterviewSection({
                 <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]">
                   <Sparkles className="w-10 h-10 text-emerald-400" />
                 </div>
-                <h4 className="text-2xl font-bold text-white mb-2">
+                <h4 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                   {t('sections.interview.readyTitle', 'Prepare for Your Interview')}
                 </h4>
                 <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
@@ -737,8 +737,8 @@ export function InterviewSection({
                         <div className="flex-1">
                           <div className="flex items-start justify-between gap-4 mb-2">
                             <h4 className={cn(
-                              "font-semibold text-white/90 leading-relaxed transition-colors",
-                              expandedQuestions.has(globalIdx) ? "text-amber-300" : ""
+                              "font-semibold text-gray-800 dark:text-white/90 leading-relaxed transition-colors",
+                              expandedQuestions.has(globalIdx) ? "text-amber-600 dark:text-amber-300" : ""
                             )}>
                               {question.question}
                             </h4>
@@ -801,21 +801,21 @@ export function InterviewSection({
                                   <div className="space-y-1">
                                     <div className="flex gap-2">
                                       <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
-                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
+                                      <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
                                     </div>
                                     <div className="flex gap-2">
                                       <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
-                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.task}</span>
+                                      <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.task}</span>
                                     </div>
                                   </div>
                                   <div className="space-y-1">
                                     <div className="flex gap-2">
                                       <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
-                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.action}</span>
+                                      <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.action}</span>
                                     </div>
                                     <div className="flex gap-2">
                                       <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
-                                      <span className="text-white/70 text-xs leading-relaxed">{starTips.result}</span>
+                                      <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.result}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -864,14 +864,14 @@ export function InterviewSection({
 
           <div className="flex flex-col gap-1 mb-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 {t('sections.interview.questionsTitle', 'Predicted Questions')}
-                <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-xs font-normal">
+                <span className="bg-gray-200/50 dark:bg-white/10 text-gray-600 dark:text-white/70 px-2 py-0.5 rounded-full text-xs font-normal">
                   {skillFilter ? filteredQuestions.length : standardQuestions.length}
                 </span>
               </h3>
             </div>
-            <p className="inline-flex items-center gap-2 text-sm font-medium text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-full">
+            <p className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-full">
               <Target className="h-4 w-4" />
               {t('trust.interviewQuestions')}
             </p>
@@ -879,13 +879,13 @@ export function InterviewSection({
 
           {/* Skill Filter */}
           {uniqueSkills.length > 0 && (
-            <div className="mb-6 p-5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
+            <div className="mb-6 p-5 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 backdrop-blur-sm">
               <div className="flex items-center justify-between mb-4">
-                <label className="text-sm font-semibold text-white/90 flex items-center gap-2">
+                <label className="text-sm font-semibold text-gray-800 dark:text-white/90 flex items-center gap-2">
                   <Target className="w-4 h-4 text-emerald-400" />
                   {t('sections.interview.filterBySkill', 'Filter by Skill')}
                 </label>
-                <span className="text-xs text-white/40 font-medium px-2 py-1 bg-white/5 rounded-full border border-white/5">
+                <span className="text-xs text-gray-400 dark:text-white/40 font-medium px-2 py-1 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5">
                   {uniqueSkills.length} {t('common.skills', 'Skills')}
                 </span>
               </div>
@@ -897,13 +897,13 @@ export function InterviewSection({
                     'group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border flex items-center justify-between',
                     skillFilter === null
                       ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-                      : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/20'
+                      : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/70 hover:bg-gray-200/50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20'
                   )}
                 >
                   <span className="truncate">{t('sections.interview.all', 'All')}</span>
                   <span className={cn(
                     "text-xs py-0.5 px-2 rounded-full transition-colors font-semibold ml-2 min-w-[1.5rem] text-center",
-                    skillFilter === null ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/90"
+                    skillFilter === null ? "bg-white/20 text-white" : "bg-gray-200/50 dark:bg-white/10 text-gray-400 dark:text-white/50 group-hover:bg-gray-300/50 dark:group-hover:bg-white/20 group-hover:text-gray-800 dark:group-hover:text-white/90"
                   )}>
                     {questions.length}
                   </span>
@@ -922,7 +922,7 @@ export function InterviewSection({
                     <span className="truncate text-start" title={skill}>{skill}</span>
                     <span className={cn(
                       "text-xs py-0.5 px-2 rounded-full transition-colors font-semibold ml-2 min-w-[1.5rem] text-center",
-                      skillFilter === skill ? "bg-white/20 text-white" : "bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white/90"
+                      skillFilter === skill ? "bg-white/20 text-white" : "bg-gray-200/50 dark:bg-white/10 text-gray-400 dark:text-white/50 group-hover:bg-gray-300/50 dark:group-hover:bg-white/20 group-hover:text-gray-800 dark:group-hover:text-white/90"
                     )}>
                       {getSkillCount(skill)}
                     </span>
@@ -948,7 +948,7 @@ export function InterviewSection({
                   onClick={() => toggleQuestion(index)}
                 >
                   <div className="mt-1">
-                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/50 text-sm font-bold">
                       {index + 1}
                     </span>
                   </div>
@@ -956,8 +956,8 @@ export function InterviewSection({
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <h4 className={cn(
-                        "font-semibold text-white/90 leading-relaxed transition-colors",
-                        expandedQuestions.has(index) ? "text-emerald-300" : ""
+                        "font-semibold text-gray-800 dark:text-white/90 leading-relaxed transition-colors",
+                        expandedQuestions.has(index) ? "text-emerald-700 dark:text-emerald-300" : ""
                       )}>
                         {question.question}
                       </h4>
@@ -1000,7 +1000,7 @@ export function InterviewSection({
                           {question.skills_tested.map((skill, idx) => (
                             <span
                               key={idx}
-                              className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 text-blue-300 border border-blue-500/20 hover:bg-white/10 transition-colors cursor-default"
+                              className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-white/5 text-blue-600 dark:text-blue-300 border border-blue-500/20 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors cursor-default"
                             >
                               {skill}
                             </span>
@@ -1027,21 +1027,21 @@ export function InterviewSection({
                             <div className="space-y-1">
                               <div className="flex gap-2">
                                 <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
-                                <span className="text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
+                                <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
                               </div>
                               <div className="flex gap-2">
                                 <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
-                                <span className="text-white/70 text-xs leading-relaxed">{starTips.task}</span>
+                                <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.task}</span>
                               </div>
                             </div>
                             <div className="space-y-1">
                               <div className="flex gap-2">
                                 <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
-                                <span className="text-white/70 text-xs leading-relaxed">{starTips.action}</span>
+                                <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.action}</span>
                               </div>
                               <div className="flex gap-2">
                                 <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
-                                <span className="text-white/70 text-xs leading-relaxed">{starTips.result}</span>
+                                <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.result}</span>
                               </div>
                             </div>
                           </div>

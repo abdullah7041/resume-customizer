@@ -53,7 +53,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
     <GlassCard className="p-6">
       <div className="flex items-center gap-2 mb-6">
         <TrendingUp className="w-5 h-5 text-emerald-400" />
-        <h3 className="text-lg font-bold text-white">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
           {t('vision2030.breakdown.title', 'Detailed Sector Analysis')}
         </h3>
       </div>
@@ -66,7 +66,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
           return (
             <div
               key={sector.sectorId}
-              className="rounded-lg border border-white/10 overflow-hidden bg-gradient-to-br from-white/[0.02] to-white/[0.01] hover:border-white/20 transition-all"
+              className="rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden bg-gradient-to-br from-white/[0.02] to-white/[0.01] hover:border-gray-300 dark:hover:border-white/20 transition-all"
             >
               {/* Sector Header */}
               <button
@@ -75,17 +75,17 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                 className="w-full p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${sector.score > 0 ? 'bg-emerald-500/10' : 'bg-white/5'}`}>
+                  <div className={`p-2 rounded-lg ${sector.score > 0 ? 'bg-emerald-500/10' : 'bg-gray-100 dark:bg-white/5'}`}>
                     <SectorIcon
                       sectorId={sector.sectorId}
-                      className={`w-5 h-5 ${sector.score > 0 ? 'text-emerald-400' : 'text-white/20'}`}
+                      className={`w-5 h-5 ${sector.score > 0 ? 'text-emerald-400' : 'text-gray-300 dark:text-white/20'}`}
                     />
                   </div>
                   <div className="text-left">
-                    <h4 className="font-semibold text-white/90">
+                    <h4 className="font-semibold text-gray-800 dark:text-white/90">
                       {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
                     </h4>
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-gray-400 dark:text-white/50">
                       {sector.matchedCount} / {sector.totalSkills} {t('vision2030.breakdown.skillsMatched', 'skills matched')}
                     </p>
                   </div>
@@ -107,9 +107,9 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
 
                   {/* Expand Icon */}
                   {isExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-white/40" />
+                    <ChevronUp className="w-5 h-5 text-gray-400 dark:text-white/40" />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-white/40" />
+                    <ChevronDown className="w-5 h-5 text-gray-400 dark:text-white/40" />
                   )}
                 </div>
               </button>
@@ -120,7 +120,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                   {/* Matched Skills */}
                   {sectorSkills.length > 0 && (
                     <div>
-                      <h5 className="text-sm font-semibold text-white/80 mb-2 flex items-center gap-2">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-white/80 mb-2 flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-400" />
                         {t('vision2030.breakdown.matchedSkills', 'Matched Skills')}
                       </h5>
@@ -131,7 +131,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                             className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10"
                           >
                             <div className="flex items-start justify-between gap-3 mb-1">
-                              <span className="text-sm font-medium text-emerald-300">
+                              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                                 {isArabic ? skill.skillNameAr : skill.skillNameEn}
                               </span>
                               <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 shrink-0">
@@ -139,7 +139,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                               </span>
                             </div>
                             {skill.context && (
-                              <p className="text-xs text-white/50 leading-relaxed">
+                              <p className="text-xs text-gray-400 dark:text-white/50 leading-relaxed">
                                 {t('vision2030.breakdown.foundIn', 'Found in')}: "{skill.context.substring(0, 100)}..."
                               </p>
                             )}
@@ -152,7 +152,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                   {/* Suggested Keywords */}
                   {sector.suggestedKeywords.length > 0 && (
                     <div>
-                      <h5 className="text-sm font-semibold text-white/80 mb-2">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-white/80 mb-2">
                         {t('vision2030.breakdown.suggestedKeywords', 'Suggested Keywords to Add')}
                       </h5>
                       <div className="flex flex-wrap gap-2">
@@ -170,7 +170,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
 
                   {/* No matches message */}
                   {sectorSkills.length === 0 && (
-                    <p className="text-sm text-white/40 italic">
+                    <p className="text-sm text-gray-400 dark:text-white/40 italic">
                       {t('vision2030.breakdown.noMatches', 'No matching skills found for this sector. Consider adding relevant keywords to improve your alignment.')}
                     </p>
                   )}

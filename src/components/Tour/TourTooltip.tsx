@@ -36,7 +36,7 @@ export function TourTooltip({
                     {!step.hideCloseButton && (
                         <button
                             {...closeProps}
-                            className="absolute top-4 right-4 p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                            className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 dark:text-white/40 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -52,7 +52,7 @@ export function TourTooltip({
                     )}
 
                     {/* Content */}
-                    <div className="text-white/80 leading-relaxed mb-6 font-medium">
+                    <div className="text-gray-700 dark:text-white/80 leading-relaxed mb-6 font-medium">
                         {step.content}
                     </div>
 
@@ -68,7 +68,7 @@ export function TourTooltip({
                             {index > 0 && (
                                 <button
                                     {...backProps}
-                                    className="px-3 py-2 text-sm font-medium text-white/60 hover:text-white transition-colors"
+                                    className="px-3 py-2 text-sm font-medium text-gray-500 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
                                 >
                                     {t('common.back', 'Back')}
                                 </button>

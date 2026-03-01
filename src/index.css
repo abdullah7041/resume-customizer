@@ -1,6 +1,8 @@
 @import "./styles/theme.css";
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 
 @layer base {
   :root {
@@ -309,16 +311,28 @@
   }
 
   .glass-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(0, 0, 0, 0.03);
     border-radius: 8px;
   }
 
   .glass-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.15);
     border-radius: 8px;
   }
 
   .glass-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  .dark .glass-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .dark .glass-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .dark .glass-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.25);
   }
 
@@ -930,12 +944,10 @@
   .neu-card {
     background: color-mix(in oklab, var(--surface), transparent 5%);
     border-radius: var(--radius-card);
-    border: 1px solid color-mix(in oklab, rgba(255, 255, 255, 0.08), transparent 20%);
+    border: 1px solid var(--panel-stroke);
     box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.2),
-      0 2px 4px -1px rgba(0, 0, 0, 0.1),
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
-      inset 0 0 20px 0 rgba(255, 255, 255, 0.02);
+      0 4px 6px -1px rgba(0, 0, 0, 0.07),
+      0 2px 4px -1px rgba(0, 0, 0, 0.04);
     backdrop-filter: blur(var(--blur-soft));
     transition: transform var(--duration-breathe) var(--transition-snappy), box-shadow var(--duration-breathe) ease;
   }
@@ -953,6 +965,12 @@
   .neu-card-hover:hover {
     transform: translateY(-2px) scale(1.01);
     box-shadow:
+      0 8px 16px -4px rgba(0, 0, 0, 0.12),
+      0 4px 8px -2px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .neu-card-hover:hover {
+    box-shadow:
       0 12px 24px -8px rgba(0, 0, 0, 0.5),
       0 8px 12px -4px rgba(0, 0, 0, 0.3),
       inset 0 1px 2px 0 rgba(255, 255, 255, 0.12),
@@ -961,18 +979,22 @@
 
   /* Inset Shadows / Wells */
   .neu-inset {
-    background: color-mix(in oklab, #021114, rgba(255, 255, 255, 0.02) 20%);
+    background: var(--surface-strong);
     border-radius: var(--radius-md);
+    border: 1px solid color-mix(in oklab, var(--ink), transparent 85%);
+    box-shadow:
+      inset 0 2px 4px 0 rgba(0, 0, 0, 0.08),
+      inset 0 1px 2px 0 rgba(0, 0, 0, 0.05),
+      0 1px 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .dark .neu-inset {
+    background: color-mix(in oklab, #000405, rgba(255, 255, 255, 0.01) 10%);
     border: 1px solid color-mix(in oklab, rgba(0, 0, 0, 0.6), transparent 10%);
     box-shadow:
       inset 0 2px 6px 0 rgba(0, 0, 0, 0.5),
       inset 0 1px 3px 0 rgba(0, 0, 0, 0.3),
       0 1px 1px 0 rgba(255, 255, 255, 0.05);
-    /* very subtle bottom highlight */
-  }
-
-  .dark .neu-inset {
-    background: color-mix(in oklab, #000405, rgba(255, 255, 255, 0.01) 10%);
   }
 
   /* Spring Metallic Buttons */
@@ -991,7 +1013,7 @@
     box-shadow:
       0 4px 12px rgba(0, 108, 53, 0.4),
       inset 0 1px 1px rgba(255, 255, 255, 0.3);
-    color: var(--ink);
+    color: #ffffff;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     transition: all 0.2s var(--transition-spring);
     cursor: pointer;
@@ -1053,8 +1075,17 @@
 
   .tab-embossed[data-state="active"],
   .tab-embossed.active {
-    background: color-mix(in oklab, var(--surface-strong), rgba(255, 255, 255, 0.05) 90%);
+    background: var(--surface-strong);
     color: var(--ink);
+    border: 1px solid var(--panel-stroke);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.06),
+      0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark .tab-embossed[data-state="active"],
+  .dark .tab-embossed.active {
+    background: color-mix(in oklab, var(--surface-strong), rgba(255, 255, 255, 0.05) 90%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
       inset 0 1px 2px rgba(255, 255, 255, 0.1),
@@ -1063,19 +1094,28 @@
 
   .tab-embossed:hover:not([data-state="active"]):not(.active) {
     color: var(--ink);
-    background: rgba(255, 255, 255, 0.02);
+    background: color-mix(in oklab, var(--ink), transparent 96%);
   }
 
   /* Gauge Badge (for score circle) */
   .gauge-badge {
+    background: linear-gradient(135deg, var(--surface-strong) 0%, color-mix(in oklab, var(--surface), transparent 10%) 100%);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.06),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.08),
+      0 4px 8px -2px rgba(0, 0, 0, 0.1),
+      0 0 0 1px color-mix(in oklab, var(--ink), transparent 90%);
+    border-radius: 50%;
+    position: relative;
+  }
+
+  .dark .gauge-badge {
     background: linear-gradient(135deg, color-mix(in oklab, var(--surface-strong), transparent 10%) 0%, color-mix(in oklab, #021114, transparent 10%) 100%);
     box-shadow:
       inset 0 2px 4px rgba(255, 255, 255, 0.08),
       inset 0 -2px 4px rgba(0, 0, 0, 0.4),
       0 8px 16px -4px rgba(0, 0, 0, 0.5),
       0 0 0 1px rgba(255, 255, 255, 0.05);
-    border-radius: 50%;
-    position: relative;
   }
 
   .gauge-badge::before {

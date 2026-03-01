@@ -368,7 +368,7 @@ export default function Header() {
                   {t("common.appName")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-sm sm:text-base font-medium text-emerald-200/80 tracking-wider">
+                  <p className="text-sm sm:text-base font-medium text-emerald-700/80 dark:text-emerald-200/80 tracking-wider">
                     {t("common.byAuthor")}
                   </p>
                   <a
@@ -430,7 +430,7 @@ export default function Header() {
                       setCreditModalMode('invite-only');
                       setShowCreditModal(true);
                     }}
-                    className="btn-spring relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 group shadow-md hover:shadow-emerald-500/20"
+                    className="btn-spring relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-700 dark:text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 group shadow-md hover:shadow-emerald-500/20"
                     title="Invite friends and earn 5 credits each!"
                   >
                     <Gift className="w-4 h-4" />
@@ -448,7 +448,7 @@ export default function Header() {
                   variant="secondary"
                   size="md"
                   // Use dark background for better readability as requested
-                  className="bg-gray-900/80 hover:bg-black border-white/10 text-gray-200 hover:text-white shadow-md font-bold tracking-wide"
+                  className="bg-gray-900/80 hover:bg-black border-gray-200 dark:border-white/10 text-gray-200 hover:text-white shadow-md font-bold tracking-wide"
                   leftIcon={<LogOut className="h-4 w-4" />}
                 >
                   {t("common.signOut")}
@@ -470,7 +470,7 @@ export default function Header() {
             {/* Mobile: Hamburger menu button */}
             <button
               onClick={() => setMobileNavOpen(true)}
-              className="md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/40 dark:bg-white/5 border border-gray-300/40 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+              className="md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/40 dark:bg-white/5 border border-gray-300/40 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
               aria-label="Open navigation menu"
               aria-expanded={mobileNavOpen}
             >
@@ -549,7 +549,7 @@ export default function Header() {
                   )} style={{ opacity: 0.15 }} />
 
                   <div className={cn(
-                    "inline-flex h-12 w-12 items-center justify-center rounded-xl mb-4 bg-gradient-to-br shadow-inner border border-white/5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
+                    "inline-flex h-12 w-12 items-center justify-center rounded-xl mb-4 bg-gradient-to-br shadow-inner border border-gray-200/50 dark:border-white/5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
                     card.gradient
                   )}>
                     <card.icon className="h-6 w-6 text-white drop-shadow-md" />
@@ -606,9 +606,9 @@ export default function Header() {
                   {/* Animated icon circle */}
                   <div className={cn(
                     iconCircleClass,
-                    "h-12 w-12 flex-shrink-0 bg-black/40 border-emerald-500/20 group-hover:border-emerald-400/50 group-hover:scale-110 group-hover:shadow-[0_0_25px_-5px_rgba(16,185,129,0.4)]"
+                    "h-12 w-12 flex-shrink-0 bg-white/60 dark:bg-black/40 border-emerald-500/20 group-hover:border-emerald-400/50 group-hover:scale-110 group-hover:shadow-[0_0_25px_-5px_rgba(16,185,129,0.4)]"
                   )}>
-                    <step.icon className="h-5 w-5 text-emerald-400 transition-colors duration-300 group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                    <step.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400 transition-colors duration-300 group-hover:text-emerald-500 dark:group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                   </div>
 
                   <div className="flex-1 pt-1.5 transition-transform duration-300 group-hover:translate-x-1">
@@ -659,7 +659,7 @@ export default function Header() {
                   className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
                   aria-label="Toggle Theme"
                 >
-                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-emerald-400" />}
+                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
                 </button>
                 <button
                   onClick={() => setMobileNavOpen(false)}

@@ -847,11 +847,11 @@ export function OptimizeSection({
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 mb-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 shadow-lg shadow-purple-500/5">
-              <Sparkles className="w-6 h-6 text-purple-400" />
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-gray-200 dark:border-white/10 shadow-lg shadow-purple-500/5">
+              <Sparkles className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                 {t('sections.optimize.title', 'Optimize Resume')}
               </h3>
               <p className="text-sm text-gray-400 mt-1">
@@ -862,9 +862,9 @@ export function OptimizeSection({
           <div className="flex flex-wrap items-center gap-3">
             {/* Applied Counter */}
             {optimizations.length > 0 && (
-              <div className="flex items-center gap-3 bg-white/5 rounded-xl p-1.5 pr-3 border border-white/5">
-                <div className="px-3 py-1.5 rounded-lg bg-black/20 border border-white/5">
-                  <span className="text-sm font-medium text-emerald-400">
+              <div className="flex items-center gap-3 bg-gray-100 dark:bg-white/5 rounded-xl p-1.5 pr-3 border border-gray-200 dark:border-white/5">
+                <div className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-black/20 border border-gray-300 dark:border-white/5">
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                     {appliedCount} <span className="text-gray-500">/ {optimizations.length}</span>
                   </span>
                 </div>
@@ -872,13 +872,13 @@ export function OptimizeSection({
                 {appliedCount > 0 && (
                   <button
                     onClick={revertAllOptimizations}
-                    className="text-xs font-medium text-gray-400 hover:text-white transition-colors px-2"
+                    className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors px-2"
                   >
                     {t('optimization.revert', 'Revert')}
                   </button>
                 )}
 
-                <div className="w-px h-4 bg-white/10 mx-1" />
+                <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-1" />
 
                 <button
                   onClick={applyAllOptimizations}
@@ -887,7 +887,7 @@ export function OptimizeSection({
                     "text-xs font-bold transition-colors px-2",
                     appliedCount === optimizations.length
                       ? "text-gray-500 cursor-not-allowed"
-                      : "text-emerald-400 hover:text-emerald-300"
+                      : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300"
                   )}
                 >
                   {t('optimization.applyAll', 'Apply All')}
@@ -896,14 +896,14 @@ export function OptimizeSection({
             )}
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/5">
+            <div className="flex items-center bg-gray-200 dark:bg-black/20 rounded-xl p-1 border border-gray-300/50 dark:border-white/5">
               <button
                 onClick={() => setViewMode('split')}
                 className={cn(
                   'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
                   viewMode === 'split'
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
+                    ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 )}
               >
                 {t('sections.optimize.sideBySide', 'Split')}
@@ -913,8 +913,8 @@ export function OptimizeSection({
                 className={cn(
                   'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
                   viewMode === 'diff'
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
+                    ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 )}
               >
                 {t('sections.optimize.inlineDiff', 'Diff')}
@@ -937,7 +937,7 @@ export function OptimizeSection({
 
         {/* Section Tabs */}
         <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 mb-6">
-          <div className="flex items-center gap-2 p-1 bg-black/20 rounded-xl border border-white/5">
+          <div className="flex items-center gap-2 p-1 bg-gray-200 dark:bg-black/20 rounded-xl border border-gray-300/50 dark:border-white/5">
             {tabs.map((tab) => {
               const isActive = activeSection === tab.id;
               const hasItems = tab.id === 'all'
@@ -951,18 +951,18 @@ export function OptimizeSection({
                   className={cn(
                     'relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap',
                     isActive
-                      ? 'text-white'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/5',
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5',
                     !hasItems && !isActive && 'opacity-50'
                   )}
                 >
                   {isActive && (
-                    <div className="absolute inset-0 bg-white/10 rounded-lg shadow-sm border border-white/5" />
+                    <div className="absolute inset-0 bg-gray-100 dark:bg-white/10 rounded-lg shadow-sm border border-gray-300/50 dark:border-white/5" />
                   )}
                   <span className="relative z-10">
                     {tab.label}
                     {tab.id !== 'all' && hasItems && (
-                      <span className="ml-2 text-xs opacity-60 bg-white/10 px-1.5 py-0.5 rounded-full">
+                      <span className="ml-2 text-xs opacity-60 bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded-full">
                         {optimizations.filter(o => o.sectionType === tab.id).length}
                       </span>
                     )}
@@ -1040,8 +1040,8 @@ export function OptimizeSection({
       {/* Keyword Focus Section - Manual Buckets */}
       <GlassCard>
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
-          <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400">
+          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
             {t('sections.optimize.keywordFocus', 'Keyword Strategy')}
           </h3>
         </div>
@@ -1058,13 +1058,13 @@ export function OptimizeSection({
             const Icon = config.icon;
 
             return (
-              <div key={bucket} className="space-y-3 p-4 rounded-xl bg-black/40 border border-white/5 hover:border-white/10 transition-colors">
+              <div key={bucket} className="space-y-3 p-4 rounded-xl bg-gray-100 dark:bg-black/40 border border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 transition-colors">
                 <div className="flex items-center justify-between">
-                  <p className={`text-xs font-bold uppercase tracking-wider text-${config.color}-400 flex items-center gap-2`}>
+                  <p className={`text-xs font-bold uppercase tracking-wider text-${config.color}-600 dark:text-${config.color}-400 flex items-center gap-2`}>
                     <Icon className="w-3.5 h-3.5" />
                     {t(`sections.optimize.chipLabels.${bucket}`)}
                   </p>
-                  <span className="text-[10px] font-medium text-gray-500 bg-black/20 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-medium text-gray-500 bg-gray-200 dark:bg-black/20 px-2 py-0.5 rounded-full">
                     {items.length}
                   </span>
                 </div>
@@ -1077,9 +1077,9 @@ export function OptimizeSection({
                         title={token}
                         className={cn(
                           'px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all truncate max-w-[140px]',
-                          bucket === 'add' && 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20',
-                          bucket === 'neutral' && 'bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20',
-                          bucket === 'remove' && 'bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20 line-through decoration-rose-500/50'
+                          bucket === 'add' && 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20',
+                          bucket === 'neutral' && 'bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20',
+                          bucket === 'remove' && 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 line-through decoration-rose-500/50'
                         )}
                       >
                         {token}
@@ -1105,7 +1105,7 @@ export function OptimizeSection({
               <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
                 {t('sections.optimize.currentScore', 'Current Score')}
               </span>
-              <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore ? 'text-gray-600 italic' : 'text-white'}`}>
+              <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore ? 'text-gray-600 italic' : 'text-gray-900 dark:text-white'}`}>
                 {resultsSummaryData.isPlaceholderScore ? '—' : `${resultsSummaryData.beforeScore}%`}
               </span>
             </div>
@@ -1122,7 +1122,7 @@ export function OptimizeSection({
                   </div>
                 </>
               ) : (
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center border border-gray-300/50 dark:border-white/10">
                   <span className="text-gray-600 text-lg">→</span>
                 </div>
               )}
@@ -1203,7 +1203,7 @@ export function OptimizeSection({
               <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {t('sections.optimize.autoVerifying', 'Auto-verifying match score...')}
               </p>
               <p className="text-xs text-gray-500">
@@ -1228,10 +1228,10 @@ export function OptimizeSection({
             <GlassCard padding="md" className="mb-2">
               <div className="flex items-center gap-3 text-gray-400">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <Check className="w-5 h-5 text-emerald-400" />
+                  <Check className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {t('sections.optimize.noGapsDetected', 'No Critical Gaps Detected')}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -1295,7 +1295,7 @@ export function OptimizeSection({
                   });
                 }
               }}
-              className="text-[10px] font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md border border-white/5"
+              className="text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded-md border border-gray-300/50 dark:border-white/5"
             >
               {filteredOptimizations.every(o => expandedCards.has(o.sectionId))
                 ? t('sections.optimize.collapseAll', 'Collapse All')
@@ -1315,14 +1315,14 @@ export function OptimizeSection({
                   'overflow-hidden transition-all duration-300 border',
                   opt.applied
                     ? 'border-emerald-500/30 ring-1 ring-emerald-500/20'
-                    : 'border-white/5 hover:border-white/10'
+                    : 'border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10'
                 )}
               >
                 {/* Card Header - Always Visible */}
                 <div
                   className={cn(
-                    "p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors",
-                    expandedCards.has(opt.sectionId) && "bg-white/5 border-b border-white/5"
+                    "p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors",
+                    expandedCards.has(opt.sectionId) && "bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/5"
                   )}
                   onClick={() => toggleCard(opt.sectionId)}
                 >
@@ -1341,7 +1341,7 @@ export function OptimizeSection({
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white capitalize">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white capitalize">
                           {opt.sectionType === 'experience'
                             ? (function () {
                               // Calculate index specifically among experience items
@@ -1357,8 +1357,8 @@ export function OptimizeSection({
                         <span className={cn(
                           'px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold border',
                           opt.applied
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                            : 'bg-white/5 border-white/10 text-gray-400'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-gray-100 dark:bg-white/5 border-gray-300/50 dark:border-white/10 text-gray-500 dark:text-gray-400'
                         )}>
                           {opt.applied
                             ? t('sections.optimize.status.applied', 'Applied')
@@ -1396,7 +1396,7 @@ export function OptimizeSection({
                         "p-2 rounded-lg transition-colors border border-transparent",
                         compareMode === opt.sectionId
                           ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
-                          : "hover:bg-white/10 text-gray-400 hover:text-white"
+                          : "hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                       )}
                       title={t('sections.optimize.compare', 'Compare')}
                     >
@@ -1453,7 +1453,7 @@ export function OptimizeSection({
                             <p className="text-xs text-gray-500 uppercase tracking-wider pl-1">
                               {t('sections.optimize.original', 'Original')}
                             </p>
-                            <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-sm text-gray-400 leading-relaxed">
+                            <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                               {Array.isArray(opt.original)
                                 ? opt.original.join('\n')
                                 : opt.original || t('sections.optimize.noOriginal', 'No original text')
@@ -1464,7 +1464,7 @@ export function OptimizeSection({
                             <p className="text-xs text-emerald-500/70 uppercase tracking-wider pl-1">
                               {t('sections.optimize.optimized', 'Optimized')}
                             </p>
-                            <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-sm text-gray-200 leading-relaxed shadow-sm">
+                            <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-sm text-gray-700 dark:text-gray-200 leading-relaxed shadow-sm">
                               {Array.isArray(opt.optimized)
                                 ? opt.optimized.join('\n')
                                 : opt.optimized || t('sections.optimize.noOptimized', 'No optimized text')
@@ -1473,12 +1473,12 @@ export function OptimizeSection({
                           </div>
                         </div>
                       ) : (
-                        <div className="mt-2 p-4 bg-black/20 rounded-xl border border-white/5 font-mono text-sm leading-7">
-                          <span className="bg-red-500/20 text-red-300 px-1 rounded mx-1 line-through decoration-red-400/50">
+                        <div className="mt-2 p-4 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-200 dark:border-white/5 font-mono text-sm leading-7">
+                          <span className="bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-300 px-1 rounded mx-1 line-through decoration-red-400/50">
                             {Array.isArray(opt.original) ? opt.original.join(' ') : opt.original}
                           </span>
                           <span className="text-gray-500 mx-2">→</span>
-                          <span className="bg-emerald-500/20 text-emerald-300 px-1 rounded mx-1">
+                          <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1 rounded mx-1">
                             {Array.isArray(opt.optimized) ? opt.optimized.join(' ') : opt.optimized}
                           </span>
                         </div>
@@ -1515,7 +1515,7 @@ export function OptimizeSection({
                       {onCopy && (
                         <button
                           onClick={() => onCopy(Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized)}
-                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white border border-white/5"
+                          className="p-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300/50 dark:border-white/5"
                           title={t('common.copy', 'Copy Text')}
                         >
                           <Copy className="w-4 h-4" />
@@ -1528,12 +1528,12 @@ export function OptimizeSection({
             ))}
           </div>
         ) : (
-          <GlassCard padding="lg" className="border-dashed border-white/10">
+          <GlassCard padding="lg" className="border-dashed border-gray-300 dark:border-white/10">
             <div className="text-center text-gray-500 py-8">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-8 h-8 text-gray-600" />
               </div>
-              <h4 className="text-lg font-medium text-gray-400 mb-2">
+              <h4 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">
                 {t('sections.optimize.emptyTitle', 'Ready to Optimize?')}
               </h4>
               <p className="max-w-md mx-auto text-sm opacity-60">

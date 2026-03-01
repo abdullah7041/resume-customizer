@@ -267,10 +267,10 @@ export function MatchSection({
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <GlassCircle size="md" variant="success">
-                <Target className="w-5 h-5 text-emerald-400" />
+                <Target className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </GlassCircle>
               <div>
-                <h3 className="text-lg font-semibold text-white">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {t('sections.match.jobInput.title', 'Match a Role')}
                 </h3>
                 <p className="text-sm text-gray-400">
@@ -284,7 +284,7 @@ export function MatchSection({
                   setJobText("");
                   onClear?.();
                 }}
-                className="text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-rose-500/20 px-2.5 py-1 rounded-lg transition-all"
+                className="text-xs font-medium text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-white/5 hover:bg-rose-500/20 px-2.5 py-1 rounded-lg transition-all"
               >
                 {t('common.clear', 'Clear')}
               </button>
@@ -339,7 +339,7 @@ export function MatchSection({
             <GlassCircle size="md" variant="blue">
               <TrendingUp className="w-5 h-5 text-blue-400" />
             </GlassCircle>
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {t('sections.match.results.title', 'Match Results')}
             </h3>
           </div>
@@ -365,7 +365,7 @@ export function MatchSection({
                 </svg>
                 <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-emerald-300 animate-pulse" />
               </div>
-              <h4 className="text-lg font-semibold text-white mb-2">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 {t('sections.match.analyzingTitle', 'Analyzing Match...')}
               </h4>
               <p className="text-sm text-gray-400 text-center max-w-md">
@@ -451,7 +451,7 @@ export function MatchSection({
                                 duration={1500}
                                 className="text-5xl font-black text-white tracking-tight drop-shadow-lg"
                               />
-                              <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest mt-[-2px]">{t('sections.match.scoreLabel', 'Score')}</span>
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-white/50 uppercase tracking-widest mt-[-2px]">{t('sections.match.scoreLabel', 'Score')}</span>
                             </div>
                           </Tooltip>
                         </div>
@@ -463,7 +463,7 @@ export function MatchSection({
                       <p className={cn('text-sm font-bold uppercase tracking-[0.2em]', variant.text)}>
                         {t(`sections.match.variant.${variant.label}`, variant.label)}
                       </p>
-                      <p className="mt-1 text-sm text-white/80">
+                      <p className="mt-1 text-sm text-gray-700 dark:text-white/80">
                         {matchAnalysis?.reasoning || (
                           score >= 70
                             ? t('sections.match.results.strongMessage', 'Your profile is highly aligned with this role.')
@@ -481,7 +481,7 @@ export function MatchSection({
                     {/* Optimized Resume Warning Banner */}
                     {showOptimized && score !== null && (
                       <div className="w-full p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                        <p className="text-sm text-emerald-300 text-center">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300 text-center">
                           ✅ {t('sections.match.optimizedBanner', 'Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.', { score })}
                         </p>
                       </div>
@@ -492,7 +492,7 @@ export function MatchSection({
                       ref={buttonRef}
                       type="button"
                       onClick={() => setWhyOpen(!whyOpen)}
-                      className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-all"
+                      className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-200 dark:border-white/20 bg-gray-200/50 dark:bg-white/10 text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white hover:bg-gray-300/50 dark:hover:bg-white/20 transition-all"
                     >
                       <Info className="h-3.5 w-3.5" />
                       {t('sections.match.results.breakdown', 'Score Breakdown')}
@@ -504,15 +504,15 @@ export function MatchSection({
                 {whyOpen && (
                   <div
                     ref={popoverRef}
-                    className="absolute left-2 right-2 bottom-2 z-50 rounded-2xl border border-white/20 bg-slate-900/80 p-5 backdrop-blur-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200"
+                    className="absolute left-2 right-2 bottom-2 z-50 rounded-2xl border border-gray-200 dark:border-white/20 bg-white/90 dark:bg-slate-900/80 p-5 backdrop-blur-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200"
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-white/60">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-white/60">
                         {t('sections.match.results.howItWorks', 'Score Breakdown')}
                       </p>
                       <button
                         onClick={() => setWhyOpen(false)}
-                        className="text-white/40 hover:text-white transition-colors"
+                        className="text-gray-400 dark:text-white/40 hover:text-gray-900 dark:hover:text-white transition-colors"
                       >
                         <ChevronDown className="w-4 h-4" />
                       </button>
@@ -536,7 +536,7 @@ export function MatchSection({
                               <div className="flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2">
                                   <CatIcon className={cn("w-3.5 h-3.5", cat.text)} />
-                                  <span className="text-white/80 font-medium">{t(`sections.match.categoryScores.${cat.i18nKey}`)}</span>
+                                  <span className="text-gray-700 dark:text-white/80 font-medium">{t(`sections.match.categoryScores.${cat.i18nKey}`)}</span>
                                 </div>
                                 <span className={cn("font-bold", cat.text)}>{data.score}/{data.max}</span>
                               </div>
@@ -551,15 +551,15 @@ export function MatchSection({
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm text-white/90 leading-relaxed">
+                      <p className="text-sm text-gray-800 dark:text-white/90 leading-relaxed">
                         <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
                       </p>
                     )}
-                    <div className="mt-4 pt-3 border-t border-white/10">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">
+                    <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/50 mb-2">
                         {t('sections.match.results.calculation.title', 'How is this calculated?')}
                       </p>
-                      <div className="grid grid-cols-2 gap-2 text-[10px] text-white/60">
+                      <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-500 dark:text-white/60">
                         <div>
                           <span className="text-blue-400 font-medium block mb-0.5">{t('sections.match.categoryScores.hardSkills', 'Hard Skills')}</span>
                           {t('sections.match.categoryScores.hardSkillsDesc', 'Matching technical keywords')}
@@ -592,7 +592,7 @@ export function MatchSection({
                       <div className="p-1 rounded bg-rose-500/20">
                         <AlertCircle className="h-3.5 w-3.5" />
                       </div>
-                      {t('sections.match.results.missing', 'Missing Keywords')} <span className="text-white/40">({missing.length})</span>
+                      {t('sections.match.results.missing', 'Missing Keywords')} <span className="text-gray-400 dark:text-white/40">({missing.length})</span>
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {missing.map((keyword, i) => (
@@ -615,7 +615,7 @@ export function MatchSection({
                       <div className="p-1 rounded bg-emerald-500/20">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                       </div>
-                      {t('sections.match.results.keywords', 'Recognized Strengths')} <span className="text-white/40">({hits.length})</span>
+                      {t('sections.match.results.keywords', 'Recognized Strengths')} <span className="text-gray-400 dark:text-white/40">({hits.length})</span>
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {hits.map((keyword, i) => (
@@ -644,7 +644,7 @@ export function MatchSection({
                       {matchAnalysis.suggestions.map((suggestion, i) => (
                         <li
                           key={i}
-                          className="p-3 rounded-xl bg-white/5 border border-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all cursor-default"
+                          className="p-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-sm text-gray-300 hover:bg-gray-200/50 dark:hover:bg-white/10 hover:border-gray-200 dark:hover:border-white/20 transition-all cursor-default"
                         >
                           <span className="text-amber-400 mr-2">•</span>
                           {suggestion}
@@ -681,11 +681,11 @@ export function MatchSection({
             <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8 animate-fade-in">
               <div className="relative mb-6 group">
                 <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-1000 animate-pulse" />
-                <div className="relative p-6 rounded-full bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-500 group-hover:scale-110">
+                <div className="relative p-6 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 group-hover:border-gray-300 dark:group-hover:border-white/20 transition-all duration-500 group-hover:scale-110">
                   <Target className="w-10 h-10 text-gray-400 group-hover:text-blue-400 transition-colors duration-500" />
                 </div>
               </div>
-              <h4 className="text-lg font-medium text-white mb-2">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 {t('sections.match.emptyState.title', 'Ready to Analyze')}
               </h4>
               <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">

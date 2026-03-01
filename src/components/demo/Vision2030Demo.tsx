@@ -61,10 +61,10 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                         <span>{isArabic ? 'ميزة حصرية' : 'Exclusive Feature'}</span>
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                         {isArabic ? 'توافق سيرتك الذاتية مع رؤية 2030' : 'Vision 2030 Resume Alignment'}
                     </h2>
-                    <p className="text-lg text-white/70 max-w-2xl mx-auto">
+                    <p className="text-lg text-gray-600 dark:text-white/70 max-w-2xl mx-auto">
                         {isArabic
                             ? 'تحليل ذكي يقيّم توافق مهاراتك مع قطاعات النمو في المملكة العربية السعودية'
                             : 'Smart analysis that evaluates how your skills align with Saudi Arabia\'s growth sectors'}
@@ -77,7 +77,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                         <div key={idx} className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
                             <stat.icon className="w-6 h-6 text-[#4ade80] mx-auto mb-2" />
                             <div className="text-2xl font-bold text-[#4ade80]">{stat.value}</div>
-                            <div className="text-xs text-white/60">{stat.label}</div>
+                            <div className="text-xs text-gray-500 dark:text-white/60">{stat.label}</div>
                         </div>
                     ))}
                 </div>
@@ -92,8 +92,8 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                                     <Target className="w-6 h-6 text-emerald-400" />
                                 </GlassCircle>
                                 <div>
-                                    <h3 className="font-bold text-white">{t('vision2030.title', 'Vision 2030 Alignment')}</h3>
-                                    <p className="text-xs text-white/60">{isArabic ? 'تحليل سيرتك الذاتية' : 'Your Resume Analysis'}</p>
+                                    <h3 className="font-bold text-gray-900 dark:text-white">{t('vision2030.title', 'Vision 2030 Alignment')}</h3>
+                                    <p className="text-xs text-gray-500 dark:text-white/60">{isArabic ? 'تحليل سيرتك الذاتية' : 'Your Resume Analysis'}</p>
                                 </div>
                             </div>
 
@@ -123,7 +123,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                                         </defs>
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-3xl font-bold text-white">87%</span>
+                                        <span className="text-3xl font-bold text-gray-900 dark:text-white">87%</span>
                                         <span className="text-xs text-[#4ade80]">{isArabic ? 'متوافق' : 'Aligned'}</span>
                                     </div>
                                 </div>
@@ -131,7 +131,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
 
                             {/* Sample Sectors */}
                             <div className="space-y-2">
-                                <p className="text-xs text-white/60 mb-2">{isArabic ? 'أفضل القطاعات المطابقة' : 'Top Matched Sectors'}</p>
+                                <p className="text-xs text-gray-500 dark:text-white/60 mb-2">{isArabic ? 'أفضل القطاعات المطابقة' : 'Top Matched Sectors'}</p>
                                 <div className="flex flex-wrap gap-2">
                                     {VISION_2030_SECTORS.slice(0, 4).map((sector) => (
                                         <div
@@ -139,7 +139,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#006C35]/20 border border-[#006C35]/30"
                                         >
                                             <SectorIcon sectorId={sector.id} className="w-4 h-4 text-[#4ade80]" />
-                                            <span className="text-xs text-white">
+                                            <span className="text-xs text-gray-900 dark:text-white">
                                                 {isArabic ? sector.nameAr : sector.nameEn}
                                             </span>
                                         </div>
@@ -153,7 +153,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
 
                     {/* Benefits List */}
                     <div className="space-y-4">
-                        <h3 className="text-xl font-bold text-white mb-6">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                             {isArabic ? 'لماذا هذا مهم لمستقبلك المهني؟' : 'Why This Matters for Your Career'}
                         </h3>
                         {benefits.map((benefit, idx) => (
@@ -165,10 +165,10 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                                     <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
                                 </div>
                                 <div>
-                                    <h4 className="font-medium text-white">
+                                    <h4 className="font-medium text-gray-900 dark:text-white">
                                         {isArabic ? benefit.titleAr : benefit.titleEn}
                                     </h4>
-                                    <p className="text-sm text-white/60">
+                                    <p className="text-sm text-gray-500 dark:text-white/60">
                                         {isArabic ? benefit.descAr : benefit.descEn}
                                     </p>
                                 </div>
@@ -179,7 +179,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
 
                 {/* Sector Icons Row */}
                 <div className="mb-12">
-                    <p className="text-center text-sm text-white/60 mb-4">
+                    <p className="text-center text-sm text-gray-500 dark:text-white/60 mb-4">
                         {isArabic ? 'نحلل سيرتك الذاتية ضمن 8 قطاعات حيوية' : 'We analyze your resume across 8 vital sectors'}
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
@@ -191,7 +191,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                                 <div className="w-10 h-10 rounded-lg bg-[#006C35]/20 flex items-center justify-center">
                                     <SectorIcon sectorId={sector.id} className="w-5 h-5 text-[#4ade80]" />
                                 </div>
-                                <span className="text-[10px] text-white/80 text-center">
+                                <span className="text-[10px] text-gray-700 dark:text-white/80 text-center">
                                     {isArabic ? sector.nameAr : sector.nameEn}
                                 </span>
                             </div>

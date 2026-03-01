@@ -23,7 +23,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
               {leftIcon}
             </div>
           )}
@@ -40,10 +40,10 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
           />
         </div>
         {error && (
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         )}
         {!error && helperText && (
-          <p className="text-xs text-emerald-400">{helperText}</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400">{helperText}</p>
         )}
       </div>
     );

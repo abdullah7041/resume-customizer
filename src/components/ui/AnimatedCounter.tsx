@@ -145,10 +145,10 @@ export function AnimatedStatCard({
           suffix={suffix}
           prefix={prefix}
           decimals={decimals}
-          className="text-5xl font-bold text-white"
+          className="text-5xl font-bold text-gray-900 dark:text-white"
         />
 
-        <div className="text-white/70 text-lg">{label}</div>
+        <div className="text-gray-600 dark:text-white/70 text-lg">{label}</div>
       </div>
 
       {/* Glow effect on hover */}

@@ -78,8 +78,8 @@ export function RecommendationsModal({
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           {icon}
-          <h4 className="text-sm font-semibold text-white/90">{title}</h4>
-          <span className="text-xs text-white/40">({suggestions.length})</span>
+          <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h4>
+          <span className="text-xs text-gray-400 dark:text-white/40">({suggestions.length})</span>
         </div>
 
         <div className="space-y-2">
@@ -99,14 +99,14 @@ export function RecommendationsModal({
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
                         {isArabic ? suggestion.skillNameAr : suggestion.skillNameEn}
                       </span>
                       <span className={cn('text-xs px-2 py-0.5 rounded border', badge.className)}>
                         {badge.label}
                       </span>
                     </div>
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-gray-400 dark:text-white/50">
                       {t('vision2030.recommendations.sector', 'Sector')}: {isArabic ? suggestion.sectorNameAr : suggestion.sectorNameEn}
                     </p>
                   </div>
@@ -120,12 +120,12 @@ export function RecommendationsModal({
                     {isCopied ? (
                       <Check className="w-4 h-4 text-emerald-400" />
                     ) : (
-                      <Copy className="w-4 h-4 text-white/40" />
+                      <Copy className="w-4 h-4 text-gray-400 dark:text-white/40" />
                     )}
                   </button>
                 </div>
 
-                <p className="text-sm text-white/70 leading-relaxed" dir={isArabic ? 'rtl' : 'ltr'}>
+                <p className="text-sm text-gray-600 dark:text-white/70 leading-relaxed" dir={isArabic ? 'rtl' : 'ltr'}>
                   {isArabic ? suggestion.reasonAr : suggestion.reason}
                 </p>
               </div>
@@ -163,7 +163,7 @@ export function RecommendationsModal({
             </div>
             <h3
               id="recommendations-title"
-              className="text-xl font-bold text-white"
+              className="text-xl font-bold text-gray-900 dark:text-white"
             >
               {t('vision2030.recommendations.title', 'Improvement Recommendations')}
             </h3>
@@ -183,10 +183,10 @@ export function RecommendationsModal({
             <div className="p-4 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-16 h-16 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-emerald-400" />
             </div>
-            <h4 className="text-lg font-semibold text-white mb-2">
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               {t('vision2030.recommendations.perfect', 'Excellent Alignment!')}
             </h4>
-            <p className="text-white/60">
+            <p className="text-gray-500 dark:text-white/60">
               {t('vision2030.recommendations.perfectDesc', 'Your resume already covers all major Vision 2030 sectors. Keep up the great work!')}
             </p>
           </div>
@@ -194,7 +194,7 @@ export function RecommendationsModal({
           <div className="space-y-6">
             {/* Summary */}
             <div className={cn(glass.card, 'p-4 bg-blue-500/[0.03] border-blue-500/10')}>
-              <p className="text-sm text-white/70 leading-relaxed">
+              <p className="text-sm text-gray-600 dark:text-white/70 leading-relaxed">
                 {t('vision2030.recommendations.intro', 'These recommendations will help strengthen your alignment with Saudi Vision 2030. Focus on high-impact suggestions first.')}
               </p>
             </div>

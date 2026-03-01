@@ -170,10 +170,10 @@ function ResumeTransformDemo() {
               "px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300",
               stage === idx
                 ? s.color === "red"
-                  ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                  ? "bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30"
                   : s.color === "yellow"
-                    ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 animate-pulse"
-                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                    ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border border-yellow-500/30 animate-pulse"
+                    : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
                 : "bg-gray-100/50 dark:bg-white/5 text-gray-500 dark:text-white/40 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/30"
             )}
           >
@@ -204,8 +204,8 @@ function ResumeTransformDemo() {
           {current.color === "emerald" ? (
             <>
               «Spearheaded a high-performing sales unit of 15, driving{" "}
-              <span className="text-emerald-400 font-bold">SAR 12M</span> in annual revenue and
-              expanding market share by <span className="text-emerald-400 font-bold">18%</span>{" "}
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">SAR 12M</span> in annual revenue and
+              expanding market share by <span className="text-emerald-600 dark:text-emerald-400 font-bold">18%</span>{" "}
               across the Eastern Province.»
             </>
           ) : (
@@ -218,7 +218,7 @@ function ResumeTransformDemo() {
           {current.issues?.map((issue, idx) => (
             <span
               key={idx}
-              className="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs font-medium border border-red-500/20"
+              className="px-2 py-1 rounded bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-medium border border-red-500/20"
             >
               ✗ {issue}
             </span>
@@ -226,7 +226,7 @@ function ResumeTransformDemo() {
           {current.benefits?.map((benefit, idx) => (
             <span
               key={idx}
-              className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20"
+              className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium border border-emerald-500/20"
             >
               ✓ {benefit}
             </span>
@@ -235,7 +235,7 @@ function ResumeTransformDemo() {
       </div>
 
       {/* Progress bar */}
-      <div className="mt-4 h-1 bg-white/10 rounded-full overflow-hidden">
+      <div className="mt-4 h-1 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
         <div
           className={cn(
             "h-full rounded-full transition-all duration-300",
@@ -267,7 +267,7 @@ function FeatureCard({ feature }) {
     >
       <div className="flex items-start gap-4 mb-4">
         <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 group-hover:from-emerald-500/30 group-hover:to-teal-500/30 transition-all duration-300">
-          <feature.icon className="w-6 h-6 text-emerald-300" />
+          <feature.icon className="w-6 h-6 text-emerald-600 dark:text-emerald-300" />
         </div>
         {feature.badge && (
           <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 text-xs font-medium border border-yellow-500/30">
@@ -299,7 +299,7 @@ function StatItem({ stat }) {
   return (
     <div ref={ref} className="text-center space-y-2 sm:space-y-3 group px-2">
       <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 mx-auto group-hover:from-emerald-500/30 group-hover:to-teal-500/30 transition-all duration-300">
-        <stat.icon className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-300" />
+        <stat.icon className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600 dark:text-emerald-300" />
       </div>
       <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tabular-nums">
         {count}

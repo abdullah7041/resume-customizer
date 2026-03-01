@@ -81,10 +81,10 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                             </div>
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                                 {t('vision2030.modal.title', 'Understanding Vision 2030').replace(/SA|🇸🇦/g, '').trim()}
                             </h2>
-                            <p className="text-xs text-emerald-300 font-medium tracking-wide uppercase">
+                            <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium tracking-wide uppercase">
                                 National Transformation Program
                             </p>
                         </div>
@@ -109,13 +109,13 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                                 <MapPin className="w-32 h-32 text-emerald-500" />
                             </div>
 
-                            <h3 className="text-xl font-bold text-white mb-3 flex items-center gap-3">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-3">
                                 <Target className="w-5 h-5 text-emerald-400" />
                                 <span className="bg-gradient-to-r from-emerald-200 to-white bg-clip-text text-transparent">
                                     {t('vision2030.modal.whatIs', 'What is Vision 2030?')}
                                 </span>
                             </h3>
-                            <p className="text-white/70 leading-relaxed text-base md:text-lg max-w-2xl">
+                            <p className="text-gray-600 dark:text-white/70 leading-relaxed text-base md:text-lg max-w-2xl">
                                 {t('vision2030.modal.description',
                                     'Saudi Vision 2030 is the Kingdom\'s ambitious plan to diversify its economy and reduce dependence on oil. It focuses on developing key sectors including technology, tourism, entertainment, healthcare, and renewable energy to create millions of new jobs for Saudi citizens and residents.'
                                 )}
@@ -125,11 +125,11 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                         {/* Sectors Grid */}
                         <div>
                             <div className="flex items-center justify-between mb-5">
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <TrendingUp className="w-5 h-5 text-emerald-400" />
                                     {t('vision2030.modal.sectors', 'Key Growth Sectors')}
                                 </h3>
-                                <span className="text-xs font-medium px-2 py-1 rounded bg-white/5 border border-white/10 text-white/40">
+                                <span className="text-xs font-medium px-2 py-1 rounded bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/40">
                                     High Demand
                                 </span>
                             </div>
@@ -145,7 +145,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                                         >
                                             <SectorIcon sectorId={sector.id} className="w-6 h-6 text-white/60 group-hover:text-emerald-400 transition-colors" />
                                         </div>
-                                        <span className="text-sm font-medium text-center text-white/70 group-hover:text-white leading-tight">
+                                        <span className="text-sm font-medium text-center text-gray-600 dark:text-white/70 group-hover:text-gray-900 dark:group-hover:text-white leading-tight">
                                             {isArabic ? sector.nameAr : sector.nameEn}
                                         </span>
                                     </div>
@@ -156,13 +156,13 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                         {/* Alignment Section */}
                         <div className="grid md:grid-cols-2 gap-6">
                             <div className="p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-900/20 to-teal-900/10 backdrop-blur-sm">
-                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                     <Sparkles className="w-5 h-5 text-yellow-400" />
                                     {t('vision2030.modal.alignment', 'How We Help You Align')}
                                 </h3>
                                 <ul className="space-y-4">
                                     {[1, 2, 3, 4].map((num) => (
-                                        <li key={num} className="flex items-start gap-3 text-sm text-white/80">
+                                        <li key={num} className="flex items-start gap-3 text-sm text-gray-700 dark:text-white/80">
                                             <div className="mt-0.5 min-w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                                             </div>
@@ -178,10 +178,10 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                                     {/* Removed Emoji as requested */}
                                     <Sparkles className="w-8 h-8 text-[#006C35]" />
                                 </div>
-                                <h4 className="text-white font-bold text-lg">
+                                <h4 className="text-gray-900 dark:text-white font-bold text-lg">
                                     Ready to join the transformation?
                                 </h4>
-                                <p className="text-white/50 text-sm max-w-xs">
+                                <p className="text-gray-400 dark:text-white/50 text-sm max-w-xs">
                                     Explore the official Vision 2030 portal for detailed roadmap and opportunities.
                                 </p>
                                 <a

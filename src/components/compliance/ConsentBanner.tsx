@@ -56,12 +56,12 @@ export function ConsentBanner() {
             </div>
           </div>
           <div className="flex-1 space-y-1">
-            <h3 className="font-bold text-base text-white tracking-tight flex items-center justify-between">
+            <h3 className="font-bold text-base text-gray-900 dark:text-white tracking-tight flex items-center justify-between">
               {t('consent.title', 'Cookie Preferences')}
               {/* Optional: Subtle close button if user REALLY wants to ignore it (optional behavior) */}
               {/* <button onClick={() => setIsVisible(false)} className="text-white/40 hover:text-white transition-colors"><X size={16} /></button> */}
             </h3>
-            <p className="text-sm text-white/70 leading-relaxed font-light">
+            <p className="text-sm text-gray-600 dark:text-white/70 leading-relaxed font-light">
               {t('consent.description', 'We use cookies to analyze traffic and improve your experience. Identifying data is never sold.')}
             </p>
           </div>
@@ -76,7 +76,7 @@ export function ConsentBanner() {
             }}
             className={cn(
               'order-2 sm:order-1 px-4 py-2.5 rounded-xl text-sm font-medium',
-              'text-white/50 hover:text-white transition-colors duration-200',
+              'text-gray-400 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-colors duration-200',
               'hover:bg-white/5 text-center'
             )}
           >

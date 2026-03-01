@@ -121,7 +121,7 @@ export function PricingSection() {
                                                     <li key={idx} className="flex items-start gap-3.5 group/item">
                                                         <div className={cn(
                                                             "mt-1 shrink-0 rounded-full p-0.5",
-                                                            "bg-emerald-500/20 text-emerald-400"
+                                                            "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                                                         )}>
                                                             <Check className="w-3.5 h-3.5" />
                                                         </div>

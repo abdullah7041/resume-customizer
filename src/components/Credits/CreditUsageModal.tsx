@@ -312,12 +312,12 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
         ) : (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <p className="text-white/80">
+              <p className="text-gray-700 dark:text-white/80">
                 {t('referrals.shareLink')}
               </p>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                 <span className="text-emerald-400 font-bold">{t('referrals.youGet')}</span>
-                <span className="text-white/40">•</span>
+                <span className="text-gray-400 dark:text-white/40">•</span>
                 <span className="text-emerald-400 font-bold">{t('referrals.theyGet')}</span>
               </div>
             </div>
