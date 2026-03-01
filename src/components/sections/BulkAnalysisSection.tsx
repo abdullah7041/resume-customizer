@@ -89,7 +89,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
               <FileText className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-white truncate" title={name}>{name}</h4>
+              <h4 className="font-medium text-white truncate rtl:text-right" dir="auto" title={name}>{name}</h4>
               <p className="text-xs text-gray-400 capitalize flex items-center gap-1.5">
                 {status === 'analyzing' || status === 'parsing' ? (
                   <>
@@ -114,7 +114,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
           </div>
           <button
             onClick={onRemove}
-            className="text-gray-500 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-500/10 rounded"
+            className="text-gray-500 hover:text-rose-400 transition-colors md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-rose-500/10 rounded"
           >
             <X className="w-4 h-4" />
           </button>

@@ -440,6 +440,8 @@
         "success": "Resume ready!",
         "error": "We couldn't process that file."
       },
+      "selectFile": "Select File",
+      "scanResume": "Scan Resume",
       "saudi": {
         "label": "Are you Saudi?",
         "description": "Adds \"Saudi\" to your resume summary to align with Saudization ATS filters"
