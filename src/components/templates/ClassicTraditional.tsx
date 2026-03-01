@@ -104,20 +104,36 @@ export function ClassicTraditional({
           </p>
         )}
         <p className="text-gray-500 mb-1" style={{ fontSize: fs(10) }}>
-          {[
-            basics.email,
-            basics.phone,
-            basics.location?.city && basics.location?.region
-              ? `${basics.location.city}, ${basics.location.region}`
-              : basics.location?.city,
-          ].filter(Boolean).join('  |  ')}
+          {basics.phone && <span>{basics.phone}</span>}
+          {basics.email && (
+            <>
+              {basics.phone && <span>  |  </span>}
+              <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>
+            </>
+          )}
+          {basics.location?.city && (
+            <>
+              {(basics.phone || basics.email) && <span>  |  </span>}
+              <span>
+                {basics.location.city}
+                {basics.location?.region && `, ${basics.location.region}`}
+              </span>
+            </>
+          )}
         </p>
         {(linkedInUrl || portfolioUrl) && (
-          <p className="text-gray-400" style={{ fontSize: fs(10) }}>
-            {[
-              linkedInUrl?.replace('https://', '').replace('www.', ''),
-              portfolioUrl?.replace('https://', '').replace('www.', ''),
-            ].filter(Boolean).join('  |  ')}
+          <p style={{ fontSize: fs(10) }}>
+            {linkedInUrl && (
+              <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                {linkedInUrl.replace('https://', '').replace('www.', '')}
+              </a>
+            )}
+            {linkedInUrl && portfolioUrl && <span className="text-gray-400">  |  </span>}
+            {portfolioUrl && (
+              <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                {portfolioUrl.replace('https://', '').replace('www.', '')}
+              </a>
+            )}
           </p>
         )}
       </header>

@@ -130,6 +130,24 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
         </div>
     );
 
+    // Helper to get/set LinkedIn URL from profiles array
+    const getLinkedInUrl = () => {
+        const profiles = localResume?.basics?.profiles || [];
+        return profiles.find((p: any) => p.network?.toLowerCase() === 'linkedin')?.url || '';
+    };
+
+    const setLinkedInUrl = (url: string) => {
+        if (!localResume) return;
+        const profiles = [...(localResume.basics?.profiles || [])];
+        const idx = profiles.findIndex((p: any) => p.network?.toLowerCase() === 'linkedin');
+        if (idx >= 0) {
+            profiles[idx] = { ...profiles[idx], url };
+        } else if (url) {
+            profiles.push({ network: 'LinkedIn', username: '', url });
+        }
+        updateNestedState('basics.profiles', profiles);
+    };
+
     const renderBasics = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -160,6 +178,28 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     placeholder={isArabic ? 'مثال: الرياض' : 'e.g., Riyadh'}
                 />
             </div>
+
+            {/* Links Section */}
+            <div className="p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl space-y-4">
+                <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                    🔗 {isArabic ? 'الروابط والملفات الشخصية' : 'Links & Profiles'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <GlassInput
+                        label={isArabic ? 'رابط LinkedIn' : 'LinkedIn URL'}
+                        value={getLinkedInUrl()}
+                        onChange={(e) => setLinkedInUrl(e.target.value)}
+                        placeholder="https://linkedin.com/in/username"
+                    />
+                    <GlassInput
+                        label={isArabic ? 'الموقع الشخصي / Portfolio' : 'Portfolio / Website URL'}
+                        value={localResume?.basics?.url || ''}
+                        onChange={(e) => updateNestedState('basics.url', e.target.value)}
+                        placeholder="https://yourportfolio.com"
+                    />
+                </div>
+            </div>
+
             <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
                     {isArabic ? 'الملخص المهني' : 'Professional Summary'}

@@ -44,15 +44,9 @@ export function ATSOptimized({
         typeof s === 'string' ? [s] : (s.keywords || [s.name]).filter(Boolean)
     ) || [];
 
-    // Build contact line
-    const contactParts = [
-        basics?.phone,
-        basics?.email,
-        basics?.location?.city && basics?.location?.region
-            ? `${basics.location.city}, ${basics.location.region}`
-            : basics?.location?.city,
-        basics?.profiles?.[0]?.url
-    ].filter(Boolean);
+    // Get profile links
+    const linkedInUrl = basics?.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url;
+    const portfolioUrl = basics?.url || basics?.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website')?.url;
 
     // Helper for scaled fonts - use displayOptions or legacy fontScale
     const fs = (pt: number) => {
@@ -78,6 +72,9 @@ export function ATSOptimized({
         marginBottom: `${opts.paragraphSpacing}px`,
         breakAfter: 'avoid' as const,
     };
+
+    // Separator element for contact line
+    const Sep = () => <span> | </span>;
 
     return (
         <div
@@ -106,7 +103,38 @@ export function ATSOptimized({
                 )}
                 {/* Contact Line */}
                 <p className="text-black mt-2" style={{ fontSize: fs(10) }}>
-                    {contactParts.join(' | ')}
+                    {basics?.phone && <span>{basics.phone}</span>}
+                    {basics?.email && (
+                        <>
+                            {basics?.phone && <Sep />}
+                            <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>
+                        </>
+                    )}
+                    {basics?.location?.city && (
+                        <>
+                            {(basics?.phone || basics?.email) && <Sep />}
+                            <span>
+                                {basics.location.city}
+                                {basics.location?.region && `, ${basics.location.region}`}
+                            </span>
+                        </>
+                    )}
+                    {linkedInUrl && (
+                        <>
+                            <Sep />
+                            <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                                {linkedInUrl.replace('https://', '').replace('www.', '')}
+                            </a>
+                        </>
+                    )}
+                    {portfolioUrl && !linkedInUrl?.includes(portfolioUrl) && (
+                        <>
+                            <Sep />
+                            <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                                {portfolioUrl.replace('https://', '').replace('www.', '')}
+                            </a>
+                        </>
+                    )}
                 </p>
             </header>
 

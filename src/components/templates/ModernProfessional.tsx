@@ -116,7 +116,7 @@ export function ModernProfessional({
           {basics.email && (
             <>
               <span className="text-gray-300">·</span>
-              <span>{basics.email}</span>
+              <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>
             </>
           )}
           {basics.phone && (
@@ -128,17 +128,17 @@ export function ModernProfessional({
           {linkedInUrl && (
             <>
               <span className="text-gray-300">·</span>
-              <span>
+              <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
                 {linkedInUrl.replace('https://', '').replace('www.', '')}
-              </span>
+              </a>
             </>
           )}
           {portfolioUrl && (
             <>
               <span className="text-gray-300">·</span>
-              <span>
+              <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
                 {portfolioUrl.replace('https://', '').replace('www.', '')}
-              </span>
+              </a>
             </>
           )}
         </div>

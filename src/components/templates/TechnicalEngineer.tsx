@@ -108,7 +108,7 @@ export function TechnicalEngineer({
                     </p>
                 )}
                 <div className="flex flex-wrap gap-4 text-gray-500" style={{ fontSize: fs(10) }}>
-                    {basics.email && <span>{basics.email}</span>}
+                    {basics.email && <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>}
                     {basics.phone && <span>{basics.phone}</span>}
                     {basics.location?.city && (
                         <span>
@@ -116,8 +116,8 @@ export function TechnicalEngineer({
                             {basics.location?.region && `, ${basics.location.region}`}
                         </span>
                     )}
-                    {linkedInUrl && <span>{linkedInUrl.replace('https://', '').replace('www.', '')}</span>}
-                    {portfolioUrl && <span>{portfolioUrl.replace('https://', '').replace('www.', '')}</span>}
+                    {linkedInUrl && <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{linkedInUrl.replace('https://', '').replace('www.', '')}</a>}
+                    {portfolioUrl && <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{portfolioUrl.replace('https://', '').replace('www.', '')}</a>}
                 </div>
             </header>
 
