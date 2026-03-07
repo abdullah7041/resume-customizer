@@ -270,7 +270,7 @@ function FeatureCard({ feature }) {
           <feature.icon className="w-6 h-6 text-emerald-600 dark:text-emerald-300" />
         </div>
         {feature.badge && (
-          <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 text-xs font-medium border border-yellow-500/30">
+          <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 text-xs font-medium border border-yellow-500/30">
             {feature.badge}
           </span>
         )}
@@ -618,7 +618,7 @@ export default function LandingPage({ onGetStarted }) {
       {/* Vision 2030 - Immersive Full Width */}
       <section className="relative z-10 py-24 md:py-32 px-4 overflow-hidden">
         {/* Distinctive Background for Vision 2030 */}
-        <div className="absolute inset-0 bg-emerald-950/30">
+        <div className="absolute inset-0 bg-emerald-50/80 dark:bg-emerald-950/30">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15)_0%,transparent_70%)]" />
           <div className="absolute w-full h-full opacity-30"
             style={{

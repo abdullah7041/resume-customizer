@@ -854,7 +854,7 @@ export function OptimizeSection({
               <h3 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                 {t('sections.optimize.title', 'Optimize Resume')}
               </h3>
-              <p className="text-sm text-gray-400 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {t('sections.optimize.subtitle', 'AI-powered suggestions to improve your resume score')}
               </p>
             </div>
@@ -1148,7 +1148,7 @@ export function OptimizeSection({
           {!resultsSummaryData.isPlaceholderScore &&
             !resultsSummaryData.isPlaceholderImprovement &&
             resultsSummaryData.afterScore - resultsSummaryData.beforeScore > 10 && (
-              <div className="flex justify-center mt-3 pt-3 border-t border-white/5">
+              <div className="flex justify-center mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
                 <GlassButton
                   variant="secondary"
                   size="sm"
@@ -1226,7 +1226,7 @@ export function OptimizeSection({
             />
           ) : (
             <GlassCard padding="md" className="mb-2">
-              <div className="flex items-center gap-3 text-gray-400">
+              <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
                   <Check className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                 </div>
@@ -1423,9 +1423,9 @@ export function OptimizeSection({
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
                             {t('sections.optimize.originalContent', 'Original Content')}
                           </p>
-                          <div className="text-sm text-gray-300 font-mono text-xs leading-relaxed opacity-80 bg-black/20 p-3 rounded-lg">
+                          <div className="text-sm text-gray-600 dark:text-gray-300 font-mono text-xs leading-relaxed opacity-80 bg-gray-100 dark:bg-black/20 p-3 rounded-lg">
                             {Array.isArray(opt.original)
-                              ? opt.original.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-white/5 last:border-0">{item}</div>)
+                              ? opt.original.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-gray-200 dark:border-white/5 last:border-0">{item}</div>)
                               : opt.original || 'No content'
                             }
                           </div>
@@ -1435,9 +1435,9 @@ export function OptimizeSection({
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                             {t('sections.optimize.optimizedVersion', 'Optimized Version')}
                           </p>
-                          <div className="text-sm text-gray-200 font-mono text-xs leading-relaxed bg-black/20 p-3 rounded-lg shadow-inner">
+                          <div className="text-sm text-gray-700 dark:text-gray-200 font-mono text-xs leading-relaxed bg-gray-100 dark:bg-black/20 p-3 rounded-lg shadow-inner">
                             {Array.isArray(opt.optimized)
-                              ? opt.optimized.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-white/5 last:border-0">{item}</div>)
+                              ? opt.optimized.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-gray-200 dark:border-white/5 last:border-0">{item}</div>)
                               : opt.optimized || 'No content'
                             }
                           </div>

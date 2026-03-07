@@ -48,31 +48,31 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
   const colorClasses = useMemo(() => {
     if (percentage > 50) {
       return {
-        border: 'border-emerald-500/30',
-        text: 'text-emerald-400',
-        icon: 'text-emerald-400',
+        border: 'border-emerald-300 dark:border-emerald-500/30',
+        text: 'text-emerald-700 dark:text-emerald-400',
+        icon: 'text-emerald-600 dark:text-emerald-400',
         pulse: '',
       };
     } else if (percentage > 25) {
       return {
-        border: 'border-amber-500/30',
-        text: 'text-amber-400',
-        icon: 'text-amber-400',
+        border: 'border-amber-300 dark:border-amber-500/30',
+        text: 'text-amber-700 dark:text-amber-400',
+        icon: 'text-amber-600 dark:text-amber-400',
         pulse: '',
       };
     } else if (creditsRemaining >= 5) {
       return {
-        border: 'border-red-500/30',
-        text: 'text-red-400',
-        icon: 'text-red-400',
+        border: 'border-red-300 dark:border-red-500/30',
+        text: 'text-red-700 dark:text-red-400',
+        icon: 'text-red-600 dark:text-red-400',
         pulse: '',
       };
     } else {
       // Critical - pulsing animation
       return {
-        border: 'border-red-500/50',
-        text: 'text-red-400',
-        icon: 'text-red-400',
+        border: 'border-red-500 dark:border-red-500/50',
+        text: 'text-red-700 dark:text-red-400',
+        icon: 'text-red-600 dark:text-red-400',
         pulse: 'animate-pulse',
       };
     }
@@ -103,15 +103,15 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
       <button
         onClick={onClick}
         className={cn(
-          // Glassy dark background (more transparent as requested)
-          'bg-black/40 backdrop-blur-md border border-white/10 items-center gap-3 px-4 py-2 rounded-xl transition-all shadow-lg',
-          // colorClasses.border, // Removed solid border color to cleaner look, or keep subtle
-          'hover:bg-black/50 hover:scale-105 active:scale-95',
+          // Glassy dark/light background
+          'bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 flex items-center gap-3 px-4 py-2 rounded-xl transition-all shadow-sm',
+          colorClasses.border, // Optional solid border color
+          'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.98]',
           colorClasses.pulse
         )}
         aria-label={t('credits.balance')}
       >
-        <div className={cn("p-1.5 rounded-full bg-white/5", colorClasses.text)}>
+        <div className={cn("p-1.5 rounded-full bg-gray-100 dark:bg-white/5", colorClasses.text)}>
           <Coins className="w-4 h-4" />
         </div>
 
@@ -137,8 +137,8 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
         onClick={handleRefresh}
         disabled={isRefreshing}
         className={cn(
-          'p-2 rounded-lg bg-black/40 backdrop-blur-md border border-white/10',
-          'hover:bg-black/50 hover:scale-105 active:scale-95 transition-all',
+          'p-2 rounded-lg bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 shadow-sm',
+          'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.98] transition-all',
           isRefreshing && 'animate-spin'
         )}
         aria-label="Refresh credits"

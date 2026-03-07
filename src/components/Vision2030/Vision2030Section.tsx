@@ -330,7 +330,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-white/5">
+          <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
             <GlassButton
               variant="secondary"
               onClick={() => {
@@ -451,7 +451,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         </div>
 
         {/* Info about what's included */}
-        <div className="mt-8 p-4 rounded-xl bg-white/[0.02] border border-white/5 max-w-lg">
+        <div className="mt-8 p-4 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 max-w-lg">
           <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-3">
             {t('vision2030.section.included', "What's Included:")}
           </h4>

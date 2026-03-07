@@ -273,7 +273,7 @@ export function MatchSection({
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {t('sections.match.jobInput.title', 'Match a Role')}
                 </h3>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t('sections.match.subtitle', 'Paste the job description to uncover keyword gaps')}
                 </p>
               </div>
@@ -368,7 +368,7 @@ export function MatchSection({
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 {t('sections.match.analyzingTitle', 'Analyzing Match...')}
               </h4>
-              <p className="text-sm text-gray-400 text-center max-w-md">
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">
                 {t(
                   'sections.match.analyzingDesc',
                   'AI is comparing your resume against job requirements. This takes 10-20 seconds.'
@@ -388,7 +388,7 @@ export function MatchSection({
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 p-6 text-white">
+                <div className="relative z-10 p-6 text-gray-900 dark:text-white">
                   <div className="flex flex-col items-center gap-4">
                     {/* SVG Ring */}
                     <div className="relative h-32 w-32">
@@ -449,7 +449,7 @@ export function MatchSection({
                               <AnimatedCounter
                                 to={score}
                                 duration={1500}
-                                className="text-5xl font-black text-white tracking-tight drop-shadow-lg"
+                                className="text-5xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-lg"
                               />
                               <span className="text-[10px] font-bold text-gray-400 dark:text-white/50 uppercase tracking-widest mt-[-2px]">{t('sections.match.scoreLabel', 'Score')}</span>
                             </div>
@@ -540,7 +540,7 @@ export function MatchSection({
                                 </div>
                                 <span className={cn("font-bold", cat.text)}>{data.score}/{data.max}</span>
                               </div>
-                              <div className="h-2.5 w-full bg-black/20 rounded-full overflow-hidden ring-1 ring-white/5">
+                              <div className="h-2.5 w-full bg-gray-200 dark:bg-black/20 rounded-full overflow-hidden ring-1 ring-gray-300/50 dark:ring-white/5">
                                 <div
                                   className={cn("h-full rounded-full transition-all duration-700 ease-out", cat.color)}
                                   style={{ width: `${percent}%` }}
@@ -598,7 +598,7 @@ export function MatchSection({
                       {missing.map((keyword, i) => (
                         <span
                           key={i}
-                          className="group px-3 py-1.5 bg-rose-500/5 text-rose-300/90 rounded-lg text-sm border border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all cursor-pointer hover:scale-[1.02]"
+                          className="group px-3 py-1.5 bg-rose-500/5 text-rose-700 dark:text-rose-300/90 rounded-lg text-sm border border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all cursor-pointer hover:scale-[1.02]"
                           title={t('sections.match.results.addKeyword', 'Consider adding this keyword')}
                         >
                           {keyword}
@@ -621,7 +621,7 @@ export function MatchSection({
                       {hits.map((keyword, i) => (
                         <span
                           key={i}
-                          className="px-3 py-1.5 bg-emerald-500/5 text-emerald-300/90 rounded-lg text-sm border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors"
+                          className="px-3 py-1.5 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300/90 rounded-lg text-sm border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors"
                         >
                           <CheckCircle2 className="w-3 h-3 inline me-1.5 opacity-60" />
                           {keyword}
@@ -644,7 +644,7 @@ export function MatchSection({
                       {matchAnalysis.suggestions.map((suggestion, i) => (
                         <li
                           key={i}
-                          className="p-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-sm text-gray-300 hover:bg-gray-200/50 dark:hover:bg-white/10 hover:border-gray-200 dark:hover:border-white/20 transition-all cursor-default"
+                          className="p-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-white/10 hover:border-gray-200 dark:hover:border-white/20 transition-all cursor-default"
                         >
                           <span className="text-amber-400 mr-2">•</span>
                           {suggestion}

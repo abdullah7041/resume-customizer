@@ -14,7 +14,7 @@ export function OptimizeSkeleton(): React.JSX.Element {
             {Array.from({ length: 3 }).map((_, i) => (
                 <div
                     key={`optimize-skeleton-card-${i}`}
-                    className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3"
+                    className="p-4 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 space-y-3"
                 >
                     {/* Section title */}
                     <div className="flex items-center gap-2">
@@ -23,7 +23,7 @@ export function OptimizeSkeleton(): React.JSX.Element {
                     </div>
 
                     {/* Original text */}
-                    <div className="p-3 rounded-lg bg-white/5">
+                    <div className="p-3 rounded-lg bg-gray-200 dark:bg-white/5">
                         <Skeleton className="h-3 w-16 mb-2" />
                         <Skeleton.Text lines={2} />
                     </div>

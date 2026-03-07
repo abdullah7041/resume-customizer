@@ -106,8 +106,8 @@ export function ReferralLink({ className }: ReferralLinkProps) {
   if (isLoading) {
     return (
       <div className={cn(glass.card, 'p-4 animate-pulse', className)}>
-        <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
-        <div className="h-10 bg-white/10 rounded" />
+        <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-3/4 mb-2" />
+        <div className="h-10 bg-gray-200 dark:bg-white/10 rounded" />
       </div>
     );
   }
@@ -115,11 +115,11 @@ export function ReferralLink({ className }: ReferralLinkProps) {
   if (!referralUrl) {
     return (
       <div className={cn(glass.card, 'p-4 text-center space-y-2', className)}>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           {t('referrals.linkUnavailable')}
         </p>
         {error && (
-          <p className="text-xs text-red-400">
+          <p className="text-xs text-red-500 dark:text-red-400">
             {error}
           </p>
         )}
@@ -131,16 +131,16 @@ export function ReferralLink({ className }: ReferralLinkProps) {
     <div className={cn(glass.card, 'p-4 space-y-4', className)}>
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Share2 className="w-5 h-5 text-emerald-400" />
-        <h4 className="text-sm font-semibold text-white">
+        <Share2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
           {t('referrals.yourLink')}
         </h4>
       </div>
 
       {/* Link display with copy button */}
       <div className="flex items-center gap-2">
-        <div className={cn(glass.badge.neutral, 'flex-1 px-3 py-2 rounded-lg')}>
-          <p className="text-sm text-gray-300 truncate font-mono">
+        <div className={cn(glass.badge.neutral, 'flex-1 px-3 py-2 rounded-lg bg-gray-100/80 dark:bg-white/5 border border-gray-300 dark:border-white/10')}>
+          <p className="text-sm text-gray-800 dark:text-gray-300 truncate font-mono">
             {referralUrl}
           </p>
         </div>
@@ -148,15 +148,15 @@ export function ReferralLink({ className }: ReferralLinkProps) {
           onClick={handleCopy}
           className={cn(
             glass.badge.neutral,
-            'p-2 rounded-lg transition-all hover:bg-white/10',
-            copied && 'bg-emerald-500/20 border-emerald-500/50'
+            'p-2 rounded-lg transition-all hover:bg-gray-200 dark:hover:bg-white/10 bg-gray-100/80 dark:bg-white/5 border border-gray-300 dark:border-white/10',
+            copied && 'bg-emerald-100 border-emerald-400 dark:bg-emerald-500/20 dark:border-emerald-500/50'
           )}
           aria-label={copied ? t('common.copied') : t('common.copy')}
         >
           {copied ? (
-            <Check className="w-5 h-5 text-emerald-400" />
+            <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           ) : (
-            <Copy className="w-5 h-5 text-gray-400" />
+            <Copy className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           )}
         </button>
       </div>
@@ -192,14 +192,14 @@ export function ReferralLink({ className }: ReferralLinkProps) {
           className="flex-1"
         >
           <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
           </svg>
           {t('referrals.shareLinkedIn', 'LinkedIn')}
         </GlassButton>
       </div>
 
       {/* Info text */}
-      <p className="text-xs text-gray-400 text-center">
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
         {t('referrals.shareInfo')}
       </p>
     </div>

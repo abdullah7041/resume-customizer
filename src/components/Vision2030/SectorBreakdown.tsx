@@ -94,7 +94,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                 <div className="flex items-center gap-3">
                   {/* Score */}
                   <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-gray-900/50 rounded-full overflow-hidden">
+                    <div className="w-24 h-2 bg-gray-200 dark:bg-gray-900/50 rounded-full overflow-hidden">
                       <div
                         className={`h-full bg-gradient-to-r ${getScoreBg(sector.score)} transition-all duration-1000`}
                         style={{ width: `${sector.score}%` }}
@@ -116,7 +116,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
 
               {/* Expanded Content */}
               {isExpanded && (
-                <div className="px-4 pb-4 pt-0 space-y-4 border-t border-white/5">
+                <div className="px-4 pb-4 pt-0 space-y-4 border-t border-gray-100 dark:border-white/5">
                   {/* Matched Skills */}
                   {sectorSkills.length > 0 && (
                     <div>
@@ -134,7 +134,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                               <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                                 {isArabic ? skill.skillNameAr : skill.skillNameEn}
                               </span>
-                              <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 shrink-0">
+                              <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 shrink-0">
                                 {skill.weight}x
                               </span>
                             </div>
@@ -159,7 +159,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                         {sector.suggestedKeywords.map((keyword, idx) => (
                           <span
                             key={idx}
-                            className="px-3 py-1 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/30 transition-colors cursor-default"
+                            className="px-3 py-1 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/30 transition-colors cursor-default"
                           >
                             + {keyword}
                           </span>

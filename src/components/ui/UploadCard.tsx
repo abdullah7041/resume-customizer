@@ -194,8 +194,8 @@ export default function UploadCard({
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.15em] sm:tracking-[0.32em] text-gold-500">{t("upload.card.step")}</p>
         </div>
-        <h3 className="text-lg sm:text-2xl font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] leading-tight">{t("upload.card.title")}</h3>
-        <p className="text-[11px] sm:text-sm text-emerald-100/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] leading-relaxed">
+        <h3 className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white drop-shadow-none dark:drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] leading-tight">{t("upload.card.title")}</h3>
+        <p className="text-[11px] sm:text-sm text-gray-600 dark:text-emerald-100/90 drop-shadow-none dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] leading-relaxed">
           {t("upload.card.subtitle")}
         </p>
       </header>
@@ -225,10 +225,10 @@ export default function UploadCard({
         <span className={cn("absolute right-2 rtl:right-auto rtl:left-2 sm:right-6 sm:rtl:left-6 sm:rtl:right-auto top-3 sm:top-6 px-2 sm:px-3 py-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.15em] sm:tracking-[0.2em]", chipClass)}>
           {t("upload.card.maxSize")}
         </span>
-        <div className="flex items-center gap-2 rounded-pill border border-[color:color-mix(in_oklab,var(--glass-border),transparent_30%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-4 py-2 text-xs font-semibold text-emerald-100 shadow-soft backdrop-blur-xl">
+        <div className="flex items-center gap-2 rounded-pill border border-[color:color-mix(in_oklab,var(--glass-border),transparent_30%)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_18%)] px-4 py-2 text-xs font-semibold text-gray-700 dark:text-emerald-100 shadow-soft backdrop-blur-xl">
           <FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" />
           <span>{t("upload.card.pdf")}</span>
-          <span className="text-emerald-200/70">{t("upload.card.and")}</span>
+          <span className="text-gray-500 dark:text-emerald-200/70">{t("upload.card.and")}</span>
           <span>{t("upload.card.docx")}</span>
         </div>
         <span className="relative inline-flex items-center justify-center">
@@ -237,10 +237,10 @@ export default function UploadCard({
             <UploadCloud className="h-7 w-7 sm:h-9 sm:w-9 text-emerald-300/90 drop-shadow-[0_4px_12px_rgba(16,185,129,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.6)]" aria-hidden="true" />
           </span>
         </span>
-        <p className="text-sm sm:text-base font-semibold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] px-2">
+        <p className="text-sm sm:text-base font-semibold text-gray-800 dark:text-white drop-shadow-none dark:drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] px-2">
           {t("upload.card.dropText")}
         </p>
-        <p className="text-xs sm:text-sm text-emerald-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] px-2">
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-emerald-200/90 drop-shadow-none dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] px-2">
           <span className="inline-flex items-center gap-1.5"><Shield className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-300" /> {t("upload.card.securityText")}</span>
         </p>
       </div>
@@ -308,8 +308,8 @@ export default function UploadCard({
               </svg>
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-emerald-100">Resume Ready & Saved</span>
-              <span className="text-xs text-emerald-200/80 font-mono break-all line-clamp-2">{fileName}</span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-100">Resume Ready & Saved</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-200/80 font-mono break-all line-clamp-2">{fileName}</span>
             </div>
           </div>
 
@@ -333,8 +333,8 @@ export default function UploadCard({
               <FileText className="h-5 w-5 text-blue-400" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-blue-100">Ready to Prepare</span>
-              <span className="text-xs text-blue-200/80 font-mono break-all line-clamp-2">{fileName}</span>
+              <span className="font-bold text-blue-700 dark:text-blue-100">Ready to Prepare</span>
+              <span className="text-xs text-blue-600 dark:text-blue-200/80 font-mono break-all line-clamp-2">{fileName}</span>
             </div>
           </div>
 
@@ -375,7 +375,7 @@ export default function UploadCard({
       {
         error && (
           <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
-            <p className="text-sm font-medium text-red-200" role="alert">
+            <p className="text-sm font-medium text-red-700 dark:text-red-200" role="alert">
               {error}
             </p>
           </div>
@@ -392,10 +392,10 @@ export default function UploadCard({
                 <span className="text-lg sm:text-xl drop-shadow-md">🇸🇦</span>
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-sm font-semibold text-white group-hover:text-emerald-100 transition-colors">
+                <span className="text-sm font-semibold text-gray-800 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-100 transition-colors">
                   {t('upload.card.saudi.label')}
                 </span>
-                <span className="text-[10px] sm:text-xs text-emerald-200/60 font-medium">
+                <span className="text-[10px] sm:text-xs text-gray-500 dark:text-emerald-200/60 font-medium">
                   {t('upload.card.saudi.description')}
                 </span>
               </div>

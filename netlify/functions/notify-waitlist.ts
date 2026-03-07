@@ -16,7 +16,7 @@ import { sendWaitlistNotification } from "../lib/email-service.js";
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "change-me-in-production";
 
 function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {

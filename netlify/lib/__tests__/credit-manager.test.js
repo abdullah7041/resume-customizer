@@ -373,6 +373,51 @@ describe('CreditManager', () => {
     });
   });
 
+  describe('getSupabaseClient env var fallback', () => {
+    it('should fallback to VITE_SUPABASE_URL when SUPABASE_URL is missing', async () => {
+      // Save original values
+      const originalSupabaseUrl = process.env.SUPABASE_URL;
+
+      // Simulate the real .env: SUPABASE_URL is missing, only VITE_SUPABASE_URL exists
+      delete process.env.SUPABASE_URL;
+      process.env.VITE_SUPABASE_URL = 'https://fallback.supabase.co';
+
+      // Re-import to get a fresh module that reads env vars
+      // We need to clear the module cache first
+      vi.resetModules();
+
+      // Re-mock supabase
+      vi.doMock('@supabase/supabase-js', () => ({
+        createClient: vi.fn(() => supabaseMock),
+      }));
+
+      const { checkCredits: freshCheckCredits } = await import('../credit-manager.js');
+
+      // This should NOT throw — it should fallback to VITE_SUPABASE_URL
+      // Bug: currently throws "[CreditManager] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY"
+      supabaseMock.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { credits_remaining: 10, credits_total: 20 },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      await expect(freshCheckCredits('user-123', 'ai_match')).resolves.toEqual({
+        hasCredits: true,
+        required: 2,
+        available: 10,
+      });
+
+      // Restore original values
+      process.env.SUPABASE_URL = originalSupabaseUrl;
+      delete process.env.VITE_SUPABASE_URL;
+    });
+  });
+
   describe('addCredits', () => {
     it('successfully adds credits for referral reward', async () => {
       // Mock getUserCredits

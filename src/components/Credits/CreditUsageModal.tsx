@@ -160,7 +160,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
             )}
             <h3
               id="credit-usage-title"
-              className="text-lg font-semibold text-white"
+              className="text-lg font-semibold text-gray-900 dark:text-white"
             >
               {viewMode === 'full' ? t('credits.usage.title') : t('referrals.inviteEarn')}
             </h3>
@@ -171,8 +171,8 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
               onClick={handleRefresh}
               disabled={isRefreshing}
               className={cn(
-                "text-gray-400 hover:text-emerald-400 transition-all",
-                isRefreshing && "animate-spin text-emerald-400"
+                "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-all",
+                isRefreshing && "animate-spin text-emerald-500 dark:text-emerald-400"
               )}
               aria-label="Refresh credits"
               title="Refresh credits"
@@ -182,7 +182,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
               aria-label="Close dialog"
             >
               <X className="w-5 h-5" />
@@ -197,34 +197,34 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
               <div className={cn(glass.card, 'p-6 mb-6 border-emerald-500/30')}>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       {t('credits.balance')}
                     </p>
-                    <p className="text-3xl font-bold text-white">
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
                       {credits.remaining}{' '}
-                      <span className="text-lg text-gray-400">
+                      <span className="text-lg text-gray-500 dark:text-gray-400">
                         / {credits.total}
                       </span>
                     </p>
                   </div>
-                  <Coins className="w-12 h-12 text-emerald-400 opacity-50" />
+                  <Coins className="w-12 h-12 text-emerald-500 dark:text-emerald-400 opacity-50" />
                 </div>
 
                 {/* Earned credits */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-white/10">
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       {t('credits.usage.feedbackEarned')}
                     </p>
-                    <p className="text-sm font-medium text-emerald-400">
+                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                       +{credits.feedbackCreditsEarned}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       {t('credits.usage.referralEarned')}
                     </p>
-                    <p className="text-sm font-medium text-emerald-400">
+                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                       +{credits.referralCreditsEarned}
                     </p>
                   </div>
@@ -240,7 +240,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
 
             {/* Transaction History */}
             <div>
-              <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 {t('credits.usage.history')}
               </h4>
@@ -259,7 +259,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                 </div>
               ) : transactions.length === 0 ? (
                 <div className={cn(glass.card, 'p-6 text-center')}>
-                  <p className="text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-400">
                     {t('credits.usage.noTransactions')}
                   </p>
                 </div>
@@ -279,10 +279,10 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                             <Icon className="w-4 h-4 text-emerald-400" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
                               {tx.feature.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {formatDate(tx.createdAt)}
                             </p>
                           </div>
@@ -298,7 +298,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                             {isPositive ? '+' : ''}
                             {tx.amount}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {tx.creditsAfter} total
                           </p>
                         </div>

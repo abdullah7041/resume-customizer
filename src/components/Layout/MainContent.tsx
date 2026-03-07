@@ -990,12 +990,12 @@ export default function MainContent() {
       {/* Delete All Data Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 border border-white/10 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
               <AlertTriangle className="w-6 h-6 text-amber-500" />
               {t("workspace.deleteAllConfirm.title", "Delete All Data?")}
             </h3>
-            <p className="text-gray-400 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               {t(
                 "workspace.deleteAllConfirm.description",
                 "This will permanently delete your uploaded resume, optimizations, and all saved progress. This action cannot be undone."
@@ -1004,7 +1004,7 @@ export default function MainContent() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors text-white font-medium"
+                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-gray-900 dark:text-white font-medium"
               >
                 {t("common.cancel", "Cancel")}
               </button>
@@ -1129,13 +1129,13 @@ export default function MainContent() {
       {/* Comparison Table - shown for all users */}
       <div className={`${containerClass} mt-16 mb-12`}>
         <div className="text-center mb-12 space-y-4">
-          <div className="inline-block px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-semibold tracking-wider uppercase">
+          <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-100/90 dark:bg-emerald-500/10 backdrop-blur-md border border-emerald-500/30 text-emerald-800 dark:text-emerald-400 text-sm font-bold tracking-wider uppercase shadow-sm">
             {t("landing.comparison.title", "Competitive Advantage")}
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-3xl md:text-4xl font-bold text-white drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]">
             {t("landing.comparison.title", "Why Choose Watheq?")}
           </h2>
-          <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-white/60">
+          <p className="max-w-2xl mx-auto text-lg text-white dark:text-white/80 font-medium drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
             {t("landing.comparison.subtitle", "See how we stack up against generic resume tools")}
           </p>
         </div>

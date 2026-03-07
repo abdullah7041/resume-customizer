@@ -86,9 +86,9 @@ interface InterviewSectionProps {
 // === Sub-components ===
 const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
   const colors: Record<string, string> = {
-    easy: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    hard: 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+    easy: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    medium: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    hard: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30'
   };
   return (
     <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm', colors[difficulty] || colors.medium)}>
@@ -106,13 +106,13 @@ const STARMethodTip = () => {
       <div className="flex flex-col md:flex-row items-start gap-6">
         <div className="flex-shrink-0">
           <GlassCircle size="lg" className="bg-emerald-500/20 border-emerald-500/40">
-            <Lightbulb className="w-6 h-6 text-emerald-300" />
+            <Lightbulb className="w-6 h-6 text-emerald-600 dark:text-emerald-300" />
           </GlassCircle>
         </div>
         <div className="flex-1 w-full">
-          <h4 className="text-lg font-bold text-emerald-300 mb-2 flex items-center gap-2">
+          <h4 className="text-lg font-bold text-emerald-700 dark:text-emerald-300 mb-2 flex items-center gap-2">
             {t('sections.interview.starMethod.title')}
-            <span className="text-xs font-normal text-emerald-400/70 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-normal text-emerald-600/70 dark:text-emerald-400/70 border border-emerald-500/30 px-2 py-0.5 rounded-full">
               {t('sections.interview.starMethod.recommended')}
             </span>
           </h4>
@@ -128,10 +128,10 @@ const STARMethodTip = () => {
             ].map((item, idx) => (
               <GlassCard key={idx} padding="sm" className="group border-emerald-500/10">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 group-hover:scale-110 transition-transform">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-700 dark:text-emerald-300 group-hover:scale-110 transition-transform">
                     {item.letter}
                   </div>
-                  <span className="text-emerald-200 font-semibold">{item.word}</span>
+                  <span className="text-emerald-700 dark:text-emerald-200 font-semibold">{item.word}</span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-white/60 ps-1">{item.desc}</p>
               </GlassCard>
@@ -550,7 +550,7 @@ export function InterviewSection({
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                 {t('sections.interview.title', 'Interview Preparation')}
               </h3>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t('sections.interview.subtitle', 'AI-predicted questions based on the job description')}
               </p>
             </div>
@@ -587,7 +587,7 @@ export function InterviewSection({
                 <Award className="w-5 h-5 text-amber-400" />
               </GlassCircle>
               <div>
-                <p className="text-sm text-gray-400 mb-1 font-medium">{t('sections.interview.roleLevel', 'Role Level')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 font-medium">{t('sections.interview.roleLevel', 'Role Level')}</p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white capitalize">{roleLevel || 'Mid-Senior'}</p>
               </div>
             </div>
@@ -597,7 +597,7 @@ export function InterviewSection({
                 <Target className="w-5 h-5 text-emerald-400" />
               </GlassCircle>
               <div>
-                <p className="text-sm text-gray-400 mb-2 font-medium">{t('sections.interview.focusAreas', 'Focus Areas')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('sections.interview.focusAreas', 'Focus Areas')}</p>
                 <div className="flex flex-wrap gap-2">
                   {focusAreas.length > 0 ? focusAreas.map((area, idx) => (
                     <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-white/5 hover:bg-gray-200/50 dark:hover:bg-white/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 rounded-full text-xs font-medium transition-colors cursor-default backdrop-blur-sm">
@@ -633,7 +633,7 @@ export function InterviewSection({
                 <h4 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                   {t('sections.interview.readyTitle', 'Prepare for Your Interview')}
                 </h4>
-                <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
+                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
                   {t('sections.interview.readyDesc', 'Generate AI-predicted interview questions based on the job description.')}
                 </p>
               </>
@@ -681,7 +681,7 @@ export function InterviewSection({
         {isLoading && (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
             <Loader2 className="h-12 w-12 animate-spin text-emerald-500" />
-            <p className="text-gray-400 animate-pulse">
+            <p className="text-gray-500 dark:text-gray-400 animate-pulse">
               {t('sections.interview.generating', 'Analyzing job description and generating questions...')}
             </p>
           </div>
@@ -699,15 +699,15 @@ export function InterviewSection({
             <div className="space-y-4">
               <div className="flex flex-col gap-1 mb-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-amber-700 dark:text-amber-300 flex items-center gap-2">
                     <ShieldAlert className="w-5 h-5" />
                     {t('sections.interview.vulnerability.title', 'Career Vulnerability Questions')}
-                    <span className="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full text-xs font-normal border border-amber-500/30">
+                    <span className="bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full text-xs font-normal border border-amber-500/30">
                       {vulnerabilityQuestions.length}
                     </span>
                   </h3>
                 </div>
-                <p className="text-xs text-amber-400/60">
+                <p className="text-xs text-amber-600 dark:text-amber-400/60">
                   {t('sections.interview.vulnerability.subtitle', 'Questions targeting potential red flags in your career timeline')}
                 </p>
               </div>
@@ -729,7 +729,7 @@ export function InterviewSection({
                         onClick={() => toggleQuestion(globalIdx)}
                       >
                         <div className="mt-1">
-                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm font-bold">
+                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">
                             {index + 1}
                           </span>
                         </div>
@@ -744,7 +744,7 @@ export function InterviewSection({
                             </h4>
                             <button className={cn(
                               "p-2 rounded-full transition-all duration-300",
-                              expandedQuestions.has(globalIdx) ? "bg-amber-500/20 text-amber-400 rotate-180" : "bg-white/5 text-gray-400 hover:bg-white/10"
+                              expandedQuestions.has(globalIdx) ? "bg-amber-500/20 text-amber-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
                             )}>
                               <ChevronDown className="w-4 h-4" />
                             </button>
@@ -753,12 +753,12 @@ export function InterviewSection({
                           <div className="flex flex-wrap items-center gap-2">
                             <DifficultyBadge difficulty={question.difficulty} />
                             {question.vulnerabilityType && (
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
                                 <ShieldAlert className="w-3 h-3" />
                                 {t(`sections.interview.vulnerability.types.${question.vulnerabilityType}`, question.vulnerabilityType)}
                               </span>
                             )}
-                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
                               {question.category}
                             </span>
                           </div>
@@ -774,13 +774,13 @@ export function InterviewSection({
                             <div className="p-4 bg-amber-500/5 rounded-xl border border-amber-500/15">
                               <div className="flex items-center gap-2 mb-2">
                                 <GlassCircle size="sm" className="bg-amber-500/20">
-                                  <Lightbulb className="w-3.5 h-3.5 text-amber-300" />
+                                  <Lightbulb className="w-3.5 h-3.5 text-amber-600 dark:text-amber-300" />
                                 </GlassCircle>
-                                <span className="text-sm font-bold text-amber-400">
+                                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
                                   {t('sections.interview.vulnerability.coachingTip', 'Coaching Tip')}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-300 leading-relaxed ps-9">{question.coachingTip}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed ps-9">{question.coachingTip}</p>
                             </div>
                           )}
 
@@ -788,9 +788,9 @@ export function InterviewSection({
                           <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
                             <div className="flex items-center gap-2 mb-3">
                               <GlassCircle size="sm" className="bg-emerald-500/20">
-                                <Lightbulb className="w-3.5 h-3.5 text-emerald-300" />
+                                <Lightbulb className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                               </GlassCircle>
-                              <span className="text-sm font-bold text-emerald-400">
+                              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                 {t('sections.interview.starTips.header')}
                               </span>
                             </div>
@@ -800,21 +800,21 @@ export function InterviewSection({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                   <div className="space-y-1">
                                     <div className="flex gap-2">
-                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
+                                      <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">S:</span>
                                       <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
+                                      <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">T:</span>
                                       <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.task}</span>
                                     </div>
                                   </div>
                                   <div className="space-y-1">
                                     <div className="flex gap-2">
-                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
+                                      <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">A:</span>
                                       <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.action}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                      <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
+                                      <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">R:</span>
                                       <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.result}</span>
                                     </div>
                                   </div>
@@ -825,7 +825,7 @@ export function InterviewSection({
 
                           {/* Practice answer */}
                           <div className="pt-2">
-                            <label className="block text-sm font-medium text-gray-300 mb-2 flex justify-between">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
                               {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
                               <span className="text-xs text-gray-500 font-normal">{t('sections.interview.privateToYou', 'Private to you')}</span>
                             </label>
@@ -833,7 +833,7 @@ export function InterviewSection({
                               value={savedAnswers[globalIdx] || ''}
                               onChange={(e) => setSavedAnswers(prev => ({ ...prev, [globalIdx]: e.target.value }))}
                               placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}
-                              className="w-full h-32 p-4 rounded-xl bg-black/20 border border-white/10 text-white placeholder-gray-600 resize-y focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all font-sans text-sm leading-relaxed"
+                              className="w-full h-32 p-4 rounded-xl bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-y focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all font-sans text-sm leading-relaxed"
                             />
                           </div>
                         </div>
@@ -851,10 +851,10 @@ export function InterviewSection({
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 </GlassCircle>
                 <div>
-                  <h4 className="text-sm font-bold text-emerald-300">
+                  <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
                     {t('sections.interview.vulnerability.noVulnerabilities', 'No red flags detected in your career timeline')}
                   </h4>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {t('sections.interview.vulnerability.noVulnerabilitiesDesc', 'Your career progression looks consistent. Focus on the standard questions below.')}
                   </p>
                 </div>
@@ -916,7 +916,7 @@ export function InterviewSection({
                       'group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border flex items-center justify-between',
                       skillFilter === skill
                         ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-                        : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/20'
+                        : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20'
                     )}
                   >
                     <span className="truncate text-start" title={skill}>{skill}</span>
@@ -938,8 +938,8 @@ export function InterviewSection({
                 key={index}
                 padding="none"
                 className={cn(
-                  "overflow-hidden transition-all duration-300 border-white/5",
-                  expandedQuestions.has(index) ? "ring-1 ring-emerald-500/30" : "hover:border-white/10"
+                  "overflow-hidden transition-all duration-300 border-gray-100 dark:border-white/5",
+                  expandedQuestions.has(index) ? "ring-1 ring-emerald-500/30" : "hover:border-gray-200 dark:hover:border-white/10"
                 )}
               >
                 {/* Header / Question Summary */}
@@ -963,7 +963,7 @@ export function InterviewSection({
                       </h4>
                       <button className={cn(
                         "p-2 rounded-full transition-all duration-300",
-                        expandedQuestions.has(index) ? "bg-emerald-500/20 text-emerald-400 rotate-180" : "bg-white/5 text-gray-400 hover:bg-white/10"
+                        expandedQuestions.has(index) ? "bg-emerald-500/20 text-emerald-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
                       )}>
                         <ChevronDown className="w-4 h-4" />
                       </button>
@@ -971,13 +971,13 @@ export function InterviewSection({
 
                     <div className="flex flex-wrap items-center gap-2">
                       <DifficultyBadge difficulty={question.difficulty} />
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                         {question.type === 'technical' && <Monitor className="w-3 h-3" />}
                         {question.type === 'behavioral' && <Users className="w-3 h-3" />}
                         {question.type === 'situational' && <Target className="w-3 h-3" />}
                         {question.type || 'General'}
                       </span>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
                         {question.category}
                       </span>
                     </div>
@@ -987,12 +987,12 @@ export function InterviewSection({
                 {/* Expanded Content */}
                 {expandedQuestions.has(index) && (
                   <div className="px-5 pb-5 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="h-px w-full bg-white/5 mb-4" />
+                    <div className="h-px w-full bg-gray-200 dark:bg-white/5 mb-4" />
 
                     {/* Skills Being Evaluated */}
                     {question.skills_tested && question.skills_tested.length > 0 && (
                       <div className="p-3 bg-blue-500/5 rounded-lg border border-blue-500/10">
-                        <h5 className="text-xs font-bold text-blue-400 mb-2 flex items-center gap-2">
+                        <h5 className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
                           <Target className="w-3.5 h-3.5" />
                           {t('sections.interview.skillsEvaluated', 'Skills Being Evaluated')}
                         </h5>
@@ -1013,9 +1013,9 @@ export function InterviewSection({
                     <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
                       <div className="flex items-center gap-2 mb-3">
                         <GlassCircle size="sm" className="bg-emerald-500/20">
-                          <Lightbulb className="w-3.5 h-3.5 text-emerald-300" />
+                          <Lightbulb className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                         </GlassCircle>
-                        <span className="text-sm font-bold text-emerald-400">
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                           {t('sections.interview.starTips.header')}
                         </span>
                       </div>
@@ -1026,21 +1026,21 @@ export function InterviewSection({
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div className="space-y-1">
                               <div className="flex gap-2">
-                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">S:</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">S:</span>
                                 <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.situation}</span>
                               </div>
                               <div className="flex gap-2">
-                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">T:</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">T:</span>
                                 <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.task}</span>
                               </div>
                             </div>
                             <div className="space-y-1">
                               <div className="flex gap-2">
-                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">A:</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">A:</span>
                                 <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.action}</span>
                               </div>
                               <div className="flex gap-2">
-                                <span className="font-bold text-emerald-400 min-w-[1.5rem]">R:</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400 min-w-[1.5rem]">R:</span>
                                 <span className="text-gray-600 dark:text-white/70 text-xs leading-relaxed">{starTips.result}</span>
                               </div>
                             </div>
@@ -1053,18 +1053,18 @@ export function InterviewSection({
                       <div className="p-4 bg-blue-500/5 rounded-xl border border-blue-500/10">
                         <div className="flex items-center gap-2 mb-2">
                           <GlassCircle size="sm" className="bg-blue-500/20">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
                           </GlassCircle>
-                          <span className="text-sm font-bold text-blue-400">
+                          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                             {t('sections.interview.framework', 'Answer Framework')}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-300 leading-relaxed ps-9">{question.answerFramework}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed ps-9">{question.answerFramework}</p>
                       </div>
                     )}
 
                     <div className="pt-2">
-                      <label className="block text-sm font-medium text-gray-300 mb-2 flex justify-between">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
                         {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
                         <span className="text-xs text-gray-500 font-normal">{t('sections.interview.privateToYou', 'Private to you')}</span>
                       </label>
@@ -1072,7 +1072,7 @@ export function InterviewSection({
                         value={savedAnswers[index] || ''}
                         onChange={(e) => setSavedAnswers(prev => ({ ...prev, [index]: e.target.value }))}
                         placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}
-                        className="w-full h-32 p-4 rounded-xl bg-black/20 border border-white/10 text-white placeholder-gray-600 resize-y focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all font-sans text-sm leading-relaxed"
+                        className="w-full h-32 p-4 rounded-xl bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-y focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all font-sans text-sm leading-relaxed"
                       />
                     </div>
                   </div>

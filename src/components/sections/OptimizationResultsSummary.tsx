@@ -78,7 +78,7 @@ function AnimatedScore({
     };
 
     const getBgColor = (s: number, isAfter: boolean) => {
-        if (!isAfter) return 'bg-white/5';
+        if (!isAfter) return 'bg-gray-100 dark:bg-white/5';
         if (s >= 80) return 'bg-emerald-500/10';
         if (s >= 60) return 'bg-yellow-500/10';
         return 'bg-orange-500/10';
@@ -90,7 +90,7 @@ function AnimatedScore({
             getBgColor(score, variant === 'after'),
             variant === 'after'
                 ? 'border-emerald-500/30'
-                : 'border-white/10'
+                : 'border-gray-200 dark:border-white/10'
         )}>
             <span className="text-xs uppercase tracking-wider text-gray-500 mb-2">
                 {label}
@@ -104,7 +104,7 @@ function AnimatedScore({
                 </span>
                 <span className="text-2xl text-gray-500 ml-1">%</span>
             </div>
-            <span className="text-sm text-gray-400 mt-1">
+            <span className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {t('sections.optimizationResults.matchScore', 'Match Score')}
             </span>
         </div>
@@ -190,10 +190,10 @@ function Vision2030Card({
                         🇸🇦
                     </div>
                     <div>
-                        <h4 className="text-sm font-medium text-white">
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">
                             {t('vision2030.resultsAlignment', 'Vision 2030 Alignment')}
                         </h4>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                             {t('vision2030.targetSectors', 'Target Sectors')}
                         </p>
                     </div>
@@ -209,7 +209,7 @@ function Vision2030Card({
             {/* Primary Sector */}
             <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">{vision2030.primarySector.icon}</span>
-                <span className="text-sm font-medium text-white">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
                     {isArabic ? vision2030.primarySector.nameAr : vision2030.primarySector.nameEn}
                 </span>
                 <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full">
@@ -223,7 +223,7 @@ function Vision2030Card({
                     {vision2030.secondarySectors.map((sector) => (
                         <span
                             key={sector.id}
-                            className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg text-xs text-gray-300"
+                            className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-white/5 rounded-lg text-xs text-gray-600 dark:text-gray-300"
                         >
                             <span>{sector.icon}</span>
                             <span>{isArabic ? sector.nameAr : sector.nameEn}</span>
@@ -234,11 +234,11 @@ function Vision2030Card({
 
             {/* Detected Career */}
             {vision2030.detectedCareer && (
-                <div className="mt-3 pt-2 border-t border-white/5">
-                    <p className="text-xs text-gray-400">
+                <div className="mt-3 pt-2 border-t border-gray-100 dark:border-white/5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                         {t('vision2030.detectedCareerPath', 'Detected Career Path')}
                     </p>
-                    <p className="text-sm text-white mt-1">
+                    <p className="text-sm text-gray-900 dark:text-white mt-1">
                         {isArabic ? vision2030.detectedCareer.nameAr : vision2030.detectedCareer.nameEn}
                     </p>
                 </div>
@@ -246,7 +246,7 @@ function Vision2030Card({
 
             {/* Matched Vision 2030 Skills */}
             {vision2030.topMatchedSkills.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-white/5">
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
                     <p className="text-xs text-gray-400 mb-2">
                         {t('vision2030.skillsDetected', 'Vision 2030 Skills Detected')}
                     </p>
@@ -254,7 +254,7 @@ function Vision2030Card({
                         {vision2030.topMatchedSkills.map((skill, idx) => (
                             <span
                                 key={idx}
-                                className="px-2 py-1 bg-white/5 text-gray-300 text-xs rounded-md border border-white/10"
+                                className="px-2 py-1 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs rounded-md border border-gray-200 dark:border-white/10"
                             >
                                 {skill}
                             </span>
@@ -342,7 +342,7 @@ export function OptimizationResultsSummary({
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                                 {t('sections.optimizationResults.title', 'Optimization Results')}
                             </h3>
-                            <p className="text-sm text-gray-400">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {t('sections.optimizationResults.subtitle', 'How your resume improved to match the job')}
                             </p>
                         </div>
@@ -379,34 +379,34 @@ export function OptimizationResultsSummary({
 
                     {/* Stats Row */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div className="text-center p-4 bg-white/5 rounded-xl">
+                        <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-xl">
                             <div className="flex items-center justify-center gap-2 mb-1">
                                 <Sparkles className="w-4 h-4 text-purple-400" />
                             </div>
-                            <p className="text-2xl font-bold text-white">{totalOptimizations}</p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalOptimizations}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {t('sections.optimizationResults.improvementsFound', 'Improvements Found')}
                             </p>
                         </div>
 
-                        <div className="text-center p-4 bg-white/5 rounded-xl">
+                        <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-xl">
                             <div className="flex items-center justify-center gap-2 mb-1">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                             </div>
-                            <p className="text-2xl font-bold text-white">{appliedOptimizations}</p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{appliedOptimizations}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {t('sections.optimizationResults.applied', 'Applied')}
                             </p>
                         </div>
 
-                        <div className="text-center p-4 bg-white/5 rounded-xl">
+                        <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-xl">
                             <div className="flex items-center justify-center gap-2 mb-1">
                                 <TrendingUp className="w-4 h-4 text-yellow-400" />
                             </div>
-                            <p className="text-2xl font-bold text-white">
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                 {hasJobDescription ? `+${improvement}%` : '-'}
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {t('sections.optimizationResults.scoreBoost', 'Score Boost')}
                             </p>
                             {/* Show potential if not all applied */}
@@ -419,24 +419,24 @@ export function OptimizationResultsSummary({
 
                         {/* Vision 2030 Stats */}
                         {vision2030 && vision2030.primarySector ? (
-                            <div className="text-center p-4 bg-white/5 rounded-xl border border-emerald-500/20 card-shine">
+                            <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-xl border border-emerald-500/20 card-shine">
                                 <div className="flex items-center justify-center gap-2 mb-1">
                                     <span className="text-sm">🇸🇦</span>
                                 </div>
-                                <p className="text-2xl font-bold text-white">
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                     {1 + vision2030.secondarySectors.length}
                                 </p>
-                                <p className="text-xs text-gray-400">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                     {t('vision2030.sectors', '2030 Sectors')}
                                 </p>
                             </div>
                         ) : (
-                            <div className="text-center p-4 bg-white/5 rounded-xl opacity-50">
+                            <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-xl opacity-50">
                                 <div className="flex items-center justify-center gap-2 mb-1">
                                     <span className="text-sm">🇸🇦</span>
                                 </div>
-                                <p className="text-xl font-bold text-white">-</p>
-                                <p className="text-xs text-gray-400">
+                                <p className="text-xl font-bold text-gray-900 dark:text-white">-</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                     {t('vision2030.sectors', '2030 Sectors')}
                                 </p>
                             </div>
@@ -448,7 +448,7 @@ export function OptimizationResultsSummary({
                         <div className="mb-6">
                             <div className="flex items-center gap-2 mb-3">
                                 <Plus className="w-4 h-4 text-emerald-400" />
-                                <h4 className="text-sm font-medium text-gray-300">
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     {t('sections.optimizationResults.keywordsAdded', 'Keywords Added to Match JD')}
                                 </h4>
                             </div>
@@ -469,7 +469,7 @@ export function OptimizationResultsSummary({
                                     </span>
                                 ))}
                                 {keywordsAdded.length > 10 && (
-                                    <span className="px-3 py-1.5 text-sm text-gray-400">
+                                    <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">
                                         +{keywordsAdded.length - 10} {t('sections.optimizationResults.more', 'more')}
                                     </span>
                                 )}
@@ -482,7 +482,7 @@ export function OptimizationResultsSummary({
                         <div className="mb-6">
                             <div className="flex items-center gap-2 mb-3">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                <h4 className="text-sm font-medium text-gray-300">
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     {t('sections.optimizationResults.keywordsMatching', 'Keywords Already Matching JD')}
                                 </h4>
                             </div>
@@ -490,13 +490,13 @@ export function OptimizationResultsSummary({
                                 {matchedKeywords.slice(0, 8).map((keyword, idx) => (
                                     <span
                                         key={idx}
-                                        className="px-3 py-1.5 rounded-full text-sm font-medium bg-white/10 text-gray-300 border border-white/10"
+                                        className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10"
                                     >
                                         {keyword}
                                     </span>
                                 ))}
                                 {matchedKeywords.length > 8 && (
-                                    <span className="px-3 py-1.5 text-sm text-gray-400">
+                                    <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">
                                         +{matchedKeywords.length - 8} {t('sections.optimizationResults.more', 'more')}
                                     </span>
                                 )}
@@ -507,14 +507,14 @@ export function OptimizationResultsSummary({
                     {/* Applied Improvements */}
                     {appliedSections.length > 0 && (
                         <div className="mb-6">
-                            <h4 className="text-sm font-medium text-gray-300 mb-3">
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                 {t('sections.optimizationResults.improvementsApplied', 'Improvements Applied')}
                             </h4>
                             <div className="space-y-2">
                                 {appliedSections.map((section, idx) => (
                                     <div
                                         key={idx}
-                                        className="flex items-center gap-2 text-sm text-gray-300"
+                                        className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                                     >
                                         <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                                         <span>{section}</span>
@@ -525,7 +525,7 @@ export function OptimizationResultsSummary({
                     )}
 
                     {/* Actions */}
-                    <div className="flex flex-wrap gap-3 pt-4 border-t border-white/10">
+                    <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
                         {!allApplied && onApplyAll && (
                             <GlassButton
                                 variant="primary"

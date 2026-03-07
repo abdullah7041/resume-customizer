@@ -7,7 +7,7 @@ export function TemplatesSkeleton(): React.JSX.Element {
             {Array.from({ length: 6 }).map((_, i) => (
                 <div
                     key={`template-skeleton-${i}`}
-                    className="rounded-xl bg-white/5 border border-white/10 overflow-hidden"
+                    className="rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 overflow-hidden"
                 >
                     {/* Template preview skeleton */}
                     <Skeleton className="h-64 rounded-none" />

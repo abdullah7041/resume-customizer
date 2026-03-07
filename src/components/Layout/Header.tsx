@@ -364,18 +364,18 @@ export default function Header() {
 
               {/* Brand text */}
               <div className="flex flex-col">
-                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] bg-gradient-to-r from-emerald-600 via-gray-800 to-teal-600 dark:from-emerald-200 dark:via-white dark:to-teal-200 bg-clip-text text-transparent uppercase drop-shadow-[0_0_10px_rgba(16,185,129,0.15)] dark:drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] text-white dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-emerald-200 dark:via-white dark:to-teal-200 uppercase drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                   {t("common.appName")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-sm sm:text-base font-medium text-emerald-700/80 dark:text-emerald-200/80 tracking-wider">
+                  <p className="text-sm sm:text-base font-bold text-white dark:text-emerald-200/80 tracking-wider drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none">
                     {t("common.byAuthor")}
                   </p>
                   <a
                     href="https://www.linkedin.com/in/3binahmed/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center text-emerald-700/80 dark:text-emerald-200/80 hover:text-[#0A66C2] dark:hover:text-[#0A66C2] transition-all duration-300 hover:scale-110"
+                    className="inline-flex items-center justify-center text-white dark:text-emerald-200/80 hover:text-[#0A66C2] dark:hover:text-[#0A66C2] transition-all duration-300 hover:scale-110 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none"
                     aria-label="Visit LinkedIn profile"
                   >
                     <Linkedin className="h-6 w-6" />
@@ -387,17 +387,17 @@ export default function Header() {
             {/* Badge - moved from Hero - Now clickable with flip animation */}
             <button
               onClick={() => setBadgeFlipped(!badgeFlipped)}
-              className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-gray-300/40 dark:border-white/10 shadow-lg ml-4 cursor-pointer hover:border-emerald-400/30 transition-all duration-300 hover:scale-105 group"
+              className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-white/90 dark:bg-black/40 backdrop-blur-xl border border-gray-300 dark:border-white/10 shadow-sm ml-4 cursor-pointer hover:border-emerald-400/50 transition-all duration-300 hover:scale-105 group"
               aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
               title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
             >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 dark:bg-emerald-400" />
               </span>
               <span
                 key={badgeFlipped ? 'alt' : 'main'}
-                className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent uppercase animate-[flipIn_0.5s_ease-in-out]"
+                className="bg-gradient-to-r from-emerald-700 to-teal-700 dark:from-emerald-300 dark:to-teal-300 bg-clip-text text-transparent uppercase animate-[flipIn_0.5s_ease-in-out]"
               >
                 {badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
               </span>
@@ -407,7 +407,7 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-3">
               <button
                 onClick={toggleTheme}
-                className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/40 dark:bg-white/5 border border-gray-300/40 dark:border-white/10 text-gray-700 dark:text-white transition-all duration-300 hover:bg-emerald-500/10 dark:hover:bg-white/10"
+                className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/80 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 text-gray-800 dark:text-white transition-all duration-300 hover:bg-white hover:text-emerald-600 dark:hover:bg-white/10 shadow-sm"
                 aria-label="Toggle Theme"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
@@ -430,12 +430,12 @@ export default function Header() {
                       setCreditModalMode('invite-only');
                       setShowCreditModal(true);
                     }}
-                    className="btn-spring relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-700 dark:text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 group shadow-md hover:shadow-emerald-500/20"
+                    className="btn-spring relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50/90 dark:bg-black/40 backdrop-blur-md border-2 border-emerald-300 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 dark:hover:bg-emerald-900/60 transition-all shadow-sm"
                     title="Invite friends and earn 5 credits each!"
                   >
-                    <Gift className="w-4 h-4" />
+                    <Gift className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="text-sm font-bold">Invite</span>
-                    <span className="absolute -top-2 -right-2 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-emerald-400 to-teal-400 text-gray-900 rounded-full shadow-lg group-hover:scale-110 transition-transform">
+                    <span className="absolute -top-2 -right-2 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full shadow-lg group-hover:scale-110 transition-transform">
                       +5
                     </span>
                   </button>
@@ -447,8 +447,7 @@ export default function Header() {
                   onClick={signOut}
                   variant="secondary"
                   size="md"
-                  // Use dark background for better readability as requested
-                  className="bg-gray-900/80 hover:bg-black border-gray-200 dark:border-white/10 text-gray-200 hover:text-white shadow-md font-bold tracking-wide"
+                  className="bg-white/90 dark:bg-black/40 backdrop-blur-md hover:bg-gray-100 dark:hover:bg-white/10 border-gray-300 dark:border-white/10 text-gray-800 hover:text-black dark:text-gray-200 dark:hover:text-white shadow-sm font-bold tracking-wide"
                   leftIcon={<LogOut className="h-4 w-4" />}
                 >
                   {t("common.signOut")}

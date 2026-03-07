@@ -71,7 +71,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
   if (!stats) {
     return (
       <div className={cn(glass.card, 'p-4 text-center', className)}>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           {t('referrals.statsUnavailable')}
         </p>
       </div>
@@ -83,29 +83,29 @@ export function ReferralStats({ className }: ReferralStatsProps) {
       icon: Users,
       label: t('referrals.totalReferrals'),
       value: stats.totalReferrals,
-      color: 'text-blue-400',
-      bgColor: 'from-blue-500/20 to-blue-500/10',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'from-blue-100 to-blue-50 dark:from-blue-500/20 dark:to-blue-500/10',
     },
     {
       icon: CheckCircle,
       label: t('referrals.completedReferrals'),
       value: stats.completedReferrals,
-      color: 'text-emerald-400',
-      bgColor: 'from-emerald-500/20 to-emerald-500/10',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'from-emerald-100 to-emerald-50 dark:from-emerald-500/20 dark:to-emerald-500/10',
     },
     {
       icon: Coins,
       label: t('referrals.creditsEarned'),
       value: `+${stats.creditsEarned}`,
-      color: 'text-amber-400',
-      bgColor: 'from-amber-500/20 to-amber-500/10',
+      color: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'from-amber-100 to-amber-50 dark:from-amber-500/20 dark:to-amber-500/10',
     },
   ];
 
   return (
     <div className={cn(glass.card, 'p-4 space-y-3', className)}>
       {/* Header */}
-      <h4 className="text-sm font-semibold text-white">
+      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
         {t('referrals.yourStats')}
       </h4>
 
@@ -115,7 +115,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
           <div
             key={item.label}
             className={cn(
-              'relative overflow-hidden rounded-lg p-3 border border-white/10',
+              'relative overflow-hidden rounded-lg p-3 border border-gray-200 dark:border-white/10',
               'bg-gradient-to-br',
               item.bgColor
             )}
@@ -125,7 +125,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
               <p className={cn('text-lg font-bold', item.color)}>
                 {item.value}
               </p>
-              <p className="text-[10px] text-gray-400 leading-tight mt-1">
+              <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-tight mt-1">
                 {item.label}
               </p>
             </div>
@@ -135,17 +135,17 @@ export function ReferralStats({ className }: ReferralStatsProps) {
 
       {/* Info message */}
       {stats.totalReferrals === 0 ? (
-        <p className="text-xs text-gray-400 text-center pt-2">
+        <p className="text-xs text-gray-600 dark:text-gray-400 text-center pt-2">
           {t('referrals.noReferralsYet')}
         </p>
       ) : stats.completedReferrals < stats.totalReferrals ? (
-        <p className="text-xs text-gray-400 text-center pt-2">
+        <p className="text-xs text-gray-600 dark:text-gray-400 text-center pt-2">
           {t('referrals.pendingReferrals', {
             count: stats.totalReferrals - stats.completedReferrals,
           })}
         </p>
       ) : (
-        <p className="text-xs text-emerald-400 text-center pt-2">
+        <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center pt-2">
           {t('referrals.allCompleted')}
         </p>
       )}

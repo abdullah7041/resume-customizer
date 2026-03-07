@@ -22,7 +22,7 @@ async function verifyAuth(authHeader: string | undefined) {
 
     const token = authHeader.replace(/^Bearer\s+/i, '');
     const supabaseAnon = createClient(
-        process.env.SUPABASE_URL!,
+        (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)!,
         process.env.SUPABASE_ANON_KEY!
     );
 
@@ -40,7 +40,7 @@ async function verifyAuth(authHeader: string | undefined) {
  */
 function getServiceClient() {
     return createClient(
-        process.env.SUPABASE_URL!,
+        (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 }

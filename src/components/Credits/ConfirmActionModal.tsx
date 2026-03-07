@@ -145,14 +145,14 @@ export function ConfirmActionModal({
             <Sparkles className="w-5 h-5 text-emerald-400" />
             <h3
               id="confirm-action-title"
-              className="text-lg font-semibold text-white"
+              className="text-lg font-semibold text-gray-900 dark:text-white"
             >
               {t('credits.confirm.title')}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -162,16 +162,16 @@ export function ConfirmActionModal({
         {/* Content */}
         <div className="space-y-4">
           <div className={cn(glass.card, 'p-4')}>
-            <p className="text-sm text-gray-400 mb-2">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
               {featureLabel}
             </p>
-            <p className="text-gray-300">
+            <p className="text-gray-800 dark:text-gray-300">
               {t('credits.confirm.message', { cost })}
             </p>
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">
+            <span className="text-gray-600 dark:text-gray-400">
               {t('credits.confirm.current', {
                 remaining: currentCredits,
                 total: 15,
@@ -219,7 +219,7 @@ export function ConfirmActionModal({
                       {t('credits.upgrade.comingSoon', 'Pro Plan Coming Soon!')}
                     </p>
                   </div>
-                  <p className="text-xs text-gray-400 mb-3">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
                     {t('credits.confirm.waitlistCta', 'Get 100 credits/mo when you join the Pro waitlist.')}
                   </p>
                   <form onSubmit={handleSubmitWaitlist} className="space-y-2">
@@ -232,8 +232,8 @@ export function ConfirmActionModal({
                         placeholder={t('pricing.emailPlaceholder', 'Enter your email')}
                         className={cn(
                           'w-full pl-10 pr-4 py-2 rounded-lg text-sm',
-                          'bg-white/5 border border-white/10',
-                          'text-white placeholder:text-gray-500',
+                          'bg-gray-100/50 dark:bg-white/5 border border-gray-300 dark:border-white/10',
+                          'text-gray-900 dark:text-white placeholder:text-gray-500',
                           'focus:outline-none focus:ring-2 focus:ring-emerald-500/50',
                           'transition-all duration-200'
                         )}

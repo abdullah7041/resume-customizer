@@ -21,7 +21,7 @@ export const FEATURE_COSTS = {
  * @returns {import('@supabase/supabase-js').SupabaseClient}
  */
 function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {

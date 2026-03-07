@@ -159,7 +159,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
                 <div className="flex-1 min-w-0">
                     {/* Title with optional highlight badge */}
                     <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-semibold text-white">
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                             {t(feature.titleKey)}
                         </h3>
                         {feature.highlight && (
@@ -173,7 +173,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
                     </div>
 
                     {/* Description */}
-                    <p className="text-gray-300 mt-2 leading-relaxed">
+                    <p className="text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
                         {t(feature.descriptionKey)}
                     </p>
 
@@ -182,7 +182,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
                         {feature.benefitKeys.map((benefitKey, index) => (
                             <li
                                 key={`${feature.id}-benefit-${index}`}
-                                className="flex items-center gap-2 text-sm text-gray-200"
+                                className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
                             >
                                 <Check
                                     className={cn(
@@ -213,7 +213,7 @@ export default function FeaturesShowcase() {
                     eyebrow={t("showcase.eyebrow")}
                     title={t("showcase.title")}
                     description={t("showcase.subtitle")}
-                    className={cn("text-center mb-6 rounded-2xl p-6 shadow-lg [&_p]:text-gray-300 bg-black border border-white/10")}
+                    className={cn("text-center mb-6 rounded-2xl p-6 shadow-lg [&_p]:text-gray-600 dark:[&_p]:text-gray-300 bg-gray-100 dark:bg-black border border-gray-200 dark:border-white/10")}
                 />
 
                 {/* Hero Features - Always visible (3-column grid) */}

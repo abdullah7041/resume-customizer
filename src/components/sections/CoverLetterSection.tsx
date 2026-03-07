@@ -370,15 +370,15 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
   // Empty state
   if (!resumeText || !jobDescription) {
     return (
-      <GlassCard className="border-dashed border-white/10 bg-white/5">
+      <GlassCard className="border-dashed border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-white/5">
         <div className="py-12 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
             <FileText className="w-8 h-8 text-gray-400 opacity-50" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             {t('sections.coverLetter.emptyTitle', 'Missing Information')}
           </h3>
-          <p className="text-gray-400 max-w-md mx-auto">
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
             {t('sections.coverLetter.emptyDesc', 'Upload your resume and add a job description to generate a tailored cover letter.')}
           </p>
         </div>
@@ -392,13 +392,13 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       <GlassCard className="overflow-hidden">
         <div className="flex items-center gap-4 mb-8">
           <GlassCircle size="lg" variant="indigo" className="shadow-lg shadow-indigo-500/20">
-            <FileText className="w-6 h-6 text-indigo-300" />
+            <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
           </GlassCircle>
           <div>
-            <h3 className="text-xl font-bold text-white mb-1">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
               {t('sections.coverLetter.title', 'Cover Letter Generator')}
             </h3>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {t('sections.coverLetter.subtitle', 'Create a compelling, tailored cover letter using AI')}
             </p>
           </div>
@@ -424,7 +424,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
           {/* Signature Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('sections.coverLetter.signatureName', 'Signature Name')}
             </label>
             <GlassInput
@@ -440,7 +440,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
           {/* Tone Selector */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3 ml-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 ml-1">
               {t('sections.coverLetter.tone', 'Select Tone')}
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -454,16 +454,16 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                     className={cn(
                       'relative px-4 py-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 group',
                       isSelected
-                        ? `border-indigo-500 bg-indigo-500/20 text-white shadow-lg shadow-indigo-500/20`
-                        : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20'
+                        ? `border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-white shadow-sm shadow-indigo-500/20`
+                        : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:border-gray-300 dark:hover:border-white/20'
                     )}
                   >
                     {isSelected && (
-                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20" />
+                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-indigo-500/20 dark:ring-white/20" />
                     )}
                     <IconComponent className={cn(
                       "w-6 h-6 transition-colors duration-300",
-                      isSelected ? "text-indigo-300" : "text-gray-500 group-hover:text-gray-300"
+                      isSelected ? "text-indigo-600 dark:text-indigo-300" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
                     )} />
                     <span className="text-sm font-medium">
                       {isArabic ? tOption.labelAr : tOption.label}
@@ -480,7 +480,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
               <div className="p-2 bg-red-500/20 rounded-full">
                 <AlertCircle className="w-5 h-5 text-red-400" />
               </div>
-              <p className="text-sm text-red-300 font-medium">{error}</p>
+              <p className="text-sm text-red-600 dark:text-red-300 font-medium">{error}</p>
             </div>
           )}
 
@@ -521,10 +521,10 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
               <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10 scale-75 animate-ping" />
               <FileText className="absolute inset-0 m-auto w-6 h-6 text-indigo-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               {t('sections.coverLetter.craftingTitle', 'AI is writing...')}
             </h3>
-            <p className="text-gray-400 max-w-sm">
+            <p className="text-gray-500 dark:text-gray-400 max-w-sm">
               {t('sections.coverLetter.crafting', 'Analyzing your resume and job description to create the perfect cover letter.')}
             </p>
           </div>
@@ -534,12 +534,12 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       {/* Result Display */}
       {!isGenerating && coverLetter && (
         <GlassCard className="overflow-hidden border-t-4 border-t-indigo-500/50">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-200 dark:border-white/10">
             <div>
-              <h3 className="text-xl font-bold text-white mb-1">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
                 {t('sections.coverLetter.yourLetter', 'Your Cover Letter')}
               </h3>
-              <div className="flex items-center gap-3 text-sm text-gray-400">
+              <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <FileText className="w-4 h-4 text-indigo-400" />
                   {wordCount} {t('sections.coverLetter.words', 'words')}
@@ -569,13 +569,13 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
           {/* Key Highlights */}
           {keyHighlights.length > 0 && (
             <div className="mb-6 p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
-              <h4 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-2">
                 <Zap className="w-4 h-4" />
                 {t('sections.coverLetter.highlights', 'Key Highlights Included')}
               </h4>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {keyHighlights.map((h, idx) => (
-                  <li key={idx} className="text-sm text-gray-300 flex items-start gap-2.5">
+                  <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
                     <span className="leading-tight">{h}</span>
                   </li>
@@ -663,7 +663,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
             <div className="p-1.5 bg-indigo-500/20 rounded-md">
               <Wand2 className="w-4 h-4 text-indigo-400" />
             </div>
-            <p className="text-sm text-indigo-200/80">
+            <p className="text-sm text-indigo-700 dark:text-indigo-200/80">
               <strong>{t('sections.coverLetter.tipLabel', 'Pro Tip')}:</strong> {t('sections.coverLetter.tipText', 'Review and edit the generated text to add your personal touch before sending.')}
             </p>
           </div>

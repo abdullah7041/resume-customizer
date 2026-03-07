@@ -51,18 +51,18 @@ export function RecommendationsModal({
     if (score >= 80) {
       return {
         label: t('vision2030.recommendations.highImpact', 'High Impact'),
-        className: 'bg-red-500/10 text-red-300 border-red-500/20',
+        className: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20',
       };
     }
     if (score >= 50) {
       return {
         label: t('vision2030.recommendations.mediumImpact', 'Medium Impact'),
-        className: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+        className: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
       };
     }
     return {
       label: t('vision2030.recommendations.lowImpact', 'Low Impact'),
-      className: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
+      className: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
     };
   };
 
@@ -114,7 +114,7 @@ export function RecommendationsModal({
                   <button
                     type="button"
                     onClick={() => handleCopy(isArabic ? suggestion.skillNameAr : suggestion.skillNameEn, globalIndex)}
-                    className="p-2 rounded-lg hover:bg-white/5 transition-colors shrink-0"
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors shrink-0"
                     title={t('common.copy', 'Copy')}
                   >
                     {isCopied ? (
@@ -156,7 +156,7 @@ export function RecommendationsModal({
         aria-labelledby="recommendations-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 sticky top-0 bg-gradient-to-b from-gray-900 to-transparent pb-4 z-10">
+        <div className="flex items-center justify-between mb-6 sticky top-0 bg-gradient-to-b from-white dark:from-gray-900 to-transparent pb-4 z-10">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/30">
               <Lightbulb className="w-5 h-5 text-amber-400" />
@@ -170,7 +170,7 @@ export function RecommendationsModal({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -226,7 +226,7 @@ export function RecommendationsModal({
         )}
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-white/5">
+        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-100 dark:border-white/5">
           <GlassButton variant="secondary" onClick={onClose}>
             {t('common.close', 'Close')}
           </GlassButton>

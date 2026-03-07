@@ -227,7 +227,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     const content = (
         <div
             className={cn(
-                "relative flex flex-col overflow-hidden rounded-2xl border border-emerald-500/20 bg-black/40 backdrop-blur-xl shadow-2xl transition-all duration-300",
+                "relative flex flex-col overflow-hidden rounded-2xl border border-emerald-500/20 bg-white/80 dark:bg-black/40 backdrop-blur-xl shadow-2xl transition-all duration-300",
                 mode === 'inline' ? "h-full" : ""
             )}
         >
@@ -237,12 +237,12 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                 onMouseDown={handleMouseDown}
                 onDoubleClick={mode === 'fixed' ? handleResetPosition : undefined}
                 className={cn(
-                    "flex items-center justify-between bg-gradient-to-r from-emerald-900/80 to-emerald-900/40 px-4 py-3 border-b border-emerald-500/20",
+                    "flex items-center justify-between bg-gradient-to-r from-emerald-100/80 to-emerald-50/40 dark:from-emerald-900/80 dark:to-emerald-900/40 px-4 py-3 border-b border-emerald-500/20",
                     mode === 'fixed' && "cursor-grab select-none",
                     isDragging && "cursor-grabbing"
                 )}
             >
-                <h3 className="flex items-center gap-2 text-sm font-bold text-emerald-100">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-emerald-800 dark:text-emerald-100">
                     {mode === 'fixed' && (
                         <GripVertical className="h-4 w-4 text-emerald-400/50 flex-shrink-0" />
                     )}
@@ -263,7 +263,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
 
             <div className="p-4 space-y-1 flex-1">
                 {/* Progress Line */}
-                <div className="absolute left-[28px] top-[4.5rem] bottom-6 w-px bg-white/5" />
+                <div className="absolute left-[28px] top-[4.5rem] bottom-6 w-px bg-gray-200 dark:bg-white/5" />
                 <div
                     className="absolute left-[28px] top-[4.5rem] w-px bg-gradient-to-b from-emerald-500 to-emerald-500/0 transition-all duration-700 ease-out"
                     style={{ height: `${(currentStepIndex / (steps.length - 1)) * 80}%` }}
@@ -278,7 +278,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                             key={step.id}
                             className={cn(
                                 "relative flex items-center gap-3 py-2 px-2 rounded-lg transition-all duration-300",
-                                step.isActive ? "bg-white/5 border border-white/5" : "hover:bg-white/[0.02]"
+                                step.isActive ? "bg-emerald-50 dark:bg-white/5 border border-emerald-200/50 dark:border-white/5" : "hover:bg-gray-50 dark:hover:bg-white/[0.02]"
                             )}
                         >
                             <div
@@ -288,7 +288,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                                         ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]"
                                         : step.isActive
                                             ? "border-emerald-400 bg-emerald-900/20 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.2)]"
-                                            : "border-white/10 bg-black/40 text-white/20"
+                                            : "border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-black/40 text-gray-400 dark:text-white/20"
                                 )}
                             >
                                 {step.isActive && (
@@ -300,13 +300,13 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                             <div className="flex flex-col min-w-0 flex-1">
                                 <span className={cn(
                                     "text-xs font-semibold tracking-wide truncate transition-colors duration-300",
-                                    step.isCompleted ? "text-emerald-100/90 line-through decoration-emerald-500/30" :
-                                        step.isActive ? "text-white" : "text-white/40"
+                                    step.isCompleted ? "text-emerald-700 dark:text-emerald-100/90 line-through decoration-emerald-500/30" :
+                                        step.isActive ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-white/40"
                                 )}>
                                     {step.label}
                                 </span>
                                 {step.isActive && (
-                                    <span className="text-[10px] text-emerald-400 font-medium">{t('nav.workflowSteps.inProgress')}</span>
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">{t('nav.workflowSteps.inProgress')}</span>
                                 )}
                             </div>
                         </div>

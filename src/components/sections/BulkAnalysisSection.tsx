@@ -77,7 +77,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
 
   return (
     <div className="group relative">
-      <GlassCard padding="sm" className="h-full transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-white/20">
+      <GlassCard padding="sm" className="h-full transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-gray-300 dark:hover:border-white/20">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className={cn(
@@ -89,8 +89,8 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
               <FileText className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-white truncate rtl:text-right" dir="auto" title={name}>{name}</h4>
-              <p className="text-xs text-gray-400 capitalize flex items-center gap-1.5">
+              <h4 className="font-medium text-gray-900 dark:text-white truncate rtl:text-right" dir="auto" title={name}>{name}</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 capitalize flex items-center gap-1.5">
                 {status === 'analyzing' || status === 'parsing' ? (
                   <>
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -122,7 +122,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
 
         {(status === 'analyzing' || status === 'parsing') && (
           <div className="mt-4 mb-2">
-            <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
+            <div className="w-full bg-gray-200 dark:bg-white/5 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-blue-500 h-full rounded-full animate-pulse"
                 style={{ width: '60%' }}
@@ -139,23 +139,23 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
         )}
 
         {status === 'completed' && analysis && (
-          <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Match</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">Match</span>
               <ScoreBadge score={analysis.score || 0} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white/5 rounded-lg p-2 text-center">
-                <span className="block text-lg font-semibold text-white">
+              <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-2 text-center">
+                <span className="block text-lg font-semibold text-gray-900 dark:text-white">
                   {analysis.topHits?.length || analysis.matchedKeywords?.length || 0}
                 </span>
-                <span className="text-[10px] text-gray-400 uppercase tracking-wider">Keywords</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Keywords</span>
               </div>
-              <div className="bg-white/5 rounded-lg p-2 text-center">
-                <span className="block text-lg font-semibold text-white">
+              <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-2 text-center">
+                <span className="block text-lg font-semibold text-gray-900 dark:text-white">
                   {Math.round((analysis.coverage || 0) * 100)}%
                 </span>
-                <span className="text-[10px] text-gray-400 uppercase tracking-wider">Coverage</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Coverage</span>
               </div>
             </div>
           </div>
@@ -431,10 +431,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
             <BarChart3 className="w-8 h-8 text-purple-400" />
           </GlassCircle>
           <div>
-            <h3 className="text-2xl font-bold text-white tracking-tight">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
               {t('sections.bulk.title', 'Bulk Resume Analysis')}
             </h3>
-            <p className="text-gray-400 mt-1">
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
               {t('sections.bulk.subtitle', 'Compare multiple versions side-by-side')}
             </p>
           </div>
@@ -464,7 +464,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
             'group relative rounded-2xl border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer overflow-hidden',
             isDragging
               ? 'border-emerald-500 bg-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
-              : 'border-white/10 bg-black/60 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-black/70'
+              : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-black/60 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-gray-200 dark:hover:bg-black/70'
           )}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -472,7 +472,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
           <div className="relative py-16 px-6 text-center">
             <div className={cn(
               "w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center transition-all duration-300",
-              isDragging ? "bg-emerald-500/20 scale-110" : "bg-white/5 group-hover:bg-white/10 group-hover:scale-105"
+              isDragging ? "bg-emerald-500/20 scale-110" : "bg-gray-200 dark:bg-white/5 group-hover:bg-gray-300 dark:group-hover:bg-white/10 group-hover:scale-105"
             )}>
               <Upload className={cn(
                 "w-10 h-10 transition-colors duration-300",
@@ -480,10 +480,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               )} />
             </div>
 
-            <h4 className="text-xl font-semibold text-white mb-2">
+            <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               {t('sections.bulk.uploadTitle', 'Upload Resume Files')}
             </h4>
-            <p className="text-sm text-gray-400 mb-2 max-w-sm mx-auto">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 max-w-sm mx-auto">
               {t('sections.bulk.uploadDesc', 'Drag & drop or click to browse. Supports PDF & DOCX up to 5MB.')}
             </p>
             <p className="text-xs text-emerald-400/80 mb-6">
@@ -538,12 +538,12 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       {/* Comparison Table */}
       {jobDescription && sortedResumes.length > 0 && (
         <GlassCard className="overflow-hidden animate-fade-in">
-          <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-purple-400" />
               {t('sections.bulk.comparisonTitle', 'Detailed Comparison')}
             </h3>
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/5 text-gray-400">
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400">
               {sortedResumes.length} Results
             </span>
           </div>
@@ -551,12 +551,12 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-white/5 backdrop-blur-sm">
-                  <th className="text-left py-4 px-6 font-semibold text-xs text-gray-400 uppercase tracking-wider">Rank</th>
-                  <th className="text-left py-4 px-6 font-semibold text-xs text-gray-400 uppercase tracking-wider">Candidate</th>
-                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-400 uppercase tracking-wider">Match Score</th>
-                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-400 uppercase tracking-wider">Key Matches</th>
-                  <th className="text-right py-4 px-6 font-semibold text-xs text-gray-400 uppercase tracking-wider">Status</th>
+                <tr className="bg-gray-100/50 dark:bg-white/5 backdrop-blur-sm">
+                  <th className="text-left py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
+                  <th className="text-left py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidate</th>
+                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Match Score</th>
+                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Key Matches</th>
+                  <th className="text-right py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -567,15 +567,15 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                   const score = resume.analysis?.score || 0;
 
                   return (
-                    <tr key={resume.id} className="group hover:bg-white/5 transition-colors">
+                    <tr key={resume.id} className="group hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
                             rank === 1 ? "bg-yellow-500/20 text-yellow-400" :
-                              rank === 2 ? "bg-gray-500/20 text-gray-300" :
+                              rank === 2 ? "bg-gray-500/20 text-gray-500 dark:text-gray-300" :
                                 rank === 3 ? "bg-amber-500/20 text-amber-500" :
-                                  "bg-white/5 text-gray-500"
+                                  "bg-gray-100 dark:bg-white/5 text-gray-500"
                           )}>
                             {rank}
                           </div>
@@ -583,7 +583,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="font-medium text-white group-hover:text-purple-400 transition-colors">
+                        <div className="font-medium text-gray-900 dark:text-white group-hover:text-purple-400 transition-colors">
                           {resume.name}
                         </div>
                       </td>
@@ -593,7 +593,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                         </div>
                       </td>
                       <td className="py-4 px-6 text-center">
-                        <span className="text-white font-medium">
+                        <span className="text-gray-900 dark:text-white font-medium">
                           {resume.analysis?.topHits?.length || resume.analysis?.matchedKeywords?.length || 0}
                         </span>
                         <span className="text-xs text-gray-500 ml-1">found</span>
@@ -630,13 +630,13 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       {resumes.length === 0 && (
         <GlassCard className="mx-auto max-w-lg mt-12">
           <div className="py-12 px-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-6 transform rotate-12">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-6 transform rotate-12">
               <TrendingUp className="w-8 h-8 text-gray-400 opacity-50" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               {t('sections.bulk.emptyTitle', 'Ready to Analyze')}
             </h3>
-            <p className="text-gray-400 leading-relaxed">
+            <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
               {t('sections.bulk.emptyDesc', 'Upload multiple resume versions to see which one aligns best with the job description.')}
             </p>
           </div>

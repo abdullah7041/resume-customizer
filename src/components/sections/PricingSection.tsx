@@ -43,10 +43,12 @@ export function PricingSection() {
             <div className="space-y-6">
                 {/* Section Header */}
                 <div className="text-center space-y-4">
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">
-                        {t('pricing.title')}
+                    <h2 className="inline-block text-3xl sm:text-4xl lg:text-5xl font-bold drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+                        <span className="text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 dark:bg-clip-text dark:text-transparent pb-1">
+                            {t('pricing.title')}
+                        </span>
                     </h2>
-                    <p className="text-lg sm:text-xl text-gray-600 dark:text-white/70 max-w-2xl mx-auto">
+                    <p className="text-lg sm:text-xl font-medium text-white dark:text-white/80 max-w-2xl mx-auto drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
                         {t('pricing.subtitle')}
                     </p>
                 </div>

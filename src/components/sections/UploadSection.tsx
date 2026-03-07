@@ -249,7 +249,7 @@ export default function UploadSection({
                         <div className="flex items-start gap-3">
                             <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                             <div className="space-y-2 w-full">
-                                <h4 className="text-sm font-semibold text-amber-200">
+                                <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
                                     Resume Parsing Alerts
                                 </h4>
                                 <div className="space-y-2">
@@ -259,8 +259,8 @@ export default function UploadSection({
                                             className={cn(
                                                 "text-xs p-2 rounded-lg border",
                                                 warning.level === 'warning'
-                                                    ? "bg-amber-500/10 border-amber-500/20 text-amber-100"
-                                                    : "bg-blue-500/10 border-blue-500/20 text-blue-100"
+                                                    ? "bg-amber-500/10 border-amber-500/20 text-amber-900 dark:text-amber-100"
+                                                    : "bg-blue-500/10 border-blue-500/20 text-blue-900 dark:text-blue-100"
                                             )}
                                         >
                                             <span className="font-semibold mr-1">[{warning.section}]</span>
