@@ -7,40 +7,40 @@ const variants = {
     border: "border-emerald-500/30",
     gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent",
     iconColor: "text-emerald-400",
-    glow: "shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]",
-    titleColor: "text-emerald-50",
+    glow: "shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)] shadow-emerald-500/20",
+    titleColor: "text-emerald-900 dark:text-emerald-50",
   },
   danger: {
     icon: AlertTriangle,
     border: "border-rose-500/30",
     gradient: "from-rose-500/10 via-rose-500/5 to-transparent",
     iconColor: "text-rose-400",
-    glow: "shadow-[0_0_20px_-5px_rgba(244,63,94,0.3)]",
-    titleColor: "text-rose-50",
+    glow: "shadow-[0_0_20px_-5px_rgba(244,63,94,0.3)] shadow-rose-500/20",
+    titleColor: "text-rose-900 dark:text-rose-50",
   },
   warning: {
     icon: AlertTriangle,
     border: "border-amber-500/30",
     gradient: "from-amber-500/10 via-amber-500/5 to-transparent",
     iconColor: "text-amber-400",
-    glow: "shadow-[0_0_20px_-5px_rgba(245,158,11,0.3)]",
-    titleColor: "text-amber-50",
+    glow: "shadow-[0_0_20px_-5px_rgba(245,158,11,0.3)] shadow-amber-500/20",
+    titleColor: "text-amber-900 dark:text-amber-50",
   },
   info: {
     icon: Info,
     border: "border-sky-500/30",
     gradient: "from-sky-500/10 via-sky-500/5 to-transparent",
     iconColor: "text-sky-400",
-    glow: "shadow-[0_0_20px_-5px_rgba(14,165,233,0.3)]",
-    titleColor: "text-sky-50",
+    glow: "shadow-[0_0_20px_-5px_rgba(14,165,233,0.3)] shadow-sky-500/20",
+    titleColor: "text-sky-900 dark:text-sky-50",
   },
   loading: {
     icon: Loader2,
     border: "border-indigo-500/30",
     gradient: "from-indigo-500/10 via-indigo-500/5 to-transparent",
     iconColor: "text-indigo-400",
-    glow: "shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]",
-    titleColor: "text-indigo-50",
+    glow: "shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)] shadow-indigo-500/20",
+    titleColor: "text-indigo-900 dark:text-indigo-50",
     spin: true,
   },
 };
@@ -66,7 +66,7 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
     <div
       role="status"
       className={cn(
-        "group pointer-events-auto relative overflow-hidden rounded-xl border bg-[#051315]/80 p-4 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:bg-[#051315]/90",
+        "group pointer-events-auto relative overflow-hidden rounded-xl border bg-white/95 dark:bg-[#051315]/80 p-4 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:bg-white dark:hover:bg-[#051315]/90 shadow-lg",
         "animate-in slide-in-from-right-8 fade-in duration-300",
         variant.border,
         variant.glow
@@ -88,7 +88,7 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
             {title}
           </p>
           {description && (
-            <p className="text-sm leading-relaxed text-slate-400/90 font-light">
+            <p className="text-sm leading-relaxed text-gray-600 dark:text-slate-400/90 font-light">
               {description}
             </p>
           )}
@@ -97,7 +97,7 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className="group/close -mr-1 -mt-1 flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-300"
+            className="group/close -mr-1 -mt-1 flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-gray-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-300"
           >
             <X className="h-3.5 w-3.5" />
           </button>
