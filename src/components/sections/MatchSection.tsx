@@ -69,7 +69,7 @@ const resolveVariant = (score: number) => {
 };
 
 const LAST_JOB_KEY = "airo:lastJobDescription";
-const RING_RADIUS = 56;
+const RING_RADIUS = 60;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 interface MatchResult {
@@ -378,7 +378,7 @@ export function MatchSection({
           ) : hasResults && score !== null ? (
             <div className="flex flex-col h-full gap-5">
               {/* Score Ring Display - Fixed at top */}
-              <div className="relative rounded-2xl overflow-hidden">
+              <div className="relative rounded-2xl overflow-hidden shrink-0">
                 {/* Background gradient */}
                 <div className={cn(
                   'absolute inset-0 bg-gradient-to-br',
@@ -391,11 +391,15 @@ export function MatchSection({
                 <div className="relative z-10 p-6 text-gray-900 dark:text-white">
                   <div className="flex flex-col items-center gap-4">
                     {/* SVG Ring */}
-                    <div className="relative h-32 w-32">
+                    <div 
+                      className="relative shrink-0 mx-auto" 
+                      style={{ width: '140px', height: '140px', minWidth: '140px', minHeight: '140px' }}
+                    >
                       <div className={cn('absolute inset-0 rounded-full blur-2xl opacity-40', variant.glow)} />
                       <svg
-                        className="absolute inset-0 h-full w-full rotate-[-90deg]"
-                        viewBox="0 0 120 120"
+                        className="absolute inset-0 rotate-[-90deg] overflow-visible"
+                        style={{ width: '100%', height: '100%' }}
+                        viewBox="0 0 140 140"
                       >
                         <defs>
                           <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -411,8 +415,8 @@ export function MatchSection({
                           </filter>
                         </defs>
                         <circle
-                          cx="60"
-                          cy="60"
+                          cx="70"
+                          cy="70"
                           r={RING_RADIUS}
                           fill="none"
                           stroke="currentColor"
@@ -420,8 +424,8 @@ export function MatchSection({
                           className="text-white/10"
                         />
                         <circle
-                          cx="60"
-                          cy="60"
+                          cx="70"
+                          cy="70"
                           r={RING_RADIUS}
                           fill="none"
                           stroke="url(#score-gradient)"
@@ -435,23 +439,26 @@ export function MatchSection({
                       </svg>
 
                       {/* Inner Score */}
-                      <div className="absolute inset-4 grid place-items-center gauge-badge overflow-hidden">
+                      <div 
+                        className="!absolute grid place-items-center gauge-badge overflow-hidden rounded-full"
+                        style={{ inset: '12px' }}
+                      >
                         {/* Inner highlight pulse */}
                         {score >= 70 && (
                           <div className="absolute inset-0 bg-emerald-500/20 animate-pulse" />
                         )}
-                        <div className="flex flex-col items-center justify-center text-center relative z-10">
+                        <div className="flex flex-col items-center justify-center text-center relative z-10 w-full h-full">
                           <Tooltip
                             content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`}
                             position="bottom"
                           >
-                            <div className="flex flex-col items-center cursor-help">
+                            <div className="flex flex-col items-center justify-center cursor-help">
                               <AnimatedCounter
                                 to={score}
                                 duration={1500}
-                                className="text-5xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-lg"
+                                className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-lg leading-none"
                               />
-                              <span className="text-[10px] font-bold text-gray-400 dark:text-white/50 uppercase tracking-widest mt-[-2px]">{t('sections.match.scoreLabel', 'Score')}</span>
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-white/50 uppercase tracking-widest mt-1 block w-full text-center">{t('sections.match.scoreLabel', 'Score')}</span>
                             </div>
                           </Tooltip>
                         </div>
