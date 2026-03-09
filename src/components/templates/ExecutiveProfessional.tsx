@@ -169,10 +169,10 @@ export function ExecutiveProfessional({
               <div key={i} style={{ pageBreakInside: 'avoid' }}>
                 {/* Position + Date on same row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
-                  <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR }}>
+                  <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0 }}>
                     {safeString(job.position)}
                   </h3>
-                  <span style={{ fontSize: fs(10), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', marginLeft: '12px' }}>
+                  <span style={{ fontSize: fs(10), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', marginLeft: '12px', flexShrink: 0 }}>
                     {job.startDate} — {job.endDate || 'Current'}
                   </span>
                 </div>

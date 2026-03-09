@@ -83,6 +83,11 @@ export async function exportToPdf(
           .job-header {
             display: flex;
             justify-content: space-between;
+            align-items: baseline;
+            gap: 8pt;
+          }
+          .job-header h3 {
+            min-width: 0;
           }
           .job-company {
             font-style: italic;
@@ -91,6 +96,8 @@ export async function exportToPdf(
           .job-dates {
             font-size: 10pt;
             color: #444;
+            flex-shrink: 0;
+            white-space: nowrap;
           }
           .skills {
             margin-top: 4pt;

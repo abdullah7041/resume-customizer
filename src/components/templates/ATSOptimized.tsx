@@ -181,11 +181,10 @@ export function ATSOptimized({
                                 <p className="text-black" style={{ fontSize: fs(10.5) }}>{job.location}</p>
                             )}
                             {job.highlights && job.highlights.length > 0 && (
-                                <ul className="mt-2 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
+                                <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                     {job.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
-                                            <span className="me-2">•</span>
-                                            <span>{highlight}</span>
+                                        <li key={hIndex} style={{ fontSize: fs(10.5), marginBottom: '1px' }}>
+                                            {highlight}
                                         </li>
                                     ))}
                                 </ul>
@@ -208,11 +207,10 @@ export function ATSOptimized({
                                 <p className="text-black" style={{ fontSize: fs(10.5) }}>{project.description}</p>
                             )}
                             {project.highlights && project.highlights.length > 0 && (
-                                <ul className="mt-1 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
+                                <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                     {project.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
-                                            <span className="me-2">•</span>
-                                            <span>{highlight}</span>
+                                        <li key={hIndex} style={{ fontSize: fs(10.5), marginBottom: '1px' }}>
+                                            {highlight}
                                         </li>
                                     ))}
                                 </ul>
@@ -245,11 +243,10 @@ export function ATSOptimized({
                                 </p>
                             )}
                             {edu.highlights && edu.highlights.length > 0 && (
-                                <ul className="mt-1 space-y-1" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
+                                <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                     {edu.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} className="flex" style={{ fontSize: fs(10.5) }}>
-                                            <span className="me-2">•</span>
-                                            <span>{highlight}</span>
+                                        <li key={hIndex} style={{ fontSize: fs(10.5), marginBottom: '1px' }}>
+                                            {highlight}
                                         </li>
                                     ))}
                                 </ul>

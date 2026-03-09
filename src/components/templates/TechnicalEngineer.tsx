@@ -210,11 +210,12 @@ export function TechnicalEngineer({
                                             fontSize: fs(12),
                                             fontWeight: '600',
                                             fontFamily: "'Inter', -apple-system, sans-serif",
+                                            minWidth: 0,
                                         }}
                                     >
                                         {safeString(job.position)}
                                     </h3>
-                                    <span className="text-gray-500" style={{ fontSize: fs(10) }}>
+                                    <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
                                         {job.startDate} → {job.endDate || 'Present'}
                                     </span>
                                 </div>
@@ -223,16 +224,9 @@ export function TechnicalEngineer({
                                     {job.location && ` | ${job.location}`}
                                 </p>
                                 {job.highlights && job.highlights.length > 0 && (
-                                    <ul className="space-y-1 ps-4">
+                                    <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {job.highlights.map((h, j) => (
-                                            <li
-                                                key={j}
-                                                className="text-gray-600 relative"
-                                                style={{
-                                                    fontSize: fs(10.5),
-                                                    listStyleType: 'disc',
-                                                }}
-                                            >
+                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
                                                 {h}
                                             </li>
                                         ))}
@@ -270,16 +264,9 @@ export function TechnicalEngineer({
                                     <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5) }}>{project.description}</p>
                                 )}
                                 {project.highlights && project.highlights.length > 0 && (
-                                    <ul className="space-y-1 ps-4">
+                                    <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {project.highlights.map((h, j) => (
-                                            <li
-                                                key={j}
-                                                className="text-gray-600"
-                                                style={{
-                                                    fontSize: fs(10.5),
-                                                    listStyleType: 'disc',
-                                                }}
-                                            >
+                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
                                                 {h}
                                             </li>
                                         ))}
@@ -335,16 +322,9 @@ export function TechnicalEngineer({
                                     </span>
                                 </div>
                                 {edu.highlights && edu.highlights.length > 0 && (
-                                    <ul className="space-y-1 ps-4 mt-1">
+                                    <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {edu.highlights.map((h, j) => (
-                                            <li
-                                                key={j}
-                                                className="text-gray-600"
-                                                style={{
-                                                    fontSize: fs(10.5),
-                                                    listStyleType: 'disc',
-                                                }}
-                                            >
+                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
                                                 {h}
                                             </li>
                                         ))}

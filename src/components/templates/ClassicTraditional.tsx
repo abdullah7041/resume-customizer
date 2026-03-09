@@ -181,10 +181,10 @@ export function ClassicTraditional({
             {work.map((job, i) => (
               <div key={i} style={{ breakInside: 'avoid' }}>
                 <div className="flex justify-between items-baseline mb-1">
-                  <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700' }}>
+                  <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0 }}>
                     {safeString(job.position)}
                   </h3>
-                  <span className="text-gray-500 italic" style={{ fontSize: fs(10) }}>
+                  <span className="text-gray-500 italic" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
                     {job.startDate} – {job.endDate || 'Present'}
                   </span>
                 </div>
@@ -193,26 +193,9 @@ export function ClassicTraditional({
                   {job.location && ` | ${job.location}`}
                 </p>
                 {job.highlights && job.highlights.length > 0 && (
-                  <ul className="space-y-1 ps-4">
+                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (
-                      <li
-                        key={j}
-                        className="text-gray-700"
-                        style={{
-                          fontSize: fs(10.5),
-                          listStyleType: 'none',
-                          position: 'relative',
-                          paddingInlineStart: '12px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            position: 'absolute',
-                            insetInlineStart: '0',
-                          }}
-                        >
-                          –
-                        </span>
+                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
                         {h}
                       </li>
                     ))}
@@ -261,26 +244,9 @@ export function ClassicTraditional({
                   </span>
                 </div>
                 {edu.highlights && edu.highlights.length > 0 && (
-                  <ul className="space-y-1 ps-4 mt-1">
+                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {edu.highlights.map((h, j) => (
-                      <li
-                        key={j}
-                        className="text-gray-700"
-                        style={{
-                          fontSize: fs(10.5),
-                          listStyleType: 'none',
-                          position: 'relative',
-                          paddingInlineStart: '12px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            position: 'absolute',
-                            insetInlineStart: '0',
-                          }}
-                        >
-                          –
-                        </span>
+                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
                         {h}
                       </li>
                     ))}
@@ -344,26 +310,9 @@ export function ClassicTraditional({
                   <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5) }}>{project.description}</p>
                 )}
                 {project.highlights && project.highlights.length > 0 && (
-                  <ul className="space-y-1 ps-4">
+                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {project.highlights.map((h, j) => (
-                      <li
-                        key={j}
-                        className="text-gray-700"
-                        style={{
-                          fontSize: fs(10.5),
-                          listStyleType: 'none',
-                          position: 'relative',
-                          paddingInlineStart: '12px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            position: 'absolute',
-                            insetInlineStart: '0',
-                          }}
-                        >
-                          –
-                        </span>
+                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
                         {h}
                       </li>
                     ))}

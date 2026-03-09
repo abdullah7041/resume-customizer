@@ -636,33 +636,33 @@ export default function Header() {
           role="dialog"
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" />
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm animate-fade-in" />
 
           {/* Nav Panel - slides in from right */}
           <div
             ref={mobileNavRef}
-            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 border-l border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
+            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-l border-gray-200 dark:border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
           >
             {/* Header with close button */}
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
+            <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-sm font-bold text-white">{t("common.appName")}</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-white">{t("common.appName")}</span>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleTheme}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
                   aria-label="Toggle Theme"
                 >
                   {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
                 </button>
                 <button
                   onClick={() => setMobileNavOpen(false)}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-white/10 active:scale-95"
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
                   aria-label="Close navigation menu"
                 >
                   <X className="h-5 w-5" />
@@ -673,15 +673,15 @@ export default function Header() {
             {/* Nav content */}
             <div className="flex flex-col p-5 space-y-4">
               {/* Language Switcher */}
-              <div className="pb-4 border-b border-white/10">
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">{t("common.language") || "Language"}</p>
+              <div className="pb-4 border-b border-gray-200 dark:border-white/10">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50 mb-3">{t("common.language") || "Language"}</p>
                 <LanguageSwitcher />
               </div>
 
               {/* Credit Balance */}
               {user && (
-                <div className="pb-4 border-b border-white/10 space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">{t("credits.balance")}</p>
+                <div className="pb-4 border-b border-gray-200 dark:border-white/10 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50 mb-3">{t("credits.balance")}</p>
                   <div className="min-h-[44px]">
                     <CreditBalance onClick={() => {
                       setCreditModalMode('full');
@@ -697,11 +697,11 @@ export default function Header() {
                       setShowCreditModal(true);
                       setMobileNavOpen(false);
                     }}
-                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 min-h-[48px] bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-400/50 text-emerald-300 hover:from-emerald-500/30 hover:to-teal-500/20 hover:border-emerald-400/70 shadow-md"
+                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 min-h-[48px] bg-gradient-to-br from-emerald-50 dark:from-emerald-500/20 to-teal-50 dark:to-teal-500/10 border-2 border-emerald-200 dark:border-emerald-400/50 text-emerald-700 dark:text-emerald-300 hover:from-emerald-100 dark:hover:from-emerald-500/30 hover:to-teal-100 dark:hover:to-teal-500/20 hover:border-emerald-300 dark:hover:border-emerald-400/70 shadow-md"
                   >
                     <Gift className="w-5 h-5" />
                     <span className="text-sm font-bold">Invite Friends</span>
-                    <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-emerald-400 to-teal-400 text-gray-900 rounded-full">
+                    <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-emerald-400 to-teal-400 text-white dark:text-gray-900 rounded-full">
                       +5 Credits
                     </span>
                   </button>
@@ -716,7 +716,7 @@ export default function Header() {
                       signOut();
                       setMobileNavOpen(false);
                     }}
-                    className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-200 hover:text-white bg-gray-900/80 border border-white/10 hover:bg-black"
+                    className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-black"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>{t("common.signOut")}</span>
@@ -727,7 +727,7 @@ export default function Header() {
                       signInWithGoogle();
                       setMobileNavOpen(false);
                     }}
-                    className="btn-metal w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white"
+                    className="btn-metal w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-transparent"
                   >
                     <LogIn className="h-4 w-4" />
                     <span>{t("common.signIn")}</span>
@@ -737,14 +737,14 @@ export default function Header() {
             </div>
 
             {/* Footer */}
-            <div className="absolute bottom-0 left-0 right-0 p-5 border-t border-white/10">
-              <div className="flex items-center justify-center gap-2 text-xs text-white/70">
+            <div className="absolute bottom-0 left-0 right-0 p-5 border-t border-gray-200 dark:border-white/10">
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-white/70">
                 <span>{t("common.byAuthor")}</span>
                 <a
                   href="https://www.linkedin.com/in/3binahmed/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/80 hover:text-[#0A66C2] transition-colors"
+                  className="text-gray-700 dark:text-white/80 hover:text-[#0A66C2] dark:hover:text-[#0A66C2] transition-colors"
                   aria-label="LinkedIn"
                 >
                   <Linkedin className="h-4 w-4" />

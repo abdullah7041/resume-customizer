@@ -1,0 +1,47 @@
+
+> resume-customizer@0.0.0 build
+> node scripts/build.mjs
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[plugin vite:resolve] Module "node:zlib" has been externalized for browser compatibility, imported by "C:/Users/NoteBook Pc/Desktop/resume-customizer/src/lib/utils/resumeText.ts". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[32mΓ£ô[39m 2971 modules transformed.
+Generated an empty chunk: "vendor-pdfjs".
+rendering chunks...
+[plugin vite:reporter] 
+(!) C:/Users/NoteBook Pc/Desktop/resume-customizer/src/services/api.js is dynamically imported by C:/Users/NoteBook Pc/Desktop/resume-customizer/src/components/sections/OptimizeSection.tsx, C:/Users/NoteBook Pc/Desktop/resume-customizer/src/components/sections/TemplatesSection.tsx but also statically imported by C:/Users/NoteBook Pc/Desktop/resume-customizer/src/components/Layout/MainContent.tsx, C:/Users/NoteBook Pc/Desktop/resume-customizer/src/components/Vision2030/Vision2030Section.tsx, C:/Users/NoteBook Pc/Desktop/resume-customizer/src/components/sections/BulkAnalysisSection.tsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+[2mdist/[22m[32mindex.html                               [39m[1m[2m  6.10 kB[22m[1m[22m[2m Γöé gzip:   1.97 kB[22m
+[2mdist/[22m[35massets/index-D5wwSXXU.css                [39m[1m[2m285.62 kB[22m[1m[22m[2m Γöé gzip:  34.29 kB[22m
+[2mdist/[22m[36massets/vendor-pdfjs-l0sNRNKZ.js          [39m[1m[2m  0.00 kB[22m[1m[22m[2m Γöé gzip:   0.02 kB[22m
+[2mdist/[22m[36massets/vision2030Icons-CgqXRepH.js       [39m[1m[2m  0.47 kB[22m[1m[22m[2m Γöé gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/authHeaders-Cdiw1ydo.js           [39m[1m[2m  0.50 kB[22m[1m[22m[2m Γöé gzip:   0.34 kB[22m
+[2mdist/[22m[36massets/keywordBolder-hWduHs2q.js         [39m[1m[2m  1.06 kB[22m[1m[22m[2m Γöé gzip:   0.57 kB[22m
+[2mdist/[22m[36massets/PricingSection-Dmg8K-9g.js        [39m[1m[2m  4.80 kB[22m[1m[22m[2m Γöé gzip:   1.71 kB[22m
+[2mdist/[22m[36massets/ConfirmActionModal-B4lqd8O4.js    [39m[1m[2m  5.89 kB[22m[1m[22m[2m Γöé gzip:   2.36 kB[22m
+[2mdist/[22m[36massets/ResumeDiffView-0TYoVCGj.js        [39m[1m[2m  8.00 kB[22m[1m[22m[2m Γöé gzip:   2.29 kB[22m
+[2mdist/[22m[36massets/ShareScoreCard-DcgP8kYo.js        [39m[1m[2m  9.10 kB[22m[1m[22m[2m Γöé gzip:   3.20 kB[22m
+[2mdist/[22m[36massets/MirroredKeywordsCard-peP82E47.js  [39m[1m[2m  9.46 kB[22m[1m[22m[2m Γöé gzip:   2.55 kB[22m
+[2mdist/[22m[36massets/FeedbackModal-DsLGC79K.js         [39m[1m[2m  9.82 kB[22m[1m[22m[2m Γöé gzip:   3.85 kB[22m
+[2mdist/[22m[36massets/exportDocx-DpwzJuRv.js            [39m[1m[2m 11.89 kB[22m[1m[22m[2m Γöé gzip:   3.17 kB[22m
+[2mdist/[22m[36massets/CoverLetterSection-4IoCeGqO.js    [39m[1m[2m 16.83 kB[22m[1m[22m[2m Γöé gzip:   5.48 kB[22m
+[2mdist/[22m[36massets/BulkAnalysisSection-DOupuRKL.js   [39m[1m[2m 17.57 kB[22m[1m[22m[2m Γöé gzip:   5.49 kB[22m
+[2mdist/[22m[36massets/MatchSection-Dp7YxoPc.js          [39m[1m[2m 21.96 kB[22m[1m[22m[2m Γöé gzip:   6.72 kB[22m
+[2mdist/[22m[36massets/purify.es-C0_7NiBM.js             [39m[1m[2m 22.58 kB[22m[1m[22m[2m Γöé gzip:   8.67 kB[22m
+[2mdist/[22m[36massets/vision2030Skills-DUuRXr__.js      [39m[1m[2m 24.78 kB[22m[1m[22m[2m Γöé gzip:   7.15 kB[22m
+[2mdist/[22m[36massets/LandingPage-D6IlwYVi.js           [39m[1m[2m 30.42 kB[22m[1m[22m[2m Γöé gzip:   7.66 kB[22m
+[2mdist/[22m[36massets/Vision2030Section-BPvwMmAK.js     [39m[1m[2m 31.57 kB[22m[1m[22m[2m Γöé gzip:   8.66 kB[22m
+[2mdist/[22m[36massets/InterviewSection-C5qjRFSW.js      [39m[1m[2m 33.25 kB[22m[1m[22m[2m Γöé gzip:   7.38 kB[22m
+[2mdist/[22m[36massets/OptimizeSection-CYheiIX3.js       [39m[1m[2m 49.47 kB[22m[1m[22m[2m Γöé gzip:  13.73 kB[22m
+[2mdist/[22m[36massets/vendor-joyride-B4ryL-6e.js        [39m[1m[2m 99.06 kB[22m[1m[22m[2m Γöé gzip:  31.17 kB[22m
+[2mdist/[22m[36massets/index.es-gHksDHPd.js              [39m[1m[2m158.66 kB[22m[1m[22m[2m Γöé gzip:  52.96 kB[22m
+[2mdist/[22m[36massets/vendor-supabase-BXKfFyOl.js       [39m[1m[2m173.31 kB[22m[1m[22m[2m Γöé gzip:  45.88 kB[22m
+[2mdist/[22m[36massets/html2canvas.esm-DXEQVQnt.js       [39m[1m[2m201.04 kB[22m[1m[22m[2m Γöé gzip:  47.43 kB[22m
+[2mdist/[22m[36massets/vendor-sentry-DPVtLVw1.js         [39m[1m[2m257.29 kB[22m[1m[22m[2m Γöé gzip:  84.85 kB[22m
+[2mdist/[22m[36massets/vendor-core-C7yqF-xv.js           [39m[1m[2m265.17 kB[22m[1m[22m[2m Γöé gzip:  82.35 kB[22m
+[2mdist/[22m[36massets/index-Boh0YAwo.js                 [39m[1m[2m406.88 kB[22m[1m[22m[2m Γöé gzip: 119.18 kB[22m
+[2mdist/[22m[36massets/vendor-jspdf-D_RzZRjs.js          [39m[1m[2m418.53 kB[22m[1m[22m[2m Γöé gzip: 136.49 kB[22m
+[2mdist/[22m[36massets/vendor-ui-BJ9vcZnX.js             [39m[1m[2m436.79 kB[22m[1m[22m[2m Γöé gzip: 133.35 kB[22m
+[2mdist/[22m[36massets/index-B7AGaZlY.js                 [39m[1m[2m546.86 kB[22m[1m[22m[2m Γöé gzip: 155.85 kB[22m
+[32mΓ£ô built in 2m 1s[39m

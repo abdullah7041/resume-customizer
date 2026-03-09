@@ -95,54 +95,40 @@ function getSmartFilename(resume: Partial<ResumeSchema> | null, templateId: stri
 }
 
 /**
- * Build a self-contained HTML document from the preview element with all
- * computed styles inlined. This eliminates Tailwind class dependencies and
- * keeps the payload small enough for the Netlify function (< 6MB).
+ * Build a self-contained HTML document from the preview element.
+ *
+ * Previous approach inlined a whitelist of ~40 computed style properties and
+ * stripped all class names, which lost flex sizing, combinatorial selectors
+ * (e.g. space-y-*), pseudo-elements, CSS variables, and more — causing
+ * widespread layout breakage in the Puppeteer-rendered PDF.
+ *
+ * New approach: extract the page's full compiled CSS from `document.styleSheets`
+ * and bundle it with the class-name–bearing HTML.  This guarantees the PDF
+ * matches the browser preview exactly.  Typical payload is 200-600 KB,
+ * well within the Netlify function's 6 MB limit.
  */
 function buildInlinedHtml(element: HTMLElement): string {
-  // Clone and inline computed styles on every element
+  // Clone the full element tree — class names AND inline styles are preserved
   const clone = element.cloneNode(true) as HTMLElement;
 
-  const inlineStyles = (source: HTMLElement, target: HTMLElement) => {
-    const computed = window.getComputedStyle(source);
-    // Only inline non-default properties to keep size small
-    const dominated = [
-      'color', 'background-color', 'background-image', 'background',
-      'font-family', 'font-size', 'font-weight', 'font-style',
-      'line-height', 'letter-spacing', 'text-align', 'text-decoration', 'text-transform',
-      'display', 'flex-direction', 'flex-wrap', 'align-items', 'justify-content', 'gap',
-      'grid-template-columns', 'grid-template-rows', 'grid-column', 'grid-row',
-      'width', 'max-width', 'min-width', 'height', 'max-height', 'min-height',
-      'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-      'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-      'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
-      'border-radius', 'border-color', 'border-width', 'border-style',
-      'position', 'top', 'right', 'bottom', 'left',
-      'overflow', 'white-space', 'word-break', 'text-overflow',
-      'box-sizing', 'opacity', 'visibility', 'list-style-type',
-      'column-count', 'column-gap',
-    ];
-    let style = '';
-    for (const prop of dominated) {
-      const value = computed.getPropertyValue(prop);
-      if (value && value !== 'none' && value !== 'normal' && value !== 'auto' && value !== '0px'
-        && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') {
-        style += `${prop}:${value};`;
-      }
-    }
-    if (style) target.setAttribute('style', style);
-    target.removeAttribute('class');
+  // Remove elements that should not appear in the PDF
+  clone.querySelectorAll('[data-no-print]').forEach((el) => el.remove());
 
-    const sourceChildren = source.children;
-    const targetChildren = target.children;
-    for (let i = 0; i < sourceChildren.length; i++) {
-      if (sourceChildren[i] instanceof HTMLElement && targetChildren[i] instanceof HTMLElement) {
-        inlineStyles(sourceChildren[i] as HTMLElement, targetChildren[i] as HTMLElement);
+  // ---- Extract compiled CSS from all accessible stylesheets ----
+  // This captures every Tailwind utility, component style, CSS variable,
+  // combinatorial selector (space-y-*, etc.), and pseudo-element rule
+  // that the browser preview uses.
+  const cssChunks: string[] = [];
+  for (const sheet of document.styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) {
+        cssChunks.push(rule.cssText);
       }
+    } catch {
+      // Cross-origin sheets (e.g. Google Fonts CDN) can't be read.
+      // Templates use system-font fallback stacks, so this is safe.
     }
-  };
-
-  inlineStyles(element, clone);
+  }
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -150,6 +136,7 @@ function buildInlinedHtml(element: HTMLElement): string {
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#fff}
 svg{display:inline-block;vertical-align:middle}
+${cssChunks.join('\n')}
 </style></head>
 <body>${clone.outerHTML}</body>
 </html>`;

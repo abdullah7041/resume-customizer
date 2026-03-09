@@ -36,11 +36,11 @@ export const AnimatedCard = forwardRef<HTMLElement, AnimatedCardProps>(function 
 
   const toneStyles = {
     glass:
-      "border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl",
+      "border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-xl shadow-xl",
     solid:
-      "border border-white/15 bg-black/60 backdrop-blur-xl shadow-xl",
+      "border border-gray-200/50 dark:border-white/15 bg-white/60 dark:bg-black/60 backdrop-blur-xl shadow-xl",
     translucent:
-      "border border-white/10 bg-black/30 backdrop-blur-lg shadow-lg",
+      "border border-gray-200/50 dark:border-white/10 bg-white/30 dark:bg-black/30 backdrop-blur-lg shadow-lg",
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {

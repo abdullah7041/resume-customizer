@@ -77,7 +77,12 @@ const handler: Handler = async (event) => {
     }
 
     // Create map for quick email lookup
-    const authUserMap = new Map(authUsers?.users.map((u) => [u.id, { email: u.email, name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'User' }]) || []);
+    const authUserMap = new Map<string, { email?: string; name: string }>(
+      authUsers?.users.map((u): [string, { email?: string; name: string }] => [
+        u.id,
+        { email: u.email, name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'User' },
+      ]) || []
+    );
 
     let successCount = 0;
     let emailFailCount = 0;

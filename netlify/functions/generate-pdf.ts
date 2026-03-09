@@ -153,6 +153,8 @@ const baseHandler: Handler = async (event) => {
     await page.emulateMediaType('screen');
 
     // Inject critical CSS for proper PDF rendering
+    // Note: Tailwind utilities are no longer re-created here because the
+    // client now bundles the full compiled CSS from the page's stylesheets.
     await page.addStyleTag({
       content: `
         /* Hide elements marked as non-printable (page break indicators, etc.) */
@@ -172,34 +174,6 @@ const baseHandler: Handler = async (event) => {
 
         /* Keep header block together */
         header { break-inside: avoid !important; page-break-inside: avoid !important; }
-        
-        /* Tailwind border utilities (not loaded without stylesheet) */
-        .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
-        .border-b-2 { border-bottom-width: 2px; border-bottom-style: solid; }
-        .border-black { border-color: #000 !important; }
-        .border-gray-400 { border-color: #9ca3af !important; }
-        .border-white\\/10 { border-color: rgba(255,255,255,0.1) !important; }
-        
-        /* Tailwind text utilities */
-        .text-center { text-align: center !important; }
-        .text-justify { text-align: justify !important; }
-        .uppercase { text-transform: uppercase !important; }
-        .font-bold { font-weight: 700 !important; }
-        .font-semibold { font-weight: 600 !important; }
-        
-        /* Tailwind spacing */
-        .mb-1 { margin-bottom: 0.25rem; }
-        .mb-2 { margin-bottom: 0.5rem; }
-        .mb-3 { margin-bottom: 0.75rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mb-5 { margin-bottom: 1.25rem; }
-        .mb-6 { margin-bottom: 1.5rem; }
-        .pb-1 { padding-bottom: 0.25rem; }
-        .pb-4 { padding-bottom: 1rem; }
-        .mt-1 { margin-top: 0.25rem; }
-        .mt-2 { margin-top: 0.5rem; }
-        .space-y-1 > * + * { margin-top: 0.25rem; }
-        .space-y-2 > * + * { margin-top: 0.5rem; }
         
         /* Ensure exact color rendering */
         * { 

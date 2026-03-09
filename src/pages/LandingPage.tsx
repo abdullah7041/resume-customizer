@@ -492,7 +492,7 @@ export default function LandingPage({ onGetStarted }) {
           <div className="space-y-6">
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.9] text-gray-900 dark:text-white">
               {t("landing.hero.title")}
-              <span className="block mt-2 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 dark:from-emerald-400 dark:via-teal-200 dark:to-cyan-400 bg-clip-text text-transparent pb-4 min-h-[1.2em]">
+              <span className="block mt-2 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 dark:from-emerald-400 dark:via-teal-200 dark:to-cyan-400 bg-clip-text text-transparent pb-4 min-h-[2.4em] sm:min-h-[1.2em]">
                 {dynamicText}
                 <span className="animate-blink text-gray-900 dark:text-white opacity-50 font-light">|</span>
               </span>
