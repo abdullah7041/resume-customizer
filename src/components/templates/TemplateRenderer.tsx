@@ -101,24 +101,24 @@ const TemplateHeader = ({ template, userData }) => {
           )}
 
           {fields.includes("linkedin") && userData.linkedin && (
-            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <a href={userData.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
               <ContactIcon type="linkedin" />
               <span>{userData.linkedin}</span>
-            </div>
+            </a>
           )}
 
           {fields.includes("github") && userData.github && (
-            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <a href={userData.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
               <ContactIcon type="github" />
               <span>{userData.github}</span>
-            </div>
+            </a>
           )}
 
           {fields.includes("portfolio") && userData.portfolio && (
-            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <a href={userData.portfolio} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
               <ContactIcon type="portfolio" />
               <span>{userData.portfolio}</span>
-            </div>
+            </a>
           )}
 
           {fields.includes("address") && userData.address && (
