@@ -66,8 +66,8 @@ const handler: Handler = async (event) => {
     // Get all active users
     const { data: users, error: fetchError } = await supabase
       .from('user_credits')
-      .select('user_id, credits_remaining')
-      .neq('user_id', '00000000-0000-0000-0000-000000000000'); // Exclude system users
+      .select('email, credits_remaining')
+      .not('email', 'is', null); // Ensure emails exist
 
     if (fetchError) {
       throw fetchError;
@@ -86,7 +86,7 @@ const handler: Handler = async (event) => {
 
     // Update all users' credits
     const updates = users.map((user) => ({
-      user_id: user.user_id,
+      email: user.email,
       credits_remaining: user.credits_remaining + amount,
       updated_at: new Date().toISOString(),
     }));
@@ -101,7 +101,7 @@ const handler: Handler = async (event) => {
 
     // Log transactions for each user
     const transactions = users.map((user) => ({
-      user_id: user.user_id,
+      email: user.email,
       feature: 'celebration_bonus',
       amount,
       credits_before: user.credits_remaining,

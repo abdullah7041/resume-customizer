@@ -32,7 +32,8 @@ export function ReferralLink({ className }: ReferralLinkProps) {
 
     async function fetchReferralLink() {
       try {
-        const response = await fetch(`/.netlify/functions/referral-api?action=get-link&user_id=${user.id}`);
+        const emailParam = encodeURIComponent(user.email || '');
+        const response = await fetch(`/.netlify/functions/referral-api?action=get-link&email=${emailParam}`);
         const data = await response.json();
 
         if (data.success && data.referralUrl) {

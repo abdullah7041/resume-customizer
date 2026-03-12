@@ -2,8 +2,8 @@
  * Unified Referral API
  *
  * Handles all referral-related operations via action parameter:
- * - GET  ?action=get-link&user_id=xxx     → Get/generate referral link
- * - GET  ?action=get-stats&user_id=xxx    → Get referral statistics
+ * - GET  ?action=get-link&email=xxx     → Get/generate referral link
+ * - GET  ?action=get-stats&email=xxx    → Get referral statistics
  * - POST { action: "track", ... }         → Track a new referral
  */
 
@@ -18,7 +18,7 @@ const generateCode = customAlphabet('0123456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjk
 /**
  * Handle GET /get-link - Generate or retrieve referral link
  */
-async function handleGetLink(userId: string) {
+async function handleGetLink(email: string) {
     const supabase = getSupabaseClient();
 
     if (!supabase) {
@@ -29,7 +29,7 @@ async function handleGetLink(userId: string) {
     const { data: userData, error: fetchError } = await supabase
         .from('user_credits')
         .select('referral_code')
-        .eq('user_id', userId)
+        .eq('email', email)
         .single();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
@@ -46,14 +46,14 @@ async function handleGetLink(userId: string) {
         const { error: updateError } = await supabase
             .from('user_credits')
             .update({ referral_code: referralCode })
-            .eq('user_id', userId);
+            .eq('email', email);
 
         if (updateError) {
             console.error('[referral-api] Update error:', updateError);
             throw new Error('Failed to save referral code');
         }
 
-        console.log(`[referral-api] Generated new code for user ${userId}: ${referralCode}`);
+        console.log(`[referral-api] Generated new code for user ${email}: ${referralCode}`);
     }
 
     // Build full referral URL
@@ -66,8 +66,8 @@ async function handleGetLink(userId: string) {
 /**
  * Handle GET /get-stats - Get referral statistics
  */
-async function handleGetStats(userId: string) {
-    const stats = await getReferralStats(userId);
+async function handleGetStats(email: string) {
+    const stats = await getReferralStats(email);
 
     // Map new field names to legacy format for backward compatibility
     return {
@@ -80,17 +80,17 @@ async function handleGetStats(userId: string) {
 
 /**
  * Handle POST /track - Track a new referral
- * Expects: { referral_code: string, referee_id: string }
+ * Expects: { referral_code: string, referee_email: string }
  */
-async function handleTrack(body: { referral_code: string; referee_id: string }) {
-    const { referral_code, referee_id } = body;
+async function handleTrack(body: { referral_code: string; referee_email: string }) {
+    const { referral_code, referee_email } = body;
 
     // Validate required fields
-    if (!referral_code || !referee_id) {
-        throw { statusCode: 400, message: 'Missing required fields: referral_code, referee_id' };
+    if (!referral_code || !referee_email) {
+        throw { statusCode: 400, message: 'Missing required fields: referral_code, referee_email' };
     }
 
-    const result = await trackReferral(referral_code, referee_id);
+    const result = await trackReferral(referral_code, referee_email);
 
     if (!result.success) {
         throw { statusCode: 400, message: result.error || 'Failed to track referral' };
@@ -106,18 +106,18 @@ const handler: Handler = async (event) => {
         // ===================== GET Requests =====================
         if (method === 'GET') {
             const action = event.queryStringParameters?.action;
-            const userId = event.queryStringParameters?.user_id;
+            const email = event.queryStringParameters?.email;
 
-            if (!userId) {
+            if (!email) {
                 return {
                     statusCode: 400,
-                    body: JSON.stringify({ error: 'Missing user_id parameter' }),
+                    body: JSON.stringify({ error: 'Missing email parameter' }),
                 };
             }
 
             if (action === 'get-link') {
                 try {
-                    const result = await handleGetLink(userId);
+                    const result = await handleGetLink(email);
                     return {
                         statusCode: 200,
                         body: JSON.stringify({ success: true, ...result }),
@@ -135,7 +135,7 @@ const handler: Handler = async (event) => {
             }
 
             if (action === 'get-stats') {
-                const stats = await handleGetStats(userId);
+                const stats = await handleGetStats(email);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({ success: true, ...stats }),

@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import readline from 'readline';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -208,7 +209,11 @@ async function executeMigration() {
   logSection('PHASE 2: MIGRATION EXECUTION');
 
   // Read migration file
-  const migrationPath = join(__dirname, '..', 'supabase', 'migrations', '20260108_rename_tables_gdpr_compliance.sql');
+/**
+ * Path to migration SQL file
+ */
+const MIGRATION_FILE = 'supabase/migrations/20260310_refactor_to_email.sql';
+  const migrationPath = join(__dirname, '..', MIGRATION_FILE);
   logInfo(`Reading migration file: ${migrationPath}`);
 
   let migrationSQL;
@@ -247,15 +252,15 @@ async function executeMigration() {
 /**
  * Ask user a question (for interactive mode)
  */
-function askQuestion(question) {
-  return new Promise((resolve) => {
-    const readline = require('readline').createInterface({
+function askQuestion(query) {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
 
-    readline.question(question, (answer) => {
-      readline.close();
+    rl.question(query, answer => {
+      rl.close();
       resolve(answer);
     });
   });

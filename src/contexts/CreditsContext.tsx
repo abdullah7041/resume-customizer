@@ -61,7 +61,7 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             const { data, error: fetchError } = await supabase
                 .from('user_credits')
                 .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date')
-                .eq('user_id', user.id)
+                .eq('email', user.email)
                 .single();
 
             if (fetchError) {
@@ -162,14 +162,14 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
         if (!user) return;
 
         const subscription = supabase
-            .channel(`user_credits_global:${user.id}`)
+            .channel(`user_credits_global:${user.email}`)
             .on(
                 'postgres_changes',
                 {
                     event: '*',
                     schema: 'public',
                     table: 'user_credits',
-                    filter: `user_id=eq.${user.id}`,
+                    filter: `email=eq.${user.email}`,
                 },
                 (payload) => {
                     // Use debounced version to prevent rapid updates

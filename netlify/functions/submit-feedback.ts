@@ -127,7 +127,7 @@ const handleFeedbackSubmission: Handler = async (event) => {
     const { data: savedFeedback, error: insertError } = await supabase
       .from("feedback")
       .insert({
-        user_id: user.id,
+        email: user.email,
         emoji_rating: feedbackData.emoji_rating,
         testimonial_text: feedbackData.testimonial_text || null,
         context: feedbackData.context || null,
@@ -160,15 +160,15 @@ const handleFeedbackSubmission: Handler = async (event) => {
         // First ensure user has a credits record (in case trigger didn't fire)
         const { data: existingCredits } = await supabase
           .from("user_credits")
-          .select("user_id, feedback_credits_earned, credits_remaining")
-          .eq("user_id", user.id)
+          .select("email, feedback_credits_earned, credits_remaining")
+          .eq("email", user.email)
           .single();
 
         if (!existingCredits) {
           // Initialize credits for this user
-          console.log(`[submit-feedback] Initializing credits for user ${user.id}`);
+          console.log(`[submit-feedback] Initializing credits for user ${user.email}`);
           await supabase.from("user_credits").insert({
-            user_id: user.id,
+            email: user.email,
             credits_remaining: 15,
             credits_total: 15,
             feedback_credits_earned: 0,
@@ -177,7 +177,7 @@ const handleFeedbackSubmission: Handler = async (event) => {
           });
         }
 
-        const creditResult = await addFeedbackCredits(user.id, {
+        const creditResult = await addFeedbackCredits(user.email, {
           emoji_rating: feedbackData.emoji_rating,
           feedback_id: savedFeedback.id,
         });

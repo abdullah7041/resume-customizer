@@ -218,7 +218,7 @@ describe('CreditManager', () => {
       const result = await consumeCredits('user-123', 'optimize');
 
       expect(supabaseMock.rpc).toHaveBeenCalledWith('consume_user_credits', {
-        p_user_id: 'user-123',
+        p_email: 'user-123',
         p_amount: 5,
       });
 
@@ -329,7 +329,7 @@ describe('CreditManager', () => {
       const result = await consumeCredits('user-123', 'optimize', 3);
 
       expect(supabaseMock.rpc).toHaveBeenCalledWith('consume_user_credits', {
-        p_user_id: 'user-123',
+        p_email: 'user-123',
         p_amount: 3,
       });
 

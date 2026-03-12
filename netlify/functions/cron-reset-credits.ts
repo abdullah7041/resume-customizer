@@ -46,7 +46,7 @@ const handler: Handler = async (event) => {
 
     const { data: usersNeedingReset, error: queryError } = await supabase
       .from('user_credits')
-      .select('user_id, credits_remaining, last_reset_date, email')
+      .select('email, credits_remaining, last_reset_date')
       .lt('last_reset_date', thirtyDaysAgo.toISOString());
 
     if (queryError) {
@@ -76,10 +76,10 @@ const handler: Handler = async (event) => {
       throw new Error('Failed to retrieve user information');
     }
 
-    // Create map for quick email lookup
+    // Create map for quick email lookup (using email as key now)
     const authUserMap = new Map<string, { email?: string; name: string }>(
       authUsers?.users.map((u): [string, { email?: string; name: string }] => [
-        u.id,
+        u.email || u.id,
         { email: u.email, name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'User' },
       ]) || []
     );
@@ -91,12 +91,12 @@ const handler: Handler = async (event) => {
     // Process each user
     for (const userCredit of usersNeedingReset) {
       try {
-        const userId = userCredit.user_id;
-        const authUserInfo = authUserMap.get(userId);
+        const email = userCredit.email;
+        const authUserInfo = authUserMap.get(email);
 
-        if (!authUserInfo || !authUserInfo.email) {
-          console.warn(`[cron-reset-credits] User ${userId} not found in auth or missing email, skipping`);
-          errors.push({ userId, error: 'User not found in auth' });
+        if (!email) {
+          console.warn(`[cron-reset-credits] User record missing email, skipping`);
+          errors.push({ userId: 'unknown', error: 'Missing email' });
           continue;
         }
 
@@ -110,17 +110,17 @@ const handler: Handler = async (event) => {
             last_reset_date: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
-          .eq('user_id', userId);
+          .eq('email', email);
 
         if (updateError) {
-          console.error(`[cron-reset-credits] Failed to reset credits for user ${userId}:`, updateError);
-          errors.push({ userId, error: `Failed to update credits: ${updateError.message}` });
+          console.error(`[cron-reset-credits] Failed to reset credits for user ${email}:`, updateError);
+          errors.push({ userId: email, error: `Failed to update credits: ${updateError.message}` });
           continue;
         }
 
         // Log transaction
         const { error: logError } = await supabase.from('credit_transactions').insert({
-          user_id: userId,
+          email: email,
           feature: 'monthly_reset',
           amount: newCredits - (userCredit.credits_remaining || 0),
           credits_before: userCredit.credits_remaining || 0,
@@ -133,24 +133,25 @@ const handler: Handler = async (event) => {
         });
 
         if (logError) {
-          console.warn(`[cron-reset-credits] Failed to log transaction for user ${userId}:`, logError);
+          console.warn(`[cron-reset-credits] Failed to log transaction for user ${email}:`, logError);
           // Don't fail the operation
         }
 
         // Send email notification
-        const emailResult = await sendCreditsRefreshedEmail(authUserInfo.email, authUserInfo.name, newCredits, 'en');
+        const userName = authUserInfo?.name || email.split('@')[0];
+        const emailResult = await sendCreditsRefreshedEmail(email, userName, newCredits, 'en');
 
         if (!emailResult.success) {
-          console.warn(`[cron-reset-credits] Failed to send email for user ${userId}:`, emailResult.error);
+          console.warn(`[cron-reset-credits] Failed to send email for user ${email}:`, emailResult.error);
           emailFailCount++;
         }
 
         successCount++;
-        console.log(`[cron-reset-credits] Reset credits for user ${userId}. Email sent: ${emailResult.success}`);
+        console.log(`[cron-reset-credits] Reset credits for user ${email}. Email sent: ${emailResult.success}`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error(`[cron-reset-credits] Error processing user:`, errorMsg);
-        errors.push({ userId: userCredit.user_id, error: errorMsg });
+        errors.push({ userId: userCredit.email, error: errorMsg });
       }
     }
 

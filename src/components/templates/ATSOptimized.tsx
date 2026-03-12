@@ -45,8 +45,34 @@ export function ATSOptimized({
     ) || [];
 
     // Get profile links
-    const linkedInUrl = basics?.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url;
-    const portfolioUrl = basics?.url || basics?.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website')?.url;
+    const normalizeUrl = (url?: string): string | null => {
+      if (!url) return null;
+      if (url.startsWith('http')) return url;
+      if (url.includes('.')) return `https://${url}`;
+      return null;
+    };
+    const resolveProfileUrl = (profile?: { url?: string; username?: string; network?: string }): string | null => {
+      if (!profile) return null;
+      const fromUrl = normalizeUrl(profile.url);
+      if (fromUrl) return fromUrl;
+
+      const id = profile.url || profile.username;
+      if (id && !id.includes(' ') && !id.toLowerCase().includes(profile.network?.toLowerCase() || 'none')) {
+        const net = profile.network?.toLowerCase();
+        if (net === 'linkedin') return `https://linkedin.com/in/${id}`;
+        if (net === 'github') return `https://github.com/${id}`;
+      }
+
+      const fromUsername = normalizeUrl(profile.username);
+      if (fromUsername) return fromUsername;
+      return null;
+    };
+    const linkedInProfile = basics?.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin');
+    const linkedInUrl = resolveProfileUrl(linkedInProfile);
+    const linkedInLabel = (linkedInProfile?.url || linkedInProfile?.username) && !linkedInUrl ? (linkedInProfile?.url || linkedInProfile?.username) : undefined;
+    const portfolioProfile = basics?.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website');
+    const portfolioUrl = normalizeUrl(basics?.url) || resolveProfileUrl(portfolioProfile);
+    const portfolioLabel = !portfolioUrl ? (basics?.url || portfolioProfile?.url || portfolioProfile?.username || undefined) : undefined;
 
     // Helper for scaled fonts - use displayOptions or legacy fontScale
     const fs = (pt: number) => {
@@ -119,20 +145,28 @@ export function ATSOptimized({
                             </span>
                         </>
                     )}
-                    {linkedInUrl && (
+                    {(linkedInUrl || linkedInLabel) && (
                         <>
                             <Sep />
-                            <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
-                                {linkedInUrl.replace('https://', '').replace('www.', '')}
-                            </a>
+                            {linkedInUrl ? (
+                                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                                    LinkedIn Account
+                                </a>
+                            ) : (
+                                <span>{linkedInLabel}</span>
+                            )}
                         </>
                     )}
-                    {portfolioUrl && !linkedInUrl?.includes(portfolioUrl) && (
+                    {(portfolioUrl || portfolioLabel) && (
                         <>
                             <Sep />
-                            <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
-                                {portfolioUrl.replace('https://', '').replace('www.', '')}
-                            </a>
+                            {portfolioUrl ? (
+                                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                                    Portfolio
+                                </a>
+                            ) : (
+                                <span>{portfolioLabel}</span>
+                            )}
                         </>
                     )}
                 </p>

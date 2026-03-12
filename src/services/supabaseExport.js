@@ -26,10 +26,10 @@ const generateFileName = (baseName = "Resume_Optimized") => {
 /**
  * Export optimized resume to Supabase Storage
  */
-export const exportToSupabase = async ({ 
-  htmlContent, 
+export const exportToSupabase = async ({
+  htmlContent,
   fileName = "Resume_Optimized",
-  metadata = {} 
+  metadata = {}
 }) => {
   // Validate input
   if (!htmlContent || typeof htmlContent !== "string") {
@@ -56,7 +56,7 @@ export const exportToSupabase = async ({
 
   try {
     // No need to create bucket - reusing existing 'resumes' bucket
-    
+
     // Convert HTML to Blob
     const blob = htmlToBlob(htmlContent);
     const uniqueFileName = generateFileName(fileName);
@@ -120,7 +120,7 @@ export const exportToSupabase = async ({
     };
   } catch (error) {
     console.error("Supabase export error:", error);
-    
+
     if (error instanceof AppError) {
       throw error;
     }
@@ -236,7 +236,7 @@ export const deleteExport = async (filePath) => {
         .from("resume_exports")
         .delete()
         .eq("file_path", filePath)
-        .eq("user_id", user.id);
+        .eq("email", user.email);
     } catch (dbError) {
       console.warn("Could not delete export record from database:", dbError);
     }

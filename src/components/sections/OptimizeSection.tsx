@@ -552,7 +552,7 @@ export function OptimizeSection({
           const { data: userCredits, error: _creditsError } = await supabase
             .from('user_credits')
             .select('feedback_credits_earned')
-            .eq('user_id', user.id)
+            .eq('email', user.email)
             .single();
 
           // Only show if user has < 3 feedback submissions (max limit)

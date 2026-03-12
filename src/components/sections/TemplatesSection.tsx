@@ -194,10 +194,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const storeActiveResume = useMemo(() => {
     if (!useStoreData) return null;
     // getActiveResume() internally uses showOptimized, optimizations, isSaudiNational, originalResume
-    // We rely on getActiveResume being a stable Zustand getter that internally handles reactivity
+    // We must depend on these values so the memo recomputes when editor saves or optimizations change
     return getActiveResume();
 
-  }, [useStoreData, getActiveResume]);
+  }, [useStoreData, getActiveResume, storeOriginalResume, optimizations, showOptimized]);
 
   // Determine which resume to use
   const resumeData = useStoreData

@@ -8,6 +8,7 @@
 
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import * as crypto from 'crypto';
 import { initSentry, captureError } from '../lib/sentry';
 
 initSentry();
@@ -48,47 +49,58 @@ function getServiceClient() {
 /**
  * Handle export action - GDPR data export
  */
-async function handleExport(userId: string) {
+async function handleExport(email: string) {
     const supabase = getServiceClient();
 
     const [
         { data: profile },
         { data: resumes },
         { data: jobMatches },
-        { data: jobApplications },
     ] = await Promise.all([
-        supabase.from('user_profiles').select('*').eq('id', userId).single(),
-        supabase.from('resumes').select('*').eq('user_id', userId),
-        supabase.from('job_matches').select('*').eq('user_id', userId),
-        supabase.from('job_applications').select('*').eq('user_id', userId),
+        supabase.from('user_profiles').select('*').eq('email', email).single(),
+        supabase.from('resumes').select('*').eq('email', email),
+        supabase.from('job_matches').select('*').eq('email', email),
     ]);
 
     return {
         exportDate: new Date().toISOString(),
         exportType: 'GDPR_DATA_EXPORT',
-        userData: { profile, resumes, jobMatches, jobApplications },
+        userData: { profile, resumes, jobMatches },
     };
 }
 
 /**
  * Handle delete action - Account deletion
  */
-async function handleDelete(userId: string, confirmDelete: boolean) {
+async function handleDelete(email: string, userId: string, confirmDelete: boolean) {
     if (!confirmDelete) {
         throw { statusCode: 400, message: 'Confirmation required' };
     }
 
     const supabase = getServiceClient();
 
+    // Generate anonymous hash for deletion log (GDPR compliant)
+    const emailHash = crypto.createHash('sha256').update(email).digest('hex');
+    
+    // Log deletion before removing the account
+    const { error: logError } = await supabase.from('deletion_log').insert({
+        user_id_hash: emailHash,
+        deleted_at: new Date().toISOString()
+    });
+    
+    if (logError) {
+        console.error("Could not log to deletion_log (table might not exist)", logError);
+    }
+
     // Delete in order (respecting foreign keys)
-    await supabase.from('job_matches').delete().eq('user_id', userId);
-    await supabase.from('resumes').delete().eq('user_id', userId);
-    await supabase.from('user_profiles').delete().eq('id', userId);
+    await supabase.from('job_matches').delete().eq('email', email);
+    await supabase.from('resumes').delete().eq('email', email);
+    await supabase.from('user_profiles').delete().eq('email', email);
 
     // Delete auth user (cascades remaining data)
     await supabase.auth.admin.deleteUser(userId);
 
-    console.log(`User ${userId} deleted their account at ${new Date().toISOString()}`);
+    console.log(`User ${email} deleted their account at ${new Date().toISOString()}`);
 
     return { message: 'Account deleted' };
 }
@@ -103,6 +115,11 @@ export const handler: Handler = async (event) => {
         const authHeader = event.headers.authorization || event.headers.Authorization;
         const user = await verifyAuth(authHeader);
         const userId = user.id;
+        const userEmail = user.email;
+
+        if (!userEmail) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'User email is missing' }) };
+        }
 
         // Parse request body
         const body = JSON.parse(event.body || '{}');
@@ -110,12 +127,12 @@ export const handler: Handler = async (event) => {
 
         // ===================== Export Action =====================
         if (action === 'export') {
-            const exportData = await handleExport(userId);
+            const exportData = await handleExport(userEmail);
             return {
                 statusCode: 200,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Content-Disposition': `attachment; filename="user-data-export-${userId}.json"`,
+                    'Content-Disposition': `attachment; filename="user-data-export-${userEmail}.json"`,
                 },
                 body: JSON.stringify(exportData, null, 2),
             };
@@ -123,7 +140,7 @@ export const handler: Handler = async (event) => {
 
         // ===================== Delete Action =====================
         if (action === 'delete') {
-            const result = await handleDelete(userId, body.confirmDelete);
+            const result = await handleDelete(userEmail, userId, body.confirmDelete);
             return {
                 statusCode: 200,
                 body: JSON.stringify({ success: true, ...result }),

@@ -48,8 +48,34 @@ export function ExecutiveProfessional({
 
   const { basics, work = [], education = [], skills = [], projects = [], languages = [], certificates = [] } = resume;
 
-  const linkedInUrl = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin')?.url;
-  const portfolioUrl = basics.url || basics.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website')?.url;
+  const normalizeUrl = (url?: string): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.includes('.')) return `https://${url}`;
+    return null;
+  };
+  const resolveProfileUrl = (profile?: { url?: string; username?: string; network?: string }): string | null => {
+    if (!profile) return null;
+    const fromUrl = normalizeUrl(profile.url);
+    if (fromUrl) return fromUrl;
+
+    const id = profile.url || profile.username;
+    if (id && !id.includes(' ') && !id.toLowerCase().includes(profile.network?.toLowerCase() || 'none')) {
+      const net = profile.network?.toLowerCase();
+      if (net === 'linkedin') return `https://linkedin.com/in/${id}`;
+      if (net === 'github') return `https://github.com/${id}`;
+    }
+
+    const fromUsername = normalizeUrl(profile.username);
+    if (fromUsername) return fromUsername;
+    return null;
+  };
+  const linkedInProfile = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin');
+  const linkedInUrl = resolveProfileUrl(linkedInProfile);
+  const linkedInLabel = (linkedInProfile?.url || linkedInProfile?.username) && !linkedInUrl ? (linkedInProfile?.url || linkedInProfile?.username) : undefined;
+  const portfolioProfile = basics.profiles?.find((p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website');
+  const portfolioUrl = normalizeUrl(basics.url) || resolveProfileUrl(portfolioProfile);
+  const portfolioLabel = !portfolioUrl ? (basics.url || portfolioProfile?.url || portfolioProfile?.username || undefined) : undefined;
 
   const fs = (pt: number) => {
     if (displayOptions?.baseFontSize) {
@@ -131,16 +157,24 @@ export function ExecutiveProfessional({
               <span>{[basics.location.city, basics.location.region].filter(Boolean).join(', ')}</span>
             </>
           )}
-          {linkedInUrl && (
+          {(linkedInUrl || linkedInLabel) && (
             <>
               <span style={{ color: '#999', margin: '0 6px' }}>|</span>
-              <a href={linkedInUrl} style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>LinkedIn Account</a>
+              {linkedInUrl ? (
+                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>LinkedIn Account</a>
+              ) : (
+                <span>{linkedInLabel}</span>
+              )}
             </>
           )}
-          {portfolioUrl && (
+          {(portfolioUrl || portfolioLabel) && (
             <>
               <span style={{ color: '#999', margin: '0 6px' }}>|</span>
-              <a href={portfolioUrl} style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>Portfolio</a>
+              {portfolioUrl ? (
+                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>Portfolio</a>
+              ) : (
+                <span>{portfolioLabel}</span>
+              )}
             </>
           )}
         </p>

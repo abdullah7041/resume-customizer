@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown, Gift, ShieldCheck, Sun, Moon } from "lucide-react";
+import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown, Gift, ShieldCheck, Sun, Moon, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
 import { CreditUsageModal } from "../Credits/CreditUsageModal";
+import { SettingsModal } from "../Settings/SettingsModal";
 import { useTheme } from "../../hooks/useTheme";
 
 
@@ -53,6 +54,7 @@ export default function Header() {
   const mobileNavRef = useRef<HTMLDivElement>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const [theme, toggleTheme] = useTheme();
 
@@ -439,6 +441,14 @@ export default function Header() {
                       +5
                     </span>
                   </button>
+                  <button
+                    onClick={() => setShowSettingsModal(true)}
+                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 text-gray-800 dark:text-gray-300 transition-all duration-300 hover:bg-white hover:text-emerald-600 dark:hover:bg-white/10 shadow-sm"
+                    aria-label="Settings"
+                    title="Settings"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </button>
                 </>
               )}
 
@@ -711,16 +721,28 @@ export default function Header() {
               {/* Auth Section */}
               <div className="pt-2 space-y-3">
                 {user ? (
-                  <button
-                    onClick={() => {
-                      signOut();
-                      setMobileNavOpen(false);
-                    }}
-                    className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-black"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>{t("common.signOut")}</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setMobileNavOpen(false);
+                      }}
+                      className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-black"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>{t("common.signOut")}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSettingsModal(true);
+                        setMobileNavOpen(false);
+                      }}
+                      className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-transparent border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={() => {
@@ -760,6 +782,12 @@ export default function Header() {
         isOpen={showCreditModal}
         onClose={() => setShowCreditModal(false)}
         viewMode={creditModalMode}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
       />
     </header>
   );

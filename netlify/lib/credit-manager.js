@@ -46,7 +46,7 @@ async function checkIPAbuse(ipAddress) {
 
   const { count, error } = await supabase
     .from('user_credits')
-    .select('user_id', { count: 'exact', head: true })
+    .select('email', { count: 'exact', head: true })
     .contains('signup_metadata', { ip_address: ipAddress })
     .gte('created_at', oneDayAgo);
 
@@ -72,30 +72,30 @@ async function checkIPAbuse(ipAddress) {
  * @param {boolean} options.emailVerified - Whether user's email is verified
  * @returns {Promise<{credits_remaining: number, credits_total: number, last_reset_date: string} | null>}
  */
-export async function getUserCredits(userId, options = {}) {
+export async function getUserCredits(email, options = {}) {
   const { ipAddress, emailVerified = true } = options;
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
     .from('user_credits')
     .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
-    .eq('user_id', userId)
+    .eq('email', email)
     .single();
 
   if (error) {
     // If user doesn't exist, initialize their credits
     if (error.code === 'PGRST116') {
-      console.log(`[CreditManager] Initializing credits for user ${userId}`);
+      console.log(`[CreditManager] Initializing credits for user ${email}`);
 
       // ANTI-ABUSE CHECKS
 
       // Check 1: Email must be verified
       if (!emailVerified) {
-        console.warn(`[CreditManager] Email not verified for ${userId} - giving 0 credits`);
+        console.warn(`[CreditManager] Email not verified for ${email} - giving 0 credits`);
         const { data: newCredits, error: insertError } = await supabase
           .from('user_credits')
           .insert({
-            user_id: userId,
+            email: email,
             credits_remaining: 0, // No credits until verified
             credits_total: 0,
             feedback_credits_earned: 0,
@@ -123,13 +123,13 @@ export async function getUserCredits(userId, options = {}) {
       const creditsToGive = isIPSuspicious ? 5 : 20; // Reduced credits for suspicious IPs
 
       if (isIPSuspicious) {
-        console.warn(`[CreditManager] Suspicious IP detected for ${userId} - giving ${creditsToGive} credits instead of 20`);
+        console.warn(`[CreditManager] Suspicious IP detected for ${email} - giving ${creditsToGive} credits instead of 20`);
       }
 
       const { data: newCredits, error: insertError } = await supabase
         .from('user_credits')
         .insert({
-          user_id: userId,
+          email: email,
           credits_remaining: creditsToGive,
           credits_total: creditsToGive,
           feedback_credits_earned: 0,
@@ -169,7 +169,7 @@ export async function getUserCredits(userId, options = {}) {
  * @param {boolean} options.emailVerified - Whether user's email is verified (for anti-abuse on first call)
  * @returns {Promise<{hasCredits: boolean, required: number, available: number}>}
  */
-export async function checkCredits(userId, feature, options = {}) {
+export async function checkCredits(email, feature, options = {}) {
   const requiredCredits = FEATURE_COSTS[feature];
 
   if (requiredCredits === undefined) {
@@ -181,7 +181,7 @@ export async function checkCredits(userId, feature, options = {}) {
     return { hasCredits: true, required: 0, available: 0 };
   }
 
-  const credits = await getUserCredits(userId, options);
+  const credits = await getUserCredits(email, options);
   const available = credits?.credits_remaining || 0;
 
   return {
@@ -198,7 +198,7 @@ export async function checkCredits(userId, feature, options = {}) {
  * @param {number} [amount] - Optional custom amount (defaults to FEATURE_COSTS[feature])
  * @returns {Promise<{success: boolean, creditsRemaining: number}>}
  */
-export async function consumeCredits(userId, feature, amount = null) {
+export async function consumeCredits(email, feature, amount = null) {
   const supabase = getSupabaseClient();
   const creditsToConsume = amount !== null ? amount : FEATURE_COSTS[feature];
 
@@ -213,7 +213,7 @@ export async function consumeCredits(userId, feature, amount = null) {
   }
 
   // 1. Check current balance
-  const check = await checkCredits(userId, feature);
+  const check = await checkCredits(email, feature);
   if (!check.hasCredits) {
     console.warn(`[CreditManager] Insufficient credits for ${feature}. Required: ${check.required}, Available: ${check.available}`);
     return { success: false, creditsRemaining: check.available };
@@ -224,7 +224,7 @@ export async function consumeCredits(userId, feature, amount = null) {
 
   // 2. Atomic update using RPC (Postgres function) - More reliable than client-side subtraction
   const { error: updateError } = await supabase.rpc('consume_user_credits', {
-    p_user_id: userId,
+    p_email: email,
     p_amount: creditsToConsume,
   });
 
@@ -237,7 +237,7 @@ export async function consumeCredits(userId, feature, amount = null) {
         credits_remaining: creditsAfter,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', userId)
+      .eq('email', email)
       .eq('credits_remaining', creditsBefore); // Optimistic locking
 
     if (directUpdateError) {
@@ -255,7 +255,7 @@ export async function consumeCredits(userId, feature, amount = null) {
     supabase
       .from('credit_transactions')
       .insert({
-        user_id: userId,
+        email: email,
         feature,
         amount: -creditsToConsume,
         credits_before: creditsBefore,
@@ -276,7 +276,7 @@ export async function consumeCredits(userId, feature, amount = null) {
   if (creditsToConsume > 0) {
     try {
       const { completeReferral } = await import('./referral-manager.js');
-      const result = await completeReferral(userId);
+      const result = await completeReferral(email);
 
       if (result.completed) {
         console.log(`[CreditManager] Referral completed. Awarded ${result.referrerReward} + ${result.refereeReward} credits`);
@@ -297,11 +297,11 @@ export async function consumeCredits(userId, feature, amount = null) {
  * @param {object} [metadata] - Optional metadata
  * @returns {Promise<{success: boolean, creditsRemaining: number}>}
  */
-export async function addCredits(userId, amount, type, metadata = {}) {
+export async function addCredits(email, amount, type, metadata = {}) {
   const supabase = getSupabaseClient();
 
   // Get current balance
-  const credits = await getUserCredits(userId);
+  const credits = await getUserCredits(email);
   const creditsBefore = credits?.credits_remaining || 0;
   const creditsAfter = creditsBefore + amount;
 
@@ -312,7 +312,7 @@ export async function addCredits(userId, amount, type, metadata = {}) {
       credits_remaining: creditsAfter,
       updated_at: new Date().toISOString(),
     })
-    .eq('user_id', userId);
+    .eq('email', email);
 
   if (updateError) {
     console.error('[CreditManager] Failed to add credits:', updateError);
@@ -323,7 +323,7 @@ export async function addCredits(userId, amount, type, metadata = {}) {
   const { error: logError } = await supabase
     .from('credit_transactions')
     .insert({
-      user_id: userId,
+      email: email,
       feature: type,
       amount,
       credits_before: creditsBefore,
@@ -350,12 +350,12 @@ export async function addCredits(userId, amount, type, metadata = {}) {
  * @param {object} [metadata] - Optional metadata (e.g., emoji_rating, testimonial_text)
  * @returns {Promise<{success: boolean, creditsAwarded: number, feedbackCreditsEarned: number, creditsRemaining: number, error?: string}>}
  */
-export async function addFeedbackCredits(userId, metadata = {}) {
+export async function addFeedbackCredits(email, metadata = {}) {
   const supabase = getSupabaseClient();
 
   // Call atomic RPC function that enforces max 3 constraint at database level
   const { data, error } = await supabase.rpc('add_feedback_credits', {
-    p_user_id: userId,
+    p_email: email,
   });
 
   if (error) {

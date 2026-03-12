@@ -15,7 +15,7 @@ export interface UserCredits {
 
 export interface CreditTransaction {
   id: string;
-  userId: string;
+  email: string;
   feature: string;
   amount: number;
   creditsBefore: number;

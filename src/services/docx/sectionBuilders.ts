@@ -14,6 +14,7 @@ export interface DocxModule {
     Packer: any;
     Paragraph: any;
     TextRun: any;
+    ExternalHyperlink: any;
     AlignmentType: any;
     convertInchesToTwip: (inches: number) => number;
     LineRuleType: any;
@@ -52,6 +53,14 @@ function border(style: 'solid' | 'dashed' | 'none', size: number, color: string,
 /** Body font shorthand */
 function bf(cfg: DocxTemplateConfig) {
     return { font: cfg.fontFamily, size: cfg.baseFontSize, color: cfg.bodyColor };
+}
+
+/** Normalize a URL: pass through http*, prepend https:// for domain-like strings, null for plain text */
+function normalizeUrl(url?: string): string | null {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.includes('.')) return `https://${url}`;
+    return null;
 }
 
 /**
@@ -184,46 +193,102 @@ export function buildHeader(
         );
     }
 
-    // Contact line
-    const parts: string[] = [];
-    if (basics.phone) parts.push(basics.phone);
-    if (basics.email) parts.push(basics.email);
-    if (basics.location?.city) {
-        parts.push(
-            [basics.location.city, basics.location.region].filter(Boolean).join(', '),
+    // Contact line — build as a mix of TextRun and ExternalHyperlink
+    const contactChildren: any[] = [];
+    const addSep = () => {
+        if (contactChildren.length > 0) {
+            contactChildren.push(
+                new D.TextRun({ text: '  |  ', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: cfg.contactColor })
+            );
+        }
+    };
+
+    if (basics.phone) {
+        addSep();
+        contactChildren.push(
+            new D.TextRun({ text: basics.phone, font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: cfg.contactColor })
         );
     }
-    const linkedIn = basics.profiles?.find(
-        (p) => p.network?.toLowerCase() === 'linkedin',
-    );
-    if (linkedIn?.url) {
-        parts.push(linkedIn.url.replace('https://', '').replace('www.', ''));
+    if (basics.email) {
+        addSep();
+        contactChildren.push(
+            new D.ExternalHyperlink({
+                children: [new D.TextRun({ text: basics.email, font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
+                link: `mailto:${basics.email}`,
+            })
+        );
     }
-    const portfolio =
-        basics.url ||
-        basics.profiles?.find(
-            (p) =>
-                p.network?.toLowerCase() === 'portfolio' ||
-                p.network?.toLowerCase() === 'website',
-        )?.url;
-    if (portfolio) {
-        parts.push(portfolio.replace('https://', '').replace('www.', ''));
+    if (basics.location?.city) {
+        addSep();
+        contactChildren.push(
+            new D.TextRun({
+                text: [basics.location.city, basics.location.region].filter(Boolean).join(', '),
+                font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: cfg.contactColor,
+            })
+        );
     }
 
-    if (parts.length > 0) {
+    const resolveProfileUrl = (profile?: { url?: string; username?: string; network?: string }): string | null => {
+        if (!profile) return null;
+        const fromUrl = normalizeUrl(profile.url);
+        if (fromUrl) return fromUrl;
+
+        const id = profile.url || profile.username;
+        if (id && !id.includes(' ') && !id.toLowerCase().includes(profile.network?.toLowerCase() || 'none')) {
+            const net = profile.network?.toLowerCase();
+            if (net === 'linkedin') return `https://linkedin.com/in/${id}`;
+            if (net === 'github') return `https://github.com/${id}`;
+        }
+
+        const fromUsername = normalizeUrl(profile.username);
+        if (fromUsername) return fromUsername;
+        return null;
+    };
+
+    const linkedIn = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin');
+    const linkedInLink = linkedIn ? resolveProfileUrl(linkedIn) : null;
+    if (linkedIn) {
+        addSep();
+        if (linkedInLink) {
+            contactChildren.push(
+                new D.ExternalHyperlink({
+                    children: [new D.TextRun({ text: 'LinkedIn Account', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
+                    link: linkedInLink,
+                })
+            );
+        } else {
+            contactChildren.push(
+                new D.TextRun({ text: linkedIn.url || linkedIn.username || '', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: cfg.contactColor })
+            );
+        }
+    }
+
+    const portfolioProfile = basics.profiles?.find(
+        (p) => p.network?.toLowerCase() === 'portfolio' || p.network?.toLowerCase() === 'website',
+    );
+    const portfolioLink = normalizeUrl(basics.url) || resolveProfileUrl(portfolioProfile);
+    if (portfolioLink || basics.url || portfolioProfile) {
+        addSep();
+        if (portfolioLink) {
+            contactChildren.push(
+                new D.ExternalHyperlink({
+                    children: [new D.TextRun({ text: 'Portfolio', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
+                    link: portfolioLink,
+                })
+            );
+        } else {
+            contactChildren.push(
+                new D.TextRun({ text: basics.url || portfolioProfile?.url || portfolioProfile?.username || '', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: cfg.contactColor })
+            );
+        }
+    }
+
+    if (contactChildren.length > 0) {
         children.push(
             new D.Paragraph({
-                children: [
-                    new D.TextRun({
-                        text: parts.join('  |  '),
-                        font: cfg.fontFamily,
-                        size: cfg.baseFontSize - 1,
-                        color: cfg.contactColor,
-                    }),
-                ],
+                children: contactChildren,
                 alignment: al,
                 spacing: { after: 60, ...spacing },
-                // Add header border on the last paragraph of the header block
                 border: border(cfg.headerBorder, 8, cfg.headerBorderColor, D),
             }),
         );

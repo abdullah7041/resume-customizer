@@ -51,7 +51,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
         const { data, error } = await supabase
           .from('credit_transactions')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('email', user.email)
           .order('created_at', { ascending: false })
           .limit(20);
 
@@ -63,7 +63,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
         setTransactions(
           (data || []).map((tx) => ({
             id: tx.id,
-            userId: tx.user_id,
+            email: tx.email,
             feature: tx.feature,
             amount: tx.amount,
             creditsBefore: tx.credits_before,
