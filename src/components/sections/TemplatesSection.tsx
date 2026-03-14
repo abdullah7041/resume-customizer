@@ -107,7 +107,7 @@ function getSmartFilename(resume: Partial<ResumeSchema> | null, templateId: stri
  * matches the browser preview exactly.  Typical payload is 200-600 KB,
  * well within the Netlify function's 6 MB limit.
  */
-function buildInlinedHtml(element: HTMLElement): string {
+function buildInlinedHtml(element: HTMLElement, title: string = 'Resume'): string {
   // Clone the full element tree — class names AND inline styles are preserved
   const clone = element.cloneNode(true) as HTMLElement;
 
@@ -132,8 +132,11 @@ function buildInlinedHtml(element: HTMLElement): string {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><style>
-*{box-sizing:border-box;margin:0;padding:0}
+<head>
+<meta charset="utf-8">
+<title>${title}</title>
+<style>
+* {box-sizing:border-box;margin:0;padding:0}
 body{background:#fff}
 svg{display:inline-block;vertical-align:middle}
 ${cssChunks.join('\n')}
@@ -350,7 +353,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       // Build self-contained HTML with inlined computed styles.
       // Raw outerHTML contains Tailwind class names that Puppeteer can't resolve
       // without the full stylesheet, and the payload can exceed Netlify's 6MB limit.
-      const html = buildInlinedHtml(previewElement);
+      const html = buildInlinedHtml(previewElement, filename.replace('.pdf', ''));
 
       // Try server-side PDF generation (Puppeteer-based, pixel-perfect)
       let serverSuccess = false;
@@ -375,19 +378,67 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           console.warn('[PDF] Server returned', response.status, text);
         }
       } catch (serverErr) {
-        if (import.meta.env.DEV) console.warn('[PDF] Server unavailable, using print fallback:', serverErr);
+        if (import.meta.env.DEV) console.warn('[PDF] Server unavailable, using client-side fallback:', serverErr);
       }
 
-      // Client-side fallback: open print dialog with the same preview HTML
+      // Client-side fallback: Instant client-side download without print popup
       if (!serverSuccess) {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(html);
-          printWindow.document.close();
-          printWindow.addEventListener('load', () => {
-            printWindow.print();
-            setTimeout(() => printWindow.close(), 1000);
+        try {
+          // Dynamic import to keep bundle size small
+          const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+            import('html2canvas'),
+            import('jspdf')
+          ]);
+
+          // Hide elements that shouldn't be printed
+          const noPrintNodes = previewElement.querySelectorAll('[data-no-print]');
+          noPrintNodes.forEach(node => (node as HTMLElement).style.display = 'none');
+
+          const canvas = await html2canvas(previewElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
           });
+
+          // Restore no-print elements
+          noPrintNodes.forEach(node => (node as HTMLElement).style.display = '');
+
+          const imgData = canvas.toDataURL('image/png');
+          
+          // PDF A4 dimensions at 96 DPI: 210 x 297 mm
+          const pdf = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'mm' });
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          
+          let heightLeft = pdfHeight;
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          let position = 0;
+          
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pageHeight;
+          
+          // Add extra pages if content exceeds one A4 page
+          while (heightLeft >= 0) {
+            position = heightLeft - pdfHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+          }
+          
+          pdf.save(filename);
+        } catch (clientErr) {
+          console.error('[PDF] Client-side generation failed, using print dialog:', clientErr);
+          // Last resort fallback using native print dialog
+          const printWindow = window.open('', '_blank');
+          if (printWindow) {
+            printWindow.document.title = filename.replace('.pdf', '');
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.addEventListener('load', () => {
+              printWindow.print();
+              setTimeout(() => printWindow.close(), 1000);
+            });
+          }
         }
       }
 

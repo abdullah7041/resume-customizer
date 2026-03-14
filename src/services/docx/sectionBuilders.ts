@@ -55,11 +55,14 @@ function bf(cfg: DocxTemplateConfig) {
     return { font: cfg.fontFamily, size: cfg.baseFontSize, color: cfg.bodyColor };
 }
 
-/** Normalize a URL: pass through http*, prepend https:// for domain-like strings, null for plain text */
 function normalizeUrl(url?: string): string | null {
     if (!url) return null;
-    if (url.startsWith('http')) return url;
-    if (url.includes('.')) return `https://${url}`;
+    let clean = url.trim();
+    if (!clean) return null;
+    if (clean.includes(' ') && !clean.includes('.')) return null;
+    if (clean.includes(' ')) clean = encodeURI(clean);
+    if (clean.startsWith('http')) return clean;
+    if (clean.includes('.')) return `https://${clean}`;
     return null;
 }
 
@@ -233,7 +236,7 @@ export function buildHeader(
         const fromUrl = normalizeUrl(profile.url);
         if (fromUrl) return fromUrl;
 
-        const id = profile.url || profile.username;
+        const id = (profile.url || profile.username)?.trim();
         if (id && !id.includes(' ') && !id.toLowerCase().includes(profile.network?.toLowerCase() || 'none')) {
             const net = profile.network?.toLowerCase();
             if (net === 'linkedin') return `https://linkedin.com/in/${id}`;
