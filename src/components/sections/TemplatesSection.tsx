@@ -394,11 +394,22 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           const noPrintNodes = previewElement.querySelectorAll('[data-no-print]');
           noPrintNodes.forEach(node => (node as HTMLElement).style.display = 'none');
 
+          // CRITICAL FIX: Reset CSS transform to scale(1) before capturing.
+          // html2canvas captures the element at its rendered (scaled) size.
+          // If the preview is at 0.9x scale, the canvas will be 90% of A4 size,
+          // and jsPDF stretching it to A4 produces a blurry/corrupted PDF.
+          const scaleWrapper = previewElement.closest('[style*="transform"]') as HTMLElement | null;
+          const originalTransform = scaleWrapper?.style.transform ?? '';
+          if (scaleWrapper) scaleWrapper.style.transform = 'scale(1)';
+
           const canvas = await html2canvas(previewElement, {
-            scale: 2,
+            scale: 2, // 2x for crisp retina-quality rendering
             useCORS: true,
             logging: false,
           });
+
+          // Restore display scale immediately after capture
+          if (scaleWrapper) scaleWrapper.style.transform = originalTransform;
 
           // Restore no-print elements
           noPrintNodes.forEach(node => (node as HTMLElement).style.display = '');
