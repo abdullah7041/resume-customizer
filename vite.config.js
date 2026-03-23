@@ -27,18 +27,16 @@ export default defineConfig({
 
   build: {
     target: "es2020",
-    minify: "esbuild", // faster than terser
+    minify: true, // Vite 8 (Rolldown) default minifier
     sourcemap: false, // disable for production (faster builds)
     cssCodeSplit: true,
 
-    // Remove console and debugger statements in production
-    esbuildOptions: {
-      drop: ['console', 'debugger'],
-    },
-
+    // Vite 8 uses Rolldown internally — rollupOptions is aliased to rolldownOptions
     rollupOptions: {
       external: ["path2d"],
       output: {
+        // NOTE: manualChunks function form is deprecated in Vite 8 (Rolldown)
+        // but still works via compatibility layer. Migrate to codeSplitting when ready.
         manualChunks(id) {
           if (id.includes("node_modules")) {
             // ===== REACT-I18NEXT - MUST be with React =====
@@ -95,7 +93,7 @@ export default defineConfig({
               return "vendor-jspdf";
             }
 
-            // Let Rollup handle the rest (dynamic imports)
+            // Let Rolldown handle the rest (dynamic imports)
             return undefined;
           }
         },
@@ -130,7 +128,7 @@ export default defineConfig({
       "puppeteer-core",          // Server-only
       "@sparticuz/chromium",     // Server-only (Lambda)
     ],
-    esbuildOptions: {
+    rolldownOptions: {
       define: {
         global: "globalThis",
       },

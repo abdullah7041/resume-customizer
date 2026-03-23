@@ -70,7 +70,7 @@ export default function App() {
                 skip: 'Skip Tour',
               }}
               floaterProps={{
-                disableAnimation: false,
+                animate: true,
                 offset: 10,
               }}
             />
