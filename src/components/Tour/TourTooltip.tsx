@@ -33,14 +33,12 @@ export function TourTooltip({
             >
                 <div className="p-6 relative">
                     {/* Close Button */}
-                    {!step.hideCloseButton && (
-                        <button
-                            {...closeProps}
-                            className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 dark:text-white/40 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    )}
+                    <button
+                        {...closeProps}
+                        className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 dark:text-white/40 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
 
                     {/* Header */}
                     {step.title && (

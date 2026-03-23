@@ -1,19 +1,11 @@
-import { Styles } from 'react-joyride';
+import type { Styles } from 'react-joyride';
 
 export const tourStyles: Partial<Styles> = {
-    options: {
-        primaryColor: '#10B981', // Emerald-500
-        textColor: '#1f2937', // Gray-800
-        backgroundColor: '#ffffff',
-        overlayColor: 'rgba(0, 0, 0, 0.65)', // Darker overlay for better focus
-        arrowColor: '#ffffff',
-        zIndex: 10000,
-    },
     tooltip: {
         fontSize: '15px',
         padding: '24px',
         borderRadius: '16px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', // Premium shadow
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     },
     tooltipContainer: {
         textAlign: 'left',
@@ -28,7 +20,8 @@ export const tourStyles: Partial<Styles> = {
         color: '#374151', // Gray-700
         lineHeight: '1.6',
     },
-    buttonNext: {
+    // v3: buttonNext → buttonPrimary
+    buttonPrimary: {
         backgroundColor: '#10B981', // Emerald-500
         color: '#ffffff',
         fontSize: '14px',
@@ -54,8 +47,8 @@ export const tourStyles: Partial<Styles> = {
         fontWeight: '500',
         cursor: 'pointer',
     },
-    spotlight: {
+    // v3: spotlight is part of overlay now — keep for compat
+    overlay: {
         borderRadius: '12px',
-        boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.4)', // Spotlight ring effect
     },
 };

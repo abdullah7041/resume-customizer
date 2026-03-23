@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Step, CallBackProps } from 'react-joyride';
+import type { Step, EventData } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 
 const STORAGE_KEY = 'watheq:onboardingTourCompleted';
@@ -49,22 +49,13 @@ export function useOnboardingTour() {
       content: t('tour.onboarding.steps.credits.content'),
       title: t('tour.onboarding.steps.credits.title'),
       placement: 'bottom',
-      disableBeacon: true,
-      disableOverlayClose: true,
-      disableScrolling: true, // Disable scrolling for fixed header element
-      hideCloseButton: isMobile, // Hide close button on mobile to prevent overlap
+      // v3: skipBeacon replaces disableBeacon; options.blockTargetInteraction replaces disableOverlayClose
+      skipBeacon: true,
+      isFixed: true, // credit badge is in a fixed header
       spotlightPadding: 8,
-      floaterProps: {
-        disableAnimation: false,
-      },
-      styles: {
-        options: {
-          zIndex: 10000,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-        },
-        tooltipTitle: {
-          paddingRight: isMobile ? '12px' : '36px', // Extra padding for close button on desktop
-        },
+      // v3: tooltip width is set via options.width (per-step via options prop)
+      options: {
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
       },
     },
     {
@@ -72,17 +63,10 @@ export function useOnboardingTour() {
       content: t('tour.onboarding.steps.upload.content'),
       title: t('tour.onboarding.steps.upload.title'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
       spotlightPadding: 8,
-      hideCloseButton: isMobile,
-      styles: {
-        options: {
-          zIndex: 10000,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-        },
-        tooltipTitle: {
-          paddingRight: isMobile ? '12px' : '36px',
-        },
+      options: {
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
       },
     },
     {
@@ -90,17 +74,10 @@ export function useOnboardingTour() {
       content: t('tour.onboarding.steps.features.content'),
       title: t('tour.onboarding.steps.features.title'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
       spotlightPadding: 8,
-      hideCloseButton: isMobile,
-      styles: {
-        options: {
-          zIndex: 10000,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-        },
-        tooltipTitle: {
-          paddingRight: isMobile ? '12px' : '36px',
-        },
+      options: {
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
       },
     },
     {
@@ -108,25 +85,19 @@ export function useOnboardingTour() {
       content: t('tour.onboarding.steps.referral.content'),
       title: t('tour.onboarding.steps.referral.title'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
       spotlightPadding: 8,
-      hideCloseButton: isMobile,
-      styles: {
-        options: {
-          zIndex: 10000,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-        },
-        tooltipTitle: {
-          paddingRight: isMobile ? '12px' : '36px',
-        },
+      options: {
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
       },
     },
   ], [t, isMobile]);
 
-  const handleCallback = useCallback((data: CallBackProps) => {
+  // v3: onEvent replaces callback; EventData shape is different
+  const handleEvent = useCallback((data: EventData) => {
     const { action, index, type, status } = data;
 
-    // Handle manual navigation
+    // Handle manual navigation (controlled mode via stepIndex)
     if (type === 'step:after' && action === 'next') {
       setStepIndex(index + 1);
     } else if (type === 'step:after' && action === 'prev') {
@@ -155,7 +126,7 @@ export function useOnboardingTour() {
     run,
     steps,
     stepIndex,
-    handleCallback,
+    handleEvent,
     startTour,
     resetTour,
   };

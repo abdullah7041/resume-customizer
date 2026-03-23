@@ -7,7 +7,7 @@
  */
 
 import { lazy, Suspense, useState, useCallback, useEffect } from 'react';
-const Joyride = lazy(() => import('react-joyride'));
+const Joyride = lazy(() => import('react-joyride').then((m) => ({ default: m.Joyride })));
 import { useTranslation } from 'react-i18next';
 import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
 import { analyzeVision2030 } from '../../services/api';
@@ -79,7 +79,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const [showCalculationModal, setShowCalculationModal] = useState(false);
 
   // Vision 2030 tour
-  const { run, steps, stepIndex, handleCallback, startTour } = useVision2030Tour();
+  const { run, steps, stepIndex, handleEvent, startTour } = useVision2030Tour();
 
   // Start tour when component mounts (first time only)
   useEffect(() => {
@@ -498,11 +498,8 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           run={run}
           stepIndex={stepIndex}
           continuous
-          showProgress
-          showSkipButton
-          callback={handleCallback}
-          disableScrolling={false}
-          spotlightClicks={false}
+          scrollToFirstStep
+          onEvent={handleEvent}
           tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
           locale={{
             back: isArabic ? 'السابق' : 'Back',
@@ -511,8 +508,10 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
             next: isArabic ? 'التالي' : 'Next',
             skip: isArabic ? 'تخطي الجولة' : 'Skip Tour',
           }}
-          floaterProps={{
-            disableAnimation: true,
+          options={{
+            showProgress: true,
+            buttons: ['back', 'close', 'primary', 'skip'],
+            zIndex: 10000,
           }}
         />
       </Suspense>

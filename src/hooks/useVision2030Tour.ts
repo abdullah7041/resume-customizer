@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Step, CallBackProps } from 'react-joyride';
+import type { Step, EventData } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 
 const STORAGE_KEY = 'watheq:vision2030TourCompleted';
@@ -27,18 +27,11 @@ export function useVision2030Tour() {
       content: t('tour.vision2030.steps.intro.content'),
       title: t('tour.vision2030.steps.intro.title'),
       placement: 'bottom',
-      disableBeacon: true,
-      disableOverlayClose: true,
-      hideCloseButton: isMobile, // Hide close button on mobile to prevent overlap
+      skipBeacon: true,
       spotlightPadding: 10,
-      styles: {
-        options: {
-          zIndex: 10000,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-        },
-        tooltipTitle: {
-          paddingRight: isMobile ? '12px' : '36px', // Extra padding for close button on desktop
-        },
+      options: {
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
+        overlayClickAction: false, // replaces disableOverlayClose
       },
     },
     {
@@ -46,17 +39,10 @@ export function useVision2030Tour() {
       content: t('tour.vision2030.steps.calculate.content'),
       title: t('tour.vision2030.steps.calculate.title'),
       placement: 'top',
-      disableBeacon: true,
+      skipBeacon: true,
       spotlightPadding: 10,
-      hideCloseButton: isMobile,
-      styles: {
-        options: {
-          zIndex: 10000,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-        },
-        tooltipTitle: {
-          paddingRight: isMobile ? '12px' : '36px',
-        },
+      options: {
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
       },
     },
     {
@@ -64,25 +50,19 @@ export function useVision2030Tour() {
       content: t('tour.vision2030.steps.methodology.content'),
       title: t('tour.vision2030.steps.methodology.title'),
       placement: 'top',
-      disableBeacon: true,
+      skipBeacon: true,
       spotlightPadding: 10,
-      hideCloseButton: isMobile,
-      styles: {
-        options: {
-          zIndex: 10000,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-        },
-        tooltipTitle: {
-          paddingRight: isMobile ? '12px' : '36px',
-        },
+      options: {
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
       },
     },
   ], [t, isMobile]);
 
-  const handleCallback = useCallback((data: CallBackProps) => {
+  // v3: onEvent replaces callback; EventData shape is different
+  const handleEvent = useCallback((data: EventData) => {
     const { action, index, type, status } = data;
 
-    // Handle manual navigation
+    // Handle manual navigation (controlled mode via stepIndex)
     if (type === 'step:after' && action === 'next') {
       setStepIndex(index + 1);
     } else if (type === 'step:after' && action === 'prev') {
@@ -117,7 +97,7 @@ export function useVision2030Tour() {
     run,
     steps,
     stepIndex,
-    handleCallback,
+    handleEvent,
     startTour,
     resetTour,
   };

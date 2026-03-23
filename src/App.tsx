@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
-const Joyride = lazy(() => import("react-joyride"));
+// react-joyride v3 uses named exports (no default export)
+const Joyride = lazy(() => import("react-joyride").then((m) => ({ default: m.Joyride })));
 import { MotionConfig } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
@@ -25,7 +26,7 @@ export default function App() {
   const { credits, showUpgrade, setShowUpgrade, upgradeDismissedKey } = useUserCredits();
 
   // Onboarding tour
-  const { run, steps, stepIndex, handleCallback } = useOnboardingTour();
+  const { run, steps, stepIndex, handleEvent } = useOnboardingTour();
 
   return (
     <MotionConfig reducedMotion="user">
@@ -47,20 +48,15 @@ export default function App() {
             dismissKey={upgradeDismissedKey || ''}
           />
 
-          {/* Onboarding Tour */}
+          {/* Onboarding Tour — react-joyride v3 API */}
           <Suspense fallback={null}>
             <Joyride
               steps={steps}
               run={run}
               stepIndex={stepIndex}
               continuous
-              showProgress
-              showSkipButton
-              callback={handleCallback}
-              disableScrolling={false}
               scrollToFirstStep
-              scrollOffset={20}
-              spotlightClicks={false}
+              onEvent={handleEvent}
               tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
               locale={{
                 back: 'Back',
@@ -69,9 +65,12 @@ export default function App() {
                 next: 'Next',
                 skip: 'Skip Tour',
               }}
-              floaterProps={{
-                animate: true,
-                offset: 10,
+              options={{
+                showProgress: true,
+                buttons: ['back', 'close', 'primary', 'skip'],
+                scrollOffset: 20,
+                zIndex: 10000,
+                overlayColor: 'rgba(0, 0, 0, 0.65)',
               }}
             />
           </Suspense>
@@ -80,7 +79,3 @@ export default function App() {
     </MotionConfig>
   );
 }
-
-
-
-
