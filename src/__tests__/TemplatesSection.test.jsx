@@ -119,11 +119,11 @@ describe('TemplatesSection', () => {
             const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons)
                 .map(btn => btn.textContent?.trim())
-                .filter(text => ['Modern Professional', 'Classic Traditional', 'Technical Engineer'].includes(text || ''));
+                .filter(text => ['Modern Professional', 'Gulf Classic', 'Tech Specialist'].includes(text || ''));
 
             expect(templateButtons).toContain('Modern Professional');
-            expect(templateButtons).toContain('Classic Traditional');
-            expect(templateButtons).toContain('Technical Engineer');
+            expect(templateButtons).toContain('Gulf Classic');
+            expect(templateButtons).toContain('Tech Specialist');
         });
 
         it('renders template names in floating selector', () => {
@@ -131,8 +131,8 @@ describe('TemplatesSection', () => {
 
             // Check for template names in the floating selector
             expect(screen.getAllByText('Modern Professional').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Classic Traditional').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Technical Engineer').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Gulf Classic').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Tech Specialist').length).toBeGreaterThan(0);
         });
 
         it('renders Download PDF button', () => {
@@ -162,8 +162,8 @@ describe('TemplatesSection', () => {
 
             // Should show all 3 templates in the floating selector
             expect(screen.getAllByText('Modern Professional').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Classic Traditional').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Technical Engineer').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Gulf Classic').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Tech Specialist').length).toBeGreaterThan(0);
         });
 
         it('calls onSelectTemplate callback when template is selected', () => {
@@ -174,7 +174,7 @@ describe('TemplatesSection', () => {
             const allButtons = screen.getAllByRole('button');
             // Find a button that contains Classic Traditional text
             const classicButtons = allButtons.filter(btn =>
-                btn.textContent?.includes('Classic Traditional')
+                btn.textContent?.includes('Gulf Classic')
             );
 
             if (classicButtons.length > 0) {
@@ -226,17 +226,17 @@ describe('TemplatesSection', () => {
             const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons).filter(btn => {
                 const text = btn.textContent?.trim();
-                return ['Modern Professional', 'Classic Traditional', 'Technical Engineer'].includes(text || '');
+                return ['Modern Professional', 'Gulf Classic', 'Tech Specialist'].includes(text || '');
             });
 
             expect(templateButtons.length).toBeGreaterThanOrEqual(3);
 
             // Click on Technical Engineer
-            const techButton = templateButtons.find(btn => btn.textContent?.includes('Technical Engineer'));
+            const techButton = templateButtons.find(btn => btn.textContent?.includes('Tech Specialist'));
             if (techButton) {
                 fireEvent.click(techButton);
                 // Verify click doesn't cause errors
-                expect(screen.getAllByText('Technical Engineer').length).toBeGreaterThan(0);
+                expect(screen.getAllByText('Tech Specialist').length).toBeGreaterThan(0);
             }
         });
     });

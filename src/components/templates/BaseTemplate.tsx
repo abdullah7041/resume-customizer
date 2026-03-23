@@ -29,6 +29,8 @@ export const A4_STYLES = {
   width: '210mm',
   minHeight: '297mm',
   padding: '10mm 12mm',
+  overflowWrap: 'break-word' as const,
+  wordBreak: 'break-word' as const,
 } as const;
 
 /**

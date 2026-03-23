@@ -85,7 +85,7 @@ async function getBrowser() {
     console.log('[PDF] Launching new browser instance');
     browserInstance = await puppeteer.launch({
       args: isNetlify ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
-      defaultViewport: { width: 816, height: 1056 }, // Letter size at 96dpi
+      defaultViewport: { width: 794, height: 1123 }, // A4 at 96dpi: 210mm × 96/25.4 ≈ 794px, 297mm × 96/25.4 ≈ 1123px
       executablePath: await getChromiumPath(),
       headless: true, // Always headless for PDF generation
     });
@@ -135,7 +135,9 @@ const baseHandler: Handler = async (event) => {
     await page.setRequestInterception(true);
     page.on('request', (req) => {
       const type = req.resourceType();
-      if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+      // Block only image, font, and media — stylesheets are already inlined in the HTML
+      // (injected via buildInlinedHtml on the client), so blocking them is unnecessary.
+      if (['image', 'font', 'media'].includes(type)) {
         req.abort();
       } else {
         req.continue();

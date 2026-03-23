@@ -12,6 +12,7 @@ export const TEMPLATE_CATEGORIES = {
 export const resumeTemplates = [
   {
     id: "modern-professional",
+    // Saudi market: clean, contemporary — ideal for tech & Vision 2030 roles
     name: "Modern Professional",
     category: TEMPLATE_CATEGORIES.MODERN,
     description: "Clean, contemporary design with clear section headers. Perfect for tech and corporate roles.",
@@ -96,7 +97,7 @@ export const resumeTemplates = [
 
   {
     id: "classic-traditional",
-    name: "Classic Traditional",
+    name: "Gulf Classic",
     category: TEMPLATE_CATEGORIES.CLASSIC,
     description: "Traditional resume format with emphasis on chronological experience. Ideal for conservative industries.",
     atsScore: 100,
@@ -180,7 +181,7 @@ export const resumeTemplates = [
 
   {
     id: "technical-engineer",
-    name: "Technical Engineer",
+    name: "Tech Specialist",
     category: TEMPLATE_CATEGORIES.TECHNICAL,
     description: "Optimized for software developers, engineers, and IT professionals. Highlights technical skills and projects.",
     atsScore: 100,
@@ -369,7 +370,7 @@ export const resumeTemplates = [
   ,
   {
     id: "executive-professional",
-    name: "Executive Professional",
+    name: "Executive Leader",
     category: TEMPLATE_CATEGORIES.EXECUTIVE,
     description: "Elegant serif design for senior leadership and executive roles. Navy blue accents with centered header.",
     atsScore: 100,

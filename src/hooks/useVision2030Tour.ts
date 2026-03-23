@@ -34,6 +34,7 @@ export function useVision2030Tour() {
       styles: {
         options: {
           zIndex: 10000,
+          width: isMobile ? 'calc(100vw - 32px)' : 400,
         },
         tooltipTitle: {
           paddingRight: isMobile ? '12px' : '36px', // Extra padding for close button on desktop
@@ -51,6 +52,7 @@ export function useVision2030Tour() {
       styles: {
         options: {
           zIndex: 10000,
+          width: isMobile ? 'calc(100vw - 32px)' : 400,
         },
         tooltipTitle: {
           paddingRight: isMobile ? '12px' : '36px',
@@ -68,6 +70,7 @@ export function useVision2030Tour() {
       styles: {
         options: {
           zIndex: 10000,
+          width: isMobile ? 'calc(100vw - 32px)' : 400,
         },
         tooltipTitle: {
           paddingRight: isMobile ? '12px' : '36px',
