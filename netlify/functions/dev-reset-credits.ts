@@ -5,7 +5,7 @@
  * IMPORTANT: Only enable in development/staging environments!
  *
  * Usage:
- * - GET  /.netlify/functions/dev-reset-credits?user_id=xxx  (reset specific user)
+ * - GET  /.netlify/functions/dev-reset-credits?email=xxx  (reset specific user)
  * - POST /.netlify/functions/dev-reset-credits              (reset all users)
  */
 
@@ -32,12 +32,12 @@ const handler: Handler = async (event) => {
   try {
     if (event.httpMethod === 'GET') {
       // Reset specific user
-      const userId = event.queryStringParameters?.user_id;
+      const email = event.queryStringParameters?.email || event.queryStringParameters?.user_id;
 
-      if (!userId) {
+      if (!email) {
         return {
           statusCode: 400,
-          body: JSON.stringify({ error: 'user_id parameter required' }),
+          body: JSON.stringify({ error: 'email parameter required' }),
         };
       }
 
@@ -47,7 +47,7 @@ const handler: Handler = async (event) => {
           credits_remaining: 20,
           last_reset_date: new Date().toISOString(),
         })
-        .eq('user_id', userId)
+        .eq('email', email)
         .select();
 
       if (error) throw error;
@@ -56,7 +56,7 @@ const handler: Handler = async (event) => {
         statusCode: 200,
         body: JSON.stringify({
           success: true,
-          message: `Credits reset for user ${userId}`,
+          message: `Credits reset for user ${email}`,
           data: data[0],
         }),
       };
@@ -70,7 +70,7 @@ const handler: Handler = async (event) => {
           credits_remaining: 20,
           last_reset_date: new Date().toISOString(),
         })
-        .neq('user_id', '00000000-0000-0000-0000-000000000000'); // Update all real users
+        .not('email', 'is', null); // Update all real users
 
       if (error) throw error;
 

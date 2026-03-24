@@ -650,6 +650,7 @@ export const useResumeStore = create<ResumeState>()(
           },
           scoreBreakdown: null,
           categoryScores: null,
+          positionSuggestion: null,
         }
       }),
 

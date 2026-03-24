@@ -50,14 +50,14 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  const userId = user.id;
+  const userEmail = user.email;
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+  const emailVerified = user.email_confirmed_at !== null;
 
   // Check credits BEFORE processing (2 credits for ai_match)
-  const creditCheck = await checkCredits(userId, 'ai_match', { ipAddress, emailVerified });
+  const creditCheck = await checkCredits(userEmail, 'ai_match', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -118,16 +118,16 @@ const baseHandler: Handler = async (event) => {
     };
 
     // Consume credits AFTER successful match (BEFORE database writes to minimize latency)
-    const creditResult = await consumeCredits(userId, 'ai_match');
+    const creditResult = await consumeCredits(userEmail, 'ai_match');
 
     // Save to database ASYNCHRONOUSLY (don't await - fire and forget)
     // This prevents database latency from eating into the 90s Netlify timeout
-    if (userId && client) {
+    if (userEmail && client) {
       // Fire-and-forget: don't await, don't block response
       // Note: Supabase query builder returns PromiseLike (no .catch), so wrap with Promise.resolve
       Promise.resolve(
         client.from('job_matches').insert({
-          user_id: userId,
+          email: userEmail,
           resume_text: resumeText.substring(0, 5000), // Truncate for storage
           job_text: jobText.substring(0, 5000), // Truncate for storage
           score: match.score,
@@ -164,7 +164,7 @@ const baseHandler: Handler = async (event) => {
       captureError(error, {
         function: 'ai-match',
         payload: JSON.parse(event.body || '{}'),
-        userId,
+        email: userEmail,
       });
     }
 

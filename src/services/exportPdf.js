@@ -784,19 +784,45 @@ export const exportResumeToPdf = async ({
     return html;
   }
 
-  // Create a new window for printing
+  // Detect mobile — mobile can't use window.open/print reliably
+  const isMobile = typeof navigator !== 'undefined' &&
+    /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // Mobile: download HTML as a file directly (no popup needed)
+    const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Resume_Optimized.html';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return true;
+  }
+
+  // Desktop: use print dialog via popup window
   const printWindow = window.open('', '_blank', 'width=800,height=600');
 
   if (!printWindow) {
-    throw new Error('Please allow pop-ups to export PDF. Check your browser settings.');
+    // Popup blocked even on desktop — fall back to blob download
+    const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Resume_Optimized.html';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return true;
   }
 
   try {
-    // Write the HTML to the new window
     printWindow.document.write(html);
     printWindow.document.close();
 
-    // Wait for content to load
     await new Promise((resolve) => {
       if (printWindow.document.readyState === 'complete') {
         resolve();
@@ -805,13 +831,9 @@ export const exportResumeToPdf = async ({
       }
     });
 
-    // Small delay to ensure rendering is complete
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Trigger the browser's native print dialog
     printWindow.print();
 
-    // Close the window after a delay (user can cancel print)
     setTimeout(() => {
       printWindow.close();
     }, 1000);

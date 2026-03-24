@@ -805,9 +805,14 @@ export default function MainContent() {
             description: `Your resume "${result.fileName}" has been saved securely.`,
           });
 
-          // Optionally open the file in a new tab
           if (result.signedUrl) {
-            window.open(result.signedUrl, "_blank");
+            const link = document.createElement('a');
+            link.href = result.signedUrl;
+            link.download = result.fileName || 'Resume_Optimized.html';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
           }
         } else {
           // Fallback to print dialog if Supabase is not available or user not signed in

@@ -306,6 +306,8 @@ const baseHandler: Handler = async (event) => {
         },
         // Category Scores - NEW
         categoryScores: optimization?.category_scores || null,
+        // Position name suggestion from AI (only shown if is_necessary=true)
+        positionSuggestion: optimization?.position_name_suggestion ?? null,
         // Project improvements from AI
         projectImprovements: (optimization?.project_improvements || []).map((proj: any) => ({
           project_name: proj.project_name || '',

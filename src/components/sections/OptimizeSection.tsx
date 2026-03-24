@@ -30,6 +30,7 @@ import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { PositionSuggestionBanner } from '../PositionSuggestionBanner';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { FeedbackModal } from '../Feedback/FeedbackModal';
 import { supabase } from '../../services/supabase';
@@ -163,6 +164,7 @@ export function OptimizeSection({
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
+  const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
   const { user } = useAuth();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
@@ -648,6 +650,14 @@ export function OptimizeSection({
         metricsToUpdate.categoryScores = data.categoryScores;
       }
 
+      // Capture position name suggestion from AI (only when is_necessary=true)
+      if (data.positionSuggestion?.is_necessary === true) {
+        metricsToUpdate.positionSuggestion = data.positionSuggestion;
+      } else {
+        // Clear any stale suggestion from a previous run
+        metricsToUpdate.positionSuggestion = null;
+      }
+
       // Run Vision 2030 analysis on resume text
       const textToAnalyze = resumeText || JSON.stringify(originalResume);
       if (textToAnalyze) {
@@ -792,12 +802,23 @@ export function OptimizeSection({
     await handleGenerateActual();
   };
 
+  // Apply position suggestion: update resume basics.label
+  const handleApplyPositionSuggestion = (suggested: string) => {
+    const state = useResumeStore.getState();
+    if (state.originalResume?.basics) {
+      const updated = structuredClone(state.originalResume);
+      updated.basics!.label = suggested;
+      state.setOriginalResume(updated);
+    }
+  };
+
   const handleClear = () => {
     if (onClear) {
       onClear();
     } else {
       setOptimizations([]);
     }
+    setPositionBannerDismissed(false);
     // Also reset all optimization metrics to clear stale data
     resetOptimizationMetrics();
     setVerifiedScore(null);
@@ -1194,6 +1215,18 @@ export function OptimizeSection({
           />
         )
       }
+
+      {/* Position Name Suggestion Banner */}
+      {optimizations.length > 0 &&
+        optimizationMetrics.positionSuggestion?.is_necessary === true &&
+        !positionBannerDismissed && (
+          <PositionSuggestionBanner
+            suggestion={optimizationMetrics.positionSuggestion}
+            onApply={handleApplyPositionSuggestion}
+            onDismiss={() => setPositionBannerDismissed(true)}
+            className="mb-2"
+          />
+        )}
 
       {/* Auto-Verify Loading Indicator */}
       {isAutoVerifying && (

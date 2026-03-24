@@ -174,7 +174,7 @@ export function ConfirmActionModal({
             <span className="text-gray-600 dark:text-gray-400">
               {t('credits.confirm.current', {
                 remaining: currentCredits,
-                total: 15,
+                total: credits?.total ?? 15,
               })}
             </span>
             {canProceed && (

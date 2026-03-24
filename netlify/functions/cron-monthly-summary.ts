@@ -68,7 +68,7 @@ const handler: Handler = async (event) => {
     }
 
     // Get user credits info for all users
-    const { data: allUserCredits, error: creditsError } = await supabase.from('user_credits').select('user_id, credits_total, credits_remaining, last_reset_date');
+    const { data: allUserCredits, error: creditsError } = await supabase.from('user_credits').select('email, credits_total, credits_remaining, last_reset_date');
 
     if (creditsError) {
       console.error('[cron-monthly-summary] Failed to get user credits:', creditsError);
@@ -76,7 +76,7 @@ const handler: Handler = async (event) => {
     }
 
     // Create map for quick lookup
-    const creditsMap = new Map((allUserCredits || []).map((c) => [c.user_id, c]));
+    const creditsMap = new Map((allUserCredits || []).map((c) => [c.email, c]));
 
     // Calculate the date range for past month (since last_reset_date)
     const thirtyDaysAgo = new Date();
@@ -85,7 +85,7 @@ const handler: Handler = async (event) => {
     // Get transactions for past 30 days
     const { data: recentTransactions, error: transError } = await supabase
       .from('credit_transactions')
-      .select('user_id, feature, amount, created_at')
+      .select('email, feature, amount, created_at')
       .gte('created_at', thirtyDaysAgo.toISOString());
 
     if (transError) {
@@ -97,17 +97,18 @@ const handler: Handler = async (event) => {
     const userStatsMap = new Map<string, UserStats>();
 
     for (const user of authUsers.users) {
-      const userId = user.id;
+      const userEmail = user.email;
+      if (!userEmail) continue;
 
-      const userCredits = creditsMap.get(userId);
+      const userCredits = creditsMap.get(userEmail);
       if (!userCredits) {
-        console.warn(`[cron-monthly-summary] User ${userId} has no credits record`);
+        console.warn(`[cron-monthly-summary] User ${userEmail} has no credits record`);
         continue;
       }
 
       // Filter transactions for this user from past month
       const userTransactions = (recentTransactions || []).filter(
-        (t) => t.user_id === userId && t.created_at && new Date(t.created_at) >= thirtyDaysAgo
+        (t) => t.email === userEmail && t.created_at && new Date(t.created_at) >= thirtyDaysAgo
       );
 
       // Calculate stats
@@ -145,7 +146,7 @@ const handler: Handler = async (event) => {
         breakdown,
       };
 
-      userStatsMap.set(userId, stats);
+      userStatsMap.set(userEmail, stats);
     }
 
     console.log(`[cron-monthly-summary] Calculated stats for ${userStatsMap.size} users`);
@@ -157,19 +158,18 @@ const handler: Handler = async (event) => {
     // Send emails to each user
     for (const user of authUsers.users) {
       try {
-        const userId = user.id;
         const userEmail = user.email;
-        const userName = user.user_metadata?.full_name || userEmail?.split('@')[0] || 'User';
-        const stats = userStatsMap.get(userId);
-
         if (!userEmail) {
-          console.warn(`[cron-monthly-summary] User ${userId} has no email, skipping`);
-          errors.push({ userId, error: 'User has no email' });
+          console.warn(`[cron-monthly-summary] User has no email, skipping`);
+          errors.push({ userId: user.id, error: 'User has no email' });
           continue;
         }
 
+        const userName = user.user_metadata?.full_name || userEmail.split('@')[0] || 'User';
+        const stats = userStatsMap.get(userEmail);
+
         if (!stats) {
-          console.warn(`[cron-monthly-summary] No stats found for user ${userId}, using empty stats`);
+          console.warn(`[cron-monthly-summary] No stats found for user ${userEmail}, using empty stats`);
         }
 
         // Send email
@@ -188,12 +188,12 @@ const handler: Handler = async (event) => {
         );
 
         if (!emailResult.success) {
-          console.warn(`[cron-monthly-summary] Failed to send email for user ${userId}:`, emailResult.error);
+          console.warn(`[cron-monthly-summary] Failed to send email for user ${userEmail}:`, emailResult.error);
           emailFailCount++;
         }
 
         successCount++;
-        console.log(`[cron-monthly-summary] Sent summary email to user ${userId}. Success: ${emailResult.success}`);
+        console.log(`[cron-monthly-summary] Sent summary email to user ${userEmail}. Success: ${emailResult.success}`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error(`[cron-monthly-summary] Error processing user:`, errorMsg);

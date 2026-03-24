@@ -154,6 +154,13 @@ export interface OptimizationMetrics {
     final_score: number;
     score_explanation: string;
   };
+  // Position name suggestion from AI
+  positionSuggestion?: {
+    original: string;
+    suggested: string;
+    reason: string;
+    is_necessary: boolean;
+  } | null;
 }
 
 /**
