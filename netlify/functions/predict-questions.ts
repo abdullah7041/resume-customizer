@@ -1,3 +1,4 @@
+import { Handler } from '@netlify/functions';
 import { predictInterviewQuestions } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas";
@@ -9,7 +10,7 @@ import { detectVulnerabilities } from "../lib/vulnerability-detector";
 
 initSentry();
 
-const baseHandler = async (event: { httpMethod: string; body: any; headers: any; }) => {
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -49,14 +50,14 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
     };
   }
 
-  const userId = user.id;
+  const userEmail = user.email;
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
 
   // Check credits BEFORE processing (3 credits for interview_prep)
-  const creditCheck = await checkCredits(userId, 'interview_prep', { ipAddress, emailVerified });
+  const creditCheck = await checkCredits(userEmail, 'interview_prep', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -104,7 +105,7 @@ const baseHandler = async (event: { httpMethod: string; body: any; headers: any;
     const interviewPrep = await predictInterviewQuestions(resumeText, jobDescription, questionType, vulnerabilities, language);
 
     // Consume credits AFTER successful prediction
-    const creditResult = await consumeCredits(userId, 'interview_prep');
+    const creditResult = await consumeCredits(userEmail, 'interview_prep');
 
     return {
       statusCode: 200,

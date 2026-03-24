@@ -53,14 +53,14 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  const userId = user.id;
+  const userEmail = user.email;
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
   const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
 
   // Check credits BEFORE processing (5 credits for optimize)
-  const creditCheck = await checkCredits(userId, 'optimize', { ipAddress, emailVerified });
+  const creditCheck = await checkCredits(userEmail, 'optimize', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -269,7 +269,7 @@ const baseHandler: Handler = async (event) => {
     ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
 
     // Consume credits AFTER successful optimization
-    const creditResult = await consumeCredits(userId, 'optimize');
+    const creditResult = await consumeCredits(userEmail, 'optimize');
 
     return {
       statusCode: 200,

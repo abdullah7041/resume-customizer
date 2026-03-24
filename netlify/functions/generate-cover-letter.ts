@@ -1,3 +1,4 @@
+import { Handler } from '@netlify/functions';
 import { generateCoverLetter } from "../lib/gemini-client";
 import { withRateLimit } from "../lib/rate-limiter";
 import { CoverLetterRequestSchema, formatZodError } from "../lib/resume-schemas";
@@ -8,7 +9,7 @@ import { getClientIP } from "../lib/ip-utils.js";
 
 initSentry();
 
-const baseHandler = async (event) => {
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -48,14 +49,14 @@ const baseHandler = async (event) => {
     };
   }
 
-  const userId = user.id;
+  const userEmail = user.email;
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || user.email_verified !== false;
+  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
 
   // Check credits BEFORE processing (4 credits for cover_letter)
-  const creditCheck = await checkCredits(userId, 'cover_letter', { ipAddress, emailVerified });
+  const creditCheck = await checkCredits(userEmail, 'cover_letter', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -88,7 +89,7 @@ const baseHandler = async (event) => {
     const result = await generateCoverLetter(resumeText, jobDescription, language);
 
     // Consume credits AFTER successful generation
-    const creditResult = await consumeCredits(userId, 'cover_letter');
+    const creditResult = await consumeCredits(userEmail, 'cover_letter');
 
     return {
       statusCode: 200,

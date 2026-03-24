@@ -123,14 +123,14 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  const userId = user.id;
+  const userEmail = user.email;
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
   const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
 
   // Check credits BEFORE processing (2 credits for vision2030)
-  const creditCheck = await checkCredits(userId, 'vision2030', { ipAddress, emailVerified });
+  const creditCheck = await checkCredits(userEmail, 'vision2030', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -202,7 +202,7 @@ const baseHandler: Handler = async (event) => {
     }
 
     // Consume credits AFTER successful analysis
-    const creditResult = await consumeCredits(userId, 'vision2030');
+    const creditResult = await consumeCredits(userEmail, 'vision2030');
 
     return {
       statusCode: 200,
