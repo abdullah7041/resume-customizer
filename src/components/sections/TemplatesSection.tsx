@@ -371,7 +371,22 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
         if (response.ok) {
           const blob = await response.blob();
-          saveAs(blob, filename);
+
+          // Mobile Safari/Chrome ignore <a download> for blob URLs (file-saver uses this internally).
+          // Detect mobile and open the PDF blob URL directly — mobile browsers display their
+          // native PDF viewer with a download button.
+          const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+          if (isMobile) {
+            const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(pdfBlob);
+            window.open(blobUrl, '_blank');
+            // Revoke after a delay to give the browser time to load it
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+          } else {
+            saveAs(blob, filename);
+          }
+
           serverSuccess = true;
         } else if (import.meta.env.DEV) {
           const text = await response.text();
