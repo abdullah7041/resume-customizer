@@ -802,13 +802,59 @@ export function OptimizeSection({
     await handleGenerateActual();
   };
 
-  // Apply position suggestion: update resume basics.label
+  // Apply position suggestion: update only matching work positions per AI's positionChanges map
   const handleApplyPositionSuggestion = (suggested: string) => {
     const state = useResumeStore.getState();
-    if (state.originalResume?.basics) {
+    if (!state.originalResume?.work?.length) return;
+
+    const updated = structuredClone(state.originalResume);
+    const positionChanges = state.optimizationMetrics?.positionSuggestion?.positionChanges;
+
+    // Save originals for revert before mutating
+    const originalPositions = updated.work!.map((w: { position?: string }) => w.position || '');
+
+    if (positionChanges?.length) {
+      // Per-position granular update: only change entries where change_needed=true
+      updated.work!.forEach((w: { position?: string }) => {
+        const match = positionChanges.find(
+          (c) => c.change_needed && c.original.trim().toLowerCase() === (w.position || '').trim().toLowerCase()
+        );
+        if (match) w.position = match.suggested;
+      });
+    } else {
+      // Fallback: rename all (legacy behaviour for old AI responses)
+      updated.work!.forEach((w: { position?: string }) => { w.position = suggested; });
+    }
+
+    state.setOriginalResume(updated);
+
+    const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
+    if (currentSuggestion) {
+      state.setOptimizationMetrics({
+        positionSuggestion: { ...currentSuggestion, applied: true, originalPositions },
+      });
+    }
+  };
+
+  // Revert position suggestion: restore each work[].position from saved array
+  const handleRevertPositionSuggestion = () => {
+    const state = useResumeStore.getState();
+    const saved = state.optimizationMetrics?.positionSuggestion?.originalPositions;
+
+    if (state.originalResume?.work?.length && saved?.length) {
       const updated = structuredClone(state.originalResume);
-      updated.basics!.label = suggested;
+      updated.work!.forEach((w: { position?: string }, i: number) => {
+        w.position = saved[i] ?? w.position;
+      });
       state.setOriginalResume(updated);
+    }
+
+    // Clear applied flag — banner goes back to "apply" state
+    const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
+    if (currentSuggestion) {
+      state.setOptimizationMetrics({
+        positionSuggestion: { ...currentSuggestion, applied: false, originalPositions: undefined },
+      });
     }
   };
 
@@ -1218,11 +1264,13 @@ export function OptimizeSection({
 
       {/* Position Name Suggestion Banner */}
       {optimizations.length > 0 &&
-        optimizationMetrics.positionSuggestion?.is_necessary === true &&
+        (optimizationMetrics.positionSuggestion?.is_necessary === true ||
+          optimizationMetrics.positionSuggestion?.applied === true) &&
         !positionBannerDismissed && (
           <PositionSuggestionBanner
-            suggestion={optimizationMetrics.positionSuggestion}
+            suggestion={optimizationMetrics.positionSuggestion!}
             onApply={handleApplyPositionSuggestion}
+            onRevert={handleRevertPositionSuggestion}
             onDismiss={() => setPositionBannerDismissed(true)}
             className="mb-2"
           />

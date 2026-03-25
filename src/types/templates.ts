@@ -156,10 +156,17 @@ export interface OptimizationMetrics {
   };
   // Position name suggestion from AI
   positionSuggestion?: {
-    original: string;
-    suggested: string;
+    original: string;          // joined display string e.g. "Data Analyst / Sales Specialist"
+    suggested: string;         // representative suggested title for display in banner
     reason: string;
     is_necessary: boolean;
+    applied?: boolean;
+    originalPositions?: string[];  // stored on apply for revert
+    positionChanges?: Array<{      // per-position granular mapping
+      original: string;
+      suggested: string;
+      change_needed: boolean;
+    }>;
   } | null;
 }
 

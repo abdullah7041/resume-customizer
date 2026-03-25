@@ -179,8 +179,15 @@ const baseHandler: Handler = async (event) => {
         const originalText = item.original;
         const improvedText = item.improved || item.suggestion;
 
-        // Only add card if we have BOTH original and improved
-        if (hasContent(originalText) && hasContent(improvedText)) {
+        // Safety filter: skip any bullet the AI marked as N/A or "not relevant"
+        const isNAResponse = typeof improvedText === 'string' && (
+          improvedText.trim().toLowerCase().startsWith('n/a') ||
+          improvedText.toLowerCase().includes('not relevant to the target role') ||
+          improvedText.toLowerCase().includes('not relevant to this role')
+        );
+
+        // Only add card if we have BOTH original and improved, and it's not an N/A placeholder
+        if (hasContent(originalText) && hasContent(improvedText) && !isNAResponse) {
           cards.push({
             section: "Experience",
             issue: item.issue || "Bullet point lacks impact.",
@@ -307,7 +314,19 @@ const baseHandler: Handler = async (event) => {
         // Category Scores - NEW
         categoryScores: optimization?.category_scores || null,
         // Position name suggestion from AI (only shown if is_necessary=true)
-        positionSuggestion: optimization?.position_name_suggestion ?? null,
+        positionSuggestion: optimization?.position_name_suggestion
+          ? {
+              ...optimization.position_name_suggestion,
+              // Map snake_case to camelCase for the frontend
+              positionChanges: (optimization.position_name_suggestion.position_changes || []).map(
+                (c: { original: string; suggested: string; change_needed: boolean }) => ({
+                  original: c.original,
+                  suggested: c.suggested,
+                  change_needed: c.change_needed,
+                })
+              ),
+            }
+          : null,
         // Project improvements from AI
         projectImprovements: (optimization?.project_improvements || []).map((proj: any) => ({
           project_name: proj.project_name || '',

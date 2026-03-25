@@ -25,6 +25,12 @@ export default defineConfig({
     },
   },
 
+  // Prevent silent port shifting to 5174 that causes confusing Netlify CLI timeouts
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
+
   build: {
     target: "es2020",
     minify: true, // Vite 8 (Rolldown) default minifier

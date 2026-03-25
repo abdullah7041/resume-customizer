@@ -311,7 +311,7 @@ export default function MainContent() {
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(JOB_STORAGE_KEY);
 
-    // Reset state
+    // Reset local state
     setResumeData("");
     setJobDescription("");
     setMatchAnalysis(null);
@@ -319,6 +319,9 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setActiveTab("resume");
+
+    // Reset persisted Zustand store state
+    useResumeStore.getState().clearAll();
 
     setShowDeleteConfirm(false);
 
@@ -349,9 +352,17 @@ export default function MainContent() {
   }, [pushToast, t]);
 
   const handleClearOptimizations = useCallback(() => {
+    // Clear local component state
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+
+    // Clear persisted Zustand state (survives refresh via localStorage)
+    const store = useResumeStore.getState();
+    store.resetOptimizationMetrics();
+    store.setKeywordSuggestions([]);
+    store.setShowOptimized(false);
+
     pushToast({ type: "success", title: t("toasts.optimizationsClearedTitle"), description: t("toasts.optimizationsClearedDesc") });
   }, [pushToast, t]);
 
@@ -634,10 +645,25 @@ export default function MainContent() {
         setOptimizationData(result.optimization ?? null);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
 
-        // FIX: Store optimization metrics (gapAnalysis, matchScoring, categoryScores) in Zustand
+        // FIX: Also persist keywords to Zustand store so they survive page refresh
+        if (result.keywords) {
+          const suggestions: { keyword: string; category: 'add' | 'keep' | 'deemphasize' }[] = [];
+          if (result.keywords.add) {
+            result.keywords.add.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'add' }));
+          }
+          if (result.keywords.neutral) {
+            result.keywords.neutral.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'keep' }));
+          }
+          if (result.keywords.remove) {
+            result.keywords.remove.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'deemphasize' }));
+          }
+          useResumeStore.getState().setKeywordSuggestions(suggestions);
+        }
+
+        // FIX: Store optimization metrics (gapAnalysis, matchScoring, categoryScores, positionSuggestion) in Zustand
         // These were previously discarded, causing gap analysis and optimized score to not appear
         const { setOptimizationMetrics } = useResumeStore.getState();
-        if (result.matchScoring || result.gapAnalysis || result.categoryScores) {
+        if (result.matchScoring || result.gapAnalysis || result.categoryScores || result.positionSuggestion !== undefined) {
           setOptimizationMetrics({
             ...(result.matchScoring && {
               beforeScore: result.matchScoring.beforeScore,
@@ -655,6 +681,10 @@ export default function MainContent() {
             }),
             ...(result.gapAnalysis && { gapAnalysis: result.gapAnalysis }),
             ...(result.categoryScores && { categoryScores: result.categoryScores }),
+            // Position name suggestion: only store when AI says it's necessary, otherwise clear stale ones
+            positionSuggestion: result.positionSuggestion?.is_necessary === true
+              ? result.positionSuggestion
+              : null,
           });
         }
         pushToast(
@@ -761,7 +791,7 @@ export default function MainContent() {
         // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
         const mergedResume = mergeResumeData(resumeData, {
           optimization: optimizationData,
-          candidateProfile: null // Add if available
+          candidateProfile: null, // Add if available
         });
 
         // Get the HTML content from exportPdf (without triggering print)
