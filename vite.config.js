@@ -25,10 +25,10 @@ export default defineConfig({
     },
   },
 
-  // Prevent silent port shifting to 5174 that causes confusing Netlify CLI timeouts
+  // Let Vite shift to the next available port (e.g. 5174) if 5173 is in use so multiple instances can run
   server: {
     port: 5173,
-    strictPort: true,
+    strictPort: false,
   },
 
   build: {

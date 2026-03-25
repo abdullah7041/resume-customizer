@@ -1010,6 +1010,24 @@ export default function MainContent() {
     </ParallaxContainer>
   );
 
+  if (!loading && !user && showLanding) {
+    return (
+      <div className="relative isolate z-20 flex-1 flex flex-col w-full h-full">
+        <ToastContainer>{renderedToasts}</ToastContainer>
+        <Suspense fallback={<SectionSkeleton />}>
+          <LandingPage
+            onGetStarted={() => {
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem("watheq:landingSeen", "true");
+              }
+              signInWithGoogle();
+            }}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <main
       data-app-main
@@ -1074,18 +1092,6 @@ export default function MainContent() {
             </div>
           ) : user ? (
             workspace
-          ) : showLanding ? (
-            <Suspense fallback={<SectionSkeleton />}>
-              <LandingPage
-                onGetStarted={() => {
-                  if (typeof window !== "undefined") {
-                    window.localStorage.setItem("watheq:landingSeen", "true");
-                  }
-                  // Directly trigger sign-in instead of showing sign-in empty state
-                  signInWithGoogle();
-                }}
-              />
-            </Suspense>
           ) : (
             <EmptyState
               icon={UserPlus}
