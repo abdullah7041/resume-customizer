@@ -343,6 +343,27 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
     const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
 
+    // -----------------------------------------------------------------------
+    // iOS Safari POPUP FIX — must happen SYNCHRONOUSLY before any await.
+    //
+    // Safari enforces "transient activation": window.open() is only allowed
+    // during a user-gesture event. Any await (fetch, dynamic import, etc.)
+    // expires the timer, and Safari silently blocks the popup.
+    //
+    // Strategy: open a blank tab NOW (synchronously), then redirect it to
+    // the blob URL once we have the data. On desktop we skip this.
+    // -----------------------------------------------------------------------
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let mobileWindow: Window | null = null;
+    if (isMobile) {
+      mobileWindow = window.open('', '_blank');
+      // Show a loading placeholder so the blank tab isn't confusing
+      if (mobileWindow) {
+        mobileWindow.document.write('<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb"><p style="color:#6b7280;font-size:16px">Generating your PDF\u2026</p></body></html>');
+        mobileWindow.document.close();
+      }
+    }
+
     try {
       // Capture rendered HTML from preview container
       const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
@@ -371,20 +392,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
         if (response.ok) {
           const blob = await response.blob();
+          const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(pdfBlob);
 
-          // Mobile Safari/Chrome ignore <a download> for blob URLs (file-saver uses this internally).
-          // Detect mobile and open the PDF blob URL directly — mobile browsers display their
-          // native PDF viewer with a download button.
-          const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-          if (isMobile) {
-            const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(pdfBlob);
-            window.open(blobUrl, '_blank');
-            // Revoke after a delay to give the browser time to load it
+          if (isMobile && mobileWindow) {
+            // Redirect the pre-opened tab to the PDF blob URL.
+            // This works because we opened the window synchronously above
+            // (within the user-gesture activation window).
+            mobileWindow.location.href = blobUrl;
             setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
           } else {
-            saveAs(blob, filename);
+            saveAs(pdfBlob, filename);
           }
 
           serverSuccess = true;
@@ -430,19 +448,19 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           noPrintNodes.forEach(node => (node as HTMLElement).style.display = '');
 
           const imgData = canvas.toDataURL('image/png');
-          
+
           // PDF A4 dimensions at 96 DPI: 210 x 297 mm
           const pdf = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'mm' });
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          
+
           let heightLeft = pdfHeight;
           const pageHeight = pdf.internal.pageSize.getHeight();
           let position = 0;
-          
+
           pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
           heightLeft -= pageHeight;
-          
+
           // Add extra pages if content exceeds one A4 page
           while (heightLeft >= 0) {
             position = heightLeft - pdfHeight;
@@ -450,20 +468,34 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
             heightLeft -= pageHeight;
           }
-          
-          pdf.save(filename);
+
+          if (isMobile && mobileWindow) {
+            // jsPDF.save() uses saveAs internally (same mobile bug).
+            // Use blob URL redirect instead.
+            const pdfBlob = pdf.output('blob');
+            const blobUrl = URL.createObjectURL(pdfBlob);
+            mobileWindow.location.href = blobUrl;
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+          } else {
+            pdf.save(filename);
+          }
         } catch (clientErr) {
           console.error('[PDF] Client-side generation failed, using print dialog:', clientErr);
           // Last resort fallback using native print dialog
-          const printWindow = window.open('', '_blank');
-          if (printWindow) {
-            printWindow.document.title = filename.replace('.pdf', '');
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.addEventListener('load', () => {
-              printWindow.print();
-              setTimeout(() => printWindow.close(), 1000);
-            });
+          if (mobileWindow) {
+            mobileWindow.document.write(html);
+            mobileWindow.document.close();
+          } else {
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+              printWindow.document.title = filename.replace('.pdf', '');
+              printWindow.document.write(html);
+              printWindow.document.close();
+              printWindow.addEventListener('load', () => {
+                printWindow.print();
+                setTimeout(() => printWindow.close(), 1000);
+              });
+            }
           }
         }
       }
@@ -475,6 +507,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
       console.error("PDF Download failed:", err);
+      // Close the pre-opened mobile tab if something catastrophic failed
+      if (mobileWindow && !mobileWindow.closed) mobileWindow.close();
     } finally {
       setIsDownloading(false);
     }
