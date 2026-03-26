@@ -13,6 +13,10 @@ interface PageBreakIndicatorProps {
  * A4 page height at 96 DPI = 297mm * 96 / 25.4 ≈ 1123px
  */
 export const A4_PAGE_HEIGHT_PX = 1123;
+/**
+ * 8mm top margin for consecutive pages to prevent text being cut near edge
+ */
+export const TOP_MARGIN_PX = 30;
 
 /**
  * Visual indicator showing where page breaks will occur in PDF
@@ -20,10 +24,15 @@ export const A4_PAGE_HEIGHT_PX = 1123;
 export function PageBreakIndicator({ pageNumber }: PageBreakIndicatorProps) {
     const { t } = useTranslation();
 
+    let topPosition = 0;
+    if (pageNumber > 0) {
+        topPosition = A4_PAGE_HEIGHT_PX + (pageNumber - 1) * (A4_PAGE_HEIGHT_PX - TOP_MARGIN_PX);
+    }
+
     return (
         <div
             className="absolute left-0 right-0 flex items-center gap-2 pointer-events-none z-10"
-            style={{ top: `${pageNumber * A4_PAGE_HEIGHT_PX}px` }}
+            style={{ top: `${topPosition}px` }}
         >
             {/* Left dashed line */}
             <div className="flex-1 border-t-2 border-dashed border-amber-500/60" />
@@ -52,7 +61,10 @@ interface PageBreakOverlayProps {
 
 export function PageBreakOverlay({ contentHeight }: PageBreakOverlayProps) {
     // Calculate how many page breaks we need
-    const pageCount = Math.ceil(contentHeight / A4_PAGE_HEIGHT_PX);
+    let pageCount = 1;
+    if (contentHeight > A4_PAGE_HEIGHT_PX) {
+        pageCount = 1 + Math.ceil((contentHeight - A4_PAGE_HEIGHT_PX) / (A4_PAGE_HEIGHT_PX - TOP_MARGIN_PX));
+    }
 
     // Render indicators for pages 1 to (pageCount - 1)
     const indicators = [];

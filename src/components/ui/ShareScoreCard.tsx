@@ -205,7 +205,7 @@ export function ShareScoreCard({ beforeScore, afterScore, jobTitle, onClose }: S
         if (!cardRef.current) return;
         setIsGenerating(true);
         try {
-            const html2canvas = (await import('html2canvas')).default;
+            const html2canvas = (await import('html2canvas-pro')).default;
             const canvas = await html2canvas(cardRef.current, {
                 scale: 2,
                 useCORS: true,

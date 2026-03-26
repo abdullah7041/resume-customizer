@@ -1127,3 +1127,37 @@
     pointer-events: none;
   }
 }
+
+/* Print optimization for resume templates */
+@media print {
+  @page {
+    margin: 0;
+    size: A4 portrait;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+  }
+  
+  [data-no-print] {
+    display: none !important;
+  }
+  
+  /* Reset scaling & enforce bounds for templates inside browser print dialog */
+  [data-resume-preview] {
+    transform: none !important;
+    max-width: 210mm !important;
+    width: 100% !important;
+    margin: 0 auto;
+    overflow: hidden;
+    page-break-inside: auto;
+  }
+  
+  [data-resume-preview] > div {
+    width: 100% !important;
+    max-width: 210mm !important;
+    transform: none !important;
+    min-height: auto !important;
+  }
+}

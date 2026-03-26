@@ -10,7 +10,7 @@ import { CreditBalance } from "../Credits/CreditBalance";
 import { CreditUsageModal } from "../Credits/CreditUsageModal";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { useTheme } from "../../hooks/useTheme";
-
+import { createPortal } from "react-dom";
 
 
 
@@ -492,9 +492,9 @@ export default function Header() {
       </div>
 
       {/* Mobile Navigation Overlay */}
-      {mobileNavOpen && (
+      {mobileNavOpen && createPortal(
         <div
-          className="fixed inset-0 z-40 md:hidden"
+          className="fixed inset-0 z-[100] md:hidden"
           onClick={handleMobileNavOutsideClick}
           aria-modal="true"
           role="dialog"
@@ -628,7 +628,8 @@ export default function Header() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Credit Usage Modal */}
