@@ -401,7 +401,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       let clientSuccess = false;
       try {
         const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-          import('html2canvas-pro'),
+          import('html2canvas'),
           import('jspdf'),
         ]);
 
@@ -427,8 +427,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             if (clonedEl.style.transform) clonedEl.style.transform = 'none';
             clonedEl.style.width = '210mm';
 
-            // 3. Reset transform on any inner template containers (e.g. ModernProfessional's scale)
-            // This ensures html2canvas renders them at full 1:1 crispness and avoids bounding box cut-offs
+            // 3. Reset transform on any inner template containers
             const innerTf = clonedEl.querySelectorAll('[style*="transform"]');
             innerTf.forEach(el => {
               const htmlEl = el as HTMLElement;
@@ -443,6 +442,46 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             // 4. Force print layout rules uniformly across children
             clonedEl.style.overflow = 'visible';
             clonedEl.style.boxSizing = 'border-box';
+
+            // 5. Intelligent Pagination Engine
+            // Find logic blocks that shouldn't be cut across pages.
+            // Targeting common resume container/text elements.
+            const selectors = [
+              '.resume-section > div', // Main job entries / education entries
+              '.space-y-4 > div',
+              '.space-y-3 > div',
+              '.border-l-2', // Timeline items
+              'p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+              '[data-prevent-page-break]'
+            ].join(', ');
+
+            // element list in document order (parents before children)
+            const blocks = Array.from(clonedEl.querySelectorAll(selectors)) as HTMLElement[];
+
+            const PAGE_HEIGHT = 1122.5; // 297mm in pixels at 96 DPI (793.7 width * 1.414 ratio)
+            
+            blocks.forEach(block => {
+              const wrapperRect = clonedEl.getBoundingClientRect();
+              const rect = block.getBoundingClientRect();
+              
+              const relativeTop = rect.top - wrapperRect.top;
+              const relativeBottom = rect.bottom - wrapperRect.top;
+
+              const startPage = Math.floor(relativeTop / PAGE_HEIGHT);
+              const endPage = Math.floor(relativeBottom / PAGE_HEIGHT);
+
+              // If the block crosses a page boundary AND isn't taller than a whole page itself
+              // This dynamically keeps parents intact if they fit. If a parent is too tall, 
+              // it skips the parent and the loop eventually reaches its children, breaking them instead!
+              if (startPage !== endPage && (relativeBottom - relativeTop) < PAGE_HEIGHT) {
+                const currentMarginTop = parseFloat(window.getComputedStyle(block).marginTop || '0');
+                // Calculate distance required to push the TOP of the element precisely past the 297mm cutline
+                const distanceToNextPage = ((startPage + 1) * PAGE_HEIGHT) - relativeTop;
+                
+                // Add spacer gap + 20px padding so it doesn't touch the immediate cut edge
+                block.style.marginTop = `${currentMarginTop + distanceToNextPage + 20}px`;
+              }
+            });
           },
         });
 
@@ -454,30 +493,16 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const pageHeight = pdf.internal.pageSize.getHeight(); // 297 mm
         const totalHeightMm = (canvas.height / canvas.width) * pdfWidth;
 
-        // Slice into A4 pages
-        const topMarginMm = 8; // 8mm top margin for consecutive pages to prevent text cut near edge
-        let imgPos = 0;
-        let isFirstPage = true;
-
-        while (imgPos < totalHeightMm) {
-          if (!isFirstPage) {
-            pdf.addPage();
-          }
-
-          const currentTopMargin = isFirstPage ? 0 : topMarginMm;
-          const currentUsableHeight = pageHeight - currentTopMargin;
-
-          // Place the image so that the current 'imgPos' starts exactly below the top margin mask
-          pdf.addImage(imgData, 'JPEG', 0, currentTopMargin - imgPos, pdfWidth, totalHeightMm);
-
-          // Draw a white mask over the top margin to prevent overlapping content from previous page from bleeding through
-          if (currentTopMargin > 0) {
-            pdf.setFillColor(255, 255, 255);
-            pdf.rect(0, 0, pdfWidth, currentTopMargin, 'F');
-          }
-
-          imgPos += currentUsableHeight;
-          isFirstPage = false;
+        // Slice into A4 pages perfectly safely, because the clone was padded with white gaps!
+        let heightLeft = totalHeightMm;
+        let position = 0;
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, totalHeightMm);
+        heightLeft -= pageHeight;
+        while (heightLeft > 0) {
+          position -= pageHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, totalHeightMm);
+          heightLeft -= pageHeight;
         }
 
         // Deliver the PDF
