@@ -34,7 +34,7 @@ Sentry.init({
 });
 
 import { StrictMode } from "react";
-import ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AuthProvider } from "./hooks/useAuth";
 import { CreditsProvider } from "./contexts/CreditsContext";
@@ -44,7 +44,11 @@ import "./index.css";
 
 // Initialize analytics (respects consent)
 analytics.init();
-ReactDOM.createRoot(document.getElementById("root")!).render(
+
+// Pre-warm the PDF generation serverless function to drastically reduce cold starts
+fetch('/.netlify/functions/generate-pdf', { method: 'HEAD' }).catch(() => {});
+
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
       <CreditsProvider>

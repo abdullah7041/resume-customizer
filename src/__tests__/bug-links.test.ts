@@ -40,7 +40,7 @@ describe("Bug: links must use normalizeUrl + resolveProfileUrl", () => {
       });
 
       it("normalizeUrl handles domain-like URLs via includes('.')", () => {
-        expect(src).toMatch(/includes.*'\.'|indexOf.*'\.'|\.includes\('\.\'\)/);
+        expect(src).toMatch(/includes.*'\.'|indexOf.*'\.'|\.includes\('\.'\)/);
       });
 
       it("constructs URLs intelligently based on valid identifiers", () => {

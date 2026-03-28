@@ -205,19 +205,16 @@ export function ShareScoreCard({ beforeScore, afterScore, jobTitle, onClose }: S
         if (!cardRef.current) return;
         setIsGenerating(true);
         try {
-            const html2canvas = (await import('html2canvas-pro')).default;
-            const canvas = await html2canvas(cardRef.current, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: null,
+            const { toPng } = await import('html-to-image');
+            const dataUrl = await toPng(cardRef.current, {
+                pixelRatio: 2,
                 width: 1200,
                 height: 630,
-                windowWidth: 1200,
             });
 
             const link = document.createElement('a');
             link.download = `watheq-score-${beforeScore}-to-${afterScore}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = dataUrl;
             link.click();
 
             analytics.track('share_card_downloaded', {

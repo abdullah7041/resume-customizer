@@ -113,7 +113,10 @@ export function ExecutiveProfessional({
         transformOrigin: 'top left',
         width: A4_STYLES.width,
         minHeight: A4_STYLES.minHeight,
-        padding: marginPadding,
+        paddingTop: `${opts.marginTop * 25.4}mm`,
+        paddingBottom: `${opts.marginTop * 25.4}mm`,
+        paddingLeft: `${opts.marginSide * 25.4}mm`,
+        paddingRight: `${opts.marginSide * 25.4}mm`,
         fontFamily: opts.fontFamily,
         fontSize: `${opts.baseFontSize}pt`,
         lineHeight: String(opts.lineHeight),
@@ -190,7 +193,7 @@ export function ExecutiveProfessional({
           <h2 style={headingStyle}>
             {getSectionLabel('about')}
           </h2>
-          <p style={{ lineHeight: String(opts.lineHeight), color: '#333', fontSize: fs(10), textAlign: 'justify' }}>
+          <p style={{ lineHeight: String(opts.lineHeight), color: '#333', fontSize: fs(10), textAlign: 'justify', orphans: 2, widows: 2 }}>
             {basics.summary}
           </p>
         </section>
@@ -204,26 +207,28 @@ export function ExecutiveProfessional({
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: `${opts.paragraphSpacing + 4}px` }}>
             {work.map((job, i) => (
-              <div key={i} style={{ pageBreakInside: 'avoid' }}>
-                {/* Position + Date on same row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
-                  <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0 }}>
-                    {safeString(job.position)}
-                  </h3>
-                  <span style={{ fontSize: fs(10), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', marginLeft: '12px', flexShrink: 0 }}>
-                    {job.startDate} — {job.endDate || 'Current'}
-                  </span>
+              <div key={i} style={{ pageBreakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                <div style={{ pageBreakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto', breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
+                  {/* Position + Date on same row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
+                    <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0 }}>
+                      {safeString(job.position)}
+                    </h3>
+                    <span style={{ fontSize: fs(10), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', marginLeft: '12px', flexShrink: 0 }}>
+                      {job.startDate} — {job.endDate || 'Current'}
+                    </span>
+                  </div>
+                  {/* Company + Location in italic */}
+                  <p style={{ fontSize: fs(10), color: ACCENT_COLOR, fontStyle: 'italic', marginBottom: '3px' }}>
+                    {safeString(job.name)}
+                    {job.location && ` | ${job.location}`}
+                  </p>
                 </div>
-                {/* Company + Location in italic */}
-                <p style={{ fontSize: fs(10), color: ACCENT_COLOR, fontStyle: 'italic', marginBottom: '3px' }}>
-                  {safeString(job.name)}
-                  {job.location && ` | ${job.location}`}
-                </p>
                 {/* Bullet points */}
                 {job.highlights && job.highlights.length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (
-                      <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
+                      <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {h}
                       </li>
                     ))}
@@ -243,17 +248,19 @@ export function ExecutiveProfessional({
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: `${opts.paragraphSpacing + 2}px` }}>
             {projects.map((project, i) => (
-              <div key={i} style={{ pageBreakInside: 'avoid' }}>
-                <h3 style={{ fontSize: fs(10.5), fontWeight: '700', color: '#1a5276', marginBottom: '2px' }}>
-                  {safeString(project.name)}
-                </h3>
-                {project.description && (
-                  <p style={{ fontSize: fs(10), color: '#444', marginBottom: '2px' }}>{project.description}</p>
-                )}
+              <div key={i} style={{ pageBreakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                <div style={{ pageBreakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto', breakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto' }}>
+                  <h3 style={{ fontSize: fs(10.5), fontWeight: '700', color: '#1a5276', marginBottom: '2px' }}>
+                    {safeString(project.name)}
+                  </h3>
+                  {project.description && (
+                    <p style={{ fontSize: fs(10), color: '#444', marginBottom: '2px', orphans: 2, widows: 2 }}>{project.description}</p>
+                  )}
+                </div>
                 {project.highlights && project.highlights.length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {project.highlights.map((h, j) => (
-                      <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px' }}>
+                      <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px', orphans: 2, widows: 2 }}>
                         {h}
                       </li>
                     ))}

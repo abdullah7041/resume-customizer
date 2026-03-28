@@ -108,7 +108,10 @@ export function ClassicTraditional({
         transformOrigin: 'top left',
         width: A4_STYLES.width,
         minHeight: A4_STYLES.minHeight,
-        padding: marginPadding,
+        paddingTop: `${opts.marginTop * 25.4}mm`,
+        paddingBottom: `${opts.marginTop * 25.4}mm`,
+        paddingLeft: `${opts.marginSide * 25.4}mm`,
+        paddingRight: `${opts.marginSide * 25.4}mm`,
         fontFamily: opts.fontFamily,
         fontSize: `${opts.baseFontSize}pt`,
         lineHeight: String(opts.lineHeight),
@@ -193,7 +196,7 @@ export function ClassicTraditional({
           </h2>
           <p
             className="text-gray-700 italic text-justify"
-            style={{ fontSize: fs(10.5), lineHeight: '1.55' }}
+            style={{ fontSize: fs(10.5), lineHeight: '1.55', orphans: 2, widows: 2 }}
           >
             {basics.summary}
           </p>
@@ -217,23 +220,25 @@ export function ClassicTraditional({
           </h2>
           <div className="space-y-4">
             {work.map((job, i) => (
-              <div key={i} style={{ breakInside: 'avoid' }}>
-                <div className="flex justify-between items-baseline mb-1">
-                  <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0 }}>
-                    {safeString(job.position)}
-                  </h3>
-                  <span className="text-gray-500 italic" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
-                    {job.startDate} – {job.endDate || 'Present'}
-                  </span>
+              <div key={i} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                <div style={{ breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0 }}>
+                      {safeString(job.position)}
+                    </h3>
+                    <span className="text-gray-500 italic" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                      {job.startDate} – {job.endDate || 'Present'}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 italic mb-2" style={{ fontSize: fs(11) }}>
+                    {safeString(job.name)}
+                    {job.location && ` | ${job.location}`}
+                  </p>
                 </div>
-                <p className="text-gray-600 italic mb-2" style={{ fontSize: fs(11) }}>
-                  {safeString(job.name)}
-                  {job.location && ` | ${job.location}`}
-                </p>
                 {job.highlights && job.highlights.length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (
-                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
+                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {h}
                       </li>
                     ))}
@@ -256,35 +261,37 @@ export function ClassicTraditional({
           </h2>
           <div className="space-y-3">
             {education.map((edu, i) => (
-              <div key={i} style={{ breakInside: 'avoid' }}>
-                <div className="flex justify-between">
-                  <div>
-                    <h3 className="text-gray-900" style={{ fontSize: fs(10.5), fontWeight: '700' }}>
-                      {safeString(edu.studyType)}
-                      {edu.area && ` in ${edu.area}`}
-                    </h3>
-                    <p className="text-gray-600 italic" style={{ fontSize: fs(10.5) }}>
-                      {safeString(edu.institution)}
-                    </p>
-                    {edu.score && (
-                      <p className="text-gray-600" style={{ fontSize: fs(10.5) }}>
-                        GPA: {edu.score}
+              <div key={i} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                <div style={{ breakAfter: (edu.highlights && edu.highlights.length > 4) ? 'avoid' : 'auto' }}>
+                  <div className="flex justify-between">
+                    <div>
+                      <h3 className="text-gray-900" style={{ fontSize: fs(10.5), fontWeight: '700' }}>
+                        {safeString(edu.studyType)}
+                        {edu.area && ` in ${edu.area}`}
+                      </h3>
+                      <p className="text-gray-600 italic" style={{ fontSize: fs(10.5) }}>
+                        {safeString(edu.institution)}
                       </p>
-                    )}
-                    {edu.courses && edu.courses.length > 0 && (
-                      <p className="text-gray-600 italic" style={{ fontSize: fs(10.5), marginTop: '2px' }}>
-                        Relevant Coursework: {edu.courses.join(' · ')}
-                      </p>
-                    )}
+                      {edu.score && (
+                        <p className="text-gray-600" style={{ fontSize: fs(10.5) }}>
+                          GPA: {edu.score}
+                        </p>
+                      )}
+                      {edu.courses && edu.courses.length > 0 && (
+                        <p className="text-gray-600 italic" style={{ fontSize: fs(10.5), marginTop: '2px' }}>
+                          Relevant Coursework: {edu.courses.join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-gray-500 italic" style={{ fontSize: fs(10) }}>
+                      {edu.endDate || edu.startDate}
+                    </span>
                   </div>
-                  <span className="text-gray-500 italic" style={{ fontSize: fs(10) }}>
-                    {edu.endDate || edu.startDate}
-                  </span>
                 </div>
                 {edu.highlights && edu.highlights.length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {edu.highlights.map((h, j) => (
-                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
+                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {h}
                       </li>
                     ))}
@@ -340,17 +347,19 @@ export function ClassicTraditional({
           </h2>
           <div className="space-y-3">
             {projects.map((project, i) => (
-              <div key={i} style={{ breakInside: 'avoid' }}>
-                <h3 className="text-gray-900" style={{ fontSize: fs(11), fontWeight: '700' }}>
-                  {safeString(project.name)}
-                </h3>
-                {project.description && (
-                  <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5) }}>{project.description}</p>
-                )}
+              <div key={i} style={{ breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                <div style={{ breakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto' }}>
+                  <h3 className="text-gray-900" style={{ fontSize: fs(11), fontWeight: '700' }}>
+                    {safeString(project.name)}
+                  </h3>
+                  {project.description && (
+                    <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5), orphans: 2, widows: 2 }}>{project.description}</p>
+                  )}
+                </div>
                 {project.highlights && project.highlights.length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {project.highlights.map((h, j) => (
-                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight) }}>
+                      <li key={j} className="text-gray-700" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {h}
                       </li>
                     ))}

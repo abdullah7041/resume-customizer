@@ -1,4 +1,22 @@
 // src/components/sections/TemplatesSection.tsx
+/**
+ * PDF GENERATION DIAGNOSTIC AUDIT
+ * ===============================
+ * Files importing html2canvas, html2canvas-pro, html-to-image, or jspdf:
+ * - src/components/ui/ShareScoreCard.tsx
+ * - src/components/sections/TemplatesSection.tsx
+ * - src/components/sections/BulkAnalysisSection.tsx
+ * 
+ * Target PDF generation trigger:
+ * - `handleDownloadPdf` in `TemplatesSection.tsx`
+ * 
+ * Intelligent Pagination Engine behavior:
+ * - Mutates DOM elements to identify text blocks and section containers that cross the threshold of A4 pages (1122.5px slices).
+ * - Applies a computed `marginTop` pushing the truncated elements entirely onto the next PDF page. Needs `wrapperRect` calculation against exact UI scale. 
+ *
+ * `netlify/functions/generate-pdf` input shape:
+ * - Takes `{ html, templateId }`. Historically, this fell short because it lacked pagination modifications.
+ */
 // Resume template gallery with floating overlay template selector
 
 import { useState, useMemo, useLayoutEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
@@ -325,251 +343,146 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     }
   }, [isDragging, handleDragMove, handleDragEnd]);
 
-  // Download PDF — primary: instant client-side html2canvas + jsPDF (works for ALL templates).
-  // Safari (mobile + desktop) pre-opens a window synchronously to bypass transient-activation blocking.
-  // Fallback: server-side Puppeteer only if client-side generation fails.
+  // Download PDF — Server-side Puppeteer rendering
   const handleDownloadPdf = async () => {
-    if (isDownloading) return;
+    if (isDownloading) return; // CRITICAL: blocks re-entrant calls — fixes freeze
 
     if (!hasRealResume) {
       console.warn('Cannot download PDF: No resume data available');
       return;
     }
 
-
-    const appliedCount = optimizations.filter(o => o.applied).length;
-    const _isExportingOptimized = showOptimized && appliedCount > 0; // retained for future analytics
-
     setIsDownloading(true);
 
-    const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
-
-    // -----------------------------------------------------------------------
-    // SAFARI FIX (mobile + macOS desktop) — must pre-open window SYNCHRONOUSLY.
-    //
-    // Safari enforces "transient activation": window.open() is only permitted
-    // inside a synchronous user-gesture handler. Any dynamic import or fetch
-    // call expires the activation window, Safari then silently blocks the popup.
-    //
-    // Detection:
-    //  • isMobile        — iOS Safari on iPhone/iPad
-    //  • isSafariDesktop — macOS Safari (has "Safari" in UA but NOT "Chrome"
-    //                      or "Chromium", which both append "Safari" to their UA)
-    //
-    // Fix: pre-open a blank tab NOW, redirect its .location.href to the blob
-    // URL after async work finishes. Chrome/Firefox/Edge handle <a download>
-    // with blob URLs correctly and take the standard saveAs() path.
-    // -----------------------------------------------------------------------
-    const ua = navigator.userAgent;
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
-    const isSafariDesktop = /^((?!Chrome|Chromium|Android).)*Safari/i.test(ua) && !isMobile;
-    const needsWindowRedirect = isMobile || isSafariDesktop;
-
-    let safariWindow: Window | null = null;
-    if (needsWindowRedirect) {
-      safariWindow = window.open('', '_blank');
-      if (safariWindow) {
-        safariWindow.document.write('<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb"><p style="color:#6b7280;font-size:16px">Generating your PDF…</p></body></html>');
-        safariWindow.document.close();
-      }
-    }
-
     try {
+      const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
+
+      // 1. Clone DOM off-screen
       const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
       if (!previewElement) throw new Error('Preview not found — unable to capture HTML');
 
-      // -----------------------------------------------------------------------
-      // PRIMARY PATH — Instant client-side PDF via html2canvas + jsPDF.
-      //
-      // WHY this is now primary (was previously fallback):
-      //  • Works for ALL templates — no server payload size limit
-      //  • No cold-start delay (eliminates the 5–12 s server round-trip)
-      //  • html2canvas reads computed styles from the live DOM, so Tailwind
-      //    utilities, CSS variables, and flex/grid layouts render correctly for
-      //    every template — not just ATS Optimized.
-      //
-      // KEY options:
-      //  scale: 2          → 2× pixel density = crisp retina-quality output
-      //  windowWidth/Height → A4 px dims so the clone doesn't trigger mobile
-      //                       media-query breakpoints that reflow the layout
-      //  onclone           → mutate the non-destructive DOM clone before capture:
-      //    1. Remove [data-no-print] overlays (page-break indicators, etc.)
-      //    2. Reset CSS transform on the scale wrapper so the clone renders at
-      //       full 1:1 size instead of the UI's 0.9× viewport-fit thumbnail.
-      //       Without this the canvas is 90% of A4 and jsPDF stretches it blurry.
-      // -----------------------------------------------------------------------
-      let clientSuccess = false;
-      try {
-        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-          import('html2canvas'),
-          import('jspdf'),
-        ]);
+      const clone = previewElement.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      document.body.appendChild(clone);
 
-        const canvas = await html2canvas(previewElement, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          windowWidth: 794,   // A4 at 96 DPI — prevents layout reflow in clone
-          windowHeight: 1123,
-          onclone: (_clonedDoc, clonedEl) => {
-            // 1. Strip non-printable overlays
-            clonedEl.querySelectorAll('[data-no-print]').forEach(el => el.remove());
-            
-            // 2. Reset scale transform on any outer wrappers
-            const wrapper = (
-              clonedEl.closest?.('[style*="transform"]') as HTMLElement | null
-              ?? clonedEl.parentElement?.closest?.('[style*="transform"]') as HTMLElement | null
-            );
-            if (wrapper) {
-              wrapper.style.transform = 'none';
-              wrapper.style.width = '210mm';
-            }
-            if (clonedEl.style.transform) clonedEl.style.transform = 'none';
-            clonedEl.style.width = '210mm';
+      // 2. Run pagination mutations
+      const wrapper = (
+        clone.closest?.('[style*="transform"]') as HTMLElement | null
+        ?? clone.parentElement?.closest?.('[style*="transform"]') as HTMLElement | null
+      );
+      if (wrapper) {
+        wrapper.style.transform = 'none';
+        wrapper.style.width = '210mm';
+      }
+      if (clone.style.transform) clone.style.transform = 'none';
+      clone.style.width = '210mm';
 
-            // 3. Reset transform on any inner template containers
-            const innerTf = clonedEl.querySelectorAll('[style*="transform"]');
-            innerTf.forEach(el => {
-              const htmlEl = el as HTMLElement;
-              htmlEl.style.transform = 'none';
-              // Force dimensions to A4 to prevent reflow clipping
-              htmlEl.style.width = '210mm';
-              htmlEl.style.maxWidth = '100%';
-              htmlEl.style.height = 'auto'; // let height grow organically
-              htmlEl.style.minHeight = '297mm';
+      const innerTf = clone.querySelectorAll('[style*="transform"]');
+      innerTf.forEach(el => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.transform = 'none';
+        htmlEl.style.width = '210mm';
+        htmlEl.style.maxWidth = '100%';
+        htmlEl.style.height = 'auto'; // let height grow organically
+        htmlEl.style.minHeight = 'auto'; // Must NOT be 297mm — that forces a full-page blank gap when content is shorter
+      });
+      
+      clone.style.overflow = 'visible';
+      clone.style.boxSizing = 'border-box';
+
+      // 3. inline all images as base64 so Puppeteer doesn't need to load external URLs
+      const images = clone.querySelectorAll('img');
+      for (const img of Array.from(images)) {
+        try {
+          if (img.src && !img.src.startsWith('data:')) {
+            const res = await fetch(img.src);
+            const imageBlob = await res.blob();
+            const base64Data = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(imageBlob);
             });
-            
-            // 4. Force print layout rules uniformly across children
-            clonedEl.style.overflow = 'visible';
-            clonedEl.style.boxSizing = 'border-box';
-
-            // 5. Intelligent Pagination Engine
-            // Find logic blocks that shouldn't be cut across pages.
-            // Targeting common resume container/text elements.
-            const selectors = [
-              '.resume-section > div', // Main job entries / education entries
-              '.space-y-4 > div',
-              '.space-y-3 > div',
-              '.border-l-2', // Timeline items
-              'p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-              '[data-prevent-page-break]'
-            ].join(', ');
-
-            // element list in document order (parents before children)
-            const blocks = Array.from(clonedEl.querySelectorAll(selectors)) as HTMLElement[];
-
-            const PAGE_HEIGHT = 1122.5; // 297mm in pixels at 96 DPI (793.7 width * 1.414 ratio)
-            
-            blocks.forEach(block => {
-              const wrapperRect = clonedEl.getBoundingClientRect();
-              const rect = block.getBoundingClientRect();
-              
-              const relativeTop = rect.top - wrapperRect.top;
-              const relativeBottom = rect.bottom - wrapperRect.top;
-
-              const startPage = Math.floor(relativeTop / PAGE_HEIGHT);
-              const endPage = Math.floor(relativeBottom / PAGE_HEIGHT);
-
-              // If the block crosses a page boundary AND isn't taller than a whole page itself
-              // This dynamically keeps parents intact if they fit. If a parent is too tall, 
-              // it skips the parent and the loop eventually reaches its children, breaking them instead!
-              if (startPage !== endPage && (relativeBottom - relativeTop) < PAGE_HEIGHT) {
-                const currentMarginTop = parseFloat(window.getComputedStyle(block).marginTop || '0');
-                // Calculate distance required to push the TOP of the element precisely past the 297mm cutline
-                const distanceToNextPage = ((startPage + 1) * PAGE_HEIGHT) - relativeTop;
-                
-                // Add spacer gap + 20px padding so it doesn't touch the immediate cut edge
-                block.style.marginTop = `${currentMarginTop + distanceToNextPage + 20}px`;
-              }
-            });
-          },
-        });
-
-        // JPEG (0.95 quality) is slightly smaller + faster to encode than PNG
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-        const pdf = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'mm' });
-        const pdfWidth = pdf.internal.pageSize.getWidth();    // 210 mm
-        const pageHeight = pdf.internal.pageSize.getHeight(); // 297 mm
-        const totalHeightMm = (canvas.height / canvas.width) * pdfWidth;
-
-        // Slice into A4 pages perfectly safely, because the clone was padded with white gaps!
-        let heightLeft = totalHeightMm;
-        let position = 0;
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, totalHeightMm);
-        heightLeft -= pageHeight;
-        while (heightLeft > 0) {
-          position -= pageHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, totalHeightMm);
-          heightLeft -= pageHeight;
+            img.src = base64Data as string;
+          }
+        } catch (e) {
+          console.warn('Could not inline image for PDF:', e);
         }
-
-        // Deliver the PDF
-        if (needsWindowRedirect && safariWindow) {
-          // Safari: redirect the pre-opened tab to the blob URL.
-          // Safari ignores <a download> for blobs but correctly displays a
-          // blob URL redirected from a window that was opened synchronously
-          // within the original user-gesture activation window.
-          const pdfBlob = pdf.output('blob');
-          const blobUrl = URL.createObjectURL(pdfBlob);
-          safariWindow.location.href = blobUrl;
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-        } else {
-          // Chrome / Firefox / Edge — standard anchor-click download
-          saveAs(pdf.output('blob') as Blob, filename);
-        }
-
-        clientSuccess = true;
-      } catch (clientErr) {
-        if (import.meta.env.DEV) console.warn('[PDF] Client-side generation failed, trying server:', clientErr);
       }
 
-      // -----------------------------------------------------------------------
-      // FALLBACK — Server-side Puppeteer (only if client-side fails).
-      // Kept as a safety net for edge-cases (complex SVG gradients, etc.).
-      // -----------------------------------------------------------------------
-      if (!clientSuccess) {
-        try {
-          const html = buildInlinedHtml(previewElement, filename.replace('.pdf', ''));
-          const { getAuthHeaders } = await import('../../services/api');
-          const headers = await getAuthHeaders();
-          const response = await fetch('/.netlify/functions/generate-pdf', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ html, templateId: selectedTemplate.id }),
-          });
+      // 4. Remove no-print elements
+      clone.querySelectorAll('[data-no-print]').forEach(el => el.remove());
 
-          if (response.ok) {
-            const blob = await response.blob();
-            const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(pdfBlob);
-            if (needsWindowRedirect && safariWindow) {
-              safariWindow.location.href = blobUrl;
-              setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-            } else {
-              saveAs(pdfBlob, filename);
-            }
-          } else {
-            // Last resort: open rendered HTML so user can browser-print to PDF
-            const fallbackWindow = safariWindow ?? window.open('', '_blank');
-            if (fallbackWindow) {
-              const html = buildInlinedHtml(previewElement, filename.replace('.pdf', ''));
-              fallbackWindow.document.write(html);
-              fallbackWindow.document.close();
-            }
+      // 5. Capture HTML + styles (STRIP off-screen positioning first!)
+      clone.style.position = 'static';
+      clone.style.left = '0';
+      clone.style.top = '0';
+      const html = clone.outerHTML;
+
+      // Capture all internal <style> blocks
+      const inlineStyles = Array.from(document.querySelectorAll('style'))
+        .map(style => style.innerHTML)
+        .join('\n');
+
+      // Capture and fetch all external <link rel="stylesheet"> files
+      const linkTags = document.querySelectorAll('link[rel="stylesheet"]');
+      const hrefs = Array.from(linkTags).map(link => (link as HTMLLinkElement).href);
+      const externalStyles = await Promise.all(
+        hrefs.map(async href => {
+          try {
+            const resp = await fetch(href);
+            return await resp.text();
+          } catch {
+            return '';
           }
-        } catch (serverErr) {
-          console.error('[PDF] All generation methods failed:', serverErr);
-          if (safariWindow && !safariWindow.closed) safariWindow.close();
-        }
+        })
+      );
+
+      const styles = inlineStyles + '\n' + externalStyles.join('\n');
+
+      document.body.removeChild(clone);
+
+      // 5. Send to Server (Netlify Function)
+      const { getAuthHeaders } = await import('../../services/api');
+      const apiHeaders = await getAuthHeaders();
+      const response = await fetch('/.netlify/functions/generate-pdf', {
+        method: 'POST',
+        headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html, styles, templateId: selectedTemplate.id, filename: filename.replace('.pdf', '') }),
+      });
+
+      if (!response.ok) throw new Error(`[PDFDownload] Server error: ${response.status}`);
+
+      const blob = await response.blob();
+
+      // 6. Mobile-safe Download
+      // iOS Safari frequently blocks navigator.share or blob URLs after async fetch delays.
+      // Data URLs bypass the transient user activation restriction and trigger the native iOS download prompt.
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = reader.result as string;
+          a.download = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        };
+        reader.readAsDataURL(blob);
+      } else {
+        saveAs(blob, typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
       }
 
       analytics.trackExport(selectedTemplate.id, 'pdf');
       useResumeStore.getState().setHasDownloaded(true);
+
     } catch (err) {
-      console.error('PDF Download failed:', err);
-      if (safariWindow && !safariWindow.closed) safariWindow.close();
+      console.error('[PDFDownload] Failed:', err);
+      // Fallback/UI message could be shown here
     } finally {
       setIsDownloading(false);
     }

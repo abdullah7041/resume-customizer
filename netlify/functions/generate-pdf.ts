@@ -105,6 +105,9 @@ const VALID_TEMPLATE_IDS = [
 ] as const;
 
 const baseHandler: Handler = async (event) => {
+  if (event.httpMethod === "HEAD") {
+    return { statusCode: 200, body: "" };
+  }
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -115,7 +118,8 @@ const baseHandler: Handler = async (event) => {
   let page: Page | null = null; // Declare outside try block for cleanup access
 
   try {
-    const { html, templateId } = JSON.parse(event.body || "{}");
+    const { html, styles, filename, templateId } = JSON.parse(event.body || "{}");
+    const safeFilename = filename || `resume-optimized`;
 
     if (!html) {
       return { statusCode: 400, body: JSON.stringify({ error: "Missing html" }) };
@@ -130,63 +134,80 @@ const baseHandler: Handler = async (event) => {
     const browser = await getBrowser();
     page = await browser.newPage();
 
-    // Block external resource requests (fonts, images, stylesheets) to speed up rendering
-    // The HTML is self-contained from the client — no external dependencies needed
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const type = req.resourceType();
-      // Block only image, font, and media — stylesheets are already inlined in the HTML
-      // (injected via buildInlinedHtml on the client), so blocking them is unnecessary.
-      if (['image', 'font', 'media'].includes(type)) {
-        req.abort();
-      } else {
-        req.continue();
-      }
-    });
+    // Set fixed viewport matching A4 (210mm x 297mm @ 96dpi)
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+
+    // Allow external resources needed for rendering (fonts, images)
+    await page.setRequestInterception(false);
 
     // Disable JavaScript to prevent script execution from client-provided HTML
     await page.setJavaScriptEnabled(false);
 
-    // Use domcontentloaded since HTML is pre-rendered from client
-    // No need to wait for network resources (fonts already loaded in client)
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    // Render the final HTML string with embedded styles
+    await page.setContent(`
+      <!DOCTYPE html>
+      <html dir="ltr">
+        <head>
+          <meta charset="UTF-8">
+          <style>${styles || ''}</style>
+          <style>
+            /* Hide elements marked as non-printable (page break indicators, etc.) */
+            [data-no-print] { display: none !important; }
+            
+            /* Ensure exact color rendering in print mode */
+            * { 
+              -webkit-print-color-adjust: exact !important; 
+              print-color-adjust: exact !important; 
+            }
 
-    // Emulate screen media to match browser preview (not print media)
-    await page.emulateMediaType('screen');
+            /* Prevent section headers from orphaning at the bottom of a page.
+               Works in both screen and print rendering modes. */
+            h2 { break-after: avoid; }
 
-    // Inject critical CSS for proper PDF rendering
-    // Note: Tailwind utilities are no longer re-created here because the
-    // client now bundles the full compiled CSS from the page's stylesheets.
-    await page.addStyleTag({
-      content: `
-        /* Hide elements marked as non-printable (page break indicators, etc.) */
-        [data-no-print] { display: none !important; }
-        
-        /* Page break prevention - keep individual items together, not whole sections */
-        li, p, h1, h2, h3, h4 {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
+            /* Template root has paddingTop (e.g. 12.7mm) for the browser preview.
+               In the PDF the Puppeteer margin option provides top spacing on every page,
+               so we zero out the template's own paddingTop to avoid double-padding on page 1. */
+            [data-resume-preview] > div {
+              padding-top: 0 !important;
+            }
+          </style>
+        </head>
+        <body>${html}</body>
+      </html>
+    `, { waitUntil: 'networkidle0', timeout: 30_000 });
 
-        /* Keep section entries together (work, education, project blocks) */
-        section > div > div { break-inside: avoid !important; page-break-inside: avoid !important; }
+    // Use print media so @media print CSS rules in index.css fire.
+    // These rules apply min-height: auto !important to the template root (removing the
+    // 297mm forced-height that causes blank gaps), strip transforms, and handle @page margins.
+    // print-color-adjust: exact ensures colors/gradients render correctly despite print mode.
+    await page.emulateMediaType('print');
 
-        /* Keep headings attached to following content */
-        h2 { break-after: avoid !important; page-break-after: avoid !important; }
-
-        /* Keep header block together */
-        header { break-inside: avoid !important; page-break-inside: avoid !important; }
-        
-        /* Ensure exact color rendering */
-        * { 
-          -webkit-print-color-adjust: exact !important; 
-          print-color-adjust: exact !important; 
-        }
-      `
-    });
-
-    // Short stabilization delay for layout
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Wait for fonts to ensure perfect rendering
+    try {
+      if (!browserInstance?.isConnected()) {
+        throw new Error("Browser disconnected before font load.");
+      }
+      await page.evaluateHandle('document.fonts.ready');
+      
+      // Graciously wait for images to load, max 3 seconds
+      await page.evaluate(async () => {
+        const doc = (globalThis as any).document;
+        if (!doc) return;
+        const images = Array.from(doc.images) as any[];
+        if (images.length === 0) return;
+        await Promise.all(
+          images.map((img: any) => {
+            if (img.complete) return Promise.resolve();
+            return new Promise((resolve) => {
+              img.onload = resolve;
+              img.onerror = resolve; // Ignore broken images
+            });
+          })
+        );
+      });
+    } catch(e) {
+      console.warn('Asset loading failed (fonts/images), attempting PDF anyway:', e);
+    }
 
     // Generate PDF with 60s safety timeout (Netlify fn has 90s limit)
     const PDF_TIMEOUT_MS = 60_000;
@@ -208,7 +229,8 @@ const baseHandler: Handler = async (event) => {
       statusCode: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="resume-${sanitizedTemplateId}.pdf"`,
+        "Content-Disposition": `attachment; filename="${safeFilename}.pdf"`,
+        "Cache-Control": "no-store",
       },
       body: Buffer.from(pdfBuffer).toString("base64"),
       isBase64Encoded: true,
