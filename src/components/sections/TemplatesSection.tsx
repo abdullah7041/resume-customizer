@@ -484,15 +484,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', err);
       
       try {
-        // Dynamic import to keep bundle size small. We use html2canvas-pro rather than html2canvas
-        // to natively support modern Tailwind CSS colors like `oklch` which jsPDF crashes on otherwise.
-        const [{ default: html2canvasPro }, { jsPDF }] = await Promise.all([
-          import('html2canvas-pro'),
+        // Dynamic import to keep bundle size small
+        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+          import('html2canvas'),
           import('jspdf')
         ]);
-        
-        // Inject html2canvas-pro into window so jsPDF.html() can use it for 'oklch' colors natively
-        (window as any).html2canvas = html2canvasPro;
 
         const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
         if (!previewElement) throw new Error('Preview not found for fallback');
@@ -520,37 +516,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           wrapper.style.transform = 'none';
         }
 
-        // Use the user's selected margins (converted to JS PDF unit: pt by default but we use 'mm')
-        // We will configure jsPDF to use pt for best HTML compatibility, but let's stick to mm.
-        const displayOpts = useResumeStore.getState().displayOptions;
-        const mt = displayOpts?.marginTop ? displayOpts.marginTop * 25.4 : 19.05;
-        const mb = displayOpts?.marginBottom ? displayOpts.marginBottom * 25.4 : 19.05;
-
-        const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
-        const finalFilename = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-
-        // Create PDF with mm units
-        const pdf = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'mm' });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        
-        // Let jsPDF's built-in html2canvas pipeline handle the DOM, using autoPaging: 'text'
-        // to intelligently break elements instead of blindly slicing text nodes in half.
-        await pdf.html(previewElement, {
-          x: 0,
-          y: 0,
-          margin: [mt, 0, mb, 0],   // Top, right, bottom, left margins in 'mm'
-          autoPaging: 'text',       // Context7 recommended text-aware page breaking
-          width: pdfWidth,          // Target width inside the PDF
-          windowWidth: previewElement.clientWidth, // Source width
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-          }
+        const canvas = await html2canvas(previewElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
         });
 
-        // Restore transforms and no-print elements after the capture is complete
+        // Restore transforms and no-print elements
         if (wrapper) {
           wrapper.style.transform = originalTransform;
         }
@@ -559,6 +531,61 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           el.style.display = noPrintDisplayStates.get(el) || '';
         });
 
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Output to jsPDF (A4)
+        const pdf = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'mm' });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const a4Height = pdf.internal.pageSize.getHeight();
+        
+        // Use the user's selected margins, defaulting to 0.75in (19.05mm)
+        const displayOpts = useResumeStore.getState().displayOptions;
+        const mt = displayOpts?.marginTop ? displayOpts.marginTop * 25.4 : 19.05;
+        const mb = displayOpts?.marginBottom ? displayOpts.marginBottom * 25.4 : 19.05;
+        
+        // Printable area height
+        const printableHeight = a4Height - mt - mb;
+        
+        // Image Dimensions inside PDF
+        const imgHeightInPdf = (canvas.height * pdfWidth) / canvas.width;
+        
+        let heightLeft = imgHeightInPdf;
+        
+        // Page 1:
+        // The first page of the original DOM already includes the top padding padding natively!
+        // We draw the image from the very top (so mt is included implicitly).
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeightInPdf);
+        
+        // Mask the bottom margin of page 1 so text doesn't bleed out of the page bounds
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, a4Height - mb, pdfWidth, mb, 'F');
+        
+        // The amount of image displayed on page 1 is (a4Height - mb)
+        let yOffset = a4Height - mb; 
+        heightLeft -= yOffset;
+        
+        // Add extra pages if content exceeds one A4 page
+        while (heightLeft > 0) {
+          pdf.addPage();
+          
+          // Image position for this page: shift UP by amount already printed, and DOWN by top margin
+          const imgY = mt - yOffset;
+          pdf.addImage(imgData, 'PNG', 0, imgY, pdfWidth, imgHeightInPdf);
+          
+          // Mask the top margin
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(0, 0, pdfWidth, mt, 'F');
+          
+          // Mask the bottom margin
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(0, a4Height - mb, pdfWidth, mb, 'F');
+          
+          yOffset += printableHeight;
+          heightLeft -= printableHeight;
+        }
+        
+        const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
+        const finalFilename = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
         pdf.save(finalFilename);
         
         analytics.trackExport(selectedTemplate.id, 'pdf');
