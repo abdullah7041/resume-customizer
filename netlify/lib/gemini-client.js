@@ -478,7 +478,8 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
   const schema = {
     type: "object",
     properties: {
-      match_score: { type: "number" },
+      match_score: { type: "number", description: "The baseline match score (0-100) based strictly on the rubric." },
+      after_score: { type: "number", description: "The projected Match Score (0-100) IF all suggested improvements are applied. Must realistically adhere to the rubric." },
       category_scores: CATEGORY_SCORE_SCHEMA,
       gap_analysis: { type: "array", items: { type: "object", properties: { requirement: { type: "string" }, current_state: { type: "string" }, gap_severity: { type: "string" }, recommendation: { type: "string" } }, required: ["requirement", "current_state", "gap_severity", "recommendation"] } },
       original_headline: { type: "string" },
@@ -514,10 +515,38 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
         required: ["original", "suggested", "reason", "is_necessary", "position_changes"]
       }
     },
-    required: ["match_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline", "original_summary", "summary_rewrite", "bullet_improvements", "project_improvements", "certification_recommendations", "missing_keywords", "keywords_to_keep", "keywords_to_avoid", "position_name_suggestion"]
+    required: ["match_score", "after_score", "category_scores", "gap_analysis", "original_headline", "suggested_headline", "original_summary", "summary_rewrite", "bullet_improvements", "project_improvements", "certification_recommendations", "missing_keywords", "keywords_to_keep", "keywords_to_avoid", "position_name_suggestion"]
   };
 
   const prompt = `Analyze this resume against the job description and provide optimization suggestions.
+
+## SCORING RUBRIC (Total: 100 points)
+### Hard Skills (0-40 points)
+- 40: ALL required technical skills present with evidence of proficiency
+- 30: Most required skills present (80%+)
+- 20: Some required skills present (50-79%)
+- 10: Few required skills present (25-49%)
+- 0: Missing most required skills (<25%)
+
+### Experience (0-30 points)
+- 30: Experience level EXCEEDS requirements, relevant industry, matching responsibilities
+- 22: Experience level MEETS requirements with relevant background
+- 15: Experience level slightly below OR different industry but transferable skills
+- 8: Limited relevant experience
+- 0: No relevant experience
+
+### Education (0-15 points)
+- 15: Exceeds education requirements (higher degree or prestigious institution)
+- 12: Meets exact education requirements
+- 8: Related field or equivalent experience
+- 4: Some relevant coursework
+- 0: No relevant education
+
+### Soft Skills (0-15 points)
+- 15: Strong evidence of ALL soft skills mentioned in job description
+- 10: Evidence of most soft skills (leadership, communication, teamwork)
+- 5: Some soft skills demonstrated
+- 0: No soft skills evidence
 
 RULES:
 1. Copy EXACT text for "original" fields - no paraphrasing
@@ -527,11 +556,12 @@ RULES:
    (e.g., leadership, communication, project management, data analysis, problem-solving) that apply to the target role.
    If a bullet seems unrelated, find the transferable angle — never dismiss it.
 3. Provide 4-6 gap_analysis items identifying MISSING requirements from job description
-4. match_score = sum of category scores (hard_skills + experience + education + soft_skills)
-5. gap_analysis should identify what the resume LACKS compared to the job requirements
+4. match_score = sum of category scores (hard_skills + experience + education + soft_skills) based on the rubric above.
+5. after_score = Provide an honest, realistic estimate of what the match_score will be IF the candidate applies all your suggestions. Do not overinflate.
+6. gap_analysis should identify what the resume LACKS compared to the job requirements
 
 PROJECT IMPROVEMENTS (REQUIRED - do not leave empty):
-6. Look for any Projects section in the resume. If found, provide 1-3 project_improvements to reframe them for this job.
+7. Look for any Projects section in the resume. If found, provide 1-3 project_improvements to reframe them for this job.
    - project_name: The actual name of the project from the resume
    - original: The current project description text
    - improved: Rewritten description highlighting relevance to the job
@@ -540,7 +570,7 @@ PROJECT IMPROVEMENTS (REQUIRED - do not leave empty):
    If no projects section exists, create 1 suggestion with project_name="No Projects Found", original="N/A", improved="Consider adding a Projects section showcasing relevant work", issue="Missing projects section", rationale="Projects demonstrate practical skills"
 
 CERTIFICATION RECOMMENDATIONS (REQUIRED - do not leave empty):
-7. Based on the job requirements, recommend 1-2 certifications the candidate should obtain.
+8. Based on the job requirements, recommend 1-2 certifications the candidate should obtain.
    - name: Full certification name (e.g., "AWS Solutions Architect Associate")
    - issuer: Organization that issues it (e.g., "Amazon Web Services")
    - relevance: Why this certification matters for this specific job
@@ -552,7 +582,7 @@ GAP ANALYSIS FORMAT - Each gap MUST have:
 - recommendation: Specific action to address the gap
 
 POSITION NAME SUGGESTION (REQUIRED):
-8. Analyze each work experience POSITION TITLE individually vs. the target role in the JD.
+9. Analyze each work experience POSITION TITLE individually vs. the target role in the JD.
    Tailor only the positions that are relevant to the JD. Leave unrelated positions unchanged.
    - original: ALL unique position titles joined with " / " (e.g., "Data Analyst / Senior Sales Specialist")
    - suggested: A representative suggested title for the most relevant positions (for display)

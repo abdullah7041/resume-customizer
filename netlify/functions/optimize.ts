@@ -262,9 +262,16 @@ const baseHandler: Handler = async (event) => {
       throw new Error('AI optimization failed to calculate match score');
     }
 
-    // Estimated improvement hint (non-binding - genuine re-analysis replaces this)
+    // Estimated improvement is now explicitly calculated by the AI using the ATS-aligned strict rubric
     const addKeywords = optimization?.missing_keywords || [];
-    const estimatedImprovement = Math.min(cards.length * 2, 15);
+    
+    // Fallback logic in case after_score is omitted or hallucinated lower than beforeScore
+    let estimatedImprovement = 0;
+    if (typeof optimization?.after_score === 'number') {
+      estimatedImprovement = Math.max(0, optimization.after_score - beforeScore);
+    } else {
+      estimatedImprovement = Math.min(cards.length * 2, 15);
+    }
 
     // Extract JD-matched keywords (keywords resume already has that match JD)
     const matchedKeywords = optimization?.keywords_to_keep || [];
