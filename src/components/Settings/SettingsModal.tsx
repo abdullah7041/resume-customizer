@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Settings, Download, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -17,9 +18,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen || !user) return null;
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
+  if (!isOpen || !user || !mounted) return null;
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -98,37 +103,37 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  const modal = (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-md animate-fade-in"
         onClick={() => !isDeleting && onClose()}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 animate-scale-in">
+      <div className="relative w-full max-w-lg neu-card shadow-2xl rounded-2xl animate-scale-in overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
           <div className="flex items-center gap-3 text-gray-900 dark:text-white">
-            <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <div className="p-2 neu-inset rounded-lg">
+              <Settings className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <h2 className="text-xl font-bold">Settings</h2>
           </div>
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto max-h-[75vh]">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-start gap-3">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <p>{error}</p>
             </div>
@@ -137,7 +142,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* Account Details */}
           <div className="mb-8">
             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Account Information</h3>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+            <div className="p-4 neu-inset rounded-xl">
               <p className="text-gray-900 dark:text-white font-medium">{user.email}</p>
               <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-4 h-4" />
@@ -152,7 +157,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             
             <div className="space-y-4">
               {/* Export Data */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 neu-inset rounded-xl gap-4">
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-white">Export Personal Data</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Download a copy of your resumes and optimizations in JSON format.</p>
@@ -160,7 +165,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <button
                   onClick={handleExportClick}
                   disabled={isExporting || isDeleting}
-                  className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                  className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm"
                 >
                   {isExporting ? (
                     <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -172,7 +177,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </div>
 
               {/* Delete Account */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-red-50/50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/20 rounded-xl gap-4">
                 <div>
                   <h4 className="font-semibold text-red-600 dark:text-red-400">Delete Account</h4>
                   <p className="text-sm text-red-500/80 dark:text-red-400/80 mt-1">Permanently delete your account and all associated data.</p>
@@ -182,7 +187,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={isExporting || isDeleting}
-                    className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/20 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     <Trash2 className="w-4 h-4" />
                     Delete Account
@@ -203,7 +208,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
                         disabled={isDeleting}
-                        className="px-3 py-1.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                        className="px-3 py-1.5 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-white/20 transition-colors disabled:opacity-50"
                       >
                         Cancel
                       </button>
@@ -217,4 +222,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
