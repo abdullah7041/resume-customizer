@@ -96,7 +96,7 @@ async function callOpenRouterDirect(model, messages, jsonSchema, options, contro
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.SITE_URL || 'https://watheq.netlify.app',
+      'HTTP-Referer': process.env.SITE_URL || 'https://watheqai.app',
       'X-Title': 'Watheq Resume Optimizer'
     },
     body: JSON.stringify(requestBody),
