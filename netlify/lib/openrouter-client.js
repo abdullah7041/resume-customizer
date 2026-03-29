@@ -86,6 +86,9 @@ async function callOpenRouterDirect(model, messages, jsonSchema, options, contro
         schema: convertedSchema
       }
     };
+  } else {
+    // Force JSON output even without strict schema if the prompt expects JSON
+    requestBody.response_format = { type: 'json_object' };
   }
 
   const response = await fetch(OPENROUTER_URL, {
@@ -157,6 +160,9 @@ async function callGeminiDirect(modelType, messages, jsonSchema, options, contro
   if (jsonSchema) {
     requestBody.generationConfig.responseMimeType = 'application/json';
     requestBody.generationConfig.responseSchema = jsonSchema;
+  } else {
+    // Force JSON output even without strict schema if the prompt expects JSON
+    requestBody.generationConfig.responseMimeType = 'application/json';
   }
 
   const response = await fetch(url, {
