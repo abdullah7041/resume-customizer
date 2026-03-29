@@ -481,8 +481,89 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       useResumeStore.getState().setHasDownloaded(true);
 
     } catch (err) {
-      console.error('[PDFDownload] Failed:', err);
-      // Fallback/UI message could be shown here
+      console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', err);
+      
+      try {
+        // Dynamic import to keep bundle size small
+        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+          import('html2canvas'),
+          import('jspdf')
+        ]);
+
+        const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
+        if (!previewElement) throw new Error('Preview not found for fallback');
+
+        // Hide elements that shouldn't be printed
+        const noPrintNodes = previewElement.querySelectorAll('[data-no-print]');
+        const noPrintDisplayStates = new Map<HTMLElement, string>();
+        
+        noPrintNodes.forEach(node => {
+          const el = node as HTMLElement;
+          noPrintDisplayStates.set(el, el.style.display);
+          el.style.display = 'none';
+        });
+
+        // 1. Snapshot the actual live preview element without transformations
+        // We temporarily turn off transforms on the immediate wrapper so html2canvas renders crisply at Native dimensions instead of the scaled-down view
+        const wrapper = (
+          previewElement.closest?.('[style*="transform"]') as HTMLElement | null
+          ?? previewElement.parentElement?.closest?.('[style*="transform"]') as HTMLElement | null
+        );
+        
+        let originalTransform = '';
+        if (wrapper) {
+          originalTransform = wrapper.style.transform;
+          wrapper.style.transform = 'none';
+        }
+
+        const canvas = await html2canvas(previewElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+
+        // Restore transforms and no-print elements
+        if (wrapper) {
+          wrapper.style.transform = originalTransform;
+        }
+        noPrintNodes.forEach(node => {
+          const el = node as HTMLElement;
+          el.style.display = noPrintDisplayStates.get(el) || '';
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Output to jsPDF (A4)
+        const pdf = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'mm' });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        let heightLeft = pdfHeight;
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        let position = 0;
+        
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+        
+        // Add extra pages if content exceeds one A4 page
+        while (heightLeft > 0) {
+          position = heightLeft - pdfHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
+        const finalFilename = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+        pdf.save(finalFilename);
+        
+        analytics.trackExport(selectedTemplate.id, 'pdf');
+        useResumeStore.getState().setHasDownloaded(true);
+        
+      } catch (clientErr) {
+        console.error('[PDFDownload] Client-side fallback also failed:', clientErr);
+        // We could show a toast error here
+      }
     } finally {
       setIsDownloading(false);
     }

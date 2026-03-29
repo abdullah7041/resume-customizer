@@ -48,13 +48,13 @@ function SectionSkeleton() {
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
   { value: "match", label: t("tabs.match"), icon: Target },
-  { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target },
   { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
 
   { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate },
   { value: "interview", label: t("tabs.interview"), icon: MessageSquare },
   { value: "bulk", label: t("tabs.bulk"), icon: FileText },
   { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail },
+  { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true },
 ];
 
 const containerClass = "app-shell w-full";
@@ -1042,31 +1042,43 @@ export default function MainContent() {
 
       {/* Delete All Data Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-amber-500" />
-              {t("workspace.deleteAllConfirm.title", "Delete All Data?")}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {t(
-                "workspace.deleteAllConfirm.description",
-                "This will permanently delete your uploaded resume, optimizations, and all saved progress. This action cannot be undone."
-              )}
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-gray-900 dark:text-white font-medium"
-              >
-                {t("common.cancel", "Cancel")}
-              </button>
-              <button
-                onClick={confirmDeleteAllData}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
-              >
-                {t("workspace.deleteAllConfirm.confirm", "Delete All")}
-              </button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-md animate-fade-in"
+            onClick={() => setShowDeleteConfirm(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-md neu-card shadow-2xl rounded-2xl animate-scale-in overflow-hidden">
+            <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-white/10">
+              <div className="p-2 neu-inset rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {t("workspace.deleteAllConfirm.title", "Delete All Data?")}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                {t(
+                  "workspace.deleteAllConfirm.description",
+                  "This will permanently delete your uploaded resume, optimizations, and all saved progress. This action cannot be undone."
+                )}
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-all duration-300 bg-gray-100 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-black border border-gray-300/50 dark:border-white/10 text-gray-900 dark:text-white shadow-md active:scale-95"
+                >
+                  {t("common.cancel", "Cancel")}
+                </button>
+                <button
+                  onClick={confirmDeleteAllData}
+                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-all duration-300 bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_8px_30px_rgba(239,68,68,0.4)] border border-red-400/20 flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {t("workspace.deleteAllConfirm.confirm", "Delete All")}
+                </button>
+              </div>
             </div>
           </div>
         </div>

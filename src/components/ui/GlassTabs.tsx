@@ -8,6 +8,7 @@ interface Tab {
   label: string;
   labelAr?: string;
   icon?: React.ElementType;
+  isPremium?: boolean;
 }
 
 interface GlassTabsProps {
@@ -37,7 +38,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
       role="tablist"
       data-tour={dataTour}
     >
-      <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth px-1">
+      <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth px-1 py-1">
         {tabs.map((tab, idx) => {
           const Icon = tab.icon;
           const isActive = activeValue === tab.value;
@@ -54,21 +55,28 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               role="tab"
               aria-selected={isActive}
               className={cn(
-                'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap outline-none select-none shrink-0 z-10',
+                'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap outline-none select-none shrink-0 z-10 rounded-xl ml-0.5 mr-0.5',
                 isActive
-                  ? 'text-gray-900 dark:text-white drop-shadow-md'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? tab.isPremium ? 'text-white drop-shadow-md' : 'text-gray-900 dark:text-white drop-shadow-md'
+                  : tab.isPremium
+                    ? 'text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               )}
             >
               {/* Animated active indicator background */}
               {isActive && (
                 <motion.div
                   layoutId="activeTabIndicator"
-                  className="absolute inset-0 tab-embossed rounded-xl -z-10"
+                  className={cn(
+                    "absolute inset-0 rounded-xl -z-10",
+                    tab.isPremium 
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md shadow-emerald-500/30" 
+                      : "tab-embossed"
+                  )}
                   transition={springTransition}
                 >
                   {/* Subtle shine effect for active tab */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
                 </motion.div>
               )}
 
