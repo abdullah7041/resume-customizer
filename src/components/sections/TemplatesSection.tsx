@@ -484,11 +484,15 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', err);
       
       try {
-        // Dynamic import to keep bundle size small
-        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-          import('html2canvas'),
+        // Dynamic import to keep bundle size small. We use html2canvas-pro rather than html2canvas
+        // to natively support modern Tailwind CSS colors like `oklch` which jsPDF crashes on otherwise.
+        const [{ default: html2canvasPro }, { jsPDF }] = await Promise.all([
+          import('html2canvas-pro'),
           import('jspdf')
         ]);
+        
+        // Inject html2canvas-pro into window so jsPDF.html() can use it for 'oklch' colors natively
+        (window as any).html2canvas = html2canvasPro;
 
         const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
         if (!previewElement) throw new Error('Preview not found for fallback');
