@@ -546,42 +546,77 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         // Printable area height
         const printableHeight = a4Height - mt - mb;
         
-        // Image Dimensions inside PDF
-        const imgHeightInPdf = (canvas.height * pdfWidth) / canvas.width;
+        // Pixel math scaling
+        const pxPerMm = canvas.width / pdfWidth;
+        const printableHeightPx = printableHeight * pxPerMm;
         
-        let heightLeft = imgHeightInPdf;
+        // Intelligent pixel-scanning engine to find a clean horizontal slice through the canvas 
+        // without cutting across text pixels.
+        const findSafeBottomPx = (targetBottomPx: number) => {
+          try {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) return targetBottomPx;
+            const searchRangePx = Math.floor(25.4 * pxPerMm); // scan upwards up to 1 inch
+            for (let y = Math.floor(targetBottomPx); y >= Math.floor(targetBottomPx - searchRangePx) && y > 0; y--) {
+              const imgData = ctx.getImageData(0, y, canvas.width, 1).data;
+              let isWhite = true;
+              // Sample aggressively (every 16th pixel) for blazing fast performance
+              for (let i = 0; i < imgData.length; i += 16) {
+                // If pixel is visually dark and opaque, this row contains text
+                if ((imgData[i] < 250 || imgData[i+1] < 250 || imgData[i+2] < 250) && imgData[i+3] > 10) {
+                  isWhite = false;
+                  break;
+                }
+              }
+              if (isWhite) return y; // Empty row found!
+            }
+          } catch (e) {
+            // Ignore tainted canvas errors securely
+          }
+          return targetBottomPx; // Fallback to raw math
+        };
+
+        const canvasTotalHeight = canvas.height;
+        let currentTopPx = 0;
+        let isFirstPage = true;
         
-        // Page 1:
-        // The first page of the original DOM already includes the top padding padding natively!
-        // We draw the image from the very top (so mt is included implicitly).
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeightInPdf);
-        
-        // Mask the bottom margin of page 1 so text doesn't bleed out of the page bounds
-        pdf.setFillColor(255, 255, 255);
-        pdf.rect(0, a4Height - mb, pdfWidth, mb, 'F');
-        
-        // The amount of image displayed on page 1 is (a4Height - mb)
-        let yOffset = a4Height - mb; 
-        heightLeft -= yOffset;
-        
-        // Add extra pages if content exceeds one A4 page
-        while (heightLeft > 0) {
-          pdf.addPage();
+        while (currentTopPx < canvasTotalHeight) {
+          if (!isFirstPage) pdf.addPage();
           
-          // Image position for this page: shift UP by amount already printed, and DOWN by top margin
-          const imgY = mt - yOffset;
-          pdf.addImage(imgData, 'PNG', 0, imgY, pdfWidth, imgHeightInPdf);
+          let maxBottomPx = currentTopPx + printableHeightPx;
+          let imgYMm = mt;
           
-          // Mask the top margin
+          if (isFirstPage) {
+            // Page 1 naturally incorporates the DOM's padding-top, allowing an extended initial printable slice
+            maxBottomPx = (mt + printableHeight) * pxPerMm;
+            imgYMm = 0; 
+          }
+          
+          if (maxBottomPx > canvasTotalHeight) maxBottomPx = canvasTotalHeight;
+          
+          let safeBottomPx = maxBottomPx;
+          if (maxBottomPx < canvasTotalHeight) {
+            safeBottomPx = findSafeBottomPx(maxBottomPx);
+          }
+          
+          const chunkHeightMm = (safeBottomPx - currentTopPx) / pxPerMm;
+          const yOffsetMm = currentTopPx / pxPerMm;
+          const yImgInPdf = imgYMm - yOffsetMm;
+          
+          pdf.addImage(imgData, 'PNG', 0, yImgInPdf, pdfWidth, canvasTotalHeight / pxPerMm);
+          
+          // Mask elements spilling out ABOVE the safe chunk (on pages 2+)
+          if (imgYMm > 0) {
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(0, 0, pdfWidth, imgYMm, 'F');
+          }
+          
+          // Mask elements spilling out BELOW the safe chunk completely protecting the bottom margin
           pdf.setFillColor(255, 255, 255);
-          pdf.rect(0, 0, pdfWidth, mt, 'F');
+          pdf.rect(0, imgYMm + chunkHeightMm, pdfWidth, a4Height - (imgYMm + chunkHeightMm), 'F');
           
-          // Mask the bottom margin
-          pdf.setFillColor(255, 255, 255);
-          pdf.rect(0, a4Height - mb, pdfWidth, mb, 'F');
-          
-          yOffset += printableHeight;
-          heightLeft -= printableHeight;
+          currentTopPx = safeBottomPx;
+          isFirstPage = false;
         }
         
         const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
