@@ -42,6 +42,10 @@ function sanitizeAndParseJSON(text) {
     // eslint-disable-next-line no-control-regex
     cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' ');
 
+    // Replace invalid escape sequences (e.g., \U from C:\Users) that break JSON.parse.
+    // Valid JSON escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+    cleaned = cleaned.replace(/\\([^"\\/bfnrtu])/g, '\\\\$1');
+
     // 5. Try to fix truncated JSON by finding a valid truncation point
     console.warn('[Gemini] Response appears truncated, attempting to repair JSON...');
 
