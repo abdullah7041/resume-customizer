@@ -177,7 +177,8 @@ const baseHandler: Handler = async (event) => {
     // forward them to Puppeteer's native `@page` CSS, while stripping the root
     // padding to prevent double-margins on the first page.
     await page.evaluate(() => {
-      const templateRoot = document.querySelector('[data-resume-preview] > div') as HTMLElement;
+      const doc = (globalThis as any).document;
+      const templateRoot = doc.querySelector('[data-resume-preview] > div') as any;
       if (templateRoot) {
         // Extract dynamically generated margins (e.g. "12.7mm")
         const pt = templateRoot.style.paddingTop || '19.05mm';
@@ -189,13 +190,13 @@ const baseHandler: Handler = async (event) => {
         
         // Inject an override for index.css's `@page { margin: 0 }` print reset.
         // Puppeteer leverages this over its local marginal configurations.
-        const style = document.createElement('style');
+        const style = doc.createElement('style');
         style.innerHTML = `
           @page {
             margin: ${pt} 0 ${pb} 0 !important;
           }
         `;
-        document.head.appendChild(style);
+        doc.head.appendChild(style);
       }
     });
 
