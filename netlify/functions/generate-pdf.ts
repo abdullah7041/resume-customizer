@@ -164,23 +164,40 @@ const baseHandler: Handler = async (event) => {
                Works in both screen and print rendering modes. */
             h2 { break-after: avoid; }
 
-            /* Template root has paddingTop (e.g. 12.7mm) for the browser preview.
-               In the PDF the Puppeteer margin option provides top spacing on every page,
-               so we zero out the template's own paddingTop to avoid double-padding on page 1. */
-            [data-resume-preview] > div {
-              padding-top: 0 !important;
-            }
           </style>
         </head>
         <body>${html}</body>
       </html>
     `, { waitUntil: 'networkidle0', timeout: 30_000 });
 
-    // Use print media so @media print CSS rules in index.css fire.
-    // These rules apply min-height: auto !important to the template root (removing the
-    // 297mm forced-height that causes blank gaps), strip transforms, and handle @page margins.
-    // print-color-adjust: exact ensures colors/gradients render correctly despite print mode.
+    // Use print media so screen-only components are hidden natively.
     await page.emulateMediaType('print');
+
+    // Dynamically extract the template's user-defined margin settings and
+    // forward them to Puppeteer's native `@page` CSS, while stripping the root
+    // padding to prevent double-margins on the first page.
+    await page.evaluate(() => {
+      const templateRoot = document.querySelector('[data-resume-preview] > div') as HTMLElement;
+      if (templateRoot) {
+        // Extract dynamically generated margins (e.g. "12.7mm")
+        const pt = templateRoot.style.paddingTop || '19.05mm';
+        const pb = templateRoot.style.paddingBottom || '19.05mm';
+        
+        // Strip padding from the DOM so it doesn't double-apply on page 1
+        templateRoot.style.paddingTop = '0';
+        templateRoot.style.paddingBottom = '0';
+        
+        // Inject an override for index.css's `@page { margin: 0 }` print reset.
+        // Puppeteer leverages this over its local marginal configurations.
+        const style = document.createElement('style');
+        style.innerHTML = `
+          @page {
+            margin: ${pt} 0 ${pb} 0 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    });
 
     // Wait for fonts to ensure perfect rendering
     try {
@@ -215,7 +232,9 @@ const baseHandler: Handler = async (event) => {
       page.pdf({
         format: "A4",
         printBackground: true,
-        margin: { top: '12.7mm', right: 0, bottom: '12.7mm', left: 0 },
+        // The displayHeaderFooter property ensures no browser URL headers are printed
+        // in combination with standard @page margins.
+        displayHeaderFooter: false,
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`PDF generation timed out after ${PDF_TIMEOUT_MS / 1000}s`)), PDF_TIMEOUT_MS)

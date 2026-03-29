@@ -536,21 +536,52 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         // Output to jsPDF (A4)
         const pdf = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'mm' });
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const a4Height = pdf.internal.pageSize.getHeight();
         
-        let heightLeft = pdfHeight;
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        let position = 0;
+        // Use the user's selected margins, defaulting to 0.75in (19.05mm)
+        const displayOpts = useResumeStore.getState().displayOptions;
+        const mt = displayOpts?.marginTop ? displayOpts.marginTop * 25.4 : 19.05;
+        const mb = displayOpts?.marginBottom ? displayOpts.marginBottom * 25.4 : 19.05;
         
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
+        // Printable area height
+        const printableHeight = a4Height - mt - mb;
+        
+        // Image Dimensions inside PDF
+        const imgHeightInPdf = (canvas.height * pdfWidth) / canvas.width;
+        
+        let heightLeft = imgHeightInPdf;
+        
+        // Page 1:
+        // The first page of the original DOM already includes the top padding padding natively!
+        // We draw the image from the very top (so mt is included implicitly).
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeightInPdf);
+        
+        // Mask the bottom margin of page 1 so text doesn't bleed out of the page bounds
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, a4Height - mb, pdfWidth, mb, 'F');
+        
+        // The amount of image displayed on page 1 is (a4Height - mb)
+        let yOffset = a4Height - mb; 
+        heightLeft -= yOffset;
         
         // Add extra pages if content exceeds one A4 page
         while (heightLeft > 0) {
-          position = heightLeft - pdfHeight;
           pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-          heightLeft -= pageHeight;
+          
+          // Image position for this page: shift UP by amount already printed, and DOWN by top margin
+          const imgY = mt - yOffset;
+          pdf.addImage(imgData, 'PNG', 0, imgY, pdfWidth, imgHeightInPdf);
+          
+          // Mask the top margin
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(0, 0, pdfWidth, mt, 'F');
+          
+          // Mask the bottom margin
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(0, a4Height - mb, pdfWidth, mb, 'F');
+          
+          yOffset += printableHeight;
+          heightLeft -= printableHeight;
         }
         
         const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
