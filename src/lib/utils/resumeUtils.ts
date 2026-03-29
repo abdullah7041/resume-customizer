@@ -163,3 +163,95 @@ export const mergeResumeData = (original, aiResult) => {
 
     return mergedData;
 };
+
+/**
+ * Formats a ResumeSchema into a flat plain text string.
+ * This simulates what pdf.js or an ATS would extract from a PDF,
+ * allowing the Match Analysis AI to evaluate a realistic text string
+ * rather than perfectly structured JSON.
+ */
+export const formatResumeToText = (resume: any): string => {
+    if (!resume) return "";
+    
+    const parts: string[] = [];
+    
+    if (resume.basics) {
+        if (resume.basics.name) parts.push(resume.basics.name);
+        
+        const contactInfo: string[] = [];
+        if (resume.basics.email) contactInfo.push(resume.basics.email);
+        if (resume.basics.phone) contactInfo.push(resume.basics.phone);
+        if (resume.basics.location?.city) contactInfo.push(`${resume.basics.location.city}${resume.basics.location.region ? `, ${resume.basics.location.region}` : ''}`);
+        if (resume.basics.url) contactInfo.push(resume.basics.url);
+        if (contactInfo.length > 0) parts.push(contactInfo.join(" | "));
+        
+        if (resume.basics.label) parts.push(resume.basics.label);
+        if (resume.basics.summary) parts.push(resume.basics.summary);
+    }
+    
+    if (resume.skills && resume.skills.length > 0) {
+        parts.push("\nSKILLS");
+        parts.push(resume.skills.map(s => typeof s === 'string' ? s : s.name).join(", "));
+    }
+    
+    if (resume.work && resume.work.length > 0) {
+        parts.push("\nEXPERIENCE");
+        resume.work.forEach(w => {
+            let header = "";
+            if (w.position) header += w.position;
+            if (w.company) header += (header ? " at " : "") + w.company;
+            if (header) parts.push(header);
+            
+            let dates = "";
+            if (w.startDate) dates += w.startDate;
+            if (w.endDate) dates += (dates ? " - " : "") + w.endDate;
+            if (dates) parts.push(dates);
+            
+            if (w.summary) parts.push(w.summary);
+            
+            if (w.highlights && Array.isArray(w.highlights)) {
+                w.highlights.forEach(h => parts.push(`• ${h}`));
+            }
+        });
+    }
+    
+    if (resume.education && resume.education.length > 0) {
+        parts.push("\nEDUCATION");
+        resume.education.forEach(e => {
+            let header = "";
+            if (e.studyType) header += e.studyType;
+            if (e.area) header += (header ? " in " : "") + e.area;
+            if (header) parts.push(header);
+            
+            if (e.institution) parts.push(e.institution);
+            
+            let dates = "";
+            if (e.startDate) dates += e.startDate;
+            if (e.endDate) dates += (dates ? " - " : "") + e.endDate;
+            if (dates) parts.push(dates);
+        });
+    }
+    
+    if (resume.projects && resume.projects.length > 0) {
+        parts.push("\nPROJECTS");
+        resume.projects.forEach(p => {
+            if (p.name) parts.push(p.name);
+            if (p.description) parts.push(p.description);
+            if (p.highlights && Array.isArray(p.highlights)) {
+                p.highlights.forEach(h => parts.push(`• ${h}`));
+            }
+        });
+    }
+    
+    if (resume.certificates && resume.certificates.length > 0) {
+        parts.push("\nCERTIFICATIONS");
+        resume.certificates.forEach(c => {
+            let line = "";
+            if (c.name) line += c.name;
+            if (c.issuer) line += (line ? " - " : "") + c.issuer;
+            if (line) parts.push(line);
+        });
+    }
+    
+    return parts.join("\n");
+};

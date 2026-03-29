@@ -747,7 +747,10 @@ export function OptimizeSection({
 
           if (optimizedResume) {
             const { analyzeResumeWithAI } = await import('../../services/api');
-            const optimizedText = JSON.stringify(optimizedResume);
+            const { formatResumeToText } = await import('../../lib/utils/resumeUtils');
+            // Give AI a realistic plain text string (what ATS sees) instead of structured JSON 
+            // to prevent artificially inflated scores.
+            const optimizedText = formatResumeToText(optimizedResume);
             const result = await analyzeResumeWithAI(optimizedText, jobDescription);
 
             if (result?.score) {

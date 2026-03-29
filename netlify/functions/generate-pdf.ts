@@ -215,7 +215,7 @@ const baseHandler: Handler = async (event) => {
       page.pdf({
         format: "A4",
         printBackground: true,
-        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+        margin: { top: '12.7mm', right: 0, bottom: '12.7mm', left: 0 },
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`PDF generation timed out after ${PDF_TIMEOUT_MS / 1000}s`)), PDF_TIMEOUT_MS)
