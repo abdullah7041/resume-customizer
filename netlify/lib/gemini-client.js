@@ -552,6 +552,18 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
 - 5: Some soft skills demonstrated
 - 0: No soft skills evidence
 
+## SCORING RULES & PDF OCR RESILIENCE
+1. Score skills based on demonstrated proficiency and evidence in the resume
+2. Count synonyms and related terms (e.g., "React" covers "React.js", "ReactJS")
+3. If resume has MORE skills than required, score HIGHER not lower
+4. Experience with similar technologies counts (e.g., Vue experience is relevant for React role)
+5. IMPORTANT OCR RULE: This resume text is extracted from a PDF. It may contain scattered layout, missing bullets, concatenated lines, headers mixed with content, or weird spacing. DO NOT penalize the candidate for visual or structural formatting errors. Base evaluation strictly on the presence of semantic content, keywords, and experience.
+
+## IMPORTANT
+- Score based on actual alignment with job requirements
+- An excellent match with strong evidence across all categories should score 85+
+- Only score below 50 if there's a fundamental mismatch
+
 RULES:
 1. Copy EXACT text for "original" fields - no paraphrasing
 2. Provide 3-5 bullet_improvements from Experience section with original, improved, issue, rationale.
@@ -561,11 +573,11 @@ RULES:
    If a bullet seems unrelated, find the transferable angle — never dismiss it.
 3. Provide 4-6 gap_analysis items identifying MISSING requirements from job description
 4. match_score = sum of category scores (hard_skills + experience + education + soft_skills) based on the rubric above.
-5. after_score = Provide an honest, realistic estimate of what the match_score will be IF the candidate applies all your suggestions. Do not overinflate.
+5. after_score = Provide an honest, realistic estimate of what the match_score will be IF the candidate applies all your suggestions. Do not overinflate. Ensure it reflects the same strict rubric and ATS rules.
 6. gap_analysis should identify what the resume LACKS compared to the job requirements
 
 PROJECT IMPROVEMENTS (REQUIRED - do not leave empty):
-7. Look for any Projects section in the resume. If found, provide 1-3 project_improvements to reframe them for this job.
+8. Look for any Projects section in the resume. If found, provide 1-3 project_improvements to reframe them for this job.
    - project_name: The actual name of the project from the resume
    - original: The current project description text
    - improved: Rewritten description highlighting relevance to the job
@@ -574,7 +586,7 @@ PROJECT IMPROVEMENTS (REQUIRED - do not leave empty):
    If no projects section exists, create 1 suggestion with project_name="No Projects Found", original="N/A", improved="Consider adding a Projects section showcasing relevant work", issue="Missing projects section", rationale="Projects demonstrate practical skills"
 
 CERTIFICATION RECOMMENDATIONS (REQUIRED - do not leave empty):
-8. Based on the job requirements, recommend 1-2 certifications the candidate should obtain.
+9. Based on the job requirements, recommend 1-2 certifications the candidate should obtain.
    - name: Full certification name (e.g., "AWS Solutions Architect Associate")
    - issuer: Organization that issues it (e.g., "Amazon Web Services")
    - relevance: Why this certification matters for this specific job
@@ -586,8 +598,8 @@ GAP ANALYSIS FORMAT - Each gap MUST have:
 - recommendation: Specific action to address the gap
 
 POSITION NAME SUGGESTION (REQUIRED):
-9. Analyze each work experience POSITION TITLE individually vs. the target role in the JD.
-   Tailor only the positions that are relevant to the JD. Leave unrelated positions unchanged.
+10. Analyze each work experience POSITION TITLE individually vs. the target role in the JD.
+    Tailor only the positions that are relevant to the JD. Leave unrelated positions unchanged.
    - original: ALL unique position titles joined with " / " (e.g., "Data Analyst / Senior Sales Specialist")
    - suggested: A representative suggested title for the most relevant positions (for display)
    - reason: A concise 1-sentence explanation
@@ -693,6 +705,11 @@ export async function processMatchOnly(resumeText, jobDescription, language = 'e
 2. Count synonyms and related terms (e.g., "React" covers "React.js", "ReactJS")
 3. If resume has MORE skills than required, score HIGHER not lower
 4. Experience with similar technologies counts (e.g., Vue experience is relevant for React role)
+
+## PDF EXTRATION / OCR RESILIENCE (CRITICAL)
+- IMPORTANT: This resume text is often extracted from a PDF. It WILL contain scattered layout, missing bullets, concatenated lines, headers mixed with content, and weird spacing.
+- You MUST NOT penalize the candidate for visual or structural formatting errors.
+- Base evaluation strictly on the presence of semantic content, keywords, and experience, regardless of how messy the text appears.
 
 ## IMPORTANT
 - Score based on actual alignment with job requirements
