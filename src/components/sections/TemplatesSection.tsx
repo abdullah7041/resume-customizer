@@ -54,7 +54,7 @@ const SAMPLE_RESUME: Partial<ResumeSchema> = {
     location: {
       city: 'Riyadh',
       countryCode: 'SA',
-      region: 'Riyadh',
+      region: 'Riyadh Province',
     },
     profiles: [],
   },

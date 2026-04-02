@@ -145,7 +145,9 @@ export function TechnicalEngineer({
                     {basics.location?.city && (
                         <span>
                             {basics.location.city}
-                            {basics.location?.region && `, ${basics.location.region}`}
+                            {basics.location?.region &&
+                                basics.location.region !== basics.location.city &&
+                                `, ${basics.location.region}`}
                         </span>
                     )}
                     {(linkedInUrl || linkedInLabel) && (linkedInUrl ? <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>LinkedIn Account</a> : <span>{linkedInLabel}</span>)}
@@ -246,6 +248,7 @@ export function TechnicalEngineer({
                                                 fontWeight: '600',
                                                 fontFamily: "'Inter', -apple-system, sans-serif",
                                                 minWidth: 0,
+                                                overflow: 'hidden',
                                             }}
                                         >
                                             {safeString(job.position)}
@@ -330,7 +333,7 @@ export function TechnicalEngineer({
                             <div key={i} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
                                 <div style={{ breakAfter: (edu.highlights && edu.highlights.length > 4) ? 'avoid' : 'auto' }}>
                                     <div className="flex justify-between items-baseline">
-                                        <div>
+                                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                             <h3
                                                 className="text-gray-900"
                                                 style={{
@@ -356,7 +359,7 @@ export function TechnicalEngineer({
                                                 </p>
                                             )}
                                         </div>
-                                        <span className="text-gray-500" style={{ fontSize: fs(10) }}>
+                                        <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
                                             {edu.endDate || edu.startDate}
                                         </span>
                                     </div>

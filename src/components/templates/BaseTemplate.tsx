@@ -126,8 +126,10 @@ export function formatContactLine(basics: ResumeSchema['basics']): string {
   const parts: string[] = [];
 
   if (basics.location?.city) {
+    const city = basics.location.city;
+    const region = basics.location.region !== city ? basics.location.region : undefined;
     parts.push(
-      [basics.location.city, basics.location.region, basics.location.countryCode]
+      [city, region, basics.location.countryCode]
         .filter(Boolean)
         .join(', ')
     );

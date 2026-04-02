@@ -149,7 +149,9 @@ export function ModernProfessional({
           {basics.location?.city && (
             <span>
               {basics.location.city}
-              {basics.location?.region && `, ${basics.location.region}`}
+              {basics.location?.region &&
+                basics.location.region !== basics.location.city &&
+                `, ${basics.location.region}`}
             </span>
           )}
           {basics.email && (
@@ -225,7 +227,7 @@ export function ModernProfessional({
               <div key={i} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   <div className="flex justify-between items-baseline mb-1">
-                    <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0 }}>
+                    <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0, overflow: 'hidden' }}>
                       {safeString(job.position)}
                     </h3>
                     <span className="text-gray-600 font-medium" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
@@ -306,7 +308,7 @@ export function ModernProfessional({
               <div key={i} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ breakAfter: (edu.highlights && edu.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   <div className="flex justify-between items-baseline">
-                    <div>
+                    <div style={{ minWidth: 0, overflow: 'hidden' }}>
                       <h3 className="text-gray-900" style={{ fontSize: fs(11), fontWeight: '700' }}>
                         {safeString(edu.institution)}
                       </h3>
@@ -325,7 +327,7 @@ export function ModernProfessional({
                         </p>
                       )}
                     </div>
-                    <span className="text-gray-600 font-medium" style={{ fontSize: fs(10) }}>
+                    <span className="text-gray-600 font-medium" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
                       {edu.startDate} — {edu.endDate}
                     </span>
                   </div>

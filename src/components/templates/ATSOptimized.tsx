@@ -145,7 +145,9 @@ export function ATSOptimized({
                             {(basics?.phone || basics?.email) && <Sep />}
                             <span>
                                 {basics.location.city}
-                                {basics.location?.region && `, ${basics.location.region}`}
+                                {basics.location?.region &&
+                                    basics.location.region !== basics.location.city &&
+                                    `, ${basics.location.region}`}
                             </span>
                         </>
                     )}
@@ -207,11 +209,11 @@ export function ATSOptimized({
                     {work.map((job, index) => (
                         <div key={index} className="mb-4" style={{ breakInside: 'avoid' }}>
                             <div className="flex justify-between items-baseline">
-                                <div>
+                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                     <span className="font-semibold" style={{ fontSize: fs(12) }}>{safeString(job.position)}</span>
                                     {job.name && <span className="text-black" style={{ fontSize: fs(11) }}> | {job.name}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: fs(10) }}>
+                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
                                     {job.startDate} - {job.endDate || 'Present'}
                                 </span>
                             </div>
@@ -267,11 +269,11 @@ export function ATSOptimized({
                     {education.map((edu, index) => (
                         <div key={index} className="mb-3" style={{ breakInside: 'avoid' }}>
                             <div className="flex justify-between">
-                                <div>
+                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                     <span className="font-semibold" style={{ fontSize: fs(10.5) }}>{safeString(edu.studyType)}</span>
                                     {edu.area && <span style={{ fontSize: fs(10.5) }}> in {edu.area}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: fs(10) }}>{edu.endDate}</span>
+                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>{edu.endDate}</span>
                             </div>
                             <p className="text-black" style={{ fontSize: fs(10.5) }}>{safeString(edu.institution)}</p>
                             {edu.score && <p style={{ fontSize: fs(10.5) }}>GPA: {edu.score}</p>}

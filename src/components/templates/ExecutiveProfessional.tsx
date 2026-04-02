@@ -159,7 +159,7 @@ export function ExecutiveProfessional({
           {basics.location?.city && (
             <>
               <span style={{ color: '#999', margin: '0 6px' }}>|</span>
-              <span>{[basics.location.city, basics.location.region].filter(Boolean).join(', ')}</span>
+              <span>{[basics.location.city, basics.location.region].filter(Boolean).filter((v, i, arr) => i === 0 || v !== arr[0]).join(', ')}</span>
             </>
           )}
           {(linkedInUrl || linkedInLabel) && (
@@ -209,7 +209,7 @@ export function ExecutiveProfessional({
                 <div style={{ pageBreakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto', breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   {/* Position + Date on same row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
-                    <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0 }}>
+                    <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0, overflow: 'hidden' }}>
                       {safeString(job.position)}
                     </h3>
                     <span style={{ fontSize: fs(10), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', marginLeft: '12px', flexShrink: 0 }}>
