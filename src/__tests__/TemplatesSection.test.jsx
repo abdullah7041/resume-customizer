@@ -119,20 +119,20 @@ describe('TemplatesSection', () => {
             const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons)
                 .map(btn => btn.textContent?.trim())
-                .filter(text => ['Modern Professional', 'Gulf Classic', 'Tech Specialist'].includes(text || ''));
+                .filter(text => ['Riyadh', 'Khobar', 'Qiddiya'].includes(text || ''));
 
-            expect(templateButtons).toContain('Modern Professional');
-            expect(templateButtons).toContain('Gulf Classic');
-            expect(templateButtons).toContain('Tech Specialist');
+            expect(templateButtons).toContain('Riyadh');
+            expect(templateButtons).toContain('Khobar');
+            expect(templateButtons).toContain('Qiddiya');
         });
 
         it('renders template names in floating selector', () => {
             renderWithProviders(<TemplateGallery />);
 
             // Check for template names in the floating selector
-            expect(screen.getAllByText('Modern Professional').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Gulf Classic').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Tech Specialist').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Riyadh').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Khobar').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Qiddiya').length).toBeGreaterThan(0);
         });
 
         it('renders Download PDF button', () => {
@@ -160,10 +160,10 @@ describe('TemplatesSection', () => {
         it('all template pills are rendered', () => {
             renderWithProviders(<TemplateGallery />);
 
-            // Should show all 3 templates in the floating selector
-            expect(screen.getAllByText('Modern Professional').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Gulf Classic').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Tech Specialist').length).toBeGreaterThan(0);
+            // Should show at least 3 templates in the floating selector
+            expect(screen.getAllByText('Riyadh').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Khobar').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Qiddiya').length).toBeGreaterThan(0);
         });
 
         it('calls onSelectTemplate callback when template is selected', () => {
@@ -172,9 +172,9 @@ describe('TemplatesSection', () => {
 
             // Find template buttons
             const allButtons = screen.getAllByRole('button');
-            // Find a button that contains Classic Traditional text
+            // Find a button that contains Khobar text
             const classicButtons = allButtons.filter(btn =>
-                btn.textContent?.includes('Gulf Classic')
+                btn.textContent?.includes('Khobar')
             );
 
             if (classicButtons.length > 0) {
@@ -198,7 +198,7 @@ describe('TemplatesSection', () => {
 
             // Check that h3 heading shows a template name
             const h3 = screen.getByRole('heading', { level: 3 });
-            expect(h3.textContent).toContain('Modern Professional');
+            expect(h3.textContent).toContain('Riyadh');
         });
     });
 
@@ -215,8 +215,8 @@ describe('TemplatesSection', () => {
         it('renders template selector in floating bar', () => {
             renderWithProviders(<TemplateGallery />);
 
-            // Template selector renders pills - Modern Professional should be visible
-            expect(screen.getAllByText('Modern Professional').length).toBeGreaterThan(0);
+            // Template selector renders pills - Riyadh should be visible
+            expect(screen.getAllByText('Riyadh').length).toBeGreaterThan(0);
         });
 
         it('template pills are clickable', () => {
@@ -226,17 +226,17 @@ describe('TemplatesSection', () => {
             const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons).filter(btn => {
                 const text = btn.textContent?.trim();
-                return ['Modern Professional', 'Gulf Classic', 'Tech Specialist'].includes(text || '');
+                return ['Riyadh', 'Khobar', 'Qiddiya'].includes(text || '');
             });
 
             expect(templateButtons.length).toBeGreaterThanOrEqual(3);
 
-            // Click on Technical Engineer
-            const techButton = templateButtons.find(btn => btn.textContent?.includes('Tech Specialist'));
+            // Click on Khobar
+            const techButton = templateButtons.find(btn => btn.textContent?.includes('Khobar'));
             if (techButton) {
                 fireEvent.click(techButton);
                 // Verify click doesn't cause errors
-                expect(screen.getAllByText('Tech Specialist').length).toBeGreaterThan(0);
+                expect(screen.getAllByText('Khobar').length).toBeGreaterThan(0);
             }
         });
     });
@@ -297,7 +297,7 @@ describe('Template Data Structure', () => {
 
         const template = getTemplateById('modern-professional');
         expect(template).toBeDefined();
-        expect(template?.name).toBe('Modern Professional');
+        expect(template?.name).toBe('Riyadh');
     });
 
     it('getTemplateById returns null for unknown ID', async () => {

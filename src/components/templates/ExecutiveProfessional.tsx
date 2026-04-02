@@ -89,8 +89,6 @@ export function ExecutiveProfessional({
     return scaledFontSize(pt, fontScale);
   };
 
-  const marginPadding = `${opts.marginTop * 25.4}mm ${opts.marginSide * 25.4}mm`;
-
   const sectionStyle = { marginBottom: `${opts.sectionSpacing}px` };
   const headingStyle: React.CSSProperties = {
     fontSize: fs(12),
@@ -315,6 +313,15 @@ export function ExecutiveProfessional({
                 )}
                 {edu.score && (
                   <span style={{ color: '#555', display: 'block', paddingLeft: '4px', fontSize: fs(9.5) }}>GPA: {edu.score}</span>
+                )}
+                {edu.highlights && edu.highlights.length > 0 && (
+                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                    {edu.highlights.map((h, j) => (
+                      <li key={j} style={{ fontSize: fs(9.5), color: '#444' }}>
+                        {h}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </li>
             ))}

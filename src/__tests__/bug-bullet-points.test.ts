@@ -21,7 +21,6 @@ const TEMPLATE_DIR = resolve(__dirname, "..", "components", "templates");
 // Templates that need fixing (all except ExecutiveProfessional)
 const TEMPLATES_TO_FIX = [
   "ModernProfessional.tsx",
-  "ClassicTraditional.tsx",
   "TechnicalEngineer.tsx",
   "ATSOptimized.tsx",
 ];

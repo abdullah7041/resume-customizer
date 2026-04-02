@@ -83,7 +83,6 @@ export function TechnicalEngineer({
     };
 
     // Dynamic margins based on displayOptions
-    const marginPadding = `${opts.marginTop * 25.4}mm ${opts.marginSide * 25.4}mm`;
 
     // Computed styles based on displayOptions
     const sectionStyle = { marginBottom: `${opts.sectionSpacing}px` };

@@ -62,7 +62,6 @@ describe("Bug fix: PDF export uses CSS extraction (not inline whitelist)", () =>
 const TEMPLATE_DIR = resolve(__dirname, "..", "components", "templates");
 const TEMPLATE_FILES = [
   "ModernProfessional.tsx",
-  "ClassicTraditional.tsx",
   "TechnicalEngineer.tsx",
   "ExecutiveProfessional.tsx",
 ];

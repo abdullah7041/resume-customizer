@@ -40,7 +40,7 @@ vi.mock('../components/providers/DirectionProvider', () => ({
 }));
 
 import { ModernProfessional } from '../components/templates/ModernProfessional';
-import { ClassicTraditional } from '../components/templates/ClassicTraditional';
+import { ExecutiveProfessional } from '../components/templates/ExecutiveProfessional';
 import { TechnicalEngineer } from '../components/templates/TechnicalEngineer';
 import { ATSOptimized } from '../components/templates/ATSOptimized';
 
@@ -130,7 +130,7 @@ afterEach(() => {
 
 const templates = [
   { name: 'ModernProfessional', Component: ModernProfessional },
-  { name: 'ClassicTraditional', Component: ClassicTraditional },
+  { name: 'ExecutiveProfessional', Component: ExecutiveProfessional },
   { name: 'TechnicalEngineer', Component: TechnicalEngineer },
   { name: 'ATSOptimized', Component: ATSOptimized },
 ];

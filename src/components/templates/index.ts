@@ -3,9 +3,9 @@
 
 // Templates
 export { ModernProfessional } from './ModernProfessional';
-export { ClassicTraditional } from './ClassicTraditional';
 export { TechnicalEngineer } from './TechnicalEngineer';
 export { ATSOptimized } from './ATSOptimized';
+export { ExecutiveProfessional } from './ExecutiveProfessional';
 
 // Registry
 export {
