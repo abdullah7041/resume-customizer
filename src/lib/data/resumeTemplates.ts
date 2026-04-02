@@ -13,7 +13,7 @@ export const resumeTemplates = [
   {
     id: "modern-professional",
     // Saudi market: clean, contemporary — ideal for tech & Vision 2030 roles
-    name: "Modern Professional",
+    name: "Riyadh",
     category: TEMPLATE_CATEGORIES.MODERN,
     description: "Clean, contemporary design with clear section headers. Perfect for tech and corporate roles.",
     atsScore: 100,
@@ -95,93 +95,11 @@ export const resumeTemplates = [
     }
   },
 
-  {
-    id: "classic-traditional",
-    name: "Gulf Classic",
-    category: TEMPLATE_CATEGORIES.CLASSIC,
-    description: "Traditional resume format with emphasis on chronological experience. Ideal for conservative industries.",
-    atsScore: 100,
-    preview: {
-      layout: "single-column",
-      colorScheme: "neutral",
-      font: "serif"
-    },
-    structure: {
-      header: {
-        includePhoto: false,
-        layout: "left-aligned",
-        fields: ["name", "address", "phone", "email"]
-      },
-      sections: [
-        {
-          id: "objective",
-          title: "Career Objective",
-          type: "paragraph",
-          placeholder: "Seeking a challenging position in [Field] where I can utilize my [Skills] to contribute to [Goal].",
-          maxLength: 200,
-          optional: true
-        },
-        {
-          id: "experience",
-          title: "Professional Experience",
-          type: "timeline",
-          placeholder: "Job Title\nCompany Name, City, State\nStart Date - End Date\n• Accomplishment with measurable result\n• Responsibility description",
-          required: true,
-          format: {
-            showDuration: false,
-            bulletStyle: "dash",
-            reverse: true
-          }
-        },
-        {
-          id: "education",
-          title: "Education",
-          type: "timeline",
-          placeholder: "Degree Type in Major\nUniversity Name, City, State\nGraduation Date",
-          required: true,
-          format: {
-            showGPA: true
-          }
-        },
-        {
-          id: "skills",
-          title: "Professional Skills",
-          type: "categorized",
-          placeholder: "Category: Skill 1, Skill 2, Skill 3",
-          format: {
-            categories: ["Technical", "Soft Skills", "Languages"]
-          }
-        },
-        {
-          id: "references",
-          title: "References",
-          type: "text",
-          placeholder: "Available upon request",
-          optional: true
-        }
-      ]
-    },
-    formatting: {
-      fontSize: {
-        name: "24pt",
-        sectionTitle: "12pt",
-        body: "11pt"
-      },
-      spacing: {
-        sectionGap: "12px",
-        lineHeight: "1.4"
-      },
-      colors: {
-        primary: "#000000",
-        secondary: "#333333",
-        text: "#000000"
-      }
-    }
-  },
+
 
   {
     id: "technical-engineer",
-    name: "Tech Specialist",
+    name: "Khobar",
     category: TEMPLATE_CATEGORIES.TECHNICAL,
     description: "Optimized for software developers, engineers, and IT professionals. Highlights technical skills and projects.",
     atsScore: 100,
@@ -268,7 +186,7 @@ export const resumeTemplates = [
 
   {
     id: "ats-optimized",
-    name: "ATS Optimized",
+    name: "Qiddiya",
     category: TEMPLATE_CATEGORIES.MODERN,
     description: "Maximum ATS compatibility with clean, parseable single-column format. Keyword-rich design optimized for applicant tracking systems.",
     atsScore: 100,
@@ -370,7 +288,7 @@ export const resumeTemplates = [
   ,
   {
     id: "executive-professional",
-    name: "Executive Leader",
+    name: "Neom",
     category: TEMPLATE_CATEGORIES.EXECUTIVE,
     description: "Elegant serif design for senior leadership and executive roles. Navy blue accents with centered header.",
     atsScore: 100,

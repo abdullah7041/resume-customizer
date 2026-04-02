@@ -373,7 +373,7 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
 
   // Check if this is a known template from the registry
   // If so, use the proper component with the resume prop structure
-  if (['modern-professional', 'classic-traditional', 'technical-engineer', 'ats-optimized', 'executive-professional'].includes(template.id)) {
+  if (['modern-professional', 'technical-engineer', 'ats-optimized', 'executive-professional'].includes(template.id)) {
     // Registry templates expect { resume, displayOptions } props
     return (
       <div

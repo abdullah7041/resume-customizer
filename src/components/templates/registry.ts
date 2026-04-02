@@ -1,7 +1,7 @@
 import type { TemplateComponent } from './BaseTemplate';
 import type { TemplateConfig, TemplateId } from '../../types/templates';
 import { ModernProfessional } from './ModernProfessional';
-import { ClassicTraditional } from './ClassicTraditional';
+
 import { TechnicalEngineer } from './TechnicalEngineer';
 import { ATSOptimized } from './ATSOptimized';
 import { ExecutiveProfessional } from './ExecutiveProfessional';
@@ -12,7 +12,7 @@ import { ExecutiveProfessional } from './ExecutiveProfessional';
  */
 export const TEMPLATES: Record<TemplateId, TemplateComponent> = {
   'modern-professional': ModernProfessional as TemplateComponent,
-  'classic-traditional': ClassicTraditional as TemplateComponent,
+
   'technical-engineer': TechnicalEngineer as TemplateComponent,
   'ats-optimized': ATSOptimized as TemplateComponent,
   'executive-professional': ExecutiveProfessional as TemplateComponent,
@@ -25,28 +25,19 @@ export const TEMPLATES: Record<TemplateId, TemplateComponent> = {
 export const TEMPLATE_CONFIGS: TemplateConfig[] = [
   {
     id: 'modern-professional',
-    name: 'Modern Professional',
-    nameAr: 'احترافي عصري',
+    name: 'Riyadh',
+    nameAr: 'الرياض',
     category: 'modern',
     description: 'Clean & minimal, perfect for any industry',
     descriptionAr: 'تصميم عصري ونظيف مع ألوان مميزة',
     isAtsOptimized: true,
     previewColor: '#10b981', // emerald-500
   },
-  {
-    id: 'classic-traditional',
-    name: 'Classic Traditional',
-    nameAr: 'كلاسيكي تقليدي',
-    category: 'classic',
-    description: 'Elegant serif style for traditional sectors',
-    descriptionAr: 'تخطيط كلاسيكي بعمودين مع طباعة أنيقة',
-    isAtsOptimized: true,
-    previewColor: '#6b7280', // gray-500
-  },
+
   {
     id: 'technical-engineer',
-    name: 'Technical Engineer',
-    nameAr: 'مهندس تقني',
+    name: 'Khobar',
+    nameAr: 'الخبر',
     category: 'technical',
     description: 'Skills-first layout for technical roles',
     descriptionAr: 'تخطيط يركز على المهارات للأدوار التقنية',
@@ -55,8 +46,8 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
   },
   {
     id: 'ats-optimized',
-    name: 'ATS Optimized',
-    nameAr: 'مُحسَّن للنظام الآلي',
+    name: 'Qiddiya',
+    nameAr: 'القدية',
     category: 'modern',
     description: 'Single-column layout optimized for Applicant Tracking Systems',
     descriptionAr: 'تنسيق عمود واحد محسّن لأنظمة تتبع المتقدمين',
@@ -65,8 +56,8 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
   },
   {
     id: 'executive-professional',
-    name: 'Executive Professional',
-    nameAr: 'تنفيذي احترافي',
+    name: 'Neom',
+    nameAr: 'نيوم',
     category: 'executive',
     description: 'Elegant serif design for senior leadership and executive roles',
     descriptionAr: 'تصميم أنيق بخطوط سيريف للمناصب القيادية والتنفيذية',

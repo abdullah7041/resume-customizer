@@ -59,7 +59,7 @@ describe('resumeStore', () => {
         expect(useResumeStore.getState().hasDownloaded).toBe(true);
 
         // Simulate changing template - should reset
-        useResumeStore.getState().setSelectedTemplate('classic-traditional');
+        useResumeStore.getState().setSelectedTemplate('technical-engineer');
         expect(useResumeStore.getState().hasDownloaded).toBe(false);
 
         // Reset and test another action

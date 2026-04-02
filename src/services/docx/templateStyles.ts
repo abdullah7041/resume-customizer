@@ -112,42 +112,7 @@ const modernProfessional: DocxTemplateConfig = {
   margins: [0.5, 0.5, 0.6, 0.6],
 };
 
-const classicTraditional: DocxTemplateConfig = {
-  fontFamily: 'Georgia',
-  headingFont: 'Georgia',
-  baseFontSize: 21,       // 10.5pt
-  headingSize: 28,        // 14pt
-  nameSize: 48,           // 24pt
-  accentColor: '1A1A1A',
-  bodyColor: '374151',    // gray-700
-  contactColor: '6B7280', // gray-500
-  headerAlignment: 'CENTER',
-  headerBorder: 'solid',
-  headerBorderColor: '1A1A1A',
-  nameUppercase: true,
-  nameLetterSpacing: true,
-  headingUppercase: true,
-  headingBorder: 'solid',
-  headingBorderColor: '1A1A1A',
-  headingAlignment: 'LEFT',
-  summaryItalic: true,
-  bulletChar: '–',
-  dateSeparator: ' – ',
-  skillsLayout: 'comma',
-  lineSpacing: 348,
-  labels: {
-    summary: 'Professional Summary',
-    experience: 'Work Experience',
-    projects: 'Key Projects',
-    skills: 'Skills & Expertise',
-    education: 'Education',
-    certificates: 'Certifications',
-    languages: 'Languages',
-  },
-  sectionOrder: ['summary', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages'],
-  margins: [0.5, 0.5, 0.6, 0.6],
-  experienceCompanyItalic: true,
-};
+
 
 const technicalEngineer: DocxTemplateConfig = {
   fontFamily: 'Consolas',
@@ -265,7 +230,7 @@ const executiveProfessional: DocxTemplateConfig = {
 
 const TEMPLATE_CONFIGS: Record<TemplateId, DocxTemplateConfig> = {
   'modern-professional': modernProfessional,
-  'classic-traditional': classicTraditional,
+
   'technical-engineer': technicalEngineer,
   'ats-optimized': atsOptimized,
   'executive-professional': executiveProfessional,

@@ -485,8 +485,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       
       try {
         // Dynamic import to keep bundle size small
-        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-          import('html2canvas'),
+        const [{ toCanvas }, { jsPDF }] = await Promise.all([
+          import('html-to-image'),
           import('jspdf')
         ]);
 
@@ -516,10 +516,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           wrapper.style.transform = 'none';
         }
 
-        const canvas = await html2canvas(previewElement, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
+        const canvas = await toCanvas(previewElement, {
+          pixelRatio: 2,
+          cacheBust: true,
+          style: {
+            transform: 'none',
+          }
         });
 
         // Restore transforms and no-print elements

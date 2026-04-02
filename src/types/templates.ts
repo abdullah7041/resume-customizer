@@ -6,7 +6,6 @@ import type { ResumeSchema } from './resume';
  */
 export type TemplateId =
   | 'modern-professional'
-  | 'classic-traditional'
   | 'technical-engineer'
   | 'ats-optimized'
   | 'executive-professional';

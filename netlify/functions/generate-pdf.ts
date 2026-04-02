@@ -98,7 +98,6 @@ async function getBrowser() {
 // Valid template IDs - must match registry
 const VALID_TEMPLATE_IDS = [
   'modern-professional',
-  'classic-traditional',
   'technical-engineer',
   'ats-optimized',
   'executive-professional'
@@ -163,12 +162,15 @@ const baseHandler: Handler = async (event) => {
             /* Prevent section headers from orphaning at the bottom of a page.
                Works in both screen and print rendering modes. */
             h2 { break-after: avoid; }
+            
+            /* Remove template root padding to prevent double-padding on page 1 */
+            [data-resume-preview] > div { padding-top: 0 !important; }
 
           </style>
         </head>
         <body>${html}</body>
       </html>
-    `, { waitUntil: 'networkidle0', timeout: 30_000 });
+    `, { waitUntil: 'networkidle2', timeout: 30_000 });
 
     // Use print media so screen-only components are hidden natively.
     await page.emulateMediaType('print');
@@ -231,6 +233,7 @@ const baseHandler: Handler = async (event) => {
         // The displayHeaderFooter property ensures no browser URL headers are printed
         // in combination with standard @page margins.
         displayHeaderFooter: false,
+        margin: { top: '10mm', bottom: '10mm', left: '0', right: '0' },
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`PDF generation timed out after ${PDF_TIMEOUT_MS / 1000}s`)), PDF_TIMEOUT_MS)
