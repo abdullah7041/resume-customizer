@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle } from "lucide-react";
 import {
@@ -42,6 +42,39 @@ function SectionSkeleton() {
       <div className="h-64 w-full rounded-xl bg-gray-100 dark:bg-white/5" />
     </div>
   );
+}
+
+/** Error boundary that catches failed dynamic imports and shows a recovery UI */
+class LazyErrorBoundary extends Component<
+  { children: ReactNode; label?: string },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; label?: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-4 p-10 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Failed to load {this.props.label ?? 'this section'}. This can happen after a hot-reload.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
+          >
+            Reload page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 
@@ -923,43 +956,49 @@ export default function MainContent() {
             />
           )}
           {activeTab === "match" && (
-            <Suspense fallback={<SectionSkeleton />}>
-              <MatchSection
-                onAnalyzeMatchAI={handleAnalyzeMatchAI}
-                matchAnalysis={matchAnalysis}
-                isAnalyzing={isAnalyzing}
-                hasResume={Boolean(resumeData?.plainText)}
-                resumeText={resumeData?.plainText || ''}
-                onToast={pushToast}
-                onClear={handleClearMatch}
-              />
-            </Suspense>
+            <LazyErrorBoundary label="Match section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <MatchSection
+                  onAnalyzeMatchAI={handleAnalyzeMatchAI}
+                  matchAnalysis={matchAnalysis}
+                  isAnalyzing={isAnalyzing}
+                  hasResume={Boolean(resumeData?.plainText)}
+                  resumeText={resumeData?.plainText || ''}
+                  onToast={pushToast}
+                  onClear={handleClearMatch}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
           )}
           {activeTab === "vision2030" && (
-            <Suspense fallback={<SectionSkeleton />}>
-              <Vision2030Section
-                resumeText={resumeData?.plainText || ''}
-                onToast={pushToast}
-              />
-            </Suspense>
+            <LazyErrorBoundary label="Vision 2030 section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <Vision2030Section
+                  resumeText={resumeData?.plainText || ''}
+                  onToast={pushToast}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
           )}
           {activeTab === "optimize" && (
-            <Suspense fallback={<SectionSkeleton />}>
-              <OptimizeSection
-                isPremium={isPremium}
-                optimizations={optimizations}
-                keywords={optimizationKeywords}
-                isOptimizing={isOptimizing}
-                onOptimize={handleOptimize}
-                onCopy={handleCopy}
-                previewUsed={previewUsed}
-                onUpgrade={handleUpgrade}
-                onExport={handleExportPdf}
-                canExport={Boolean(resumeData?.plainText)}
-                hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
-                onClear={handleClearOptimizations}
-              />
-            </Suspense>
+            <LazyErrorBoundary label="Optimize section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <OptimizeSection
+                  isPremium={isPremium}
+                  optimizations={optimizations}
+                  keywords={optimizationKeywords}
+                  isOptimizing={isOptimizing}
+                  onOptimize={handleOptimize}
+                  onCopy={handleCopy}
+                  previewUsed={previewUsed}
+                  onUpgrade={handleUpgrade}
+                  onExport={handleExportPdf}
+                  canExport={Boolean(resumeData?.plainText)}
+                  hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
+                  onClear={handleClearOptimizations}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
           )}
 
           {activeTab === "templates" && (
@@ -969,31 +1008,37 @@ export default function MainContent() {
             />
           )}
           {activeTab === "interview" && (
-            <Suspense fallback={<SectionSkeleton />}>
-              <InterviewSection
-                jobDescription={jobDescription}
-                resumeText={resumeData?.plainText || ""}
-                matchAnalysis={matchAnalysis}
-                resumeData={resumeData}
-                onUpdate={handleResumeDataUpdate}
-              />
-            </Suspense>
+            <LazyErrorBoundary label="Interview section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <InterviewSection
+                  jobDescription={jobDescription}
+                  resumeText={resumeData?.plainText || ""}
+                  matchAnalysis={matchAnalysis}
+                  resumeData={resumeData}
+                  onUpdate={handleResumeDataUpdate}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
           )}
           {activeTab === "bulk" && (
-            <Suspense fallback={<SectionSkeleton />}>
-              <BulkAnalysisSection
-                jobDescription={jobDescription}
-              />
-            </Suspense>
+            <LazyErrorBoundary label="Bulk Analysis section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <BulkAnalysisSection
+                  jobDescription={jobDescription}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
           )}
           {activeTab === "cover-letter" && (
-            <Suspense fallback={<SectionSkeleton />}>
-              <CoverLetterSection
-                resumeText={resumeData?.plainText || ""}
-                jobDescription={jobDescription}
-                resumeData={resumeData}
-              />
-            </Suspense>
+            <LazyErrorBoundary label="Cover Letter section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <CoverLetterSection
+                  resumeText={resumeData?.plainText || ""}
+                  jobDescription={jobDescription}
+                  resumeData={resumeData}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
           )}
         </div>
 

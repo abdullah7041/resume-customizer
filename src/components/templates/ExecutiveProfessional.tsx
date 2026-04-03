@@ -159,7 +159,7 @@ export function ExecutiveProfessional({
           {basics.location?.city && (
             <>
               <span style={{ color: '#999', margin: '0 6px' }}>|</span>
-              <span>{[basics.location.city, basics.location.region].filter(Boolean).filter((v, i, arr) => i === 0 || v !== arr[0]).join(', ')}</span>
+              <span>{[basics.location.city, basics.location.region !== basics.location.city ? basics.location.region : undefined].filter(Boolean).join(', ')}</span>
             </>
           )}
           {(linkedInUrl || linkedInLabel) && (

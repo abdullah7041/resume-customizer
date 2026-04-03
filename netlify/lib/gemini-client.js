@@ -1,6 +1,13 @@
 // OpenRouter API client for Gemini models
 import { callOpenRouter, MODELS } from './openrouter-client.js';
 
+// Shared OCR resilience rule injected into both optimizeResume and processMatchOnly prompts.
+// Having one source of truth ensures consistent scoring behaviour across all AI evaluations.
+const OCR_RESILIENCE_RULE = `## PDF EXTRACTION / OCR RESILIENCE (CRITICAL)
+- IMPORTANT: This resume text is often extracted from a PDF. It WILL contain scattered layout, missing bullets, concatenated lines, headers mixed with content, and weird spacing.
+- You MUST NOT penalize the candidate for visual or structural formatting errors.
+- Base evaluation strictly on the presence of semantic content, keywords, and experience, regardless of how messy the text appears.`;
+
 // Shared schema for category scores (used by processMatchOnly & optimizeResume)
 // Note: No longer using SchemaType - plain JSON Schema objects
 const CATEGORY_SCORE_SCHEMA = {
@@ -552,12 +559,13 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
 - 5: Some soft skills demonstrated
 - 0: No soft skills evidence
 
-## SCORING RULES & PDF OCR RESILIENCE
+## SCORING RULES
 1. Score skills based on demonstrated proficiency and evidence in the resume
 2. Count synonyms and related terms (e.g., "React" covers "React.js", "ReactJS")
 3. If resume has MORE skills than required, score HIGHER not lower
 4. Experience with similar technologies counts (e.g., Vue experience is relevant for React role)
-5. IMPORTANT OCR RULE: This resume text is extracted from a PDF. It may contain scattered layout, missing bullets, concatenated lines, headers mixed with content, or weird spacing. DO NOT penalize the candidate for visual or structural formatting errors. Base evaluation strictly on the presence of semantic content, keywords, and experience.
+
+${OCR_RESILIENCE_RULE}
 
 ## IMPORTANT
 - Score based on actual alignment with job requirements
@@ -706,10 +714,7 @@ export async function processMatchOnly(resumeText, jobDescription, language = 'e
 3. If resume has MORE skills than required, score HIGHER not lower
 4. Experience with similar technologies counts (e.g., Vue experience is relevant for React role)
 
-## PDF EXTRATION / OCR RESILIENCE (CRITICAL)
-- IMPORTANT: This resume text is often extracted from a PDF. It WILL contain scattered layout, missing bullets, concatenated lines, headers mixed with content, and weird spacing.
-- You MUST NOT penalize the candidate for visual or structural formatting errors.
-- Base evaluation strictly on the presence of semantic content, keywords, and experience, regardless of how messy the text appears.
+${OCR_RESILIENCE_RULE}
 
 ## IMPORTANT
 - Score based on actual alignment with job requirements
