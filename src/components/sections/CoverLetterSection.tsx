@@ -211,7 +211,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
     } finally {
       setIsGenerating(false);
     }
-  }, [resumeText, jobDescription, companyName, hiringManager, tone, refetchCredits, trackFeatureUse, shouldShowFeedback, t, i18n.language]);
+  }, [resumeText, jobDescription, companyName, hiringManager, tone, signatureName, refetchCredits, trackFeatureUse, shouldShowFeedback, t, i18n.language]);
 
   // Wrapper function that shows confirmation modal first
   const generateCoverLetter = () => {

@@ -30,7 +30,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Import handler
-const { handler } = await import('../parse-resume');
+const { handler } = await import('../parse-resume.js');
 
 // Test headers (beta code no longer required)
 const TEST_HEADERS = {};

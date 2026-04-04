@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { FileText, Linkedin, LogIn, LogOut, Sparkles, Target, Zap, Star, ArrowRight, Menu, X, TrendingUp, MessageSquare, BarChart3, Mail, Crown, Gift, ShieldCheck, Sun, Moon, Settings } from "lucide-react";
+import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -21,17 +21,6 @@ const getPrefersReducedMotion = () => {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 };
 
-// Modern premium glass card styles
-const glassCardClass =
-  "neu-card group";
-
-const glassCardHoverClass =
-  "neu-card-hover";
-
-// Icon circle with glow effect
-const iconCircleClass =
-  "relative inline-flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl transition-all duration-300";
-
 export default function Header() {
   const { t } = useTranslation();
   const { user, signInWithGoogle, signOut } = useAuth();
@@ -44,10 +33,6 @@ export default function Header() {
   );
   const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
-  const [heroVisible, setHeroVisible] = useState(initialReducedMotion);
-  const [workflowVisible, setWorkflowVisible] = useState(initialReducedMotion);
-  const heroAnimatedRef = useRef(initialReducedMotion);
-  const workflowAnimatedRef = useRef(initialReducedMotion);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [badgeFlipped, setBadgeFlipped] = useState(false);
@@ -128,44 +113,14 @@ export default function Header() {
     const updateFromMediaQuery = (event) => {
       const shouldReduce = event.matches;
       setPrefersReducedMotion(shouldReduce);
-
-      if (shouldReduce) {
-        heroAnimatedRef.current = true;
-        workflowAnimatedRef.current = true;
-        setHeroVisible(true);
-        setWorkflowVisible(true);
-      }
     };
 
     updateFromMediaQuery(mediaQuery);
 
-    let heroFrame;
-    let workflowTimer;
 
-    const requestFrame =
-      typeof window.requestAnimationFrame === "function"
-        ? window.requestAnimationFrame.bind(window)
-        : (callback) => setTimeout(callback, 16);
-
-    const cancelFrame =
-      typeof window.cancelAnimationFrame === "function"
-        ? window.cancelAnimationFrame.bind(window)
-        : clearTimeout;
 
     if (!mediaQuery.matches) {
-      if (!heroAnimatedRef.current) {
-        heroFrame = requestFrame(() => {
-          setHeroVisible(true);
-          heroAnimatedRef.current = true;
-        });
-      }
-
-      if (!workflowAnimatedRef.current) {
-        workflowTimer = setTimeout(() => {
-          setWorkflowVisible(true);
-          workflowAnimatedRef.current = true;
-        }, 200);
-      }
+      // Intentionally empty since animations were removed
     }
 
     const removeMotionListener =
@@ -181,116 +136,10 @@ export default function Header() {
 
     return () => {
       removeMotionListener();
-      if (heroFrame) cancelFrame(heroFrame);
-      if (workflowTimer) clearTimeout(workflowTimer);
     };
   }, []);
 
 
-
-  // Feature cards organized by priority and category
-  const featureCards = [
-    // ===== CORE AI FEATURES (Top Priority - Trust & Intelligence) =====
-    {
-      icon: Target,
-      label: t("header.features.matchScore.label"),
-      desc: t("header.features.matchScore.desc"),
-      gradient: "from-emerald-400 to-teal-500",
-    },
-    {
-      icon: ShieldCheck,
-      label: t("header.features.antiHallucination.label"),
-      desc: t("header.features.antiHallucination.desc"),
-      gradient: "from-emerald-400 to-green-500",
-      highlight: true,
-    },
-    {
-      icon: Sparkles,
-      label: t("header.features.aiOptimization.label"),
-      desc: t("header.features.aiOptimization.desc"),
-      gradient: "from-purple-400 to-pink-500",
-    },
-
-    // ===== WORKFLOW FEATURES (Secondary - Core Functionality) =====
-    {
-      icon: Zap,
-      label: t("header.features.smartParsing.label"),
-      desc: t("header.features.smartParsing.desc"),
-      gradient: "from-yellow-400 to-orange-500",
-    },
-    {
-      icon: TrendingUp,
-      label: t("header.features.keywords.label"),
-      desc: t("header.features.keywords.desc"),
-      gradient: "from-blue-400 to-indigo-500",
-    },
-    {
-      icon: FileText,
-      label: t("header.features.templates.label"),
-      desc: t("header.features.templates.desc"),
-      gradient: "from-cyan-400 to-blue-500",
-    },
-
-    // ===== ADVANCED FEATURES (Tertiary - Value-Added Services) =====
-    {
-      icon: MessageSquare,
-      label: t("header.features.interview.label"),
-      desc: t("header.features.interview.desc"),
-      gradient: "from-rose-400 to-red-500",
-    },
-    {
-      icon: BarChart3,
-      label: t("header.features.bulk.label"),
-      desc: t("header.features.bulk.desc"),
-      gradient: "from-amber-400 to-orange-500",
-    },
-    {
-      icon: Mail,
-      label: t("header.features.coverLetter.label"),
-      desc: t("header.features.coverLetter.desc"),
-      gradient: "from-violet-400 to-purple-500",
-    },
-    {
-      icon: Star,
-      label: t("header.features.vision2030.label"),
-      desc: t("header.features.vision2030.desc"),
-      gradient: "from-[#006C35] to-emerald-500",
-      highlight: true,
-    },
-  ];
-
-  const workflowSteps = [
-    {
-      icon: FileText,
-      title: t("header.workflow.step1.title"),
-      desc: t("header.workflow.step1.desc"),
-    },
-    {
-      icon: Target,
-      title: t("header.workflow.step2.title"),
-      desc: t("header.workflow.step2.desc"),
-    },
-    {
-      icon: Sparkles,
-      title: t("header.workflow.step3.title"),
-      desc: t("header.workflow.step3.desc"),
-    },
-    {
-      icon: TrendingUp,
-      title: t("header.workflow.step4.title"),
-      desc: t("header.workflow.step4.desc"),
-    },
-    {
-      icon: MessageSquare,
-      title: t("header.workflow.step5.title"),
-      desc: t("header.workflow.step5.desc"),
-    },
-    {
-      icon: Mail,
-      title: t("header.workflow.step6.title"),
-      desc: t("header.workflow.step6.desc"),
-    },
-  ];
 
   return (
     <header

@@ -1,12 +1,12 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import { callOpenRouter } from '../lib/openrouter-client';
-import { withRateLimit } from '../lib/rate-limiter';
-import { Vision2030RequestSchema, formatZodError } from '../lib/resume-schemas';
-import { initSentry, captureError } from '../lib/sentry';
-import { checkCredits, consumeCredits } from '../lib/credit-manager';
+import { callOpenRouter } from '../lib/openrouter-client.js';
+import { withRateLimit } from '../lib/rate-limiter.js';
+import { Vision2030RequestSchema, formatZodError } from '../lib/resume-schemas.js';
+import { initSentry, captureError } from '../lib/sentry.js';
+import { checkCredits, consumeCredits } from '../lib/credit-manager.js';
 import { getClientIP } from '../lib/ip-utils.js';
-import type { Vision2030AnalysisResponse } from '../../src/types/vision2030';
+import type { Vision2030AnalysisResponse } from '../lib/vision2030-types.js';
 
 initSentry();
 

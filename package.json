@@ -23,7 +23,7 @@
     "cleanup": "node -e \"const fs=require('fs');const files=['unified-pipeline.js','test-local.sh','test-parse-resume.ps1','debug_output.png','deno.lock','scripts/debug-gemini.js','LOCAL_TESTING_GUIDE.md'];files.forEach(f=>{try{fs.unlinkSync(f);console.log('Deleted:',f)}catch(e){if(e.code!=='ENOENT')console.error('Error:',f,e.message)}});console.log('Cleanup complete!')\""
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^2.1.90",
+    "@anthropic-ai/claude-code": "^2.1.92",
     "@netlify/functions": "^5.1.5",
     "@sentry/node": "^10.47.0",
     "@sentry/react": "^10.47.0",
@@ -51,7 +51,7 @@
     "react-i18next": "^17.0.2",
     "react-joyride": "^3.0.2",
     "resend": "^6.10.0",
-    "supabase": "^2.84.7",
+    "supabase": "^2.84.10",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.3.6",
@@ -70,7 +70,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/file-saver": "^2.0.7",
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.5.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/parser": "^8.58.0",

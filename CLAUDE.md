@@ -37,7 +37,7 @@ After EVERY code change, run `npm run quality:parallel`. Fix all errors immediat
 - **DB migrations**: Output SQL for user to run in Supabase dashboard. NEVER apply directly.
 - **Netlify functions**: 30s timeout default, 1024MB memory for `generate-pdf` (Puppeteer). No localhost URLs.
 - **Vite chunking**: `@react-pdf` MUST stay in one chunk (`vendor-pdf`) — circular deps break if split. Same for `@sentry` (`vendor-sentry`). `react-i18next` MUST be in `vendor-react` chunk.
-- **OpenRouter**: All AI functions use `OPENROUTER_API_KEY` env var. Two tiers: `lite` (gemini-2.5-flash-lite) for parsing, `flash` (gemini-2.5-flash) for analysis/optimization.
+- **OpenRouter**: All AI functions use `OPENROUTER_API_KEY` env var. Two tiers: `lite` (gemini-2.5-flash-lite) for parsing, `flash` (gemini-2.5-pro) for analysis/optimization.
 
 ## Debugging
 

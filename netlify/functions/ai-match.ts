@@ -1,11 +1,11 @@
 import { Handler } from '@netlify/functions';
-import { processMatchOnly } from "../lib/gemini-client";
-import { withRateLimit } from "../lib/rate-limiter";
-import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas";
-import { initSentry, captureError } from "../lib/sentry";
-import { checkCredits, consumeCredits } from "../lib/credit-manager";
+import { processMatchOnly } from "../lib/gemini-client.js";
+import { withRateLimit } from "../lib/rate-limiter.js";
+import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas.js";
+import { initSentry, captureError } from "../lib/sentry.js";
+import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { getClientIP } from "../lib/ip-utils.js";
-import { getSupabaseClient } from "../lib/supabase-client";
+import { getSupabaseClient } from "../lib/supabase-client.js";
 
 initSentry();
 

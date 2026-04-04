@@ -540,7 +540,7 @@ export default function MainContent() {
         // Fix B1: Always analyze the ORIGINAL resume text for match scoring
         // This prevents the optimized score (e.g. 87) from leaking into match analysis
         // when showOptimized is true after optimization + download
-        const { parsedResumeText, showOptimized } = useResumeStore.getState();
+        const { parsedResumeText } = useResumeStore.getState();
         const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
 
         const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language);
@@ -550,7 +550,7 @@ export default function MainContent() {
         // Cache the match analysis score so OptimizeSection can read it
         // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
         if (result && typeof result.score === 'number') {
-          const { setCachedAnalysis, setOptimizationMetrics, baselineMatchScore, setBaselineMatchScore } = useResumeStore.getState();
+          const { setCachedAnalysis, setOptimizationMetrics, setBaselineMatchScore } = useResumeStore.getState();
           // CRITICAL: Cache using the SAME text we used for analysis
           // This ensures cache key matches what we analyzed (original or optimized)
           setCachedAnalysis(resumeTextToAnalyze, trimmedJob, {

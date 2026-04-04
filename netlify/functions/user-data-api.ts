@@ -9,7 +9,7 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import * as crypto from 'crypto';
-import { initSentry, captureError } from '../lib/sentry';
+import { initSentry, captureError } from '../lib/sentry.js';
 
 initSentry();
 

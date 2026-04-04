@@ -69,7 +69,7 @@ interface TemplateProps {
 |----------|---------|-------|
 | `parse-resume.ts` | Extract text from PDF/DOCX | N/A (OCR) |
 | `extract-resume-json.ts` | Text → JSON Resume schema | lite (gemini-2.5-flash-lite) |
-| `ai-match.ts` | TF-IDF + cosine similarity | flash (gemini-2.5-flash) |
+| `ai-match.ts` | TF-IDF + cosine similarity | flash (gemini-2.5-pro) |
 | `optimize.ts` | AI optimization suggestions | flash |
 | `predict-questions.ts` | Interview question generation | flash |
 | `generate-cover-letter.ts` | Cover letter generation | flash |

@@ -42,7 +42,7 @@ vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/sentry', () => mockSentry);
 
 // Import handler
-const { handler } = await import('../extract-resume-json');
+const { handler } = await import('../extract-resume-json.js');
 
 
 describe('extract-resume-json function', () => {

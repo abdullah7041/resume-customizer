@@ -1,10 +1,10 @@
 import { Handler } from '@netlify/functions';
-import { optimizeResume } from "../lib/gemini-client";
-import { withRateLimit } from "../lib/rate-limiter";
-import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas";
-import { initSentry, captureError } from "../lib/sentry";
-import { checkCredits, consumeCredits } from "../lib/credit-manager";
-import { getSupabaseClient } from "../lib/supabase-client";
+import { optimizeResume } from "../lib/gemini-client.js";
+import { withRateLimit } from "../lib/rate-limiter.js";
+import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
+import { initSentry, captureError } from "../lib/sentry.js";
+import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
+import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 
 initSentry();

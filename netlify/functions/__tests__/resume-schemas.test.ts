@@ -6,7 +6,7 @@ import {
     ParseResumeRequestSchema,
     validateResume,
     formatZodError
-} from '../../lib/resume-schemas';
+} from '../../lib/resume-schemas.js';
 
 describe('Resume Schemas', () => {
     describe('ResumeSchema', () => {

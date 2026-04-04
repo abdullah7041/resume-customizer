@@ -4,8 +4,8 @@ import {
   extractPlainTextFromArrayBuffer,
   inferMimeType,
 } from "../lib/resumeText.js";
-import { withRateLimit } from "../lib/rate-limiter";
-import { initSentry, captureError } from "../lib/sentry";
+import { withRateLimit } from "../lib/rate-limiter.js";
+import { initSentry, captureError } from "../lib/sentry.js";
 
 initSentry();
 

@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
 import { X, Settings, Download, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { cn } from '../../lib/utils/cn';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,7 +9,6 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -50,7 +47,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         try {
            const json = await response.json();
            errorData = json.error || json.message || errorData;
-        } catch(e) { /* ignore */ }
+        } catch { /* ignore */ }
         throw new Error(errorData);
       }
 

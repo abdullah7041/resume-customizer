@@ -112,56 +112,7 @@ function getSmartFilename(resume: Partial<ResumeSchema> | null, templateId: stri
   return position ? `${name}_${position}.${ext}` : `${name}_Resume.${ext}`;
 }
 
-/**
- * Build a self-contained HTML document from the preview element.
- *
- * Previous approach inlined a whitelist of ~40 computed style properties and
- * stripped all class names, which lost flex sizing, combinatorial selectors
- * (e.g. space-y-*), pseudo-elements, CSS variables, and more — causing
- * widespread layout breakage in the Puppeteer-rendered PDF.
- *
- * New approach: extract the page's full compiled CSS from `document.styleSheets`
- * and bundle it with the class-name–bearing HTML.  This guarantees the PDF
- * matches the browser preview exactly.  Typical payload is 200-600 KB,
- * well within the Netlify function's 6 MB limit.
- */
-function buildInlinedHtml(element: HTMLElement, title: string = 'Resume'): string {
-  // Clone the full element tree — class names AND inline styles are preserved
-  const clone = element.cloneNode(true) as HTMLElement;
 
-  // Remove elements that should not appear in the PDF
-  clone.querySelectorAll('[data-no-print]').forEach((el) => el.remove());
-
-  // ---- Extract compiled CSS from all accessible stylesheets ----
-  // This captures every Tailwind utility, component style, CSS variable,
-  // combinatorial selector (space-y-*, etc.), and pseudo-element rule
-  // that the browser preview uses.
-  const cssChunks: string[] = [];
-  for (const sheet of document.styleSheets) {
-    try {
-      for (const rule of sheet.cssRules) {
-        cssChunks.push(rule.cssText);
-      }
-    } catch {
-      // Cross-origin sheets (e.g. Google Fonts CDN) can't be read.
-      // Templates use system-font fallback stacks, so this is safe.
-    }
-  }
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>${title}</title>
-<style>
-* {box-sizing:border-box;margin:0;padding:0}
-body{background:#fff}
-svg{display:inline-block;vertical-align:middle}
-${cssChunks.join('\n')}
-</style></head>
-<body>${clone.outerHTML}</body>
-</html>`;
-}
 
 interface TemplateGalleryProps {
   resumeData?: ResumeSchema | null;
@@ -217,7 +168,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     // getActiveResume() internally uses showOptimized, optimizations, isSaudiNational, originalResume
     // We must depend on these values so the memo recomputes when editor saves or optimizations change
     return getActiveResume();
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useStoreData, getActiveResume, storeOriginalResume, optimizations, showOptimized]);
 
   // Determine which resume to use
@@ -238,16 +189,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
       : (propResumeData || SAMPLE_RESUME);
 
-    // Debug logging only in development
-    if (import.meta.env.DEV) {
-      const appliedCount = optimizations.filter(o => o.applied).length;
-      const isExportingOptimized = !!storeActiveResume && showOptimized && appliedCount > 0;
-
-      // Dev verification intentionally removed
-    }
-
     return data;
-  }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData, showOptimized, optimizations]);
+  }, [useStoreData, storeActiveResume, storeOriginalResume, propResumeData]);
 
   // Calculate optimal initial scale based on viewport
   useLayoutEffect(() => {
@@ -572,7 +515,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               }
               if (isWhite) return y; // Empty row found!
             }
-          } catch (e) {
+          } catch {
             // Ignore tainted canvas errors securely
           }
           return targetBottomPx; // Fallback to raw math

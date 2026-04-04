@@ -1,5 +1,4 @@
-import React, { TextareaHTMLAttributes, forwardRef } from 'react';
-import { glass } from '../../lib/styles/glass';
+import { TextareaHTMLAttributes, forwardRef } from 'react';
 import { cn } from '../../lib/utils/cn';
 
 interface GlassTextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {

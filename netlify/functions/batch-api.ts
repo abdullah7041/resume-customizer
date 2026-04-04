@@ -1,6 +1,6 @@
 import type { Handler } from "@netlify/functions";
-import { RateLimiter, batchWithConcurrency } from "../lib/rate-limiter";
-import { initSentry, captureError } from "../lib/sentry";
+import { RateLimiter, batchWithConcurrency } from "../lib/rate-limiter.js";
+import { initSentry, captureError } from "../lib/sentry.js";
 
 initSentry();
 

@@ -300,7 +300,7 @@ export const SessionContextSchema = z.object({
 
 export const SubmitFeedbackRequestSchema = z.object({
     emoji_rating: z.enum(['love', 'happy', 'neutral', 'sad', 'terrible'], {
-        errorMap: () => ({ message: 'Invalid emoji rating' }),
+        message: 'Invalid emoji rating',
     }),
     testimonial_text: z.string().max(500, 'Testimonial must be 500 characters or less').optional()
         .transform(val => val?.trim() || undefined),

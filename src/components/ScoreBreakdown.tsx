@@ -1,4 +1,4 @@
-import { TrendingUp, Code2, Briefcase, GraduationCap, Users, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, Code2, Briefcase, GraduationCap, Users, Info, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';

@@ -12,13 +12,13 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models
 // Model mapping: Internal names → provider-specific model IDs
 const MODELS = {
   lite: 'google/gemini-2.5-flash-lite',
-  flash: 'google/gemini-2.5-flash'
+  flash: 'google/gemini-2.5-pro'
 };
 
 // Direct Google model IDs (without the google/ prefix)
 const GEMINI_MODELS = {
   lite: 'gemini-2.5-flash-lite',
-  flash: 'gemini-2.5-flash'
+  flash: 'gemini-2.5-pro'
 };
 
 if (!OPENROUTER_API_KEY && !GEMINI_API_KEY) {

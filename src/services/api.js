@@ -50,9 +50,6 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
     } catch (error) {
       lastError = error;
 
-      // Always retry on 502/504 errors (Bad Gateway / Gateway Timeout)
-      const isRetryableServerError = error.status === 502 || error.status === 504 || error.retryable === true;
-
       // Don't retry on 4xx errors EXCEPT 429 (rate limit)
       // 401, 403, 404, 400 are client errors and should not be retried
       if (error.status >= 400 && error.status < 500 && error.status !== 429) {

@@ -10,7 +10,7 @@
 import { Handler } from '@netlify/functions';
 import { customAlphabet } from 'nanoid';
 import { getReferralStats, trackReferral } from '../lib/referral-manager.js';
-import { getSupabaseClient } from '../lib/supabase-client';
+import { getSupabaseClient } from '../lib/supabase-client.js';
 
 // Generate short, URL-safe referral codes (8 characters)
 const generateCode = customAlphabet('0123456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz', 8);

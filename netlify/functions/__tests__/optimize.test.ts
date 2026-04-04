@@ -49,10 +49,10 @@ vi.mock('../../lib/credit-manager', () => ({
     })
 }));
 
-import { optimizeResume } from '../../lib/gemini-client';
+import { optimizeResume } from '../../lib/gemini-client.js';
 
 // Import handler after mocks
-const { handler } = await import('../optimize');
+const { handler } = await import('../optimize.js');
 
 // Test auth header
 const TEST_HEADERS = { 'Authorization': 'Bearer test-token' };

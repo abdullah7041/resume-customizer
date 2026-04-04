@@ -47,7 +47,7 @@ const mockCreditManager = {
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
 vi.mock('../../lib/openrouter-client', () => ({
     callOpenRouter: vi.fn().mockResolvedValue('{}'),
-    MODELS: { lite: 'google/gemini-2.5-flash-lite', flash: 'google/gemini-2.5-flash' }
+    MODELS: { lite: 'google/gemini-2.5-flash-lite', flash: 'google/gemini-2.5-pro' }
 }));
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/sentry', () => mockSentry);
@@ -84,7 +84,7 @@ describe('AI Integration Functions', () => {
         let aiMatchHandler: any;
 
         beforeEach(async () => {
-            const mod = await import('../ai-match');
+            const mod = await import('../ai-match.js');
             aiMatchHandler = mod.handler;
         }, 30000);
 
@@ -127,7 +127,7 @@ describe('AI Integration Functions', () => {
         let coverLetterHandler: any;
 
         beforeEach(async () => {
-            const mod = await import('../generate-cover-letter');
+            const mod = await import('../generate-cover-letter.js');
             coverLetterHandler = mod.handler;
         });
 
@@ -165,7 +165,7 @@ describe('AI Integration Functions', () => {
         let predictQuestionsHandler: any;
 
         beforeEach(async () => {
-            const mod = await import('../predict-questions');
+            const mod = await import('../predict-questions.js');
             predictQuestionsHandler = mod.handler;
         });
 

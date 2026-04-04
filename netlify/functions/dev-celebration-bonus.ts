@@ -15,7 +15,7 @@
  */
 
 import { Handler } from '@netlify/functions';
-import { getSupabaseClient } from '../lib/supabase-client';
+import { getSupabaseClient } from '../lib/supabase-client.js';
 
 const handler: Handler = async (event) => {
   // SAFETY: Only allow in development or with explicit flag

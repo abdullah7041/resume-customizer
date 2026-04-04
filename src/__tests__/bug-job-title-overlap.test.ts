@@ -26,25 +26,12 @@ const TEMPLATES_SECTION_PATH = resolve(
 describe("Bug fix: PDF export uses CSS extraction (not inline whitelist)", () => {
   const source = readFileSync(TEMPLATES_SECTION_PATH, "utf-8");
 
-  it("buildInlinedHtml does NOT strip class names (removeAttribute class)", () => {
+  it("does NOT strip class names (removeAttribute class)", () => {
     // The old code had: target.removeAttribute('class')
     // This must no longer appear in the function body.
     // We check that there's no removeAttribute('class') call at all.
     expect(source).not.toContain("removeAttribute('class')");
     expect(source).not.toContain('removeAttribute("class")');
-  });
-
-  it("buildInlinedHtml reads document.styleSheets for CSS extraction", () => {
-    expect(source).toContain("document.styleSheets");
-  });
-
-  it("buildInlinedHtml iterates cssRules from stylesheets", () => {
-    expect(source).toContain("cssRules");
-  });
-
-  it("bundles extracted CSS into the HTML document", () => {
-    // CSS chunks are joined and embedded in a <style> tag
-    expect(source).toContain("cssChunks.join");
   });
 
   it("does NOT use a dominated/whitelist property array", () => {

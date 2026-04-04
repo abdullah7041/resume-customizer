@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, Type, FileText, RotateCcw, Sparkles } from 'lucide-react';
+import { ChevronUp, Type, FileText, RotateCcw, Sparkles } from 'lucide-react';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { cn } from '../../lib/utils/cn';
 

@@ -1,6 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { callOpenRouter } from '../lib/openrouter-client.js';
-import { initSentry, captureError } from '../lib/sentry';
+import { initSentry, captureError } from '../lib/sentry.js';
 
 initSentry();
 

@@ -14,9 +14,9 @@ import { createClient } from "@supabase/supabase-js";
 import {
   SubmitFeedbackRequestSchema,
   type SubmitFeedbackRequest,
-} from "../lib/resume-schemas";
-import { withRateLimit } from "../lib/rate-limiter";
-import { addFeedbackCredits } from "../lib/credit-manager";
+} from "../lib/resume-schemas.js";
+import { withRateLimit } from "../lib/rate-limiter.js";
+import { addFeedbackCredits } from "../lib/credit-manager.js";
 
 // Initialize Supabase client with service role
 function getSupabaseClient() {

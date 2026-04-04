@@ -5,7 +5,7 @@
 import type { Handler } from "@netlify/functions";
 import chromium from "@sparticuz/chromium";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
-import { withRateLimit } from "../lib/rate-limiter";
+import { withRateLimit } from "../lib/rate-limiter.js";
 
 
 import { existsSync } from "fs";
@@ -125,7 +125,7 @@ const baseHandler: Handler = async (event) => {
     }
 
     // Validate templateId to prevent header injection
-    const sanitizedTemplateId = VALID_TEMPLATE_IDS.includes(templateId)
+    const _sanitizedTemplateId = VALID_TEMPLATE_IDS.includes(templateId)
       ? templateId
       : 'modern-professional';
 
