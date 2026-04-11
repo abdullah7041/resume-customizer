@@ -641,7 +641,8 @@ ${resumeText}
     // Use 100s timeout for optimize (function has 120s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
-      timeoutMs: 100000
+      timeoutMs: 100000,
+      reasoningBudget: 2048
     });
     console.log(`[OpenRouter] Optimize response length: ${text.length} chars`);
 
@@ -736,7 +737,8 @@ Analyze step by step, then provide your final score.`;
     // Use 65s timeout for ai-match (function has 90s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
-      timeoutMs: 65000
+      timeoutMs: 65000,
+      reasoningBudget: 1024
     });
     console.log(`[OpenRouter] Match response: ${text.length} chars`);
 
@@ -961,7 +963,7 @@ Return ONLY the cover letter text in the draft_text field.
 
   try {
     const messages = [{ role: 'user', content: prompt + langInstruction }];
-    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384, timeoutMs: 50000 });
+    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384, timeoutMs: 50000, reasoningBudget: 1024 });
     console.log(`[OpenRouter] Cover letter response: ${text.length} chars`);
 
     let parsed;

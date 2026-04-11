@@ -47,7 +47,8 @@ const mockCreditManager = {
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
 vi.mock('../../lib/openrouter-client', () => ({
     callOpenRouter: vi.fn().mockResolvedValue('{}'),
-    MODELS: { lite: 'google/gemini-2.5-flash-lite', flash: 'google/gemini-2.5-pro' }
+    MODELS: { lite: 'google/gemini-2.5-flash-lite', flash: 'google/gemini-2.5-flash' },
+    DEFAULT_MAX_TOKENS: { lite: 4096, flash: 6144 }
 }));
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/sentry', () => mockSentry);

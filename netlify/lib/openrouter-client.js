@@ -11,15 +11,18 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models
 
 // Model mapping: Internal names → provider-specific model IDs
 const MODELS = {
-  lite: 'google/gemini-2.5-flash-lite',
-  flash: 'google/gemini-2.5-pro'
+  lite:  'google/gemini-2.5-flash-lite',
+  flash: 'google/gemini-2.5-flash',
 };
 
 // Direct Google model IDs (without the google/ prefix)
 const GEMINI_MODELS = {
-  lite: 'gemini-2.5-flash-lite',
-  flash: 'gemini-2.5-pro'
+  lite:  'gemini-2.5-flash-lite',
+  flash: 'gemini-2.5-flash',
 };
+
+// Per-tier output token defaults (avoids a wasteful 16 384 ceiling on lite)
+const DEFAULT_MAX_TOKENS = { lite: 4096, flash: 6144 };
 
 if (!OPENROUTER_API_KEY && !GEMINI_API_KEY) {
   console.error('[AI Client] Error: Neither OPENROUTER_API_KEY nor GEMINI_API_KEY is set');
@@ -68,13 +71,22 @@ function isFallbackEligible(error) {
 /**
  * Call OpenRouter API (primary provider)
  */
-async function callOpenRouterDirect(model, messages, jsonSchema, options, controller) {
+async function callOpenRouterDirect(modelType, model, messages, jsonSchema, options, controller) {
   const requestBody = {
     model,
     messages,
     temperature: options.temperature ?? 0,
-    max_tokens: options.maxTokens ?? 16384,
+    max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS[modelType] ?? 6144,
   };
+
+  // Cap thinking tokens for Pro models to control latency & cost.
+  // exclude:true means reasoning is used internally but not returned in the response.
+  if (options.reasoningBudget != null) {
+    requestBody.reasoning = {
+      max_tokens: options.reasoningBudget,
+      exclude: true
+    };
+  }
 
   if (jsonSchema) {
     const convertedSchema = convertGoogleSchemaToOpenRouter(jsonSchema);
@@ -113,6 +125,13 @@ async function callOpenRouterDirect(model, messages, jsonSchema, options, contro
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content;
 
+  // Log token usage including reasoning tokens for observability
+  if (data.usage) {
+    const u = data.usage;
+    const reasoning = u.reasoning_tokens || u.completion_tokens_details?.reasoning_tokens || 0;
+    console.log(`[AI Client] Tokens — prompt: ${u.prompt_tokens}, completion: ${u.completion_tokens}, reasoning: ${reasoning}, total: ${u.total_tokens}`);
+  }
+
   if (!content) {
     throw new Error('OpenRouter returned empty response');
   }
@@ -147,9 +166,16 @@ async function callGeminiDirect(modelType, messages, jsonSchema, options, contro
     contents,
     generationConfig: {
       temperature: options.temperature ?? 0,
-      maxOutputTokens: options.maxTokens ?? 16384,
+      maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS[modelType] ?? 6144,
     }
   };
+
+  // Cap thinking tokens for Pro models (min 128 for 2.5 Pro, cannot be 0)
+  if (options.reasoningBudget != null) {
+    requestBody.generationConfig.thinkingConfig = {
+      thinkingBudget: options.reasoningBudget
+    };
+  }
 
   // Add system instruction if present
   if (systemInstruction) {
@@ -196,7 +222,7 @@ async function callGeminiDirect(modelType, messages, jsonSchema, options, contro
  * @param {'lite' | 'flash'} modelType - Model tier to use
  * @param {Array} messages - Array of {role, content} messages
  * @param {Object} jsonSchema - Optional JSON schema for structured output
- * @param {Object} options - Additional options (temperature, maxTokens, timeoutMs, etc.)
+ * @param {Object} options - Additional options (temperature, maxTokens, timeoutMs, reasoningBudget, etc.)
  * @returns {Promise<string>} - Response text (JSON string if schema provided)
  */
 export async function callOpenRouter(modelType, messages, jsonSchema = null, options = {}) {
@@ -212,7 +238,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
       console.log(`[AI Client] PRIMARY: OpenRouter ${model} (${messages.length} msgs, timeout: ${TIMEOUT_MS}ms)`);
 
       try {
-        const content = await callOpenRouterDirect(model, messages, jsonSchema, options, controller);
+        const content = await callOpenRouterDirect(modelType, model, messages, jsonSchema, options, controller);
         console.log(`[AI Client] OpenRouter success (${content.length} chars)`);
         return content;
       } catch (openRouterError) {
@@ -273,4 +299,4 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
   }
 }
 
-export { MODELS };
+export { MODELS, DEFAULT_MAX_TOKENS };
