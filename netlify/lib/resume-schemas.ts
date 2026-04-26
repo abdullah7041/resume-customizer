@@ -202,17 +202,18 @@ export const MatchRequestSchema = z.object({
     language: z.enum(["en", "ar"]).optional().default("en"),
 });
 
-export const OptimizeRequestSchema = z.object({
-    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
-    jobText: z.string().min(1, "Job text is required").max(MAX_JOB_LENGTH, "Job text too large"),
-    language: z.enum(["en", "ar"]).optional().default("en"),
-});
-
 export const WorkHistoryEntrySchema = z.object({
     name: z.string(),
     position: z.string(),
     startDate: z.string(),
     endDate: z.string(),
+});
+
+export const OptimizeRequestSchema = z.object({
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
+    jobText: z.string().min(1, "Job text is required").max(MAX_JOB_LENGTH, "Job text too large"),
+    workHistory: z.array(WorkHistoryEntrySchema).optional(),
+    language: z.enum(["en", "ar"]).optional().default("en"),
 });
 
 export const PredictQuestionsRequestSchema = z.object({

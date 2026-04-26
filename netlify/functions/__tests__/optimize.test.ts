@@ -15,6 +15,12 @@ vi.mock('../../lib/sentry', () => ({
     captureError: vi.fn()
 }));
 
+vi.mock('../../lib/redis-cache', () => ({
+    buildCacheKey: vi.fn(() => 'mock-cache-key'),
+    getCached: vi.fn().mockResolvedValue(null),
+    setCached: vi.fn().mockResolvedValue(undefined)
+}));
+
 vi.mock('../../lib/supabase-client', () => ({
     getSupabaseClient: vi.fn(() => ({
         auth: {

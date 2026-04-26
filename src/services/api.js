@@ -2,11 +2,13 @@
 import { supabase } from './supabase';
 import * as Sentry from '@sentry/react';
 import { isCircuitOpen, recordFailure, recordSuccess } from '../lib/utils/circuit-breaker';
+import { extractPlainTextFromArrayBuffer, inferMimeType } from '../lib/utils/resumeText';
 
 const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
 const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/extract-resume-json`;
 const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
+const OPTIMIZE_STREAM_ENDPOINT = `/api/optimize-stream`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 
@@ -165,14 +167,39 @@ export const parseResume = async (resumeInput, options = {}) => {
     try {
       let payload;
       if (resumeInput instanceof File) {
-        const base64 = await fileToBase64(resumeInput);
-        // Include filename and mime type for better server-side text extraction
-        payload = {
-          kind: "file",
-          data: base64,
-          name: resumeInput.name,
-          mime: resumeInput.type,
-        };
+        // CLIENT-SIDE TEXT EXTRACTION: Extract text from PDF/DOCX in the browser
+        // This saves 5-8s of serverless execution time by avoiding server-side PDF parsing
+        let clientExtractedText = '';
+        try {
+          const arrayBuffer = await resumeInput.arrayBuffer();
+          const mimeType = inferMimeType({ mimeType: resumeInput.type, fileName: resumeInput.name });
+          clientExtractedText = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: resumeInput.name });
+          console.log(`[API] Client-side extraction: ${clientExtractedText.length} chars from ${resumeInput.name}`);
+        } catch (extractError) {
+          console.warn('[API] Client-side extraction failed, falling back to server-side:', extractError);
+        }
+
+        if (clientExtractedText.length >= 100) {
+          // Client extraction succeeded — send plain text (no base64 file transfer)
+          console.log('[API] Using client-extracted text (saving server-side PDF parsing time)');
+          payload = { kind: "text", value: clientExtractedText };
+        } else {
+          // Fallback: scanned PDF or extraction failure — send file to server for OCR
+          console.log('[API] Client extraction insufficient, falling back to server-side file upload');
+
+          // P1 FIX: Notify the UI so it can display an OCR-in-progress message
+          if (typeof options.onOcrFallback === 'function') {
+            try { options.onOcrFallback(); } catch (_) { /* never block upload for a UI callback */ }
+          }
+
+          const base64 = await fileToBase64(resumeInput);
+          payload = {
+            kind: "file",
+            data: base64,
+            name: resumeInput.name,
+            mime: resumeInput.type,
+          };
+        }
       } else {
         payload = { kind: "text", value: resumeInput };
       }
@@ -328,7 +355,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en' }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -339,7 +366,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory }),
       });
 
       const data = await handleResponse(response);
@@ -379,6 +406,110 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       throw error;
     }
   }, 3, 2000); // 3 retries, 2s base delay
+};
+
+/**
+ * SSE streaming version of optimizeResume.
+ * Streams progress events from the server for real-time UX feedback.
+ *
+ * @param {object} params - Same params as optimizeResume
+ * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
+ * @returns {Promise<object>} - Same response shape as optimizeResume
+ */
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory }, onStatus) => {
+  if (isCircuitOpen('openrouter-ai')) {
+    throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
+  }
+
+  const headers = await getAuthHeaders();
+  // Remove Content-Type for SSE request compatibility — the body is still JSON
+  // but we need to accept text/event-stream response
+  const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory }),
+  });
+
+  // Non-streaming error responses (4xx, 5xx with JSON body)
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: response.statusText }));
+    const error = new Error(data.error || 'Optimization failed');
+    error.status = response.status;
+    if (data.creditsRequired) error.creditsRequired = data.creditsRequired;
+    if (data.creditsAvailable != null) error.creditsAvailable = data.creditsAvailable;
+    recordFailure('openrouter-ai');
+    throw error;
+  }
+
+  // Parse SSE stream
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result = null;
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete SSE events (delimited by \n\n)
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || ''; // Keep incomplete event in buffer
+
+      for (const eventBlock of events) {
+        if (!eventBlock.trim()) continue;
+
+        let eventType = '';
+        let eventData = '';
+
+        for (const line of eventBlock.split('\n')) {
+          if (line.startsWith('event: ')) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
+            eventData = line.slice(6);
+          }
+        }
+
+        if (!eventType || !eventData) continue;
+
+        try {
+          const parsed = JSON.parse(eventData);
+
+          switch (eventType) {
+            case 'status':
+              onStatus?.(parsed.phase, parsed);
+              break;
+            case 'result':
+              result = parsed;
+              recordSuccess('openrouter-ai');
+              break;
+            case 'error': {
+              const error = new Error(parsed.error);
+              error.retryable = parsed.retryable;
+              recordFailure('openrouter-ai');
+              throw error;
+            }
+            case 'done':
+              console.log(`[optimize-stream] Complete in ${parsed.durationMs}ms`);
+              break;
+          }
+        } catch (parseErr) {
+          if (parseErr.retryable !== undefined) throw parseErr; // Re-throw SSE errors
+          console.warn('[optimize-stream] Failed to parse SSE event:', eventType, parseErr);
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (!result) {
+    throw new Error('SSE stream ended without a result event');
+  }
+
+  return result;
 };
 
 export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null) => {

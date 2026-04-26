@@ -17,8 +17,9 @@ import {
 import { deduplicateByName } from '../utils/resumeUtils';
 import { fuzzyTextMatch } from '../utils/textMatcher';
 
-// Cache validity duration: 5 minutes
-const CACHE_TTL_MS = 5 * 60 * 1000;
+// Cache validity duration: 30 minutes
+// Users re-analyzing the same resume+JD pair within this window hit cache instead of burning credits
+const CACHE_TTL_MS = 30 * 60 * 1000;
 
 // Memoization cache for cache key generation (performance optimization)
 const cacheKeyMemo = new Map<string, string>();

@@ -84,9 +84,9 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobDescription, language } = parseResult.data;
+    const { resumeText, jobDescription, tone, language } = parseResult.data;
 
-    const result = await generateCoverLetter(resumeText, jobDescription, language);
+    const result = await generateCoverLetter(resumeText, jobDescription, language, tone);
 
     // Consume credits AFTER successful generation
     const creditResult = await consumeCredits(userEmail, 'cover_letter');

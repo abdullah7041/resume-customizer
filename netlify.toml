@@ -43,6 +43,9 @@
 [functions."optimize"]
   timeout = 120  # Increased: OpenRouter timeout 100s + 20s cleanup buffer
 
+[functions."optimize-stream"]
+  timeout = 120  # SSE streaming variant — same AI call, same timeout
+
 [functions."generate-cover-letter"]
   timeout = 60  # Increased: OpenRouter timeout 50s + 10s buffer
 

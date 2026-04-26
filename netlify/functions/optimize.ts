@@ -6,6 +6,8 @@ import { initSentry, captureError } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
+import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
+import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 
 initSentry();
 
@@ -88,13 +90,44 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText, language } = parseResult.data;
+    const { resumeText, jobText, workHistory, language } = parseResult.data;
+
+    // Detect career vulnerabilities from structured work history
+    const vulnerabilities = workHistory?.length
+      ? detectVulnerabilities(workHistory)
+      : [];
+
+    if (vulnerabilities.length > 0) {
+      console.log(`[optimize] Detected ${vulnerabilities.length} career vulnerabilities:`, vulnerabilities.map(v => v.type));
+    }
+
+    // -----------------------------------------------------------------------
+    // P0 FIX: Redis cache check — bypass Gemini on identical payloads
+    // -----------------------------------------------------------------------
+    const cacheKey = buildCacheKey('optimize', {
+      resumeText: resumeText.trim(),
+      jobText: jobText.trim(),
+      language: language || 'en',
+      vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
+    });
+
+    const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
+    if (cachedResponse) {
+      console.log('[optimize] Cache HIT — returning cached result, skipping Gemini call.');
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+        body: JSON.stringify(cachedResponse),
+      };
+    }
+    console.log('[optimize] Cache MISS — calling Gemini.');
+    // -----------------------------------------------------------------------
 
     // Add timeout logging
     const startTime = Date.now();
 
     // Use dedicated optimizeResume function for faster, focused optimization
-    const optimization = await optimizeResume(resumeText, jobText, language);
+    const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities);
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);
     console.log('[optimize] AI response summary:', {
@@ -285,79 +318,88 @@ const baseHandler: Handler = async (event) => {
     // Consume credits AFTER successful optimization
     const creditResult = await consumeCredits(userEmail, 'optimize');
 
+    const responsePayload = {
+      cards: cards,
+      keywords: {
+        add: addKeywords,
+        neutral: optimization?.keywords_to_keep || [],
+        remove: optimization?.keywords_to_avoid || []
+      },
+      // Match scoring for Results Summary
+      matchScoring: {
+        beforeScore: Math.round(beforeScore),
+        estimatedImprovement: Math.round(estimatedImprovement),
+        jdKeywords: jdKeywords.slice(0, 20), // Cap at 20 for UI
+        matchedKeywords: matchedKeywords.slice(0, 15),
+        reasoning: null,
+      },
+      // Credit information
+      creditsRemaining: creditResult.creditsRemaining,
+      // Gap Analysis - from AI response
+      gapAnalysis: (optimization?.gap_analysis || []).map((gap: any) => ({
+        requirement: gap.requirement || '',
+        currentState: gap.current_state || '',
+        severity: gap.gap_severity || 'minor',
+        recommendation: gap.recommendation || ''
+      })),
+      // Keyword Strategy - simplified (not returned by optimizeResume)
+      keywordStrategy: {
+        mirroredPhrases: [],
+        structuralChanges: [],
+        hiddenMatches: []
+      },
+      // Category Scores
+      categoryScores: optimization?.category_scores || null,
+      // Position name suggestion from AI (only shown if is_necessary=true)
+      positionSuggestion: optimization?.position_name_suggestion
+        ? {
+            ...optimization.position_name_suggestion,
+            positionChanges: (optimization.position_name_suggestion.position_changes || []).map(
+              (c: { original: string; suggested: string; change_needed: boolean }) => ({
+                original: c.original,
+                suggested: c.suggested,
+                change_needed: c.change_needed,
+              })
+            ),
+          }
+        : null,
+      // Project improvements from AI
+      projectImprovements: (optimization?.project_improvements || []).map((proj: any) => ({
+        project_name: proj.project_name || '',
+        original: proj.original || '',
+        improved: proj.improved || '',
+        issue: proj.issue || '',
+        rationale: proj.rationale || ''
+      })),
+      // Certification recommendations from AI (display-only)
+      certificationRecommendations: (optimization?.certification_recommendations || []).map((cert: any) => ({
+        name: cert.name || '',
+        issuer: cert.issuer || '',
+        relevance: cert.relevance || ''
+      })),
+      // Score Breakdown - simplified
+      scoreBreakdown: null,
+      source: "gemini",
+      debug: {
+        totalCards: cards.length,
+        hasOptimization: !!optimization,
+        hadBulletImprovements: bulletImprovements?.length > 0,
+        hasJobDescription: Boolean(jobText && jobText.trim().length > 0),
+      }
+    };
+
+    // -----------------------------------------------------------------------
+    // P0 FIX: Store result in Redis for 30 minutes (cache SET)
+    // We cache AFTER credit consumption so replays are still free for the user
+    // but don't re-charge — credits are only charged once per unique payload.
+    // -----------------------------------------------------------------------
+    await setCached(cacheKey, responsePayload);
+    console.log('[optimize] Cache SET for key:', cacheKey.substring(0, 50));
+
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cards: cards,
-        keywords: {
-          add: addKeywords,
-          neutral: optimization?.keywords_to_keep || [],
-          remove: optimization?.keywords_to_avoid || []
-        },
-        // Match scoring for Results Summary
-        matchScoring: {
-          beforeScore: Math.round(beforeScore),
-          estimatedImprovement: Math.round(estimatedImprovement),
-          jdKeywords: jdKeywords.slice(0, 20), // Cap at 20 for UI
-          matchedKeywords: matchedKeywords.slice(0, 15),
-          reasoning: null,
-        },
-        // Credit information
-        creditsRemaining: creditResult.creditsRemaining,
-        // Gap Analysis - from AI response
-        gapAnalysis: (optimization?.gap_analysis || []).map((gap: any) => ({
-          requirement: gap.requirement || '',
-          currentState: gap.current_state || '',
-          severity: gap.gap_severity || 'minor',
-          recommendation: gap.recommendation || ''
-        })),
-        // Keyword Strategy - simplified (not returned by optimizeResume)
-        keywordStrategy: {
-          mirroredPhrases: [],
-          structuralChanges: [],
-          hiddenMatches: []
-        },
-        // Category Scores - NEW
-        categoryScores: optimization?.category_scores || null,
-        // Position name suggestion from AI (only shown if is_necessary=true)
-        positionSuggestion: optimization?.position_name_suggestion
-          ? {
-              ...optimization.position_name_suggestion,
-              // Map snake_case to camelCase for the frontend
-              positionChanges: (optimization.position_name_suggestion.position_changes || []).map(
-                (c: { original: string; suggested: string; change_needed: boolean }) => ({
-                  original: c.original,
-                  suggested: c.suggested,
-                  change_needed: c.change_needed,
-                })
-              ),
-            }
-          : null,
-        // Project improvements from AI
-        projectImprovements: (optimization?.project_improvements || []).map((proj: any) => ({
-          project_name: proj.project_name || '',
-          original: proj.original || '',
-          improved: proj.improved || '',
-          issue: proj.issue || '',
-          rationale: proj.rationale || ''
-        })),
-        // Certification recommendations from AI (display-only, not applied to template)
-        certificationRecommendations: (optimization?.certification_recommendations || []).map((cert: any) => ({
-          name: cert.name || '',
-          issuer: cert.issuer || '',
-          relevance: cert.relevance || ''
-        })),
-        // Score Breakdown - simplified (not returned by optimizeResume)
-        scoreBreakdown: null,
-        source: "gemini",
-        debug: {
-          totalCards: cards.length,
-          hasOptimization: !!optimization,
-          hadBulletImprovements: bulletImprovements?.length > 0,
-          hasJobDescription: Boolean(jobText && jobText.trim().length > 0),
-        }
-      }),
+      headers: { 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
+      body: JSON.stringify(responsePayload),
     };
 
   } catch (error) {

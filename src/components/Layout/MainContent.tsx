@@ -5,6 +5,7 @@ import {
   parseResume,
   analyzeResumeWithAI,
   optimizeResume,
+  optimizeResumeStream,
 } from "../../services/api.js";
 import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
@@ -465,7 +466,23 @@ export default function MainContent() {
         );
 
         setFlowProgress(48);
-        const parsed = await parseResume(parseInput, { signal });
+        const parsed = await parseResume(parseInput, {
+          signal,
+          // P1 FIX: Notify the user when we fall back to server-side OCR
+          onOcrFallback: () => {
+            pushToast(
+              {
+                type: 'info',
+                title: t('toasts.ocrFallbackTitle', 'Scanning document with OCR'),
+                description: t(
+                  'toasts.ocrFallbackDesc',
+                  'This document appears to be scanned or image-based. Server-side processing may take a few extra seconds.'
+                ),
+              },
+              { id: TOAST_IDS.upload }
+            );
+          },
+        });
         setFlowProgress(88);
         const enriched =
           parsed
@@ -631,15 +648,64 @@ export default function MainContent() {
           { id: TOAST_IDS.optimize }
         );
 
-        const result = await optimizeResume(
-          {
-            resumeText: resumeData.plainText,
-            jobDesc: jobDescription,
-            mode,
-            preview: !isPremium,
-            language: i18n.language,
-          }
-        );
+        // Extract structured work history for vulnerability detection (gaps, short tenures, pivots)
+        const storeWork = useResumeStore.getState().originalResume?.work;
+        const workHistory = storeWork?.map(w => ({
+          name: w.name || '',
+          position: w.position || '',
+          startDate: w.startDate || '',
+          endDate: w.endDate || '',
+        })).filter(w => w.name && w.position) || undefined;
+
+        // Phase progress messages for SSE stream
+        const phaseMessages: Record<string, string> = {
+          validating: t('toasts.optimizeValidating', 'Validating your resume...'),
+          detecting_vulnerabilities: t('toasts.optimizeVulnerabilities', 'Scanning career timeline...'),
+          ai_processing: t('toasts.optimizeAI', 'AI is analyzing and rewriting bullets...'),
+          building_response: t('toasts.optimizeBuildingResponse', 'Building optimization cards...'),
+        };
+
+        let result;
+        try {
+          // Try SSE streaming endpoint first
+          result = await optimizeResumeStream(
+            {
+              resumeText: resumeData.plainText,
+              jobDesc: jobDescription,
+              mode,
+              preview: !isPremium,
+              language: i18n.language,
+              workHistory,
+            },
+            // onStatus callback: update toast with real-time progress
+            (phase) => {
+              const message = phaseMessages[phase];
+              if (message) {
+                pushToast(
+                  {
+                    type: 'info',
+                    title: t('toasts.generatingOptimizations'),
+                    description: message,
+                  },
+                  { id: TOAST_IDS.optimize }
+                );
+              }
+            }
+          );
+        } catch (streamError: any) {
+          // Fallback to legacy non-streaming endpoint
+          console.warn('[optimize] SSE stream failed, falling back to legacy:', streamError.message);
+          result = await optimizeResume(
+            {
+              resumeText: resumeData.plainText,
+              jobDesc: jobDescription,
+              mode,
+              preview: !isPremium,
+              language: i18n.language,
+              workHistory,
+            }
+          );
+        }
 
         // Build full cards array including projects and certifications
         const allCards = [...(result.cards ?? [])];

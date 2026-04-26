@@ -41,6 +41,9 @@ build
 # Test coverage
 coverage
 
+# Test artifacts
+*.pdf
+
 # Lock files (keeping package-lock.json for consistency)
 # *.lock
 .env
