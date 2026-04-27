@@ -584,11 +584,13 @@ RULES:
    If a bullet seems unrelated, find the transferable angle — never dismiss it.
 
    STAR + METRIC ENFORCEMENT (MANDATORY for every improved bullet):
-   - Every "improved" bullet MUST follow: [Strong Action Verb] + [Specific Task] + [Quantified Result]
+   - Every "improved" bullet MUST use the inverted impact structure to front-load the result: [Action Verb] [Quantified Result] by [Specific Task/Technology]
    - Minimum 1 metric per bullet (%, $, time saved, volume, team size, or efficiency gain)
    - If the original lacks metrics, infer plausible ones from context and append "(verify)" so the user knows to confirm
    - Example: "Managed team" → "Led cross-functional team of 8 engineers, delivering $2.3M project 2 weeks ahead of schedule"
    - Example: "Handled customer issues" → "Resolved 50+ customer escalations/month with 94% satisfaction rate (verify), reducing churn by 12%"
+   - Structure bullets to front-load the impact where possible: [Action Verb] [Quantified Result] by [Specific Task/Technology]. Example: "Reduced cloud costs by 24% by orchestrating Docker container scaling."
+   - CRITICAL: Absolutely NO first-person pronouns (I, me, my, we, our). Start every bullet directly with the Action Verb.
 
    KEYWORD WEAVING (MANDATORY):
    - Identify the top 3-5 missing keywords from the JD that appear 2+ times
@@ -600,6 +602,7 @@ RULES:
 4. match_score = sum of category scores (hard_skills + experience + education + soft_skills) based on the rubric above.
 5. after_score = Provide an honest, realistic estimate of what the match_score will be IF the candidate applies all your suggestions. Do not overinflate. Ensure it reflects the same strict rubric and ATS rules.
 6. gap_analysis should identify what the resume LACKS compared to the job requirements
+7. SUMMARY REWRITE: The summary must be a high-density keyword zone. Identify the top 3 mandatory technical skills and the primary job title from the JD. You MUST organically integrate all of them into the first two sentences of the summary_rewrite. Keep it strictly under 4 sentences.
 
 PROJECT IMPROVEMENTS (REQUIRED - do not leave empty):
 8. Look for any Projects section in the resume. If found, provide 1-3 project_improvements to reframe them for this job.
@@ -653,6 +656,9 @@ For each vulnerability above:
 - For demotion: Reframe as a strategic lateral move or scope expansion
 - For job_hopping: Emphasize progressive responsibility and growing impact across roles
 ` : ''}
+LOCAL MARKET ALIGNMENT (SAUDI ARABIA / VISION 2030):
+If the job description mentions entities like PIF, NEOM, ROSHN, Diriyah, or uses terminology like "Localization", "Digital Transformation", or "Sustainability": You MUST inject these specific semantic signals into the summary_rewrite and at least one bullet_improvement to maximize alignment with local talent acquisition filters.
+
 <job_description>
 ${jobDescription}
 </job_description>
