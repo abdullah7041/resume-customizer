@@ -472,6 +472,22 @@ CRITICAL REMINDERS:
  * @returns {Promise<object>} - Optimization suggestions with original and improved content.
  */
 export async function optimizeResume(resumeText, jobDescription, language = 'en', vulnerabilities = []) {
+  // PERF FIX: Truncate oversized inputs to prevent AI timeouts.
+  // optimize needs less text than parse — 15K resume + 5K JD is more than sufficient.
+  const MAX_RESUME_CHARS = 15000;
+  const MAX_JD_CHARS = 5000;
+  let trimmedResume = resumeText;
+  let trimmedJD = jobDescription;
+
+  if (typeof resumeText === 'string' && resumeText.length > MAX_RESUME_CHARS) {
+    console.warn(`[OpenRouter] Resume too long (${resumeText.length} chars), truncating to ${MAX_RESUME_CHARS}`);
+    trimmedResume = resumeText.substring(0, MAX_RESUME_CHARS);
+  }
+  if (typeof jobDescription === 'string' && jobDescription.length > MAX_JD_CHARS) {
+    console.warn(`[OpenRouter] JD too long (${jobDescription.length} chars), truncating to ${MAX_JD_CHARS}`);
+    trimmedJD = jobDescription.substring(0, MAX_JD_CHARS);
+  }
+
   const schema = {
     type: "object",
     properties: {
@@ -646,17 +662,17 @@ LOCAL MARKET ALIGNMENT (SAUDI ARABIA / VISION 2030):
 If the job description mentions entities like PIF, NEOM, ROSHN, Diriyah, or uses terminology like "Localization", "Digital Transformation", or "Sustainability": You MUST inject these specific semantic signals into the summary_rewrite and at least one bullet_improvement to maximize alignment with local talent acquisition filters.
 
 <job_description>
-${jobDescription}
+${trimmedJD}
 </job_description>
 
 <resume_text>
-${resumeText}
+${trimmedResume}
 </resume_text>`;
 
   const langInstruction = language === 'ar' ? `\n\nLANGUAGE INSTRUCTION: You MUST write ALL text fields in Arabic. This includes: issue, rationale, improved text, suggestion, current_state, recommendation, and relevance fields. Keep JSON keys and technical keywords (programming languages, tools, certifications like "AWS", "Python", "React") in English. Write all descriptive and explanatory content in formal Arabic.` : '';
 
   try {
-    console.log(`[OpenRouter] Optimizing with ${MODELS.flash}`);
+    console.log(`[OpenRouter] Optimizing with ${MODELS.flash} (resume: ${trimmedResume.length} chars, JD: ${trimmedJD.length} chars)`);
     const messages = [{ role: 'user', content: prompt + langInstruction }];
     // Use 100s timeout for optimize (function has 120s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
@@ -684,7 +700,15 @@ ${resumeText}
  * @returns {Promise<object>} - Match score, keywords, and reasoning.
  */
 export async function processMatchOnly(resumeText, jobDescription, language = 'en') {
-  console.log(`[Gemini] Fast match analysis with ${MODELS.flash}`);
+  // Truncate oversized inputs to prevent AI timeouts
+  const MAX_RESUME = 15000;
+  const MAX_JD = 5000;
+  const trimmedResume = (typeof resumeText === 'string' && resumeText.length > MAX_RESUME)
+    ? resumeText.substring(0, MAX_RESUME) : resumeText;
+  const trimmedJD = (typeof jobDescription === 'string' && jobDescription.length > MAX_JD)
+    ? jobDescription.substring(0, MAX_JD) : jobDescription;
+
+  console.log(`[Gemini] Fast match analysis with ${MODELS.flash} (resume: ${trimmedResume.length} chars, JD: ${trimmedJD.length} chars)`);
 
   const schema = {
     type: "object",
@@ -746,10 +770,10 @@ ${OCR_RESILIENCE_RULE}
 - Each category score must be independently justified with specific resume evidence.
 
 Job Description:
-${jobDescription}
+${trimmedJD}
 
 Resume:
-${resumeText}
+${trimmedResume}
 
 Analyze step by step, then provide your final score.`;
 

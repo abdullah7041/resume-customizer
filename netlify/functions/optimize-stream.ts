@@ -19,20 +19,10 @@ import { initSentry, captureError } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
+import { getSupabaseClient } from "../lib/supabase-client.js";
 
-// Inline Supabase client getter (avoids importing the v1 event-based wrapper)
-function getSupabaseClientDirect() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  // Dynamic import to avoid bundling issues
-  try {
-    const { createClient } = require("@supabase/supabase-js");
-    return createClient(url, key);
-  } catch {
-    return null;
-  }
-}
+// NOTE: Previously used an inline require("@supabase/supabase-js") which fails
+// in esbuild production bundles. Now uses the shared static import instead.
 
 initSentry();
 
@@ -99,7 +89,7 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  const supabase = getSupabaseClientDirect();
+  const supabase = getSupabaseClient();
   if (!supabase) {
     return new Response(
       JSON.stringify({ error: "Server configuration error. Please contact support." }),
