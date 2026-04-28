@@ -212,8 +212,17 @@ export async function parseResumeOnly(inputData, isPdf = true) {
     throw new Error('PDF inline data not supported with OpenRouter. Please convert PDF to text first using OCR.');
   }
 
+  // PERF FIX: Truncate excessively long input to prevent AI timeouts.
+  // No resume needs >20K chars — anything beyond that is layout noise from PDF extraction.
+  const MAX_INPUT_CHARS = 20000;
+  let trimmedInput = inputData;
+  if (typeof inputData === 'string' && inputData.length > MAX_INPUT_CHARS) {
+    console.warn(`[OpenRouter] Input too long (${inputData.length} chars), truncating to ${MAX_INPUT_CHARS} chars`);
+    trimmedInput = inputData.substring(0, MAX_INPUT_CHARS);
+  }
+
   try {
-    console.log(`[OpenRouter] Parsing resume with ${MODELS.lite}. Input type: Text`);
+    console.log(`[OpenRouter] Parsing resume with ${MODELS.lite}. Input type: Text, length: ${trimmedInput.length} chars`);
 
     const systemInstruction = `You are a highly accurate OCR and resume parser.
 Your goal is to extract the FULL text verbatim and structure the data.
@@ -271,7 +280,6 @@ If you are unsure if a section exists but see text that looks like it (e.g. a li
 
     const prompt = `
 Extract the following information from the resume.
-IMPORTANT: "meta.raw_text" must contain the COMPLETE text of the resume, preserving line breaks and structure. Do not summarize; extract fully.
 
 CRITICAL: Extract LOCATION for each work experience and HIGHLIGHTS for education entries.
 
@@ -343,8 +351,7 @@ Return the response in JSON Resume format:
   ],
   "meta": {
     "version": "1.0.0",
-    "lastModified": "string (ISO date)",
-    "raw_text": "string (The FULL verbatim text of the resume)"
+    "lastModified": "string (ISO date)"
   }
 }
 
@@ -360,38 +367,18 @@ CRITICAL REMINDERS:
 `;
 
     // Build prompt with system instruction and user content
-    const fullPrompt = `${systemInstruction}\n\n${prompt}\n\nRESUME CONTENT:\n${inputData}`;
+    // NOTE: We no longer ask for meta.raw_text — the client already has the full
+    // text from client-side extraction, so echoing it back wastes tokens and time.
+    const fullPrompt = `${systemInstruction}\n\n${prompt}\n\nRESUME CONTENT:\n${trimmedInput}`;
 
     const messages = [{ role: 'user', content: fullPrompt }];
-    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 8192, timeoutMs: 50000 });
+    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 4096, timeoutMs: 50000 });
     const parsed = sanitizeAndParseJSON(text);
 
-    // CRITICAL FIX: Safely extract plainText as string
-    // Gemini may return raw_text as an object in some cases
-    const rawTextValue = parsed.meta?.raw_text;
+    // plainText: Use the ORIGINAL input (before truncation) — we already have the
+    // full text from client-side extraction, no need for the AI to echo it back.
+    parsed.plainText = typeof inputData === 'string' ? inputData : '';
 
-    // DEBUG: Log what we're receiving
-    console.log("[Gemini] DEBUG: parsed.meta exists:", !!parsed.meta);
-    console.log("[Gemini] DEBUG: typeof rawTextValue:", typeof rawTextValue);
-    console.log("[Gemini] DEBUG: rawTextValue preview:",
-      typeof rawTextValue === 'string' ? rawTextValue.substring(0, 100) : JSON.stringify(rawTextValue)?.substring(0, 200));
-
-    let extractedPlainText = "";
-    if (typeof rawTextValue === "string") {
-      extractedPlainText = rawTextValue;
-    } else if (rawTextValue && typeof rawTextValue === "object") {
-      // Try to extract from object if it has a text-like property
-      if (typeof rawTextValue.text === "string") extractedPlainText = rawTextValue.text;
-      else if (typeof rawTextValue.content === "string") extractedPlainText = rawTextValue.content;
-      else {
-        console.warn("[Gemini] ⚠️ meta.raw_text is an object, not string:", JSON.stringify(rawTextValue).substring(0, 200));
-      }
-    } else {
-      console.warn("[Gemini] ⚠️ meta.raw_text is empty/undefined, type:", typeof rawTextValue);
-    }
-
-    console.log("[Gemini] DEBUG: extractedPlainText length:", extractedPlainText.length);
-    parsed.plainText = extractedPlainText;
     parsed.candidateProfile = {
       name: parsed.basics?.name || "",
       email: parsed.basics?.email || "",
@@ -400,20 +387,19 @@ CRITICAL REMINDERS:
         `${parsed.basics.location.city || ""}, ${parsed.basics.location.region || ""}`.trim().replace(/^,\s*|,\s*$/g, "") : "",
       links: (parsed.basics?.profiles || []).map(p => p.url).filter(Boolean)
     };
-    // CRITICAL FIX: Extract summary from raw_text if basics.summary is missing/short
+
+    // Extract summary from inputData if basics.summary is missing/short
     let summary = parsed.basics?.summary || "";
-    if ((!summary || summary.length < 50) && extractedPlainText) {
-      // Try to find summary section in raw text
-      const summaryMatch = extractedPlainText.match(
+    if ((!summary || summary.length < 50) && inputData) {
+      const summaryMatch = inputData.match(
         /(?:SUMMARY|PROFESSIONAL SUMMARY|PROFILE|OBJECTIVE|ABOUT)[:\s]*\n?([\s\S]*?)(?=\n\n|\n(?:EXPERIENCE|WORK|EDUCATION|SKILLS|CERTIFICATIONS?|PROJECTS?|$))/i
       );
       if (summaryMatch && summaryMatch[1]) {
         const extractedSummary = summaryMatch[1].trim();
         if (extractedSummary.length > 50) {
           summary = extractedSummary;
-          // Also update basics.summary for consistency
           if (parsed.basics) parsed.basics.summary = summary;
-          console.log("[Gemini] Extracted summary from raw_text, length:", summary.length);
+          console.log("[Gemini] Extracted summary from input text, length:", summary.length);
         }
       }
     }
