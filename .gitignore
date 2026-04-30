@@ -47,3 +47,6 @@ coverage
 # Lock files (keeping package-lock.json for consistency)
 # *.lock
 .env
+
+# Agent tooling directories (auto-generated, not source)
+.agents/

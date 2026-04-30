@@ -90,7 +90,7 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText, workHistory, language } = parseResult.data;
+    const { resumeText, jobText, workHistory, language, userClarifications } = parseResult.data;
 
     // Detect career vulnerabilities from structured work history
     const vulnerabilities = workHistory?.length
@@ -109,6 +109,7 @@ const baseHandler: Handler = async (event) => {
       jobText: jobText.trim(),
       language: language || 'en',
       vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
+      userClarifications: userClarifications || '',
     });
 
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
@@ -127,7 +128,7 @@ const baseHandler: Handler = async (event) => {
     const startTime = Date.now();
 
     // Use dedicated optimizeResume function for faster, focused optimization
-    const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities);
+    const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications);
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);
     console.log('[optimize] AI response summary:', {

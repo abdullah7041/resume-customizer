@@ -231,7 +231,25 @@
     "printDialogOpened": "تم فتح نافذة الطباعة",
     "printDialogOpenedDesc": "استخدم نافذة الطباعة للحفظ كـ PDF أو طباعة سيرتك الذاتية.",
     "exportFailed": "ما زبط التصدير",
-    "templateSelected": "تم اختيار القالب"
+    "templateSelected": "تم اختيار القالب",
+    "analyzingGaps": "نحلل فجوات سيرتك…",
+    "ocrFallbackTitle": "نمسح المستند",
+    "ocrFallbackDesc": "يبدو أن هذا الملف ممسوح ضوئياً أو قائم على صور. المعالجة من الخادم قد تأخذ ثواني إضافية.",
+    "optimizeValidating": "نتحقق من سيرتك...",
+    "optimizeVulnerabilities": "نفحص مسارك المهني...",
+    "optimizeAI": "الذكاء الاصطناعي يحلل ويعيد كتابة نقاطك...",
+    "optimizeBuildingResponse": "يبني بطاقات التحسين..."
+  },
+  "clarificationModal": {
+    "title": "أسئلة سريعة لتحسين نتائجك",
+    "question": "سؤال",
+    "questions": "أسئلة",
+    "duration": "دقيقة تقريباً",
+    "placeholder": "اكتب إجابتك هنا… (أو اتركها فارغة لتخطي هذا السؤال)",
+    "validationHint": "لو سمحت أعطنا إجابة واضحة (أو اتركها فارغة لتخطي هذا السؤال)",
+    "nudge": "الإجابة تساعد الذكاء الاصطناعي على توليد اقتراحات أكثر دقة",
+    "skipBtn": "تخطي للحين",
+    "submitBtn": "إرسال الإجابات"
   },
   "landing": {
     "trustBadge": "مصمم لمواهب رؤية 2030",

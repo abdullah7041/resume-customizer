@@ -214,6 +214,15 @@ export const OptimizeRequestSchema = z.object({
     jobText: z.string().min(1, "Job text is required").max(MAX_JOB_LENGTH, "Job text too large"),
     workHistory: z.array(WorkHistoryEntrySchema).optional(),
     language: z.enum(["en", "ar"]).optional().default("en"),
+    // Optional structured Q&A from the clarification modal — injected into AI prompt context
+    userClarifications: z.string().max(5000).optional(),
+});
+
+// New: Clarification pre-optimization endpoint schema
+export const ClarificationRequestSchema = z.object({
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
+    jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
+    language: z.enum(["en", "ar"]).optional().default("en"),
 });
 
 export const PredictQuestionsRequestSchema = z.object({
@@ -253,6 +262,7 @@ export type Project = z.infer<typeof ProjectSchema>;
 export type ParseResumeRequest = z.infer<typeof ParseResumeRequestSchema>;
 export type MatchRequest = z.infer<typeof MatchRequestSchema>;
 export type OptimizeRequest = z.infer<typeof OptimizeRequestSchema>;
+export type ClarificationRequest = z.infer<typeof ClarificationRequestSchema>;
 
 // Gap Analysis Types
 export type GapAnalysisItem = z.infer<typeof GapAnalysisItemSchema>;

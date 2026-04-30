@@ -52,6 +52,9 @@
 [functions."predict-questions"]
   timeout = 60  # Increased: OpenRouter timeout 50s + 10s buffer
 
+[functions."generate-clarifications"]
+  timeout = 30  # Lightweight pre-optimization gap analysis (20s AI timeout + 10s buffer)
+
 [functions."extract-resume-json"]
   external_node_modules = ["pdfjs-dist"]
   timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer for parsing

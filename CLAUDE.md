@@ -25,6 +25,7 @@ npm run test               # Vitest unit tests
 - Optimizations: only applied when `applied: true` flag is set
 - Skills are never auto-injected — recommendations only, user adds manually
 - AI-modified data tracked in `meta.ai_suggestions` to preserve schema integrity
+- Always use Context7 mcp when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 
 ## Quality — NON-NEGOTIABLE
 

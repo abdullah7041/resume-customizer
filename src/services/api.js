@@ -9,6 +9,7 @@ const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
 const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/extract-resume-json`;
 const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
 const OPTIMIZE_STREAM_ENDPOINT = `/api/optimize-stream`;
+const CLARIFY_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-clarifications`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 
@@ -180,9 +181,42 @@ export const parseResume = async (resumeInput, options = {}) => {
         }
 
         if (clientExtractedText.length >= 100) {
-          // Client extraction succeeded — send plain text (no base64 file transfer)
-          console.log('[API] Using client-extracted text (saving server-side PDF parsing time)');
-          payload = { kind: "text", value: clientExtractedText };
+          // QUALITY CHECK: pdf.js can return binary garbage from CID-font PDFs.
+          // CID fonts missing a ToUnicode CMap produce raw glyph indices that land in
+          // the Latin-1 Supplement block (ö, ü, ã, ÿ…) — these are real Unicode letters,
+          // so both printable-char and \p{L} ratio checks are defeated (ratio 50–72%).
+          //
+          // Word-level analysis discriminates correctly: real resume text (English/Arabic)
+          // has ≥5 whitespace-delimited pure-letter tokens; CID garbage has almost none
+          // because its "letters" are isolated between symbol fragments.
+          const isReadableText = (text) => {
+            const sample = text.substring(0, 500);
+            const words = sample
+              .split(/[\s,;:.!?(){}\[\]|/\\]+/) // eslint-disable-line no-useless-escape
+              .filter(w => /^[\p{L}]{2,}$/u.test(w));
+            return words.length >= 5 && words.length / sample.length > 0.02;
+          };
+
+          if (isReadableText(clientExtractedText)) {
+            // Client extraction succeeded — send plain text (no base64 file transfer)
+            console.log('[API] Using client-extracted text (saving server-side PDF parsing time)');
+            payload = { kind: "text", value: clientExtractedText };
+          } else {
+            // Text looks like binary garbage (CID-font PDF, image-based, etc.)
+            console.warn(`[API] Client extraction returned non-readable text (binary/encoded glyphs). Falling back to server-side OCR.`);
+
+            if (typeof options.onOcrFallback === 'function') {
+              try { options.onOcrFallback(); } catch (_) { /* never block upload for a UI callback */ }
+            }
+
+            const base64 = await fileToBase64(resumeInput);
+            payload = {
+              kind: "file",
+              data: base64,
+              name: resumeInput.name,
+              mime: resumeInput.type,
+            };
+          }
         } else {
           // Fallback: scanned PDF or extraction failure — send file to server for OCR
           console.log('[API] Client extraction insufficient, falling back to server-side file upload');
@@ -355,7 +389,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -366,7 +400,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications }),
       });
 
       const data = await handleResponse(response);
@@ -409,6 +443,35 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
 };
 
 /**
+ * Fetch 0–3 targeted clarification questions before optimization.
+ * NON-FATAL: always resolves — returns { clarifications: [] } on any error.
+ *
+ * @param {object} params
+ * @param {string} params.resumeText
+ * @param {string} params.jobDesc
+ * @param {string} [params.language='en']
+ * @returns {Promise<{ clarifications: Array<{id,theme,rationale,question}> }>}
+ */
+export const generateClarifications = async ({ resumeText, jobDesc, language = 'en' }) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(CLARIFY_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ resumeText, jobText: jobDesc, language }),
+    });
+    if (!response.ok) {
+      console.warn('[API] generateClarifications returned non-OK status:', response.status);
+      return { clarifications: [] };
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn('[API] generateClarifications failed (non-fatal), proceeding without:', error?.message);
+    return { clarifications: [] };
+  }
+};
+
+/**
  * SSE streaming version of optimizeResume.
  * Streams progress events from the server for real-time UX feedback.
  *
@@ -416,7 +479,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory }, onStatus) => {
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications }, onStatus) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -427,7 +490,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory }),
+    body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications }),
   });
 
   // Non-streaming error responses (4xx, 5xx with JSON body)

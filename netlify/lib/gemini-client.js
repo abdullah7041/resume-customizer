@@ -213,8 +213,8 @@ export async function parseResumeOnly(inputData, isPdf = true) {
   }
 
   // PERF FIX: Truncate excessively long input to prevent AI timeouts.
-  // No resume needs >20K chars — anything beyond that is layout noise from PDF extraction.
-  const MAX_INPUT_CHARS = 20000;
+  // Real resume content is typically 2-5K chars; anything beyond 10K is PDF layout noise.
+  const MAX_INPUT_CHARS = 10000;
   let trimmedInput = inputData;
   if (typeof inputData === 'string' && inputData.length > MAX_INPUT_CHARS) {
     console.warn(`[OpenRouter] Input too long (${inputData.length} chars), truncating to ${MAX_INPUT_CHARS} chars`);
@@ -224,160 +224,42 @@ export async function parseResumeOnly(inputData, isPdf = true) {
   try {
     console.log(`[OpenRouter] Parsing resume with ${MODELS.lite}. Input type: Text, length: ${trimmedInput.length} chars`);
 
-    const systemInstruction = `You are a highly accurate OCR and resume parser.
-Your goal is to extract the FULL text verbatim and structure the data.
-You MUST output JSON strictly adhering to the JSONResume.org schema standard.
+    const systemInstruction = `You are a resume parser. Extract structured data from the resume text below.
+Output JSON strictly following the JSONResume.org schema.
 
-CRITICAL EXTRACTION REQUIREMENTS:
+EXTRACTION RULES:
+1. WORK: Extract name (company only), position, location (city/country), startDate (YYYY-MM), endDate (YYYY-MM or "Present"), highlights (ALL bullet points)
+2. EDUCATION: Extract institution, area, studyType, dates, score (GPA), highlights, courses
+3. PROJECTS: Extract name (REQUIRED — the actual project title, NEVER a generic name like "Project" or "Project 1". Use real names like "Sales Dashboard", "Inventory Tracker", etc.), description, highlights, keywords
+4. SKILLS: Group by category with keywords array
+5. CERTIFICATES: Extract name, issuer, date
+6. LANGUAGES: Extract language and fluency level
+7. LOCATION PARSING: "Company, City, Country" → name: "Company", location: "City, Country"
+8. DO NOT omit any bullet points or details`;
 
-1. WORK EXPERIENCE - For each job, extract:
-   - name: Company name (REQUIRED)
-   - position: Job title (REQUIRED)
-   - location: City/Region (e.g., "Alahsa, Saudi Arabia", "Dammam, Saudi Arabia") - REQUIRED if present
-   - startDate: Start date
-   - endDate: End date or "Present"
-   - highlights: Array of ALL bullet points/achievements - DO NOT OMIT ANY
-
-2. EDUCATION - For each entry, extract:
-   - institution: School/University name (REQUIRED)
-   - area: Field of study/Major
-   - studyType: Degree type (Diploma, Bachelor, Master, PhD, etc.)
-   - startDate: Start date
-   - endDate: End date
-   - score: GPA if mentioned
-   - highlights: Array of ALL bullet points describing the education (REQUIRED if present)
-     Examples to look for:
-     - "First Year: Focused on academic coursework..."
-     - "Second Year: Hands-on workshop courses..."
-     - "Dean's List 2020-2022"
-     - "Senior project: Developed a..."
-   - courses: Array of relevant coursework if mentioned
-
-3. PROJECTS - For each project:
-   - name: Project name
-   - description: Brief description
-   - highlights: Array of ALL bullet points
-   - keywords: Technologies used
-
-4. SKILLS - Group by category if present:
-   - Technical Skills, Programming Languages, Soft Skills, etc.
-   each group should have name and keywords array.
-
-5. CERTIFICATIONS - Extract all certifications/licenses/trainings:
-   - Look for headers like: "Certifications", "Licenses", "Training", "Credentials", "Professional Development"
-   - Also look for "Certified..." or "License..." mentions in text.
-   - For each, extract:
-     - name: Certificate name (REQUIRED)
-     - issuer: Issuing organization (e.g., Coursera, AWS, SCOPA)
-     - date: Date obtained
-
-6. LANGUAGES - Extract language proficiencies
-
-DO NOT OMIT any bullet points or details. Include EVERY piece of information from the resume.
-Location is REQUIRED for each work entry if mentioned in the resume.
-Education highlights (bullet points describing coursework/achievements) are REQUIRED if present.
-If you are unsure if a section exists but see text that looks like it (e.g. a list of courses under specific years), extract it as best interpretation.`;
-
-    const prompt = `
-Extract the following information from the resume.
-
-CRITICAL: Extract LOCATION for each work experience and HIGHLIGHTS for education entries.
-
-Return the response in JSON Resume format:
+    const prompt = `Extract resume data into JSON Resume format:
 {
-  "basics": {
-    "name": "string",
-    "label": "string (Job Title / Professional Headline)",
-    "email": "string",
-    "phone": "string",
-    "url": "string (optional)",
-    "summary": "string (professional summary)",
-    "location": {
-      "city": "string",
-      "countryCode": "string",
-      "region": "string"
-    },
-    "profiles": [{ "network": "string", "username": "string", "url": "string" }]
-  },
-  "work": [
-    {
-      "name": "string (Company name ONLY - do not include city/country)",
-      "position": "string (Job Title)",
-      "location": "string (City, Country - REQUIRED if present in resume, e.g. 'Alahsa, Saudi Arabia'. Extract this separately from company name.)",
-      "startDate": "string (YYYY-MM format)",
-      "endDate": "string (YYYY-MM or 'Present')",
-      "summary": "string (optional role overview)",
-      "highlights": ["string (EVERY bullet point - do not skip any)"]
-    }
-  ],
-  "education": [
-    {
-      "institution": "string (School/University name)",
-      "area": "string (Major/Field of Study)",
-      "studyType": "string (Degree: Diploma, Bachelor, Master, PhD, etc.)",
-      "startDate": "string",
-      "endDate": "string",
-      "score": "string (GPA if mentioned)",
-      "courses": ["string (relevant coursework if listed)"],
-      "highlights": ["string (EVERY bullet point about the education, year-by-year details like 'First Year: ...', 'Second Year: ...', achievements, etc.)"]
-    }
-  ],
-  "skills": [
-    {
-      "name": "string (Category: Technical Skills, Soft Skills, etc.)",
-      "keywords": ["string (individual skills in this category)"]
-    }
-  ],
-  "projects": [
-    {
-      "name": "string (REQUIRED - The actual project title. NEVER use generic names like 'Project' or 'Project 1'. Extract real names like 'Sales Dashboard', 'Inventory Tracker', etc.)",
-      "description": "string (Brief summary, separate from name)",
-      "highlights": ["string (EVERY bullet point - do not duplicate description)"],
-      "keywords": ["string (technologies used)"]
-    }
-  ],
-  "certificates": [
-    {
-      "name": "string",
-      "date": "string",
-      "issuer": "string"
-    }
-  ],
-  "languages": [
-    {
-      "language": "string",
-      "fluency": "string (Native, Fluent, Upper Intermediate, Intermediate, Basic)"
-    }
-  ],
-  "meta": {
-    "version": "1.0.0",
-    "lastModified": "string (ISO date)"
-  }
+  "basics": { "name", "label", "email", "phone", "url", "summary", "location": { "city", "countryCode", "region" }, "profiles": [{ "network", "username", "url" }] },
+  "work": [{ "name", "position", "location", "startDate", "endDate", "summary", "highlights": [] }],
+  "education": [{ "institution", "area", "studyType", "startDate", "endDate", "score", "courses": [], "highlights": [] }],
+  "skills": [{ "name", "keywords": [] }],
+  "projects": [{ "name", "description", "highlights": [], "keywords": [] }],
+  "certificates": [{ "name", "date", "issuer" }],
+  "languages": [{ "language", "fluency" }],
+  "meta": { "version": "1.0.0", "lastModified": "" }
 }
 
-CRITICAL REMINDERS:
-- Extract LOCATION for each work experience (e.g., "Dammam, Saudi Arabia")
-- LOCATION PATTERN RECOGNITION: When you see "Company Name, City, Country" or "Company Name, City Name, Country Name", the city and country are the LOCATION field, NOT part of the company name. Examples:
-  * "ABC Corp, Alahsa, Saudi Arabia" → name: "ABC Corp", location: "Alahsa, Saudi Arabia"
-  * "Tech Company, Riyadh, KSA" → name: "Tech Company", location: "Riyadh, KSA"
-  * "XYZ Ltd., Dammam" → name: "XYZ Ltd.", location: "Dammam"
-- Extract ALL education highlights/bullet points (e.g., "First Year: focused on academic coursework...")
-- Map ALL experience entries to "work[]" with every bullet point in "highlights[]"
-- DO NOT skip or summarize any content
-`;
+RESUME CONTENT:
+${trimmedInput}`;
 
-    // Build prompt with system instruction and user content
-    // NOTE: We no longer ask for meta.raw_text — the client already has the full
-    // text from client-side extraction, so echoing it back wastes tokens and time.
-    const fullPrompt = `${systemInstruction}\n\n${prompt}\n\nRESUME CONTENT:\n${trimmedInput}`;
-
-    const messages = [{ role: 'user', content: fullPrompt }];
-    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 4096, timeoutMs: 50000 });
+    const messages = [{ role: 'user', content: `${systemInstruction}\n\n${prompt}` }];
+    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 3072, timeoutMs: 50000 });
     const parsed = sanitizeAndParseJSON(text);
 
-    // plainText: Use the ORIGINAL input (before truncation) — we already have the
-    // full text from client-side extraction, no need for the AI to echo it back.
-    parsed.plainText = typeof inputData === 'string' ? inputData : '';
+    // plainText: Use the ORIGINAL input (before truncation) only when we know it is
+    // human-readable text. When isPdf=true, inputData is a base64 blob — assigning it
+    // here would corrupt the plainText field and break the placeholder detector downstream.
+    parsed.plainText = (!isPdf && typeof inputData === 'string') ? inputData : '';
 
     parsed.candidateProfile = {
       name: parsed.basics?.name || "",
@@ -471,7 +353,7 @@ CRITICAL REMINDERS:
  * @param {string} jobDescription - Job description text.
  * @returns {Promise<object>} - Optimization suggestions with original and improved content.
  */
-export async function optimizeResume(resumeText, jobDescription, language = 'en', vulnerabilities = []) {
+export async function optimizeResume(resumeText, jobDescription, language = 'en', vulnerabilities = [], userClarifications = '') {
   // PERF FIX: Truncate oversized inputs to prevent AI timeouts.
   // optimize needs less text than parse — 15K resume + 5K JD is more than sufficient.
   const MAX_RESUME_CHARS = 15000;
@@ -671,9 +553,16 @@ ${trimmedResume}
 
   const langInstruction = language === 'ar' ? `\n\nLANGUAGE INSTRUCTION: You MUST write ALL text fields in Arabic. This includes: issue, rationale, improved text, suggestion, current_state, recommendation, and relevance fields. Keep JSON keys and technical keywords (programming languages, tools, certifications like "AWS", "Python", "React") in English. Write all descriptive and explanatory content in formal Arabic.` : '';
 
+  const clarificationsBlock = userClarifications ? `
+<user_clarifications>
+The candidate provided these additional details in response to targeted questions before this optimization. Use them to ENRICH bullet rewrites, the summary, and gap analysis. Treat as high-confidence first-party data.
+IMPORTANT: If any answer appears to be random characters or nonsense (e.g. "asdfjkl"), ignore it entirely.
+${userClarifications}
+</user_clarifications>` : '';
+
   try {
     console.log(`[OpenRouter] Optimizing with ${MODELS.flash} (resume: ${trimmedResume.length} chars, JD: ${trimmedJD.length} chars)`);
-    const messages = [{ role: 'user', content: prompt + langInstruction }];
+    const messages = [{ role: 'user', content: prompt + clarificationsBlock + langInstruction }];
     // Use 100s timeout for optimize (function has 120s Netlify timeout)
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,

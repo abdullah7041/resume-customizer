@@ -71,7 +71,8 @@ describe('extract-resume-json function', () => {
     });
 
     it('handles direct text input', async () => {
-        const text = "John Doe\nSoftware Engineer";
+        // Realistic resume snippet with ≥5 words to pass the word-level isReadableText check
+        const text = "John Doe\nSoftware Engineer\nExperience working with Python Django REST APIs cloud infrastructure";
         const mockAnalysis = {
             basics: { name: "John Doe", label: "Software Engineer" },
             meta: { raw_text: text }
@@ -93,7 +94,8 @@ describe('extract-resume-json function', () => {
     });
 
     it('handles file input with pre-extraction success', async () => {
-        const mockText = "Valid PDF Content";
+        // Realistic pre-extracted text with ≥5 words to pass the word-level isReadableText check
+        const mockText = "PDF User Software Engineer Python Django REST APIs cloud infrastructure five years experience";
         const mockAnalysis = {
             basics: { name: "PDF User" },
             meta: { raw_text: mockText }
@@ -146,16 +148,70 @@ describe('extract-resume-json function', () => {
     });
 
     it('handles Gemini API errors', async () => {
+        // Use realistic text to pass the server-side isReadableText guard
+        const realisticText = 'John Doe Software Engineer Python Django REST APIs cloud infrastructure five years';
         mockGeminiClient.parseResumeOnly.mockRejectedValue(new Error('rate limit exceeded'));
 
         const event = {
             httpMethod: 'POST',
-            body: JSON.stringify({ kind: 'text', value: 'test' }),
+            body: JSON.stringify({ kind: 'text', value: realisticText }),
             headers: { 'X-Beta-Code': 'WATHEQ01' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(500);
         expect(JSON.parse(result.body).error).toContain('AI service is currently busy');
+    });
+
+    it('rejects CID-font garbage from kind:file upload (word-level check)', async () => {
+        // Pure symbol/punctuation noise with NO pure-letter word tokens ≥2 chars.
+        // This simulates what a CID-font PDF with missing ToUnicode CMap actually emits.
+        // Note: we use only symbols and single chars so no token passes /^[\p{L}]{2,}$/u
+        const cidGarbage = '§{¶½ú¸=§$~²◄►♦♣♠☺☻☼↑↓←→▲▼±×÷≈≠∞√∑∏∫≤≥¿¡«»—…·•°′″§¶†‡©®™¢£¥€¤ƒ'
+            .repeat(8); // 450+ chars, 0 real word tokens
+
+        mockResumeText.inferMimeType.mockReturnValue('application/pdf');
+        mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue(cidGarbage);
+
+        mockGeminiClient.parseResumeOnly.mockResolvedValue({
+            meta: { raw_text: 'I cannot extract text from this content.' },
+            plainText: ''
+        });
+
+        const event = {
+            httpMethod: 'POST',
+            body: JSON.stringify({
+                kind: 'file',
+                name: 'CID-font-resume.pdf',
+                data: Buffer.from('fake-pdf').toString('base64'),
+                mime: 'application/pdf'
+            }),
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as any, mockContext) as HandlerResponse;
+        // CID garbage must NOT return 200 OK with empty structured data
+        expect(result.statusCode).not.toBe(200);
+    });
+
+    it('rejects CID-font garbage sent as kind:text (server-side defense-in-depth)', async () => {
+        // Simulates what happens when the client-side isReadableText has a stale bundle
+        // or bug, and garbage slips through as kind:'text'. The server must also reject it.
+        // Uses pure symbols with zero pure-letter tokens so the word-level check always fails.
+        const cidGarbage = '§{¶½ú¸=§$~²◄►♦♣♠☺☻☼↑↓←→▲▼±×÷≈≠∞√∑∏∫≤≥¿¡«»—…·•°′″§¶†‡©®™¢£¥€¤ƒ'
+            .repeat(8); // 500+ chars, 0 real word tokens
+
+        const event = {
+            httpMethod: 'POST',
+            body: JSON.stringify({ kind: 'text', value: cidGarbage }),
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as any, mockContext) as HandlerResponse;
+        // Server must catch and reject garbage even when sent as kind:'text'
+        expect(result.statusCode).toBe(422);
+        expect(JSON.parse(result.body).error).toContain('Could not read the uploaded file');
+        // parseResumeOnly must NOT be called with garbage
+        expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
     });
 });

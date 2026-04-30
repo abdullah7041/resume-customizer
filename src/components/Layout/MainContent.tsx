@@ -6,7 +6,9 @@ import {
   analyzeResumeWithAI,
   optimizeResume,
   optimizeResumeStream,
+  generateClarifications,
 } from "../../services/api.js";
+import { ClarificationModal, type ClarificationQuestion } from "../modals/ClarificationModal";
 import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import TemplateGallery from "../sections/TemplatesSection";
@@ -175,6 +177,11 @@ export default function MainContent() {
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, _setAiDebug] = useState(null);
+  // Clarification interrogation state
+  const [isInterrogating, setIsInterrogating] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
+  const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[] } | null>(null);
   const [showLanding, _setShowLanding] = useState(() => {
     if (typeof window === "undefined") return true;
     return !window.localStorage.getItem("watheq:landingSeen");
@@ -625,37 +632,21 @@ export default function MainContent() {
     [i18n.language, pushToast, resumeData, t]
   );
 
-  const handleOptimize = useCallback(
-    async (mode) => {
-      if (!resumeData?.plainText || !jobDescription) {
-        pushToast({
-          type: "warning",
-          title: "Add job context",
-          description: "Run a match analysis before requesting optimizations.",
-        });
-        return null;
-      }
-
+  // Internal: runs the real SSE optimize call with optional clarifications baked in
+  const handleOptimizeActual = useCallback(
+    async ({ mode, workHistory, userClarifications }: { mode: string; workHistory?: any[]; userClarifications?: string }) => {
+      if (!resumeData?.plainText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
         pushToast(
           {
-            type: "info",
-            title: t("toasts.generatingOptimizations"),
-            description: withTemperature(t("toasts.generatingOptimizationsDesc")),
+            type: 'info',
+            title: t('toasts.generatingOptimizations'),
+            description: t('toasts.generatingOptimizationsDesc'),
           },
           { id: TOAST_IDS.optimize }
         );
-
-        // Extract structured work history for vulnerability detection (gaps, short tenures, pivots)
-        const storeWork = useResumeStore.getState().originalResume?.work;
-        const workHistory = storeWork?.map(w => ({
-          name: w.name || '',
-          position: w.position || '',
-          startDate: w.startDate || '',
-          endDate: w.endDate || '',
-        })).filter(w => w.name && w.position) || undefined;
 
         // Phase progress messages for SSE stream
         const phaseMessages: Record<string, string> = {
@@ -676,6 +667,7 @@ export default function MainContent() {
               preview: !isPremium,
               language: i18n.language,
               workHistory,
+              userClarifications,
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
@@ -703,6 +695,7 @@ export default function MainContent() {
               preview: !isPremium,
               language: i18n.language,
               workHistory,
+              userClarifications,
             }
           );
         }
@@ -837,6 +830,123 @@ export default function MainContent() {
     },
     [i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData, t]
   );
+
+  // Gate function: runs clarification step first, then delegates to handleOptimizeActual
+  const handleOptimize = useCallback(
+    async (mode) => {
+      if (!resumeData?.plainText || !jobDescription) {
+        pushToast({
+          type: "warning",
+          title: "Add job context",
+          description: "Run a match analysis before requesting optimizations.",
+        });
+        return null;
+      }
+
+      // Guard against double-clicks or re-entrant calls while already processing
+      if (isOptimizing || isInterrogating) return null;
+
+      /** Helper: build typed work-history from Zustand store */
+      const buildWorkHistory = () => {
+        const storeWork = useResumeStore.getState().originalResume?.work;
+        return storeWork
+          ?.map(w => ({
+            name: w.name || '',
+            position: w.position || '',
+            startDate: w.startDate || '',
+            endDate: w.endDate || '',
+          }))
+          .filter(w => w.name && w.position) || undefined;
+      };
+
+      try {
+        const workHistory = buildWorkHistory();
+
+        // ---- Clarification Step (free, non-fatal) ----
+        // Show a lightweight toast while we call the gap-analysis endpoint
+        pushToast(
+          {
+            type: 'info',
+            title: t('toasts.generatingOptimizations'),
+            description: t('toasts.analyzingGaps', 'Analyzing resume gaps…'),
+          },
+          { id: TOAST_IDS.optimize }
+        );
+
+        const clarifyResult = await generateClarifications({
+          resumeText: resumeData.plainText,
+          jobDesc: jobDescription,
+          language: i18n.language,
+        });
+
+        if (clarifyResult.clarifications?.length > 0) {
+          // Pause the flow — show the modal and wait for user answers
+          setClarificationQuestions(clarifyResult.clarifications);
+          setPendingOptimizeArgs({ mode, workHistory });
+          setIsInterrogating(true);
+          setIsOptimizing(false);
+          setFlowProgress(0);
+          return null; // resume in handleClarificationSubmit / handleClarificationSkip
+        }
+
+        // No questions → fall through to the actual optimize call
+        return await handleOptimizeActual({ mode, workHistory, userClarifications: undefined });
+      } catch (outerError) {
+        // If clarification itself throws (shouldn't — it's non-fatal), proceed anyway
+        console.warn('[handleOptimize] Clarification error, proceeding without:', outerError);
+        return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined });
+      }
+    },
+    [generateClarifications, handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, pushToast, resumeData, t]
+  );
+
+  // ---- Clarification modal handlers ----
+
+  /** Format user answers as structured natural language for the AI prompt */
+  const formatClarifications = useCallback((answers: Record<string, string>): string => {
+    return clarificationQuestions
+      .filter(q => answers[q.id]?.trim())
+      .map(q => `[${q.theme}]\nQ: ${q.question}\nA: ${answers[q.id].trim()}`)
+      .join('\n\n');
+  }, [clarificationQuestions]);
+
+  const handleClarificationSubmit = useCallback(async (answers: Record<string, string>) => {
+    setIsInterrogating(false);
+    const userClarifications = formatClarifications(answers);
+    const { mode, workHistory } = pendingOptimizeArgs || {};
+    setPendingOptimizeArgs(null);
+    setClarificationQuestions([]);
+    await handleOptimizeActual({ mode, workHistory, userClarifications: userClarifications || undefined });
+  }, [formatClarifications, handleOptimizeActual, pendingOptimizeArgs]);
+
+  const handleClarificationSkip = useCallback(async () => {
+    setIsInterrogating(false);
+    const { mode, workHistory } = pendingOptimizeArgs || {};
+    setPendingOptimizeArgs(null);
+    setClarificationQuestions([]);
+    await handleOptimizeActual({ mode, workHistory, userClarifications: undefined });
+  }, [handleOptimizeActual, pendingOptimizeArgs]);
+
+  /** Re-generate clarification questions (user pressed refresh icon) */
+  const handleRegenerate = useCallback(async () => {
+    if (!resumeData?.plainText || !jobDescription) return;
+    setIsRegenerating(true);
+    try {
+      const result = await generateClarifications({
+        resumeText: resumeData.plainText,
+        jobDesc: jobDescription,
+        language: i18n.language,
+      });
+      if (result.clarifications?.length > 0) {
+        setClarificationQuestions(result.clarifications);
+      } else {
+        // No questions generated — skip straight to optimize
+        handleClarificationSkip();
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [generateClarifications, i18n.language, jobDescription, handleClarificationSkip, resumeData]);
 
   const handleCopy = useCallback(
     async (value) => {
@@ -1149,6 +1259,16 @@ export default function MainContent() {
         isOpen={viewTextModalOpen}
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
+      />
+
+      {/* Clarification Modal — pre-optimization gap interrogation */}
+      <ClarificationModal
+        questions={clarificationQuestions}
+        isOpen={isInterrogating}
+        isRegenerating={isRegenerating}
+        onSubmit={handleClarificationSubmit}
+        onSkip={handleClarificationSkip}
+        onRegenerate={handleRegenerate}
       />
 
       {/* Delete All Data Confirmation Modal */}

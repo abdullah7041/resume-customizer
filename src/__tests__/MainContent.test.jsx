@@ -6,10 +6,15 @@ const {
   parseResumeMock,
   analyzeResumeMock,
   optimizeResumeMock,
+  optimizeResumeStreamMock,
+  generateClarificationsMock,
 } = vi.hoisted(() => ({
   parseResumeMock: vi.fn(),
   analyzeResumeMock: vi.fn(),
   optimizeResumeMock: vi.fn(),
+  optimizeResumeStreamMock: vi.fn(),
+  // Non-fatal: always returns empty clarifications in tests so the optimize flow proceeds directly
+  generateClarificationsMock: vi.fn().mockResolvedValue({ clarifications: [] }),
 }));
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
@@ -109,6 +114,8 @@ vi.mock("../services/api.js", () => ({
   parseResume: parseResumeMock,
   analyzeResume: analyzeResumeMock,
   optimizeResume: optimizeResumeMock,
+  optimizeResumeStream: optimizeResumeStreamMock,
+  generateClarifications: generateClarificationsMock,
   AI_DEFAULT_TEMPERATURE: 0.32,
 }));
 

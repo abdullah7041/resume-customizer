@@ -29,6 +29,22 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     let analysis;
     let extractedPlainText = "";
 
+    // Mirrors the frontend check in api.js: reject CID-font / scanned-PDF binary garbage.
+    // CID fonts missing a ToUnicode CMap produce raw glyph indices that land in the
+    // Latin-1 Supplement block (ö, ü, ã, ÿ…) — real Unicode letters — so both a
+    // printable-char ratio and a \p{L} ratio check are defeated (observed ratio: 50–72%).
+    //
+    // Word-level analysis discriminates correctly: real resume text (English/Arabic)
+    // has ≥5 whitespace-delimited pure-letter tokens; CID garbage has almost none
+    // because its "letters" are isolated between symbol fragments.
+    const isReadableText = (text: string): boolean => {
+      const sample = text.substring(0, 500);
+      const words = sample
+        .split(/[\s,;:.!?(){}\[\]|/\\]+/) // eslint-disable-line no-useless-escape
+        .filter(w => /^[\p{L}]{2,}$/u.test(w));
+      return words.length >= 5 && words.length / sample.length > 0.02;
+    };
+
     if (kind === "file" && data) {
       // CRITICAL FIX: Extract text from PDF/DOCX BEFORE sending to Gemini
       // This ensures we always have the full text regardless of Gemini's response
@@ -36,16 +52,20 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         const buffer = Buffer.from(data, "base64");
         const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
         const mimeType = inferMimeType({ mimeType: mime, fileName: name });
-        extractedPlainText = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: name });
-        console.log(`[extract-resume-json] Pre-extracted text length: ${extractedPlainText.length} chars`);
-        if (extractedPlainText.length > 0) {
+        const rawExtracted = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: name });
+        console.log(`[extract-resume-json] Pre-extracted text length: ${rawExtracted.length} chars`);
+
+        if (rawExtracted.length > 0 && isReadableText(rawExtracted)) {
+          extractedPlainText = rawExtracted;
           console.log(`[extract-resume-json] Pre-extracted preview: "${extractedPlainText.slice(0, 300).replace(/\s+/g, ' ')}"`);
+        } else if (rawExtracted.length > 0) {
+          console.warn("[extract-resume-json] Pre-extracted text failed readability check (binary/encoded glyphs) — treating as empty.");
         }
       } catch (extractError) {
         console.warn("[extract-resume-json] Pre-extraction failed, will rely on Gemini:", extractError);
       }
 
-      // OPTIMIZATION: Use pre-extracted text if available (much faster than PDF parsing)
+      // OPTIMIZATION: Use pre-extracted text if available AND readable (much faster than PDF parsing)
       // PDF mode takes 30-45s, text mode takes ~5-10s
       if (extractedPlainText.length > 200) {
         console.log("[extract-resume-json] Using pre-extracted text for faster parsing...");
@@ -56,6 +76,19 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       }
       console.log("[extract-resume-json] parseResumeOnly returned success.");
     } else if (kind === "text" && body.value) {
+      // Defense-in-depth: reject garbage even if it slipped past the client-side check.
+      // This catches cases where the client had a stale bundle or a bug in isReadableText.
+      if (!isReadableText(body.value)) {
+        console.warn("[extract-resume-json] ⚠️ Text payload failed server-side readability check — CID-font garbage suspected.");
+        return {
+          statusCode: 422,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            error: "Could not read the uploaded file. It may use an unsupported font encoding. Please try a different PDF or paste your resume text directly.",
+            details: "Text payload failed readability check (CID-font garbage suspected)."
+          }),
+        };
+      }
       console.log("[extract-resume-json] Calling parseResumeOnly with text...");
       extractedPlainText = body.value;
       analysis = await parseResumeOnly(body.value, false);
