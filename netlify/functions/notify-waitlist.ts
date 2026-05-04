@@ -10,13 +10,12 @@
 
 import { Handler } from "@netlify/functions";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdminMutationGate } from "../lib/admin-gates.js";
 import { sendWaitlistNotification } from "../lib/email-service.js";
-
-// Admin secret for manual triggers (set in Netlify env vars)
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "change-me-in-production";
+import { redactForLog } from "../lib/sentry.js";
 
 function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -35,13 +34,12 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  // Verify admin secret
-  const secret = event.queryStringParameters?.secret;
-  if (secret !== ADMIN_SECRET) {
+  const gate = requireAdminMutationGate(event);
+  if (gate.ok === false) {
     console.warn("[notify-waitlist] Unauthorized access attempt");
     return {
-      statusCode: 401,
-      body: JSON.stringify({ error: "Unauthorized" }),
+      statusCode: gate.statusCode,
+      body: JSON.stringify({ error: gate.error }),
     };
   }
 
@@ -89,7 +87,7 @@ export const handler: Handler = async (event) => {
     // Send emails (with rate limiting to avoid Resend throttling)
     for (const user of waitlistUsers) {
       if (dryRun) {
-        console.log(`[notify-waitlist] [DRY RUN] Would notify: ${user.email}`);
+        console.log(`[notify-waitlist] [DRY RUN] Would notify: ${redactForLog(user.email)}`);
         results.success++;
         continue;
       }
@@ -109,11 +107,11 @@ export const handler: Handler = async (event) => {
             .eq("id", user.id);
 
           results.success++;
-          console.log(`[notify-waitlist] Sent to ${user.email}`);
+          console.log(`[notify-waitlist] Sent to ${redactForLog(user.email)}`);
         } else {
           results.failed++;
           results.errors.push(`${user.email}: ${emailResult.error}`);
-          console.error(`[notify-waitlist] Failed to send to ${user.email}:`, emailResult.error);
+          console.error(`[notify-waitlist] Failed to send to ${redactForLog(user.email)}:`, emailResult.error);
         }
 
         // Rate limiting: wait 100ms between emails (600 emails/min max)
@@ -122,7 +120,7 @@ export const handler: Handler = async (event) => {
         results.failed++;
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
         results.errors.push(`${user.email}: ${errorMsg}`);
-        console.error(`[notify-waitlist] Error sending to ${user.email}:`, err);
+        console.error(`[notify-waitlist] Error sending to ${redactForLog(user.email)}:`, err);
       }
     }
 

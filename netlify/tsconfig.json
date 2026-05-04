@@ -13,6 +13,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "tsBuildInfoFile": "../.tsbuildinfo.netlify",
     "outDir": "./dist"
   },
   "include": ["functions/**/*.ts", "lib/**/*.ts"],

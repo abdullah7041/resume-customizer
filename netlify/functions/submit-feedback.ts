@@ -17,10 +17,11 @@ import {
 } from "../lib/resume-schemas.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { addFeedbackCredits } from "../lib/credit-manager.js";
+import { redactForLog } from "../lib/sentry.js";
 
 // Initialize Supabase client with service role
 function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -33,9 +34,13 @@ function getSupabaseClient() {
 // Get user from JWT token
 async function getUserFromToken(token: string) {
   try {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Missing Supabase credentials");
+    }
+
     const supabase = createClient(
-      (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
     const { data, error } = await supabase.auth.getUser(token);
@@ -166,7 +171,7 @@ const handleFeedbackSubmission: Handler = async (event) => {
 
         if (!existingCredits) {
           // Initialize credits for this user
-          console.log(`[submit-feedback] Initializing credits for user ${user.email}`);
+          console.log(`[submit-feedback] Initializing credits for user ${redactForLog(user.email)}`);
           await supabase.from("user_credits").insert({
             email: user.email,
             credits_remaining: 15,

@@ -26,6 +26,7 @@ export function TechnicalEngineer({
     scale = 1,
     fontScale = 1,
     displayOptions,
+    contentDirection = 'ltr',
 }: TemplateProps) {
     const getSectionLabel = useSectionLabel();
 
@@ -113,7 +114,7 @@ export function TechnicalEngineer({
                 fontSize: `${opts.baseFontSize}pt`,
                 lineHeight: String(opts.lineHeight),
             }}
-            dir="ltr"
+            dir={contentDirection}
         >
             {/* Header */}
             <header className="mb-5 pb-4" style={{ borderBottom: '2px dashed #d1d5db' }}>

@@ -3,7 +3,7 @@
  * Handles API request throttling, exponential backoff, and concurrency control
  * 
  * This module provides two types of rate limiting:
- * 1. OUTGOING: Rate limiting for calls to external APIs (DeepSeek, Gemini)
+ * 1. OUTGOING: Rate limiting for calls to external APIs (Gemini/OpenRouter)
  * 2. INCOMING: Rate limiting for incoming requests to protect endpoints from abuse
  */
 
@@ -261,31 +261,6 @@ export async function batchWithConcurrency<T, R>(
   return results;
 }
 
-/**
- * Wrapper for DeepSeek API calls with built-in rate limiting and retries
- */
-export async function callDeepSeekWithRetry<T>(
-  fn: () => Promise<T>,
-  options: {
-    rateLimiter?: RateLimiter;
-    retryOptions?: RetryOptions;
-  } = {}
-): Promise<T> {
-  const { rateLimiter, retryOptions } = options;
-
-  const executor = async () => {
-    return await withRetry(fn, {
-      maxRetries: 2,
-      initialDelayMs: 2000,
-      maxDelayMs: 8000,
-      retryableStatusCodes: new Set([429, 500, 502, 503]),
-      ...retryOptions,
-    });
-  };
-
-  return rateLimiter ? rateLimiter.execute(executor) : executor();
-}
-
 // ============================================
 // INCOMING REQUEST RATE LIMITING
 // Protects endpoints from abuse
@@ -320,6 +295,7 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
 
   // AI endpoints using "Flash" model - INCREASED from 5 to 10
   "optimize": { maxRequests: 10 },         // Flash model - better UX while preventing abuse
+  "optimize-stream": { maxRequests: 10 },  // Flash model via Netlify v2 streaming endpoint
   "vision2030-alignment": { maxRequests: 10 },  // Flash model - deep contextual analysis
 
   // Generation endpoints using "Lite" model (already fast, keep at 10)
@@ -335,19 +311,42 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   default: { maxRequests: 30 },
 };
 
-// Singleton Upstash rate limiter and Redis client (lazy initialized)
-let upstashRatelimit: Ratelimit | null = null;
+// Singleton Upstash Redis client and per-config rate limiters (lazy initialized)
+const upstashRatelimitByConfig = new Map<string, Ratelimit>();
 let upstashRedis: Redis | null = null;
 let upstashInitAttempted = false;
 let upstashInitError: string | null = null;
 
 /**
- * Get the Upstash rate limiter (no in-memory fallback)
+ * Get an Upstash rate limiter for the endpoint config (no in-memory fallback)
  * Returns null if Upstash is not configured
  */
-function getRateLimiter(): Ratelimit | null {
+function getRateLimiter(config: EndpointRateLimitConfig): Ratelimit | null {
   initUpstash();
-  return upstashRatelimit;
+
+  if (!upstashRedis) {
+    return null;
+  }
+
+  const windowMs = config.windowMs ?? 60000;
+  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  const configKey = `${config.maxRequests}:${windowSeconds}`;
+  const existingLimiter = upstashRatelimitByConfig.get(configKey);
+
+  if (existingLimiter) {
+    return existingLimiter;
+  }
+
+  const limiter = new Ratelimit({
+    redis: upstashRedis,
+    limiter: Ratelimit.slidingWindow(config.maxRequests, `${windowSeconds} s`),
+    analytics: true,
+    prefix: "resume-optimizer",
+    timeout: 3000, // 3s timeout — fail open if Redis is slow/unavailable
+  });
+
+  upstashRatelimitByConfig.set(configKey, limiter);
+  return limiter;
 }
 
 /**
@@ -368,17 +367,9 @@ function initUpstash(): void {
   }
 
   try {
-    // Create a shared Redis client for both rate limiting and quota tracking
+    // Create a shared Redis client for endpoint-specific rate limiters.
     upstashRedis = new Redis({ url, token });
-
-    upstashRatelimit = new Ratelimit({
-      redis: upstashRedis,
-      limiter: Ratelimit.slidingWindow(20, "60 s"),
-      analytics: true,
-      prefix: "resume-optimizer",
-      timeout: 3000, // 3s timeout — fail open if Redis is slow/unavailable
-    });
-    console.log("[rate-limiter] ✓ Initialized Upstash rate limiter and Redis client");
+    console.log("[rate-limiter] ✓ Initialized Upstash Redis client for rate limiting");
   } catch (err) {
     upstashInitError = `Failed to initialize Upstash: ${err instanceof Error ? err.message : String(err)}`;
     console.error(`[rate-limiter] ${upstashInitError}`);
@@ -398,6 +389,14 @@ function getClientIdentifier(event: HandlerEvent): string {
   return ip;
 }
 
+function getClientIdentifierFromHeaders(headers: Headers): string {
+  return headers.get("x-nf-client-connection-ip")?.split(",")[0]?.trim()
+    || headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || headers.get("x-real-ip")
+    || headers.get("client-ip")
+    || "unknown";
+}
+
 /**
  * Check rate limit for an incoming request
  */
@@ -412,8 +411,8 @@ async function checkRateLimit(
   }
 
   const clientId = getClientIdentifier(event);
-  const limiter = getRateLimiter();
   const config = ENDPOINT_RATE_LIMITS[endpoint] || ENDPOINT_RATE_LIMITS.default;
+  const limiter = getRateLimiter(config);
 
   // If Upstash is not configured, allow requests through (graceful degradation)
   if (!limiter) {
@@ -449,6 +448,60 @@ async function checkRateLimit(
     return { allowed: true };
   } catch (err) {
     // If rate limiting fails, log error but allow request through
+    console.error("[rate-limiter] Rate limit check failed:", err);
+    return { allowed: true };
+  }
+}
+
+/**
+ * Check rate limit for a Netlify Functions v2 Request/Response handler.
+ */
+export async function checkRateLimitForRequest(
+  request: Request,
+  endpoint: string
+): Promise<{ allowed: boolean; response?: Response }> {
+  if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {
+    console.log('[rate-limiter] Development mode - bypassing rate limits');
+    return { allowed: true };
+  }
+
+  const clientId = getClientIdentifierFromHeaders(request.headers);
+  const config = ENDPOINT_RATE_LIMITS[endpoint] || ENDPOINT_RATE_LIMITS.default;
+  const limiter = getRateLimiter(config);
+
+  if (!limiter) {
+    console.warn(`[rate-limiter] Upstash not configured — allowing request to ${endpoint} (no rate limiting)`);
+    return { allowed: true };
+  }
+
+  try {
+    const identifier = `${endpoint}:${clientId}`;
+    const result = await limiter.limit(identifier);
+
+    if (!result.success) {
+      console.log(`[rate-limiter] Rate limit exceeded for ${clientId} on ${endpoint}`);
+      return {
+        allowed: false,
+        response: new Response(
+          JSON.stringify({
+            error: "Too many requests. Please try again later.",
+            retryAfter: 60,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...RATE_LIMIT_HEADERS,
+              "Retry-After": "60",
+              "X-RateLimit-Limit": String(config.maxRequests),
+              "X-RateLimit-Remaining": "0",
+            },
+          }
+        ),
+      };
+    }
+
+    return { allowed: true };
+  } catch (err) {
     console.error("[rate-limiter] Rate limit check failed:", err);
     return { allowed: true };
   }
@@ -508,7 +561,7 @@ export function getRateLimitStats(): {
   endpointsConfigured: string[];
 } {
   return {
-    type: upstashRatelimit ? "upstash" : "in-memory",
+    type: upstashRedis ? "upstash" : "in-memory",
     endpointsConfigured: Object.keys(ENDPOINT_RATE_LIMITS).filter(k => k !== "default"),
   };
 }

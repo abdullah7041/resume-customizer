@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { redactForLog } from './sentry.js';
 
 // Feature pricing (in credits)
 export const FEATURE_COSTS = {
@@ -21,7 +22,7 @@ export const FEATURE_COSTS = {
  * @returns {import('@supabase/supabase-js').SupabaseClient}
  */
 function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -85,13 +86,13 @@ export async function getUserCredits(email, options = {}) {
   if (error) {
     // If user doesn't exist, initialize their credits
     if (error.code === 'PGRST116') {
-      console.log(`[CreditManager] Initializing credits for user ${email}`);
+      console.log(`[CreditManager] Initializing credits for user ${redactForLog(email)}`);
 
       // ANTI-ABUSE CHECKS
 
       // Check 1: Email must be verified
       if (!emailVerified) {
-        console.warn(`[CreditManager] Email not verified for ${email} - giving 0 credits`);
+        console.warn(`[CreditManager] Email not verified for ${redactForLog(email)} - giving 0 credits`);
         const { data: newCredits, error: insertError } = await supabase
           .from('user_credits')
           .insert({
@@ -123,7 +124,7 @@ export async function getUserCredits(email, options = {}) {
       const creditsToGive = isIPSuspicious ? 5 : 20; // Reduced credits for suspicious IPs
 
       if (isIPSuspicious) {
-        console.warn(`[CreditManager] Suspicious IP detected for ${email} - giving ${creditsToGive} credits instead of 20`);
+        console.warn(`[CreditManager] Suspicious IP detected for ${redactForLog(email)} - giving ${creditsToGive} credits instead of 20`);
       }
 
       const { data: newCredits, error: insertError } = await supabase

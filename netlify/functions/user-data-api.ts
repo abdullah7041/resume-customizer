@@ -9,7 +9,8 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import * as crypto from 'crypto';
-import { initSentry, captureError } from '../lib/sentry.js';
+import { initSentry, captureError, redactForLog } from '../lib/sentry.js';
+import { getSupabaseClient } from '../lib/supabase-client.js';
 
 initSentry();
 
@@ -40,10 +41,16 @@ async function verifyAuth(authHeader: string | undefined) {
  * Get service role Supabase client
  */
 function getServiceClient() {
-    return createClient(
-        (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+        throw {
+            statusCode: 500,
+            message: 'Server configuration error. Please contact support.',
+        };
+    }
+
+    return supabase;
 }
 
 /**
@@ -100,7 +107,7 @@ async function handleDelete(email: string, userId: string, confirmDelete: boolea
     // Delete auth user (cascades remaining data)
     await supabase.auth.admin.deleteUser(userId);
 
-    console.log(`User ${email} deleted their account at ${new Date().toISOString()}`);
+    console.log(`User ${redactForLog(email)} deleted their account at ${new Date().toISOString()}`);
 
     return { message: 'Account deleted' };
 }
@@ -132,7 +139,7 @@ export const handler: Handler = async (event) => {
                 statusCode: 200,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Content-Disposition': `attachment; filename="user-data-export-${userEmail}.json"`,
+                    'Content-Disposition': 'attachment; filename="watheq-user-data-export.json"',
                 },
                 body: JSON.stringify(exportData, null, 2),
             };

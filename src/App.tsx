@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 // react-joyride v3 uses named exports (no default export)
 const Joyride = lazy(() => import("react-joyride").then((m) => ({ default: m.Joyride })));
 import { MotionConfig } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
+import Footer from "./components/Layout/Footer";
 
 import EnvironmentBadge from "./components/ui/EnvironmentBadge";
 import OfflineIndicator from "./components/ui/OfflineIndicator";
@@ -15,11 +16,32 @@ import { UpgradeModal } from "./components/Credits/UpgradeModal";
 import { useUserCredits } from "./hooks/useUserCredits";
 import { useOnboardingTour } from "./hooks/useOnboardingTour";
 import { TourTooltip } from "./components/Tour/TourTooltip";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+
+const getCurrentPath = () => {
+  if (typeof window === "undefined") return "/";
+  return window.location.pathname;
+};
 
 export default function App() {
+  const [currentPath, setCurrentPath] = useState(getCurrentPath);
+
   // Run storage migration once on app initialization
   useEffect(() => {
     migrateStorageKeys();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleLocationChange = () => setCurrentPath(window.location.pathname);
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("watheq:navigate", handleLocationChange);
+
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange);
+      window.removeEventListener("watheq:navigate", handleLocationChange);
+    };
   }, []);
 
   // Credit system integration
@@ -37,7 +59,8 @@ export default function App() {
           <Header />
           <UserProgressNav />
 
-          <MainContent />
+          {currentPath === "/privacy" ? <PrivacyPolicy /> : <MainContent />}
+          <Footer />
           <ConsentBanner />
 
           {/* Credit Upgrade Modal */}

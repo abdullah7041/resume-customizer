@@ -10,7 +10,9 @@
 
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
 import { sendMonthlyUsageSummary } from '../lib/email-service.js';
+import { redactForLog } from '../lib/sentry.js';
 
 interface UserStats {
   totalUsed: number;
@@ -24,21 +26,18 @@ interface UserStats {
 const handler: Handler = async (event) => {
   console.log('[cron-monthly-summary] Starting scheduled monthly summary...');
 
-  // Scheduled functions should only be called from Netlify's internal scheduler
-  const isScheduledCall = event.headers['x-netlify-internal-functions'] === 'true';
-  const isDev = process.env.NODE_ENV === 'development';
-
-  if (!isScheduledCall && !isDev) {
+  const gate = requireScheduledFunctionGate(event);
+  if (gate.ok === false) {
     console.warn('[cron-monthly-summary] Unauthorized call attempt');
     return {
-      statusCode: 403,
-      body: JSON.stringify({ error: 'Unauthorized' }),
+      statusCode: gate.statusCode,
+      body: JSON.stringify({ error: gate.error }),
     };
   }
 
   try {
     // Initialize Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -102,7 +101,7 @@ const handler: Handler = async (event) => {
 
       const userCredits = creditsMap.get(userEmail);
       if (!userCredits) {
-        console.warn(`[cron-monthly-summary] User ${userEmail} has no credits record`);
+        console.warn(`[cron-monthly-summary] User ${redactForLog(userEmail)} has no credits record`);
         continue;
       }
 
@@ -169,7 +168,7 @@ const handler: Handler = async (event) => {
         const stats = userStatsMap.get(userEmail);
 
         if (!stats) {
-          console.warn(`[cron-monthly-summary] No stats found for user ${userEmail}, using empty stats`);
+          console.warn(`[cron-monthly-summary] No stats found for user ${redactForLog(userEmail)}, using empty stats`);
         }
 
         // Send email
@@ -188,12 +187,12 @@ const handler: Handler = async (event) => {
         );
 
         if (!emailResult.success) {
-          console.warn(`[cron-monthly-summary] Failed to send email for user ${userEmail}:`, emailResult.error);
+          console.warn(`[cron-monthly-summary] Failed to send email for user ${redactForLog(userEmail)}:`, emailResult.error);
           emailFailCount++;
         }
 
         successCount++;
-        console.log(`[cron-monthly-summary] Sent summary email to user ${userEmail}. Success: ${emailResult.success}`);
+        console.log(`[cron-monthly-summary] Sent summary email to user ${redactForLog(userEmail)}. Success: ${emailResult.success}`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error(`[cron-monthly-summary] Error processing user:`, errorMsg);

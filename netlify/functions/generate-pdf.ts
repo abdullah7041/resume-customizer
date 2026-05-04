@@ -117,8 +117,9 @@ const baseHandler: Handler = async (event) => {
   let page: Page | null = null; // Declare outside try block for cleanup access
 
   try {
-    const { html, styles, filename, templateId } = JSON.parse(event.body || "{}");
+    const { html, styles, filename, templateId, direction } = JSON.parse(event.body || "{}");
     const safeFilename = filename || `resume-optimized`;
+    const pageDirection = direction === "rtl" ? "rtl" : "ltr";
 
     if (!html) {
       return { statusCode: 400, body: JSON.stringify({ error: "Missing html" }) };
@@ -145,7 +146,7 @@ const baseHandler: Handler = async (event) => {
     // Render the final HTML string with embedded styles
     await page.setContent(`
       <!DOCTYPE html>
-      <html dir="ltr">
+      <html dir="${pageDirection}">
         <head>
           <meta charset="UTF-8">
           <style>${styles || ''}</style>

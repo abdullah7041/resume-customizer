@@ -202,11 +202,12 @@ export const parseResume = async (resumeInput, options = {}) => {
             console.log('[API] Using client-extracted text (saving server-side PDF parsing time)');
             payload = { kind: "text", value: clientExtractedText };
           } else {
-            // Text looks like binary garbage (CID-font PDF, image-based, etc.)
-            console.warn(`[API] Client extraction returned non-readable text (binary/encoded glyphs). Falling back to server-side OCR.`);
+            // Text looks like binary garbage (CID-font PDF, image-based, etc.).
+            // Send the file so the server can classify the failure consistently.
+            console.warn(`[API] Client extraction returned non-readable text (binary/encoded glyphs). Sending file for server-side validation.`);
 
             if (typeof options.onOcrFallback === 'function') {
-              try { options.onOcrFallback(); } catch (_) { /* never block upload for a UI callback */ }
+              try { options.onOcrFallback(); } catch { /* never block upload for a UI callback */ }
             }
 
             const base64 = await fileToBase64(resumeInput);
@@ -218,12 +219,12 @@ export const parseResume = async (resumeInput, options = {}) => {
             };
           }
         } else {
-          // Fallback: scanned PDF or extraction failure — send file to server for OCR
-          console.log('[API] Client extraction insufficient, falling back to server-side file upload');
+          // Fallback: scanned PDF or extraction failure — send file to server for validation
+          console.log('[API] Client extraction insufficient, sending file for server-side validation');
 
-          // P1 FIX: Notify the UI so it can display an OCR-in-progress message
+          // Notify the UI that the document may need a text-based re-upload.
           if (typeof options.onOcrFallback === 'function') {
-            try { options.onOcrFallback(); } catch (_) { /* never block upload for a UI callback */ }
+            try { options.onOcrFallback(); } catch { /* never block upload for a UI callback */ }
           }
 
           const base64 = await fileToBase64(resumeInput);

@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "type:check": "tsc --noEmit",
+    "type:check": "tsc --noEmit && tsc -p netlify/tsconfig.json --noEmit",
     "quality:check": "npm run lint && npm run type:check && npm run test",
     "quality:parallel": "npm-run-all --parallel lint type:check test",
     "quality:fix": "npm run lint:fix && npm run type:check && npm run test",

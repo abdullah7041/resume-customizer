@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { analyzeResume, optimizeResume, parseResume } from './api.js';
 
+const mockResumeText = vi.hoisted(() => ({
+  extractPlainTextFromArrayBuffer: vi.fn(),
+  inferMimeType: vi.fn(),
+}));
+
 // Mock supabase
 vi.mock('./supabase', () => ({
   supabase: {
@@ -13,8 +18,13 @@ vi.mock('./supabase', () => ({
   }
 }));
 
+vi.mock('../lib/utils/resumeText', () => mockResumeText);
+
 beforeEach(() => {
   global.fetch = vi.fn();
+  mockResumeText.extractPlainTextFromArrayBuffer.mockReset();
+  mockResumeText.inferMimeType.mockReset();
+  mockResumeText.inferMimeType.mockReturnValue('application/pdf');
 
   // Mock localStorage with beta code
   const localStorageMock = {
@@ -72,6 +82,89 @@ describe('parseResume', () => {
       json: async () => ({ error: 'Parse failed' }),
     });
     await expect(parseResume('   ')).rejects.toThrow('Parse failed');
+  });
+
+  it('sends low-text PDFs as files with auth headers and surfaces 422 without OCR claims', async () => {
+    const onOcrFallback = vi.fn();
+    mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue('too short');
+
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      headers: new Headers(),
+      json: async () => ({
+        error: 'This file appears to be scanned or image-only. Upload a text-based PDF, DOCX, TXT, or paste text.',
+      }),
+    });
+
+    const { supabase } = await import('./supabase');
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: { access_token: 'test-access-token' } },
+      error: null,
+    });
+
+    const file = new File(['%PDF-low-text'], 'scanned.pdf', { type: 'application/pdf' });
+
+    await expect(parseResume(file, { onOcrFallback })).rejects.toThrow(
+      'This file appears to be scanned or image-only'
+    );
+
+    expect(onOcrFallback).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    const [_url, request] = global.fetch.mock.calls[0];
+    expect(request.headers).toEqual(expect.objectContaining({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-access-token',
+    }));
+
+    const payload = JSON.parse(request.body);
+    expect(payload).toEqual(expect.objectContaining({
+      kind: 'file',
+      name: 'scanned.pdf',
+      mime: 'application/pdf',
+    }));
+    expect(payload.data).toBeTruthy();
+
+    const errorMessage = global.fetch.mock.calls[0][1].body;
+    expect(errorMessage).not.toMatch(/OCR/i);
+  });
+
+  it('sends readable client-extracted PDF text as text without fallback callback', async () => {
+    const onOcrFallback = vi.fn();
+    const readableText = [
+      'Product Manager Riyadh Saudi Arabia',
+      'Led digital transformation programs across finance and operations',
+      'Managed stakeholder communication and delivery timelines',
+    ].join('\n');
+    mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue(readableText);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          document: {
+            plainText: readableText,
+            bullets: [],
+            sections: [],
+          },
+        }),
+    });
+
+    const file = new File(['%PDF-readable'], 'resume.pdf', { type: 'application/pdf' });
+
+    await expect(parseResume(file, { onOcrFallback })).resolves.toEqual({
+      plainText: readableText,
+      bullets: [],
+      sections: [],
+    });
+
+    expect(onOcrFallback).not.toHaveBeenCalled();
+    const payload = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(payload).toEqual({
+      kind: 'text',
+      value: readableText,
+    });
   });
 });
 

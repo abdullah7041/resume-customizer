@@ -11,27 +11,25 @@
 
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
 import { sendCreditsRefreshedEmail } from '../lib/email-service.js';
+import { redactForLog } from '../lib/sentry.js';
 
 const handler: Handler = async (event) => {
   console.log('[cron-reset-credits] Starting scheduled credit reset...');
 
-  // Scheduled functions should only be called from Netlify's internal scheduler
-  // But we can verify by checking for the X-Webhook-Signature header or similar
-  const isScheduledCall = event.headers['x-netlify-internal-functions'] === 'true';
-  const isDev = process.env.NODE_ENV === 'development';
-
-  if (!isScheduledCall && !isDev) {
+  const gate = requireScheduledFunctionGate(event);
+  if (gate.ok === false) {
     console.warn('[cron-reset-credits] Unauthorized call attempt');
     return {
-      statusCode: 403,
-      body: JSON.stringify({ error: 'Unauthorized' }),
+      statusCode: gate.statusCode,
+      body: JSON.stringify({ error: gate.error }),
     };
   }
 
   try {
     // Initialize Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -113,7 +111,7 @@ const handler: Handler = async (event) => {
           .eq('email', email);
 
         if (updateError) {
-          console.error(`[cron-reset-credits] Failed to reset credits for user ${email}:`, updateError);
+          console.error(`[cron-reset-credits] Failed to reset credits for user ${redactForLog(email)}:`, updateError);
           errors.push({ userId: email, error: `Failed to update credits: ${updateError.message}` });
           continue;
         }
@@ -133,7 +131,7 @@ const handler: Handler = async (event) => {
         });
 
         if (logError) {
-          console.warn(`[cron-reset-credits] Failed to log transaction for user ${email}:`, logError);
+          console.warn(`[cron-reset-credits] Failed to log transaction for user ${redactForLog(email)}:`, logError);
           // Don't fail the operation
         }
 
@@ -142,12 +140,12 @@ const handler: Handler = async (event) => {
         const emailResult = await sendCreditsRefreshedEmail(email, userName, newCredits, 'en');
 
         if (!emailResult.success) {
-          console.warn(`[cron-reset-credits] Failed to send email for user ${email}:`, emailResult.error);
+          console.warn(`[cron-reset-credits] Failed to send email for user ${redactForLog(email)}:`, emailResult.error);
           emailFailCount++;
         }
 
         successCount++;
-        console.log(`[cron-reset-credits] Reset credits for user ${email}. Email sent: ${emailResult.success}`);
+        console.log(`[cron-reset-credits] Reset credits for user ${redactForLog(email)}. Email sent: ${emailResult.success}`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error(`[cron-reset-credits] Error processing user:`, errorMsg);

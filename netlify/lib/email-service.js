@@ -9,6 +9,7 @@
 
 import { Resend } from 'resend';
 import { emailTemplates } from './email-templates.js';
+import { redactForLog } from './sentry.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -62,7 +63,7 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
   try {
     // Validate inputs
     if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', userEmail);
+      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
       return { success: false, error: 'Invalid email address' };
     }
 
@@ -85,7 +86,7 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
     }
 
     console.log('[email-service] Sending credits refreshed email', {
-      email: userEmail,
+      email: redactForLog(userEmail),
       name: userName,
       credits,
       language: lang
@@ -139,7 +140,7 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
   try {
     // Validate inputs
     if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', userEmail);
+      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
       return { success: false, error: 'Invalid email address' };
     }
 
@@ -172,7 +173,7 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
     }
 
     console.log('[email-service] Sending monthly summary email', {
-      email: userEmail,
+      email: redactForLog(userEmail),
       name: userName,
       stats: defaultStats,
       language: lang
@@ -258,7 +259,7 @@ export async function sendWaitlistNotification(userEmail, language = 'en', planT
   try {
     // Validate inputs
     if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', userEmail);
+      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
       return { success: false, error: 'Invalid email address' };
     }
 
@@ -271,7 +272,7 @@ export async function sendWaitlistNotification(userEmail, language = 'en', planT
     }
 
     console.log('[email-service] Sending waitlist notification email', {
-      email: userEmail,
+      email: redactForLog(userEmail),
       planType,
       language: lang
     });
@@ -311,7 +312,7 @@ export async function sendWaitlistConfirmation(userEmail, language = 'en') {
   try {
     // Validate inputs
     if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', userEmail);
+      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
       return { success: false, error: 'Invalid email address' };
     }
 
@@ -324,7 +325,7 @@ export async function sendWaitlistConfirmation(userEmail, language = 'en') {
     }
 
     console.log('[email-service] Sending waitlist confirmation email', {
-      email: userEmail,
+      email: redactForLog(userEmail),
       language: lang
     });
 
@@ -371,7 +372,7 @@ export async function sendReferralRewardReferrer(userEmail, userName, refereeNam
   try {
     // Validate inputs
     if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', userEmail);
+      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
       return { success: false, error: 'Invalid email address' };
     }
 
@@ -389,7 +390,7 @@ export async function sendReferralRewardReferrer(userEmail, userName, refereeNam
     }
 
     console.log('[email-service] Sending referral reward email to referrer', {
-      email: userEmail,
+      email: redactForLog(userEmail),
       name: userName,
       refereeName,
       language: lang
@@ -438,7 +439,7 @@ export async function sendReferralRewardReferee(userEmail, userName, referrerNam
   try {
     // Validate inputs
     if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', userEmail);
+      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
       return { success: false, error: 'Invalid email address' };
     }
 
@@ -456,7 +457,7 @@ export async function sendReferralRewardReferee(userEmail, userName, referrerNam
     }
 
     console.log('[email-service] Sending referral reward email to referee', {
-      email: userEmail,
+      email: redactForLog(userEmail),
       name: userName,
       referrerName,
       language: lang

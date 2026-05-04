@@ -26,6 +26,7 @@ export function ATSOptimized({
     scale = 1,
     fontScale = 1,
     displayOptions,
+    contentDirection = 'ltr',
 }: TemplateProps) {
     const getSectionLabel = useSectionLabel();
 
@@ -115,7 +116,7 @@ export function ATSOptimized({
                 padding: marginPadding,
                 transform: `scale(${scale})`,
                 transformOrigin: 'top left',
-                direction: 'ltr', // Always LTR for resume content
+                direction: contentDirection,
                 fontFamily: opts.fontFamily,
                 fontSize: `${opts.baseFontSize}pt`,
                 lineHeight: String(opts.lineHeight),

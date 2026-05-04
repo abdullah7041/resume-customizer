@@ -20,11 +20,15 @@ import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
+import { checkRateLimitForRequest } from "../lib/rate-limiter.js";
+import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
 // in esbuild production bundles. Now uses the shared static import instead.
 
 initSentry();
+
+const OPTIMIZE_CACHE_TTL_SECONDS = 600;
 
 const SSE_HEADERS = {
   "Content-Type": "text/event-stream",
@@ -77,6 +81,11 @@ export default async function handler(request: Request): Promise<Response> {
       status: 405,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  const rateLimit = await checkRateLimitForRequest(request, "optimize-stream");
+  if (!rateLimit.allowed && rateLimit.response) {
+    return rateLimit.response;
   }
 
   // --- Auth ---
@@ -299,8 +308,8 @@ export default async function handler(request: Request): Promise<Response> {
           },
         };
 
-        // P0 FIX: Cache the result for 30 minutes
-        await setCached(cacheKey, resultPayload);
+        // Cache briefly because optimization cards can include resume snippets.
+        await setCached(cacheKey, resultPayload, OPTIMIZE_CACHE_TTL_SECONDS);
         console.log('[optimize-stream] Cache SET for key:', cacheKey.substring(0, 50));
 
         // Send the full result as a single SSE event
@@ -469,28 +478,22 @@ function buildOptimizationCards(optimization: any) {
 }
 
 function calculateScores(optimization: any, cards: any[]) {
-  let beforeScore = optimization?.match_score;
+  let beforeScore: number | null = null;
+  if (optimization?.match_score != null) {
+    beforeScore = normalizeScore(optimization.match_score, "match_score");
+  }
 
-  if (typeof beforeScore !== "number" && optimization?.category_scores) {
-    const cs = optimization.category_scores;
-    beforeScore =
-      (cs.hard_skills?.score || 0) +
-      (cs.experience?.score || 0) +
-      (cs.education?.score || 0) +
-      (cs.soft_skills?.score || 0);
+  if (beforeScore === null && optimization?.category_scores) {
+    beforeScore = scoreFromCategoryScores(optimization.category_scores);
     console.log("[optimize-stream] Calculated match_score from category_scores:", beforeScore);
   }
 
-  if (typeof beforeScore !== "number") {
-    beforeScore = 0;
+  if (beforeScore === null) {
+    throw new Error("AI optimization failed to calculate match score");
   }
 
-  let estimatedImprovement = 0;
-  if (typeof optimization?.after_score === "number") {
-    estimatedImprovement = Math.max(0, optimization.after_score - beforeScore);
-  } else {
-    estimatedImprovement = Math.min(cards.length * 2, 15);
-  }
+  const fallbackImprovement = Math.min(cards.length * 2, 15);
+  const estimatedImprovement = normalizeEstimatedImprovement(beforeScore, optimization?.after_score, fallbackImprovement);
 
   return { beforeScore, estimatedImprovement };
 }

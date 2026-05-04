@@ -8,8 +8,11 @@ import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
+import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
 
 initSentry();
+
+const OPTIMIZE_CACHE_TTL_SECONDS = 600;
 
 const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -279,19 +282,18 @@ const baseHandler: Handler = async (event) => {
     });
 
     // Use AI-calculated match score, or calculate from category_scores as fallback
-    let beforeScore = optimization?.match_score;
+    let beforeScore: number | null = null;
+    if (optimization?.match_score != null) {
+      beforeScore = normalizeScore(optimization.match_score, 'match_score');
+    }
 
     // Fallback: Calculate from category_scores if match_score is missing
-    if (typeof beforeScore !== 'number' && optimization?.category_scores) {
-      const cs = optimization.category_scores;
-      beforeScore = (cs.hard_skills?.score || 0) +
-        (cs.experience?.score || 0) +
-        (cs.education?.score || 0) +
-        (cs.soft_skills?.score || 0);
+    if (beforeScore === null && optimization?.category_scores) {
+      beforeScore = scoreFromCategoryScores(optimization.category_scores);
       console.log('[optimize] Calculated match_score from category_scores:', beforeScore);
     }
 
-    if (typeof beforeScore !== 'number') {
+    if (beforeScore === null) {
       console.error('[optimize] AI did not return match_score or category_scores');
       throw new Error('AI optimization failed to calculate match score');
     }
@@ -300,12 +302,8 @@ const baseHandler: Handler = async (event) => {
     const addKeywords = optimization?.missing_keywords || [];
     
     // Fallback logic in case after_score is omitted or hallucinated lower than beforeScore
-    let estimatedImprovement = 0;
-    if (typeof optimization?.after_score === 'number') {
-      estimatedImprovement = Math.max(0, optimization.after_score - beforeScore);
-    } else {
-      estimatedImprovement = Math.min(cards.length * 2, 15);
-    }
+    const fallbackImprovement = Math.min(cards.length * 2, 15);
+    const estimatedImprovement = normalizeEstimatedImprovement(beforeScore, optimization?.after_score, fallbackImprovement);
 
     // Extract JD-matched keywords (keywords resume already has that match JD)
     const matchedKeywords = optimization?.keywords_to_keep || [];
@@ -390,11 +388,11 @@ const baseHandler: Handler = async (event) => {
     };
 
     // -----------------------------------------------------------------------
-    // P0 FIX: Store result in Redis for 30 minutes (cache SET)
+    // Store result briefly because optimization cards can include resume snippets.
     // We cache AFTER credit consumption so replays are still free for the user
     // but don't re-charge — credits are only charged once per unique payload.
     // -----------------------------------------------------------------------
-    await setCached(cacheKey, responsePayload);
+    await setCached(cacheKey, responsePayload, OPTIMIZE_CACHE_TTL_SECONDS);
     console.log('[optimize] Cache SET for key:', cacheKey.substring(0, 50));
 
     return {

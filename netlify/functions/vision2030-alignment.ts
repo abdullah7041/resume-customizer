@@ -191,8 +191,10 @@ const baseHandler: Handler = async (event) => {
       analysis = JSON.parse(analysisJson) as Vision2030AnalysisResponse;
     } catch (parseError) {
       console.error('[vision2030-alignment] Failed to parse AI response:', parseError);
-      console.error('[vision2030-alignment] Response preview (first 500 chars):', analysisJson.substring(0, 500));
-      console.error('[vision2030-alignment] Response preview (last 500 chars):', analysisJson.substring(Math.max(0, analysisJson.length - 500)));
+      console.error('[vision2030-alignment] Response parse metadata:', {
+        responseLength: analysisJson.length,
+        endsWithBrace: analysisJson.trim().endsWith('}'),
+      });
 
       // Check if response was truncated
       if (analysisJson.length > 0 && !analysisJson.trim().endsWith('}')) {

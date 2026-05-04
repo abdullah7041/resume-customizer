@@ -48,4 +48,16 @@ describe('Bug 3 – PDF export uses merged resume data', () => {
 
         expect(hasBug).toBe(false);
     });
+
+    it('signed-out Supabase export falls through to print fallback instead of returning early', () => {
+        const mainContentPath = join(__dirname, '../components/Layout/MainContent.tsx');
+        const source = readFileSync(mainContentPath, 'utf-8');
+
+        expect(source).toContain('const canSaveToSupabase = exportMethod === "supabase" && isSupabaseExportAvailable() && Boolean(user)');
+        expect(source).toContain('if (canSaveToSupabase)');
+
+        const signedOutBranch = source.match(/if \(exportMethod === "supabase" && isSupabaseExportAvailable\(\) && !user\) \{[\s\S]{0,500}?\n\s*\}/);
+        expect(signedOutBranch).toBeTruthy();
+        expect(signedOutBranch?.[0]).not.toContain('return;');
+    });
 });

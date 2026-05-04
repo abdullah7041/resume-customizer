@@ -25,6 +25,12 @@ const IMAGE_MIME_TYPES = new Set([
   "image/bmp",
 ]);
 
+const SUPPORTED_FILE_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+]);
+
 type ParseResumeRequest =
   | {
     kind: "text";
@@ -39,219 +45,21 @@ type ParseResumeRequest =
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB safety guard
 
+class UnreadableResumeError extends Error {
+  statusCode = 422;
+
+  constructor(message = "Could not extract readable text from the uploaded file. Please upload a text-based PDF/DOCX/TXT file or paste your resume text directly.") {
+    super(message);
+    this.name = "UnreadableResumeError";
+  }
+}
+
 const decodeBase64 = (value: string): ArrayBuffer => {
   try {
     const buffer = Buffer.from(value, "base64");
     return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
   } catch {
     throw new Error("Invalid file encoding.");
-  }
-};
-
-/**
- * Extract structured resume data using DeepSeek OCR
- * Handles image-based documents and low-quality PDFs
- */
-const extractWithDeepSeekOCR = async (
-  arrayBuffer: ArrayBuffer,
-  mimeType: string
-): Promise<{ text: string; structured: any; usedOCR: boolean }> => {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("DeepSeek API key not configured");
-  }
-
-  // Convert to base64 for API transmission
-  const buffer = Buffer.from(arrayBuffer);
-  const base64Image = buffer.toString("base64");
-  const dataUri = `data:${mimeType};base64,${base64Image}`;
-
-  const prompt = `Extract ALL text from this resume image COMPLETELY. Structure it as JSON with these fields:
-{
-  "name": "Full Name",
-  "email": "email@example.com",
-  "phone": "phone number",
-  "linkedin": "LinkedIn URL if present",
-  "github": "GitHub URL if present",
-  "portfolio": "Portfolio URL if present",
-  "headline": "Job title/headline if present",
-  "summary": "professional summary or objective - extract the COMPLETE text",
-  "experience": [
-    {
-      "title": "Job Title",
-      "company": "Company Name",
-      "location": "Location if present",
-      "duration": "Start - End",
-      "responsibilities": ["bullet point 1", "bullet point 2", "...every bullet point"]
-    }
-  ],
-  "education": [
-    {
-      "degree": "Degree Name",
-      "institution": "School Name",
-      "location": "Location if present",
-      "year": "Graduation Year",
-      "details": ["Any additional details like GPA, honors, coursework"]
-    }
-  ],
-  "projects": [
-    {
-      "name": "Project Name",
-      "description": "Project description",
-      "highlights": ["bullet point 1", "bullet point 2"],
-      "technologies": ["tech1", "tech2"]
-    }
-  ],
-  "skills": {
-    "technical": ["skill1", "skill2"],
-    "soft": ["skill1", "skill2"],
-    "tools": ["tool1", "tool2"],
-    "languages": ["language1", "language2"]
-  },
-  "certifications": ["cert1", "cert2"],
-  "training": ["training1", "training2"]
-}
-
-CRITICAL INSTRUCTIONS:
-1. Extract EVERY piece of text you see - do not summarize or truncate
-2. Include ALL bullet points for each job experience
-3. Include ALL projects with their complete descriptions
-4. Preserve the EXACT wording from the resume
-5. Do NOT invent or infer information not visible in the image
-Return valid JSON only - no markdown, no commentary.`;
-
-  try {
-    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: dataUri } },
-            ],
-          },
-        ],
-        temperature: 0.1,
-        max_tokens: 4096,
-      }),
-    });
-
-    if (!response.ok) {
-      const error: any = await response.json().catch(() => ({}));
-      throw new Error(
-        `DeepSeek OCR failed: ${error.error?.message || response.statusText}`
-      );
-    }
-
-    const data: any = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
-
-    // Extract JSON from markdown code blocks if present
-    const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) ||
-      content.match(/(\{[\s\S]*\})/);
-
-    if (!jsonMatch) {
-      throw new Error("DeepSeek OCR did not return valid JSON");
-    }
-
-    const structured = JSON.parse(jsonMatch[1]);
-
-    // Convert structured data back to plain text (comprehensive extraction)
-    const textParts: string[] = [];
-    if (structured.name) textParts.push(structured.name);
-    if (structured.headline) textParts.push(structured.headline);
-    if (structured.email) textParts.push(structured.email);
-    if (structured.phone) textParts.push(structured.phone);
-    if (structured.linkedin) textParts.push(structured.linkedin);
-    if (structured.github) textParts.push(structured.github);
-    if (structured.portfolio) textParts.push(structured.portfolio);
-
-    if (structured.summary) textParts.push(`\n\nSUMMARY\n${structured.summary}`);
-
-    if (structured.experience?.length) {
-      textParts.push("\n\nEXPERIENCE");
-      for (const exp of structured.experience) {
-        textParts.push(`\n${exp.title} at ${exp.company}`);
-        if (exp.location) textParts.push(`${exp.location}`);
-        if (exp.duration) textParts.push(`${exp.duration}`);
-        if (exp.responsibilities?.length) {
-          textParts.push(...exp.responsibilities.map((r: string) => `• ${r}`));
-        }
-      }
-    }
-
-    if (structured.projects?.length) {
-      textParts.push("\n\nPROJECTS");
-      for (const project of structured.projects) {
-        textParts.push(`\n${project.name}`);
-        if (project.description) textParts.push(project.description);
-        if (project.highlights?.length) {
-          textParts.push(...project.highlights.map((h: string) => `• ${h}`));
-        }
-        if (project.technologies?.length) {
-          textParts.push(`Technologies: ${project.technologies.join(", ")}`);
-        }
-      }
-    }
-
-    if (structured.education?.length) {
-      textParts.push("\n\nEDUCATION");
-      for (const edu of structured.education) {
-        textParts.push(`\n${edu.degree} - ${edu.institution}${edu.location ? `, ${edu.location}` : ""} (${edu.year})`);
-        if (edu.details?.length) {
-          textParts.push(...edu.details.map((d: string) => `• ${d}`));
-        }
-      }
-    }
-
-    // Handle both array and object formats for skills
-    if (structured.skills) {
-      textParts.push("\n\nSKILLS");
-      if (Array.isArray(structured.skills)) {
-        textParts.push(structured.skills.join(", "));
-      } else if (typeof structured.skills === 'object') {
-        if (structured.skills.technical?.length) {
-          textParts.push(`Technical: ${structured.skills.technical.join(", ")}`);
-        }
-        if (structured.skills.soft?.length) {
-          textParts.push(`Soft Skills: ${structured.skills.soft.join(", ")}`);
-        }
-        if (structured.skills.tools?.length) {
-          textParts.push(`Tools: ${structured.skills.tools.join(", ")}`);
-        }
-        if (structured.skills.languages?.length) {
-          textParts.push(`Languages: ${structured.skills.languages.join(", ")}`);
-        }
-      }
-    }
-
-    if (structured.certifications?.length) {
-      textParts.push("\n\nCERTIFICATIONS");
-      textParts.push(structured.certifications.join(", "));
-    }
-
-    if (structured.training?.length) {
-      textParts.push("\n\nTRAINING");
-      textParts.push(structured.training.join(", "));
-    }
-
-    return {
-      text: textParts.join("\n"),
-      structured,
-      usedOCR: true,
-    };
-  } catch (error) {
-    throw new Error(
-      `DeepSeek OCR extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
   }
 };
 
@@ -294,7 +102,7 @@ const calculateEntropy = (text: string): number => {
 
 /**
  * Check if text extraction resulted in very little or poor quality content
- * Indicates a scanned/image-based document that needs OCR
+ * Indicates a scanned/image-based document or unreadable encoded text.
  */
 const isLowQualityExtraction = (text: string): boolean => {
   const cleaned = text.trim();
@@ -344,7 +152,7 @@ const isLowQualityExtraction = (text: string): boolean => {
 
 /**
  * Calculate extraction quality score (0-1)
- * Used to warn users about poor OCR/extraction results
+ * Used to warn users about poor text extraction results.
  */
 const calculateExtractionQuality = (text: string): number => {
   if (!text || text.trim().length === 0) return 0;
@@ -389,7 +197,6 @@ const calculateExtractionQuality = (text: string): number => {
 type ExtractionResult = {
   text: string;
   usedOCR: boolean;
-  structured?: any;
   quality: number;
   warnings: string[];
 };
@@ -426,15 +233,12 @@ const extractText = async (
     // Check if it's an image file
     const isImage = IMAGE_MIME_TYPES.has(mimeType);
 
+    if (!isImage && !SUPPORTED_FILE_MIME_TYPES.has(mimeType)) {
+      throw new Error("Unsupported file type.");
+    }
+
     if (isImage) {
-      // Images always need OCR
-      const ocrResult = await extractWithDeepSeekOCR(arrayBuffer, mimeType);
-      const quality = calculateExtractionQuality(ocrResult.text);
-      return {
-        ...ocrResult,
-        quality,
-        warnings: quality < 0.6 ? ["OCR extraction quality is moderate. Results may not be optimal."] : []
-      };
+      throw new UnreadableResumeError("Scanned or image-only resumes are not currently supported. Please upload a text-based PDF/DOCX/TXT file or paste your resume text directly.");
     }
 
     // Try standard text extraction first for PDFs/DOCX
@@ -443,28 +247,8 @@ const extractText = async (
       fileName: body.name,
     });
 
-    // If extraction was poor quality, try OCR fallback
-    if (isLowQualityExtraction(extractedText) && process.env.DEEPSEEK_API_KEY) {
-      console.log("[parse-resume] Low quality extraction detected, attempting OCR fallback");
-      try {
-        const ocrResult = await extractWithDeepSeekOCR(arrayBuffer, mimeType);
-        const quality = calculateExtractionQuality(ocrResult.text);
-        return {
-          ...ocrResult,
-          quality,
-          warnings: quality < 0.6 ? ["OCR was used due to poor standard extraction. Quality may vary."] : []
-        };
-      } catch (ocrError) {
-        console.warn("[parse-resume] OCR fallback failed, using standard extraction:", ocrError);
-        // Fall back to the original extraction
-        const quality = calculateExtractionQuality(extractedText);
-        return {
-          text: extractedText,
-          usedOCR: false,
-          quality,
-          warnings: ["Text extraction quality is low. Consider uploading a text-based PDF or pasting content directly."]
-        };
-      }
+    if (isLowQualityExtraction(extractedText)) {
+      throw new UnreadableResumeError();
     }
 
     const quality = calculateExtractionQuality(extractedText);
@@ -522,14 +306,12 @@ const baseHandler: Handler = async (event) => {
 
     const extractionResult = await extractText(body);
 
-    // 🔍 DEBUG LOGGING: Log extraction quality metrics
+    // Log extraction quality metrics without resume text previews.
     console.log("=========== PARSE RESUME DEBUG ===========");
-    console.log(`[parse-resume] Extraction method: ${extractionResult.usedOCR ? 'DeepSeek OCR' : 'Standard PDF/DOCX parsing'}`);
+    console.log("[parse-resume] Extraction method: Standard PDF/DOCX/TXT parsing");
     console.log(`[parse-resume] Raw text length: ${extractionResult.text.length} characters`);
     console.log(`[parse-resume] Extraction quality: ${(extractionResult.quality * 100).toFixed(1)}%`);
     console.log(`[parse-resume] Warnings: ${extractionResult.warnings.length > 0 ? extractionResult.warnings.join('; ') : 'None'}`);
-    console.log(`[parse-resume] First 200 chars: "${extractionResult.text.slice(0, 200)}"`);
-    console.log(`[parse-resume] Text preview (cleaned): "${extractionResult.text.trim().slice(0, 300).replace(/\s+/g, ' ')}"`);
 
     const normalized = buildResumeDocument(extractionResult.text);
 
@@ -556,25 +338,29 @@ const baseHandler: Handler = async (event) => {
       body: JSON.stringify({
         document: normalized,
         usedOCR: extractionResult.usedOCR,
-        structured: extractionResult.structured,
         quality: extractionResult.quality,
         warnings: extractionResult.warnings,
       }),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to parse resume.";
-    captureError(error, {
-      function: 'parse-resume',
-      errorMessage: message,
-    });
-    const userMessage = message.includes("Unsupported")
-      ? "Unsupported file type. Please upload a PDF or DOCX file, or paste your resume text directly."
+    if (!(error instanceof UnreadableResumeError)) {
+      captureError(error, {
+        function: 'parse-resume',
+        errorMessage: message,
+      });
+    }
+    const statusCode = error instanceof UnreadableResumeError ? error.statusCode : 400;
+    const userMessage = error instanceof UnreadableResumeError
+      ? message
+      : message.includes("Unsupported")
+      ? "Unsupported file type. Please upload a PDF, DOCX, or TXT file, or paste your resume text directly."
       : message.includes("exceeds")
         ? "File is too large. Please use a file smaller than 8 MB."
         : `Unable to parse resume: ${message}`;
 
     return {
-      statusCode: 400,
+      statusCode,
       headers: HEADERS,
       body: JSON.stringify({ error: userMessage }),
     };

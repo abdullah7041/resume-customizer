@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import type { ResumeSchema } from '../../types/resume';
 import type { DisplayOptions } from '../../types/templates';
+import type { ResumeDirection } from '../../lib/utils/resumeDirection';
 
 /**
  * Props interface for all template components
@@ -12,6 +13,7 @@ export interface TemplateProps {
   /** @deprecated Use displayOptions instead */
   fontScale?: number; // 0.8 to 1.2, default 1 (100%)
   displayOptions?: DisplayOptions;
+  contentDirection?: ResumeDirection;
 }
 
 /**

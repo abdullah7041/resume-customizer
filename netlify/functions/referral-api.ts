@@ -2,8 +2,8 @@
  * Unified Referral API
  *
  * Handles all referral-related operations via action parameter:
- * - GET  ?action=get-link&email=xxx     → Get/generate referral link
- * - GET  ?action=get-stats&email=xxx    → Get referral statistics
+ * - GET  ?action=get-link               → Get/generate referral link
+ * - GET  ?action=get-stats              → Get referral statistics
  * - POST { action: "track", ... }         → Track a new referral
  */
 
@@ -11,9 +11,51 @@ import { Handler } from '@netlify/functions';
 import { customAlphabet } from 'nanoid';
 import { getReferralStats, trackReferral } from '../lib/referral-manager.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
+import { redactForLog } from '../lib/sentry.js';
 
 // Generate short, URL-safe referral codes (8 characters)
 const generateCode = customAlphabet('0123456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz', 8);
+
+interface HttpError {
+    statusCode: number;
+    message: string;
+}
+
+function httpError(statusCode: number, message: string): HttpError {
+    return { statusCode, message };
+}
+
+function isHttpError(error: unknown): error is HttpError {
+    return Boolean(
+        error &&
+        typeof error === 'object' &&
+        'statusCode' in error &&
+        'message' in error
+    );
+}
+
+async function getAuthenticatedEmail(event: Parameters<Handler>[0]): Promise<string> {
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+
+    if (!authHeader) {
+        throw httpError(401, 'Authentication required');
+    }
+
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+        throw httpError(500, 'Server configuration error. Please contact support.');
+    }
+
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user?.email) {
+        throw httpError(401, 'Invalid or expired authentication token');
+    }
+
+    return user.email;
+}
 
 /**
  * Handle GET /get-link - Generate or retrieve referral link
@@ -53,7 +95,7 @@ async function handleGetLink(email: string) {
             throw new Error('Failed to save referral code');
         }
 
-        console.log(`[referral-api] Generated new code for user ${email}: ${referralCode}`);
+        console.log(`[referral-api] Generated new code for user ${redactForLog(email)}: ${referralCode}`);
     }
 
     // Build full referral URL
@@ -80,20 +122,20 @@ async function handleGetStats(email: string) {
 
 /**
  * Handle POST /track - Track a new referral
- * Expects: { referral_code: string, referee_email: string }
+ * Expects: { referral_code: string }
  */
-async function handleTrack(body: { referral_code: string; referee_email: string }) {
-    const { referral_code, referee_email } = body;
+async function handleTrack(body: { referral_code: string }, refereeEmail: string) {
+    const { referral_code } = body;
 
     // Validate required fields
-    if (!referral_code || !referee_email) {
-        throw { statusCode: 400, message: 'Missing required fields: referral_code, referee_email' };
+    if (!referral_code) {
+        throw httpError(400, 'Missing required field: referral_code');
     }
 
-    const result = await trackReferral(referral_code, referee_email);
+    const result = await trackReferral(referral_code, refereeEmail);
 
     if (!result.success) {
-        throw { statusCode: 400, message: result.error || 'Failed to track referral' };
+        throw httpError(400, result.error || 'Failed to track referral');
     }
 
     return { success: true, message: 'Referral tracked successfully' };
@@ -106,14 +148,7 @@ const handler: Handler = async (event) => {
         // ===================== GET Requests =====================
         if (method === 'GET') {
             const action = event.queryStringParameters?.action;
-            const email = event.queryStringParameters?.email;
-
-            if (!email) {
-                return {
-                    statusCode: 400,
-                    body: JSON.stringify({ error: 'Missing email parameter' }),
-                };
-            }
+            const email = await getAuthenticatedEmail(event);
 
             if (action === 'get-link') {
                 try {
@@ -152,9 +187,10 @@ const handler: Handler = async (event) => {
         if (method === 'POST') {
             const body = JSON.parse(event.body || '{}');
             const action = body.action;
+            const email = await getAuthenticatedEmail(event);
 
             if (action === 'track') {
-                const result = await handleTrack(body);
+                const result = await handleTrack(body, email);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({ success: true, ...result }),
@@ -177,11 +213,10 @@ const handler: Handler = async (event) => {
         console.error('[referral-api] Error:', error);
 
         // Handle custom errors with statusCode
-        if (error && typeof error === 'object' && 'statusCode' in error) {
-            const err = error as { statusCode: number; message: string };
+        if (isHttpError(error)) {
             return {
-                statusCode: err.statusCode,
-                body: JSON.stringify({ error: err.message }),
+                statusCode: error.statusCode,
+                body: JSON.stringify({ error: error.message }),
             };
         }
 

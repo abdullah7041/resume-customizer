@@ -36,6 +36,7 @@ import { ManualDataEditor } from "../ui/ManualDataEditor";
 import { FormattingPanel } from "../ui/FormattingPanel";
 import { PageBreakOverlay, A4_PAGE_HEIGHT_PX } from "../ui/PageBreakIndicator";
 import { useResumeLanguage } from "../../hooks/useResumeLanguage";
+import { directionFromLanguage } from "../../lib/utils/resumeDirection";
 
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
 
@@ -149,6 +150,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Detect resume content language
   const contentLanguage = useResumeLanguage();
+  const contentDirection = directionFromLanguage(contentLanguage);
 
   // Determine if store has applied optimizations - THIS TAKES PRIORITY
   const hasAppliedOptimizations = optimizations.some(o => o.applied);
@@ -207,8 +209,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const mobileAvailable = width - totalPadding;
         const mobileScale = mobileAvailable / a4WidthPx;
         setScale(Math.max(mobileScale, 0.35)); // Min 0.35 for very small screens
-      } else if (width < 768) { // Tablet
-        setScale(0.75);
+      } else if (width < 1024) { // Tablet, no formatting panel
+        const tabletPadding = 24 * 2 + 16 * 2;
+        const tabletScale = (width - tabletPadding) / a4WidthPx;
+        setScale(Math.max(Math.min(tabletScale, 0.9), 0.65));
+      } else if (width < 1280) { // Small desktop, formatting panel visible
+        const formattingPanelWidth = 288 + 24;
+        const previewPadding = 24 * 2;
+        const shellPadding = 32;
+        const available = width - formattingPanelWidth - previewPadding - shellPadding;
+        const fittedScale = available / a4WidthPx;
+        setScale(Math.max(Math.min(fittedScale, 0.9), 0.65));
       } else {
         setScale(0.9); // Desktop: 90% scale for "fit" look with margins
       }
@@ -392,7 +403,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
         headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, styles, templateId: selectedTemplate.id, filename: filename.replace('.pdf', '') }),
+        body: JSON.stringify({ html, styles, templateId: selectedTemplate.id, filename: filename.replace('.pdf', ''), direction: contentDirection }),
       });
 
       if (!response.ok) throw new Error(`[PDFDownload] Server error: ${response.status}`);
@@ -597,6 +608,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         keywords,
         boldKeywords,
         templateId: selectedTemplate.id as TemplateId,
+        direction: contentDirection,
       });
       const filename = getSmartFilename(resumeData, selectedTemplate.id, 'docx');
       saveAs(blob, filename);
@@ -689,7 +701,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white"
               >
                 {isDownloadingDocx ? t('sections.templates.generating', 'Generating...') : (
-                  <><FileText className="w-4 h-4 me-2" />{t('sections.templates.downloadDocx', 'DOCX')}</>
+                  <><FileText className="w-4 h-4 me-2" />{t('sections.templates.downloadDocx', 'Download DOCX')}</>
                 )}
               </GlassButton>
             </div>
@@ -705,7 +717,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="ms-1">PDF</span>
+              <span className="ms-1">{t('sections.templates.mobilePdf', 'PDF file')}</span>
             </GlassButton>
 
             <GlassButton
@@ -716,7 +728,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />
-              <span className="ms-1">DOCX</span>
+              <span className="ms-1">{t('sections.templates.mobileDocx', 'DOCX file')}</span>
             </GlassButton>
 
             <GlassButton
@@ -747,7 +759,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         </div>
 
         {/* Zoom Controls Overlay - hidden on mobile (auto-fit), shown on desktop on hover */}
-        <div className="hidden md:flex absolute top-24 end-4 md:end-6 z-30 flex-col gap-2 bg-white/70 dark:bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-gray-300/50 dark:border-white/10 shadow-xl md:opacity-0 md:hover:opacity-100 md:group-hover:opacity-100 transition-opacity duration-300">
+        <div className="hidden lg:flex absolute top-24 end-4 lg:end-6 z-30 flex-col gap-2 bg-white/70 dark:bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-gray-300/50 dark:border-white/10 shadow-xl lg:opacity-0 lg:hover:opacity-100 lg:group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handleZoomIn}
             className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-colors active:scale-95"
@@ -787,7 +799,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         <div className="relative flex-1 flex overflow-hidden bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-gray-900/50 dark:to-gray-800/30 min-h-0">
 
           {/* Formatting Panel - Left Side */}
-          <div className="hidden md:block flex-shrink-0 p-3 overflow-y-auto">
+          <div className="hidden lg:block flex-shrink-0 p-3 overflow-y-auto">
             <FormattingPanel />
           </div>
 
@@ -796,7 +808,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             <div className="w-full flex justify-center pb-32 md:pb-20 pt-4">
               {/* Dynamic Scale Wrapper - centered and fit to viewport */}
               <div
-                dir="ltr"
+                dir={contentDirection}
                 className="relative bg-white shadow-2xl rounded-xl overflow-visible ring-1 ring-white/10 transition-transform duration-300 origin-top ease-out mx-auto"
                 style={{
                   transform: `scale(${scale})`,
@@ -812,6 +824,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 <TemplateRenderer
                   template={selectedTemplate}
                   userData={displayData as unknown as Record<string, unknown>}
+                  contentDirection={contentDirection}
                 />
               </div>
             </div>

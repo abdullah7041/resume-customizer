@@ -1,6 +1,7 @@
 // src/services/exportPdf.js
 
 import { buildResumeDocument } from "../../netlify/lib/normalize-resume.js";
+import { detectResumeDirection } from "../lib/utils/resumeDirection";
 
 const SECTION_KEYWORDS = {
   contact: ["contact", "contact information", "personal details"],
@@ -332,6 +333,10 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
     contact = buildContact(sections.contactLines);
   }
 
+  const contentDirection = detectResumeDirection(resumeDocument ?? resumeText);
+  const htmlLang = contentDirection === "rtl" ? "ar" : "en";
+  const textAlign = contentDirection === "rtl" ? "right" : "left";
+
 
   const summaryHtml = buildSummary(sections.summary, matchAnalysis, optimizations);
   const jdSnippet = jobDescription ? `<p class="muted">Target role context: ${escapeHtml(jobDescription.slice(0, 240))}${jobDescription.length > 240 ? "…" : ""
@@ -382,7 +387,7 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
   ` : '';
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${htmlLang}" dir="${contentDirection}">
   <head>
     <meta charset="utf-8" />
     <title>Resume Export</title>
@@ -395,7 +400,7 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
         font-size: 11pt;
         line-height: 1.5;
       }
-      body { padding: 0.5in 0.75in; max-width: 8.5in; margin: 0 auto; }
+      body { padding: 0.5in 0.75in; max-width: 8.5in; margin: 0 auto; direction: ${contentDirection}; text-align: ${textAlign}; }
       
       /* Header - Professional centered name and contact */
       .resume-header { 
@@ -662,6 +667,11 @@ const buildPlainExportHtml = ({
     bullets = document.bullets.length > 0 ? document.bullets : sections.experience;
   }
 
+  const contentDirection = detectResumeDirection(resumeDocument ?? resumeText);
+  const htmlLang = contentDirection === "rtl" ? "ar" : "en";
+  const textAlign = contentDirection === "rtl" ? "right" : "left";
+  const listMargin = contentDirection === "rtl" ? "0 18px 12px 0" : "0 0 12px 18px";
+
   const summaryLines = sections.summary.length > 0 ? sections.summary : sections.experience.slice(0, 3);
   // sections.experience is used directly via bulletLines
   const educationLines = sections.education;
@@ -711,20 +721,20 @@ const buildPlainExportHtml = ({
       : "";
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${htmlLang}" dir="${contentDirection}">
   <head>
     <meta charset="utf-8" />
     <title>ATS Resume Export</title>
     <style>
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; background: #ffffff; }
-      body { padding: 32px; }
+      body { padding: 32px; direction: ${contentDirection}; text-align: ${textAlign}; }
       main { max-width: 720px; margin: 0 auto; display: grid; gap: 24px; }
       header { border-bottom: 2px solid #1f2937; padding-bottom: 16px; }
       h1 { margin: 0; font-size: 28px; letter-spacing: 0.02em; text-transform: uppercase; }
       h2 { margin: 24px 0 12px; font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase; }
       p { margin: 0 0 12px; line-height: 1.6; }
-      ul { margin: 0 0 12px 18px; padding: 0; line-height: 1.6; }
+      ul { margin: ${listMargin}; padding: 0; line-height: 1.6; }
       li { margin-bottom: 6px; }
       .contact { font-size: 13px; color: #374151; }
       .metrics { font-size: 12px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.2em; }

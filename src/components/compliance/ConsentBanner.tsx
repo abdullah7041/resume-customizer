@@ -113,6 +113,12 @@ export function ConsentBanner() {
               {t('consent.compliance', 'Secure & Private')}
             </span>
           </div>
+          <a
+            href="/privacy"
+            className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80 transition-colors hover:text-emerald-200"
+          >
+            {t('consent.privacyPolicy', 'Privacy Policy')}
+          </a>
         </div>
       </div>
     </div>

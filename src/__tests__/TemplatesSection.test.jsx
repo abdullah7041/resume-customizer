@@ -1,11 +1,14 @@
 // src/__tests__/TemplatesSection.test.jsx
 // Tests for TemplatesSection component - template gallery with floating selector
 
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TemplateGallery from '../components/sections/TemplatesSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
+import { exportResumeAsDocx } from '../services/exportDocx';
+
+let mockContentLanguage = null;
 
 // Mock dependencies
 vi.mock('react-i18next', () => ({
@@ -15,8 +18,8 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('../lib/stores/resumeStore', () => ({
-    useResumeStore: () => ({
+vi.mock('../lib/stores/resumeStore', () => {
+    const storeState = {
         originalResume: null,
         parsedResumeText: null,
         optimizations: [],
@@ -27,11 +30,14 @@ vi.mock('../lib/stores/resumeStore', () => ({
         setDisplayOptions: vi.fn(),
         contentLanguage: null,
         setContentLanguage: vi.fn(),
-    }),
-}));
+    };
+    const useResumeStore = () => storeState;
+    useResumeStore.getState = () => storeState;
+    return { useResumeStore };
+});
 
 vi.mock('../hooks/useResumeLanguage', () => ({
-    useResumeLanguage: () => null,
+    useResumeLanguage: () => mockContentLanguage,
 }));
 
 vi.mock('../services/analytics', () => ({
@@ -45,10 +51,18 @@ vi.mock('file-saver', () => ({
     saveAs: vi.fn(),
 }));
 
+vi.mock('../services/api', () => ({
+    getAuthHeaders: vi.fn(() => Promise.resolve({ 'Content-Type': 'application/json', Authorization: 'Bearer test-token' })),
+}));
+
+vi.mock('../services/exportDocx', () => ({
+    exportResumeAsDocx: vi.fn(() => Promise.resolve(new Blob(['docx content'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))),
+}));
+
 // Mock TemplateRenderer to avoid heavy rendering
 vi.mock('../components/templates/TemplateRenderer', () => ({
-    default: ({ template }) => (
-        <div data-testid="template-renderer" data-template-id={template.id}>
+    default: ({ template, contentDirection }) => (
+        <div data-testid="template-renderer" data-resume-preview data-template-id={template.id} data-direction={contentDirection}>
             Template: {template.name}
         </div>
     ),
@@ -91,11 +105,27 @@ const renderWithProviders = (ui) => {
     return render(<DirectionProvider>{ui}</DirectionProvider>);
 };
 
+const getPreviewScale = (element) => {
+    const style = element?.getAttribute('style') ?? '';
+    const match = style.match(/scale\(([\d.]+)\)/);
+    return match ? Number(match[1]) : null;
+};
+
 beforeAll(() => {
     Object.defineProperty(window, 'matchMedia', {
         writable: true,
         value: createMatchMedia(),
     });
+});
+
+beforeEach(() => {
+    mockContentLanguage = null;
+    globalThis.fetch.mockClear();
+    globalThis.fetch.mockResolvedValue({
+        ok: true,
+        blob: () => Promise.resolve(new Blob(['pdf content'], { type: 'application/pdf' })),
+    });
+    exportResumeAsDocx.mockClear();
 });
 
 afterEach(() => {
@@ -104,6 +134,15 @@ afterEach(() => {
 });
 
 describe('TemplatesSection', () => {
+    const setViewportWidth = (width) => {
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            writable: true,
+            value: width,
+        });
+        window.dispatchEvent(new Event('resize'));
+    };
+
     describe('Rendering', () => {
         it('renders the template gallery with selected template name', () => {
             renderWithProviders(<TemplateGallery />);
@@ -139,6 +178,12 @@ describe('TemplatesSection', () => {
             renderWithProviders(<TemplateGallery />);
 
             expect(screen.getByText('Download PDF')).toBeInTheDocument();
+        });
+
+        it('renders direct DOCX download label', () => {
+            renderWithProviders(<TemplateGallery />);
+
+            expect(screen.getByText('Download DOCX')).toBeInTheDocument();
         });
 
         it('shows no resume warning when no data is provided', () => {
@@ -200,6 +245,20 @@ describe('TemplatesSection', () => {
             const h3 = screen.getByRole('heading', { level: 3 });
             expect(h3.textContent).toContain('Riyadh');
         });
+
+        it('uses RTL preview direction for mixed Arabic/English content', () => {
+            mockContentLanguage = 'mixed';
+
+            renderWithProviders(<TemplateGallery resumeData={{
+                basics: { name: 'سارة الأحمد', label: 'Product Manager' },
+                work: [],
+                education: [],
+                skills: [],
+                projects: [],
+            }} />);
+
+            expect(screen.getByTestId('template-renderer')).toHaveAttribute('data-direction', 'rtl');
+        });
     });
 
     describe('PDF Download', () => {
@@ -208,6 +267,53 @@ describe('TemplatesSection', () => {
 
             const downloadButton = screen.getByRole('button', { name: /download pdf/i });
             expect(downloadButton).toBeDisabled();
+        });
+
+        it('sends RTL direction to server PDF generation for mixed Arabic/English content', async () => {
+            mockContentLanguage = 'mixed';
+
+            renderWithProviders(<TemplateGallery resumeData={{
+                basics: { name: 'سارة الأحمد', label: 'Product Manager' },
+                work: [],
+                education: [],
+                skills: [],
+                projects: [],
+            }} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+            await waitFor(() => {
+                expect(globalThis.fetch).toHaveBeenCalledWith(
+                    '/.netlify/functions/generate-pdf',
+                    expect.objectContaining({
+                        method: 'POST',
+                        body: expect.stringContaining('"direction":"rtl"'),
+                    })
+                );
+            });
+        });
+
+        it('passes RTL direction to DOCX export for mixed Arabic/English content', async () => {
+            mockContentLanguage = 'mixed';
+
+            renderWithProviders(<TemplateGallery resumeData={{
+                basics: { name: 'سارة الأحمد', label: 'Product Manager' },
+                work: [],
+                education: [],
+                skills: [],
+                projects: [],
+            }} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+
+            await waitFor(() => {
+                expect(exportResumeAsDocx).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        basics: expect.objectContaining({ name: 'سارة الأحمد' }),
+                    }),
+                    expect.objectContaining({ direction: 'rtl' })
+                );
+            });
         });
     });
 
@@ -238,6 +344,71 @@ describe('TemplatesSection', () => {
                 // Verify click doesn't cause errors
                 expect(screen.getAllByText('Khobar').length).toBeGreaterThan(0);
             }
+        });
+    });
+
+    describe('Mobile Responsive Contracts', () => {
+        it.each([360, 390, 768])('keeps export controls compact and available at %ipx', (width) => {
+            setViewportWidth(width);
+            const { container } = renderWithProviders(<TemplateGallery />);
+
+            const mobileActionRow = container.querySelector('.md\\:hidden.flex-wrap');
+            const mobileButtons = Array.from(mobileActionRow?.querySelectorAll('button') ?? []);
+            const pdfButton = mobileButtons.find((button) => button.textContent?.trim() === 'PDF file');
+            const docxButton = mobileButtons.find((button) => button.textContent?.trim() === 'DOCX file');
+            const editButton = mobileButtons.find((button) => button.textContent?.trim() === 'Edit');
+
+            expect(mobileActionRow).toHaveClass('md:hidden', 'flex-wrap');
+            expect(pdfButton).toHaveClass('!text-xs');
+            expect(docxButton).toHaveClass('!text-xs');
+            expect(editButton).toHaveClass('!text-xs');
+        });
+
+        it.each([360, 390, 768])('keeps the A4 preview scaled inside a horizontally clipped preview area at %ipx', (width) => {
+            setViewportWidth(width);
+            renderWithProviders(<TemplateGallery />);
+
+            const preview = screen.getByTestId('template-renderer');
+            const scaleWrapper = preview.closest('div[style*="scale"]');
+            const scrollArea = scaleWrapper?.parentElement?.parentElement;
+            const scale = getPreviewScale(scaleWrapper);
+
+            expect(scaleWrapper?.getAttribute('style')).toContain('width: 210mm');
+            expect(scale).toBeGreaterThanOrEqual(0.35);
+            expect(scale).toBeLessThanOrEqual(0.9);
+            expect(scrollArea).toHaveClass('overflow-x-hidden', 'overflow-y-auto');
+        });
+
+        it('keeps the tablet preview below desktop scale when the viewport is 768px wide', () => {
+            setViewportWidth(768);
+            renderWithProviders(<TemplateGallery />);
+
+            const preview = screen.getByTestId('template-renderer');
+            const scaleWrapper = preview.closest('div[style*="scale"]');
+
+            expect(getPreviewScale(scaleWrapper)).toBeLessThan(0.9);
+        });
+
+        it('keeps formatting and zoom controls reserved for large screens', () => {
+            setViewportWidth(768);
+            const { container } = renderWithProviders(<TemplateGallery />);
+
+            expect(container.querySelector('.hidden.lg\\:block.flex-shrink-0')).toBeInTheDocument();
+            expect(container.querySelector('.hidden.lg\\:flex')).toBeInTheDocument();
+        });
+
+        it.each([360, 390, 768])('keeps the floating template selector within the viewport at %ipx', (width) => {
+            setViewportWidth(width);
+            renderWithProviders(<TemplateGallery />);
+
+            const templateButton = screen.getAllByText('Riyadh')
+                .map((node) => node.closest('button'))
+                .find(Boolean);
+            const selector = templateButton?.closest('div.fixed');
+
+            expect(selector).toHaveClass('fixed', 'z-50');
+            expect(selector?.getAttribute('style')).toContain('max-width: calc(100vw - 16px)');
+            expect(templateButton).toHaveClass('whitespace-nowrap', 'shrink-0');
         });
     });
 

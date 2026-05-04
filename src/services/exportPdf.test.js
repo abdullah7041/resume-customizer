@@ -64,6 +64,23 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("تجربة");
   });
 
+  it("renders mixed Arabic/English styled export html as RTL", () => {
+    const resumeDocument = {
+      plainText: [
+        "سارة الأحمد",
+        "Product Manager",
+        "قادت مبادرات التحول الرقمي using Jira and SQL",
+        "رفعت كفاءة العمليات بنسبة 22%",
+      ].join("\n"),
+    };
+
+    const html = buildExportHtml({ resumeDocument });
+
+    expect(html).toContain('<html lang="ar" dir="rtl">');
+    expect(html).toContain("direction: rtl");
+    expect(html).toContain("text-align: right");
+  });
+
   it("builds ATS-friendly export html", () => {
     const html = buildPlainExportHtml({
       resumeDocument: { plainText: sampleResume, bullets: ["• Launched product"], sections: [] },
@@ -80,6 +97,26 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("ATS Resume Export");
     expect(html).toContain("Experience Highlights");
     expect(html).toContain("AI Suggestions");
+  });
+
+  it("renders mixed Arabic/English ATS export html as RTL", () => {
+    const html = buildPlainExportHtml({
+      resumeDocument: {
+        plainText: [
+          "سارة الأحمد",
+          "Product Manager",
+          "قادت مبادرات التحول الرقمي using Jira and SQL",
+          "رفعت كفاءة العمليات بنسبة 22%",
+        ].join("\n"),
+        bullets: ["• قادت فريق المنتج using Agile rituals"],
+        sections: [],
+      },
+    });
+
+    expect(html).toContain('<html lang="ar" dir="rtl">');
+    expect(html).toContain("direction: rtl");
+    expect(html).toContain("text-align: right");
+    expect(html).toContain("ul { margin: 0 18px 12px 0");
   });
 
   it("removes noisy glyphs before exporting", () => {

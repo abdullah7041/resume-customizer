@@ -16,6 +16,7 @@ dist
 dist-ssr
 build
 .tsbuildinfo
+.tsbuildinfo.*
 
 # Environment files
 .env*
@@ -49,4 +50,6 @@ coverage
 .env
 
 # Agent tooling directories (auto-generated, not source)
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/**

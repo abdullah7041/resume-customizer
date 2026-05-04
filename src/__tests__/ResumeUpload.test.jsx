@@ -16,8 +16,12 @@ vi.mock("react-i18next", () => ({
         "upload.card.pdf": "PDF",
         "upload.card.and": "and",
         "upload.card.docx": "DOCX",
+        "upload.card.txt": "TXT",
         "upload.card.dropText": "Drop your resume here",
         "upload.card.securityText": "Your data is secure",
+        "upload.card.supportedFormats": "Supported formats: PDF, DOCX, TXT",
+        "upload.card.bestPractice": "For best results, use selectable text. Scanned images are not supported.",
+        "upload.card.selectFile": "Select File",
       };
       return translations[key] || key;
     },
@@ -48,6 +52,15 @@ describe("ResumeUpload", () => {
     uploadResumeFile.mockReset();
   });
 
+  const setViewportWidth = (width) => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: width,
+    });
+    window.dispatchEvent(new Event("resize"));
+  };
+
   it("renders the Saudi-inspired upload card", () => {
     render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
     expect(
@@ -58,6 +71,10 @@ describe("ResumeUpload", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(/drop your resume here/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText("TXT")).toBeInTheDocument();
+    expect(
+      screen.getByText(/supported formats: pdf, docx, txt/i)
     ).toBeInTheDocument();
   });
 
@@ -119,6 +136,66 @@ describe("ResumeUpload", () => {
       expect.objectContaining({
         type: "warning",
         title: "File must be 5MB or smaller.",
+      })
+    );
+  });
+
+  it("does not show a mobile scan button for image-only resumes", () => {
+    render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
+
+    expect(
+      screen.queryByRole("button", { name: /scan resume/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the mobile file picker limited to supported text document types", () => {
+    render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
+
+    const fileInput = screen
+      .getAllByLabelText(/upload resume file/i)
+      .find((element) => element.tagName === "INPUT");
+
+    expect(fileInput).toHaveAttribute("accept", ".pdf,.docx,.txt");
+    expect(fileInput).not.toHaveAttribute("capture");
+  });
+
+  it.each([360, 390, 768])("keeps upload controls mobile-safe at %ipx", (width) => {
+    setViewportWidth(width);
+    render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
+
+    const selectFileButton = screen.getByRole("button", { name: /select file/i });
+    expect(selectFileButton.parentElement).toHaveClass("sm:hidden");
+    expect(selectFileButton).toHaveClass("w-full", "min-h-[48px]");
+
+    const prepareButton = screen.getByRole("button", { name: /prepare resume/i });
+    const actionBar = prepareButton.closest("div");
+    expect(actionBar).toHaveClass("flex-col-reverse", "sm:flex-row");
+    expect(prepareButton).toHaveClass("w-full", "sm:w-auto");
+  });
+
+  it("rejects image uploads instead of sending them to parsing", async () => {
+    const onToast = vi.fn();
+    const onParseResume = vi.fn();
+    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} />);
+
+    const fileInput = screen
+      .getAllByLabelText(/upload resume file/i)
+      .find((element) => element.tagName === "INPUT");
+    if (!(fileInput instanceof HTMLInputElement)) {
+      throw new Error("Hidden file input not found");
+    }
+
+    const file = new File(["image"], "resume.png", { type: "image/png" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    expect(onParseResume).not.toHaveBeenCalled();
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "warning",
+        title: "Only PDF, DOCX, or TXT resumes are supported.",
       })
     );
   });

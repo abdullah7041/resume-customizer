@@ -129,11 +129,11 @@ Return JSON with this structure:
           parsed = JSON.parse(jsonMatch[1].trim());
         } catch (innerError) {
           const errorMsg = innerError instanceof Error ? innerError.message : 'Unknown error';
-          throw new Error(`Failed to parse JSON from markdown block: ${errorMsg}. Response preview: ${text.substring(0, 200)}...`);
+          throw new Error(`Failed to parse JSON from markdown block: ${errorMsg}. Response length: ${text.length}.`);
         }
       } else {
         const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown error';
-        throw new Error(`Failed to parse AI response as JSON: ${errorMsg}. Response preview: ${text.substring(0, 200)}...`);
+        throw new Error(`Failed to parse AI response as JSON: ${errorMsg}. Response length: ${text.length}.`);
       }
     }
 

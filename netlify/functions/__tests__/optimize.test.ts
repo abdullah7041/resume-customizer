@@ -234,6 +234,43 @@ describe('optimize function', () => {
             // With no optimizations, fallback card should be generated
             expect(body.cards.length).toBeGreaterThan(0);
         });
+
+        it('clamps score and improvement so projected score cannot exceed 100', async () => {
+            (optimizeResume as any).mockResolvedValue({
+                match_score: 95,
+                after_score: 150,
+                missing_keywords: ['React']
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: TEST_HEADERS,
+                body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const body = JSON.parse(result.body);
+
+            expect(result.statusCode).toBe(200);
+            expect(body.matchScoring.beforeScore).toBe(95);
+            expect(body.matchScoring.estimatedImprovement).toBe(5);
+        });
+
+        it('fails instead of returning a placeholder score when AI omits score data', async () => {
+            (optimizeResume as any).mockResolvedValue({
+                missing_keywords: ['React']
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: TEST_HEADERS,
+                body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(500);
+            expect(JSON.parse(result.body).error).toBe('Failed to optimize resume');
+        });
     });
 
     describe('error handling', () => {

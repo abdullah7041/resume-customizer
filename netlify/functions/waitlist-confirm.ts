@@ -10,6 +10,7 @@
 
 import { Handler } from "@netlify/functions";
 import { sendWaitlistConfirmation } from "../lib/email-service.js";
+import { redactForLog } from "../lib/sentry.js";
 
 export const handler: Handler = async (event) => {
   // Only accept POST requests
@@ -42,7 +43,7 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    console.log(`[waitlist-confirm] Sending confirmation to ${email} (language: ${language || 'en'})`);
+    console.log(`[waitlist-confirm] Sending confirmation to ${redactForLog(email)} (language: ${language || 'en'})`);
     console.log(`[waitlist-confirm] Using sender: ${process.env.RESEND_SENDER_EMAIL || 'noreply@watheqai.app'}`);
 
     const result = await sendWaitlistConfirmation(email, language || 'en');

@@ -122,6 +122,75 @@ describe('AI Integration Functions', () => {
             expect(body.score).toBe(85);
             expect(body.strongMatches).toContain('typescript');
         });
+
+        it('clamps out-of-range match scores before responding and storing', async () => {
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 150,
+                strongMatches: ['typescript'],
+                missingKeywords: [],
+                reasoning: 'Score should be clamped'
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'resume', jobText: 'job' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(200);
+
+            const body = JSON.parse(result.body);
+            expect(body.score).toBe(100);
+            expect(body.coverage).toBe(1);
+            expect(body.similarity).toBe(1);
+        });
+
+        it('preserves a valid zero match score before responding', async () => {
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 0,
+                strongMatches: [],
+                missingKeywords: ['react'],
+                reasoning: 'No relevant evidence'
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'resume', jobText: 'job' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(200);
+
+            const body = JSON.parse(result.body);
+            expect(body.score).toBe(0);
+            expect(body.coverage).toBe(0);
+            expect(body.similarity).toBe(0);
+        });
+
+        it('returns a retryable user-facing timeout response', async () => {
+            const timeoutError = new Error('AI request timed out after 65000ms.');
+            timeoutError.name = 'TimeoutError';
+            (timeoutError as any).status = 504;
+            mockGeminiClient.processMatchOnly.mockRejectedValue(timeoutError);
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'resume', jobText: 'job' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(504);
+            expect(result.headers?.['Retry-After']).toBe('30');
+
+            const body = JSON.parse(result.body);
+            expect(body.retryable).toBe(true);
+            expect(body.error).toContain('automatically retried');
+            expect(body.troubleshooting).toContain('Automatic retries');
+            expect(mockSentry.captureError).not.toHaveBeenCalled();
+        });
     });
 
     describe('generate-cover-letter function', () => {

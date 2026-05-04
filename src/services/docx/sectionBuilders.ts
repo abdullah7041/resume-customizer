@@ -7,6 +7,7 @@
 import type { DocxTemplateConfig, SectionKey } from './templateStyles';
 import type { ResumeSchema } from '../../types/resume';
 import { splitTextWithKeywords, shouldApplyBolding } from '../../lib/utils/keywordBolder';
+import type { ResumeDirection } from '../../lib/utils/resumeDirection';
 
 // ── Types for the dynamically-imported docx module ──────
 export interface DocxModule {
@@ -27,12 +28,28 @@ export interface DocxModule {
 export interface BuilderOptions {
     keywords: string[];
     boldKeywords: boolean;
+    direction?: ResumeDirection;
 }
 
 // ── Internal helpers ────────────────────────────────────
 
 function align(a: 'LEFT' | 'CENTER', D: DocxModule) {
     return a === 'CENTER' ? D.AlignmentType.CENTER : D.AlignmentType.LEFT;
+}
+
+function paragraphDirection(opts: BuilderOptions, D: DocxModule, configuredAlignment?: 'LEFT' | 'CENTER') {
+    if (opts.direction !== 'rtl') {
+        return configuredAlignment ? { alignment: align(configuredAlignment, D) } : {};
+    }
+
+    return {
+        bidirectional: true,
+        alignment: configuredAlignment === 'CENTER' ? D.AlignmentType.CENTER : D.AlignmentType.RIGHT,
+    };
+}
+
+function textDirection(opts: BuilderOptions) {
+    return opts.direction === 'rtl' ? { rightToLeft: true } : {};
 }
 
 function ls(cfg: DocxTemplateConfig, D: DocxModule) {
@@ -77,13 +94,14 @@ function textRuns(
 ) {
     const applyBolding = shouldApplyBolding(opts.keywords, opts.boldKeywords);
     if (!applyBolding) {
-        return [new D.TextRun({ text, ...fontCfg })];
+        return [new D.TextRun({ text, ...fontCfg, ...textDirection(opts) })];
     }
     const segments = splitTextWithKeywords(text, opts.keywords, 15);
     return segments.map((seg: { text: string; bold: boolean }) =>
         new D.TextRun({
             text: seg.text,
             ...fontCfg,
+            ...textDirection(opts),
             bold: seg.bold || (fontCfg.bold === true),
         }),
     );
@@ -92,7 +110,7 @@ function textRuns(
 /**
  * Create a section heading paragraph matching the template style.
  */
-function sectionHeading(label: string, cfg: DocxTemplateConfig, D: DocxModule) {
+function sectionHeading(label: string, cfg: DocxTemplateConfig, D: DocxModule, opts: BuilderOptions) {
     const text = cfg.headingUppercase ? label.toUpperCase() : label;
     return new D.Paragraph({
         children: [
@@ -102,10 +120,11 @@ function sectionHeading(label: string, cfg: DocxTemplateConfig, D: DocxModule) {
                 size: cfg.headingSize,
                 bold: true,
                 color: cfg.accentColor,
+                ...textDirection(opts),
             }),
         ],
         heading: D.HeadingLevel.HEADING_2,
-        alignment: align(cfg.headingAlignment, D),
+        ...paragraphDirection(opts, D, cfg.headingAlignment),
         spacing: { before: 240, after: 120, ...ls(cfg, D) },
         border: border(cfg.headingBorder, 6, cfg.headingBorderColor, D),
     });
@@ -119,6 +138,7 @@ function bulletParagraph(
     runs: any[],
     cfg: DocxTemplateConfig,
     D: DocxModule,
+    opts: BuilderOptions,
     spacingAfter = 30,
 ) {
     return new D.Paragraph({
@@ -128,9 +148,11 @@ function bulletParagraph(
                 font: cfg.fontFamily,
                 size: cfg.baseFontSize,
                 color: cfg.bodyColor,
+                ...textDirection(opts),
             }),
             ...runs,
         ],
+        ...paragraphDirection(opts, D),
         indent: { left: D.convertInchesToTwip(0.25), hanging: D.convertInchesToTwip(0.2) },
         spacing: { after: spacingAfter, ...ls(cfg, D) },
     });
@@ -153,9 +175,9 @@ export function buildHeader(
     basics: ResumeSchema['basics'],
     cfg: DocxTemplateConfig,
     D: DocxModule,
+    opts: BuilderOptions,
 ): any[] {
     const children: any[] = [];
-    const al = align(cfg.headerAlignment, D);
     const spacing = ls(cfg, D);
 
     // Name
@@ -170,9 +192,10 @@ export function buildHeader(
                     color: cfg.accentColor,
                     allCaps: cfg.nameUppercase,
                     characterSpacing: cfg.nameLetterSpacing ? 80 : undefined,
+                    ...textDirection(opts),
                 }),
             ],
-            alignment: al,
+            ...paragraphDirection(opts, D, cfg.headerAlignment),
             spacing: { after: 40, ...spacing },
         }),
     );
@@ -188,9 +211,10 @@ export function buildHeader(
                         size: cfg.baseFontSize + 3,
                         bold: true,
                         color: cfg.accentColor,
+                        ...textDirection(opts),
                     }),
                 ],
-                alignment: al,
+                ...paragraphDirection(opts, D, cfg.headerAlignment),
                 spacing: { after: 60, ...spacing },
             }),
         );
@@ -290,7 +314,7 @@ export function buildHeader(
         children.push(
             new D.Paragraph({
                 children: contactChildren,
-                alignment: al,
+                ...paragraphDirection(opts, D, cfg.headerAlignment),
                 spacing: { after: 60, ...spacing },
                 border: border(cfg.headerBorder, 8, cfg.headerBorderColor, D),
             }),
@@ -313,12 +337,13 @@ export function buildSummary(
 ): any[] {
     if (!summary) return [];
     return [
-        sectionHeading(cfg.labels.summary, cfg, D),
+        sectionHeading(cfg.labels.summary, cfg, D, opts),
         new D.Paragraph({
             children: textRuns(summary, {
                 ...bf(cfg),
                 italics: cfg.summaryItalic,
             }, opts, D),
+            ...paragraphDirection(opts, D),
             spacing: { after: 120, ...ls(cfg, D) },
         }),
     ];
@@ -331,7 +356,7 @@ export function buildExperience(
     opts: BuilderOptions,
 ): any[] {
     if (!work || work.length === 0) return [];
-    const children: any[] = [sectionHeading(cfg.labels.experience, cfg, D)];
+    const children: any[] = [sectionHeading(cfg.labels.experience, cfg, D, opts)];
     const spacing = ls(cfg, D);
     const body = bf(cfg);
     const rt = rightTab(cfg, D);
@@ -361,6 +386,7 @@ export function buildExperience(
                     }),
                 ],
                 tabStops: [rt],
+                ...paragraphDirection(opts, D),
                 spacing: { before: 120, after: 20, ...spacing },
             }),
         );
@@ -380,6 +406,7 @@ export function buildExperience(
                             ? [new D.TextRun({ text: ` | ${job.location}`, ...body, italics: true })]
                             : []),
                     ],
+                    ...paragraphDirection(opts, D),
                     spacing: { after: 40, ...spacing },
                 }),
             );
@@ -389,7 +416,7 @@ export function buildExperience(
         if (job.highlights) {
             for (const h of job.highlights) {
                 children.push(
-                    bulletParagraph(textRuns(h, body, opts, D), cfg, D),
+                    bulletParagraph(textRuns(h, body, opts, D), cfg, D, opts),
                 );
             }
         }
@@ -404,7 +431,7 @@ export function buildProjects(
     opts: BuilderOptions,
 ): any[] {
     if (!projects || projects.length === 0) return [];
-    const children: any[] = [sectionHeading(cfg.labels.projects, cfg, D)];
+    const children: any[] = [sectionHeading(cfg.labels.projects, cfg, D, opts)];
     const spacing = ls(cfg, D);
     const body = bf(cfg);
 
@@ -419,13 +446,15 @@ export function buildProjects(
                         color: cfg.accentColor,
                     }),
                 ],
+                ...paragraphDirection(opts, D),
                 spacing: { before: 100, after: 30, ...spacing },
             }),
         );
         if (project.description) {
             children.push(
                 new D.Paragraph({
-                    children: [new D.TextRun({ text: project.description, ...body })],
+            children: [new D.TextRun({ text: project.description, ...body })],
+                    ...paragraphDirection(opts, D),
                     spacing: { after: 30, ...spacing },
                 }),
             );
@@ -433,7 +462,7 @@ export function buildProjects(
         if (project.highlights) {
             for (const h of project.highlights) {
                 children.push(
-                    bulletParagraph(textRuns(h, body, opts, D), cfg, D),
+                    bulletParagraph(textRuns(h, body, opts, D), cfg, D, opts),
                 );
             }
         }
@@ -445,10 +474,11 @@ export function buildSkills(
     skills: ResumeSchema['skills'],
     cfg: DocxTemplateConfig,
     D: DocxModule,
+    opts: BuilderOptions,
 ): any[] {
     if (!skills || skills.length === 0) return [];
 
-    const children: any[] = [sectionHeading(cfg.labels.skills, cfg, D)];
+    const children: any[] = [sectionHeading(cfg.labels.skills, cfg, D, opts)];
     const spacing = ls(cfg, D);
     const body = bf(cfg);
 
@@ -458,7 +488,8 @@ export function buildSkills(
             if (typeof skillItem === 'string') {
                 children.push(
                     new D.Paragraph({
-                        children: [new D.TextRun({ text: skillItem, ...body })],
+                        children: [new D.TextRun({ text: skillItem, ...body, ...textDirection(opts) })],
+                        ...paragraphDirection(opts, D),
                         spacing: { after: 30, ...spacing },
                     }),
                 );
@@ -475,6 +506,7 @@ export function buildSkills(
                             }),
                             new D.TextRun({ text: keywords.join(', '), ...body }),
                         ],
+                        ...paragraphDirection(opts, D),
                         spacing: { after: 30, ...spacing },
                     }),
                 );
@@ -490,6 +522,7 @@ export function buildSkills(
         children.push(
             new D.Paragraph({
                 children: [new D.TextRun({ text: allSkills.join(separator), ...body })],
+                ...paragraphDirection(opts, D),
                 spacing: { after: 100, ...spacing },
             }),
         );
@@ -505,8 +538,10 @@ export function buildSkills(
                         new D.TextRun({
                             text: i < allSkills.length - 1 ? `${skill}  ·  ` : skill,
                             ...body,
+                            ...textDirection(opts),
                         }),
                 ),
+                ...paragraphDirection(opts, D),
                 spacing: { after: 100, ...spacing },
             }),
         );
@@ -519,9 +554,10 @@ export function buildEducation(
     education: ResumeSchema['education'],
     cfg: DocxTemplateConfig,
     D: DocxModule,
+    opts: BuilderOptions,
 ): any[] {
     if (!education || education.length === 0) return [];
-    const children: any[] = [sectionHeading(cfg.labels.education, cfg, D)];
+    const children: any[] = [sectionHeading(cfg.labels.education, cfg, D, opts)];
     const spacing = ls(cfg, D);
     const body = bf(cfg);
     const rt = rightTab(cfg, D);
@@ -541,6 +577,7 @@ export function buildEducation(
                     ] : []),
                 ],
                 tabStops: [rt],
+                ...paragraphDirection(opts, D),
                 spacing: { before: 80, after: 20, ...spacing },
             }),
         );
@@ -549,7 +586,8 @@ export function buildEducation(
         if (edu.institution) {
             children.push(
                 new D.Paragraph({
-                    children: [new D.TextRun({ text: edu.institution, ...body, italics: true })],
+                    children: [new D.TextRun({ text: edu.institution, ...body, italics: true, ...textDirection(opts) })],
+                    ...paragraphDirection(opts, D),
                     spacing: { after: 20, ...spacing },
                 }),
             );
@@ -560,8 +598,9 @@ export function buildEducation(
             children.push(
                 new D.Paragraph({
                     children: [
-                        new D.TextRun({ text: `GPA: ${edu.score}`, ...body, size: body.size - 1, color: '6B7280' }),
+                        new D.TextRun({ text: `GPA: ${edu.score}`, ...body, size: body.size - 1, color: '6B7280', ...textDirection(opts) }),
                     ],
+                    ...paragraphDirection(opts, D),
                     spacing: { after: 20, ...spacing },
                 }),
             );
@@ -578,8 +617,10 @@ export function buildEducation(
                             size: body.size - 1,
                             italics: true,
                             color: '6B7280',
+                            ...textDirection(opts),
                         }),
                     ],
+                    ...paragraphDirection(opts, D),
                     spacing: { after: 20, ...spacing },
                 }),
             );
@@ -589,7 +630,7 @@ export function buildEducation(
         if (edu.highlights) {
             for (const h of edu.highlights) {
                 children.push(
-                    bulletParagraph([new D.TextRun({ text: h, ...body })], cfg, D),
+                    bulletParagraph([new D.TextRun({ text: h, ...body, ...textDirection(opts) })], cfg, D, opts),
                 );
             }
         }
@@ -601,9 +642,10 @@ export function buildCertificates(
     certificates: ResumeSchema['certificates'],
     cfg: DocxTemplateConfig,
     D: DocxModule,
+    opts: BuilderOptions,
 ): any[] {
     if (!certificates || certificates.length === 0) return [];
-    const children: any[] = [sectionHeading(cfg.labels.certificates, cfg, D)];
+    const children: any[] = [sectionHeading(cfg.labels.certificates, cfg, D, opts)];
     const spacing = ls(cfg, D);
     const body = bf(cfg);
     const rt = rightTab(cfg, D);
@@ -625,6 +667,7 @@ export function buildCertificates(
                         : []),
                 ],
                 tabStops: [rt],
+                ...paragraphDirection(opts, D),
                 spacing: { after: 40, ...spacing },
             }),
         );
@@ -636,9 +679,10 @@ export function buildLanguages(
     languages: ResumeSchema['languages'],
     cfg: DocxTemplateConfig,
     D: DocxModule,
+    opts: BuilderOptions,
 ): any[] {
     if (!languages || languages.length === 0) return [];
-    const children: any[] = [sectionHeading(cfg.labels.languages, cfg, D)];
+    const children: any[] = [sectionHeading(cfg.labels.languages, cfg, D, opts)];
     const spacing = ls(cfg, D);
     const body = bf(cfg);
 
@@ -657,6 +701,7 @@ export function buildLanguages(
     children.push(
         new D.Paragraph({
             children: runs,
+            ...paragraphDirection(opts, D),
             spacing: { after: 100, ...spacing },
         }),
     );
@@ -672,10 +717,10 @@ const SECTION_BUILDERS: Record<
     summary: (r, c, D, o) => buildSummary(r.basics?.summary, c, D, o),
     experience: (r, c, D, o) => buildExperience(r.work, c, D, o),
     projects: (r, c, D, o) => buildProjects(r.projects, c, D, o),
-    skills: (r, c, D) => buildSkills(r.skills, c, D),
-    education: (r, c, D) => buildEducation(r.education, c, D),
-    certificates: (r, c, D) => buildCertificates(r.certificates, c, D),
-    languages: (r, c, D) => buildLanguages(r.languages, c, D),
+    skills: (r, c, D, o) => buildSkills(r.skills, c, D, o),
+    education: (r, c, D, o) => buildEducation(r.education, c, D, o),
+    certificates: (r, c, D, o) => buildCertificates(r.certificates, c, D, o),
+    languages: (r, c, D, o) => buildLanguages(r.languages, c, D, o),
 };
 
 /**
@@ -690,7 +735,7 @@ export function buildAllSections(
     const paragraphs: any[] = [];
 
     // Header is always first
-    paragraphs.push(...buildHeader(resume.basics, cfg, D));
+    paragraphs.push(...buildHeader(resume.basics, cfg, D, opts));
 
     // Sections in template order
     for (const key of cfg.sectionOrder) {

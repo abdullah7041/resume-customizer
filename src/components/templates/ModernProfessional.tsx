@@ -27,6 +27,7 @@ export function ModernProfessional({
   scale = 1,
   fontScale = 1,
   displayOptions,
+  contentDirection = 'ltr',
 }: TemplateProps) {
   const getSectionLabel = useSectionLabel();
 
@@ -118,9 +119,7 @@ export function ModernProfessional({
         fontSize: `${opts.baseFontSize}pt`,
         lineHeight: String(opts.lineHeight),
       }}
-      // Always LTR for resume content - resumes are typically English
-      // Section headings translate based on UI language, but content stays LTR
-      dir="ltr"
+      dir={contentDirection}
     >
       {/* Header - Large name, subtle headline */}
       <header className="mb-7 pb-5" style={{ borderBottom: '2px solid #111827' }}>

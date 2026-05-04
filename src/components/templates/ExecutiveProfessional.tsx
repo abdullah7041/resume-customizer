@@ -37,6 +37,7 @@ export function ExecutiveProfessional({
   scale = 1,
   fontScale = 1,
   displayOptions,
+  contentDirection = 'ltr',
 }: TemplateProps) {
   const getSectionLabel = useSectionLabel();
 
@@ -119,8 +120,8 @@ export function ExecutiveProfessional({
         fontSize: `${opts.baseFontSize}pt`,
         lineHeight: String(opts.lineHeight),
       }}
-      dir="ltr"
-    >
+            dir={contentDirection}
+        >
       {/* Header - Centered, bold name, subtitle, contact links */}
       <header style={{ textAlign: 'center', marginBottom: `${opts.sectionSpacing + 2}px`, pageBreakInside: 'avoid' }}>
         <h1

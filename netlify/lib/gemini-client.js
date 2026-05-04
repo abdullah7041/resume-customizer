@@ -191,8 +191,11 @@ function sanitizeAndParseJSON(text) {
         // Ignore extraction errors
       }
 
-      // Log full details server-side for debugging, but don't leak to client
-      console.error('[Gemini] JSON sanitization failed. Raw text preview:', text.substring(0, 500));
+      console.error('[Gemini] JSON sanitization failed. Raw text metadata:', {
+        length: text.length,
+        startsWithBrace: text.trim().startsWith('{'),
+        endsWithBrace: text.trim().endsWith('}'),
+      });
       console.error('[Gemini] Second parse error:', secondError);
       throw new Error(`Failed to parse AI response. Please try again.`);
     }
@@ -683,7 +686,7 @@ Analyze step by step, then provide your final score.`;
     catch { parsed = sanitizeAndParseJSON(text); }
 
     return {
-      score: parsed.score || 50,
+      score: parsed.score ?? 50,
       categoryScores: parsed.categoryScores || null,
       strongMatches: parsed.strongMatches || [],
       missingKeywords: parsed.missingKeywords || [],

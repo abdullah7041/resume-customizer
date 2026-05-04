@@ -1,7 +1,9 @@
 # CLAUDE.md
 
 **Watheq** (واثق) — Saudi-themed AI Resume Optimizer.
-React 19 + Vite 7 + Tailwind CSS v4 + Zustand + Netlify Functions + Supabase + OpenRouter (Gemini 2.5).
+React 19 + Vite 8 + Tailwind CSS v4 + Zustand + Netlify Functions + Supabase + OpenRouter (Gemini 2.5).
+
+Shared agent context: `AGENTS.md`, `context/DEVELOPER_PROFILE.md`, and `context/CODING_STANDARDS.md`.
 
 ## Commands
 

@@ -103,7 +103,6 @@ const TOAST_IDS = {
 const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
-const withTemperature = (message) => message;
 
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -475,15 +474,15 @@ export default function MainContent() {
         setFlowProgress(48);
         const parsed = await parseResume(parseInput, {
           signal,
-          // P1 FIX: Notify the user when we fall back to server-side OCR
+          // Notify the user when the browser cannot extract enough selectable text.
           onOcrFallback: () => {
             pushToast(
               {
                 type: 'info',
-                title: t('toasts.ocrFallbackTitle', 'Scanning document with OCR'),
+                title: t('toasts.ocrFallbackTitle', 'Checking document text'),
                 description: t(
                   'toasts.ocrFallbackDesc',
-                  'This document appears to be scanned or image-based. Server-side processing may take a few extra seconds.'
+                  'This file has little selectable text. If it is scanned or image-based, paste the resume text or upload a text-based PDF.'
                 ),
               },
               { id: TOAST_IDS.upload }
@@ -897,7 +896,7 @@ export default function MainContent() {
         return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined });
       }
     },
-    [generateClarifications, handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, pushToast, resumeData, t]
+    [handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, pushToast, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
@@ -946,7 +945,7 @@ export default function MainContent() {
     } finally {
       setIsRegenerating(false);
     }
-  }, [generateClarifications, i18n.language, jobDescription, handleClarificationSkip, resumeData]);
+  }, [i18n.language, jobDescription, handleClarificationSkip, resumeData]);
 
   const handleCopy = useCallback(
     async (value) => {
@@ -1014,18 +1013,18 @@ export default function MainContent() {
           skipPrint: true, // Don't trigger print, just return HTML
         });
 
-        // Check export method
-        if (exportMethod === "supabase" && isSupabaseExportAvailable()) {
-          // Check if user is authenticated
-          if (!user) {
-            pushToast({
-              type: "warning",
-              title: t("toasts.signInRequired"),
-              description: t("toasts.signInRequiredDesc"),
-            });
-            return;
-          }
+        const canSaveToSupabase = exportMethod === "supabase" && isSupabaseExportAvailable() && Boolean(user);
 
+        if (exportMethod === "supabase" && isSupabaseExportAvailable() && !user) {
+          pushToast({
+            type: "warning",
+            title: t("toasts.signInRequired"),
+            description: t("toasts.signInRequiredDesc"),
+          });
+        }
+
+        // Check export method
+        if (canSaveToSupabase) {
           // Export to Supabase Storage
           const result = await exportToSupabase({
             htmlContent,

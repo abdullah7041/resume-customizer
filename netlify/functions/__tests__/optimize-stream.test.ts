@@ -1,0 +1,179 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockGeminiClient = {
+  optimizeResume: vi.fn(),
+};
+
+const mockSentry = {
+  initSentry: vi.fn(),
+  captureError: vi.fn(),
+};
+
+const mockCreditManager = {
+  checkCredits: vi.fn(),
+  consumeCredits: vi.fn(),
+};
+
+const mockVulnerabilityDetector = {
+  detectVulnerabilities: vi.fn(() => []),
+};
+
+const mockRedisCache = {
+  buildCacheKey: vi.fn(() => 'mock-cache-key'),
+  getCached: vi.fn(),
+  setCached: vi.fn(),
+};
+
+const mockSupabase = {
+  auth: {
+    getUser: vi.fn(),
+  },
+};
+
+const mockSupabaseClient = {
+  getSupabaseClient: vi.fn(() => mockSupabase),
+};
+
+const mockRateLimiter = {
+  checkRateLimitForRequest: vi.fn(),
+};
+
+vi.mock('../../lib/gemini-client.js', () => mockGeminiClient);
+vi.mock('../../lib/sentry.js', () => mockSentry);
+vi.mock('../../lib/credit-manager.js', () => mockCreditManager);
+vi.mock('../../lib/vulnerability-detector.js', () => mockVulnerabilityDetector);
+vi.mock('../../lib/redis-cache.js', () => mockRedisCache);
+vi.mock('../../lib/supabase-client.js', () => mockSupabaseClient);
+vi.mock('../../lib/rate-limiter.js', () => mockRateLimiter);
+
+const { default: handler } = await import('../optimize-stream.js');
+
+const buildRequest = (headers: Record<string, string> = {}) =>
+  new Request('http://localhost/api/optimize-stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify({
+      resumeText: 'Resume text with enough detail',
+      jobText: 'Job description with enough detail',
+    }),
+  });
+
+describe('optimize-stream function', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimiter.checkRateLimitForRequest.mockResolvedValue({ allowed: true });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-123',
+          email: 'user@example.com',
+          email_confirmed_at: '2026-01-01T00:00:00.000Z',
+        },
+      },
+      error: null,
+    });
+    mockCreditManager.checkCredits.mockResolvedValue({
+      hasCredits: true,
+      required: 5,
+      available: 10,
+    });
+    mockRedisCache.getCached.mockResolvedValue({
+      cards: [],
+      source: 'cache',
+    });
+  });
+
+  it('checks the v2 rate limit before auth and credits work', async () => {
+    const rateLimitedResponse = new Response(
+      JSON.stringify({ error: 'Too many requests. Please try again later.', retryAfter: 60 }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+        },
+      }
+    );
+    mockRateLimiter.checkRateLimitForRequest.mockResolvedValue({
+      allowed: false,
+      response: rateLimitedResponse,
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const body = await response.json() as { error: string };
+
+    expect(response.status).toBe(429);
+    expect(body.error).toContain('Too many requests');
+    expect(mockRateLimiter.checkRateLimitForRequest).toHaveBeenCalledWith(
+      expect.any(Request),
+      'optimize-stream'
+    );
+    expect(mockSupabase.auth.getUser).not.toHaveBeenCalled();
+    expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+  });
+
+  it('continues to auth when the v2 rate limit allows the request', async () => {
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('X-Cache')).toBe('HIT');
+    expect(mockRateLimiter.checkRateLimitForRequest).toHaveBeenCalledWith(
+      expect.any(Request),
+      'optimize-stream'
+    );
+    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('test-token');
+    expect(mockCreditManager.checkCredits).toHaveBeenCalled();
+  });
+
+  it('stores cache misses with a short optimization TTL', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 5,
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/event-stream');
+    expect(streamText).toContain('event: result');
+    expect(mockRedisCache.setCached).toHaveBeenCalledWith(
+      'mock-cache-key',
+      expect.objectContaining({
+        source: 'gemini',
+      }),
+      600
+    );
+  });
+
+  it('does not cache a fake zero score when the AI omits score data', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 5,
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(streamText).toContain('event: error');
+    expect(streamText).toContain('Failed to optimize resume');
+    expect(mockRedisCache.setCached).not.toHaveBeenCalled();
+  });
+});

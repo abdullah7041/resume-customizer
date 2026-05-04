@@ -17,7 +17,7 @@ import { Handler } from '@netlify/functions';
 import { callOpenRouter } from '../lib/openrouter-client.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { ClarificationRequestSchema, formatZodError } from '../lib/resume-schemas.js';
-import { initSentry, captureError } from '../lib/sentry.js';
+import { initSentry, captureError, redactForLog } from '../lib/sentry.js';
 import { buildCacheKey, getCached, setCached } from '../lib/redis-cache.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { getClientIP } from '../lib/ip-utils.js';
@@ -187,7 +187,7 @@ const baseHandler: Handler = async (event) => {
     const prompt = buildPrompt(resumeText, jobText, language || 'en');
     const messages = [{ role: 'user', content: prompt }];
 
-    console.log(`[generate-clarifications] Calling AI (user: ${user.email}, ip: ${getClientIP(event)})`);
+    console.log(`[generate-clarifications] Calling AI (user: ${redactForLog(user.email)}, ip: ${getClientIP(event)})`);
 
     const text = await callOpenRouter('flash', messages, CLARIFICATION_SCHEMA, {
       maxTokens: 2048,
@@ -225,7 +225,7 @@ const baseHandler: Handler = async (event) => {
     console.error('[generate-clarifications] AI call failed:', error);
     captureError(error, {
       function: 'generate-clarifications',
-      userEmail: user.email,
+      userId: user.id,
     });
     // Non-fatal: return empty so the optimize flow proceeds unblocked
     return {

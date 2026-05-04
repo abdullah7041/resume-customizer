@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FileText, Shield, UploadCloud, XCircle, Camera, Loader2 } from "lucide-react";
+import { FileText, Shield, UploadCloud, XCircle, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/utils/cn";
@@ -89,7 +89,6 @@ export default function UploadCard({
 }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
-  const cameraInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
   // Import CheckCircle dynamically or assume it's available. 
@@ -230,6 +229,8 @@ export default function UploadCard({
           <span>{t("upload.card.pdf")}</span>
           <span className="text-gray-500 dark:text-emerald-200/70">{t("upload.card.and")}</span>
           <span>{t("upload.card.docx")}</span>
+          <span className="text-gray-500 dark:text-emerald-200/70">{t("upload.card.and")}</span>
+          <span>{t("upload.card.txt", "TXT")}</span>
         </div>
         <span className="relative inline-flex items-center justify-center">
           <span className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-emerald-600/10 blur-2xl sm:blur-3xl" aria-hidden="true" />
@@ -251,7 +252,7 @@ export default function UploadCard({
           {t('upload.card.supportedFormats', 'Supported formats: PDF, DOCX, TXT')} • {t('upload.card.maxSizeLabel', 'Max size: 5MB')}
         </p>
         <p className="text-xs text-gray-500">
-          {t('upload.card.bestPractice', 'For best results, use a PDF with selectable text (not scanned images)')}
+          {t('upload.card.bestPractice', 'For best results, use selectable text. Scanned images are not supported.')}
         </p>
       </div>
 
@@ -266,19 +267,6 @@ export default function UploadCard({
         onChange={handleFileChange}
       />
 
-      {/* Camera capture input for mobile - scan physical resumes */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        name="resume-camera"
-        aria-label="Take photo of resume"
-        title="Take photo of resume"
-        onChange={handleFileChange}
-      />
-
       {/* Mobile: Prominent upload buttons */}
       <div className="flex flex-col sm:hidden gap-2 w-full mt-4">
         <button
@@ -288,14 +276,6 @@ export default function UploadCard({
         >
           <UploadCloud className="h-5 w-5" />
           <span>{t("upload.card.selectFile") || "Select File"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => cameraInputRef.current?.click()}
-          className="flex items-center justify-center gap-2 w-full min-h-[48px] rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm transition-all duration-300 hover:bg-white/10 active:scale-[0.98]"
-        >
-          <Camera className="h-5 w-5 text-emerald-400" />
-          <span>{t("upload.card.scanResume") || "Scan Resume"}</span>
         </button>
       </div>
 

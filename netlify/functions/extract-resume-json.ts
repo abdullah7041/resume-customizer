@@ -5,6 +5,17 @@ import { initSentry, captureError } from "../lib/sentry.js";
 
 initSentry();
 
+const MIN_READABLE_TEXT_LENGTH = 100;
+
+const UNREADABLE_FILE_RESPONSE = {
+  statusCode: 422,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    error: "Could not extract readable text from the uploaded file. Please upload a text-based PDF/DOCX/TXT file or paste your resume text directly.",
+    details: "The uploaded file did not contain enough selectable text. Scanned or image-only resumes are not currently supported by this parser."
+  }),
+};
+
 const baseHandler = async (event: { httpMethod: string; body: string; headers: any; }) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
@@ -55,25 +66,23 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         const rawExtracted = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: name });
         console.log(`[extract-resume-json] Pre-extracted text length: ${rawExtracted.length} chars`);
 
-        if (rawExtracted.length > 0 && isReadableText(rawExtracted)) {
+        if (rawExtracted.length >= MIN_READABLE_TEXT_LENGTH && isReadableText(rawExtracted)) {
           extractedPlainText = rawExtracted;
-          console.log(`[extract-resume-json] Pre-extracted preview: "${extractedPlainText.slice(0, 300).replace(/\s+/g, ' ')}"`);
+          console.log(`[extract-resume-json] Pre-extracted readable text length: ${extractedPlainText.length} chars`);
         } else if (rawExtracted.length > 0) {
-          console.warn("[extract-resume-json] Pre-extracted text failed readability check (binary/encoded glyphs) — treating as empty.");
+          console.warn("[extract-resume-json] Pre-extracted text was too short or failed readability check — treating as unreadable.");
         }
       } catch (extractError) {
-        console.warn("[extract-resume-json] Pre-extraction failed, will rely on Gemini:", extractError);
+        console.warn("[extract-resume-json] Pre-extraction failed:", extractError);
       }
 
-      // OPTIMIZATION: Use pre-extracted text if available AND readable (much faster than PDF parsing)
-      // PDF mode takes 30-45s, text mode takes ~5-10s
-      if (extractedPlainText.length > 200) {
-        console.log("[extract-resume-json] Using pre-extracted text for faster parsing...");
-        analysis = await parseResumeOnly(extractedPlainText, false);
-      } else {
-        console.log("[extract-resume-json] Calling parseResumeOnly with PDF data (fallback)...");
-        analysis = await parseResumeOnly(data, true);
+      if (extractedPlainText.length < MIN_READABLE_TEXT_LENGTH) {
+        console.warn("[extract-resume-json] File payload did not contain enough readable selectable text.");
+        return UNREADABLE_FILE_RESPONSE;
       }
+
+      console.log("[extract-resume-json] Using pre-extracted text for parsing...");
+      analysis = await parseResumeOnly(extractedPlainText, false);
       console.log("[extract-resume-json] parseResumeOnly returned success.");
     } else if (kind === "text" && body.value) {
       // Defense-in-depth: reject garbage even if it slipped past the client-side check.
@@ -93,7 +102,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       extractedPlainText = body.value;
       analysis = await parseResumeOnly(body.value, false);
     } else {
-      console.warn("[extract-resume-json] Invalid input:", body);
+      console.warn("[extract-resume-json] Invalid input keys:", Object.keys(body || {}));
       return { statusCode: 400, body: JSON.stringify({ error: "Invalid input" }) };
     }
 
@@ -110,18 +119,17 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         if (typeof obj.plainText === 'string') return obj.plainText;
         if (typeof obj.raw_text === 'string') return obj.raw_text;
         if (typeof obj.content === 'string') return obj.content;
-        // Log warning for debugging
-        console.warn('[extract-resume-json] ⚠️ Received object instead of string for plainText:', JSON.stringify(value).substring(0, 200));
+        console.warn('[extract-resume-json] ⚠️ Received object instead of string for plainText:', {
+          keys: Object.keys(obj).slice(0, 20),
+        });
         return ''; // Don't coerce object to "[object Object]"
       }
       return String(value); // For primitives like number, boolean
     };
 
 
-    // DEBUG: Log what analysis contains
+    // DEBUG: Log shape only. Do not log resume text or AI raw text.
     console.log('[extract-resume-json] DEBUG: typeof analysis.plainText:', typeof analysis.plainText);
-    console.log('[extract-resume-json] DEBUG: analysis.plainText preview:',
-      typeof analysis.plainText === 'string' ? analysis.plainText.substring(0, 100) : JSON.stringify(analysis.plainText)?.substring(0, 200));
     console.log('[extract-resume-json] DEBUG: typeof analysis.meta?.raw_text:', typeof analysis.meta?.raw_text);
 
     // Use the best available plain text source:
@@ -148,7 +156,9 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     const isGeminiPlaceholder = PLACEHOLDER_PATTERNS.some(pattern => geminiTextLower.includes(pattern));
 
     if (isGeminiPlaceholder) {
-      console.warn(`[extract-resume-json] ⚠️ Gemini returned placeholder response: "${geminiPlainText.slice(0, 100)}"`);
+      console.warn('[extract-resume-json] ⚠️ Gemini returned placeholder response', {
+        length: geminiPlainText.length,
+      });
     }
 
     // Choose the best available text, excluding Gemini placeholders

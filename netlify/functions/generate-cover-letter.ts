@@ -102,9 +102,17 @@ const baseHandler: Handler = async (event) => {
 
   } catch (error) {
     console.error("Cover letter error:", error);
+    const rawBody = JSON.parse(event.body || '{}');
     captureError(error, {
       function: 'generate-cover-letter',
-      payload: JSON.parse(event.body || '{}'),
+      payload: {
+        resumeTextLength: rawBody.resumeText?.length || 0,
+        jobDescriptionLength: rawBody.jobDescription?.length || 0,
+        hasResumeText: Boolean(rawBody.resumeText),
+        hasJobDescription: Boolean(rawBody.jobDescription),
+        tone: rawBody.tone || null,
+        language: rawBody.language || null,
+      },
     });
     return {
       statusCode: 500,

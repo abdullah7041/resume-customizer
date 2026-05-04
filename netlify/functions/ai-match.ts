@@ -6,6 +6,7 @@ import { initSentry, captureError } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
+import { normalizeScore } from "../lib/score-utils.js";
 
 initSentry();
 
@@ -92,12 +93,13 @@ const baseHandler: Handler = async (event) => {
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
     const match = await processMatchOnly(resumeText, jobText, language);
+    const normalizedScore = normalizeScore(match.score, 'match score');
 
     // Map to frontend expected format
     const response = {
-      score: match.score,
-      coverage: match.score / 100,
-      similarity: match.score / 100,
+      score: normalizedScore,
+      coverage: normalizedScore / 100,
+      similarity: normalizedScore / 100,
       missingKeywords: match.missingKeywords,
       strongMatches: match.strongMatches,
       matched_keywords: match.strongMatches,
@@ -130,7 +132,7 @@ const baseHandler: Handler = async (event) => {
           email: userEmail,
           resume_text: resumeText.substring(0, 5000), // Truncate for storage
           job_text: jobText.substring(0, 5000), // Truncate for storage
-          score: match.score,
+          score: normalizedScore,
           missing_keywords: match.missingKeywords,
           suggestions: match.strongMatches,
         })
@@ -161,10 +163,16 @@ const baseHandler: Handler = async (event) => {
 
     // Don't send timeout errors to Sentry (expected behavior under load)
     if (errorDetails?.name !== 'TimeoutError') {
+      const rawBody = JSON.parse(event.body || '{}');
       captureError(error, {
         function: 'ai-match',
-        payload: JSON.parse(event.body || '{}'),
-        email: userEmail,
+        payload: {
+          resumeTextLength: rawBody.resumeText?.length || 0,
+          jobTextLength: rawBody.jobText?.length || 0,
+          hasResumeText: Boolean(rawBody.resumeText),
+          hasJobText: Boolean(rawBody.jobText),
+          language: rawBody.language || null,
+        },
       });
     }
 

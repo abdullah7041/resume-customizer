@@ -8,19 +8,25 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { addCredits } from './credit-manager.js';
+import { redactForLog } from './sentry.js';
 
 const REFERRER_REWARD = 5;
 const REFEREE_REWARD = 5;
+const MISSING_CONFIG_ERROR = '[ReferralManager] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY';
+
+function isMissingConfigError(error) {
+  return error instanceof Error && error.message === MISSING_CONFIG_ERROR;
+}
 
 /**
  * Get Supabase client for referral operations
  */
 function getSupabaseClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    throw new Error('[ReferralManager] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error(MISSING_CONFIG_ERROR);
   }
 
   return createClient(url, key, {
@@ -57,34 +63,52 @@ export async function trackReferral(referrerCode, refereeEmail) {
 
     const referrerEmail = referrerData.email;
 
-    // Check if referee was already referred
-    const { data: existingReferral } = await supabase
-      .from('user_credits')
-      .select('referred_by_email, referral_completed')
-      .eq('email', refereeEmail)
-      .single();
-
-    if (existingReferral?.referred_by_email) {
-      console.warn('[ReferralManager] User already has a referrer');
-      return { success: false, error: 'Already referred by another user' };
+    if (referrerEmail === refereeEmail) {
+      console.warn('[ReferralManager] Self-referral blocked');
+      return { success: false, error: 'Cannot use your own referral code' };
     }
 
-    // Update referee's record with referrer relationship
-    const { error: updateError } = await supabase
+    // Atomically claim the referral relationship. Rewards are only paid when this
+    // conditional write returns the referee row, preventing retry/double-award races.
+    const { data: trackedReferral, error: updateError } = await supabase
       .from('user_credits')
       .update({
         referred_by_email: referrerEmail,
         referral_completed: true,
         referral_completed_at: new Date().toISOString()
       })
-      .eq('email', refereeEmail);
+      .eq('email', refereeEmail)
+      .is('referred_by_email', null)
+      .select('email')
+      .maybeSingle();
 
     if (updateError) {
       console.error('[ReferralManager] Failed to track referral:', updateError);
       return { success: false, error: 'Failed to track referral' };
     }
 
-    console.log(`[ReferralManager] Tracked referral: ${referrerEmail} → ${refereeEmail}`);
+    if (!trackedReferral) {
+      const { data: existingReferral, error: existingReferralError } = await supabase
+        .from('user_credits')
+        .select('referred_by_email')
+        .eq('email', refereeEmail)
+        .single();
+
+      if (existingReferralError || !existingReferral) {
+        console.warn('[ReferralManager] Referee credit record not found');
+        return { success: false, error: 'Referral record not found' };
+      }
+
+      if (existingReferral.referred_by_email) {
+        console.warn('[ReferralManager] User already has a referrer');
+        return { success: false, error: 'Already referred by another user' };
+      }
+
+      console.warn('[ReferralManager] Referral was not tracked');
+      return { success: false, error: 'Failed to track referral' };
+    }
+
+    console.log(`[ReferralManager] Tracked referral: ${redactForLog(referrerEmail)} -> ${redactForLog(refereeEmail)}`);
 
     // Award credits to referrer using credit-manager (avoids RPC migration dependency)
     try {
@@ -92,7 +116,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
         description: `Referral bonus: ${refereeEmail} signed up`,
         referee_email: refereeEmail,
       });
-      console.log(`[ReferralManager] Awarded ${REFERRER_REWARD} credits to referrer ${referrerEmail}`);
+      console.log(`[ReferralManager] Awarded ${REFERRER_REWARD} credits to referrer ${redactForLog(referrerEmail)}`);
     } catch (referrerRewardError) {
       console.error('[ReferralManager] Failed to reward referrer:', referrerRewardError);
     }
@@ -103,7 +127,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
         description: `Referral bonus: welcome reward`,
         referrer_email: referrerEmail,
       });
-      console.log(`[ReferralManager] Awarded ${REFEREE_REWARD} credits to referee ${refereeEmail}`);
+      console.log(`[ReferralManager] Awarded ${REFEREE_REWARD} credits to referee ${redactForLog(refereeEmail)}`);
     } catch (refereeRewardError) {
       console.error('[ReferralManager] Failed to reward referee:', refereeRewardError);
     }
@@ -127,6 +151,10 @@ export async function trackReferral(referrerCode, refereeEmail) {
 
     return { success: true };
   } catch (error) {
+    if (isMissingConfigError(error)) {
+      throw error;
+    }
+
     console.error('[ReferralManager] trackReferral error:', error);
     return { success: false, error: error.message };
   }
@@ -162,7 +190,7 @@ export async function completeReferral(refereeEmail) {
       return { completed: false };
     }
 
-    console.log(`[ReferralManager] Completing referral for referee ${refereeEmail}`);
+    console.log(`[ReferralManager] Completing referral for referee ${redactForLog(refereeEmail)}`);
 
     // Award credits to referrer
     const { error: referrerError } = await supabase.rpc('add_credits', {
@@ -204,7 +232,7 @@ export async function completeReferral(refereeEmail) {
       return { completed: false, error: 'Failed to mark complete' };
     }
 
-    console.log(`[ReferralManager] Referral completed: ${referrerEmail} (+${REFERRER_REWARD}) and ${refereeEmail} (+${REFEREE_REWARD})`);
+    console.log(`[ReferralManager] Referral completed: ${redactForLog(referrerEmail)} (+${REFERRER_REWARD}) and ${redactForLog(refereeEmail)} (+${REFEREE_REWARD})`);
 
     // Send email notifications (non-blocking)
     try {
@@ -230,6 +258,10 @@ export async function completeReferral(refereeEmail) {
       refereeReward: REFEREE_REWARD
     };
   } catch (error) {
+    if (isMissingConfigError(error)) {
+      throw error;
+    }
+
     console.error('[ReferralManager] completeReferral error:', error);
     return { completed: false, error: error.message };
   }
@@ -263,6 +295,10 @@ export async function getReferralStats(userEmail) {
 
     return { total, completed, pending, creditsEarned };
   } catch (error) {
+    if (isMissingConfigError(error)) {
+      throw error;
+    }
+
     console.error('[ReferralManager] getReferralStats error:', error);
     return { total: 0, completed: 0, pending: 0, creditsEarned: 0 };
   }

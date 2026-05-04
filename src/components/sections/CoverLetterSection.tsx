@@ -53,11 +53,23 @@ const tones = [
   { value: 'creative', label: 'Creative', labelAr: 'إبداعي', icon: Palette, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' }
 ];
 
+const arabicToneLabels: Record<string, string> = {
+  professional: 'احترافي',
+  enthusiastic: 'متحمس',
+  formal: 'رسمي',
+  creative: 'إبداعي',
+};
+
+const getToneLabel = (value: string, fallback: string, isArabic: boolean) => {
+  return isArabic ? (arabicToneLabels[value] || fallback) : fallback;
+};
+
 export function CoverLetterSection({ resumeText, jobDescription, resumeData }: CoverLetterSectionProps) {
   const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
   const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
   const isArabic = i18n.language === 'ar';
+  const documentDirection = isArabic ? 'rtl' : 'ltr';
 
   const [coverLetter, setCoverLetter] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -251,12 +263,18 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
     const fontConfig = { font: 'Times New Roman', size: 24 };
     const lineSpacing = { line: 276, lineRule: LineRuleType.AUTO }; // 1.15 line spacing
 
+    const paragraphDirection = isArabic
+      ? { bidirectional: true, alignment: AlignmentType.RIGHT }
+      : {};
+    const textDirection = isArabic ? { rightToLeft: true } : {};
+    const bodyAlignment = isArabic ? AlignmentType.RIGHT : AlignmentType.JUSTIFIED;
+
     // Helper to create TextRuns with keyword bolding
     const createTextRuns = (text: string): any[] => {
       const applyBolding = shouldApplyBolding(keywords, boldKeywordsFlag);
 
       if (!applyBolding) {
-        return [new TextRun({ text, ...fontConfig })];
+        return [new TextRun({ text, ...fontConfig, ...textDirection })];
       }
 
       const segments = splitTextWithKeywords(text, keywords, 15); // Top 15 keywords
@@ -264,6 +282,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
         new TextRun({
           text: segment.text,
           ...fontConfig,
+          ...textDirection,
           bold: segment.bold,
         })
       );
@@ -281,25 +300,29 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
     // Company name (bold, left-aligned)
     if (companyName) {
       docChildren.push(new Paragraph({
-        children: [new TextRun({ text: companyName, bold: true, ...fontConfig })],
-        alignment: AlignmentType.LEFT,
+        children: [new TextRun({ text: companyName, bold: true, ...fontConfig, ...textDirection })],
+        ...paragraphDirection,
         spacing: { after: 200, ...lineSpacing }
       }));
     }
 
     // Date (formatted professionally)
-    const currentDate = new Date().toLocaleDateString('en-US', {
+    const currentDate = new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
       year: 'numeric', month: 'long', day: 'numeric'
     });
     docChildren.push(new Paragraph({
-      children: [new TextRun({ text: currentDate, ...fontConfig })],
+      children: [new TextRun({ text: currentDate, ...fontConfig, ...textDirection })],
+      ...paragraphDirection,
       spacing: { after: 400, ...lineSpacing }
     }));
 
     // Greeting
-    const greeting = hiringManager ? `Dear ${hiringManager},` : 'Dear Hiring Manager,';
+    const greeting = hiringManager
+      ? (isArabic ? `السادة ${hiringManager}،` : `Dear ${hiringManager},`)
+      : (isArabic ? 'السادة فريق التوظيف،' : 'Dear Hiring Manager,');
     docChildren.push(new Paragraph({
-      children: [new TextRun({ text: greeting, ...fontConfig })],
+      children: [new TextRun({ text: greeting, ...fontConfig, ...textDirection })],
+      ...paragraphDirection,
       spacing: { after: 280, ...lineSpacing }
     }));
 
@@ -310,7 +333,8 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       docChildren.push(new Paragraph({
         children: createTextRuns(trimmed),
         spacing: { after: 280, ...lineSpacing },
-        alignment: AlignmentType.JUSTIFIED
+        alignment: bodyAlignment,
+        ...(isArabic ? { bidirectional: true } : {}),
       }));
     });
 
@@ -318,13 +342,15 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
     if (signatureName) {
       // "Sincerely,"
       docChildren.push(new Paragraph({
-        children: [new TextRun({ text: 'Sincerely,', ...fontConfig })],
+        children: [new TextRun({ text: isArabic ? 'مع خالص التحية،' : 'Sincerely,', ...fontConfig, ...textDirection })],
+        ...paragraphDirection,
         spacing: { after: 600, ...lineSpacing } // Extra space before signature
       }));
 
       // Signature name (bold)
       docChildren.push(new Paragraph({
-        children: [new TextRun({ text: signatureName, bold: true, ...fontConfig })],
+        children: [new TextRun({ text: signatureName, bold: true, ...fontConfig, ...textDirection })],
+        ...paragraphDirection,
         spacing: { after: 200, ...lineSpacing }
       }));
     }
@@ -466,7 +492,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                       isSelected ? "text-indigo-600 dark:text-indigo-300" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
                     )} />
                     <span className="text-sm font-medium">
-                      {isArabic ? tOption.labelAr : tOption.label}
+                      {getToneLabel(tOption.value, tOption.label, isArabic)}
                     </span>
                   </button>
                 );
@@ -550,7 +576,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                     const Icon = tones.find(t => t.value === tone)!.icon;
                     return <Icon className="w-4 h-4 text-indigo-400" />
                   })()}
-                  {tones.find(t => t.value === tone)?.label} {t('sections.coverLetter.toneLabel', 'tone')}
+                  {getToneLabel(tone, tones.find(t => t.value === tone)?.label || tone, isArabic)} {t('sections.coverLetter.toneLabel', 'tone')}
                 </span>
               </div>
             </div>
@@ -585,7 +611,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
           )}
 
           {/* Document Container - Professional Word-like appearance */}
-          <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8 lg:p-12 rounded-xl">
+          <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8 lg:p-12 rounded-xl" dir={documentDirection}>
             {/* Edit Toggle Button */}
             <button
               onClick={() => setIsEditing(!isEditing)}
@@ -604,7 +630,11 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
             <div className="max-w-3xl mx-auto bg-white rounded shadow-2xl shadow-gray-400/30 overflow-hidden">
               {/* Document Content */}
               <div
-                className="p-10 md:p-14 lg:p-16 min-h-[700px]"
+                className={cn(
+                  "p-10 md:p-14 lg:p-16 min-h-[700px]",
+                  isArabic && "text-right"
+                )}
+                dir={documentDirection}
                 style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
               >
                 {isEditing ? (
@@ -612,26 +642,32 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                   <textarea
                     value={coverLetter}
                     onChange={(e) => setCoverLetter(e.target.value)}
-                    className="w-full min-h-[600px] text-gray-800 text-[17px] leading-relaxed bg-transparent resize-none focus:outline-none border-2 border-dashed border-gray-300 rounded-lg p-4 -m-4"
+                    dir={documentDirection}
+                    className={cn(
+                      "w-full min-h-[600px] text-gray-800 text-[17px] leading-relaxed bg-transparent resize-none focus:outline-none border-2 border-dashed border-gray-300 rounded-lg p-4 -m-4",
+                      isArabic && "text-right"
+                    )}
                     style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                     autoFocus
                   />
                 ) : (
                   /* View Mode - Rendered Document */
-                  <div className="text-gray-800 text-[17px] leading-relaxed">
+                  <div className={cn("text-gray-800 text-[17px] leading-relaxed", isArabic && "text-right")} dir={documentDirection}>
                     {/* Header */}
                     {companyName && (
                       <p className="font-bold text-lg mb-1">{companyName}</p>
                     )}
                     <p className="text-gray-600 mb-6">
-                      {new Date().toLocaleDateString('en-US', {
+                      {new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
                         year: 'numeric', month: 'long', day: 'numeric'
                       })}
                     </p>
 
                     {/* Greeting */}
                     <p className="mb-6">
-                      {hiringManager ? `Dear ${hiringManager},` : 'Dear Hiring Manager,'}
+                      {hiringManager
+                        ? (isArabic ? `السادة ${hiringManager}،` : `Dear ${hiringManager},`)
+                        : (isArabic ? 'السادة فريق التوظيف،' : 'Dear Hiring Manager,')}
                     </p>
 
                     {/* Body Paragraphs */}
@@ -640,7 +676,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                       .split(/\n\n+/)
                       .filter(p => p.trim())
                       .map((para, idx) => (
-                        <p key={idx} className="mb-5 text-justify">
+                        <p key={idx} className={cn("mb-5", isArabic ? "text-right" : "text-justify")}>
                           {para.trim()}
                         </p>
                       ))
@@ -649,7 +685,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                     {/* Signature */}
                     {signatureName && (
                       <div className="mt-8">
-                        <p className="mb-1">Sincerely,</p>
+                        <p className="mb-1">{isArabic ? 'مع خالص التحية،' : 'Sincerely,'}</p>
                         <p className="mt-4 font-semibold">{signatureName}</p>
                       </div>
                     )}

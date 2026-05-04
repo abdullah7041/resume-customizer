@@ -232,8 +232,8 @@
     "exportFailed": "Export failed",
     "templateSelected": "Template Selected",
     "analyzingGaps": "Analyzing resume gaps…",
-    "ocrFallbackTitle": "Scanning document with OCR",
-    "ocrFallbackDesc": "This document appears to be scanned or image-based. Server-side processing may take a few extra seconds.",
+    "ocrFallbackTitle": "Checking document text",
+    "ocrFallbackDesc": "This file has little selectable text. If it is scanned or image-based, paste the resume text or upload a text-based PDF.",
     "optimizeValidating": "Validating your resume...",
     "optimizeVulnerabilities": "Scanning career timeline...",
     "optimizeAI": "AI is analyzing and rewriting bullets...",
@@ -290,7 +290,7 @@
       "smartParsing": {
         "title": "Smart Resume Parsing",
         "description": "Upload PDF, DOCX, or paste text. AI extracts and structures your experience instantly.",
-        "badge": "OCR Powered",
+        "badge": "Text parsing",
         "capabilities": [
           "Multi-format support",
           "Arabic & English",
@@ -348,7 +348,7 @@
       "title": "Get Results in 3 Simple Steps",
       "step1": {
         "title": "Upload Resume",
-        "description": "Drop your PDF/DOCX or paste text. OCR handles scanned documents too."
+        "description": "Drop a text-based PDF/DOCX or paste text. Scanned image-only resumes are not supported yet."
       },
       "step2": {
         "title": "Add Job Description",
@@ -437,16 +437,17 @@
     "dragDrop": "Drag and drop your file here",
     "or": "or",
     "browse": "Browse Files",
-    "supported": "Supported formats: PDF, DOCX",
+    "supported": "Supported formats: PDF, DOCX, TXT",
     "maxSize": "Maximum file size: 5MB",
     "paste": "Or paste your resume text",
     "card": {
       "step": "Step 1",
       "title": "Upload or Paste Your Resume",
-      "subtitle": "Drag a PDF or DOCX, or paste the text to let our AI optimize every line.",
+      "subtitle": "Drag a PDF, DOCX, or TXT file, or paste the text to let our AI optimize every line.",
       "maxSize": "Max 5MB",
       "pdf": "PDF",
       "docx": "DOCX",
+      "txt": "TXT",
       "and": "&",
       "dropText": "Drop your resume here or click to browse",
       "securityText": "We keep uploads private and secure.",
@@ -459,7 +460,9 @@
         "error": "We couldn't process that file."
       },
       "selectFile": "Select File",
-      "scanResume": "Scan Resume",
+      "supportedFormats": "Supported formats: PDF, DOCX, TXT",
+      "maxSizeLabel": "Max size: 5MB",
+      "bestPractice": "For best results, use selectable text. Scanned images are not supported.",
       "saudi": {
         "label": "Are you Saudi?",
         "description": "Adds \"Saudi\" to your resume summary to align with Saudization ATS filters"

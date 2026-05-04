@@ -25,7 +25,6 @@ vi.mock('../../lib/resumeText.js', () => mockResumeText);
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/sentry', () => mockSentry);
 
-// Mock global fetch for DeepSeek OCR
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -55,7 +54,6 @@ const createMockContext = (): HandlerContext => ({
 describe('parse-resume function', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        process.env.DEEPSEEK_API_KEY = 'test-key';
     });
 
     describe('basic validation', () => {
@@ -162,32 +160,12 @@ describe('parse-resume function', () => {
         });
     });
 
-    describe('OCR fallback', () => {
-        it('attempts OCR when text extraction is low quality', async () => {
+    describe('unreadable file handling', () => {
+        it('rejects low-quality extraction without OCR fallback', async () => {
             // Mock poor extraction result
             mockResumeText.inferMimeType.mockReturnValue('application/pdf');
             mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue("Garbled extraction result");
 
-            // Mock successful OCR response
-            mockFetch.mockResolvedValue({
-                ok: true,
-                json: async () => ({
-                    choices: [{
-                        message: {
-                            content: JSON.stringify({
-                                name: "OCR Name",
-                                summary: "Recovered summary from OCR"
-                            })
-                        }
-                    }]
-                })
-            });
-
-            mockNormalizeResume.buildResumeDocument.mockReturnValue({
-                plainText: "OCR Name\n\nSUMMARY\nRecovered summary from OCR",
-                sections: []
-            });
-
             const event = {
                 httpMethod: 'POST',
                 headers: TEST_HEADERS,
@@ -201,27 +179,14 @@ describe('parse-resume function', () => {
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
             const body = JSON.parse(result.body);
 
-            expect(result.statusCode).toBe(200);
-            expect(body.usedOCR).toBe(true);
-            expect(mockFetch).toHaveBeenCalledWith(
-                expect.stringContaining('deepseek.com'),
-                expect.anything()
-            );
+            expect(result.statusCode).toBe(422);
+            expect(body.error).toContain('Could not extract readable text');
+            expect(mockNormalizeResume.buildResumeDocument).not.toHaveBeenCalled();
         });
 
-        it('falls back to original text if OCR fails', async () => {
-            // Mock poor extraction result
-            const poorText = "Garbled extraction result";
+        it('rejects scanned PDFs', async () => {
             mockResumeText.inferMimeType.mockReturnValue('application/pdf');
-            mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue(poorText);
-
-            // Mock failed OCR response
-            mockFetch.mockRejectedValue(new Error('OCR Failed'));
-
-            mockNormalizeResume.buildResumeDocument.mockReturnValue({
-                plainText: poorText,
-                sections: []
-            });
+            mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue("");
 
             const event = {
                 httpMethod: 'POST',
@@ -236,9 +201,57 @@ describe('parse-resume function', () => {
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
             const body = JSON.parse(result.body);
 
-            expect(result.statusCode).toBe(200);
-            expect(body.usedOCR).toBe(false);
-            expect(body.warnings).toContainEqual(expect.stringContaining('Text extraction quality is low'));
+            expect(result.statusCode).toBe(422);
+            expect(body.error).toContain('Could not extract readable text');
+            expect(global.fetch).not.toHaveBeenCalled();
+            expect(mockNormalizeResume.buildResumeDocument).not.toHaveBeenCalled();
+        });
+
+        it('rejects image-only uploads without OCR provider fallback', async () => {
+            mockResumeText.inferMimeType.mockReturnValue('image/png');
+
+            const event = {
+                httpMethod: 'POST',
+                headers: TEST_HEADERS,
+                body: JSON.stringify({
+                    kind: 'file',
+                    name: 'resume.png',
+                    data: Buffer.from('image-content').toString('base64'),
+                    mime: 'image/png'
+                })
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const body = JSON.parse(result.body);
+
+            expect(result.statusCode).toBe(422);
+            expect(body.error).toContain('Scanned or image-only resumes are not currently supported');
+            expect(global.fetch).not.toHaveBeenCalled();
+            expect(mockResumeText.extractPlainTextFromArrayBuffer).not.toHaveBeenCalled();
+            expect(mockNormalizeResume.buildResumeDocument).not.toHaveBeenCalled();
+        });
+
+        it('rejects unsupported file types before extraction', async () => {
+            mockResumeText.inferMimeType.mockReturnValue('application/octet-stream');
+
+            const event = {
+                httpMethod: 'POST',
+                headers: TEST_HEADERS,
+                body: JSON.stringify({
+                    kind: 'file',
+                    name: 'resume.bin',
+                    data: Buffer.from('binary-content').toString('base64'),
+                    mime: 'application/octet-stream'
+                })
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const body = JSON.parse(result.body);
+
+            expect(result.statusCode).toBe(400);
+            expect(body.error).toContain('Unsupported file type');
+            expect(mockResumeText.extractPlainTextFromArrayBuffer).not.toHaveBeenCalled();
+            expect(mockNormalizeResume.buildResumeDocument).not.toHaveBeenCalled();
         });
     });
 });

@@ -3,6 +3,7 @@ import type { TemplateId } from '../types/templates';
 import { getTemplateConfig } from './docx/templateStyles';
 import { buildAllSections } from './docx/sectionBuilders';
 import type { DocxModule } from './docx/sectionBuilders';
+import type { ResumeDirection } from '../lib/utils/resumeDirection';
 
 /**
  * Options for DOCX export with keyword bolding and template selection
@@ -11,6 +12,7 @@ export interface DocxExportOptions {
   keywords?: string[];      // Keywords to bold (from job description)
   boldKeywords?: boolean;   // Enable/disable keyword bolding (default: true)
   templateId?: TemplateId;  // Template to match styling (default: modern-professional)
+  direction?: ResumeDirection;
 }
 
 /**
@@ -27,7 +29,7 @@ export async function exportResumeAsDocx(
   resume: ResumeSchema,
   options: DocxExportOptions = {}
 ): Promise<Blob> {
-  const { keywords = [], boldKeywords = true, templateId } = options;
+  const { keywords = [], boldKeywords = true, templateId, direction = 'ltr' } = options;
 
   // Dynamic import of docx library
   const D: DocxModule = await import('docx');
@@ -40,7 +42,7 @@ export async function exportResumeAsDocx(
     resume,
     cfg,
     D,
-    { keywords, boldKeywords },
+    { keywords, boldKeywords, direction },
   );
 
   // Create the document with template margins

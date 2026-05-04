@@ -10,14 +10,15 @@
  */
 
 import { Handler } from '@netlify/functions';
+import { requireAdminMutationGate } from '../lib/admin-gates.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 
 const handler: Handler = async (event) => {
-  // SAFETY: Only allow in development
-  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_DEV_RESET) {
+  const gate = requireAdminMutationGate(event, 'ALLOW_DEV_RESET');
+  if (gate.ok === false) {
     return {
-      statusCode: 403,
-      body: JSON.stringify({ error: 'Not available in production' }),
+      statusCode: gate.statusCode,
+      body: JSON.stringify({ error: gate.error }),
     };
   }
 

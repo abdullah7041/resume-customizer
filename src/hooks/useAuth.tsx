@@ -76,21 +76,28 @@ const captureReferralParam = () => {
 /**
  * Track referral after user signup
  */
-const trackReferralAfterSignup = async (userId: string, userEmail?: string) => {
+const trackReferralAfterSignup = async (userId: string, accessToken?: string) => {
   const referrerId = localStorage.getItem("watheq:pending_referrer_id");
 
   if (!referrerId || referrerId === userId) {
     return; // No referral to track
   }
 
+  if (!accessToken) {
+    console.warn("[useAuth] Cannot track referral without an auth token");
+    return;
+  }
+
   try {
     const response = await fetch("/.netlify/functions/referral-api", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify({
         action: "track",
         referral_code: referrerId,
-        referee_id: userId,
       }),
     });
 
@@ -128,7 +135,7 @@ export const AuthProvider = ({ children }) => {
 
       // Track referral for new signups
       if (currentUser && !lastUserIdRef.current && _event === "SIGNED_IN") {
-        trackReferralAfterSignup(currentUser.id, currentUser.email);
+        trackReferralAfterSignup(currentUser.id, session?.access_token);
       }
 
       lastUserIdRef.current = currentUser?.id || null;

@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, Share2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../services/supabase';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
@@ -28,12 +29,22 @@ export function ReferralLink({ className }: ReferralLinkProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     async function fetchReferralLink() {
       try {
-        const emailParam = encodeURIComponent(user.email || '');
-        const response = await fetch(`/.netlify/functions/referral-api?action=get-link&email=${emailParam}`);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error('Authentication required');
+        }
+
+        const response = await fetch('/.netlify/functions/referral-api?action=get-link', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
         const data = await response.json();
 
         if (data.success && data.referralUrl) {

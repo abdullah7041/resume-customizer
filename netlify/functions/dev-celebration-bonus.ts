@@ -15,14 +15,15 @@
  */
 
 import { Handler } from '@netlify/functions';
+import { requireAdminMutationGate } from '../lib/admin-gates.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 
 const handler: Handler = async (event) => {
-  // SAFETY: Only allow in development or with explicit flag
-  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_CELEBRATION_BONUS) {
+  const gate = requireAdminMutationGate(event, 'ALLOW_CELEBRATION_BONUS');
+  if (gate.ok === false) {
     return {
-      statusCode: 403,
-      body: JSON.stringify({ error: 'Not available in production without ALLOW_CELEBRATION_BONUS flag' }),
+      statusCode: gate.statusCode,
+      body: JSON.stringify({ error: gate.error }),
     };
   }
 

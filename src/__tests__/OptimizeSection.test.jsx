@@ -540,6 +540,47 @@ describe('OptimizeSection', () => {
         });
     });
 
+    describe('Export Flow Clarity', () => {
+        it('shows the optimized export path as HTML or print-based PDF', () => {
+            mockStoreState.originalResume = { basics: { name: 'Test User' } };
+            mockStoreState.optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
+            ];
+
+            renderWithProviders(<OptimizeSection onExport={vi.fn()} canExport />);
+
+            expect(screen.getByText('Optimized export')).toBeInTheDocument();
+            expect(screen.getByText(/saves html to your account/i)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /save html \/ print pdf/i })).toBeEnabled();
+        });
+
+        it('calls the existing optimized export path with styled Supabase-first semantics', async () => {
+            const onExport = vi.fn().mockResolvedValue(undefined);
+            mockStoreState.originalResume = { basics: { name: 'Test User' } };
+            mockStoreState.optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
+            ];
+
+            renderWithProviders(<OptimizeSection onExport={onExport} canExport />);
+
+            fireEvent.click(screen.getByRole('button', { name: /save html \/ print pdf/i }));
+
+            await waitFor(() => {
+                expect(onExport).toHaveBeenCalledWith('styled', 'supabase');
+            });
+        });
+
+        it('disables optimized export until a resume is exportable', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
+            ];
+
+            renderWithProviders(<OptimizeSection onExport={vi.fn()} canExport={false} />);
+
+            expect(screen.getByRole('button', { name: /save html \/ print pdf/i })).toBeDisabled();
+        });
+    });
+
     describe('Clear Functionality', () => {
         it('calls onClear prop when clear button is clicked', () => {
             const onClearMock = vi.fn();
@@ -726,6 +767,89 @@ describe('OptimizeSection', () => {
             // Full RTL testing would require mocking i18n.language = 'ar'
             renderWithProviders(<OptimizeSection />);
             expect(screen.getByText('Optimize Resume')).toBeInTheDocument();
+        });
+    });
+
+    describe('Mobile Responsive Contracts', () => {
+        const setViewportWidth = (width) => {
+            Object.defineProperty(window, 'innerWidth', {
+                configurable: true,
+                writable: true,
+                value: width,
+            });
+            window.dispatchEvent(new Event('resize'));
+        };
+
+        it.each([360, 390, 768])('keeps filter tabs horizontally scrollable at %ipx', (width) => {
+            setViewportWidth(width);
+            renderWithProviders(<OptimizeSection />);
+
+            const projectsTab = screen.getByRole('button', { name: 'Projects' });
+            const scrollContainer = projectsTab.closest('div.overflow-x-auto');
+
+            expect(scrollContainer).toBeInTheDocument();
+            expect(scrollContainer).toHaveClass('overflow-x-auto');
+            expect(projectsTab).toHaveClass('whitespace-nowrap');
+        });
+
+        it.each([360, 390, 768])('wraps header actions and guards card header text at %ipx', (width) => {
+            setViewportWidth(width);
+            mockStoreState.optimizations = [
+                {
+                    sectionId: 'summary-0',
+                    sectionType: 'summary',
+                    original: 'Original summary text',
+                    optimized: 'Optimized summary text',
+                    applied: false,
+                },
+            ];
+
+            const { container } = renderWithProviders(<OptimizeSection />);
+
+            const actionWrap = container.querySelector('.md\\:justify-end');
+            expect(actionWrap).toHaveClass('w-full', 'md:w-auto', 'flex-wrap');
+
+            const cardHeader = screen.getByText('summary').closest('div[class*="cursor-pointer"]');
+            expect(cardHeader).toHaveClass('gap-3');
+            expect(cardHeader?.firstElementChild).toHaveClass('min-w-0');
+            expect(cardHeader?.lastElementChild).toHaveClass('shrink-0');
+        });
+
+        it.each([360, 390, 768])('wraps long optimization text and stacks card actions at %ipx', (width) => {
+            setViewportWidth(width);
+            const longToken = 'SeniorPlatformEngineerWithOwnershipAcrossVeryLongCloudMigrationKeyword';
+            mockStoreState.optimizations = [
+                {
+                    sectionId: 'summary-0',
+                    sectionType: 'summary',
+                    original: longToken,
+                    optimized: `${longToken} optimized`,
+                    applied: false,
+                },
+            ];
+
+            renderWithProviders(<OptimizeSection onCopy={vi.fn()} />);
+            fireEvent.click(screen.getByText('summary').closest('div[class*="cursor-pointer"]'));
+
+            expect(screen.getByText(longToken)).toHaveClass('break-words', 'whitespace-pre-wrap');
+
+            const applyButton = screen.getByRole('button', { name: /apply suggestion/i });
+            expect(applyButton.closest('div')).toHaveClass('flex-col', 'sm:flex-row');
+
+            const copyButton = screen.getByTitle('Copy Text');
+            expect(copyButton).toHaveClass('w-full', 'sm:w-auto');
+        });
+
+        it.each([360, 390, 768])('keeps the optimize loading toast inside the viewport at %ipx', (width) => {
+            setViewportWidth(width);
+            renderWithProviders(<OptimizeSection isOptimizing />);
+
+            const toastShell = document.body.querySelector('.fixed.inset-x-3');
+            expect(toastShell).toBeInTheDocument();
+            expect(toastShell).toHaveClass('bottom-4', 'sm:right-6', 'sm:bottom-6');
+
+            const toast = toastShell?.querySelector('.max-w-full');
+            expect(toast).toHaveClass('sm:max-w-sm');
         });
     });
 

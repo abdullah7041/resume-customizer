@@ -6,6 +6,7 @@ import { cn } from "../../lib/utils/cn";
 import { ExternalLink, Github, Linkedin, Mail, Phone, MapPin } from "lucide-react";
 import { getTemplate } from "./registry";
 import type { TemplateId } from "../../types/templates";
+import { detectResumeDirection, type ResumeDirection } from "../../lib/utils/resumeDirection";
 
 // Helper to safely render a value (handles strings, objects, arrays, and React Elements)
 import { isValidElement } from "react";
@@ -335,9 +336,10 @@ interface TemplateRendererProps {
   template: { id: string; structure: unknown; formatting?: unknown };
   userData?: UserData;
   aiAnalysisResult?: Record<string, unknown> | null;
+  contentDirection?: ResumeDirection;
 }
 
-export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult = null }: TemplateRendererProps) {
+export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult = null, contentDirection }: TemplateRendererProps) {
   // Get display options from store (user's formatting preferences)
   const displayOptions = useResumeStore((state) => state.displayOptions);
 
@@ -357,6 +359,9 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
     const templateId = template.id as TemplateId;
     return getTemplate(templateId);
   }, [template.id]);
+
+  const resumeDirection = contentDirection ?? detectResumeDirection(finalData);
+  const textAlign = resumeDirection === 'rtl' ? 'right' : 'left';
 
   // CSS variables for formatting - applied to all templates
   const formattingStyles = {
@@ -378,16 +383,15 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
     return (
       <div
         data-resume-preview
-        dir="ltr"
+        dir={resumeDirection}
         style={{
           ...formattingStyles,
-          // Force LTR for resume content regardless of UI language
-          direction: 'ltr',
-          textAlign: 'left',
+          direction: resumeDirection,
+          textAlign,
           unicodeBidi: 'isolate',
         }}
       >
-        <TemplateComponent resume={finalData} displayOptions={displayOptions} />
+        <TemplateComponent resume={finalData} displayOptions={displayOptions} contentDirection={resumeDirection} />
       </div>
     );
   }
@@ -396,11 +400,11 @@ export default function TemplateRenderer({ template, userData = {}, aiAnalysisRe
   return (
     <div
       data-resume-preview
-      dir="ltr"
+      dir={resumeDirection}
       style={{
         ...formattingStyles,
-        direction: 'ltr',
-        textAlign: 'left',
+        direction: resumeDirection,
+        textAlign,
         unicodeBidi: 'isolate',
       }}
     >

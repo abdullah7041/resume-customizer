@@ -95,7 +95,7 @@ describe('extract-resume-json function', () => {
 
     it('handles file input with pre-extraction success', async () => {
         // Realistic pre-extracted text with ≥5 words to pass the word-level isReadableText check
-        const mockText = "PDF User Software Engineer Python Django REST APIs cloud infrastructure five years experience";
+        const mockText = "PDF User Software Engineer Python Django REST APIs cloud infrastructure five years experience leading teams and delivering measurable outcomes across enterprise projects.";
         const mockAnalysis = {
             basics: { name: "PDF User" },
             meta: { raw_text: mockText }
@@ -121,16 +121,11 @@ describe('extract-resume-json function', () => {
 
         const body = JSON.parse(result.body);
         expect(body.document.plainText).toBe(mockText);
-        // Should rely on pre-extraction
+        expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(mockText, false);
     });
 
-    it('fails gracefully when Gemini returns placeholder', async () => {
-        const placeholderText = "Please provide the resume text";
+    it('rejects scanned PDFs without attempting inline PDF AI fallback', async () => {
         mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue("");
-        mockGeminiClient.parseResumeOnly.mockResolvedValue({
-            meta: { raw_text: placeholderText },
-            plainText: placeholderText
-        });
 
         const event = {
             httpMethod: 'POST',
@@ -143,8 +138,32 @@ describe('extract-resume-json function', () => {
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
-        // Expect 422 Unprocessable Entity as defined in the handler logic
         expect(result.statusCode).toBe(422);
+        expect(JSON.parse(result.body).error).toContain('Could not extract readable text');
+        expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
+    });
+
+    it('rejects low-text file extraction without sending unreadable content to AI', async () => {
+        mockResumeText.inferMimeType.mockReturnValue('application/pdf');
+        mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue("Name only");
+
+        const event = {
+            httpMethod: 'POST',
+            body: JSON.stringify({
+                kind: 'file',
+                name: 'low-text.pdf',
+                data: Buffer.from('low-text-pdf').toString('base64'),
+                mime: 'application/pdf'
+            }),
+            headers: { 'X-Beta-Code': 'WATHEQ01' }
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as any, mockContext) as HandlerResponse;
+        const body = JSON.parse(result.body);
+
+        expect(result.statusCode).toBe(422);
+        expect(body.details).toContain('Scanned or image-only resumes are not currently supported');
+        expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
     });
 
     it('handles Gemini API errors', async () => {
@@ -173,11 +192,6 @@ describe('extract-resume-json function', () => {
         mockResumeText.inferMimeType.mockReturnValue('application/pdf');
         mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue(cidGarbage);
 
-        mockGeminiClient.parseResumeOnly.mockResolvedValue({
-            meta: { raw_text: 'I cannot extract text from this content.' },
-            plainText: ''
-        });
-
         const event = {
             httpMethod: 'POST',
             body: JSON.stringify({
@@ -191,7 +205,8 @@ describe('extract-resume-json function', () => {
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
         // CID garbage must NOT return 200 OK with empty structured data
-        expect(result.statusCode).not.toBe(200);
+        expect(result.statusCode).toBe(422);
+        expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
     });
 
     it('rejects CID-font garbage sent as kind:text (server-side defense-in-depth)', async () => {
