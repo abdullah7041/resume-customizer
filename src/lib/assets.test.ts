@@ -186,8 +186,21 @@ describe("getSkylineUrl", () => {
     vi.stubEnv("VITE_BUILD_ID", "build-xyz");
     const { getSkylineUrl } = await loadModule();
     expect(getSkylineUrl()).toBe(
-      "https://project.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?apikey=anon-456&v=build-xyz",
+      "https://project.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?apikey=anon-456&v=build-xyz",
     );
+  });
+
+  it("uses separate desktop and mobile skyline asset URLs", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon-456");
+    vi.stubEnv("VITE_BUILD_ID", "build-xyz");
+    const { getSkylineUrls } = await loadModule();
+    expect(getSkylineUrls()).toEqual({
+      desktop:
+        "https://project.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?apikey=anon-456&v=build-xyz",
+      mobile:
+        "https://project.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-mobile-1080x1920.avif?apikey=anon-456&v=build-xyz",
+    });
   });
 
   it("falls back to a Saudi gradient when env config is missing", async () => {
@@ -203,15 +216,17 @@ describe("getSkylineUrl", () => {
     warnSpy.mockRestore();
   });
 
-  it("builds one clean URL for ui-assets/KAFDH.webp with no double slashes", async () => {
+  it("builds one clean URL for the desktop skyline asset with no double slashes", async () => {
     vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
     const { getSkylineUrl, __internal } = await loadModule();
     __internal.resetCache();
     const skyline = getSkylineUrl();
-    expect(skyline).toContain("/storage/v1/object/public/ui-assets/KAFDH.webp");
+    expect(skyline).toContain(
+      "/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif",
+    );
     expect(skyline).not.toContain("//storage");
-    expect(skyline).not.toContain("/KAFDH.webp/KAFDH.webp");
-    expect(skyline).not.toContain("KAFDH.webpKAFDH.webp");
+    expect(skyline).not.toContain("/kafdh-hero-desktop-1920x1080.avif/kafdh-hero-desktop-1920x1080.avif");
+    expect(skyline).not.toContain("kafdh-hero-desktop-1920x1080.avifkafdh-hero-desktop-1920x1080.avif");
   });
 
   it("rejects full object env and ensures DEV warning", async () => {
@@ -230,7 +245,7 @@ describe("getSkylineUrl", () => {
       expect.stringContaining("https://cwcjeujextkwpmzdfzdz.supabase.co"),
     );
     expect(skyline).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=__dev__",
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?v=__dev__",
     );
     warnSpy.mockRestore();
   });
@@ -255,7 +270,7 @@ describe("getSkylineUrl", () => {
     const second = getSkylineUrl();
     expect(first).toBe(second);
     expect(first).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/KAFDH.webp?v=build-456",
+      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?v=build-456",
     );
   });
 });

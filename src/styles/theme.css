@@ -1,11 +1,11 @@
 :root {
   /* Atmosphere - Light Mode */
-  --bg: #f8faf9;
-  --surface: #ffffff;
-  --surface-strong: #f1f5f4;
-  --surface-glass-rgb: 255 255 255;
-  --surface-glass: rgba(255, 255, 255, 0.65);
-  --surface-glass-strong: rgba(255, 255, 255, 0.82);
+  --bg: #f3f7f5;
+  --surface: #fbfcfa;
+  --surface-strong: #eef6f2;
+  --surface-glass-rgb: 251 252 250;
+  --surface-glass: rgba(251, 252, 250, 0.65);
+  --surface-glass-strong: rgba(251, 252, 250, 0.82);
   --ink: #021715;
   --ink-muted: color-mix(in oklab, var(--ink), rgba(122, 189, 177, 0.42) 65%);
   --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 80%);
@@ -21,8 +21,8 @@
   --accent-gold-soft: rgba(197, 160, 89, 0.2);
 
   /* Panels - Light Mode */
-  --panel-bg: color-mix(in oklab, rgba(255, 255, 255, 0.78), transparent 8%);
-  --panel-stroke: color-mix(in oklab, rgba(15, 118, 110, 0.2), transparent 42%);
+  --panel-bg: color-mix(in oklab, rgba(251, 252, 250, 0.78), transparent 8%);
+  --panel-stroke: rgba(13, 84, 72, 0.12);
   --panel-highlight: color-mix(in oklab, rgba(52, 211, 153, 0.15), transparent 40%);
 
   /* Elevation + sheen - Light Mode */
@@ -109,8 +109,8 @@
   --gradient-primary-value: linear-gradient(135deg, rgba(7, 89, 81, 0.95) 0%, rgba(15, 118, 110, 0.9) 38%, rgba(34, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
   --gradient-primary-soft: linear-gradient(135deg, rgba(13, 148, 136, 0.82) 0%, rgba(45, 197, 159, 0.74) 45%, rgba(162, 255, 217, 0.65) 100%);
   --gradient-emerald: linear-gradient(135deg, rgba(14, 164, 114, 0.95) 0%, rgba(52, 211, 153, 0.9) 100%);
-  --gradient-muted-value: linear-gradient(120deg, rgba(241, 245, 249, 0.8) 0%, rgba(226, 232, 240, 0.6) 52%, rgba(203, 213, 225, 0.4) 100%);
-  --gradient-card-value: linear-gradient(150deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 48%, rgba(241, 245, 249, 0.7) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(238, 246, 242, 0.8) 0%, rgba(224, 236, 230, 0.6) 52%, rgba(208, 224, 216, 0.4) 100%);
+  --gradient-card-value: linear-gradient(150deg, rgba(251, 252, 250, 0.9) 0%, rgba(243, 247, 245, 0.8) 48%, rgba(238, 246, 242, 0.7) 100%);
   --gradient-halo: radial-gradient(circle at 18% 0%, rgba(15, 118, 110, 0.1) 0%, rgba(15, 118, 110, 0) 60%);
 
   --shadow-card-value: var(--shadow-card);
@@ -132,18 +132,18 @@
   --button-primary-shadow-strong: 0 16px 32px -12px rgba(52, 211, 153, 0.4), 0 12px 24px -10px rgba(3, 47, 44, 0.3);
   --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 65%, var(--secondary));
 
-  --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
+  --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(251, 252, 250, 0.8) 0%, rgba(251, 252, 250, 0) 70%);
 }
 
 :root.dark,
 .dark {
-  --bg: radial-gradient(circle at 24% -12%, rgba(13, 78, 70, 0.62) 0%, rgba(3, 22, 27, 0.94) 45%),
-    linear-gradient(160deg, #021114 0%, #031a1c 48%, #041f1c 100%);
-  --surface: color-mix(in oklab, rgba(5, 27, 29, 0.86), transparent 6%);
-  --surface-strong: rgba(4, 26, 27, 0.94);
-  --surface-glass-rgb: 10 52 52;
-  --surface-glass: rgba(7, 42, 44, 0.65);
-  --surface-glass-strong: rgba(18, 74, 74, 0.82);
+  --bg: radial-gradient(circle at 24% -12%, rgba(16, 185, 129, 0.35) 0%, rgba(3, 23, 19, 0.96) 45%),
+    linear-gradient(160deg, #031713 0%, #041c17 48%, #052a22 100%);
+  --surface: color-mix(in oklab, rgba(6, 35, 29, 0.9), transparent 6%);
+  --surface-strong: rgba(8, 43, 35, 0.94);
+  --surface-glass-rgb: 11 51 42;
+  --surface-glass: rgba(11, 51, 42, 0.65);
+  --surface-glass-strong: rgba(11, 51, 42, 0.82);
   --ink: #f1fcf7;
   --ink-muted: color-mix(in oklab, var(--ink), rgba(122, 189, 177, 0.42) 45%);
   --ink-soft: color-mix(in oklab, var(--ink), rgba(104, 168, 156, 0.45) 60%);
@@ -157,32 +157,32 @@
   --accent-gold: #c5a059;
   --accent-gold-soft: rgba(197, 160, 89, 0.2);
 
-  --panel-bg: color-mix(in oklab, rgba(7, 42, 44, 0.78), transparent 8%);
-  --panel-stroke: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 42%);
+  --panel-bg: color-mix(in oklab, rgba(11, 51, 42, 0.78), transparent 8%);
+  --panel-stroke: rgba(16, 185, 129, 0.16);
   --panel-highlight: color-mix(in oklab, rgba(52, 211, 153, 0.38), transparent 40%);
 
   --shadow-card:
-    0 0 0 1px rgba(15, 118, 110, 0.14),
-    0 28px 60px -24px rgba(1, 10, 12, 0.85),
-    0 24px 56px -28px rgba(9, 96, 84, 0.5);
+    0 0 0 1px rgba(16, 185, 129, 0.14),
+    0 28px 60px -24px rgba(0, 10, 8, 0.85),
+    0 24px 56px -28px rgba(16, 185, 129, 0.35);
   --shadow-soft:
-    0 0 0 1px rgba(15, 118, 110, 0.1),
-    0 18px 48px -26px rgba(0, 12, 15, 0.85),
-    0 16px 36px -24px rgba(18, 112, 92, 0.45);
+    0 0 0 1px rgba(16, 185, 129, 0.1),
+    0 18px 48px -26px rgba(0, 10, 8, 0.85),
+    0 16px 36px -24px rgba(16, 185, 129, 0.3);
   --shadow-lift:
-    0 0 0 1px rgba(30, 185, 153, 0.2),
-    0 32px 68px -24px rgba(30, 185, 153, 0.5),
-    0 24px 64px -26px rgba(11, 132, 111, 0.45);
+    0 0 0 1px rgba(16, 185, 129, 0.2),
+    0 32px 68px -24px rgba(16, 185, 129, 0.45),
+    0 24px 64px -26px rgba(16, 185, 129, 0.4);
   --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 68px -30px rgba(52, 211, 153, 0.45);
-  --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.55);
+  --shadow-ring: 0 0 0 1px rgba(16, 185, 129, 0.5);
 
-  --glass-border: color-mix(in oklab, rgba(15, 118, 110, 0.45), transparent 55%);
-  --glass-border-strong: color-mix(in oklab, rgba(34, 211, 185, 0.75), transparent 35%);
+  --glass-border: rgba(16, 185, 129, 0.16);
+  --glass-border-strong: rgba(45, 212, 191, 0.28);
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 65%);
   --glass-gold-sheen: linear-gradient(125deg, rgba(244, 211, 125, 0.26) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(244, 211, 125, 0.14) 100%);
 
   --surface-900: var(--bg);
-  --surface-900-rgb: 2 23 21;
+  --surface-900-rgb: 3 23 19;
   --ink-900: var(--ink);
   --ink-900-rgb: 241 252 247;
   --ink-500: var(--ink-muted);
@@ -209,10 +209,10 @@
   --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 65%, rgba(255, 255, 255, 0) 100%);
   --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 70%, var(--secondary));
 
-  --gradient-primary-value: linear-gradient(135deg, rgba(7, 89, 81, 0.95) 0%, rgba(15, 118, 110, 0.9) 38%, rgba(34, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
-  --gradient-primary-soft: linear-gradient(135deg, rgba(7, 100, 92, 0.82) 0%, rgba(15, 118, 110, 0.76) 46%, rgba(34, 211, 153, 0.66) 100%);
-  --gradient-muted-value: linear-gradient(120deg, rgba(12, 60, 56, 0.55) 0%, rgba(15, 118, 110, 0.45) 52%, rgba(52, 211, 153, 0.36) 100%);
-  --gradient-card-value: linear-gradient(150deg, rgba(11, 60, 56, 0.5) 0%, rgba(6, 30, 32, 0.65) 48%, rgba(22, 98, 85, 0.45) 100%);
+  --gradient-primary-value: linear-gradient(135deg, rgba(6, 95, 70, 0.95) 0%, rgba(16, 185, 129, 0.9) 38%, rgba(52, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
+  --gradient-primary-soft: linear-gradient(135deg, rgba(6, 95, 70, 0.82) 0%, rgba(16, 185, 129, 0.76) 46%, rgba(52, 211, 153, 0.66) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(6, 35, 29, 0.6) 0%, rgba(8, 43, 35, 0.5) 52%, rgba(16, 185, 129, 0.35) 100%);
+  --gradient-card-value: linear-gradient(150deg, rgba(6, 35, 29, 0.55) 0%, rgba(4, 28, 23, 0.7) 48%, rgba(11, 51, 42, 0.5) 100%);
   --gradient-emerald: linear-gradient(135deg, rgba(14, 164, 114, 0.95) 0%, rgba(52, 211, 153, 0.9) 100%);
 
   --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%);

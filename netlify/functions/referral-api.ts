@@ -34,6 +34,24 @@ function isHttpError(error: unknown): error is HttpError {
     );
 }
 
+function summarizeErrorForLog(error: unknown) {
+    if (error instanceof Error) {
+        return {
+            name: error.name,
+            message: redactForLog(error.message)
+        };
+    }
+
+    if (isHttpError(error)) {
+        return {
+            statusCode: error.statusCode,
+            message: redactForLog(error.message)
+        };
+    }
+
+    return redactForLog(error);
+}
+
 async function getAuthenticatedEmail(event: Parameters<Handler>[0]): Promise<string> {
     const authHeader = event.headers.authorization || event.headers.Authorization;
 
@@ -75,7 +93,7 @@ async function handleGetLink(email: string) {
         .single();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('[referral-api] Fetch error:', fetchError);
+        console.error('[referral-api] Fetch error:', summarizeErrorForLog(fetchError));
         throw new Error('Failed to fetch user data');
     }
 
@@ -91,7 +109,7 @@ async function handleGetLink(email: string) {
             .eq('email', email);
 
         if (updateError) {
-            console.error('[referral-api] Update error:', updateError);
+            console.error('[referral-api] Update error:', summarizeErrorForLog(updateError));
             throw new Error('Failed to save referral code');
         }
 
@@ -158,7 +176,7 @@ const handler: Handler = async (event) => {
                         body: JSON.stringify({ success: true, ...result }),
                     };
                 } catch (linkError) {
-                    console.error('[referral-api] get-link error:', linkError);
+                    console.error('[referral-api] get-link error:', summarizeErrorForLog(linkError));
                     return {
                         statusCode: 500,
                         body: JSON.stringify({
@@ -210,7 +228,7 @@ const handler: Handler = async (event) => {
         };
 
     } catch (error: unknown) {
-        console.error('[referral-api] Error:', error);
+        console.error('[referral-api] Error:', summarizeErrorForLog(error));
 
         // Handle custom errors with statusCode
         if (isHttpError(error)) {

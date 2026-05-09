@@ -1,6 +1,6 @@
 import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, UserPlus, LogIn, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
@@ -27,7 +27,6 @@ const LandingPage = lazy(() => import("../../pages/LandingPage"));
 import { GlassTabs } from "../ui/GlassTabs";
 import { ComparisonTable } from "../ui/ComparisonTable";
 import Toast, { ToastContainer } from "../ui/Toast";
-import EmptyState from "../ui/EmptyState";
 import { GlassButton } from "../ui/GlassButton";
 import { ParallaxContainer } from "../ui/ParallaxSection";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
@@ -36,6 +35,7 @@ import ViewTextModal from "../ui/ViewTextModal";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
+import { emitHRSuperSaudEvent } from "../../features/hr-super-saud";
 
 /** Lightweight skeleton shown while lazy sections load */
 function SectionSkeleton() {
@@ -181,10 +181,6 @@ export default function MainContent() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
   const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[] } | null>(null);
-  const [showLanding, _setShowLanding] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !window.localStorage.getItem("watheq:landingSeen");
-  });
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
 
@@ -507,6 +503,7 @@ export default function MainContent() {
         setOptimizations([]);
         setOptimizationData(null);
         setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+        emitHRSuperSaudEvent('resume.uploaded');
         pushToast(
           {
             type: "success",
@@ -520,6 +517,7 @@ export default function MainContent() {
         return enriched;
       } catch (error) {
         setFlowProgress(0);
+        emitHRSuperSaudEvent('error.generic');
         pushToast(
           {
             type: "danger",
@@ -600,6 +598,9 @@ export default function MainContent() {
           // The old guard (baselineMatchScore === null) prevented updates when the user
           // re-analyzed with a different job description.
           setBaselineMatchScore(result.score);
+          emitHRSuperSaudEvent(result.score >= 70 ? 'match.high' : 'match.low', {
+            score: result.score,
+          });
         }
 
         pushToast(
@@ -615,6 +616,7 @@ export default function MainContent() {
         return result;
       } catch (error) {
         setFlowProgress(0);
+        emitHRSuperSaudEvent('error.generic');
         pushToast(
           {
             type: "danger",
@@ -778,6 +780,14 @@ export default function MainContent() {
               : null,
           });
         }
+        emitHRSuperSaudEvent('optimize.success', {
+          score: result.matchScoring?.afterScore
+            ?? (
+              result.matchScoring?.beforeScore != null && (result.matchScoring?.estimatedImprovement ?? result.matchScoring?.improvement) != null
+                ? result.matchScoring.beforeScore + (result.matchScoring.estimatedImprovement ?? result.matchScoring.improvement)
+                : null
+            ),
+        });
         pushToast(
           {
             type: result.source === "gemini" && result.cards?.length > 0 ? "success" : "warning",
@@ -799,6 +809,7 @@ export default function MainContent() {
         return result;
       } catch (error: any) {
         setFlowProgress(0);
+        emitHRSuperSaudEvent('error.generic');
 
         // Error handling logic moved from invalid 2nd argument of optimizeResume
         const status = typeof error?.status === "number" ? error.status : null;
@@ -1071,6 +1082,7 @@ export default function MainContent() {
         }
       } catch (error) {
         console.error("Export error:", error);
+        emitHRSuperSaudEvent('error.generic');
         pushToast({
           type: "danger",
           title: t("toasts.exportFailed"),
@@ -1230,7 +1242,17 @@ export default function MainContent() {
     </ParallaxContainer>
   );
 
-  if (!loading && !user && showLanding) {
+  if (!user) {
+    if (loading) {
+      return (
+        <div className="relative isolate z-20 flex-1 flex flex-col w-full h-full">
+          <ToastContainer>{renderedToasts}</ToastContainer>
+          <div className="flex-1 flex items-center justify-center p-8">
+            <SectionSkeleton />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="relative isolate z-20 flex-1 flex flex-col w-full h-full">
         <ToastContainer>{renderedToasts}</ToastContainer>
@@ -1332,24 +1354,8 @@ export default function MainContent() {
                 <div className="h-full w-1/2 animate-shimmer bg-gradient-to-r from-transparent via-surface-50/40 to-transparent" />
               </div>
             </div>
-          ) : user ? (
-            workspace
           ) : (
-            <EmptyState
-              icon={UserPlus}
-              title={t("workspace.signInToUnlock")}
-              description={t("workspace.signInDescription")}
-              actions={
-                <GlassButton
-                  variant="secondary"
-                  onClick={signInWithGoogle}
-                  className="justify-center text-[15px] font-semibold"
-                >
-                  <LogIn className="w-4 h-4 me-2" />
-                  {t("workspace.signInViaGoogle")}
-                </GlassButton>
-              }
-            />
+            workspace
           )}
         </div>
         {isDev && aiDebug && (

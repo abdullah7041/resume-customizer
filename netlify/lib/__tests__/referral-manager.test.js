@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { addCreditsMock, supabaseMock } = vi.hoisted(() => ({
+const {
+  addCreditsMock,
+  sendReferralRewardRefereeMock,
+  sendReferralRewardReferrerMock,
+  supabaseMock,
+} = vi.hoisted(() => ({
   addCreditsMock: vi.fn(),
+  sendReferralRewardRefereeMock: vi.fn(),
+  sendReferralRewardReferrerMock: vi.fn(),
   supabaseMock: {
     from: vi.fn(),
     rpc: vi.fn(),
@@ -14,6 +21,11 @@ vi.mock('@supabase/supabase-js', () => ({
 
 vi.mock('../credit-manager.js', () => ({
   addCredits: addCreditsMock,
+}));
+
+vi.mock('../email-service.js', () => ({
+  sendReferralRewardReferee: sendReferralRewardRefereeMock,
+  sendReferralRewardReferrer: sendReferralRewardReferrerMock,
 }));
 
 vi.mock('../sentry.js', () => ({
@@ -92,6 +104,8 @@ describe('ReferralManager tracking idempotency', () => {
   function setServerEnv() {
     process.env.SUPABASE_URL = 'https://server.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    sendReferralRewardRefereeMock.mockResolvedValue({ success: true });
+    sendReferralRewardReferrerMock.mockResolvedValue({ success: true });
   }
 
   it('awards referral credits only after the relationship write returns a row', async () => {
@@ -127,6 +141,18 @@ describe('ReferralManager tracking idempotency', () => {
       'referral_reward',
       expect.objectContaining({ referrer_email: 'referrer@example.com' })
     );
+    expect(sendReferralRewardReferrerMock).toHaveBeenCalledWith(
+      'referrer@example.com',
+      'Watheq user',
+      'a Watheq user',
+      'en'
+    );
+    expect(sendReferralRewardRefereeMock).toHaveBeenCalledWith(
+      'new-user@example.com',
+      'Watheq user',
+      'a Watheq user',
+      'en'
+    );
   });
 
   it('does not award duplicate credits when the referee already has a referrer', async () => {
@@ -154,6 +180,8 @@ describe('ReferralManager tracking idempotency', () => {
     });
     expect(updateMock.spies.is).toHaveBeenCalledWith('referred_by_email', null);
     expect(addCreditsMock).not.toHaveBeenCalled();
+    expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
+    expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
   });
 
   it('does not award credits when the referee credit row is missing', async () => {
@@ -179,5 +207,7 @@ describe('ReferralManager tracking idempotency', () => {
       error: 'Referral record not found',
     });
     expect(addCreditsMock).not.toHaveBeenCalled();
+    expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
+    expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
   });
 });

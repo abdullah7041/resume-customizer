@@ -279,37 +279,60 @@ export const publicAssetUrl = (bucket: string, objectPath: string) => {
 };
 
 const SKYLINE_BUCKET = "ui-assets";
-const SKYLINE_OBJECT_PATH = "KAFDH.webp";
+const SKYLINE_DESKTOP_OBJECT_PATH = "kafdh-hero-desktop-1920x1080.avif";
+const SKYLINE_MOBILE_OBJECT_PATH = "kafdh-hero-mobile-1080x1920.avif";
 
 const FALLBACK_SKYLINE_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#063F36" stop-opacity="0.85"/><stop offset="0.5" stop-color="#0F766E" stop-opacity="0.82"/><stop offset="1" stop-color="#34D399" stop-opacity="0.72"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><g opacity="0.32" stroke="#E2F8EE" stroke-width="1.2"><path d="M160 720V420l120-60 120 60v300"/><path d="M520 720V360l140-80 140 80v360"/><path d="M880 720V300l160-90 160 90v420"/><path d="M1240 720V420l120-60 120 60v300"/></g><g opacity="0.18" fill="#E2F8EE"><circle cx="320" cy="240" r="36"/><circle cx="1280" cy="200" r="42"/><circle cx="1040" cy="160" r="24"/></g></svg>';
 
 const FALLBACK_SKYLINE_URL = `data:image/svg+xml,${encodeURIComponent(FALLBACK_SKYLINE_SVG)}`;
 
-let memoizedSkylineUrl: string | null = null;
+type SkylineUrls = {
+  desktop: string;
+  mobile: string;
+};
 
-export const getSkylineUrl = () => {
-  if (!memoizedSkylineUrl) {
+let memoizedSkylineUrls: SkylineUrls | null = null;
+
+export const getSkylineUrls = () => {
+  if (!memoizedSkylineUrls) {
     try {
-      const resolvedUrl = publicAssetUrl(SKYLINE_BUCKET, SKYLINE_OBJECT_PATH);
-      memoizedSkylineUrl = resolvedUrl ? withVersion(resolvedUrl) : FALLBACK_SKYLINE_URL;
+      const resolvedDesktopUrl = publicAssetUrl(SKYLINE_BUCKET, SKYLINE_DESKTOP_OBJECT_PATH);
+      const resolvedMobileUrl = publicAssetUrl(SKYLINE_BUCKET, SKYLINE_MOBILE_OBJECT_PATH);
+      memoizedSkylineUrls =
+        resolvedDesktopUrl && resolvedMobileUrl
+          ? {
+            desktop: withVersion(resolvedDesktopUrl),
+            mobile: withVersion(resolvedMobileUrl),
+          }
+          : {
+            desktop: FALLBACK_SKYLINE_URL,
+            mobile: FALLBACK_SKYLINE_URL,
+          };
     } catch (error) {
       warnHostOnlyEnv(
         `[assets] Failed to resolve skyline asset: ${error instanceof Error ? error.message : String(error)
         }`,
       );
-      memoizedSkylineUrl = FALLBACK_SKYLINE_URL;
+      memoizedSkylineUrls = {
+        desktop: FALLBACK_SKYLINE_URL,
+        mobile: FALLBACK_SKYLINE_URL,
+      };
     }
   }
 
-  return memoizedSkylineUrl;
+  return memoizedSkylineUrls;
+};
+
+export const getSkylineUrl = () => {
+  return getSkylineUrls().desktop;
 };
 
 export const __internal = {
   resetCache() {
     cachedAssetsBaseHost = undefined;
     cachedSupabaseAnonKey = undefined;
-    memoizedSkylineUrl = null;
+    memoizedSkylineUrls = null;
     warnedMessages.clear();
   },
 };

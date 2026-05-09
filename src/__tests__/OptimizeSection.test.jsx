@@ -541,7 +541,7 @@ describe('OptimizeSection', () => {
     });
 
     describe('Export Flow Clarity', () => {
-        it('shows the optimized export path as HTML or print-based PDF', () => {
+        it('does not show the optimized export path after optimization', () => {
             mockStoreState.originalResume = { basics: { name: 'Test User' } };
             mockStoreState.optimizations = [
                 { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
@@ -549,35 +549,9 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection onExport={vi.fn()} canExport />);
 
-            expect(screen.getByText('Optimized export')).toBeInTheDocument();
-            expect(screen.getByText(/saves html to your account/i)).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /save html \/ print pdf/i })).toBeEnabled();
-        });
-
-        it('calls the existing optimized export path with styled Supabase-first semantics', async () => {
-            const onExport = vi.fn().mockResolvedValue(undefined);
-            mockStoreState.originalResume = { basics: { name: 'Test User' } };
-            mockStoreState.optimizations = [
-                { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
-            ];
-
-            renderWithProviders(<OptimizeSection onExport={onExport} canExport />);
-
-            fireEvent.click(screen.getByRole('button', { name: /save html \/ print pdf/i }));
-
-            await waitFor(() => {
-                expect(onExport).toHaveBeenCalledWith('styled', 'supabase');
-            });
-        });
-
-        it('disables optimized export until a resume is exportable', () => {
-            mockStoreState.optimizations = [
-                { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
-            ];
-
-            renderWithProviders(<OptimizeSection onExport={vi.fn()} canExport={false} />);
-
-            expect(screen.getByRole('button', { name: /save html \/ print pdf/i })).toBeDisabled();
+            expect(screen.queryByText('Optimized export')).not.toBeInTheDocument();
+            expect(screen.queryByText(/saves html to your account/i)).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /save html \/ print pdf/i })).not.toBeInTheDocument();
         });
     });
 

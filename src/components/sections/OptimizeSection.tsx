@@ -18,8 +18,6 @@ import {
   Info,
   TrendingUp,
   Share2,
-  Download,
-  Printer,
 } from 'lucide-react';
 
 const ShareScoreCard = lazy(() => import('../ui/ShareScoreCard'));
@@ -126,8 +124,6 @@ export function OptimizeSection({
   onUpgrade,
   hasMatchAnalysis: propHasMatchAnalysis = false,
   onClear,
-  onExport,
-  canExport = false,
   resumeText: propResumeText,
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
@@ -166,7 +162,6 @@ export function OptimizeSection({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
@@ -397,7 +392,6 @@ export function OptimizeSection({
       isScoreVerified,
     };
   }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore, verifiedScore]);
-
 
   // Generate optimizations from API
   const handleGenerateActual = async () => {
@@ -879,17 +873,6 @@ export function OptimizeSection({
     setSessionId(null);
   };
 
-  const handleOptimizedExport = async () => {
-    if (!onExport || isExporting) return;
-
-    try {
-      setIsExporting(true);
-      await onExport('styled', 'supabase');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const toggleCard = (sectionId: string) => {
     setExpandedCards(prev => {
       const newSet = new Set(prev);
@@ -1095,18 +1078,18 @@ export function OptimizeSection({
           )}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 opacity-100 group-hover:opacity-100 animate-gradient-xy transition-opacity" />
-          <div className="relative bg-gray-900/90 backdrop-blur-xl rounded-xl px-6 py-4 flex items-center justify-center gap-3 transition-colors group-hover:bg-gray-900/80">
+          <div className="relative bg-white/90 backdrop-blur-xl rounded-xl px-6 py-4 flex items-center justify-center gap-3 transition-colors group-hover:bg-white/80 dark:bg-gray-900/90 dark:group-hover:bg-gray-900/80">
             {isOptimizing ? (
               <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span className="text-white font-semibold tracking-wide">
+                <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-900 dark:border-white/30 dark:border-t-white rounded-full animate-spin" />
+                <span className="text-gray-900 dark:text-white font-semibold tracking-wide">
                   {t('sections.optimize.optimizingResume', 'Optimizing Resume...')}
                 </span>
               </>
             ) : (
               <>
-                <Sparkles className="w-5 h-5 text-purple-300 group-hover:text-white transition-colors" />
-                <span className="text-white font-bold tracking-wide">
+                <Sparkles className="w-5 h-5 text-purple-600 group-hover:text-purple-700 dark:text-purple-300 dark:group-hover:text-white transition-colors" />
+                <span className="text-gray-900 dark:text-white font-bold tracking-wide">
                   {hasResume
                     ? (
                       <>
@@ -1264,37 +1247,6 @@ export function OptimizeSection({
             onClose={() => setShowShareCard(false)}
           />
         </Suspense>
-      )}
-
-      {/* Score Breakdown — Detailed Category View */}
-      {optimizations.length > 0 && onExport && (
-        <GlassCard padding="md" className="mb-2">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
-                <Printer className="h-4 w-4 shrink-0 text-emerald-500" />
-                <span>{t('sections.optimize.export.title', 'Optimized export')}</span>
-              </div>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t(
-                  'sections.optimize.export.description',
-                  'Saves HTML to your account when available; otherwise opens browser print / Save as PDF.'
-                )}
-              </p>
-            </div>
-            <GlassButton
-              variant="secondary"
-              size="sm"
-              onClick={handleOptimizedExport}
-              disabled={!canExport || isExporting}
-              isLoading={isExporting}
-              leftIcon={<Download className="h-3.5 w-3.5" />}
-              className="w-full sm:w-auto"
-            >
-              {t('sections.optimize.export.action', 'Save HTML / Print PDF')}
-            </GlassButton>
-          </div>
-        </GlassCard>
       )}
 
       {

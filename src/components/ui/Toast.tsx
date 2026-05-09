@@ -66,7 +66,7 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
     <div
       role="status"
       className={cn(
-        "group pointer-events-auto relative overflow-hidden rounded-xl border bg-white/95 dark:bg-[#051315]/80 p-4 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:bg-white dark:hover:bg-[#051315]/90 shadow-lg",
+        "group pointer-events-auto relative overflow-hidden rounded-xl border bg-white/95 dark:bg-[#031713]/80 p-4 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:bg-white dark:hover:bg-[#031713]/90 shadow-lg",
         "animate-in slide-in-from-right-8 fade-in duration-300",
         variant.border,
         variant.glow

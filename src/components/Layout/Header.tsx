@@ -3,7 +3,7 @@ import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings }
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
-import { getSkylineUrl } from "../../lib/assets";
+import { getSkylineUrls } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
@@ -24,12 +24,12 @@ const getPrefersReducedMotion = () => {
 export default function Header() {
   const { t } = useTranslation();
   const { user, signInWithGoogle, signOut } = useAuth();
-  const skylineUrl = useMemo(() => getSkylineUrl(), []);
+  const skylineUrls = useMemo(() => getSkylineUrls(), []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
   const isFallbackSkyline = useMemo(
-    () => typeof skylineUrl === "string" && skylineUrl.startsWith("data:image/"),
-    [skylineUrl]
+    () => skylineUrls.desktop.startsWith("data:image/"),
+    [skylineUrls.desktop]
   );
   const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
@@ -40,11 +40,13 @@ export default function Header() {
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const showFixedSkyline = Boolean(user);
+  const isSignedOutHeader = !user;
 
   const [theme, toggleTheme] = useTheme();
 
   // Mouse tracking for interactive gradient
-  const handleMouseMove = useCallback((e) => {
+  const handleMouseMove = useCallback((e: MouseEvent<HTMLElement>) => {
     if (prefersReducedMotion) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setMousePosition({
@@ -83,34 +85,36 @@ export default function Header() {
 
   // Preload skyline image
   useEffect(() => {
-    if (typeof window === "undefined" || !skylineUrl) return undefined;
+    if (typeof window === "undefined") return undefined;
 
     const img = new Image();
     img.onload = () => setSkylineLoaded(true);
     img.onerror = () => setSkylineLoaded(false);
-    img.src = skylineUrl;
+    img.src = window.matchMedia("(max-width: 767px)").matches
+      ? skylineUrls.mobile
+      : skylineUrls.desktop;
 
     return () => {
       img.onload = null;
       img.onerror = null;
     };
-  }, [skylineUrl]);
+  }, [skylineUrls.desktop, skylineUrls.mobile]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !skylineUrl || !skylineLoaded || isFallbackSkyline) {
+    if (typeof window === "undefined" || !skylineLoaded || isFallbackSkyline) {
       return undefined;
     }
 
     setAnimateSkyline(true);
     const timer = setTimeout(() => setAnimateSkyline(false), 1800);
     return () => clearTimeout(timer);
-  }, [isFallbackSkyline, skylineLoaded, skylineUrl]);
+  }, [isFallbackSkyline, skylineLoaded]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateFromMediaQuery = (event) => {
+    const updateFromMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
       const shouldReduce = event.matches;
       setPrefersReducedMotion(shouldReduce);
     };
@@ -143,7 +147,12 @@ export default function Header() {
 
   return (
     <header
-      className="hero-bg-animate relative isolate flex flex-col overflow-hidden text-gray-900 dark:text-white h-auto pb-4"
+      className={cn(
+        "hero-bg-animate relative isolate flex flex-col overflow-hidden h-auto",
+        isSignedOutHeader
+          ? "bg-[#fbfcfa] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
+          : "text-gray-900 dark:text-white pb-4"
+      )}
       onMouseMove={handleMouseMove}
     >
       {/* Animated background effects */}
@@ -177,30 +186,48 @@ export default function Header() {
         <div className="absolute inset-0 opacity-[0.01] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
       </div>
 
-      {/* Skyline background - fixed to cover entire page */}
-      {typeof skylineUrl === "string" && skylineUrl && (
+      {showFixedSkyline && (
         <div
           role="img"
-          aria-label="Decorative skyline background"
+          aria-label="Decorative Riyadh skyline background"
           className={cn(
-            "fixed inset-0 -z-50 bg-no-repeat transition-opacity duration-700",
+            "fixed inset-0 -z-50 overflow-hidden transition-opacity duration-700",
             skylineLoaded && animateSkyline ? "skyline-once" : "skyline-still",
             skylineLoaded ? "opacity-100" : "opacity-0"
           )}
-          style={{
-            backgroundImage: `url('${skylineUrl}')`,
-            backgroundSize: 'cover',
-            backgroundPosition: '50% 35%',
-            opacity: 0.8,
-          }}
-        />
+        >
+          <picture className="absolute inset-0 block">
+            <source
+              media="(max-width: 767px)"
+              srcSet={skylineUrls.mobile}
+              type={isFallbackSkyline ? undefined : "image/avif"}
+            />
+            <img
+              src={skylineUrls.desktop}
+              alt=""
+              className="skyline-image"
+              decoding="async"
+              fetchPriority="high"
+              onLoad={() => setSkylineLoaded(true)}
+              onError={() => setSkylineLoaded(false)}
+            />
+          </picture>
+          <div className="skyline-readability-overlay" aria-hidden="true" />
+        </div>
       )}
 
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col">
         {/* Top navigation bar */}
-        <nav className="border-b border-gray-200 dark:border-white/5">
-          <div className={`${containerClass} flex items-center justify-between gap-4 py-4 sm:py-5`}>
+        <nav className={cn(
+          "border-b",
+          isSignedOutHeader
+            ? "border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-[#031713]/90"
+            : showFixedSkyline
+              ? "border-gray-200 dark:border-white/5"
+              : "border-slate-200/70 bg-white/85 backdrop-blur-xl"
+        )}>
+          <div className={`${containerClass} flex items-center justify-between gap-4 py-3.5 sm:py-4`}>
             {/* Logo section */}
             <div className="flex items-center gap-4 group">
               {/* Animated logo icon */}
@@ -215,18 +242,39 @@ export default function Header() {
 
               {/* Brand text */}
               <div className="flex flex-col">
-                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] text-white dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-emerald-200 dark:via-white dark:to-teal-200 uppercase drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                <p className={cn(
+                  "text-base sm:text-lg font-extrabold tracking-[0.2em] uppercase",
+                  isSignedOutHeader
+                    ? "text-slate-950 dark:text-white"
+                    : showFixedSkyline
+                    ? "text-white dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-emerald-200 dark:via-white dark:to-teal-200 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                    : "text-slate-950"
+                )}>
                   {t("common.appName")}
                 </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-sm sm:text-base font-bold text-white dark:text-emerald-200/80 tracking-wider drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none">
+                <div className={cn("items-center gap-2 mt-0.5", isSignedOutHeader ? "hidden sm:flex" : "flex")}>
+                  <p className={cn(
+                    "text-sm sm:text-base font-bold tracking-wider",
+                    isSignedOutHeader
+                      ? "text-slate-500 dark:text-white/55"
+                      : showFixedSkyline
+                      ? "text-white dark:text-emerald-200/80 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none"
+                      : "text-slate-500"
+                  )}>
                     {t("common.byAuthor")}
                   </p>
                   <a
                     href="https://www.linkedin.com/in/3binahmed/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center text-white dark:text-emerald-200/80 hover:text-[#0A66C2] dark:hover:text-[#0A66C2] transition-all duration-300 hover:scale-110 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none"
+                    className={cn(
+                      "inline-flex items-center justify-center transition-all duration-300 hover:scale-110 hover:text-[#0A66C2] dark:hover:text-[#0A66C2]",
+                      isSignedOutHeader
+                        ? "text-slate-500 dark:text-white/55"
+                        : showFixedSkyline
+                        ? "text-white dark:text-emerald-200/80 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none"
+                        : "text-slate-500"
+                    )}
                     aria-label="Visit LinkedIn profile"
                   >
                     <Linkedin className="h-6 w-6" />
@@ -238,7 +286,12 @@ export default function Header() {
             {/* Badge - moved from Hero - Now clickable with flip animation */}
             <button
               onClick={() => setBadgeFlipped(!badgeFlipped)}
-              className="hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide bg-white/90 dark:bg-black/40 backdrop-blur-xl border border-gray-300 dark:border-white/10 shadow-sm ml-4 cursor-pointer hover:border-emerald-400/50 transition-all duration-300 hover:scale-105 group"
+              className={cn(
+                "hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-all duration-300 hover:scale-105 group",
+                isSignedOutHeader
+                  ? "border border-slate-200 bg-white text-emerald-700 hover:border-emerald-300 dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
+                  : "bg-white/90 dark:bg-black/40 border border-gray-300 dark:border-white/10 hover:border-emerald-400/50"
+              )}
               aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
               title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
             >
@@ -248,7 +301,12 @@ export default function Header() {
               </span>
               <span
                 key={badgeFlipped ? 'alt' : 'main'}
-                className="bg-gradient-to-r from-emerald-700 to-teal-700 dark:from-emerald-300 dark:to-teal-300 bg-clip-text text-transparent uppercase animate-[flipIn_0.5s_ease-in-out]"
+                className={cn(
+                  "uppercase animate-[flipIn_0.5s_ease-in-out]",
+                  isSignedOutHeader
+                    ? "text-emerald-700 dark:text-emerald-200"
+                    : "bg-gradient-to-r from-emerald-700 to-teal-700 dark:from-emerald-300 dark:to-teal-300 bg-clip-text text-transparent"
+                )}
               >
                 {badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
               </span>
@@ -258,7 +316,12 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-3">
               <button
                 onClick={toggleTheme}
-                className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/80 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 text-gray-800 dark:text-white transition-all duration-300 hover:bg-white hover:text-emerald-600 dark:hover:bg-white/10 shadow-sm"
+                className={cn(
+                  "btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-all duration-300 shadow-sm",
+                  isSignedOutHeader
+                    ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                    : "bg-white/80 dark:bg-black/40 border-gray-300 dark:border-white/10 text-gray-800 dark:text-white hover:bg-white hover:text-emerald-600 dark:hover:bg-white/10"
+                )}
                 aria-label="Toggle Theme"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
@@ -316,7 +379,10 @@ export default function Header() {
                   onClick={signInWithGoogle}
                   variant="prominent"
                   size="md"
-                  className="group relative font-bold"
+                  className={cn(
+                    "group relative font-bold",
+                    isSignedOutHeader && "bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
+                  )}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                   <LogIn className="h-4 w-4 mr-2" />
@@ -328,7 +394,12 @@ export default function Header() {
             {/* Mobile: Hamburger menu button */}
             <button
               onClick={() => setMobileNavOpen(true)}
-              className="md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/40 dark:bg-white/5 border border-gray-300/40 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
+              className={cn(
+                "md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-all duration-300 active:scale-95",
+                isSignedOutHeader
+                  ? "bg-white border-slate-200 text-slate-950 hover:bg-slate-50 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                  : "bg-white/40 dark:bg-white/5 border-gray-300/40 dark:border-white/10 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10"
+              )}
               aria-label="Open navigation menu"
               aria-expanded={mobileNavOpen}
             >

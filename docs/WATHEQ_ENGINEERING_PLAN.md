@@ -32,6 +32,7 @@
 - Low-text/OCR service regression status: covered in `src/services/api.test.js`. Low-text PDF extraction now has a service-level regression proving the client sends `kind: "file"`, includes auth headers, calls the fallback callback, and surfaces a 422 without OCR-support claims.
 - Signed-out Optimize export fallback status: fixed in `src/components/Layout/MainContent.tsx`. Supabase-first Optimize export now warns signed-out users but falls through to the existing browser print / Save as PDF fallback instead of returning early.
 - Mixed Arabic/English direction status: fixed in `src/lib/utils/resumeDirection.ts` and covered across preview/export tests. `mixed` content now resolves to RTL, Optimize print HTML renders `dir="rtl"`, and Templates PDF/DOCX export paths receive RTL direction.
+- Referral email logging/notification status: fixed in `netlify/lib/email-service.js`, `netlify/lib/referral-manager.js`, and `netlify/functions/referral-api.ts`. Referral email logs no longer include raw names/referee names/referrer names, referral notifications no longer derive display names from email local-parts, and referral idempotency behavior remains covered.
 - Tests/checks that passed this session:
   - `rtk tsc`
   - `rtk lint` with 0 errors and 3 warnings in `src/components/Layout/MainContent.tsx`
@@ -42,6 +43,7 @@
   - `npm run test -- netlify/lib/__tests__/rate-limiter.test.ts`
   - `npm run test -- netlify/lib/__tests__/referral-manager.test.js`
   - `npm run test -- netlify/functions/__tests__/referral-api.test.ts`
+  - Latest `npm run quality:parallel` passed with 62 test files, 555 passed tests, 2 skipped tests, and 0 lint/type errors
   - `npx tsc -p netlify/tsconfig.json --noEmit`
   - `npm run type:check`
   - `npm run test -- netlify/functions/__tests__/admin-gates.test.ts netlify/lib/__tests__/admin-gates.test.ts netlify/functions/__tests__/optimize-stream.test.ts netlify/lib/__tests__/rate-limiter.test.ts`
@@ -111,34 +113,31 @@
 
 ### Pre-existing Issues Discovered But Not Caused By Current Diff
 
-- [ ] Email name/refereeName logging risk: `netlify/lib/email-service.js` redacts email addresses but still logs names/referee names in referral email paths.
+- [x] Email name/refereeName logging risk: referral email logs now avoid raw names/referee names/referrer names, and notification display names are no longer derived from email local-parts.
 - [ ] Some localStorage keys still use old/unprefixed names such as `airo:coverLetter`, `airo:lastJobDescription`, and `workflow-panel-*`.
-- [ ] Referral reward persistence and email notification behavior should be reviewed together after idempotency is fixed.
+- [x] Referral reward persistence and email notification behavior reviewed after idempotency fix; duplicate/already-referred and missing-referee-row paths do not send notifications or award duplicate credits.
 
 ## Next Recommended Task
 
-- Title: Review email referral name/refereeName logging risk and referral notification behavior.
-- Why it is next: upload regression coverage is confirmed and `MainContent.tsx` lint is clean; the next stabilization risk is referral email logging/persistence/notification behavior.
+- Title: Review old/unprefixed localStorage keys and migrate only with a compatibility-safe plan.
+- Why it is next: referral email logging/notification review is complete; the remaining stabilization queue item is local browser persistence key hygiene.
 - Files likely involved:
-  - `netlify/lib/email-service.js`
-  - `netlify/lib/referral-manager.js`
-  - `netlify/functions/referral-api.ts`
-  - Existing referral/email tests only as needed.
+  - `src/lib/stores/resumeStore.ts`
+  - `src/services/api.js`
+  - Existing localStorage/store tests only as needed.
 - Acceptance criteria:
-  - Referral email logs do not include raw names, referee names, emails, resume content, or other unnecessary PII.
-  - Referral reward persistence and notification behavior remains idempotent after the previous referral fix.
-  - Existing referral API and manager behavior remains intact.
+  - Inventory old/unprefixed keys such as `airo:coverLetter`, `airo:lastJobDescription`, and `workflow-panel-*`.
+  - Prefer a compatibility-safe migration or read-through fallback rather than breaking existing local user data.
+  - Do not change backend referral, scoring, exports, upload, creative backlog, or unrelated UI behavior.
 - Focused verification commands:
-  - `npm run test -- netlify/lib/__tests__/referral-manager.test.js`
-  - `npm run test -- netlify/functions/__tests__/referral-api.test.ts`
+  - Choose focused store/localStorage tests after inventory.
   - `npm run quality:parallel` when feasible
 - What not to touch:
-  - Do not change scoring, exports, direction, upload behavior, creative backlog, unrelated UI, or referral product rules outside the logging/notification risk.
+  - Do not change scoring, exports, direction, upload behavior, creative backlog, or referral behavior.
 
 ## Stabilization Priority Queue
 
-1. Review email referral name/refereeName logging risk, then review referral reward persistence and notification behavior together.
-2. Review old/unprefixed localStorage keys and migrate only with a compatibility-safe plan.
+1. Review old/unprefixed localStorage keys and migrate only with a compatibility-safe plan.
 
 ## Completed Since Last Handoff
 

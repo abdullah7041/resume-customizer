@@ -49,6 +49,17 @@ function getEmailHeaders(category = 'transactional') {
   };
 }
 
+function summarizeEmailError(error) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: redactForLog(error.message)
+    };
+  }
+
+  return redactForLog(error);
+}
+
 /**
  * Send credits refreshed email
  * Called when user's monthly credit allowance is reset
@@ -87,7 +98,6 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
 
     console.log('[email-service] Sending credits refreshed email', {
       email: redactForLog(userEmail),
-      name: userName,
       credits,
       language: lang
     });
@@ -103,14 +113,14 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
     });
 
     if (response.error) {
-      console.error('[email-service] Resend API error:', response.error);
+      console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
       return { success: false, error: response.error.message };
     }
 
     console.log('[email-service] Credits email sent successfully', { messageId: response.data.id });
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('[email-service] Failed to send credits email:', error);
+    console.error('[email-service] Failed to send credits email:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
 }
@@ -174,7 +184,6 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
 
     console.log('[email-service] Sending monthly summary email', {
       email: redactForLog(userEmail),
-      name: userName,
       stats: defaultStats,
       language: lang
     });
@@ -190,14 +199,14 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
     });
 
     if (response.error) {
-      console.error('[email-service] Resend API error:', response.error);
+      console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
       return { success: false, error: response.error.message };
     }
 
     console.log('[email-service] Monthly summary email sent successfully', { messageId: response.data.id });
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('[email-service] Failed to send monthly summary:', error);
+    console.error('[email-service] Failed to send monthly summary:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
 }
@@ -241,7 +250,7 @@ export async function sendTestEmail(testEmail) {
 
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('[email-service] Test email failed:', error);
+    console.error('[email-service] Test email failed:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
 }
@@ -288,14 +297,14 @@ export async function sendWaitlistNotification(userEmail, language = 'en', planT
     });
 
     if (response.error) {
-      console.error('[email-service] Resend API error:', response.error);
+      console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
       return { success: false, error: response.error.message };
     }
 
     console.log('[email-service] Waitlist notification sent successfully', { messageId: response.data.id });
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('[email-service] Failed to send waitlist notification:', error);
+    console.error('[email-service] Failed to send waitlist notification:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
 }
@@ -346,14 +355,14 @@ export async function sendWaitlistConfirmation(userEmail, language = 'en') {
     });
 
     if (response.error) {
-      console.error('[email-service] Resend API error:', response.error);
+      console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
       return { success: false, error: response.error.message };
     }
 
     console.log('[email-service] Waitlist confirmation sent successfully', { messageId: response.data.id });
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('[email-service] Failed to send waitlist confirmation:', error);
+    console.error('[email-service] Failed to send waitlist confirmation:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
 }
@@ -391,8 +400,6 @@ export async function sendReferralRewardReferrer(userEmail, userName, refereeNam
 
     console.log('[email-service] Sending referral reward email to referrer', {
       email: redactForLog(userEmail),
-      name: userName,
-      refereeName,
       language: lang
     });
 
@@ -413,14 +420,14 @@ export async function sendReferralRewardReferrer(userEmail, userName, refereeNam
     });
 
     if (response.error) {
-      console.error('[email-service] Resend API error:', response.error);
+      console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
       return { success: false, error: response.error.message };
     }
 
     console.log('[email-service] Referral reward email sent successfully', { messageId: response.data.id });
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('[email-service] Failed to send referral reward email:', error);
+    console.error('[email-service] Failed to send referral reward email:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
 }
@@ -458,8 +465,6 @@ export async function sendReferralRewardReferee(userEmail, userName, referrerNam
 
     console.log('[email-service] Sending referral reward email to referee', {
       email: redactForLog(userEmail),
-      name: userName,
-      referrerName,
       language: lang
     });
 
@@ -480,14 +485,14 @@ export async function sendReferralRewardReferee(userEmail, userName, referrerNam
     });
 
     if (response.error) {
-      console.error('[email-service] Resend API error:', response.error);
+      console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
       return { success: false, error: response.error.message };
     }
 
     console.log('[email-service] Referral reward email sent successfully', { messageId: response.data.id });
     return { success: true, messageId: response.data.id };
   } catch (error) {
-    console.error('[email-service] Failed to send referral reward email:', error);
+    console.error('[email-service] Failed to send referral reward email:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
 }

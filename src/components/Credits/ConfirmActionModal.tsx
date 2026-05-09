@@ -38,12 +38,12 @@ export function ConfirmActionModal({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
-
   const currentCredits = credits?.remaining || 0;
   const cost = FEATURE_COSTS[feature];
   const canProceed = currentCredits >= cost;
   const featureLabel = FEATURE_LABELS[feature];
+
+  if (!isOpen) return null;
 
   const handleConfirm = async () => {
     try {

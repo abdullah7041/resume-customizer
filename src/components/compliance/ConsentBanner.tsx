@@ -35,7 +35,7 @@ export function ConsentBanner() {
       <div
         className={cn(
           'relative overflow-hidden rounded-2xl border border-white/10',
-          'bg-[#0f172a]/80 supports-[backdrop-filter]:bg-[#0f172a]/60', // Deep dark blue/slate tinted background
+          'bg-[#031713]/80 supports-[backdrop-filter]:bg-[#031713]/60', // Deep emerald-black background
           'backdrop-blur-xl shadow-2xl shadow-black/50',
           'flex flex-col gap-4 p-5'
         )}

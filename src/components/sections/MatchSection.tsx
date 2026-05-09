@@ -511,7 +511,7 @@ export function MatchSection({
                 {whyOpen && (
                   <div
                     ref={popoverRef}
-                    className="absolute left-2 right-2 bottom-2 z-50 rounded-2xl border border-gray-200 dark:border-white/20 bg-white/90 dark:bg-slate-900/80 p-5 backdrop-blur-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200"
+                    className="absolute left-2 right-2 bottom-2 z-50 rounded-2xl border border-gray-200 dark:border-white/20 bg-white/90 dark:bg-[#041c17]/80 p-5 backdrop-blur-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200"
                   >
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-white/60">

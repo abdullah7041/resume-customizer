@@ -55,81 +55,13 @@
     },
     "usage": {
       "title": "Credit Usage",
-      "feedbackEarned": "From Feedback",
-      "referralEarned": "From Referrals",
-      "history": "Recent Activity",
+      "feedbackEarned": "From feedback",
+      "referralEarned": "From referrals",
+      "history": "Recent activity",
       "noTransactions": "No activity yet"
     },
-    "referralEarned": "🎉 Referral Bonus Earned!",
-    "referralEarnedDesc": "You earned {{creditsAdded}} credits from a successful referral. Keep sharing!"
-  },
-  "referrals": {
-    "yourLink": "Your Referral Link",
-    "yourStats": "Your Referral Stats",
-    "linkUnavailable": "Referral link unavailable",
-    "statsUnavailable": "Stats unavailable",
-    "shareInfo": "Share your link and earn +5 credits when friends sign up!",
-    "totalReferrals": "Total",
-    "completedReferrals": "Active",
-    "creditsEarned": "Earned",
-    "noReferralsYet": "Share your link to start earning credits!",
-    "pendingReferrals": "{{count}} referral(s) pending activation",
-    "allCompleted": "All referrals are active! 🎉",
-    "shareLinkedIn": "Share on LinkedIn",
-    "inviteEarn": "Invite & Earn",
-    "shareLink": "Share your unique link with friends.",
-    "youGet": "You get +5 credits",
-    "theyGet": "They get +5 credits"
-  },
-  "nav": {
-    "home": "Home",
-    "dashboard": "Dashboard",
-    "pricing": "Pricing",
-    "login": "Login",
-    "signup": "Sign Up",
-    "logout": "Logout",
-    "workflowSteps": {
-      "upload": "Upload & Parse Resume",
-      "match": "Match with Job",
-      "optimize": "Optimize with AI",
-      "download": "Review & Download",
-      "yourWorkflow": "Your Workflow",
-      "inProgress": "In Progress"
-    }
-  },
-  "header": {
-    "feedback": "Your Feedback",
-    "badge": "Verified AI - Real Data",
-    "badgeAlt": "Designed for Saudi ambition",
-    "heroTitle": "Watheq - AI Resume Optimizer",
-    "heroDescription": "Transform your experience into a compelling story. Our AI analyzes, matches, and optimizes your resume for the Saudi job market.",
-    "workflow": {
-      "title": "Your Workflow",
-      "step1": {
-        "title": "Upload or paste your resume",
-        "desc": "AI-powered parsing for PDF, DOCX"
-      },
-      "step2": {
-        "title": "Match against Saudi job roles",
-        "desc": "Get match score and missing keywords"
-      },
-      "step3": {
-        "title": "Optimize with AI precision",
-        "desc": "Premium suggestions for employers"
-      },
-      "step4": {
-        "title": "Analyze keywords for ATS",
-        "desc": "Beat applicant tracking systems"
-      },
-      "step5": {
-        "title": "Prepare for interviews",
-        "desc": "AI-generated questions and tips"
-      },
-      "step6": {
-        "title": "Generate cover letters",
-        "desc": "Tailored letters for each role"
-      }
-    },
+    "referralEarned": "Referral bonus earned!",
+    "referralEarnedDesc": "You received {{creditsAdded}} credits from a successful referral. Keep sharing!",
     "features": {
       "smartParsing": {
         "label": "Smart Parsing",
@@ -173,6 +105,24 @@
       }
     }
   },
+  "referrals": {
+    "yourLink": "Your referral link",
+    "yourStats": "Referral stats",
+    "linkUnavailable": "Referral link unavailable",
+    "statsUnavailable": "Referral stats unavailable",
+    "shareInfo": "Share your link and get +5 credits when a friend signs up.",
+    "totalReferrals": "Total",
+    "completedReferrals": "Active",
+    "creditsEarned": "Earned",
+    "noReferralsYet": "Share your link to earn credits.",
+    "pendingReferrals": "{{count}} referrals pending activation",
+    "allCompleted": "All referrals are active!",
+    "shareLinkedIn": "Share on LinkedIn",
+    "inviteEarn": "Invite friends and earn",
+    "shareLink": "Share your personal link with friends",
+    "youGet": "You get 5 credits",
+    "theyGet": "They get 5 credits"
+  },
   "tabs": {
     "resume": "Resume",
     "match": "Match",
@@ -191,6 +141,23 @@
     "signInToUnlock": "Sign in to unlock insights",
     "signInDescription": "Connect your account to securely upload resumes, run match analysis, and save optimization drafts.",
     "signInViaGoogle": "Sign in via Google"
+  },
+  "hrSuperSaud": {
+    "ready": "Ready when you are.",
+    "waveGreeting": "Hello. Ready to help you sharpen this application.",
+    "waveLabel": "Wave to HR Super Saud",
+    "moods": {
+      "confident": "On track",
+      "coach": "Career coach",
+      "caution": "Review needed"
+    },
+    "reactions": {
+      "resumeUploaded": "Resume received. Next, compare it with the role.",
+      "matchHigh": "Strong match. Review the evidence, then tailor with care.",
+      "matchLow": "There are gaps to close before this application is ready.",
+      "optimizeSuccess": "Optimization is ready. Review every suggestion before export.",
+      "errorGeneric": "Something did not complete. Save your work and try again."
+    }
   },
   "toasts": {
     "dataClearedTitle": "Data cleared",
@@ -250,8 +217,28 @@
     "skipBtn": "Skip for now",
     "submitBtn": "Submit Answers"
   },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "pricing": "Pricing",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "workflowSteps": {
+      "upload": "Upload & Parse",
+      "match": "Match Job",
+      "optimize": "AI Optimize",
+      "download": "Review & Export",
+      "yourWorkflow": "Your Workflow",
+      "inProgress": "In Progress"
+    }
+  },
+  "header": {
+    "badge": "Trusted AI · Real Data",
+    "badgeAlt": "Built for Ambitious Saudis"
+  },
   "landing": {
-    "trustBadge": "Built for Vision 2030 Talent",
+    "trustBadge": "Built for Saudi-market applications",
     "hero": {
       "title": "Land Your Dream Job with",
       "dynamicPhrases": [
@@ -283,6 +270,173 @@
         "localContext": "Local Context",
         "strongActionVerbs": "Strong Action Verbs"
       }
+    },
+    "productWalkthrough": {
+      "eyebrow": "Product walkthrough",
+      "title": "One base resume becomes one targeted application",
+      "subtitle": "Follow the job-specific flow: upload your base resume, paste the job ad, clarify missing proof, align to the role and Saudi market, then prepare ATS-ready output and interview questions.",
+      "heroTitle": "Tailor every resume to the job without inventing a thing.",
+      "heroSubtitle": "Watheq helps you turn one existing resume into a targeted application for each job ad with job matching, clarifying questions, Saudi-market context, ATS improvement, and interview preparation.",
+      "heroNote": "No fake experience. No generic rewrite.",
+      "heroCardEyebrow": "Future-ready application",
+      "heroCardTitle": "From draft to ATS-ready",
+      "heroCardCta": "Get Started",
+      "stageSubtitle": "Start with your real resume and the job ad. Watheq highlights fit, asks before rewriting, and keeps suggestions grounded in your evidence.",
+      "currentStep": "Step {{current}} of {{total}}",
+      "scrollHint": "Scroll to move through the workflow",
+      "emailPlaceholder": "Your professional email",
+      "answerPlaceholder": "Type your answer here...",
+      "finalEyebrow": "Ready when you are",
+      "finalTitle": "Build a resume that proves fit before you apply.",
+      "identity": {
+        "verified": "Verified AI suggestions",
+        "bilingual": "Arabic + English support",
+        "vision": "Vision 2030 positioning"
+      },
+      "heroProof": {
+        "eyebrow": "Live product proof",
+        "title": "Senior Business Analyst application",
+        "items": [
+          "Parses resume evidence before suggesting changes.",
+          "Asks clarifying questions when the impact is underspecified.",
+          "Shows ATS lift, matched keywords, and an improved bullet."
+        ],
+        "clarify": "Ask-before-optimization",
+        "vision": "Saudi-market fit",
+        "interview": "Interview preparation"
+      },
+      "stepLabel": "Step {{number}}",
+      "cta": "Start optimizing",
+      "ctaNote": "Base resume, job ad, clarification, alignment, ATS, interview prep.",
+      "steps": {
+        "upload": {
+          "title": "Upload your base resume",
+          "description": "Start from the resume you already have. Watheq structures the real experience, skills, roles, and language that can be safely reused.",
+          "metric": "Base resume"
+        },
+        "match": {
+          "title": "Paste the job ad",
+          "description": "Watheq reads the job's skills, tools, responsibilities, keywords, and proof expectations so the tailoring starts from the specific role.",
+          "metric": "Role signal"
+        },
+        "clarify": {
+          "title": "Clarify before rewriting",
+          "description": "If a claim needs scope, numbers, or context, Watheq asks first instead of guessing, keeping the rewrite defensible.",
+          "metric": "Ask first"
+        },
+        "vision": {
+          "title": "Align to the role and Saudi market",
+          "description": "Watheq connects your evidence to the role, Saudi-market language, and Vision 2030 priorities where they are relevant to the job ad.",
+          "metric": "Saudi + role fit"
+        },
+        "optimize": {
+          "title": "Prepare ATS-ready output",
+          "description": "Watheq combines your answers, matched keywords, and original evidence into targeted bullets and ATS-ready positioning without inventing experience.",
+          "metric": "ATS-ready"
+        },
+        "interview": {
+          "title": "Prepare for the interview",
+          "description": "Use the same resume and job evidence to generate role-specific interview questions, STAR prompts, and focus areas before the call.",
+          "metric": "Interview prep"
+        }
+      },
+      "preview": {
+        "workspace": "Watheq workspace",
+        "role": "Senior Business Analyst",
+        "resumeTitle": "Resume evidence",
+        "experience": "Original claim",
+        "originalBullet": "Managed reports and helped the team improve performance.",
+        "bilingualSignal": "Arabic + English resume support",
+        "uploadTitle": "Resume parsed",
+        "uploadMeta": "Sections, roles, skills, and language detected",
+        "matchScore": "Job match score",
+        "goodStart": "Good start",
+        "skills": "Skills",
+        "keywords": "Keywords",
+        "experienceFit": "Experience fit",
+        "exampleLabel": "Example",
+        "clarifyEyebrow": "Watheq asks first",
+        "clarifyTitle": "Quick questions to sharpen results",
+        "clarifyMeta": "3 questions · about 1 minute",
+        "clarifyQuestions": [
+          "What business decision did the reporting improve?",
+          "How many stakeholders used the dashboard?",
+          "Can you verify the time or cost saved?"
+        ],
+        "before": "Before",
+        "after": "After",
+        "keywordLift": "ATS and keyword lift",
+        "keywordTags": [
+          "stakeholder management",
+          "Power BI",
+          "KPI reporting"
+        ],
+        "optimizedBullet": "Improved: Built Power BI KPI dashboards for 9 stakeholders, reducing weekly reporting time by 35% and improving decision visibility.",
+        "exportReady": "ATS-friendly PDF ready",
+        "visionTitle": "Vision 2030 signal check",
+        "visionDescription": "Identify where the role connects to Saudi growth sectors, localization priorities, and bilingual evidence already present in the resume.",
+        "visionSignals": [
+          "Digital transformation",
+          "Saudization positioning",
+          "Bilingual stakeholder work"
+        ],
+        "interviewTitle": "Interview prep from the same evidence",
+        "interviewMeta": "Role-specific prompts",
+        "interviewQuestions": [
+          "Tell me about a dashboard that changed a business decision.",
+          "How did you handle competing stakeholder priorities?",
+          "Which Vision 2030 sector experience is most relevant here?"
+        ],
+        "interviewReady": "Practice answers with the same claims used in the tailored resume."
+      }
+    },
+    "productStory": {
+      "why": {
+        "eyebrow": "The core Watheq idea",
+        "title": "One resume is not enough for every job.",
+        "subtitle": "A generic resume is not enough because every job ad has different priorities, keywords, and proof expectations. Recruiters and ATS systems look for role-specific relevance.",
+        "bridge": "One base resume -> one targeted application for this specific job -> better ATS readiness -> better interview preparation.",
+        "cards": {
+          "role": {
+            "title": "Every job ad has a different signal",
+            "description": "Job descriptions use specific skills, tools, responsibilities, and wording. Watheq starts with the job ad so your resume can speak to this role, not just any role."
+          },
+          "ats": {
+            "title": "Generic resumes hide your best proof",
+            "description": "Relevant achievements can disappear when they are buried or framed for another role. Watheq helps surface the strongest real evidence for this application."
+          },
+          "proof": {
+            "title": "Tailoring should stay truthful",
+            "description": "Watheq improves positioning while preserving your real experience, asking clarifying questions before rewriting when proof is missing."
+          }
+        }
+      },
+      "truth": {
+        "eyebrow": "Truthful optimization",
+        "title": "Watheq improves the application around your real evidence.",
+        "subtitle": "The workflow is built to reduce generic rewrites and unsupported claims by matching first, asking when proof is missing, and keeping interview prep tied to the same source material.",
+        "cards": {
+          "match": {
+            "title": "Job matching before rewriting",
+            "description": "Watheq compares the resume to the job ad so optimization starts from actual gaps, keywords, and role expectations."
+          },
+          "clarify": {
+            "title": "Questions before assumptions",
+            "description": "When impact is vague, Watheq asks for scope, metrics, or context before turning a bullet into a stronger claim."
+          },
+          "noFakes": {
+            "title": "No fake experience",
+            "description": "Suggestions are framed as defensible improvements, not invented credentials, employers, numbers, or responsibilities."
+          }
+        }
+      }
+    },
+    "finalCta": {
+      "benefits": [
+        "ATS-friendly PDF export",
+        "Saudi-market keyword matching",
+        "Verified AI suggestions"
+      ]
     },
     "features": {
       "title": "Everything You Need to Stand Out",
@@ -605,10 +759,22 @@
   },
   "footer": {
     "tagline": "AI-Powered Resume Optimization for Saudi Arabia",
+    "linksLabel": "Legal links",
     "links": {
       "privacy": "Privacy Policy",
       "terms": "Terms of Service",
       "contact": "Contact Us"
+    },
+    "columns": {
+      "product": "Product",
+      "legal": "Legal",
+      "connect": "Connect"
+    },
+    "newsletter": {
+      "label": "Stay updated",
+      "desc": "Get tips on Saudi hiring and product updates.",
+      "placeholder": "Enter your email",
+      "button": "Subscribe"
     },
     "copyright": "© 2024 Watheq. All rights reserved."
   },
@@ -942,7 +1108,30 @@
         "needsWork": "Needs Work"
       },
       "optimizedBanner": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.",
-      "scoreLabel": "Score"
+      "scoreLabel": "Score",
+      "assistant": {
+        "label": "HR Super Saud",
+        "hide": "Hide HR Super Saud feedback",
+        "restore": "Show HR Super Saud feedback",
+        "minimized": "HR Super Saud",
+        "disable": "Disable HR Super Saud",
+        "enable": "Enable HR Super Saud",
+        "disabled": "HR Super Saud disabled",
+        "moods": {
+          "strong": {
+            "status": "Strong match",
+            "message": "Strong match. Your resume is speaking the job's language."
+          },
+          "goodStart": {
+            "status": "Good start",
+            "message": "Good start. A few targeted edits can lift this."
+          },
+          "needsWork": {
+            "status": "Needs focus",
+            "message": "This role needs a closer match. Let's make the gaps clearer."
+          }
+        }
+      }
     },
     "optimizationResults": {
       "title": "Optimization Results",
@@ -968,7 +1157,30 @@
       },
       "applyAll": "Apply All ({{remaining}} remaining)",
       "exportPdf": "Export PDF",
-      "shareResult": "Share Your Result"
+      "shareResult": "Share Your Result",
+      "assistant": {
+        "label": "HR Super Saud",
+        "hide": "Hide HR Super Saud optimization feedback",
+        "restore": "Show HR Super Saud optimization feedback",
+        "minimized": "HR Super Saud",
+        "disable": "Disable HR Super Saud",
+        "enable": "Enable HR Super Saud",
+        "disabled": "HR Super Saud disabled",
+        "moods": {
+          "strong": {
+            "status": "Polished result",
+            "message": "Great lift. Your optimized resume is ready for a sharper application."
+          },
+          "goodStart": {
+            "status": "Solid lift",
+            "message": "Nice progress. Apply the strongest edits before you export."
+          },
+          "needsWork": {
+            "status": "More room",
+            "message": "There is still room to improve. Focus on the highest-impact gaps first."
+          }
+        }
+      }
     },
     "optimize": {
       "title": "Optimize",

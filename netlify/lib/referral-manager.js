@@ -13,9 +13,22 @@ import { redactForLog } from './sentry.js';
 const REFERRER_REWARD = 5;
 const REFEREE_REWARD = 5;
 const MISSING_CONFIG_ERROR = '[ReferralManager] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY';
+const REFERRAL_EMAIL_RECIPIENT_NAME = 'Watheq user';
+const REFERRAL_COUNTERPART_NAME = 'a Watheq user';
 
 function isMissingConfigError(error) {
   return error instanceof Error && error.message === MISSING_CONFIG_ERROR;
+}
+
+function summarizeErrorForLog(error) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: redactForLog(error.message)
+    };
+  }
+
+  return redactForLog(error);
 }
 
 /**
@@ -57,7 +70,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
       .single();
 
     if (referrerError || !referrerData) {
-      console.warn('[ReferralManager] Invalid referral code:', referrerCode);
+      console.warn('[ReferralManager] Invalid referral code');
       return { success: false, error: 'Invalid referral code' };
     }
 
@@ -83,7 +96,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
       .maybeSingle();
 
     if (updateError) {
-      console.error('[ReferralManager] Failed to track referral:', updateError);
+      console.error('[ReferralManager] Failed to track referral:', summarizeErrorForLog(updateError));
       return { success: false, error: 'Failed to track referral' };
     }
 
@@ -118,7 +131,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
       });
       console.log(`[ReferralManager] Awarded ${REFERRER_REWARD} credits to referrer ${redactForLog(referrerEmail)}`);
     } catch (referrerRewardError) {
-      console.error('[ReferralManager] Failed to reward referrer:', referrerRewardError);
+      console.error('[ReferralManager] Failed to reward referrer:', summarizeErrorForLog(referrerRewardError));
     }
 
     // Award credits to referee using credit-manager (avoids RPC migration dependency)
@@ -129,7 +142,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
       });
       console.log(`[ReferralManager] Awarded ${REFEREE_REWARD} credits to referee ${redactForLog(refereeEmail)}`);
     } catch (refereeRewardError) {
-      console.error('[ReferralManager] Failed to reward referee:', refereeRewardError);
+      console.error('[ReferralManager] Failed to reward referee:', summarizeErrorForLog(refereeRewardError));
     }
 
     // Send email notifications (non-blocking)
@@ -137,16 +150,16 @@ export async function trackReferral(referrerCode, refereeEmail) {
       const { sendReferralRewardReferrer, sendReferralRewardReferee } = await import('./email-service.js');
 
       // Send email to referrer
-      sendReferralRewardReferrer(referrerEmail, referrerEmail.split('@')[0], refereeEmail.split('@')[0], 'en').catch(err => {
-        console.warn('[ReferralManager] Failed to send referrer email:', err);
+      sendReferralRewardReferrer(referrerEmail, REFERRAL_EMAIL_RECIPIENT_NAME, REFERRAL_COUNTERPART_NAME, 'en').catch(err => {
+        console.warn('[ReferralManager] Failed to send referrer email:', summarizeErrorForLog(err));
       });
 
       // Send email to referee
-      sendReferralRewardReferee(refereeEmail, refereeEmail.split('@')[0], referrerEmail.split('@')[0], 'en').catch(err => {
-        console.warn('[ReferralManager] Failed to send referee email:', err);
+      sendReferralRewardReferee(refereeEmail, REFERRAL_EMAIL_RECIPIENT_NAME, REFERRAL_COUNTERPART_NAME, 'en').catch(err => {
+        console.warn('[ReferralManager] Failed to send referee email:', summarizeErrorForLog(err));
       });
     } catch (emailError) {
-      console.warn('[ReferralManager] Email service unavailable:', emailError);
+      console.warn('[ReferralManager] Email service unavailable:', summarizeErrorForLog(emailError));
     }
 
     return { success: true };
@@ -155,7 +168,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
       throw error;
     }
 
-    console.error('[ReferralManager] trackReferral error:', error);
+    console.error('[ReferralManager] trackReferral error:', summarizeErrorForLog(error));
     return { success: false, error: error.message };
   }
 }
@@ -201,7 +214,7 @@ export async function completeReferral(refereeEmail) {
     });
 
     if (referrerError) {
-      console.error('[ReferralManager] Failed to reward referrer:', referrerError);
+      console.error('[ReferralManager] Failed to reward referrer:', summarizeErrorForLog(referrerError));
       return { completed: false, error: 'Failed to reward referrer' };
     }
 
@@ -214,7 +227,7 @@ export async function completeReferral(refereeEmail) {
     });
 
     if (refereeError) {
-      console.error('[ReferralManager] Failed to reward referee:', refereeError);
+      console.error('[ReferralManager] Failed to reward referee:', summarizeErrorForLog(refereeError));
       return { completed: false, error: 'Failed to reward referee' };
     }
 
@@ -228,7 +241,7 @@ export async function completeReferral(refereeEmail) {
       .eq('email', refereeEmail);
 
     if (completeError) {
-      console.error('[ReferralManager] Failed to mark referral complete:', completeError);
+      console.error('[ReferralManager] Failed to mark referral complete:', summarizeErrorForLog(completeError));
       return { completed: false, error: 'Failed to mark complete' };
     }
 
@@ -239,16 +252,16 @@ export async function completeReferral(refereeEmail) {
       const { sendReferralRewardReferrer, sendReferralRewardReferee } = await import('./email-service.js');
 
       // Send email to referrer
-      sendReferralRewardReferrer(referrerEmail, referrerEmail.split('@')[0], refereeEmail.split('@')[0], 'en').catch(err => {
-        console.warn('[ReferralManager] Failed to send referrer email:', err);
+      sendReferralRewardReferrer(referrerEmail, REFERRAL_EMAIL_RECIPIENT_NAME, REFERRAL_COUNTERPART_NAME, 'en').catch(err => {
+        console.warn('[ReferralManager] Failed to send referrer email:', summarizeErrorForLog(err));
       });
 
       // Send email to referee
-      sendReferralRewardReferee(refereeEmail, refereeEmail.split('@')[0], referrerEmail.split('@')[0], 'en').catch(err => {
-        console.warn('[ReferralManager] Failed to send referee email:', err);
+      sendReferralRewardReferee(refereeEmail, REFERRAL_EMAIL_RECIPIENT_NAME, REFERRAL_COUNTERPART_NAME, 'en').catch(err => {
+        console.warn('[ReferralManager] Failed to send referee email:', summarizeErrorForLog(err));
       });
     } catch (emailError) {
-      console.warn('[ReferralManager] Email service unavailable:', emailError);
+      console.warn('[ReferralManager] Email service unavailable:', summarizeErrorForLog(emailError));
       // Don't fail the entire operation if emails fail
     }
 
@@ -262,7 +275,7 @@ export async function completeReferral(refereeEmail) {
       throw error;
     }
 
-    console.error('[ReferralManager] completeReferral error:', error);
+    console.error('[ReferralManager] completeReferral error:', summarizeErrorForLog(error));
     return { completed: false, error: error.message };
   }
 }
@@ -284,7 +297,7 @@ export async function getReferralStats(userEmail) {
       .eq('referred_by_email', userEmail);
 
     if (error) {
-      console.error('[ReferralManager] Failed to fetch stats:', error);
+      console.error('[ReferralManager] Failed to fetch stats:', summarizeErrorForLog(error));
       return { total: 0, completed: 0, pending: 0, creditsEarned: 0 };
     }
 
@@ -299,7 +312,7 @@ export async function getReferralStats(userEmail) {
       throw error;
     }
 
-    console.error('[ReferralManager] getReferralStats error:', error);
+    console.error('[ReferralManager] getReferralStats error:', summarizeErrorForLog(error));
     return { total: 0, completed: 0, pending: 0, creditsEarned: 0 };
   }
 }
