@@ -96,12 +96,7 @@ function readInitialMinimized() {
   if (hasStoredPreference(MINIMIZED_STORAGE_KEY)) {
     return readStoredBoolean(MINIMIZED_STORAGE_KEY);
   }
-
-  if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 function readInitialDisabled() {
@@ -312,7 +307,7 @@ export function HRSuperSaudOverlay() {
   const styles = moodStyles[mood];
   const message = activeReaction
     ? t(activeReaction.messageKey, activeReaction.fallbackMessage)
-    : t('hrSuperSaud.ready', 'Ready when you are.');
+    : t('hrSuperSaud.stepOneHint', 'Upload a selectable PDF or DOCX to begin.');
 
   const mascotPose = useMemo<MascotPose>(() => {
     if (movement.phase === 'moving' || movement.phase === 'returning') {
@@ -379,7 +374,7 @@ export function HRSuperSaudOverlay() {
           aria-label={t('sections.match.assistant.restore', 'Show HR Super Saud feedback')}
         >
           <MessageCircle className="h-3.5 w-3.5" />
-          {t('sections.match.assistant.minimized', 'HR Super Saud')}
+          {t('hrSuperSaud.stepOneHint', 'Upload a selectable PDF or DOCX to begin.')}
         </button>
       </div>
     );

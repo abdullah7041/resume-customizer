@@ -22,6 +22,9 @@ vi.mock("react-i18next", () => ({
         "upload.card.supportedFormats": "Supported formats: PDF, DOCX, TXT",
         "upload.card.bestPractice": "For best results, use selectable text. Scanned images are not supported.",
         "upload.card.selectFile": "Select File",
+        "upload.card.pasteLabel": "Or paste your resume text",
+        "upload.card.pastePlaceholder": "Paste selectable resume text here...",
+        "upload.card.pasteHelp": "Pasted text will be used instead of a selected file.",
       };
       return translations[key] || key;
     },
@@ -75,6 +78,9 @@ describe("ResumeUpload", () => {
     expect(screen.getByText("TXT")).toBeInTheDocument();
     expect(
       screen.getByText(/supported formats: pdf, docx, txt/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/paste your resume text/i)
     ).toBeInTheDocument();
   });
 
@@ -137,6 +143,30 @@ describe("ResumeUpload", () => {
         type: "warning",
         title: "File must be 5MB or smaller.",
       })
+    );
+  });
+
+  it("parses pasted resume text", async () => {
+    const onToast = vi.fn();
+    const onParseResume = vi.fn().mockResolvedValue({ plainText: "Experienced analyst" });
+
+    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
+
+    const pasteInput = screen.getByLabelText(/paste your resume text/i);
+    await act(async () => {
+      fireEvent.change(pasteInput, { target: { value: "Experienced analyst" } });
+    });
+
+    const submitButton = screen.getByRole("button", { name: /prepare resume/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(onParseResume).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plainText: "Experienced analyst",
+      }),
+      expect.any(AbortSignal)
     );
   });
 

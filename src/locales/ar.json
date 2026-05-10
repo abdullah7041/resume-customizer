@@ -17,6 +17,8 @@
     "signIn": "دخول",
     "signOut": "خروج",
     "byAuthor": "من تطوير عبدالله بن أحمد",
+    "language": "اللغة",
+    "settings": "الإعدادات",
     "optional": "اختياري",
     "copy": "نسخ",
     "copied": "تم النسخ!",
@@ -29,6 +31,7 @@
     "resetsIn": "إعادة التعيين في {{time}}",
     "resetsInWithDate": "يتجدد خلال {{days}} يوم ({{date}})",
     "resetsSoon": "إعادة التعيين قريباً",
+    "refresh": "تحديث الرصيد",
     "confirm": {
       "title": "تأكيد العملية",
       "message": "سيتم استخدام {{cost}} نقاط.",
@@ -79,6 +82,9 @@
     "allCompleted": "جميع الإحالات نشطة! 🎉",
     "shareLinkedIn": "شارك على لينكد إن",
     "inviteEarn": "ادعو ربعك واكسب",
+    "inviteShort": "دعوة",
+    "inviteFriends": "ادعُ الأصدقاء",
+    "creditsBonus": "+5 رصيد",
     "shareLink": "شارك رابطك الخاص مع أخوياك",
     "youGet": "تجيك 5 نقاط",
     "theyGet": "وتجيهم 5 نقاط"
@@ -182,19 +188,23 @@
     "templates": "القوالب",
     "interview": "المقابلة",
     "bulk": "تحليل مجمع",
-    "coverLetter": "خطاب التغطية"
+    "coverLetter": "خطاب التغطية",
+    "vision2030": "رؤية 2030"
   },
   "workspace": {
     "howItWorks": "آلية العمل",
     "gettingStarted": "البدء",
     "clearAll": "مسح الكل",
     "continue": "متابعة",
+    "resumeGateHint": "ارفع سيرة ذاتية لفتح المطابقة والتحسين والقوالب والمقابلة.",
+    "resumeRequiredTitle": "السيرة الذاتية مطلوبة",
     "signInToUnlock": "سجّل دخولك للوصول إلى المزايا",
     "signInDescription": "اربط حسابك لإرفاق السير الذاتية بأمان وتشغيل تحليل المطابقة وحفظ مسودات التحسين.",
     "signInViaGoogle": "تسجيل الدخول عبر Google"
   },
   "hrSuperSaud": {
     "ready": "جاهز متى ما كنت جاهز.",
+    "stepOneHint": "ارفع ملف PDF أو DOCX بنص قابل للتحديد للبدء.",
     "waveGreeting": "أهلًا. جاهز أساعدك تصقل هذا الطلب.",
     "waveLabel": "لوّح لـ HR Super Saud",
     "moods": {
@@ -648,6 +658,9 @@
       "supportedFormats": "الصيغ المدعومة: PDF، DOCX، TXT",
       "maxSizeLabel": "الحجم الأقصى: 5 ميجابايت",
       "bestPractice": "لأفضل النتائج، استخدم نصاً قابلاً للتحديد. الصور الممسوحة غير مدعومة.",
+      "pasteLabel": "أو الصق نص سيرتك الذاتية",
+      "pastePlaceholder": "الصق نص السيرة الذاتية القابل للتحديد هنا...",
+      "pasteHelp": "سيتم استخدام النص الملصق بدلاً من الملف المحدد.",
       "saudi": {
         "label": "هل أنت سعودي؟",
         "description": "سيتم إضافة \"سعودي\" إلى ملخص سيرتك لمطابقة أنظمة الفرز (ATS) الخاصة بالتوطين"
@@ -725,6 +738,7 @@
     "title": "الأسعار",
     "subtitle": "أسعار بسيطة وشفافة للجميع",
     "comingSoon": "قريب",
+    "detailsComingSoon": "سيتم إعلان التفاصيل قريباً",
     "forever": "/مجاناً للأبد",
     "proPrice": "السعر قريباً",
     "getStarted": "يلا ابدأ ببلاش",

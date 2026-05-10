@@ -117,7 +117,9 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
 
         <div className="flex flex-col items-start gap-0.5">
           <span className={cn('text-sm font-extrabold tracking-wide', colorClasses.text)}>
-            {credits.remaining} / {credits.total}
+            <span dir="ltr" className="inline-block" style={{ unicodeBidi: 'isolate' }}>
+              {credits.remaining} / {credits.total}
+            </span>
           </span>
           {resetInfo.dateText && (
             <span className={cn(
@@ -141,8 +143,8 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
           'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.98] transition-all',
           isRefreshing && 'animate-spin'
         )}
-        aria-label="Refresh credits"
-        title="Refresh credits"
+        aria-label={t('credits.refresh', 'Refresh credits')}
+        title={t('credits.refresh', 'Refresh credits')}
       >
         <RefreshCw className={cn('w-4 h-4', colorClasses.icon)} />
       </button>

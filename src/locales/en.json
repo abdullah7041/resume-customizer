@@ -17,6 +17,8 @@
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "byAuthor": "By Abdullah bin Ahmed",
+    "language": "Language",
+    "settings": "Settings",
     "dismiss": "Dismiss",
     "copy": "Copy",
     "copied": "Copied!"
@@ -27,6 +29,7 @@
     "resetsIn": "Resets in {{time}}",
     "resetsInWithDate": "Resets in {{days}} days ({{date}})",
     "resetsSoon": "Resets soon",
+    "refresh": "Refresh credits",
     "confirm": {
       "title": "Confirm Action",
       "message": "This will use {{cost}} credits.",
@@ -119,6 +122,9 @@
     "allCompleted": "All referrals are active!",
     "shareLinkedIn": "Share on LinkedIn",
     "inviteEarn": "Invite friends and earn",
+    "inviteShort": "Invite",
+    "inviteFriends": "Invite Friends",
+    "creditsBonus": "+5 Credits",
     "shareLink": "Share your personal link with friends",
     "youGet": "You get 5 credits",
     "theyGet": "They get 5 credits"
@@ -131,19 +137,23 @@
     "templates": "Templates",
     "interview": "Interview",
     "bulk": "Bulk Analysis",
-    "coverLetter": "Cover Letter"
+    "coverLetter": "Cover Letter",
+    "vision2030": "Vision 2030"
   },
   "workspace": {
     "howItWorks": "How it Works",
     "gettingStarted": "Getting Started",
     "clearAll": "Clear All",
     "continue": "Continue",
+    "resumeGateHint": "Upload a resume to unlock Match, Optimize, Templates, and Interview.",
+    "resumeRequiredTitle": "Resume required",
     "signInToUnlock": "Sign in to unlock insights",
     "signInDescription": "Connect your account to securely upload resumes, run match analysis, and save optimization drafts.",
     "signInViaGoogle": "Sign in via Google"
   },
   "hrSuperSaud": {
     "ready": "Ready when you are.",
+    "stepOneHint": "Upload a selectable PDF or DOCX to begin.",
     "waveGreeting": "Hello. Ready to help you sharpen this application.",
     "waveLabel": "Wave to HR Super Saud",
     "moods": {
@@ -617,6 +627,9 @@
       "supportedFormats": "Supported formats: PDF, DOCX, TXT",
       "maxSizeLabel": "Max size: 5MB",
       "bestPractice": "For best results, use selectable text. Scanned images are not supported.",
+      "pasteLabel": "Or paste your resume text",
+      "pastePlaceholder": "Paste selectable resume text here...",
+      "pasteHelp": "Pasted text will be used instead of a selected file.",
       "saudi": {
         "label": "Are you Saudi?",
         "description": "Adds \"Saudi\" to your resume summary to align with Saudization ATS filters"
@@ -694,6 +707,7 @@
     "title": "Pricing",
     "subtitle": "Simple, transparent pricing for everyone",
     "comingSoon": "Coming Soon",
+    "detailsComingSoon": "Details will be announced soon",
     "forever": "/forever",
     "proPrice": "Price coming soon",
     "getStarted": "Get Started Free",

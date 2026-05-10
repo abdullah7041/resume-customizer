@@ -345,10 +345,10 @@ export default function Header() {
                       setShowCreditModal(true);
                     }}
                     className="btn-spring relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50/90 dark:bg-black/40 backdrop-blur-md border-2 border-emerald-300 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 dark:hover:bg-emerald-900/60 transition-all shadow-sm"
-                    title="Invite friends and earn 5 credits each!"
+                    title={t('referrals.inviteEarn')}
                   >
                     <Gift className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-sm font-bold">Invite</span>
+                    <span className="text-sm font-bold">{t('referrals.inviteShort', 'Invite')}</span>
                     <span className="absolute -top-2 -right-2 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full shadow-lg group-hover:scale-110 transition-transform">
                       +5
                     </span>
@@ -356,8 +356,8 @@ export default function Header() {
                   <button
                     onClick={() => setShowSettingsModal(true)}
                     className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 text-gray-800 dark:text-gray-300 transition-all duration-300 hover:bg-white hover:text-emerald-600 dark:hover:bg-white/10 shadow-sm"
-                    aria-label="Settings"
-                    title="Settings"
+                    aria-label={t('common.settings', 'Settings')}
+                    title={t('common.settings', 'Settings')}
                   >
                     <Settings className="w-5 h-5" />
                   </button>
@@ -458,7 +458,7 @@ export default function Header() {
             <div className="flex flex-col p-5 space-y-4">
               {/* Language Switcher */}
               <div className="pb-4 border-b border-gray-200 dark:border-white/10">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50 mb-3">{t("common.language") || "Language"}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50 mb-3">{t("common.language")}</p>
                 <LanguageSwitcher />
               </div>
 
@@ -484,9 +484,9 @@ export default function Header() {
                     className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 min-h-[48px] bg-gradient-to-br from-emerald-50 dark:from-emerald-500/20 to-teal-50 dark:to-teal-500/10 border-2 border-emerald-200 dark:border-emerald-400/50 text-emerald-700 dark:text-emerald-300 hover:from-emerald-100 dark:hover:from-emerald-500/30 hover:to-teal-100 dark:hover:to-teal-500/20 hover:border-emerald-300 dark:hover:border-emerald-400/70 shadow-md"
                   >
                     <Gift className="w-5 h-5" />
-                    <span className="text-sm font-bold">Invite Friends</span>
+                    <span className="text-sm font-bold">{t('referrals.inviteFriends', 'Invite Friends')}</span>
                     <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-emerald-400 to-teal-400 text-white dark:text-gray-900 rounded-full">
-                      +5 Credits
+                      {t('referrals.creditsBonus', '+5 Credits')}
                     </span>
                   </button>
                 </div>
@@ -514,7 +514,7 @@ export default function Header() {
                       className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-transparent border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5"
                     >
                       <Settings className="h-4 w-4" />
-                      <span>Settings</span>
+                      <span>{t('common.settings', 'Settings')}</span>
                     </button>
                   </>
                 ) : (

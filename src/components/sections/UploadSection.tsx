@@ -225,6 +225,7 @@ export default function UploadSection({
         <div data-tour="upload" className="space-y-6">
             <UploadCard
                 fileName={fileName}
+                pastedText={pastedText}
                 onFileSelect={handleFileSelect}
                 onFileClear={handleFileClear}
                 onSubmit={handleSubmit}

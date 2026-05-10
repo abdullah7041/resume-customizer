@@ -24,7 +24,7 @@ const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").t
 const PricingSection = lazy(() => import("../sections/PricingSection").then(m => ({ default: m.PricingSection })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 
-import { GlassTabs } from "../ui/GlassTabs";
+import { GlassTabs, type Tab } from "../ui/GlassTabs";
 import { ComparisonTable } from "../ui/ComparisonTable";
 import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
@@ -125,9 +125,6 @@ export default function MainContent() {
     user?.app_metadata?.plan === "premium"
   );
 
-  // Memoize tabs to avoid recreating on every render
-  const tabs = useMemo(() => getTabsConfig(t), [t]);
-
   const [activeTab, setActiveTab] = useState("resume");
   const [flowProgress, setFlowProgress] = useState(0);
   const [resumeData, setResumeData] = useState(() => {
@@ -162,6 +159,22 @@ export default function MainContent() {
       return "";
     }
   });
+  const hasResume = Boolean(resumeData?.plainText);
+  const resumeGateReason = t(
+    "workspace.resumeGateHint",
+    "Upload a resume to unlock Match, Optimize, Templates, and Interview."
+  );
+
+  // Memoize tabs to avoid recreating on every render
+  const tabs = useMemo<Tab[]>(
+    () =>
+      getTabsConfig(t).map((tab) =>
+        !hasResume && tab.value !== "resume"
+          ? { ...tab, disabledReason: resumeGateReason }
+          : tab
+      ),
+    [hasResume, resumeGateReason, t]
+  );
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -309,11 +322,30 @@ export default function MainContent() {
   }, []);
 
   const handleTabChange = useCallback((value) => {
+    const targetTab = tabs.find((tab) => tab.value === value);
+    if (targetTab?.disabledReason) {
+      pushToast({
+        type: "warning",
+        title: t("workspace.resumeRequiredTitle", "Resume required"),
+        description: targetTab.disabledReason,
+      });
+      return;
+    }
+
     setActiveTab(value);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(TAB_STORAGE_KEY, value);
     }
-  }, []);
+  }, [pushToast, t, tabs]);
+
+  useEffect(() => {
+    if (!hasResume && activeTab !== "resume") {
+      setActiveTab("resume");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
+      }
+    }
+  }, [activeTab, hasResume]);
 
   const hasNextTab = useMemo(() => {
     const index = tabs.findIndex((tab) => tab.value === activeTab);
@@ -1130,6 +1162,11 @@ export default function MainContent() {
                 </button>
               ) : undefined}
             />
+            {!hasResume && (
+              <p className="mt-2 text-center text-xs font-medium text-ink-500 dark:text-emerald-100/70 sm:text-start">
+                {resumeGateReason}
+              </p>
+            )}
           </div>
         </div>
 
@@ -1231,7 +1268,13 @@ export default function MainContent() {
 
         {hasNextTab && (
           <div className="flex justify-center sm:justify-end mt-4">
-            <GlassButton variant="secondary" onClick={handleContinue} className="justify-center">
+            <GlassButton
+              variant="secondary"
+              onClick={handleContinue}
+              disabled={!hasResume}
+              title={!hasResume ? resumeGateReason : undefined}
+              className="justify-center"
+            >
               <ArrowRight className="w-4 h-4 me-2" />
               {t("workspace.continue")}
             </GlassButton>

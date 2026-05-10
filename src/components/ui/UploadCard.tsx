@@ -73,6 +73,7 @@ const chipClass =
 
 export default function UploadCard({
   fileName,
+  pastedText = "",
   onFileSelect,
   onFileClear,
   onSubmit,
@@ -256,6 +257,27 @@ export default function UploadCard({
         </p>
       </div>
 
+      <div className="mt-5 space-y-2">
+        <label
+          htmlFor="resume-paste-text"
+          className="block text-sm font-semibold text-gray-800 dark:text-emerald-100"
+        >
+          {t('upload.card.pasteLabel', 'Or paste your resume text')}
+        </label>
+        <textarea
+          id="resume-paste-text"
+          value={pastedText}
+          onChange={(event) => onTextChange?.(sanitizeTextInput(event.target.value))}
+          disabled={status === "uploading" || status === "parsing"}
+          rows={4}
+          className="w-full resize-y rounded-xl border border-gray-200/80 bg-white/80 px-4 py-3 text-sm text-gray-900 shadow-inner outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-emerald-100/35"
+          placeholder={t('upload.card.pastePlaceholder', 'Paste selectable resume text here...')}
+        />
+        <p className="text-xs text-gray-500 dark:text-emerald-100/60">
+          {t('upload.card.pasteHelp', 'Pasted text will be used instead of a selected file.')}
+        </p>
+      </div>
+
       <input
         ref={inputRef}
         type="file"
@@ -398,7 +420,7 @@ export default function UploadCard({
         <GlassButton
           variant="ghost"
           onClick={onFileClear}
-          disabled={!fileName}
+          disabled={!fileName && !pastedText}
           className="w-full sm:w-auto text-emerald-200/60 hover:text-red-300 hover:bg-red-500/5"
         >
           <XCircle className="w-4 h-4 me-2" />

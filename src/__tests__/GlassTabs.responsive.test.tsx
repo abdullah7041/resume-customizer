@@ -50,4 +50,22 @@ describe('GlassTabs responsive behavior', () => {
     expect(tab).toHaveClass('whitespace-nowrap', 'shrink-0');
     expect(rightAction).toHaveClass('flex-shrink-0');
   });
+
+  it('marks locked tabs disabled with a reason', () => {
+    render(
+      <GlassTabs
+        tabs={[
+          tabs[0],
+          { ...tabs[1], disabledReason: 'Upload a resume first.' },
+        ]}
+        activeValue="resume"
+        onTabChange={vi.fn()}
+      />
+    );
+
+    const lockedTab = screen.getByRole('tab', { name: /match/i });
+    expect(lockedTab).toBeDisabled();
+    expect(lockedTab).toHaveAttribute('aria-disabled', 'true');
+    expect(lockedTab).toHaveAttribute('title', 'Upload a resume first.');
+  });
 });
