@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => ({
         'privacy.sections.controller.title': 'Data Controller',
         'privacy.sections.controller.name': 'Watheq',
         'privacy.sections.controller.address': 'Riyadh',
-        'privacy.sections.controller.email': 'privacy@resumeoptimizer.sa',
+        'privacy.sections.controller.email': 'privacy@watheqai.app',
         'privacy.sections.dataCollected.title': 'Data We Collect',
         'privacy.sections.dataCollected.personal.title': 'Personal Data',
         'privacy.sections.dataCollected.personal.items.name': 'Full name',
@@ -147,6 +147,14 @@ describe('App compliance navigation', () => {
     render(<App />);
 
     expect(screen.getByRole('heading', { name: /privacy policy/i })).toBeInTheDocument();
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+  });
+
+  it('renders the terms of service at /terms', () => {
+    setPath('/terms');
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: /terms of service/i })).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
   });
 });

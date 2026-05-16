@@ -31,7 +31,7 @@ export default function Footer() {
                 {t("landing.hero.cta", "Get Started")}
               </a>
               <a
-                href="mailto:privacy@resumeoptimizer.sa"
+                href="mailto:support@watheqai.app"
                 className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200"
               >
                 {t("footer.links.contact")}
@@ -50,6 +50,12 @@ export default function Footer() {
                 className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200"
               >
                 {t("footer.links.privacy")}
+              </a>
+              <a
+                href="/terms"
+                className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200"
+              >
+                {t("footer.links.terms")}
               </a>
             </nav>
           </div>

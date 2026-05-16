@@ -9,6 +9,7 @@ vi.mock('react-i18next', () => ({
       const translations: Record<string, string> = {
         'footer.linksLabel': 'Legal links',
         'footer.links.privacy': 'Privacy Policy',
+        'footer.links.terms': 'Terms of Service',
         'footer.links.contact': 'Contact Us',
       };
       return translations[key] ?? fallback ?? key;
@@ -22,6 +23,6 @@ describe('Footer compliance navigation', () => {
 
     expect(screen.getByRole('navigation', { name: /legal links/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /privacy policy/i })).toHaveAttribute('href', '/privacy');
-    expect(screen.getByRole('link', { name: /contact us/i })).toHaveAttribute('href', 'mailto:privacy@resumeoptimizer.sa');
+    expect(screen.getByRole('link', { name: /contact us/i })).toHaveAttribute('href', 'mailto:support@watheqai.app');
   });
 });

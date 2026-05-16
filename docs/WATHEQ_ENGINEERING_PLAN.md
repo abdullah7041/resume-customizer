@@ -33,6 +33,7 @@
 - Signed-out Optimize export fallback status: fixed in `src/components/Layout/MainContent.tsx`. Supabase-first Optimize export now warns signed-out users but falls through to the existing browser print / Save as PDF fallback instead of returning early.
 - Mixed Arabic/English direction status: fixed in `src/lib/utils/resumeDirection.ts` and covered across preview/export tests. `mixed` content now resolves to RTL, Optimize print HTML renders `dir="rtl"`, and Templates PDF/DOCX export paths receive RTL direction.
 - Referral email logging/notification status: fixed in `netlify/lib/email-service.js`, `netlify/lib/referral-manager.js`, and `netlify/functions/referral-api.ts`. Referral email logs no longer include raw names/referee names/referrer names, referral notifications no longer derive display names from email local-parts, and referral idempotency behavior remains covered.
+- OAuth trust/branding documentation status: documented the dashboard-driven Google sign-in trust checklist in `DEPLOYMENT_CHECKLIST.md`, including Supabase Auth Site URL/redirect/provider settings, Google Cloud OAuth branding/origin/redirect settings, `VITE_SUPABASE_URL`, `VITE_SUPABASE_REDIRECT_URL`, custom-domain rollout warnings, and browser smoke-test steps.
 - Tests/checks that passed this session:
   - `rtk tsc`
   - `rtk lint` with 0 errors and 3 warnings in `src/components/Layout/MainContent.tsx`
@@ -65,6 +66,7 @@
 - Tests/checks that failed or were not run:
   - First run of `npm run test -- netlify/lib/__tests__/rate-limiter.test.ts` failed because the test mocked `Redis` with a non-constructible arrow function; the mock was fixed and the test passed on rerun.
   - `npm run build` was not run in this checkpoint session.
+  - OAuth trust/branding checklist update was documentation-only; no automated tests were run.
 - Current dirty tree snapshot:
   - `rtk git status` most recently reported 60 modified tracked files and 26 untracked paths before removing the generated `.tsbuildinfo.netlify` artifact from the working tree.
   - Key dirty areas include backend functions/lib hardening, AI parser/scoring/rate-limit tests, frontend RTL/mobile/export changes, local agent skills/docs/context files, and this handoff document.

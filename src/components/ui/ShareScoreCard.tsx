@@ -163,7 +163,7 @@ function HiddenCanvasCard({
                             opacity: 0.5,
                         }}
                     >
-                        watheqai.app | {isArabic ? 'محسّن سير ذاتية بالذكاء الاصطناعي للسعودية' : 'AI Resume Optimizer for Saudi Arabia'}
+                        watheqai.app | {isArabic ? 'محسّن سير ذاتية بالذكاء الاصطناعي للسعودية' : 'Smart Resume Optimizer for Saudi Arabia'}
                     </div>
                 </div>
             </div>
@@ -350,7 +350,7 @@ export function ShareScoreCard({ beforeScore, afterScore, jobTitle, onClose }: S
 
                             {/* Footer */}
                             <div className="pt-3 border-t border-white/10 text-[10px] text-white/30">
-                                watheqai.app | {isArabic ? 'محسّن سير ذاتية بالذكاء الاصطناعي' : 'AI Resume Optimizer for Saudi Arabia'}
+                                watheqai.app | {isArabic ? 'محسّن سير ذاتية بالذكاء الاصطناعي' : 'Smart Resume Optimizer for Saudi Arabia'}
                             </div>
                         </div>
                     </div>

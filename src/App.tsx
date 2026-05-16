@@ -16,6 +16,7 @@ import { useUserCredits } from "./hooks/useUserCredits";
 import { useOnboardingTour } from "./hooks/useOnboardingTour";
 import { TourTooltip } from "./components/Tour/TourTooltip";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { TermsOfService } from "./pages/TermsOfService";
 import { HRSuperSaudOverlay, HRSuperSaudProvider } from "./features/hr-super-saud";
 
 const getCurrentPath = () => {
@@ -59,7 +60,13 @@ export default function App() {
             <EnvironmentBadge />
             <Header />
 
-            {currentPath === "/privacy" ? <PrivacyPolicy /> : <MainContent />}
+            {currentPath === "/privacy" ? (
+              <PrivacyPolicy />
+            ) : currentPath === "/terms" ? (
+              <TermsOfService />
+            ) : (
+              <MainContent />
+            )}
             <Footer />
             <ConsentBanner />
 
@@ -71,7 +78,7 @@ export default function App() {
               dismissKey={upgradeDismissedKey || ''}
             />
 
-            <HRSuperSaudOverlay />
+            {currentPath !== "/privacy" && currentPath !== "/terms" && <HRSuperSaudOverlay />}
 
             {/* Onboarding Tour — react-joyride v3 API */}
             <Suspense fallback={null}>

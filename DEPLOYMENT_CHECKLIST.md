@@ -10,20 +10,20 @@
 - [x] **Bundle Size**: 1.14 MB main chunk (⚠️ large but acceptable)
 
 ### Code Quality
-- [x] All critical security issues fixed (15 total)
-- [x] All critical performance issues fixed (11 total)
-- [x] All critical test issues fixed (3 total)
-- [x] Documentation complete (4 comprehensive guides)
+- [x] Security scan: 15 findings reviewed and mitigated or accepted
+- [x] Performance scan: 11 findings reviewed and mitigated or accepted
+- [x] Test scan: 3 findings reviewed and mitigated or accepted
+- [x] Documentation: 4 guides reviewed and current
 
 ---
 
 ## Environment Variables Required ⚠️
 
-**CRITICAL**: Verify these are set in Netlify dashboard before deploying!
+**CRITICAL**: Verify these are set in the Netlify dashboard before deploying.
 
 ### Required for All Functions
 ```bash
-# AI Provider (REQUIRED - replaces GEMINI_API_KEY)
+# AI Provider (REQUIRED)
 OPENROUTER_API_KEY=<your-openrouter-api-key>
 
 # Supabase (REQUIRED)
@@ -47,22 +47,104 @@ These should already be set in your `.env` file and Netlify:
 ```bash
 VITE_SUPABASE_URL=<same-as-SUPABASE_URL>
 VITE_SUPABASE_ANON_KEY=<same-as-SUPABASE_ANON_KEY>
+VITE_SUPABASE_REDIRECT_URL=<canonical-watheq-production-url>
 VITE_SENTRY_DSN=<same-as-SENTRY_DSN>
 ```
+
+`VITE_SUPABASE_URL` must remain the verified Supabase project URL or verified Supabase custom auth domain used by the browser client. Do not switch it to a custom domain until DNS, TLS, and Supabase domain verification are complete.
+
+`VITE_SUPABASE_REDIRECT_URL` should point to the canonical Watheq app URL when production needs a fixed post-login return URL.
+
+### Gemini Fallback (Verify Before Deploy)
+`GEMINI_API_KEY` is still used as a live fallback when OpenRouter returns 502/503 and by some internal AI client paths. Do **not** remove it unless you have confirmed every call path in the current deploy is OpenRouter-only and the fallback is disabled.
+- [ ] Verify whether `GEMINI_API_KEY` is still required for this deploy.
+- [ ] If uncertain, keep it set.
+
+---
+
+## OAuth Trust / Branding — Manual Dashboard Steps
+
+Google sign-in trust is controlled by dashboard settings, not React code. Complete these manually before deploy.
+
+### Supabase Auth (Supabase Dashboard)
+
+- [ ] **Site URL** is set to the canonical Watheq production URL (`https://watheqai.app`).
+- [ ] **Redirect allow list** includes:
+  - `https://watheqai.app`
+  - Approved preview URLs
+  - Local dev URLs (`http://localhost:5173`, `http://localhost:8888`)
+- [ ] **Google provider** is enabled with the intended OAuth client ID and secret.
+- [ ] **Google callback URL** is recorded, usually `https://<project-ref>.supabase.co/auth/v1/callback`.
+- [ ] **Custom auth domain is configured** (see critical note below).
+
+#### 🔴 Critical: Custom Auth Domain for Google Branding
+
+**Problem:** If you do not configure a custom auth domain, Google OAuth shows the raw Supabase project URL (`cwcjeujextkwpmzdfzdz.supabase.co`) on the consent screen instead of `watheqai.app`. Users see an unfamiliar domain and may distrust the sign-in.
+
+**Solution:** Set up a custom auth domain so Supabase OAuth flows through your own domain.
+
+**Steps:**
+1. In **Supabase Dashboard** → Authentication → URL Configuration → **Custom Domain**:
+   - Add your custom auth domain (e.g., `auth.watheqai.app` or `supabase.watheqai.app`).
+   - Follow Supabase's DNS verification steps (add the required CNAME record in your DNS provider).
+   - Wait for Supabase to verify the domain (can take a few minutes).
+2. In **Google Cloud Console** → APIs & Services → Credentials → OAuth 2.0 Client IDs:
+   - Update **Authorized redirect URIs** to use your custom domain:
+     - `https://auth.watheqai.app/auth/v1/callback` (or your chosen subdomain)
+   - Keep the old Supabase project URI until the custom domain callback is confirmed working.
+3. Update your app environment:
+   - Set `VITE_SUPABASE_URL` to the custom domain URL (Supabase dashboard will provide the exact URL once verified).
+   - **Do not** switch `VITE_SUPABASE_URL` to the custom domain until Supabase verification is complete and you've tested auth end-to-end.
+4. Test:
+   - Sign out and sign in again.
+   - Confirm the Google consent screen shows your custom domain or `watheqai.app` branding instead of the raw Supabase project URL.
+
+**If you cannot set up a custom auth domain immediately:**
+- The app will still function, but Google will display the Supabase project URL on the consent screen.
+- You can mitigate this by ensuring your **App name**, **Logo**, and **Support email** in Google Cloud Console are clearly branded as Watheq, so users recognize the app even if the domain looks technical.
+
+### Google Cloud OAuth Consent Screen (Google Cloud Console)
+
+- [ ] **App name** is `Watheq` or the approved bilingual brand name.
+- [ ] **Logo** is uploaded.
+- [ ] **Support email** is `support@watheqai.app`.
+- [ ] **Homepage URL** is `https://watheqai.app`.
+- [ ] **Privacy policy URL** is `https://watheqai.app/privacy`.
+- [ ] **Terms URL** is `https://watheqai.app/terms`.
+- [ ] **Authorized domains** include `watheqai.app` and any approved auth subdomain parent.
+- [ ] **Authorized JavaScript origins** include `https://watheqai.app` and approved preview/dev origins.
+- [ ] **Authorized redirect URIs** include the active Supabase callback URL.
+
+**Staging-only origins/URLs** (if used during development):
+- Clearly label staging preview URLs as non-production in the Google Cloud console.
+- Do not set staging URLs as the primary Homepage, Privacy, or Terms URLs.
+
+### Custom Domain Rollout Warnings
+
+- [ ] Do not remove the old Supabase callback URI until the new custom-domain callback is verified.
+- [ ] Do not switch `VITE_SUPABASE_URL` to a custom domain until DNS, TLS, and Supabase verification are complete.
+
+### Browser Smoke Test
+
+- [ ] Click Google sign-in.
+- [ ] Confirm the Google screen shows Watheq branding.
+- [ ] Complete login.
+- [ ] Confirm redirect returns to Watheq.
+- [ ] Confirm the session is established.
 
 ---
 
 ## Breaking Changes ⚠️
 
 ### CRITICAL: OpenRouter Migration
-**This deploy changes the AI provider from direct Google AI SDK to OpenRouter.**
+**This deploy changes the primary AI provider to OpenRouter.**
 
 #### Required Action
 1. **Get OpenRouter API Key**: https://openrouter.ai/keys
 2. **Set in Netlify**:
    - Go to Site settings → Environment variables
    - Add `OPENROUTER_API_KEY` with your key
-3. **Remove old key** (optional): `GEMINI_API_KEY` is no longer used
+3. **Do not remove `GEMINI_API_KEY` without verification** (see Environment Variables section)
 
 #### Why This Change?
 - ✅ Unified quota tracking across all AI functions
@@ -244,6 +326,29 @@ netlify deploy --prod
 
 ---
 
+## Production Launch Gate 🚦
+
+Do not mark the deploy as fully live until all of the following are verified:
+
+- [ ] **Environment variables verified**: `OPENROUTER_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and all required vars are present and non-empty in the production environment.
+- [ ] **OAuth branding verified**: Google Cloud OAuth consent screen shows the correct app name, logo, support email, and authorized domains. Supabase redirect URLs include production.
+- [ ] **No PII in Sentry/logs**: Error payloads, Sentry events, and function logs do not contain resume text, job text, email, phone numbers, or tokens.
+- [ ] **Core flow works end-to-end**: Upload → Match → Optimize → Export completes without errors for a test resume and job description.
+- [ ] **PDF auth works**: Downloading a PDF as an authenticated user succeeds; unauthenticated requests receive 401.
+- [ ] **Rate limiting works**: Rapid requests receive 429; normal usage is not blocked.
+
+---
+
+## Do Not Deploy If 🛑
+
+- `OPENROUTER_API_KEY` is missing or unset.
+- `SUPABASE_SERVICE_ROLE_KEY` is missing or unset.
+- Google OAuth consent screen shows wrong, untrusted, or missing branding.
+- Production smoke test (upload → match → optimize → export) fails.
+- Sentry, logs, or error messages expose resume text, job text, email, phone, or tokens.
+
+---
+
 ## Rollback Plan 🔄
 
 If deploy fails or critical bugs are found:
@@ -387,22 +492,26 @@ Deploy is successful if:
 
 ## Summary
 
-**Ready to Deploy**: ✅ YES
+**Ready to Deploy**: ⚠️ PENDING SMOKE TESTS
 
 **Critical Actions Required**:
 1. ✅ Set `OPENROUTER_API_KEY` in Netlify env vars
 2. ✅ Verify all other env vars are set
-3. ✅ Test PDF download after deploy (new auth)
-4. ✅ Monitor function errors for first 24 hours
+3. ✅ Verify OAuth branding in Google Cloud and Supabase dashboards
+4. ✅ Test PDF download after deploy (new auth)
+5. ✅ Confirm no PII in Sentry/logs
+6. ✅ Run production smoke test (upload → match → optimize → export)
+7. ✅ Monitor function errors for first 24 hours
 
-**Risk Level**: **LOW**
+**Risk Level**: **MEDIUM**
 - All tests passing
 - Build succeeds
 - Breaking changes documented
 - Rollback plan ready
+- **Smoke tests and OAuth branding must pass before risk is lowered**
 
 **Recommendation**:
-✅ **Deploy to production** — All critical issues fixed, comprehensive testing done, environment variables documented, rollback plan ready.
+⚠️ **Deploy to production only after completing the Production Launch Gate.** Do not treat build success alone as a green light.
 
 ---
 
