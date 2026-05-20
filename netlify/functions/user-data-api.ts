@@ -9,7 +9,7 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import * as crypto from 'crypto';
-import { initSentry, captureError, redactForLog } from '../lib/sentry.js';
+import { initSentry, captureError, redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 
 initSentry();
@@ -96,7 +96,7 @@ async function handleDelete(email: string, userId: string, confirmDelete: boolea
     });
     
     if (logError) {
-        console.error("Could not log to deletion_log (table might not exist)", logError);
+        console.error("Could not log to deletion_log (table might not exist)", summarizeErrorForLog(logError));
     }
 
     // Delete in order (respecting foreign keys)
@@ -160,7 +160,7 @@ export const handler: Handler = async (event) => {
         };
 
     } catch (error: unknown) {
-        console.error('[user-data-api] Error:', error);
+        console.error('[user-data-api] Error:', summarizeErrorForLog(error));
         captureError(error, { function: 'user-data-api' });
 
         // Handle custom errors with statusCode

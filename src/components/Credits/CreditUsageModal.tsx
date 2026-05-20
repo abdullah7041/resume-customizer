@@ -37,10 +37,11 @@ const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
 export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditUsageModalProps) {
   const { user } = useAuth();
   const { credits, refetch } = useUserCredits();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isArabic = i18n.language === 'ar';
 
   // Only fetch transactions if in full mode
   useEffect(() => {
@@ -85,22 +86,28 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
 
   if (!isOpen) return null;
 
+  const humanizeFeature = (feature: string) =>
+    feature.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+  const getFeatureLabel = (feature: string) =>
+    t(`credits.usage.features.${feature}`, humanizeFeature(feature));
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1) return t('credits.usage.time.justNow', 'Just now');
+    if (diffMins < 60) return t('credits.usage.time.minutesAgo', { count: diffMins });
 
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 24) return t('credits.usage.time.hoursAgo', { count: diffHours });
 
     const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 7) return t('credits.usage.time.daysAgo', { count: diffDays });
 
-    return date.toLocaleDateString();
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US');
   };
 
   const getTransactionColor = (type: string) => {
@@ -174,8 +181,8 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                 "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-all",
                 isRefreshing && "animate-spin text-emerald-500 dark:text-emerald-400"
               )}
-              aria-label="Refresh credits"
-              title="Refresh credits"
+              aria-label={t('credits.refresh', 'Refresh credits')}
+              title={t('credits.refresh', 'Refresh credits')}
             >
               <RefreshCw className="w-5 h-5" />
             </button>
@@ -183,7 +190,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
-              aria-label="Close dialog"
+              aria-label={t('common.closeDialog', 'Close dialog')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -201,9 +208,11 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                       {t('credits.balance')}
                     </p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {credits.remaining}{' '}
-                      <span className="text-lg text-gray-500 dark:text-gray-400">
-                        / {credits.total}
+                      <span dir={isArabic ? 'rtl' : 'ltr'} className="inline-block" style={{ unicodeBidi: 'isolate' }}>
+                        {t('credits.balanceDisplay', {
+                          remaining: credits.remaining,
+                          total: credits.total,
+                        })}
                       </span>
                     </p>
                   </div>
@@ -280,7 +289,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                              {tx.feature.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                              {getFeatureLabel(tx.feature)}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {formatDate(tx.createdAt)}
@@ -299,7 +308,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                             {tx.amount}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {tx.creditsAfter} total
+                            {t('credits.transactionTotal', { total: tx.creditsAfter })}
                           </p>
                         </div>
                       </div>

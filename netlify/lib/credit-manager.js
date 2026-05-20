@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { redactForLog } from './sentry.js';
+import { redactForLog, summarizeErrorForLog } from './sentry.js';
 
 // Feature pricing (in credits)
 export const FEATURE_COSTS = {
@@ -52,7 +52,7 @@ async function checkIPAbuse(ipAddress) {
     .gte('created_at', oneDayAgo);
 
   if (error) {
-    console.warn('[CreditManager] IP check failed:', error);
+    console.warn('[CreditManager] IP check failed:', summarizeErrorForLog(error));
     return false; // Fail open (allow if check fails)
   }
 
@@ -112,7 +112,7 @@ export async function getUserCredits(email, options = {}) {
           .single();
 
         if (insertError) {
-          console.error('[CreditManager] Failed to initialize credits:', insertError);
+          console.error('[CreditManager] Failed to initialize credits:', summarizeErrorForLog(insertError));
           throw new Error('Failed to initialize user credits');
         }
 
@@ -147,14 +147,14 @@ export async function getUserCredits(email, options = {}) {
         .single();
 
       if (insertError) {
-        console.error('[CreditManager] Failed to initialize credits:', insertError);
+        console.error('[CreditManager] Failed to initialize credits:', summarizeErrorForLog(insertError));
         throw new Error('Failed to initialize user credits');
       }
 
       return newCredits;
     }
 
-    console.error('[CreditManager] Failed to get user credits:', error);
+    console.error('[CreditManager] Failed to get user credits:', summarizeErrorForLog(error));
     throw new Error('Failed to retrieve user credits');
   }
 
@@ -242,11 +242,11 @@ export async function consumeCredits(email, feature, amount = null) {
       .eq('credits_remaining', creditsBefore); // Optimistic locking
 
     if (directUpdateError) {
-      console.error('[CreditManager] Failed to consume credits:', directUpdateError);
+      console.error('[CreditManager] Failed to consume credits:', summarizeErrorForLog(directUpdateError));
       throw new Error('Failed to consume credits');
     }
   } else if (updateError) {
-    console.error('[CreditManager] Failed to consume credits:', updateError);
+    console.error('[CreditManager] Failed to consume credits:', summarizeErrorForLog(updateError));
     throw new Error('Failed to consume credits');
   }
 
@@ -267,7 +267,7 @@ export async function consumeCredits(email, feature, amount = null) {
         },
       })
   ).catch((logError) => {
-    console.error('[CreditManager] Failed to log transaction:', logError);
+    console.error('[CreditManager] Failed to log transaction:', summarizeErrorForLog(logError));
     // Non-blocking: transaction logging failure doesn't affect credit consumption
   });
 
@@ -283,7 +283,7 @@ export async function consumeCredits(email, feature, amount = null) {
         console.log(`[CreditManager] Referral completed. Awarded ${result.referrerReward} + ${result.refereeReward} credits`);
       }
     } catch (error) {
-      console.warn('[CreditManager] Referral completion failed (non-blocking):', error);
+      console.warn('[CreditManager] Referral completion failed (non-blocking):', summarizeErrorForLog(error));
     }
   }
 
@@ -316,7 +316,7 @@ export async function addCredits(email, amount, type, metadata = {}) {
     .eq('email', email);
 
   if (updateError) {
-    console.error('[CreditManager] Failed to add credits:', updateError);
+    console.error('[CreditManager] Failed to add credits:', summarizeErrorForLog(updateError));
     throw new Error('Failed to add credits');
   }
 
@@ -337,7 +337,7 @@ export async function addCredits(email, amount, type, metadata = {}) {
     });
 
   if (logError) {
-    console.error('[CreditManager] Failed to log credit addition:', logError);
+    console.error('[CreditManager] Failed to log credit addition:', summarizeErrorForLog(logError));
   }
 
   console.log(`[CreditManager] Added ${amount} credits (${type}). Balance: ${creditsBefore} → ${creditsAfter}`);
@@ -360,7 +360,7 @@ export async function addFeedbackCredits(email, metadata = {}) {
   });
 
   if (error) {
-    console.error('[CreditManager] Failed to add feedback credits:', error);
+    console.error('[CreditManager] Failed to add feedback credits:', summarizeErrorForLog(error));
     throw new Error(`Failed to add feedback credits: ${error.message}`);
   }
 

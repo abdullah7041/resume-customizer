@@ -4,6 +4,8 @@
  * Used by the optimize-stream.ts SSE endpoint.
  */
 
+import { summarizeErrorForLog } from './sentry.js';
+
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -88,10 +90,10 @@ export async function streamFromOpenRouter(modelType, messages, jsonSchema = nul
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
     const error = new Error(
-      `OpenRouter streaming error (${response.status}): ${errorData.error?.message || response.statusText}`
+      `OpenRouter streaming error (${response.status})`
     );
+    error.details = summarizeErrorForLog(await response.json().catch(() => ({})));
     error.status = response.status;
     throw error;
   }
@@ -159,10 +161,10 @@ export async function streamFromGemini(modelType, messages, jsonSchema = null, o
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      `Gemini streaming error (${response.status}): ${errorData.error?.message || response.statusText}`
-    );
+    const error = new Error(`Gemini streaming error (${response.status})`);
+    error.details = summarizeErrorForLog(await response.json().catch(() => ({})));
+    error.status = response.status;
+    throw error;
   }
 
   return response.body;

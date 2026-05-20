@@ -1,6 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { callOpenRouter } from '../lib/openrouter-client.js';
-import { initSentry, captureError } from '../lib/sentry.js';
+import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 
 initSentry();
 
@@ -143,7 +143,7 @@ Return JSON with this structure:
       body: JSON.stringify(parsed),
     };
   } catch (error) {
-    console.error('Parse error:', error);
+    console.error('Parse error:', summarizeErrorForLog(error));
     captureError(error, {
       function: 'parse-arabic-resume',
     });

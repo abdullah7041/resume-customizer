@@ -44,6 +44,7 @@ vi.mock('../../lib/sentry.js', () => ({
   initSentry: vi.fn(),
   captureError: vi.fn(),
   redactForLog: vi.fn((value: string) => value.replace(/^[^@]+/, '***')),
+  summarizeErrorForLog: vi.fn((error: unknown) => error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) }),
 }));
 
 const { handler } = await import('../user-data-api.js');

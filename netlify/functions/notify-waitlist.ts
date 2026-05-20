@@ -12,7 +12,7 @@ import { Handler } from "@netlify/functions";
 import { createClient } from "@supabase/supabase-js";
 import { requireAdminMutationGate } from "../lib/admin-gates.js";
 import { sendWaitlistNotification } from "../lib/email-service.js";
-import { redactForLog } from "../lib/sentry.js";
+import { redactForLog, summarizeErrorForLog } from "../lib/sentry.js";
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -58,7 +58,7 @@ export const handler: Handler = async (event) => {
       .order("subscribed_at", { ascending: true });
 
     if (error) {
-      console.error("[notify-waitlist] Failed to fetch waitlist:", error);
+      console.error("[notify-waitlist] Failed to fetch waitlist:", summarizeErrorForLog(error));
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Failed to fetch waitlist" }),
@@ -111,7 +111,7 @@ export const handler: Handler = async (event) => {
         } else {
           results.failed++;
           results.errors.push(`${user.email}: ${emailResult.error}`);
-          console.error(`[notify-waitlist] Failed to send to ${redactForLog(user.email)}:`, emailResult.error);
+          console.error(`[notify-waitlist] Failed to send to ${redactForLog(user.email)}:`, redactForLog(emailResult.error));
         }
 
         // Rate limiting: wait 100ms between emails (600 emails/min max)
@@ -120,7 +120,7 @@ export const handler: Handler = async (event) => {
         results.failed++;
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
         results.errors.push(`${user.email}: ${errorMsg}`);
-        console.error(`[notify-waitlist] Error sending to ${redactForLog(user.email)}:`, err);
+        console.error(`[notify-waitlist] Error sending to ${redactForLog(user.email)}:`, summarizeErrorForLog(err));
       }
     }
 
@@ -137,7 +137,7 @@ export const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error("[notify-waitlist] Unexpected error:", error);
+    console.error("[notify-waitlist] Unexpected error:", summarizeErrorForLog(error));
     return {
       statusCode: 500,
       body: JSON.stringify({

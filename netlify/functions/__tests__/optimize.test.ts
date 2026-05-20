@@ -12,7 +12,8 @@ vi.mock('../../lib/rate-limiter', () => ({
 
 vi.mock('../../lib/sentry', () => ({
     initSentry: vi.fn(),
-    captureError: vi.fn()
+    captureError: vi.fn(),
+    summarizeErrorForLog: vi.fn((error: unknown) => error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) })
 }));
 
 vi.mock('../../lib/redis-cache', () => ({
@@ -144,9 +145,9 @@ describe('optimize function', () => {
                 headers: TEST_HEADERS,
                 body: 'not json'
             } as Partial<HandlerEvent>;
-            // The function catches JSON parse errors but then re-throws when
-            // trying to parse body in captureError, so we expect it to throw
-            await expect(handler(event as HandlerEvent, createMockContext())).rejects.toThrow();
+            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(500);
+            expect(JSON.parse(result.body).error).toBe('Failed to optimize resume');
         });
     });
 

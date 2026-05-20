@@ -13,13 +13,15 @@ import { useMemo, useState, type MouseEvent } from 'react';
 
 interface CreditBalanceProps {
   onClick: () => void;
+  variant?: 'default' | 'compact';
 }
 
-export function CreditBalance({ onClick }: CreditBalanceProps) {
+export function CreditBalance({ onClick, variant = 'default' }: CreditBalanceProps) {
   const { credits, isLoading, refetch } = useUserCredits();
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isCompact = variant === 'compact';
 
   // Calculate time until next reset (30 days from last_reset_date)
   const resetInfo = useMemo(() => {
@@ -92,36 +94,46 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse bg-white/5 h-9 w-32 min-w-[140px] rounded-lg" />
+      <div className={cn(
+        "animate-pulse bg-white/5 h-9 rounded-lg",
+        isCompact ? "w-24 min-w-[96px]" : "w-32 min-w-[140px]"
+      )} />
     );
   }
 
   if (!credits) return null;
 
+  const balanceDisplay = t('credits.balanceDisplay', {
+    remaining: credits.remaining,
+    total: credits.total,
+  });
+
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn("flex items-center", isCompact ? "gap-1" : "gap-2")}>
       <button
         onClick={onClick}
         className={cn(
           // Glassy dark/light background
-          'bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 flex items-center gap-3 px-4 py-2 rounded-xl transition-all shadow-sm',
+          'bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 flex items-center rounded-xl transition-all shadow-sm',
+          isCompact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-4 py-2',
           colorClasses.border, // Optional solid border color
-          'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.98]',
+          'hover:bg-gray-100 dark:hover:bg-black/50 active:scale-[0.98]',
+          !isCompact && 'hover:scale-[1.02]',
           colorClasses.pulse
         )}
         aria-label={t('credits.balance')}
       >
-        <div className={cn("p-1.5 rounded-full bg-gray-100 dark:bg-white/5", colorClasses.text)}>
-          <Coins className="w-4 h-4" />
+        <div className={cn("rounded-full bg-gray-100 dark:bg-white/5", isCompact ? "p-1" : "p-1.5", colorClasses.text)}>
+          <Coins className={cn(isCompact ? "w-3.5 h-3.5" : "w-4 h-4")} />
         </div>
 
         <div className="flex flex-col items-start gap-0.5">
-          <span className={cn('text-sm font-extrabold tracking-wide', colorClasses.text)}>
-            <span dir="ltr" className="inline-block" style={{ unicodeBidi: 'isolate' }}>
-              {credits.remaining} / {credits.total}
+          <span className={cn(isCompact ? 'text-xs font-bold' : 'text-sm font-extrabold tracking-wide', colorClasses.text)}>
+            <span dir={isArabic ? 'rtl' : 'ltr'} className="inline-block" style={{ unicodeBidi: 'isolate' }}>
+              {balanceDisplay}
             </span>
           </span>
-          {resetInfo.dateText && (
+          {!isCompact && resetInfo.dateText && (
             <span className={cn(
               "text-[10px] uppercase tracking-wider font-bold opacity-80",
               colorClasses.text
@@ -135,19 +147,21 @@ export function CreditBalance({ onClick }: CreditBalanceProps) {
       </button>
 
       {/* Refresh Button */}
-      <button
-        onClick={handleRefresh}
-        disabled={isRefreshing}
-        className={cn(
-          'p-2 rounded-lg bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 shadow-sm',
-          'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.98] transition-all',
-          isRefreshing && 'animate-spin'
-        )}
-        aria-label={t('credits.refresh', 'Refresh credits')}
-        title={t('credits.refresh', 'Refresh credits')}
-      >
-        <RefreshCw className={cn('w-4 h-4', colorClasses.icon)} />
-      </button>
+      {!isCompact && (
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className={cn(
+            'p-2 rounded-lg bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 shadow-sm',
+            'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.98] transition-all',
+            isRefreshing && 'animate-spin'
+          )}
+          aria-label={t('credits.refresh', 'Refresh credits')}
+          title={t('credits.refresh', 'Refresh credits')}
+        >
+          <RefreshCw className={cn('w-4 h-4', colorClasses.icon)} />
+        </button>
+      )}
     </div>
   );
 }

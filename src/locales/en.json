@@ -14,22 +14,31 @@
     "delete": "Delete",
     "edit": "Edit",
     "close": "Close",
+    "yes": "Yes",
+    "submitting": "Sending...",
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "byAuthor": "By Abdullah bin Ahmed",
     "language": "Language",
     "settings": "Settings",
+    "toggleTheme": "Toggle theme",
+    "openNavigation": "Open navigation menu",
+    "accountMenu": "Account menu",
+    "closeNavigation": "Close navigation menu",
+    "closeDialog": "Close dialog",
     "dismiss": "Dismiss",
     "copy": "Copy",
     "copied": "Copied!"
   },
   "credits": {
     "balance": "Credits",
+    "balanceDisplay": "{{remaining}} / {{total}} credits",
     "remaining": "credits",
     "resetsIn": "Resets in {{time}}",
     "resetsInWithDate": "Resets in {{days}} days ({{date}})",
     "resetsSoon": "Resets soon",
     "refresh": "Refresh credits",
+    "transactionTotal": "{{total}} total",
     "confirm": {
       "title": "Confirm Action",
       "message": "This will use {{cost}} credits.",
@@ -41,11 +50,13 @@
     "upgrade": {
       "title": "Upgrade to Premium",
       "lowCredits": "You're running low on credits ({{remaining}} remaining)",
+      "lowCreditsTitle": "Low credits balance",
       "comingSoon": "Coming Soon",
       "joinWaitlist": "Join Waitlist",
       "earnTip": "Tip: Earn bonus credits by submitting feedback!",
       "emailLabel": "Get notified when Pro launches:",
       "waitlistSuccess": "Thanks! We'll notify you when Pro launches.",
+      "waitlistSuccessTitle": "You're on the list!",
       "badge": "EARLY ACCESS",
       "invalidEmail": "Please enter a valid email address",
       "subtitle": "Supercharge your resume optimization with higher limits and expert features.",
@@ -61,7 +72,22 @@
       "feedbackEarned": "From feedback",
       "referralEarned": "From referrals",
       "history": "Recent activity",
-      "noTransactions": "No activity yet"
+      "noTransactions": "No activity yet",
+      "time": {
+        "justNow": "Just now",
+        "minutesAgo": "{{count}}m ago",
+        "hoursAgo": "{{count}}h ago",
+        "daysAgo": "{{count}}d ago"
+      },
+      "features": {
+        "parse_resume": "Resume parsing",
+        "ai_match": "Job match",
+        "vision2030": "Vision 2030",
+        "optimize": "Optimization",
+        "interview_prep": "Interview prep",
+        "cover_letter": "Cover letter",
+        "export_template": "Template export"
+      }
     },
     "referralEarned": "Referral bonus earned!",
     "referralEarnedDesc": "You received {{creditsAdded}} credits from a successful referral. Keep sharing!",
@@ -145,15 +171,51 @@
     "gettingStarted": "Getting Started",
     "clearAll": "Clear All",
     "continue": "Continue",
-    "resumeGateHint": "Upload a resume to unlock Match, Optimize, Templates, and Interview.",
+    "resumeGateHint": "Upload a resume first to unlock Match, Optimize, Templates, and Interview.",
     "resumeRequiredTitle": "Resume required",
     "signInToUnlock": "Sign in to unlock insights",
     "signInDescription": "Connect your account to securely upload resumes, run match analysis, and save optimization drafts.",
-    "signInViaGoogle": "Sign in via Google"
+    "signInViaGoogle": "Sign in via Google",
+    "mobileWorkflow": {
+      "ariaLabel": "Workflow navigation",
+      "stepProgress": "Step {{current}} of {{total}}",
+      "toolProgress": "Tool",
+      "currentStep": "Current step",
+      "nextAction": "Next: {{label}}",
+      "openSteps": "All steps and tools",
+      "moreTools": "More tools",
+      "current": "Current",
+      "available": "Available",
+      "locked": "Locked",
+      "lockedHelper": "Upload a resume first to unlock the next steps.",
+      "steps": {
+        "resume": "Resume",
+        "jobAd": "Job Ad",
+        "optimize": "Optimize",
+        "export": "Export"
+      }
+    }
+  },
+  "settings": {
+    "accountInformation": "Account information",
+    "verifiedAccount": "Verified account",
+    "dataPrivacy": "Data & Privacy",
+    "exportPersonalData": "Export personal data",
+    "exportPersonalDataDescription": "Download a copy of your resumes and optimizations in JSON format.",
+    "deleteAccountDescription": "Permanently delete your account and all associated data.",
+    "deleteConfirmQuestion": "Are you sure?",
+    "errors": {
+      "authToken": "Could not get an authentication token from the active session.",
+      "deleteFailed": "Failed to delete account.",
+      "deleteGeneric": "An error occurred while deleting account.",
+      "exportFailed": "Failed to export data.",
+      "exportGeneric": "An error occurred while exporting data."
+    }
   },
   "hrSuperSaud": {
     "ready": "Ready when you are.",
-    "stepOneHint": "Upload a selectable PDF or DOCX to begin.",
+    "stepOneHint": "Upload a selectable PDF, DOCX, or TXT resume to begin.",
+    "resumeUploadedHint": "Great. Now continue to match your resume with a job ad.",
     "waveGreeting": "Hello. Ready to help you sharpen this application.",
     "waveLabel": "Wave to HR Super Saud",
     "moods": {
@@ -162,7 +224,7 @@
       "caution": "Review needed"
     },
     "reactions": {
-      "resumeUploaded": "Resume received. Next, compare it with the role.",
+      "resumeUploaded": "Great. Now continue to match your resume with a job ad.",
       "matchHigh": "Strong match. Review the evidence, then tailor with care.",
       "matchLow": "There are gaps to close before this application is ready.",
       "optimizeSuccess": "Optimization is ready. Review every suggestion before export.",
@@ -569,16 +631,17 @@
     },
     "comparison": {
       "title": "Why Choose Watheq?",
-      "subtitle": "See how we stack up against generic resume tools",
+      "subtitle": "Compare Watheq with common resume workflows",
       "watheq": "Watheq",
-      "genericToolA": "Generic Tool A",
-      "genericToolB": "Generic Tool B",
+      "genericResumeBuilder": "Generic Resume Builder",
+      "keywordScanner": "Keyword Scanner",
+      "manualEditing": "Manual Editing",
       "features": {
         "vision2030": "Vision 2030 Alignment",
-        "antiHallucination": "Anti-Hallucination",
+        "antiHallucination": "Evidence Protection",
         "arabicSupport": "Native Arabic Support",
         "jobMatch": "AI Job Match",
-        "atsPassRate": "ATS Pass Rate",
+        "atsPassRate": "ATS and Job-Ad Alignment",
         "templates": "Professional Templates",
         "interviewPrep": "Interview Preparation"
       },
@@ -587,12 +650,14 @@
         "no": "No",
         "partial": "Partial",
         "unknown": "Unknown",
-        "watheqAts": "94%",
-        "toolAAts": "Unknown",
-        "toolBAts": "85%",
-        "watheqTemplates": "5 ATS-optimized",
-        "toolATemplates": "2 basic",
-        "toolBTemplates": "3 generic"
+        "watheqAts": "Evidence-aware alignment",
+        "resumeBuilderAts": "Template-focused",
+        "keywordScannerAts": "Keyword signals only",
+        "manualEditingAts": "Depends on review",
+        "watheqTemplates": "ATS-friendly formats",
+        "resumeBuilderTemplates": "Template library",
+        "keywordScannerTemplates": "Limited formatting help",
+        "manualEditingTemplates": "Self-managed formatting"
       }
     }
   },
@@ -616,7 +681,12 @@
       "dropText": "Drop your resume here or click to browse",
       "securityText": "We keep uploads private and secure.",
       "prepareButton": "Prepare Resume",
+      "processingButton": "Processing...",
       "clearButton": "Clear inputs",
+      "uploadFileLabel": "Upload resume file",
+      "removeFileLabel": "Remove selected file",
+      "savedTitle": "Resume ready and saved",
+      "readyTitle": "Ready to prepare",
       "status": {
         "uploading": "Uploading resume…",
         "parsing": "Parsing resume with AI…",
@@ -706,6 +776,7 @@
   "pricing": {
     "title": "Pricing",
     "subtitle": "Simple, transparent pricing for everyone",
+    "workspaceCta": "Need more credits? View plans",
     "comingSoon": "Coming Soon",
     "detailsComingSoon": "Details will be announced soon",
     "forever": "/forever",

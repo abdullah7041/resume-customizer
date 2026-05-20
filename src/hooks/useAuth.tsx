@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, createContext, useContext } from "react";
+import { resolveAuthRedirectUrl } from "../lib/auth/authRedirect";
 import { supabase } from "../services/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -11,48 +12,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const isLocalhostLike = (hostname = "") => {
-  const normalized = hostname.trim().toLowerCase();
-  if (!normalized) return false;
-  return (
-    normalized === "localhost" ||
-    normalized === "127.0.0.1" ||
-    normalized === "0.0.0.0" ||
-    normalized.endsWith(".local")
-  );
-};
-
 const resolveRedirectUrl = () => {
-  const envOverride = import.meta.env?.VITE_SUPABASE_REDIRECT_URL;
-
-  if (typeof window === "undefined") {
-    return typeof envOverride === "string" && envOverride.trim()
-      ? envOverride.trim()
-      : undefined;
-  }
-
-  if (typeof envOverride === "string" && envOverride.trim()) {
-    const trimmed = envOverride.trim();
-    try {
-      const overrideUrl = new URL(trimmed, window.location.origin);
-      const overrideHost = overrideUrl.hostname;
-      const currentHost = window.location.hostname;
-
-      if (isLocalhostLike(overrideHost) && !isLocalhostLike(currentHost)) {
-        // Ignore localhost overrides when running on a remote tunnel / codespace.
-      } else {
-        return overrideUrl.toString();
-      }
-    } catch (error) {
-      console.warn("Invalid VITE_SUPABASE_REDIRECT_URL, falling back to window origin", error);
-    }
-  }
-
-  const { origin, pathname } = window.location;
-  if (pathname && pathname !== "/") {
-    return `${origin}${pathname}`;
-  }
-  return origin;
+  return resolveAuthRedirectUrl({
+    envRedirectUrl: import.meta.env?.VITE_SUPABASE_REDIRECT_URL,
+    location: typeof window === "undefined" ? undefined : window.location,
+    logger: console,
+  });
 };
 
 /**

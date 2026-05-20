@@ -23,6 +23,7 @@ vi.mock('../../lib/email-service.js', () => ({
 
 vi.mock('../../lib/sentry.js', () => ({
   redactForLog: vi.fn((value: string) => `redacted:${value.length}`),
+  summarizeErrorForLog: vi.fn((error: unknown) => error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) }),
 }));
 
 const { handler: resetCreditsHandler } = await import('../dev-reset-credits.js');

@@ -14,11 +14,18 @@
     "delete": "حذف",
     "edit": "تعديل",
     "close": "إغلاق",
+    "yes": "نعم",
+    "submitting": "جاري الإرسال...",
     "signIn": "دخول",
     "signOut": "خروج",
     "byAuthor": "من تطوير عبدالله بن أحمد",
     "language": "اللغة",
     "settings": "الإعدادات",
+    "toggleTheme": "تبديل المظهر",
+    "openNavigation": "فتح قائمة التنقل",
+    "accountMenu": "قائمة الحساب",
+    "closeNavigation": "إغلاق قائمة التنقل",
+    "closeDialog": "إغلاق النافذة",
     "optional": "اختياري",
     "copy": "نسخ",
     "copied": "تم النسخ!",
@@ -27,11 +34,13 @@
   },
   "credits": {
     "balance": "الرصيد",
+    "balanceDisplay": "{{remaining}} من {{total}} رصيد",
     "remaining": "نقطة",
     "resetsIn": "إعادة التعيين في {{time}}",
     "resetsInWithDate": "يتجدد خلال {{days}} يوم ({{date}})",
     "resetsSoon": "إعادة التعيين قريباً",
     "refresh": "تحديث الرصيد",
+    "transactionTotal": "الإجمالي {{total}}",
     "confirm": {
       "title": "تأكيد العملية",
       "message": "سيتم استخدام {{cost}} نقاط.",
@@ -43,11 +52,13 @@
     "upgrade": {
       "title": "الترقية إلى المميز",
       "lowCredits": "رصيدك بيخلص ({{remaining}} متبقي)",
+      "lowCreditsTitle": "رصيد منخفض",
       "comingSoon": "قريب",
       "joinWaitlist": "انضم لقائمة الانتظار",
       "earnTip": "نصيحة: اكسب نقاطاً إضافية من خلال انك ترسل ملاحظاتك!",
       "emailLabel": "احصل على إشعار اذا اطلقنا برو:",
       "waitlistSuccess": "! تم بنعلمك متى",
+      "waitlistSuccessTitle": "تم تسجيلك في القائمة!",
       "badge": "وصول مبكر",
       "invalidEmail": "حط بريد إلكتروني صحيح",
       "subtitle": "طور سيرتك الذاتية بمميزات احترافية وحدود أعلى",
@@ -63,7 +74,22 @@
       "feedbackEarned": "من الملاحظات",
       "referralEarned": "من الإحالات",
       "history": "النشاط الأخير",
-      "noTransactions": "مافي نشاط بعد"
+      "noTransactions": "مافي نشاط بعد",
+      "time": {
+        "justNow": "الآن",
+        "minutesAgo": "قبل {{count}} د",
+        "hoursAgo": "قبل {{count}} س",
+        "daysAgo": "قبل {{count}} يوم"
+      },
+      "features": {
+        "parse_resume": "تحليل السيرة",
+        "ai_match": "مطابقة الوظيفة",
+        "vision2030": "رؤية 2030",
+        "optimize": "التحسين",
+        "interview_prep": "التحضير للمقابلة",
+        "cover_letter": "خطاب التقديم",
+        "export_template": "تصدير القالب"
+      }
     },
     "referralEarned": "🎉 حصلت على مكافأة إحالة!",
     "referralEarnedDesc": "حصلت على {{creditsAdded}} نقطة من إحالة ناجحة. استمر في المشاركة!"
@@ -196,15 +222,51 @@
     "gettingStarted": "البدء",
     "clearAll": "مسح الكل",
     "continue": "متابعة",
-    "resumeGateHint": "ارفع سيرة ذاتية لفتح المطابقة والتحسين والقوالب والمقابلة.",
+    "resumeGateHint": "ارفع سيرتك الذاتية أولاً لفتح المطابقة والتحسين والقوالب والمقابلة.",
     "resumeRequiredTitle": "السيرة الذاتية مطلوبة",
     "signInToUnlock": "سجّل دخولك للوصول إلى المزايا",
     "signInDescription": "اربط حسابك لإرفاق السير الذاتية بأمان وتشغيل تحليل المطابقة وحفظ مسودات التحسين.",
-    "signInViaGoogle": "تسجيل الدخول عبر Google"
+    "signInViaGoogle": "تسجيل الدخول عبر Google",
+    "mobileWorkflow": {
+      "ariaLabel": "تنقل خطوات العمل",
+      "stepProgress": "الخطوة {{current}} من {{total}}",
+      "toolProgress": "أداة",
+      "currentStep": "الخطوة الحالية",
+      "nextAction": "التالي: {{label}}",
+      "openSteps": "كل الخطوات والأدوات",
+      "moreTools": "أدوات إضافية",
+      "current": "الحالية",
+      "available": "متاحة",
+      "locked": "مغلقة",
+      "lockedHelper": "ارفع سيرتك الذاتية أولاً لفتح الخطوات التالية.",
+      "steps": {
+        "resume": "السيرة الذاتية",
+        "jobAd": "إعلان الوظيفة",
+        "optimize": "التحسين",
+        "export": "التصدير"
+      }
+    }
+  },
+  "settings": {
+    "accountInformation": "معلومات الحساب",
+    "verifiedAccount": "حساب موثّق",
+    "dataPrivacy": "البيانات والخصوصية",
+    "exportPersonalData": "تصدير البيانات الشخصية",
+    "exportPersonalDataDescription": "نزّل نسخة من سيرك الذاتية والتحسينات بصيغة JSON.",
+    "deleteAccountDescription": "حذف حسابك نهائياً مع كل البيانات المرتبطة به.",
+    "deleteConfirmQuestion": "هل أنت متأكد؟",
+    "errors": {
+      "authToken": "تعذر الحصول على رمز المصادقة من الجلسة الحالية.",
+      "deleteFailed": "تعذر حذف الحساب.",
+      "deleteGeneric": "حدث خطأ أثناء حذف الحساب.",
+      "exportFailed": "تعذر تصدير البيانات.",
+      "exportGeneric": "حدث خطأ أثناء تصدير البيانات."
+    }
   },
   "hrSuperSaud": {
     "ready": "جاهز متى ما كنت جاهز.",
-    "stepOneHint": "ارفع ملف PDF أو DOCX بنص قابل للتحديد للبدء.",
+    "stepOneHint": "ارفع سيرة ذاتية قابلة للتحديد بصيغة PDF أو DOCX أو TXT للبدء.",
+    "resumeUploadedHint": "ممتاز. الآن تابع لمطابقة سيرتك مع إعلان وظيفي.",
     "waveGreeting": "أهلًا. جاهز أساعدك تصقل هذا الطلب.",
     "waveLabel": "لوّح لـ HR Super Saud",
     "moods": {
@@ -213,7 +275,7 @@
       "caution": "تحتاج مراجعة"
     },
     "reactions": {
-      "resumeUploaded": "وصلت السيرة. الخطوة التالية: قارنها مع الدور.",
+      "resumeUploaded": "ممتاز. الآن تابع لمطابقة سيرتك مع إعلان وظيفي.",
       "matchHigh": "مطابقة قوية. راجع الأدلة ثم خصصها بعناية.",
       "matchLow": "فيه فجوات تحتاج إغلاق قبل ما يكون الطلب جاهز.",
       "optimizeSuccess": "التحسين جاهز. راجع كل اقتراح قبل التصدير.",
@@ -600,16 +662,17 @@
     },
     "comparison": {
       "title": "ليش تختار واثق؟",
-      "subtitle": "شوف كيف نتميز عن أدوات السير الذاتية العادية",
+      "subtitle": "قارن واثق مع طرق شائعة لتحسين السيرة الذاتية",
       "watheq": "واثق",
-      "genericToolA": "أداة عادية أ",
-      "genericToolB": "أداة عادية ب",
+      "genericResumeBuilder": "منشئ سيرة ذاتية عام",
+      "keywordScanner": "أداة فحص كلمات مفتاحية",
+      "manualEditing": "تعديل يدوي",
       "features": {
         "vision2030": "توافق رؤية 2030",
-        "antiHallucination": "بدون هلوسة",
+        "antiHallucination": "حماية الأدلة",
         "arabicSupport": "دعم اللغة العربية",
         "jobMatch": "مطابقة الوظائف بالذكاء الاصطناعي",
-        "atsPassRate": "معدل اجتياز ATS",
+        "atsPassRate": "توافق ATS وإعلان الوظيفة",
         "templates": "قوالب احترافية",
         "interviewPrep": "تحضير المقابلة"
       },
@@ -618,12 +681,14 @@
         "no": "لا",
         "partial": "جزئي",
         "unknown": "غير معروف",
-        "watheqAts": "94%",
-        "toolAAts": "غير معروف",
-        "toolBAts": "85%",
-        "watheqTemplates": "5 محسّنة لـ ATS",
-        "toolATemplates": "2 بسيطة",
-        "toolBTemplates": "3 عادية"
+        "watheqAts": "توافق مبني على أدلة",
+        "resumeBuilderAts": "يركز على القالب",
+        "keywordScannerAts": "إشارات كلمات فقط",
+        "manualEditingAts": "يعتمد على المراجعة",
+        "watheqTemplates": "تنسيقات مناسبة لـ ATS",
+        "resumeBuilderTemplates": "مكتبة قوالب",
+        "keywordScannerTemplates": "مساعدة تنسيق محدودة",
+        "manualEditingTemplates": "تنسيق يدوي"
       }
     }
   },
@@ -647,7 +712,12 @@
       "dropText": "اسقط سيرتك الذاتية هنا أو اضغط للتصفح",
       "securityText": "نحافظ على خصوصية وأمان الملفات المرفوعة.",
       "prepareButton": "تحضير السيرة الذاتية",
+      "processingButton": "\u0642\u064a\u062f \u0627\u0644\u0645\u0639\u0627\u0644\u062c\u0629...",
       "clearButton": "مسح المدخلات",
+      "uploadFileLabel": "\u0631\u0641\u0639 \u0645\u0644\u0641 \u0627\u0644\u0633\u064a\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629",
+      "removeFileLabel": "\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0645\u062d\u062f\u062f",
+      "savedTitle": "\u0627\u0644\u0633\u064a\u0631\u0629 \u062c\u0627\u0647\u0632\u0629 \u0648\u0645\u062d\u0641\u0648\u0638\u0629",
+      "readyTitle": "\u062c\u0627\u0647\u0632\u0629 \u0644\u0644\u062a\u062d\u0636\u064a\u0631",
       "status": {
         "uploading": "يرفع السيرة الذاتية...",
         "parsing": "يحلل السيرة الذاتية...",
@@ -737,6 +807,7 @@
   "pricing": {
     "title": "الأسعار",
     "subtitle": "أسعار بسيطة وشفافة للجميع",
+    "workspaceCta": "تحتاج رصيدًا أكثر؟ عرض الباقات",
     "comingSoon": "قريب",
     "detailsComingSoon": "سيتم إعلان التفاصيل قريباً",
     "forever": "/مجاناً للأبد",
@@ -982,6 +1053,9 @@
       "topSectors": "أقوى القطاعات اللي تركب معك",
       "viewRecommendations": "شف التوصيات",
       "reanalyze": "حلل من جديد (2 نقطة)",
+      "clear": "مسح النتائج",
+      "cleared": "تم مسح النتائج",
+      "clearedDesc": "تم مسح نتائج التحليل.",
       "included": "وش يشمل:",
       "feature1": "نتيجتك العامة ومدى توافقك مع قطاعات الرؤية",
       "feature2": "تفصيل القطاعات الزينة لك ومهاراتك المقبولة فيها",
@@ -1227,6 +1301,9 @@
         "hide": "إخفاء ملاحظات HR Super Saud للتحسين",
         "restore": "إظهار ملاحظات HR Super Saud للتحسين",
         "minimized": "HR Super Saud",
+        "disable": "تعطيل HR Super Saud",
+        "enable": "تفعيل HR Super Saud",
+        "disabled": "تم تعطيل HR Super Saud",
         "moods": {
           "strong": {
             "status": "نتيجة مصقولة",

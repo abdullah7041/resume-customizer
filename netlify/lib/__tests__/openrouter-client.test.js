@@ -3,6 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const ORIGINAL_ENV = { ...process.env };
 const MESSAGES = [{ role: 'user', content: 'Return JSON.' }];
 
+vi.mock('../sentry.js', () => ({
+  summarizeErrorForLog: vi.fn((error) => error instanceof Error
+    ? { name: error.name, message: error.message, status: error.status }
+    : { message: String(error) }),
+}));
+
 const jsonResponse = (status, body, statusText = 'OK') => ({
   ok: status >= 200 && status < 300,
   status,
@@ -60,7 +66,7 @@ describe('openrouter-client fallback and timeout behavior', () => {
     const { callOpenRouter } = await importClient();
 
     await expect(callOpenRouter('flash', MESSAGES, null, { timeoutMs: 1000 }))
-      .rejects.toThrow('OpenRouter API error (502): Bad gateway');
+      .rejects.toThrow('OpenRouter API error (502)');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 

@@ -113,6 +113,11 @@ function getSmartFilename(resume: Partial<ResumeSchema> | null, templateId: stri
   return position ? `${name}_${position}.${ext}` : `${name}_Resume.${ext}`;
 }
 
+const summarizeErrorForConsole = (error: unknown) => ({
+  name: error instanceof Error ? error.name : 'Error',
+  message: error instanceof Error ? error.message : String(error),
+});
+
 
 
 interface TemplateGalleryProps {
@@ -361,7 +366,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             img.src = base64Data as string;
           }
         } catch (e) {
-          console.warn('Could not inline image for PDF:', e);
+          console.warn('Could not inline image for PDF:', summarizeErrorForConsole(e));
         }
       }
 
@@ -435,7 +440,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       useResumeStore.getState().setHasDownloaded(true);
 
     } catch (err) {
-      console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', err);
+      console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', summarizeErrorForConsole(err));
       
       try {
         // Dynamic import to keep bundle size small
@@ -583,7 +588,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         useResumeStore.getState().setHasDownloaded(true);
         
       } catch (clientErr) {
-        console.error('[PDFDownload] Client-side fallback also failed:', clientErr);
+        console.error('[PDFDownload] Client-side fallback also failed:', summarizeErrorForConsole(clientErr));
         // We could show a toast error here
       }
     } finally {
@@ -616,7 +621,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       analytics.trackExport(selectedTemplate.id, 'docx');
       useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
-      console.error('DOCX Download failed:', err);
+      console.error('DOCX Download failed:', summarizeErrorForConsole(err));
     } finally {
       setIsDownloadingDocx(false);
     }

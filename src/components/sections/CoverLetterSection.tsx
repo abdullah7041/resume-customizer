@@ -23,6 +23,7 @@ import { saveAs } from 'file-saver';
 import { cn } from '../../lib/utils/cn';
 import { analytics } from '../../services/analytics';
 import { useResumeStore } from '../../lib/stores/resumeStore';
+import { getCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { splitTextWithKeywords, shouldApplyBolding } from '../../lib/utils/keywordBolder';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { useFeatureTracking } from '../../hooks/useFeatureTracking';
@@ -33,7 +34,7 @@ import type { ResumeSchema } from '../../types/resume';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
 const GENERATE_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-cover-letter`;
-const STORAGE_KEY = 'airo:coverLetter';
+const STORAGE_KEY = 'watheq:coverLetter';
 
 // === Types ===
 interface CoverLetterSectionProps {
@@ -91,7 +92,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
   // Load from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = getCompatibleStorageItem(STORAGE_KEY);
       if (stored) {
         try {
           const data = JSON.parse(stored);
@@ -194,7 +195,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
       // Save to localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        setCompatibleStorageItem(STORAGE_KEY, JSON.stringify({
           coverLetter: data.coverLetter,
           companyName,
           hiringManager,

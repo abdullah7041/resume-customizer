@@ -35,7 +35,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
 
   return (
     <nav
-      className={cn("neu-card relative flex w-full items-center p-1.5 rounded-2xl", className)}
+      className={cn("relative flex w-full items-center rounded-2xl border border-emerald-900/15 bg-white/92 p-1.5 shadow-soft dark:border-white/15 dark:bg-black/50", className)}
       role="tablist"
       data-tour={dataTour}
     >
@@ -66,12 +66,12 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               className={cn(
                 'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap outline-none select-none shrink-0 z-10 rounded-xl ml-0.5 mr-0.5',
                 isDisabled
-                  ? 'cursor-not-allowed text-gray-400/60 dark:text-gray-500/70 opacity-60'
+                  ? 'cursor-not-allowed border border-gray-300/60 bg-gray-100/70 text-gray-500 opacity-45 dark:border-white/10 dark:bg-white/5 dark:text-gray-400'
                   : isActive
                   ? tab.isPremium ? 'text-white drop-shadow-md' : 'text-gray-900 dark:text-white drop-shadow-md'
                   : tab.isPremium
                     ? 'text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
               )}
             >
               {/* Animated active indicator background */}
@@ -87,7 +87,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
                   transition={springTransition}
                 >
                   {/* Subtle shine effect for active tab */}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/12 to-transparent opacity-70" />
                 </motion.div>
               )}
 

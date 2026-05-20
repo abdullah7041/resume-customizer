@@ -10,6 +10,7 @@
 import type { Handler, HandlerEvent, HandlerContext, HandlerResponse } from "@netlify/functions";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { summarizeErrorForLog } from "./sentry.js";
 
 export type RetryOptions = {
   maxRetries?: number;
@@ -448,7 +449,7 @@ async function checkRateLimit(
     return { allowed: true };
   } catch (err) {
     // If rate limiting fails, log error but allow request through
-    console.error("[rate-limiter] Rate limit check failed:", err);
+    console.error("[rate-limiter] Rate limit check failed:", summarizeErrorForLog(err));
     return { allowed: true };
   }
 }
@@ -502,7 +503,7 @@ export async function checkRateLimitForRequest(
 
     return { allowed: true };
   } catch (err) {
-    console.error("[rate-limiter] Rate limit check failed:", err);
+    console.error("[rate-limiter] Rate limit check failed:", summarizeErrorForLog(err));
     return { allowed: true };
   }
 }

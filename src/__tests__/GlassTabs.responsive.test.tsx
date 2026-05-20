@@ -29,7 +29,7 @@ const setViewportWidth = (width: number) => {
 };
 
 describe('GlassTabs responsive behavior', () => {
-  it.each([360, 390, 768])('keeps workspace tabs horizontally scrollable at %ipx', (width) => {
+  it.each([768, 1024])('keeps desktop workspace tabs horizontally scrollable at %ipx', (width) => {
     setViewportWidth(width);
     render(
       <GlassTabs
@@ -67,5 +67,6 @@ describe('GlassTabs responsive behavior', () => {
     expect(lockedTab).toBeDisabled();
     expect(lockedTab).toHaveAttribute('aria-disabled', 'true');
     expect(lockedTab).toHaveAttribute('title', 'Upload a resume first.');
+    expect(lockedTab).toHaveClass('opacity-45');
   });
 });

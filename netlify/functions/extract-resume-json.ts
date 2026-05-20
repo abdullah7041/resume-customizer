@@ -1,7 +1,7 @@
 import { parseResumeOnly } from "../lib/gemini-client.js";
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
-import { initSentry, captureError } from "../lib/sentry.js";
+import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 
 initSentry();
 
@@ -73,7 +73,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
           console.warn("[extract-resume-json] Pre-extracted text was too short or failed readability check — treating as unreadable.");
         }
       } catch (extractError) {
-        console.warn("[extract-resume-json] Pre-extraction failed:", extractError);
+        console.warn("[extract-resume-json] Pre-extraction failed:", summarizeErrorForLog(extractError));
       }
 
       if (extractedPlainText.length < MIN_READABLE_TEXT_LENGTH) {
@@ -238,7 +238,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("[extract-resume-json] Parse error:", errorMessage, error);
+    console.error("[extract-resume-json] Parse error:", summarizeErrorForLog(error));
 
     captureError(error, {
       function: 'extract-resume-json',

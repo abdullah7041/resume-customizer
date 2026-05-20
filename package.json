@@ -74,7 +74,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/parser": "^8.59.0",
-    "@vitejs/plugin-react-swc": "^4.3.0",
+    "@vitejs/plugin-react": "^6.0.2",
     "@vitest/eslint-plugin": "^1.6.16",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.4",

@@ -34,6 +34,9 @@
 - Mixed Arabic/English direction status: fixed in `src/lib/utils/resumeDirection.ts` and covered across preview/export tests. `mixed` content now resolves to RTL, Optimize print HTML renders `dir="rtl"`, and Templates PDF/DOCX export paths receive RTL direction.
 - Referral email logging/notification status: fixed in `netlify/lib/email-service.js`, `netlify/lib/referral-manager.js`, and `netlify/functions/referral-api.ts`. Referral email logs no longer include raw names/referee names/referrer names, referral notifications no longer derive display names from email local-parts, and referral idempotency behavior remains covered.
 - OAuth trust/branding documentation status: documented the dashboard-driven Google sign-in trust checklist in `DEPLOYMENT_CHECKLIST.md`, including Supabase Auth Site URL/redirect/provider settings, Google Cloud OAuth branding/origin/redirect settings, `VITE_SUPABASE_URL`, `VITE_SUPABASE_REDIRECT_URL`, custom-domain rollout warnings, and browser smoke-test steps.
+- P0 privacy/security hardening status: current pass tightened shared redaction helpers, replaced whole-error logging across AI/functions/cache/export/client surfaces, made `generate-pdf` require auth before parsing/rendering resume HTML, shortened clarification cache TTL to 10 minutes, and kept OAuth/privacy/terms pages untouched during Google review.
+- Full Arabic workspace localization plus privacy/security hardening verification status: passed on 2026-05-19. `npm run build` completed successfully, and `npm run quality:parallel` completed with lint, root TypeScript, Netlify TypeScript, and the full Vitest suite passing.
+- Browser persistence key hygiene status: fixed in `src/lib/utils/storage-migration.ts` and the affected UI persistence call sites. Current code now writes `watheq:*` keys for cover letters, last job description, bulk analysis, and workflow panel state, while old `airo:*` and `workflow-panel-*` keys remain readable and are copied forward without deleting saved user data.
 - Tests/checks that passed this session:
   - `rtk tsc`
   - `rtk lint` with 0 errors and 3 warnings in `src/components/Layout/MainContent.tsx`
@@ -63,13 +66,32 @@
   - `npm run test -- src/services/exportPdf.test.js`
   - `npm run test -- src/__tests__/TemplatesSection.test.jsx src/__tests__/template-rtl.test.tsx`
   - Latest `npm run quality:parallel` passed with 62 test files, 556 passed tests, 2 skipped tests, 0 lint errors, and the same 3 existing `MainContent.tsx` lint warnings
+  - `npm run test -- netlify/lib/__tests__/sentry.test.ts`
+  - `npm run test -- src/__tests__/bug-pdf-download.test.ts`
+  - `npm run test -- netlify/lib/__tests__/openrouter-client.test.js`
+  - `npm run test -- netlify/functions/__tests__/extract-resume-json.test.ts netlify/functions/__tests__/parse-resume.test.ts`
+  - `npm run test -- netlify/functions/__tests__/ai-integration.test.ts netlify/functions/__tests__/optimize.test.ts netlify/functions/__tests__/optimize-stream.test.ts`
+  - `npm run test -- netlify/functions/__tests__/user-data-api.test.ts src/services/api.test.js`
+  - `npm run test -- netlify/functions/__tests__/admin-gates.test.ts netlify/lib/__tests__/rate-limiter.test.ts`
+  - `npm run type:check`
+  - `npm run test -- src/lib/utils/storage-migration.test.ts`
+  - `npm run test -- src/__tests__/CoverLetterSection.i18n.test.tsx src/__tests__/JobMatch.test.jsx`
+  - `npm run test -- src/lib/utils/storage-migration.test.ts src/__tests__/CoverLetterSection.i18n.test.tsx src/__tests__/JobMatch.test.jsx`
+  - `npm run type:check`
+  - `npm run lint`
+  - `npm run build` passed on 2026-05-19. Vite emitted known non-blocking warnings for deprecated `esbuild` option from `vite:react-swc`, browser externalization of `node:zlib`, chunk size, and ineffective dynamic import.
+  - Latest `npm run quality:parallel` passed on 2026-05-19 with lint, root `tsc --noEmit`, Netlify `tsc -p netlify/tsconfig.json --noEmit`, and Vitest all green: 66 test files passed, 576 tests passed, 2 skipped.
+  - `npm run test -- src/__tests__/light-mode-contrast.test.ts` passed on 2026-05-20 with 8 tests passed.
+  - `npm run quality:parallel` passed on 2026-05-20 with Vitest reporting 585 tests passed and 2 skipped.
+  - `npm run build` passed on 2026-05-20 with the existing non-blocking Vite/Rolldown warnings for `vite:react-swc`, browser externalization of `node:zlib`, chunk size, and ineffective dynamic import.
 - Tests/checks that failed or were not run:
   - First run of `npm run test -- netlify/lib/__tests__/rate-limiter.test.ts` failed because the test mocked `Redis` with a non-constructible arrow function; the mock was fixed and the test passed on rerun.
-  - `npm run build` was not run in this checkpoint session.
+  - The 2026-05-19 `npm run quality:parallel` failure in `src/__tests__/light-mode-contrast.test.ts` is resolved as of 2026-05-20; the current `src/lib/styles/glass.ts` keeps the intentional `dark:bg-white/5` input and `dark:bg-gray-900/80` secondary-button classes expected by the contrast gate.
   - OAuth trust/branding checklist update was documentation-only; no automated tests were run.
 - Current dirty tree snapshot:
-  - `rtk git status` most recently reported 60 modified tracked files and 26 untracked paths before removing the generated `.tsbuildinfo.netlify` artifact from the working tree.
-  - Key dirty areas include backend functions/lib hardening, AI parser/scoring/rate-limit tests, frontend RTL/mobile/export changes, local agent skills/docs/context files, and this handoff document.
+  - `rtk git status` and `rtk git diff --stat` timed out on 2026-05-19, so native `git status --short` and `git diff --stat` were used as a narrow fallback.
+  - `git status --short` reported 76 modified tracked files and 7 untracked paths.
+  - Key dirty areas include backend functions/lib hardening, AI parser/scoring/rate-limit tests, frontend RTL/mobile/export/localization changes, storage-migration follow-ups already in the dirty tree, HR Super Saud follow-ups already in the dirty tree, OAuth/auth docs/tests, and this handoff document.
   - Do not assume untracked files are already part of `rtk git diff --stat`; inspect status before relying on tracked diff output.
 
 ## Completed Decisions
@@ -96,7 +118,7 @@
 
 ### P0 / Must Fix Before Feature Expansion
 
-- [ ] No open P0 blocker is known after the score and `optimize-stream` rate-limit fixes, but the full quality/build gate has not been run against the entire dirty tree.
+- [x] No open P0 product/security blocker is known after the score, `optimize-stream` rate-limit, Arabic workspace localization, privacy/security hardening, browser persistence fixes, and resolved light-mode contrast gate mismatch. The latest full quality/build gate passed on 2026-05-20.
 
 ### P1 / Fix Soon
 
@@ -116,33 +138,35 @@
 ### Pre-existing Issues Discovered But Not Caused By Current Diff
 
 - [x] Email name/refereeName logging risk: referral email logs now avoid raw names/referee names/referrer names, and notification display names are no longer derived from email local-parts.
-- [ ] Some localStorage keys still use old/unprefixed names such as `airo:coverLetter`, `airo:lastJobDescription`, and `workflow-panel-*`.
+- [x] Some localStorage keys still use old/unprefixed names such as `airo:coverLetter`, `airo:lastJobDescription`, and `workflow-panel-*`; browser persistence now uses `watheq:*` keys with compatibility-safe read-through/copy-forward aliases.
 - [x] Referral reward persistence and email notification behavior reviewed after idempotency fix; duplicate/already-referred and missing-referee-row paths do not send notifications or award duplicate credits.
 
 ## Next Recommended Task
 
-- Title: Review old/unprefixed localStorage keys and migrate only with a compatibility-safe plan.
-- Why it is next: referral email logging/notification review is complete; the remaining stabilization queue item is local browser persistence key hygiene.
+- Title: No stabilization task is currently queued after the resolved contrast-gate mismatch.
+- Why it is next: `src/lib/styles/glass.ts` and `src/__tests__/light-mode-contrast.test.ts` are aligned; the focused contrast test, full quality gate, and production build all passed on 2026-05-20.
 - Files likely involved:
-  - `src/lib/stores/resumeStore.ts`
-  - `src/services/api.js`
-  - Existing localStorage/store tests only as needed.
+  - None until the next user-selected stabilization task.
 - Acceptance criteria:
-  - Inventory old/unprefixed keys such as `airo:coverLetter`, `airo:lastJobDescription`, and `workflow-panel-*`.
-  - Prefer a compatibility-safe migration or read-through fallback rather than breaking existing local user data.
-  - Do not change backend referral, scoring, exports, upload, creative backlog, or unrelated UI behavior.
+  - Wait for the next user-approved task instead of starting creative backlog work or unrelated feature changes.
 - Focused verification commands:
-  - Choose focused store/localStorage tests after inventory.
-  - `npm run quality:parallel` when feasible
+  - None pending.
+  - Latest completed: `npm run test -- src/__tests__/light-mode-contrast.test.ts`, `npm run quality:parallel`, and `npm run build`.
+  - Exact latest result: focused contrast test passed with 8 tests; full quality gate passed with 585 tests passed and 2 skipped; build passed with existing non-blocking Vite/Rolldown warnings only.
 - What not to touch:
-  - Do not change scoring, exports, direction, upload behavior, creative backlog, or referral behavior.
+  - Do not start creative backlog work or unrelated feature changes.
 
 ## Stabilization Priority Queue
 
-1. Review old/unprefixed localStorage keys and migrate only with a compatibility-safe plan.
+1. No queued stabilization item remains after the 2026-05-20 contrast-gate verification.
 
 ## Completed Since Last Handoff
 
+- [x] Light-mode contrast gate mismatch resolution:
+  - Inspected `src/lib/styles/glass.ts` and `src/__tests__/light-mode-contrast.test.ts`.
+  - Confirmed the current `glass.ts` values are intentional and already aligned with the contrast gate: `glass.input` includes `dark:bg-white/5`, and `glass.button.secondary` includes `dark:bg-gray-900/80`.
+  - No production code change was required; only this handoff document was updated.
+  - Verified `npm run test -- src/__tests__/light-mode-contrast.test.ts`, `npm run quality:parallel`, and `npm run build` on 2026-05-20.
 - [x] P0-1 Supabase server-client hardening:
   - Removed public anon-key fallback from `netlify/lib/supabase-client.ts`.
   - Required `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for privileged server work.
@@ -168,6 +192,22 @@
 - [x] P0-4 OCR/privacy logging check:
   - Active parser still logs metadata only: lengths, source labels, types, and object keys.
   - No raw OCR/resume/AI previews were reintroduced.
+- [x] P0-5 privacy/security hardening:
+  - Extended shared redaction helpers for content fields, identity fields, bearer/JWT/API-key-like strings, and safe error summaries.
+  - Replaced whole-error logs and broad Sentry payload contexts across AI, parse, optimize, Vision 2030, PDF/export, cache/rate-limit, feedback, waitlist, scheduled, and client API surfaces.
+  - Required auth in `generate-pdf` before parsing/rendering resume HTML payloads and sanitized PDF filenames for response headers.
+  - Reduced clarification cache TTL to 10 minutes to match sensitive resume/JD-derived output retention.
+  - Kept Google OAuth, privacy policy, and terms pages untouched while external review is pending.
+- [x] P0-6 full dirty-tree verification:
+  - Ran the missing build gate for the Arabic workspace localization plus privacy/security hardening stack.
+  - `npm run build` passed with known Vite/Rolldown warnings only.
+  - `npm run quality:parallel` passed with lint, root TypeScript, Netlify TypeScript, and all Vitest files green.
+  - No code changes were needed after verification; only this handoff document was updated.
+- [x] P2-13 browser persistence key hygiene:
+  - Inventoried old `airo:*` and unprefixed `workflow-panel-*` localStorage keys.
+  - Added compatibility-safe storage helpers that copy old aliases forward to `watheq:*` keys without deleting saved data during migration/read-through.
+  - Updated cover letter, Match/Optimize last job description, bulk analysis, and workflow panel persistence to write current `watheq:*` keys.
+  - Added focused storage migration coverage and verified existing cover-letter/job-match old-key tests still pass.
 - [x] P1-1 optimize-stream abuse protection:
   - Added `checkRateLimitForRequest()` for Netlify Functions v2 `Request` handlers.
   - Applied it to `netlify/functions/optimize-stream.ts` before auth, credit checks, cache lookup, body parsing, and AI work.

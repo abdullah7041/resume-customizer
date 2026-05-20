@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check, X, Minus } from "lucide-react";
+import { Check, FileText, Minus, PencilLine, Search, X } from "lucide-react";
 import { cn } from "../../lib/utils/cn";
 
 interface ComparisonTableProps {
@@ -9,48 +9,73 @@ interface ComparisonTableProps {
 export function ComparisonTable({ className }: ComparisonTableProps) {
   const { t } = useTranslation();
 
+  const categoryColumns = [
+    {
+      key: "resumeBuilder" as const,
+      label: t("landing.comparison.genericResumeBuilder"),
+      icon: FileText,
+    },
+    {
+      key: "keywordScanner" as const,
+      label: t("landing.comparison.keywordScanner"),
+      icon: Search,
+    },
+    {
+      key: "manualEditing" as const,
+      label: t("landing.comparison.manualEditing"),
+      icon: PencilLine,
+    },
+  ];
+
   const comparisonData = [
     {
       feature: t("landing.comparison.features.vision2030"),
       watheq: "yes",
-      toolA: "no",
-      toolB: "no",
+      resumeBuilder: "no",
+      keywordScanner: "no",
+      manualEditing: "partial",
     },
     {
       feature: t("landing.comparison.features.antiHallucination"),
       watheq: "yes",
-      toolA: "no",
-      toolB: "partial",
+      resumeBuilder: "partial",
+      keywordScanner: "partial",
+      manualEditing: "partial",
     },
     {
       feature: t("landing.comparison.features.arabicSupport"),
       watheq: "yes",
-      toolA: "no",
-      toolB: "partial",
+      resumeBuilder: "partial",
+      keywordScanner: "partial",
+      manualEditing: "partial",
     },
     {
       feature: t("landing.comparison.features.jobMatch"),
       watheq: "yes",
-      toolA: "yes",
-      toolB: "yes",
+      resumeBuilder: "partial",
+      keywordScanner: "yes",
+      manualEditing: "partial",
     },
     {
       feature: t("landing.comparison.features.atsPassRate"),
       watheq: t("landing.comparison.values.watheqAts"),
-      toolA: t("landing.comparison.values.toolAAts"),
-      toolB: t("landing.comparison.values.toolBAts"),
+      resumeBuilder: t("landing.comparison.values.resumeBuilderAts"),
+      keywordScanner: t("landing.comparison.values.keywordScannerAts"),
+      manualEditing: t("landing.comparison.values.manualEditingAts"),
     },
     {
       feature: t("landing.comparison.features.templates"),
       watheq: t("landing.comparison.values.watheqTemplates"),
-      toolA: t("landing.comparison.values.toolATemplates"),
-      toolB: t("landing.comparison.values.toolBTemplates"),
+      resumeBuilder: t("landing.comparison.values.resumeBuilderTemplates"),
+      keywordScanner: t("landing.comparison.values.keywordScannerTemplates"),
+      manualEditing: t("landing.comparison.values.manualEditingTemplates"),
     },
     {
       feature: t("landing.comparison.features.interviewPrep"),
       watheq: "yes",
-      toolA: "no",
-      toolB: "yes",
+      resumeBuilder: "no",
+      keywordScanner: "no",
+      manualEditing: "partial",
     },
   ];
 
@@ -92,9 +117,9 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
   return (
     <div className={cn("w-full overflow-hidden neu-card", className)}>
       <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
-        <div className="min-w-[640px]">
+        <div className="min-w-[820px]">
           {/* Header */}
-          <div className="grid grid-cols-4 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
+          <div className="grid grid-cols-5 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
             <div className="p-4 flex items-end">
               {/* Empty features header for cleaner look */}
             </div>
@@ -112,21 +137,14 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
               </div>
             </div>
 
-            {/* Tool A */}
-            <div className="p-4 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-white/40">
-              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 border border-gray-300 dark:border-white/10 flex items-center justify-center">
-                <span className="font-semibold">A</span>
+            {categoryColumns.map(({ key, label, icon: Icon }) => (
+              <div key={key} className="p-4 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-white/40">
+                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 border border-gray-300 dark:border-white/10 flex items-center justify-center">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <span className="text-center text-sm font-semibold leading-5">{label}</span>
               </div>
-              <span className="text-sm">{t("landing.comparison.genericToolA")}</span>
-            </div>
-
-            {/* Tool B */}
-            <div className="p-4 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-white/40">
-              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 border border-gray-300 dark:border-white/10 flex items-center justify-center">
-                <span className="font-semibold">B</span>
-              </div>
-              <span className="text-sm">{t("landing.comparison.genericToolB")}</span>
-            </div>
+            ))}
           </div>
 
           {/* Table Body */}
@@ -135,7 +153,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
               <div
                 key={idx}
                 className={cn(
-                  "grid grid-cols-4 transition-colors hover:bg-gray-100 dark:hover:bg-white/5",
+                  "grid grid-cols-5 transition-colors hover:bg-gray-100 dark:hover:bg-white/5",
                   idx % 2 === 0 ? "bg-transparent" : "bg-gray-50/50 dark:bg-black/20" // Zebra striping ledger style
                 )}
               >
@@ -152,15 +170,11 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
                   {renderCell(row.watheq, true)}
                 </div>
 
-                {/* Tool A Data */}
-                <div className="p-4 flex items-center justify-center">
-                  {renderCell(row.toolA)}
-                </div>
-
-                {/* Tool B Data */}
-                <div className="p-4 flex items-center justify-center">
-                  {renderCell(row.toolB)}
-                </div>
+                {categoryColumns.map(({ key }) => (
+                  <div key={key} className="p-4 flex items-center justify-center">
+                    {renderCell(row[key])}
+                  </div>
+                ))}
               </div>
             ))}
           </div>

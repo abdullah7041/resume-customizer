@@ -1,6 +1,6 @@
 import type { Handler } from "@netlify/functions";
 import { RateLimiter, batchWithConcurrency } from "../lib/rate-limiter.js";
-import { initSentry, captureError } from "../lib/sentry.js";
+import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 
 initSentry();
 
@@ -263,7 +263,7 @@ const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error("[batch-api] Fatal error:", error);
+    console.error("[batch-api] Fatal error:", summarizeErrorForLog(error));
     const message = error instanceof Error ? error.message : "Batch processing failed";
     captureError(error, {
       function: 'batch-api',

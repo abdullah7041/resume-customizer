@@ -17,7 +17,7 @@ import {
 } from "../lib/resume-schemas.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { addFeedbackCredits } from "../lib/credit-manager.js";
-import { redactForLog } from "../lib/sentry.js";
+import { redactForLog, summarizeErrorForLog } from "../lib/sentry.js";
 
 // Initialize Supabase client with service role
 function getSupabaseClient() {
@@ -51,7 +51,7 @@ async function getUserFromToken(token: string) {
 
     return data.user;
   } catch (error) {
-    console.error("[submit-feedback] Token verification failed:", error);
+    console.error("[submit-feedback] Token verification failed:", summarizeErrorForLog(error));
     return null;
   }
 }
@@ -142,7 +142,7 @@ const handleFeedbackSubmission: Handler = async (event) => {
       .single();
 
     if (insertError) {
-      console.error("[submit-feedback] Failed to insert feedback:", insertError);
+      console.error("[submit-feedback] Failed to insert feedback:", summarizeErrorForLog(insertError));
       return {
         statusCode: 500,
         headers: { "Content-Type": "application/json" },
@@ -210,7 +210,7 @@ const handleFeedbackSubmission: Handler = async (event) => {
         }
       } catch (error) {
         // Non-blocking: feedback is saved even if credit award fails
-        console.error("[submit-feedback] Credit award failed (non-blocking):", error);
+        console.error("[submit-feedback] Credit award failed (non-blocking):", summarizeErrorForLog(error));
         creditError = "credit_award_failed";
       }
     }
@@ -237,7 +237,7 @@ const handleFeedbackSubmission: Handler = async (event) => {
     };
   } catch (error) {
     // Catch any unexpected errors and return JSON
-    console.error("[submit-feedback] Unexpected error:", error);
+    console.error("[submit-feedback] Unexpected error:", summarizeErrorForLog(error));
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       statusCode: 500,

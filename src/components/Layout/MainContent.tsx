@@ -21,11 +21,10 @@ const InterviewSection = lazy(() => import("../sections/InterviewSection").then(
 const BulkAnalysisSection = lazy(() => import("../sections/BulkAnalysisSection").then(m => ({ default: m.BulkAnalysisSection })));
 const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").then(m => ({ default: m.CoverLetterSection })));
 const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
-const PricingSection = lazy(() => import("../sections/PricingSection").then(m => ({ default: m.PricingSection })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 
 import { GlassTabs, type Tab } from "../ui/GlassTabs";
-import { ComparisonTable } from "../ui/ComparisonTable";
+import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflowNav";
 import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
 import { ParallaxContainer } from "../ui/ParallaxSection";
@@ -35,7 +34,7 @@ import ViewTextModal from "../ui/ViewTextModal";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
-import { emitHRSuperSaudEvent } from "../../features/hr-super-saud";
+import { emitHRSuperSaudEvent, useHRSuperSaud } from "../../features/hr-super-saud";
 
 /** Lightweight skeleton shown while lazy sections load */
 function SectionSkeleton() {
@@ -92,6 +91,9 @@ const getTabsConfig = (t) => [
   { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail },
   { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true },
 ];
+const PRE_UPLOAD_TAB_VALUES = new Set(["resume", "match", "optimize"]);
+const MOBILE_PRIMARY_TAB_VALUES = ["resume", "match", "optimize", "templates"];
+const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030"];
 
 const containerClass = "app-shell w-full";
 
@@ -160,20 +162,56 @@ export default function MainContent() {
     }
   });
   const hasResume = Boolean(resumeData?.plainText);
+  const { setWorkflowState: setHRSuperSaudWorkflowState } = useHRSuperSaud();
   const resumeGateReason = t(
     "workspace.resumeGateHint",
     "Upload a resume to unlock Match, Optimize, Templates, and Interview."
   );
+  const mobileWorkflowGateReason = t(
+    "workspace.mobileWorkflow.lockedHelper",
+    "Upload a resume first to unlock the next steps."
+  );
 
   // Memoize tabs to avoid recreating on every render
   const tabs = useMemo<Tab[]>(
-    () =>
-      getTabsConfig(t).map((tab) =>
+    () => {
+      const baseTabs = getTabsConfig(t);
+      const visibleTabs = hasResume
+        ? baseTabs
+        : baseTabs.filter((tab) => PRE_UPLOAD_TAB_VALUES.has(tab.value));
+
+      return visibleTabs.map((tab) =>
         !hasResume && tab.value !== "resume"
           ? { ...tab, disabledReason: resumeGateReason }
           : tab
-      ),
+      );
+    },
     [hasResume, resumeGateReason, t]
+  );
+  const mobilePrimarySteps = useMemo<MobileWorkflowItem[]>(() => {
+    const mobileLabels = {
+      resume: t("workspace.mobileWorkflow.steps.resume", "Resume"),
+      match: t("workspace.mobileWorkflow.steps.jobAd", "Job Ad"),
+      optimize: t("workspace.mobileWorkflow.steps.optimize", "Optimize"),
+      templates: t("workspace.mobileWorkflow.steps.export", "Export"),
+    };
+
+    return getTabsConfig(t)
+      .filter((tab) => MOBILE_PRIMARY_TAB_VALUES.includes(tab.value))
+      .map((tab) => ({
+        ...tab,
+        label: mobileLabels[tab.value] ?? tab.label,
+        disabledReason: !hasResume && tab.value !== "resume" ? mobileWorkflowGateReason : undefined,
+      }));
+  }, [hasResume, mobileWorkflowGateReason, t]);
+  const mobileSecondarySteps = useMemo<MobileWorkflowItem[]>(
+    () =>
+      hasResume
+        ? getTabsConfig(t)
+            .filter((tab) => MOBILE_SECONDARY_TAB_VALUES.includes(tab.value))
+            .map((tab) => ({ ...tab }))
+        : [],
+    [hasResume, t]
   );
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState(() => {
@@ -283,6 +321,10 @@ export default function MainContent() {
       }
     }
   }, [resumeData]);
+
+  useEffect(() => {
+    setHRSuperSaudWorkflowState(hasResume ? "resumeUploaded" : "noResume");
+  }, [hasResume, setHRSuperSaudWorkflowState]);
 
   // Persist job description to localStorage
   useEffect(() => {
@@ -1139,38 +1181,54 @@ export default function MainContent() {
     [dismissToast, toasts]
   );
 
+  const renderClearAllAction = (showText: boolean) =>
+    resumeData?.plainText ? (
+      <button
+        type="button"
+        onClick={handleClearAllData}
+        className="flex-shrink-0 group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 hover:bg-danger-500/10 hover:text-danger-600 transition-all duration-200 dark:text-surface-50/70 dark:hover:bg-danger-400/10 dark:hover:text-danger-300"
+        title={t("workspace.clearAll")}
+        aria-label={t("workspace.clearAll")}
+      >
+        <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+        <span className={showText ? undefined : "hidden sm:inline"}>{t("workspace.clearAll")}</span>
+      </button>
+    ) : undefined;
+
   const workspace = (
-    <ParallaxContainer enableLayers={true} className="py-1">
-      <div className="space-y-3 sm:space-y-3 text-ink-700 dark:text-surface-50">
-        {/* Tab navigation - full width on mobile */}
+    <ParallaxContainer enableLayers={false} className="py-1">
+      <div className="space-y-3 sm:space-y-3 text-gray-900 dark:text-surface-50">
+        {/* Workflow navigation */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <GlassTabs
-              data-tour="features"
-              tabs={tabs}
-              activeValue={activeTab}
-              onTabChange={handleTabChange}
-              rightAction={resumeData?.plainText ? (
-                <button
-                  type="button"
-                  onClick={handleClearAllData}
-                  className="flex-shrink-0 group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-500/70 hover:bg-danger-500/10 hover:text-danger-500 transition-all duration-200 dark:text-surface-50/60 dark:hover:bg-danger-400/10 dark:hover:text-danger-400"
-                  title="Clear all saved data"
-                >
-                  <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
-                  <span className="hidden sm:inline">{t("workspace.clearAll")}</span>
-                </button>
-              ) : undefined}
-            />
+            <div className="sm:hidden">
+              <MobileWorkflowNav
+                primarySteps={mobilePrimarySteps}
+                secondarySteps={mobileSecondarySteps}
+                activeValue={activeTab}
+                onStepChange={handleTabChange}
+                gateReason={mobileWorkflowGateReason}
+                rightAction={renderClearAllAction(false)}
+              />
+            </div>
+            <div className="hidden sm:block">
+              <GlassTabs
+                data-tour="features"
+                tabs={tabs}
+                activeValue={activeTab}
+                onTabChange={handleTabChange}
+                rightAction={renderClearAllAction(false)}
+              />
+            </div>
             {!hasResume && (
-              <p className="mt-2 text-center text-xs font-medium text-ink-500 dark:text-emerald-100/70 sm:text-start">
+              <p className="mt-2 hidden text-center text-xs font-semibold text-gray-600 dark:text-emerald-100/82 sm:block sm:text-start">
                 {resumeGateReason}
               </p>
             )}
           </div>
         </div>
 
-        <div className="neu-card relative min-h-[420px] sm:min-h-[480px] p-4 sm:p-5 lg:p-6 transition-shadow duration-300 group">
+        <div className="relative min-h-[420px] rounded-[var(--radius-card)] border border-emerald-900/12 bg-white/95 p-4 shadow-card transition-shadow duration-300 dark:border-emerald-200/16 dark:bg-[#071f1a]/95 sm:min-h-[480px] sm:p-5 lg:p-6">
           {activeTab === "resume" && (
             <UploadSection
               onParseResume={handleParseResume}
@@ -1378,10 +1436,10 @@ export default function MainContent() {
           </div>
         </div>
       )}
-      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-ink-700 dark:text-surface-50`}>
-        <div className="neu-card p-4 sm:p-7 lg:p-8 transition-shadow duration-300 group">
+      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-gray-900 dark:text-surface-50`}>
+        <div className="rounded-[var(--radius-card)] border border-white/70 bg-white/88 p-4 shadow-soft transition-shadow duration-300 dark:border-white/12 dark:bg-[#041c17]/90 sm:p-7 lg:p-8">
           {flowProgress > 0 && (
-            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-smoke-50/70 dark:bg-zinc-900/50">
+            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-emerald-900/10 dark:bg-black/45">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-all duration-300"
                 style={{ width: `${flowProgress}%` }}
@@ -1392,8 +1450,8 @@ export default function MainContent() {
 
           {loading ? (
             <div className="space-y-6">
-              <div className="h-8 w-40 rounded-full bg-smoke-50/70" />
-              <div className="h-96 w-full overflow-hidden rounded-[var(--radius-card)] bg-smoke-50/60">
+              <div className="h-8 w-40 rounded-full bg-emerald-900/10 dark:bg-white/10" />
+              <div className="h-96 w-full overflow-hidden rounded-[var(--radius-card)] bg-white/80 dark:bg-black/35">
                 <div className="h-full w-1/2 animate-shimmer bg-gradient-to-r from-transparent via-surface-50/40 to-transparent" />
               </div>
             </div>
@@ -1458,28 +1516,6 @@ export default function MainContent() {
         )}
       </div>
 
-      {/* Comparison Table - shown for all users */}
-      <div className={`${containerClass} mt-16 mb-12`}>
-        <div className="text-center mb-12 space-y-4">
-          <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-100/90 dark:bg-emerald-500/10 backdrop-blur-md border border-emerald-500/30 text-emerald-800 dark:text-emerald-400 text-sm font-bold tracking-wider uppercase shadow-sm">
-            {t("landing.comparison.title", "Competitive Advantage")}
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]">
-            {t("landing.comparison.title", "Why Choose Watheq?")}
-          </h2>
-          <p className="max-w-2xl mx-auto text-lg text-white dark:text-white/80 font-medium drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
-            {t("landing.comparison.subtitle", "See how we stack up against generic resume tools")}
-          </p>
-        </div>
-        <ComparisonTable />
-      </div>
-
-      {/* Pricing Section - shown for all users */}
-      <div className={`${containerClass} mt-2`}>
-        <Suspense fallback={<SectionSkeleton />}>
-          <PricingSection />
-        </Suspense>
-      </div>
     </main>
   );
 }

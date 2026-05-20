@@ -36,9 +36,10 @@ import { FeedbackModal } from '../Feedback/FeedbackModal';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeatureTracking } from '../../hooks/useFeatureTracking';
+import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
 
 // Key for job description in localStorage (shared with MatchSection)
-const LAST_JOB_KEY = 'airo:lastJobDescription';
+const LAST_JOB_KEY = 'watheq:lastJobDescription';
 
 // Default match score when no analysis is available (represents neutral/baseline match)
 const DEFAULT_FALLBACK_SCORE = 55;
@@ -274,7 +275,7 @@ export function OptimizeSection({
   useEffect(() => {
     if (optimizations.length > 0 && !optimizationMetrics.beforeScore && resumeText) {
       const jobDescription = typeof window !== 'undefined'
-        ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+        ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
         : '';
 
       if (jobDescription) {
@@ -326,7 +327,7 @@ export function OptimizeSection({
 
     // Get the job description from localStorage (same as MatchSection)
     const jobDescription = typeof window !== 'undefined'
-      ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
       : '';
 
     // Try to get the cached match analysis score first (this is the 78% from Match section)
@@ -429,7 +430,7 @@ export function OptimizeSection({
           resumeText: resumeText || JSON.stringify(originalResume),
           // Get job description from localStorage (shared with MatchSection)
           jobText: typeof window !== 'undefined'
-            ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+            ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
             : '',
           language: i18n.language,
         }),
@@ -615,7 +616,7 @@ export function OptimizeSection({
         metricsToUpdate.hasJobDescription = data.debug?.hasJobDescription || false;
       } else {
         // Fallback: Use cached match analysis score if available
-        const jobDesc = typeof window !== 'undefined' ? window.localStorage.getItem(LAST_JOB_KEY) || '' : '';
+        const jobDesc = typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '';
         const cachedAnalysis = resumeText && jobDesc ? getCachedAnalysis(resumeText, jobDesc) : null;
         if (cachedAnalysis?.score) {
           metricsToUpdate.beforeScore = cachedAnalysis.score;
@@ -710,7 +711,7 @@ export function OptimizeSection({
         // Update the cache with the new match score if available
         // This ensures subsequent renders use the fresh score instead of stale cache
         if (metricsToUpdate.beforeScore && resumeText && (metricsToUpdate.hasJobDescription)) {
-          const jobDesc = typeof window !== 'undefined' ? window.localStorage.getItem(LAST_JOB_KEY) || '' : '';
+          const jobDesc = typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '';
           if (jobDesc) {
             useResumeStore.getState().setCachedAnalysis(resumeText, jobDesc, {
               score: metricsToUpdate.beforeScore,
@@ -723,7 +724,7 @@ export function OptimizeSection({
 
       // Auto-verify: Run AI re-analysis on the optimized resume (non-fatal)
       const jobDescription = typeof window !== 'undefined'
-        ? window.localStorage.getItem(LAST_JOB_KEY) || ''
+        ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
         : '';
 
       if (jobDescription.trim()) {

@@ -41,6 +41,10 @@ vi.mock('@upstash/ratelimit', () => {
   return { Ratelimit: MockRatelimit };
 });
 
+vi.mock('../sentry.js', () => ({
+  summarizeErrorForLog: vi.fn((error: unknown) => error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) }),
+}));
+
 async function loadRateLimiter() {
   vi.resetModules();
   return import('../rate-limiter.js');

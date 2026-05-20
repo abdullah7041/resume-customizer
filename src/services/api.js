@@ -13,6 +13,13 @@ const CLARIFY_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-clarifications`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 
+const summarizeErrorForConsole = (error) => ({
+  name: error?.name || 'Error',
+  message: error?.message || 'Unknown error',
+  status: error?.status || null,
+  type: error?.type || null,
+});
+
 // Helper to get auth headers
 export const getAuthHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
@@ -21,7 +28,7 @@ export const getAuthHeaders = async () => {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError) {
-      console.warn('[API] Failed to retrieve auth session:', sessionError.message);
+      console.warn('[API] Failed to retrieve auth session:', summarizeErrorForConsole(sessionError));
     }
 
     if (session?.access_token) {
@@ -30,7 +37,7 @@ export const getAuthHeaders = async () => {
       console.warn('[API] No active session found - request will be sent without authentication');
     }
   } catch (error) {
-    console.error('[API] Unexpected error retrieving auth session:', error);
+    console.error('[API] Unexpected error retrieving auth session:', summarizeErrorForConsole(error));
     // Don't throw - allow the endpoint to decide if auth is required
   }
 
@@ -177,7 +184,7 @@ export const parseResume = async (resumeInput, options = {}) => {
           clientExtractedText = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: resumeInput.name });
           console.log(`[API] Client-side extraction: ${clientExtractedText.length} chars from ${resumeInput.name}`);
         } catch (extractError) {
-          console.warn('[API] Client-side extraction failed, falling back to server-side:', extractError);
+          console.warn('[API] Client-side extraction failed, falling back to server-side:', summarizeErrorForConsole(extractError));
         }
 
         if (clientExtractedText.length >= 100) {
@@ -268,7 +275,7 @@ export const parseResume = async (resumeInput, options = {}) => {
         throw cancelError;
       }
 
-      console.error("Parse failed:", error);
+      console.error("Parse failed:", summarizeErrorForConsole(error));
 
       // Enrich error with status for retry logic
       error.status = error.status || 500;
@@ -346,7 +353,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
       };
 
     } catch (error) {
-      console.error("Match failed:", error);
+      console.error("Match failed:", summarizeErrorForConsole(error));
 
       // Enrich error with status for retry logic
       error.status = error.status || 500;
@@ -409,7 +416,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       return data;
 
     } catch (error) {
-      console.error("Optimization failed:", error);
+      console.error("Optimization failed:", summarizeErrorForConsole(error));
 
       // Enrich error with status for retry logic
       error.status = error.status || 500;
@@ -467,7 +474,7 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
     }
     return await response.json();
   } catch (error) {
-    console.warn('[API] generateClarifications failed (non-fatal), proceeding without:', error?.message);
+    console.warn('[API] generateClarifications failed (non-fatal), proceeding without:', summarizeErrorForConsole(error));
     return { clarifications: [] };
   }
 };
@@ -561,7 +568,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
           }
         } catch (parseErr) {
           if (parseErr.retryable !== undefined) throw parseErr; // Re-throw SSE errors
-          console.warn('[optimize-stream] Failed to parse SSE event:', eventType, parseErr);
+      console.warn('[optimize-stream] Failed to parse SSE event:', eventType, summarizeErrorForConsole(parseErr));
         }
       }
     }
@@ -604,7 +611,7 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
       return data;
 
     } catch (error) {
-      console.error("Vision 2030 alignment analysis failed:", error);
+      console.error("Vision 2030 alignment analysis failed:", summarizeErrorForConsole(error));
 
       // Enrich error with status for retry logic
       error.status = error.status || 500;

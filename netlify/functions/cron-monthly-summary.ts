@@ -12,7 +12,7 @@ import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
 import { sendMonthlyUsageSummary } from '../lib/email-service.js';
-import { redactForLog } from '../lib/sentry.js';
+import { redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 
 interface UserStats {
   totalUsed: number;
@@ -50,7 +50,7 @@ const handler: Handler = async (event) => {
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
 
     if (authError) {
-      console.error('[cron-monthly-summary] Failed to list auth users:', authError);
+      console.error('[cron-monthly-summary] Failed to list auth users:', summarizeErrorForLog(authError));
       throw new Error('Failed to retrieve user information');
     }
 
@@ -70,7 +70,7 @@ const handler: Handler = async (event) => {
     const { data: allUserCredits, error: creditsError } = await supabase.from('user_credits').select('email, credits_total, credits_remaining, last_reset_date');
 
     if (creditsError) {
-      console.error('[cron-monthly-summary] Failed to get user credits:', creditsError);
+      console.error('[cron-monthly-summary] Failed to get user credits:', summarizeErrorForLog(creditsError));
       throw new Error('Failed to retrieve user credits');
     }
 
@@ -88,7 +88,7 @@ const handler: Handler = async (event) => {
       .gte('created_at', thirtyDaysAgo.toISOString());
 
     if (transError) {
-      console.error('[cron-monthly-summary] Failed to get transactions:', transError);
+      console.error('[cron-monthly-summary] Failed to get transactions:', summarizeErrorForLog(transError));
       throw new Error('Failed to retrieve transaction history');
     }
 
@@ -187,7 +187,7 @@ const handler: Handler = async (event) => {
         );
 
         if (!emailResult.success) {
-          console.warn(`[cron-monthly-summary] Failed to send email for user ${redactForLog(userEmail)}:`, emailResult.error);
+          console.warn(`[cron-monthly-summary] Failed to send email for user ${redactForLog(userEmail)}:`, redactForLog(emailResult.error));
           emailFailCount++;
         }
 
@@ -213,7 +213,7 @@ const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('[cron-monthly-summary] Unexpected error:', error);
+    console.error('[cron-monthly-summary] Unexpected error:', summarizeErrorForLog(error));
 
     return {
       statusCode: 500,

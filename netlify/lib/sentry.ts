@@ -3,10 +3,13 @@ import * as Sentry from "@sentry/node";
 let initialized = false;
 
 const REDACTED = "[REDACTED]";
-const CONTENT_FIELD_PATTERN = /(^|_|\b)(resumeText|jobText|jobDescription|plainText|raw_text|rawText|content|data|html|body|value)($|_|\b)/i;
-const IDENTITY_FIELD_PATTERN = /(^|_|\b)(email|userEmail|phone|phoneNumber|name|fullName|firstName|lastName|token|authorization|password|secret|apiKey)($|_|\b)/i;
+const CONTENT_FIELD_PATTERN = /(^|_|\b)(resumeText|jobText|jobDescription|plainText|raw_text|rawText|content|data|html|styles|body|value|prompt|response|aiPrompt|aiResponse)($|_|\b)/i;
+const IDENTITY_FIELD_PATTERN = /(^|_|\b)(email|userEmail|phone|phoneNumber|address|location|name|fullName|firstName|lastName|token|authorization|password|secret|apiKey|serviceKey|serviceRoleKey|key)($|_|\b)/i;
 const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const PHONE_PATTERN = /(?:\+?\d[\d\s().-]{7,}\d)/g;
+const BEARER_PATTERN = /Bearer\s+[A-Za-z0-9._~+/=-]+/gi;
+const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
+const KEY_VALUE_PATTERN = /\b(?:sk|pk|or|sb|resend|upstash|service_role|anon)_[A-Za-z0-9._~+/=-]{16,}\b/gi;
 
 export function initSentry() {
     if (initialized) return;
@@ -57,8 +60,42 @@ function summarizeContent(value: unknown) {
 
 function sanitizeString(value: string): string {
     return value
+        .replace(BEARER_PATTERN, `Bearer ${REDACTED}`)
+        .replace(JWT_PATTERN, REDACTED)
+        .replace(KEY_VALUE_PATTERN, REDACTED)
         .replace(EMAIL_PATTERN, REDACTED)
         .replace(PHONE_PATTERN, REDACTED);
+}
+
+export function summarizeErrorForLog(error: unknown): Record<string, unknown> {
+    if (error instanceof Error) {
+        const details = error as Error & {
+            code?: unknown;
+            status?: unknown;
+            statusCode?: unknown;
+            details?: unknown;
+            hint?: unknown;
+        };
+
+        return {
+            name: error.name,
+            message: redactForLog(error.message),
+            code: redactForLog(details.code),
+            status: details.status ?? details.statusCode,
+            details: sanitizeSentryContext(details.details),
+            hint: redactForLog(details.hint),
+        };
+    }
+
+    if (error && typeof error === "object") {
+        return sanitizeSentryContext(error) as Record<string, unknown>;
+    }
+
+    return { message: redactForLog(error) };
+}
+
+export function summarizePayloadForLog(payload: unknown): unknown {
+    return sanitizeSentryContext(payload);
 }
 
 export function sanitizeSentryContext(value: unknown, key = "", depth = 0): unknown {

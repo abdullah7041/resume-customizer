@@ -15,17 +15,17 @@ export const glass = {
   elevated: 'neu-card shadow-2xl',
 
   // Subtle glass (less prominent)
-  subtle: 'neu-card opacity-95',
+  subtle: 'neu-card shadow-soft',
 
   // Input fields
-  input: 'bg-gray-100/60 dark:bg-white/5 backdrop-blur-sm border border-gray-300/50 dark:border-white/10 focus:border-emerald-500/50 focus:bg-white/80 dark:focus:bg-white/10',
+  input: 'bg-white/92 dark:bg-white/5 border border-gray-300/70 dark:border-white/10 focus:border-emerald-500/70 focus:bg-white dark:focus:bg-black/50',
 
   // Buttons
   button: {
     primary: 'btn-metal',
-    prominent: 'btn-metal shadow-lg shadow-emerald-500/20',
-    secondary: 'btn-spring bg-gray-100 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-black border border-gray-300/50 dark:border-white/10 text-gray-900 dark:text-white shadow-md backdrop-blur-md',
-    ghost: 'btn-spring hover:bg-black/5 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white',
+    prominent: 'btn-metal shadow-md shadow-emerald-900/10',
+    secondary: 'btn-spring bg-white/92 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-black/70 border border-gray-300/70 dark:border-white/10 text-gray-900 dark:text-white shadow-sm',
+    ghost: 'btn-spring hover:bg-black/5 dark:hover:bg-white/8 text-gray-700 dark:text-gray-200 hover:text-gray-950 dark:hover:text-white disabled:border disabled:border-gray-300/60 disabled:bg-gray-100/70 disabled:text-gray-500 disabled:dark:border-white/10 disabled:dark:bg-white/5 disabled:dark:text-gray-400',
   },
 
   // Tabs

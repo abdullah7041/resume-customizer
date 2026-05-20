@@ -1,3 +1,5 @@
+import { summarizeErrorForLog } from './sentry.js';
+
 const PDF_MIME = "application/pdf";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const FALLBACK_OCTET_STREAM = "application/octet-stream";
@@ -250,7 +252,7 @@ const extractPdfPlainText = async (arrayBuffer) => {
       }
       console.warn("[resumeText] PDF.js extraction returned no text, trying fallback parser");
     } catch (error) {
-      console.warn("[resumeText] PDF.js extraction failed:", error?.message || "Unknown error");
+      console.warn("[resumeText] PDF.js extraction failed:", summarizeErrorForLog(error));
       // fall back to manual parsing below
     }
   } else {
@@ -457,7 +459,7 @@ const extractDocxPlainText = async (arrayBuffer) => {
     console.log(`[resumeText] DOCX extraction: ${extractedText.length} chars`);
     return extractedText;
   } catch (error) {
-    console.error("[resumeText] DOCX extraction failed:", error?.message || "Unknown error");
+    console.error("[resumeText] DOCX extraction failed:", summarizeErrorForLog(error));
     return "";
   }
 };

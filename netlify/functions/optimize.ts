@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import { optimizeResume } from "../lib/gemini-client.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
-import { initSentry, captureError } from "../lib/sentry.js";
+import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
@@ -403,17 +403,22 @@ const baseHandler: Handler = async (event) => {
 
   } catch (error) {
     const errorDetails = error as any;
-    console.error("Optimization error:", error);
+    console.error("Optimization error:", summarizeErrorForLog(error));
 
     // Don't send timeout errors to Sentry (expected behavior under load)
     if (errorDetails?.name !== 'TimeoutError') {
       // Strip PII before sending to Sentry - only send metadata
-      const rawBody = JSON.parse(event.body || '{}');
+      let rawBody: Record<string, unknown> = {};
+      try {
+        rawBody = event.body ? JSON.parse(event.body) : {};
+      } catch {
+        rawBody = {};
+      }
       captureError(error, {
         function: 'optimize',
         payload: {
-          resumeTextLength: rawBody.resumeText?.length || 0,
-          jobTextLength: rawBody.jobText?.length || 0,
+          resumeTextLength: typeof rawBody.resumeText === 'string' ? rawBody.resumeText.length : 0,
+          jobTextLength: typeof rawBody.jobText === 'string' ? rawBody.jobText.length : 0,
           hasResumeText: Boolean(rawBody.resumeText),
           hasJobText: Boolean(rawBody.jobText),
         },

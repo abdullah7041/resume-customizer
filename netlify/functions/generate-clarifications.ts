@@ -17,7 +17,7 @@ import { Handler } from '@netlify/functions';
 import { callOpenRouter } from '../lib/openrouter-client.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { ClarificationRequestSchema, formatZodError } from '../lib/resume-schemas.js';
-import { initSentry, captureError, redactForLog } from '../lib/sentry.js';
+import { initSentry, captureError, redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 import { buildCacheKey, getCached, setCached } from '../lib/redis-cache.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { getClientIP } from '../lib/ip-utils.js';
@@ -214,7 +214,7 @@ const baseHandler: Handler = async (event) => {
     console.log(`[generate-clarifications] Returning ${parsed.clarifications.length} question(s)`);
 
     // Cache the result
-    await setCached(cacheKey, parsed, 1800); // 30 min TTL
+    await setCached(cacheKey, parsed, 600); // Sensitive resume/JD-derived output; keep briefly.
 
     return {
       statusCode: 200,
@@ -222,7 +222,7 @@ const baseHandler: Handler = async (event) => {
       body: JSON.stringify(parsed),
     };
   } catch (error) {
-    console.error('[generate-clarifications] AI call failed:', error);
+    console.error('[generate-clarifications] AI call failed:', summarizeErrorForLog(error));
     captureError(error, {
       function: 'generate-clarifications',
       userId: user.id,

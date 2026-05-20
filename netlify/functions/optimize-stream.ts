@@ -15,7 +15,7 @@
 
 import { optimizeResume } from "../lib/gemini-client.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
-import { initSentry, captureError } from "../lib/sentry.js";
+import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
@@ -322,7 +322,7 @@ export default async function handler(request: Request): Promise<Response> {
           )
         );
       } catch (error: any) {
-        console.error("[optimize-stream] Error:", error);
+        console.error("[optimize-stream] Error:", summarizeErrorForLog(error));
 
         captureError(error, {
           function: "optimize-stream",

@@ -181,8 +181,9 @@ export function UpgradeModal({
                   </span>
                 </div>
                 <h2 id="upgrade-title" className="text-3xl font-bold text-white tracking-tight">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-gray-400">Unlock </span>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-300 via-amber-200 to-gold-400 drop-shadow-[0_2px_10px_rgba(251,191,36,0.2)]">Pro</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-gray-400">
+                    {t('credits.upgrade.title', 'Upgrade to Premium')}
+                  </span>
                 </h2>
                 <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
                   {t('credits.upgrade.subtitle', 'Supercharge your resume optimization with higher limits and expert features.')}
@@ -192,6 +193,7 @@ export function UpgradeModal({
               <button
                 onClick={handleDismiss}
                 className="group/close p-2 rounded-full hover:bg-white/5 transition-colors relative z-50"
+                aria-label={t('common.closeDialog', 'Close dialog')}
               >
                 <X className="w-5 h-5 text-gray-400 group-hover/close:text-white transition-colors" />
               </button>
@@ -205,7 +207,9 @@ export function UpgradeModal({
                     <Bell className="w-4 h-4 text-red-400 animate-pulse" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-red-100">Low Credits Balance</h4>
+                    <h4 className="text-sm font-semibold text-red-100">
+                      {t('credits.upgrade.lowCreditsTitle', 'Low credits balance')}
+                    </h4>
                     <p className="text-xs text-red-300/80 mt-0.5">
                       {t('credits.upgrade.lowCredits', { remaining: creditsRemaining })}
                     </p>
@@ -246,7 +250,9 @@ export function UpgradeModal({
                     <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping opacity-75" />
                     <Check className="w-8 h-8 text-emerald-400 relative z-10" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">You're on the list!</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    {t('credits.upgrade.waitlistSuccessTitle', "You're on the list!")}
+                  </h3>
                   <p className="text-emerald-400/80 text-sm">
                     {t('credits.upgrade.waitlistSuccess', "We'll notify you as soon as spots open up.")}
                   </p>
@@ -262,7 +268,7 @@ export function UpgradeModal({
                       <GlassInput
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="example@email.com"
+                        placeholder={t('pricing.emailPlaceholder', 'Enter your email')}
                         leftIcon={<Mail className="w-4 h-4 text-emerald-500" />}
                         className="bg-black/50 border-white/10 text-lg py-6 rounded-xl focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all pl-11 shadow-inner"
                         disabled={isSubmitting}
@@ -282,7 +288,7 @@ export function UpgradeModal({
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 -translate-x-full animate-[shimmer_2s_infinite]" />
                     <span className="flex items-center gap-2">
                       {isSubmitting ? (
-                        <>Processing...</>
+                        <>{t('common.submitting', 'Sending...')}</>
                       ) : (
                         <>
                           <Bell className="w-4 h-4 fill-current" />

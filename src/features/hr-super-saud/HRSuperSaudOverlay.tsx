@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils/cn';
 import { useHRSuperSaud } from './HRSuperSaudProvider';
-import type { HRSuperSaudMood, HRSuperSaudMovementPhase, HRSuperSaudReaction, HRSuperSaudTargetRegion } from './model';
+import type { HRSuperSaudMood, HRSuperSaudMovementPhase, HRSuperSaudReaction, HRSuperSaudTargetRegion, HRSuperSaudWorkflowState } from './model';
 
 const MINIMIZED_STORAGE_KEY = 'watheq:hrSuperSaud:minimized';
 const DISABLED_STORAGE_KEY = 'watheq:hrSuperSaud:disabled';
@@ -196,8 +196,22 @@ function getMovementOffset(shell: HTMLElement, currentOffset: { offsetX: number;
   };
 }
 
-export function HRSuperSaudOverlay() {
-  const { dismissReaction, reaction } = useHRSuperSaud();
+function getWorkflowHint(workflowState: HRSuperSaudWorkflowState) {
+  if (workflowState === 'resumeUploaded') {
+    return {
+      key: 'hrSuperSaud.resumeUploadedHint',
+      fallback: 'Great. Now continue to match your resume with a job ad.',
+    };
+  }
+
+  return {
+    key: 'hrSuperSaud.stepOneHint',
+    fallback: 'Upload a selectable PDF, DOCX, or TXT resume to begin.',
+  };
+}
+
+export function HRSuperSaudOverlay({ isOnboardingActive = false }: { isOnboardingActive?: boolean }) {
+  const { dismissReaction, reaction, workflowState } = useHRSuperSaud();
   const { t } = useTranslation();
   const [isMinimized, setIsMinimized] = useState(readInitialMinimized);
   const [hasMinimizedPreference, setHasMinimizedPreference] = useState(() => hasStoredPreference(MINIMIZED_STORAGE_KEY));
@@ -233,7 +247,7 @@ export function HRSuperSaudOverlay() {
       return undefined;
     }
 
-    if (isDisabled || isMinimized) {
+    if (isDisabled || isMinimized || isOnboardingActive) {
       dismissReaction();
       return undefined;
     }
@@ -286,7 +300,7 @@ export function HRSuperSaudOverlay() {
     }, MOVE_DURATION_MS + reaction.durationMs + RETURN_DURATION_MS));
 
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [dismissReaction, isCompact, isDisabled, isMinimized, prefersReducedMotion, reaction]);
+  }, [dismissReaction, isCompact, isDisabled, isMinimized, isOnboardingActive, prefersReducedMotion, reaction]);
 
   const handleMascotClick = useCallback(() => {
     if (isDisabled || isMinimized || movement.phase !== 'idle') {
@@ -305,9 +319,12 @@ export function HRSuperSaudOverlay() {
   const activeReaction = movement.reaction ?? reaction;
   const mood = activeReaction?.mood ?? 'coach';
   const styles = moodStyles[mood];
+  const workflowHint = getWorkflowHint(workflowState);
+  const workflowMessage = t(workflowHint.key, workflowHint.fallback);
   const message = activeReaction
     ? t(activeReaction.messageKey, activeReaction.fallbackMessage)
-    : t('hrSuperSaud.stepOneHint', 'Upload a selectable PDF or DOCX to begin.');
+    : workflowMessage;
+  const shouldUseMinimalPresentation = isCompact || isOnboardingActive;
 
   const mascotPose = useMemo<MascotPose>(() => {
     if (movement.phase === 'moving' || movement.phase === 'returning') {
@@ -326,7 +343,7 @@ export function HRSuperSaudOverlay() {
   if (isDisabled) {
     return (
       <aside
-        className="hr-super-saud-shell"
+        className={cn('hr-super-saud-shell', isOnboardingActive && 'hr-super-saud-shell--onboarding')}
         aria-label="HR Super Saud"
         aria-live="polite"
       >
@@ -361,7 +378,22 @@ export function HRSuperSaudOverlay() {
     );
   }
 
-  if (isMinimized) {
+  if (isMinimized || shouldUseMinimalPresentation) {
+    if (shouldUseMinimalPresentation) {
+      return (
+        <div
+          className={cn('hr-super-saud-shell hr-super-saud-shell--minimal', isOnboardingActive && 'hr-super-saud-shell--onboarding')}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="hr-super-saud-restore hr-super-saud-restore--minimal">
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span>{workflowMessage}</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="hr-super-saud-shell">
         <button
@@ -374,7 +406,7 @@ export function HRSuperSaudOverlay() {
           aria-label={t('sections.match.assistant.restore', 'Show HR Super Saud feedback')}
         >
           <MessageCircle className="h-3.5 w-3.5" />
-          {t('hrSuperSaud.stepOneHint', 'Upload a selectable PDF or DOCX to begin.')}
+          {workflowMessage}
         </button>
       </div>
     );
@@ -389,10 +421,10 @@ export function HRSuperSaudOverlay() {
       aria-label="HR Super Saud"
       aria-live="polite"
     >
-      {((movement.phase === 'reacting' && activeReaction) || isUserWaving) && (
+      {((movement.phase === 'idle' && !activeReaction) || (movement.phase === 'reacting' && activeReaction) || isUserWaving) && (
         <div className="hr-super-saud-bubble" dir="auto">
           {isUserWaving
-            ? t('hrSuperSaud.waveGreeting', 'Hello! Ready to help you shine.')
+            ? t('hrSuperSaud.waveGreeting', 'Hello. Ready to help you sharpen this application.')
             : message}
         </div>
       )}

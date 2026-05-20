@@ -44,8 +44,8 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         disabled={disabled || isLoading}
         // Hover: Lift up (-3px), add subtle diffuse glow/shadow
         whileHover={{
-          y: -3,
-          boxShadow: '0 8px 30px rgba(16, 185, 129, 0.2), inset 0 2px 0 rgba(255,255,255,0.2)',
+          y: disabled || isLoading ? 0 : -1,
+          boxShadow: disabled || isLoading ? 'none' : '0 10px 22px -16px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255,255,255,0.18)',
           transition: { duration: 0.2, ease: "easeOut" }
         }}
         // Tap: Compress down (scale 0.96), increase inset shadow (realistic button press)
@@ -57,7 +57,8 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         }}
         className={cn(
           'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-colors duration-300',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]',
+          'disabled:cursor-not-allowed disabled:opacity-75',
           glass.button[variant],
           sizeMap[size],
           className

@@ -13,7 +13,7 @@ import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
 import { sendCreditsRefreshedEmail } from '../lib/email-service.js';
-import { redactForLog } from '../lib/sentry.js';
+import { redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 
 const handler: Handler = async (event) => {
   console.log('[cron-reset-credits] Starting scheduled credit reset...');
@@ -48,7 +48,7 @@ const handler: Handler = async (event) => {
       .lt('last_reset_date', thirtyDaysAgo.toISOString());
 
     if (queryError) {
-      console.error('[cron-reset-credits] Failed to query users:', queryError);
+      console.error('[cron-reset-credits] Failed to query users:', summarizeErrorForLog(queryError));
       throw new Error('Failed to query users for credit reset');
     }
 
@@ -70,7 +70,7 @@ const handler: Handler = async (event) => {
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
 
     if (authError) {
-      console.error('[cron-reset-credits] Failed to list auth users:', authError);
+      console.error('[cron-reset-credits] Failed to list auth users:', summarizeErrorForLog(authError));
       throw new Error('Failed to retrieve user information');
     }
 
@@ -111,7 +111,7 @@ const handler: Handler = async (event) => {
           .eq('email', email);
 
         if (updateError) {
-          console.error(`[cron-reset-credits] Failed to reset credits for user ${redactForLog(email)}:`, updateError);
+          console.error(`[cron-reset-credits] Failed to reset credits for user ${redactForLog(email)}:`, summarizeErrorForLog(updateError));
           errors.push({ userId: email, error: `Failed to update credits: ${updateError.message}` });
           continue;
         }
@@ -131,7 +131,7 @@ const handler: Handler = async (event) => {
         });
 
         if (logError) {
-          console.warn(`[cron-reset-credits] Failed to log transaction for user ${redactForLog(email)}:`, logError);
+          console.warn(`[cron-reset-credits] Failed to log transaction for user ${redactForLog(email)}:`, summarizeErrorForLog(logError));
           // Don't fail the operation
         }
 
@@ -140,7 +140,7 @@ const handler: Handler = async (event) => {
         const emailResult = await sendCreditsRefreshedEmail(email, userName, newCredits, 'en');
 
         if (!emailResult.success) {
-          console.warn(`[cron-reset-credits] Failed to send email for user ${redactForLog(email)}:`, emailResult.error);
+          console.warn(`[cron-reset-credits] Failed to send email for user ${redactForLog(email)}:`, redactForLog(emailResult.error));
           emailFailCount++;
         }
 
@@ -166,7 +166,7 @@ const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('[cron-reset-credits] Unexpected error:', error);
+    console.error('[cron-reset-credits] Unexpected error:', summarizeErrorForLog(error));
 
     return {
       statusCode: 500,

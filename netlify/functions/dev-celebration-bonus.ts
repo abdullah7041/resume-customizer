@@ -17,6 +17,7 @@
 import { Handler } from '@netlify/functions';
 import { requireAdminMutationGate } from '../lib/admin-gates.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
+import { summarizeErrorForLog } from '../lib/sentry.js';
 
 const handler: Handler = async (event) => {
   const gate = requireAdminMutationGate(event, 'ALLOW_CELEBRATION_BONUS');
@@ -119,7 +120,7 @@ const handler: Handler = async (event) => {
       .insert(transactions);
 
     if (logError) {
-      console.warn('[CelebrationBonus] Failed to log some transactions:', logError);
+      console.warn('[CelebrationBonus] Failed to log some transactions:', summarizeErrorForLog(logError));
       // Don't fail the operation if logging fails
     }
 
@@ -137,7 +138,7 @@ const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('[CelebrationBonus] Error:', error);
+    console.error('[CelebrationBonus] Error:', summarizeErrorForLog(error));
     return {
       statusCode: 500,
       body: JSON.stringify({

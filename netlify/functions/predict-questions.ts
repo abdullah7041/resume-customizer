@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import { predictInterviewQuestions } from "../lib/gemini-client.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas.js";
-import { initSentry, captureError } from "../lib/sentry.js";
+import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
@@ -119,14 +119,19 @@ const baseHandler: Handler = async (event) => {
     };
 
   } catch (error) {
-    console.error("Predict questions error:", error);
+    console.error("Predict questions error:", summarizeErrorForLog(error));
     // Strip PII before sending to Sentry - only send metadata
-    const rawBody = JSON.parse(event.body || '{}');
+    let rawBody: Record<string, unknown> = {};
+    try {
+      rawBody = event.body ? JSON.parse(event.body) : {};
+    } catch {
+      rawBody = {};
+    }
     captureError(error, {
       function: 'predict-questions',
       payload: {
-        resumeTextLength: rawBody.resumeText?.length || 0,
-        jobDescriptionLength: rawBody.jobDescription?.length || 0,
+        resumeTextLength: typeof rawBody.resumeText === 'string' ? rawBody.resumeText.length : 0,
+        jobDescriptionLength: typeof rawBody.jobDescription === 'string' ? rawBody.jobDescription.length : 0,
         hasResumeText: Boolean(rawBody.resumeText),
         hasJobDescription: Boolean(rawBody.jobDescription),
       },

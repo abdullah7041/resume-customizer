@@ -179,7 +179,13 @@ export default function UploadSection({
                 if (rawText && typeof rawText === 'string') {
                     setParsedResumeText(rawText);
                 } else {
-                    console.warn('[Upload] Warning: No valid rawText to save. Value was:', typeof plainTextValue, plainTextValue);
+                    console.warn('[Upload] Warning: No valid rawText to save.', {
+                        valueType: typeof plainTextValue,
+                        hasValue: plainTextValue !== null && plainTextValue !== undefined,
+                        keys: plainTextValue && typeof plainTextValue === 'object'
+                            ? Object.keys(plainTextValue as Record<string, unknown>).slice(0, 10)
+                            : [],
+                    });
                 }
             }
 

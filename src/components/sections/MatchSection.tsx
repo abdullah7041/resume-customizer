@@ -32,6 +32,7 @@ import { useUserCredits } from '../../hooks/useUserCredits';
 import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { FeedbackModal } from '../Feedback/FeedbackModal';
 import { useResumeStore } from '../../lib/stores/resumeStore';
+import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 const resolveVariant = (score: number) => {
@@ -68,7 +69,7 @@ const resolveVariant = (score: number) => {
   };
 };
 
-const LAST_JOB_KEY = "airo:lastJobDescription";
+const LAST_JOB_KEY = "watheq:lastJobDescription";
 const RING_RADIUS = 60;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
@@ -124,7 +125,7 @@ export function MatchSection({
   // === STATE FROM features/JobMatch.tsx ===
   const [jobText, setJobText] = useState(() => {
     if (typeof window === "undefined") return "";
-    return window.localStorage.getItem(LAST_JOB_KEY) ?? "";
+    return getCompatibleStorageItem(LAST_JOB_KEY) ?? "";
   });
   const [error, setError] = useState("");
   const [whyOpen, setWhyOpen] = useState(false);
@@ -140,9 +141,9 @@ export function MatchSection({
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (jobText && jobText.trim().length > 0) {
-      window.localStorage.setItem(LAST_JOB_KEY, jobText);
+      setCompatibleStorageItem(LAST_JOB_KEY, jobText);
     } else {
-      window.localStorage.removeItem(LAST_JOB_KEY);
+      removeCompatibleStorageItem(LAST_JOB_KEY);
     }
   }, [jobText]);
 

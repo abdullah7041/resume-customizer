@@ -66,6 +66,8 @@ VITE_SENTRY_DSN=<same-as-SENTRY_DSN>
 
 Google sign-in trust is controlled by dashboard settings, not React code. Complete these manually before deploy.
 
+Use `docs/OAUTH_TRUST_BRANDING_CHECKLIST.md` as the focused operator checklist for Supabase, Google Cloud / Google Auth Platform, DNS, custom-domain rollout, and smoke testing.
+
 ### Supabase Auth (Supabase Dashboard)
 
 - [ ] **Site URL** is set to the canonical Watheq production URL (`https://watheqai.app`).

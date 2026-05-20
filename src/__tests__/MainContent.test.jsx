@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MainContent from "../components/Layout/MainContent";
 
@@ -221,6 +221,17 @@ describe("MainContent resume parsing", () => {
     expect(resumeUploadMockProps.current.resumeDocument).toEqual(resumeData);
 
     removeItemSpy.mockRestore();
+  });
+
+  it("does not render landing pricing or comparison blocks in the authenticated workspace", () => {
+    render(<MainContent />);
+
+    expect(screen.queryByText(/Why Choose Watheq/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(RegExp(['Generic', 'Tool', 'A'].join(' '), 'i'))).not.toBeInTheDocument();
+    expect(screen.queryByText(/Generic Resume Builder/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Keyword Scanner/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Manual Editing/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pricing/i)).not.toBeInTheDocument();
   });
 });
 

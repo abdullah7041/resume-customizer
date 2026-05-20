@@ -4,6 +4,8 @@
  * Fallback: Direct Google Gemini API (when OpenRouter returns 502/503)
  */
 
+import { summarizeErrorForLog } from './sentry.js';
+
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -116,8 +118,8 @@ async function callOpenRouterDirect(modelType, model, messages, jsonSchema, opti
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const error = new Error(`OpenRouter API error (${response.status}): ${errorData.error?.message || response.statusText}`);
+    await response.json().catch(() => ({}));
+    const error = new Error(`OpenRouter API error (${response.status})`);
     error.status = response.status;
     throw error;
   }
@@ -199,8 +201,10 @@ async function callGeminiDirect(modelType, messages, jsonSchema, options, contro
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(`Gemini API error (${response.status}): ${errorData.error?.message || response.statusText}`);
+    await response.json().catch(() => ({}));
+    const error = new Error(`Gemini API error (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
 
   const data = await response.json();
@@ -244,7 +248,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
       } catch (openRouterError) {
         // If fallback is available and error is eligible, try Gemini
         if (GEMINI_API_KEY && isFallbackEligible(openRouterError)) {
-          console.warn(`[AI Client] OpenRouter failed (${openRouterError.message}), falling back to Gemini direct`);
+          console.warn('[AI Client] OpenRouter failed, falling back to Gemini direct:', summarizeErrorForLog(openRouterError));
           // Reset abort controller for fallback (create new one with remaining time)
           clearTimeout(timeoutId);
           const fallbackController = new AbortController();
@@ -256,7 +260,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
             console.log(`[AI Client] Gemini fallback success (${content.length} chars)`);
             return content;
           } catch (geminiError) {
-            console.error(`[AI Client] Gemini fallback also failed:`, geminiError.message);
+            console.error('[AI Client] Gemini fallback also failed:', summarizeErrorForLog(geminiError));
             // Throw original OpenRouter error (more informative)
             throw openRouterError;
           } finally {
@@ -266,9 +270,9 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
 
         // No fallback available or error not eligible — log why and re-throw
         if (!GEMINI_API_KEY) {
-          console.warn(`[AI Client] No GEMINI_API_KEY set — cannot fall back from OpenRouter error: ${openRouterError.message}`);
+          console.warn('[AI Client] No GEMINI_API_KEY set — cannot fall back from OpenRouter error:', summarizeErrorForLog(openRouterError));
         } else {
-          console.warn(`[AI Client] OpenRouter error not fallback-eligible (status: ${openRouterError.status}): ${openRouterError.message}`);
+          console.warn('[AI Client] OpenRouter error not fallback-eligible:', summarizeErrorForLog(openRouterError));
         }
         throw openRouterError;
       }

@@ -10,7 +10,7 @@
 
 import { Handler } from "@netlify/functions";
 import { sendWaitlistConfirmation } from "../lib/email-service.js";
-import { redactForLog } from "../lib/sentry.js";
+import { redactForLog, summarizeErrorForLog } from "../lib/sentry.js";
 
 export const handler: Handler = async (event) => {
   // Only accept POST requests
@@ -72,7 +72,7 @@ export const handler: Handler = async (event) => {
       };
     }
   } catch (error) {
-    console.error("[waitlist-confirm] Unexpected error:", error);
+    console.error("[waitlist-confirm] Unexpected error:", summarizeErrorForLog(error));
     return {
       statusCode: 500,
       body: JSON.stringify({

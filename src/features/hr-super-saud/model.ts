@@ -8,6 +8,7 @@ export type HRSuperSaudEventName =
 export type HRSuperSaudMood = 'confident' | 'coach' | 'caution';
 export type HRSuperSaudMovementPhase = 'idle' | 'moving' | 'reacting' | 'returning';
 export type HRSuperSaudTargetRegion = 'upload' | 'match' | 'optimize' | 'status';
+export type HRSuperSaudWorkflowState = 'noResume' | 'resumeUploaded';
 
 export interface HRSuperSaudEventPayload {
   score?: number | null;
@@ -40,7 +41,7 @@ const REACTIONS: Record<HRSuperSaudEventName, Omit<HRSuperSaudReaction, 'eventNa
     mood: 'coach',
     targetRegion: 'upload',
     messageKey: 'hrSuperSaud.reactions.resumeUploaded',
-    fallbackMessage: 'Resume received. Next, compare it with the role.',
+    fallbackMessage: 'Great. Now continue to match your resume with a job ad.',
     durationMs: 4200,
   },
   'match.high': {

@@ -1,48 +1,95 @@
 /**
- * Migrates old "airo:" storage keys to new "watheq:" keys
- * Runs once on app initialization to preserve user data
+ * Migrates old storage keys to current "watheq:" keys.
+ * Old keys are left in place so users can safely roll back to older builds.
  */
-export function migrateStorageKeys(): void {
-  const MIGRATION_FLAG = 'watheq:migrationComplete';
+const MIGRATION_FLAG = 'watheq:migrationComplete';
+const OLD_PREFIX = 'airo:';
+const NEW_PREFIX = 'watheq:';
 
-  // Skip if already migrated
-  if (localStorage.getItem(MIGRATION_FLAG)) {
-    return;
+const prefixedKeysToMigrate = [
+  'lastActiveTab',
+  'resumeData',
+  'lastJobDescription',
+  'landingSeen',
+  'previewQuotaUsed',
+  'bulkAnalysis',
+  'coverLetter',
+  'interviewQuestions',
+  'theme',
+  'beta_access',
+];
+
+const keyAliases: Record<string, string[]> = {
+  'watheq:bulkAnalysis': ['airo:bulkAnalysis'],
+  'watheq:coverLetter': ['airo:coverLetter'],
+  'watheq:lastJobDescription': ['airo:lastJobDescription'],
+  'watheq:workflow-panel-last-step': ['workflow-panel-last-step'],
+  'watheq:workflow-panel-minimized': ['workflow-panel-minimized'],
+  'watheq:workflow-panel-position': ['workflow-panel-position'],
+};
+
+const getAliasesForKey = (key: string): string[] => keyAliases[key] ?? [];
+
+export function getCompatibleStorageItem(key: string): string | null {
+  const currentValue = localStorage.getItem(key);
+  if (currentValue !== null) {
+    return currentValue;
   }
 
-  const OLD_PREFIX = 'airo:';
-  const NEW_PREFIX = 'watheq:';
+  for (const oldKey of getAliasesForKey(key)) {
+    const oldValue = localStorage.getItem(oldKey);
+    if (oldValue !== null) {
+      try {
+        localStorage.setItem(key, oldValue);
+      } catch (error) {
+        console.warn(`[Storage Migration] Failed to copy ${oldKey} to ${key}:`, error);
+      }
+      return oldValue;
+    }
+  }
 
-  const keysToMigrate = [
-    'lastActiveTab',
-    'resumeData',
-    'lastJobDescription',
-    'landingSeen',
-    'previewQuotaUsed',
-    'bulkAnalysis',
-    'coverLetter',
-    'interviewQuestions',
-    'theme',
-    'beta_access',
-  ];
+  return null;
+}
 
-  keysToMigrate.forEach(key => {
+export function setCompatibleStorageItem(key: string, value: string): void {
+  localStorage.setItem(key, value);
+}
+
+export function removeCompatibleStorageItem(key: string): void {
+  localStorage.removeItem(key);
+  getAliasesForKey(key).forEach((oldKey) => {
+    localStorage.removeItem(oldKey);
+  });
+}
+
+export function migrateStorageKeys(): void {
+  prefixedKeysToMigrate.forEach(key => {
     const oldKey = `${OLD_PREFIX}${key}`;
     const newKey = `${NEW_PREFIX}${key}`;
 
     try {
       const oldValue = localStorage.getItem(oldKey);
 
-      // Only migrate if old key exists and new key doesn't
       if (oldValue !== null && localStorage.getItem(newKey) === null) {
         localStorage.setItem(newKey, oldValue);
-        localStorage.removeItem(oldKey);
       }
     } catch (error) {
       console.error(`[Storage Migration] Failed to migrate ${oldKey}:`, error);
     }
   });
 
-  // Mark migration as complete
+  Object.entries(keyAliases).forEach(([newKey, oldKeys]) => {
+    oldKeys.forEach((oldKey) => {
+      try {
+        const oldValue = localStorage.getItem(oldKey);
+        if (oldValue !== null && localStorage.getItem(newKey) === null) {
+          localStorage.setItem(newKey, oldValue);
+        }
+      } catch (error) {
+        console.error(`[Storage Migration] Failed to migrate ${oldKey}:`, error);
+      }
+    });
+  });
+
   localStorage.setItem(MIGRATION_FLAG, 'true');
 }

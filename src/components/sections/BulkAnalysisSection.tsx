@@ -22,13 +22,14 @@ import {
 } from 'lucide-react';
 import { parseResume } from '../../services/api';
 import { cn } from '../../lib/utils/cn';
+import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { UpgradeModal } from '../Credits/UpgradeModal';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const STORAGE_KEY = 'airo:bulkAnalysis';
+const STORAGE_KEY = 'watheq:bulkAnalysis';
 
 // === Types ===
 interface ResumeAnalysis {
@@ -171,7 +172,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   const [resumes, setResumes] = useState<Resume[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
+      const saved = getCompatibleStorageItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         return parsed.filter((r: Resume) => r.status === 'completed' || r.status === 'error');
@@ -194,9 +195,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
         .filter(r => r.status === 'completed' || r.status === 'error')
         .map(r => ({ ...r, file: null }));
       if (toSave.length > 0) {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+        setCompatibleStorageItem(STORAGE_KEY, JSON.stringify(toSave));
       } else {
-        window.localStorage.removeItem(STORAGE_KEY);
+        removeCompatibleStorageItem(STORAGE_KEY);
       }
     } catch (e) {
       console.warn('Failed to save bulk analysis:', e);
@@ -205,7 +206,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
   const clearSavedData = useCallback(() => {
     setResumes([]);
-    window.localStorage.removeItem(STORAGE_KEY);
+    removeCompatibleStorageItem(STORAGE_KEY);
   }, []);
 
   const processResumeActual = useCallback(async (resumeId: string, file: File) => {

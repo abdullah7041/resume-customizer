@@ -78,7 +78,9 @@ export default function App() {
               dismissKey={upgradeDismissedKey || ''}
             />
 
-            {currentPath !== "/privacy" && currentPath !== "/terms" && <HRSuperSaudOverlay />}
+            {currentPath !== "/privacy" && currentPath !== "/terms" && (
+              <HRSuperSaudOverlay isOnboardingActive={run} />
+            )}
 
             {/* Onboarding Tour — react-joyride v3 API */}
             <Suspense fallback={null}>

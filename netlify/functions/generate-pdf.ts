@@ -6,6 +6,8 @@ import type { Handler } from "@netlify/functions";
 import chromium from "@sparticuz/chromium";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { withRateLimit } from "../lib/rate-limiter.js";
+import { getSupabaseClient } from "../lib/supabase-client.js";
+import { summarizeErrorForLog } from "../lib/sentry.js";
 
 
 import { existsSync } from "fs";
@@ -61,7 +63,7 @@ async function getBrowser() {
     try {
       await browserInstance.close();
     } catch (err) {
-      console.warn('[PDF] Error closing idle browser:', err);
+      console.warn('[PDF] Error closing idle browser:', summarizeErrorForLog(err));
     }
     browserInstance = null;
   }
@@ -76,7 +78,7 @@ async function getBrowser() {
         browserInstance = null;
       }
     } catch (err) {
-      console.warn('[PDF] Browser health check failed:', err);
+      console.warn('[PDF] Browser health check failed:', summarizeErrorForLog(err));
       browserInstance = null;
     }
   }
@@ -103,6 +105,19 @@ const VALID_TEMPLATE_IDS = [
   'executive-professional'
 ] as const;
 
+function sanitizeFilename(value: unknown): string {
+  if (typeof value !== "string") return "resume-optimized";
+
+  const trimmed = value.trim().replace(/\.pdf$/i, "");
+  const safe = trimmed
+    .replace(/[\r\n"]/g, "")
+    .replace(/[<>:"/\\|?*]/g, "-")
+    .replace(/\s+/g, "_")
+    .slice(0, 120);
+
+  return safe || "resume-optimized";
+}
+
 const baseHandler: Handler = async (event) => {
   if (event.httpMethod === "HEAD") {
     return { statusCode: 200, body: "" };
@@ -111,14 +126,39 @@ const baseHandler: Handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  // Auth is optional for PDF generation — rate limiting via withRateLimit prevents abuse.
-  // PDF is a stateless HTML→PDF render, no AI credits or user data accessed.
+  const authHeader = event.headers.authorization || event.headers.Authorization;
+  if (!authHeader) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Authentication required. Please sign in." }),
+    };
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Server configuration error. Please contact support." }),
+    };
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or expired authentication token" }),
+    };
+  }
 
   let page: Page | null = null; // Declare outside try block for cleanup access
 
   try {
     const { html, styles, filename, templateId, direction } = JSON.parse(event.body || "{}");
-    const safeFilename = filename || `resume-optimized`;
+    const safeFilename = sanitizeFilename(filename);
     const pageDirection = direction === "rtl" ? "rtl" : "ltr";
 
     if (!html) {
@@ -222,7 +262,7 @@ const baseHandler: Handler = async (event) => {
         );
       });
     } catch(e) {
-      console.warn('Asset loading failed (fonts/images), attempting PDF anyway:', e);
+      console.warn('Asset loading failed (fonts/images), attempting PDF anyway:', summarizeErrorForLog(e));
     }
 
     // Generate PDF with 60s safety timeout (Netlify fn has 90s limit)
@@ -255,13 +295,13 @@ const baseHandler: Handler = async (event) => {
       isBase64Encoded: true,
     };
   } catch (error) {
-    console.error("PDF generation error:", error);
+    console.error("PDF generation error:", summarizeErrorForLog(error));
 
     // Cleanup: try to close page on error (browser stays alive for pooling)
     try {
       if (page) await page.close();
     } catch (cleanupErr) {
-      console.warn('[PDF] Page cleanup error:', cleanupErr);
+      console.warn('[PDF] Page cleanup error:', summarizeErrorForLog(cleanupErr));
     }
 
     return {

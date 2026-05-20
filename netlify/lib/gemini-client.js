@@ -1,5 +1,6 @@
 // OpenRouter API client for Gemini models
 import { callOpenRouter, MODELS } from './openrouter-client.js';
+import { summarizeErrorForLog } from './sentry.js';
 
 // Shared OCR resilience rule injected into both optimizeResume and processMatchOnly prompts.
 // Having one source of truth ensures consistent scoring behaviour across all AI evaluations.
@@ -40,7 +41,7 @@ function sanitizeAndParseJSON(text) {
   try {
     return JSON.parse(cleaned);
   } catch (parseError) {
-    console.warn('[Gemini] First JSON parse attempt failed:', parseError.message);
+    console.warn('[Gemini] First JSON parse attempt failed:', summarizeErrorForLog(parseError));
     console.warn('[Gemini] Trying sanitization...');
 
     // 4. Fix common issues: control characters in strings
@@ -196,7 +197,7 @@ function sanitizeAndParseJSON(text) {
         startsWithBrace: text.trim().startsWith('{'),
         endsWithBrace: text.trim().endsWith('}'),
       });
-      console.error('[Gemini] Second parse error:', secondError);
+      console.error('[Gemini] Second parse error:', summarizeErrorForLog(secondError));
       throw new Error(`Failed to parse AI response. Please try again.`);
     }
   }
@@ -328,7 +329,7 @@ ${trimmedInput}`;
     return parsed;
 
   } catch (error) {
-    console.error("[OpenRouter] Error parsing resume:", error);
+    console.error("[OpenRouter] Error parsing resume:", summarizeErrorForLog(error));
 
     // Preserve and enrich the original error message
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -579,7 +580,7 @@ ${userClarifications}
     catch { parsed = sanitizeAndParseJSON(text); }
     return parsed;
   } catch (error) {
-    console.error("[OpenRouter] Error in optimizeResume:", error);
+    console.error("[OpenRouter] Error in optimizeResume:", summarizeErrorForLog(error));
     throw error;
   }
 }
@@ -693,7 +694,7 @@ Analyze step by step, then provide your final score.`;
       reasoning: parsed.reasoning || "Unable to determine match score."
     };
   } catch (error) {
-    console.error("[Gemini] Error in fast match analysis:", error);
+    console.error("[Gemini] Error in fast match analysis:", summarizeErrorForLog(error));
     throw error;
   }
 }
@@ -857,7 +858,7 @@ ${resumeText}
       focus_areas: parsed.focus_areas || []
     };
   } catch (error) {
-    console.error("[OpenRouter] Error predicting interview questions:", error);
+    console.error("[OpenRouter] Error predicting interview questions:", summarizeErrorForLog(error));
     throw error;
   }
 }
@@ -916,7 +917,7 @@ Return ONLY the cover letter text in the draft_text field.
 
     return { draft_text: parsed.draft_text || "" };
   } catch (error) {
-    console.error("[OpenRouter] Error generating cover letter:", error);
+    console.error("[OpenRouter] Error generating cover letter:", summarizeErrorForLog(error));
     throw error;
   }
 }

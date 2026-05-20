@@ -17,7 +17,8 @@ const mockRateLimiter = {
 
 const mockSentry = {
     initSentry: vi.fn(),
-    captureError: vi.fn()
+    captureError: vi.fn(),
+    summarizeErrorForLog: vi.fn((error: unknown) => error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) })
 };
 
 vi.mock('../../lib/normalize-resume.js', () => mockNormalizeResume);

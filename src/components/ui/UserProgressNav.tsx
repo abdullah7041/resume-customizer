@@ -3,13 +3,16 @@ import { Upload, Target, Sparkles, Download, Check, ChevronLeft, X, GripVertical
 import { useTranslation } from 'react-i18next';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { cn } from '../../lib/utils/cn';
+import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 
 interface UserProgressNavProps {
     mode?: 'fixed' | 'inline';
     className?: string;
 }
 
-const STORAGE_KEY = 'workflow-panel-position';
+const STORAGE_KEY = 'watheq:workflow-panel-position';
+const MINIMIZED_STORAGE_KEY = 'watheq:workflow-panel-minimized';
+const LAST_STEP_STORAGE_KEY = 'watheq:workflow-panel-last-step';
 
 interface Position {
     x: number;
@@ -20,7 +23,7 @@ function getInitialPosition(): Position {
     if (typeof window === 'undefined') return { x: 0, y: 0 };
 
     try {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = getCompatibleStorageItem(STORAGE_KEY);
         if (saved) {
             const parsed = JSON.parse(saved);
             // Validate the position is still within viewport
@@ -45,19 +48,19 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     const hasDownloaded = useResumeStore((state) => state.hasDownloaded);
     const [isMinimized, setIsMinimized] = useState(() => {
         if (typeof window === 'undefined') return true;
-        const saved = localStorage.getItem('workflow-panel-minimized');
+        const saved = getCompatibleStorageItem(MINIMIZED_STORAGE_KEY);
         return saved !== null ? saved === 'true' : true;
     });
 
     // Persist minimized state preference
     useEffect(() => {
-        localStorage.setItem('workflow-panel-minimized', String(isMinimized));
+        setCompatibleStorageItem(MINIMIZED_STORAGE_KEY, String(isMinimized));
     }, [isMinimized]);
 
     // Track the highest step the user has seen to prevent auto-opening on refresh
     const [lastSeenStep, setLastSeenStep] = useState(() => {
         if (typeof window === 'undefined') return 0;
-        const saved = localStorage.getItem('workflow-panel-last-step');
+        const saved = getCompatibleStorageItem(LAST_STEP_STORAGE_KEY);
         return saved ? parseInt(saved, 10) : 0;
     });
 
@@ -84,18 +87,18 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
         if (currentStepIndex > lastSeenStep) {
             setIsMinimized(false);
             setLastSeenStep(currentStepIndex);
-            localStorage.setItem('workflow-panel-last-step', String(currentStepIndex));
+            setCompatibleStorageItem(LAST_STEP_STORAGE_KEY, String(currentStepIndex));
         } else if (currentStepIndex !== lastSeenStep) {
             // Sync without expanding if going backward or just syncing
             setLastSeenStep(currentStepIndex);
-            localStorage.setItem('workflow-panel-last-step', String(currentStepIndex));
+            setCompatibleStorageItem(LAST_STEP_STORAGE_KEY, String(currentStepIndex));
         }
     }, [currentStepIndex, lastSeenStep]);
 
     // Save position to localStorage when it changes
     useEffect(() => {
         if (position.x !== 0 || position.y !== 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
+            setCompatibleStorageItem(STORAGE_KEY, JSON.stringify(position));
         }
     }, [position]);
 
@@ -159,7 +162,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     // Reset position handler
     const handleResetPosition = useCallback(() => {
         setPosition({ x: 0, y: 0 });
-        localStorage.removeItem(STORAGE_KEY);
+        removeCompatibleStorageItem(STORAGE_KEY);
     }, []);
 
     const steps = [

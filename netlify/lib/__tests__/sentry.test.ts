@@ -9,7 +9,7 @@ vi.mock('@sentry/node', () => ({
   init: vi.fn(),
 }));
 
-const { captureError, sanitizeSentryContext } = await import('../sentry.js');
+const { captureError, sanitizeSentryContext, redactForLog, summarizeErrorForLog } = await import('../sentry.js');
 
 describe('sentry context redaction', () => {
   it('redacts resume, job, and identity fields from nested context', () => {
@@ -64,5 +64,43 @@ describe('sentry context redaction', () => {
         userEmail: '[REDACTED]',
       },
     });
+  });
+
+  it('redacts bearer tokens, api keys, addresses, and provider errors', () => {
+    const sanitized = sanitizeSentryContext({
+      authorization: 'Bearer eyJprivate.header.payload',
+      apiKey: 'sk_private_12345678901234567890',
+      location: 'Riyadh, Private Street 123',
+      message: 'Failed for jane@example.com using Bearer eyJabc.def.ghi',
+    }) as Record<string, unknown>;
+
+    expect(sanitized.authorization).toBe('[REDACTED]');
+    expect(sanitized.apiKey).toBe('[REDACTED]');
+    expect(sanitized.location).toBe('[REDACTED]');
+    expect(sanitized.message).toBe('Failed for [REDACTED] using Bearer [REDACTED]');
+  });
+
+  it('summarizes errors without stacks or raw secrets', () => {
+    const error = new Error('Provider failed for user@example.com with Bearer eyJabc.def.ghi');
+    (error as Error & { status?: number; code?: string }).status = 502;
+    (error as Error & { status?: number; code?: string }).code = 'BAD_GATEWAY';
+
+    const summary = summarizeErrorForLog(error);
+
+    expect(summary).toEqual({
+      name: 'Error',
+      message: 'Provider failed for [REDACTED] with Bearer [REDACTED]',
+      code: 'BAD_GATEWAY',
+      status: 502,
+      details: undefined,
+      hint: undefined,
+    });
+    expect(summary).not.toHaveProperty('stack');
+  });
+
+  it('redacts log strings directly', () => {
+    expect(redactForLog('Call failed with token Bearer eyJabc.def.ghi for user@example.com')).toBe(
+      'Call failed with token Bearer [REDACTED] for [REDACTED]'
+    );
   });
 });

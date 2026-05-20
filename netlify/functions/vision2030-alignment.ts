@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { callOpenRouter } from '../lib/openrouter-client.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { Vision2030RequestSchema, formatZodError } from '../lib/resume-schemas.js';
-import { initSentry, captureError } from '../lib/sentry.js';
+import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 import { checkCredits, consumeCredits } from '../lib/credit-manager.js';
 import { getClientIP } from '../lib/ip-utils.js';
 import type { Vision2030AnalysisResponse } from '../lib/vision2030-types.js';
@@ -190,7 +190,7 @@ const baseHandler: Handler = async (event) => {
     try {
       analysis = JSON.parse(analysisJson) as Vision2030AnalysisResponse;
     } catch (parseError) {
-      console.error('[vision2030-alignment] Failed to parse AI response:', parseError);
+      console.error('[vision2030-alignment] Failed to parse AI response:', summarizeErrorForLog(parseError));
       console.error('[vision2030-alignment] Response parse metadata:', {
         responseLength: analysisJson.length,
         endsWithBrace: analysisJson.trim().endsWith('}'),
@@ -216,13 +216,23 @@ const baseHandler: Handler = async (event) => {
     };
 
   } catch (error) {
-    console.error('[vision2030-alignment] Error:', error);
+    console.error('[vision2030-alignment] Error:', summarizeErrorForLog(error));
 
     // Don't send timeout errors to Sentry (expected behavior under load)
     if (error.name !== 'TimeoutError') {
       captureError(error, {
         function: 'vision2030-alignment',
-        payload: rawBody || {}
+        payload: {
+          resumeTextLength: typeof (rawBody as { resumeText?: unknown })?.resumeText === 'string'
+            ? ((rawBody as { resumeText: string }).resumeText.length)
+            : 0,
+          jobDescriptionLength: typeof (rawBody as { jobDescription?: unknown })?.jobDescription === 'string'
+            ? ((rawBody as { jobDescription: string }).jobDescription.length)
+            : 0,
+          hasResumeText: Boolean((rawBody as { resumeText?: unknown })?.resumeText),
+          hasJobDescription: Boolean((rawBody as { jobDescription?: unknown })?.jobDescription),
+          language: (rawBody as { language?: unknown })?.language || null,
+        }
       });
     }
 

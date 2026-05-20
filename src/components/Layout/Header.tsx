@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings } from "lucide-react";
+import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings, UserCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,8 +8,10 @@ import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
 import { CreditUsageModal } from "../Credits/CreditUsageModal";
+import { UpgradeModal } from "../Credits/UpgradeModal";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { useTheme } from "../../hooks/useTheme";
+import { useUserCredits } from "../../hooks/useUserCredits";
 import { createPortal } from "react-dom";
 
 
@@ -35,11 +37,15 @@ export default function Header() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [badgeFlipped, setBadgeFlipped] = useState(false);
   const mobileNavRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
+  const [showPlansModal, setShowPlansModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const { credits } = useUserCredits();
   const showFixedSkyline = Boolean(user);
   const isSignedOutHeader = !user;
 
@@ -47,13 +53,13 @@ export default function Header() {
 
   // Mouse tracking for interactive gradient
   const handleMouseMove = useCallback((e: MouseEvent<HTMLElement>) => {
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion || user) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setMousePosition({
       x: ((e.clientX - rect.left) / rect.width) * 100,
       y: ((e.clientY - rect.top) / rect.height) * 100,
     });
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, user]);
 
   // Mobile nav body scroll lock
   useEffect(() => {
@@ -71,16 +77,37 @@ export default function Header() {
       if (e.key === 'Escape' && mobileNavOpen) {
         setMobileNavOpen(false);
       }
+      if (e.key === 'Escape' && accountMenuOpen) {
+        setAccountMenuOpen(false);
+      }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [mobileNavOpen]);
+  }, [accountMenuOpen, mobileNavOpen]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return undefined;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (accountMenuRef.current?.contains(event.target as Node)) return;
+      setAccountMenuOpen(false);
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => window.removeEventListener('pointerdown', handlePointerDown);
+  }, [accountMenuOpen]);
 
   // Close mobile nav on outside click
   const handleMobileNavOutsideClick = useCallback((e: MouseEvent) => {
     if (mobileNavRef.current && !mobileNavRef.current.contains(e.target as Node)) {
       setMobileNavOpen(false);
     }
+  }, []);
+
+  const handleOpenPlans = useCallback(() => {
+    setShowPlansModal(true);
+    setAccountMenuOpen(false);
+    setMobileNavOpen(false);
   }, []);
 
   // Preload skyline image
@@ -158,15 +185,17 @@ export default function Header() {
       {/* Animated background effects */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         {/* Interactive gradient that follows mouse */}
-        <div
-          className="absolute w-[600px] h-[600px] rounded-full blur-[60px] opacity-15 transition-all duration-1000 ease-out"
-          style={{
-            background: "radial-gradient(circle, rgba(16,185,129,0.4) 0%, transparent 70%)",
-            left: `${mousePosition.x - 20}%`,
-            top: `${mousePosition.y - 20}%`,
-            transform: "translate(-50%, -50%)",
-          }}
-        />
+        {isSignedOutHeader && (
+          <div
+            className="absolute h-[520px] w-[520px] rounded-full opacity-[0.08] blur-[44px] transition-all duration-1000 ease-out"
+            style={{
+              background: "radial-gradient(circle, rgba(16,185,129,0.4) 0%, transparent 70%)",
+              left: `${mousePosition.x - 20}%`,
+              top: `${mousePosition.y - 20}%`,
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+        )}
 
 
 
@@ -224,19 +253,22 @@ export default function Header() {
           isSignedOutHeader
             ? "border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-[#031713]/90"
             : showFixedSkyline
-              ? "border-gray-200 dark:border-white/5"
-              : "border-slate-200/70 bg-white/85 backdrop-blur-xl"
+              ? "border-white/12 bg-[#041c17]/92"
+              : "border-slate-200/80 bg-white/92 backdrop-blur-md"
         )}>
           <div className={`${containerClass} flex items-center justify-between gap-4 py-3.5 sm:py-4`}>
             {/* Logo section */}
             <div className="flex items-center gap-4 group">
               {/* Animated logo icon */}
               <div className="relative group-hover:scale-105 transition-transform duration-300">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 blur-md opacity-25 group-hover:opacity-35 transition-opacity duration-500" />
                 <img
                   src="/logo-circle.png"
                   alt="Watheq Logo"
-                  className="relative h-14 w-14 object-cover rounded-full drop-shadow-lg"
+                  className={cn(
+                    "relative object-cover rounded-full drop-shadow-lg",
+                    isSignedOutHeader ? "h-14 w-14" : "h-11 w-11 sm:h-12 sm:w-12"
+                  )}
                 />
               </div>
 
@@ -247,12 +279,12 @@ export default function Header() {
                   isSignedOutHeader
                     ? "text-slate-950 dark:text-white"
                     : showFixedSkyline
-                    ? "text-white dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-emerald-200 dark:via-white dark:to-teal-200 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                    ? "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.72)] dark:drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)]"
                     : "text-slate-950"
                 )}>
                   {t("common.appName")}
                 </p>
-                <div className={cn("items-center gap-2 mt-0.5", isSignedOutHeader ? "hidden sm:flex" : "flex")}>
+                <div className={cn("items-center gap-2 mt-0.5", isSignedOutHeader ? "hidden sm:flex" : "hidden")}>
                   <p className={cn(
                     "text-sm sm:text-base font-bold tracking-wider",
                     isSignedOutHeader
@@ -283,128 +315,181 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Badge - moved from Hero - Now clickable with flip animation */}
-            <button
-              onClick={() => setBadgeFlipped(!badgeFlipped)}
-              className={cn(
-                "hidden lg:inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-all duration-300 hover:scale-105 group",
-                isSignedOutHeader
-                  ? "border border-slate-200 bg-white text-emerald-700 hover:border-emerald-300 dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
-                  : "bg-white/90 dark:bg-black/40 border border-gray-300 dark:border-white/10 hover:border-emerald-400/50"
-              )}
-              aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
-              title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 dark:bg-emerald-400" />
-              </span>
-              <span
-                key={badgeFlipped ? 'alt' : 'main'}
-                className={cn(
-                  "uppercase animate-[flipIn_0.5s_ease-in-out]",
-                  isSignedOutHeader
-                    ? "text-emerald-700 dark:text-emerald-200"
-                    : "bg-gradient-to-r from-emerald-700 to-teal-700 dark:from-emerald-300 dark:to-teal-300 bg-clip-text text-transparent"
-                )}
-              >
-                {badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
-              </span>
-            </button>
-
-            {/* Desktop: Language switcher, Feedback, and Auth button */}
-            <div className="hidden md:flex items-center gap-3">
+            {/* Badge - signed-out trust signal only */}
+            {isSignedOutHeader && (
               <button
-                onClick={toggleTheme}
-                className={cn(
-                  "btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-all duration-300 shadow-sm",
-                  isSignedOutHeader
-                    ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
-                    : "bg-white/80 dark:bg-black/40 border-gray-300 dark:border-white/10 text-gray-800 dark:text-white hover:bg-white hover:text-emerald-600 dark:hover:bg-white/10"
-                )}
-                aria-label="Toggle Theme"
+                onClick={() => setBadgeFlipped(!badgeFlipped)}
+                className="hidden lg:inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold tracking-wide text-emerald-700 backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:border-emerald-300 group dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
+                aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
+                title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
               >
-                {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 dark:bg-emerald-400" />
+                </span>
+                <span
+                  key={badgeFlipped ? 'alt' : 'main'}
+                  className="uppercase animate-[flipIn_0.5s_ease-in-out]"
+                >
+                  {badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
+                </span>
               </button>
-              <LanguageSwitcher />
-              {user && (
+            )}
+
+            {/* Desktop: keep authenticated header quiet; secondary actions live in account menu */}
+            <div className="hidden md:flex items-center gap-3">
+              {user ? (
                 <>
                   <div data-tour="credits" className="inline-block">
                     <CreditBalance
+                      variant="compact"
                       onClick={() => {
                         setCreditModalMode('full');
                         setShowCreditModal(true);
                       }}
                     />
                   </div>
-                  {/* Invite Friends Button */}
-                  <button
-                    data-tour="referral"
-                    onClick={() => {
-                      setCreditModalMode('invite-only');
-                      setShowCreditModal(true);
-                    }}
-                    className="btn-spring relative inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50/90 dark:bg-black/40 backdrop-blur-md border-2 border-emerald-300 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 dark:hover:bg-emerald-900/60 transition-all shadow-sm"
-                    title={t('referrals.inviteEarn')}
-                  >
-                    <Gift className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-sm font-bold">{t('referrals.inviteShort', 'Invite')}</span>
-                    <span className="absolute -top-2 -right-2 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full shadow-lg group-hover:scale-110 transition-transform">
-                      +5
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setShowSettingsModal(true)}
-                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 text-gray-800 dark:text-gray-300 transition-all duration-300 hover:bg-white hover:text-emerald-600 dark:hover:bg-white/10 shadow-sm"
-                    aria-label={t('common.settings', 'Settings')}
-                    title={t('common.settings', 'Settings')}
-                  >
-                    <Settings className="w-5 h-5" />
-                  </button>
-                </>
-              )}
+                  <div ref={accountMenuRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setAccountMenuOpen((open) => !open)}
+                      className="btn-spring inline-flex h-10 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-gray-300/80 bg-white/90 px-3 text-gray-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 dark:border-white/15 dark:bg-black/55 dark:text-gray-100 dark:hover:bg-black/70 dark:hover:text-white"
+                      aria-label={t('common.accountMenu', 'Account menu')}
+                      aria-expanded={accountMenuOpen}
+                      aria-haspopup="menu"
+                    >
+                      <UserCircle className="h-5 w-5" />
+                      <Menu className="h-4 w-4" />
+                    </button>
 
-              {user ? (
-                <GlassButton
-                  onClick={signOut}
-                  variant="secondary"
-                  size="md"
-                  className="bg-white/90 dark:bg-black/40 backdrop-blur-md hover:bg-gray-100 dark:hover:bg-white/10 border-gray-300 dark:border-white/10 text-gray-800 hover:text-black dark:text-gray-200 dark:hover:text-white shadow-sm font-bold tracking-wide"
-                  leftIcon={<LogOut className="h-4 w-4" />}
-                >
-                  {t("common.signOut")}
-                </GlassButton>
+                    {accountMenuOpen && (
+                      <div
+                        role="menu"
+                        className="absolute end-0 top-full z-50 mt-3 w-72 rounded-2xl border border-gray-200/90 bg-white/95 p-3 text-gray-800 shadow-xl backdrop-blur-sm dark:border-white/15 dark:bg-[#071f1a]/95 dark:text-gray-100"
+                      >
+                        <div className="border-b border-gray-200 pb-3 dark:border-white/10">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50">
+                            {t("common.language", "Language")}
+                          </p>
+                          <LanguageSwitcher />
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          <button
+                            type="button"
+                            onClick={handleOpenPlans}
+                            className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                            role="menuitem"
+                          >
+                            <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+                            <span>{t('pricing.workspaceCta', 'Need more credits? View plans')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            data-tour="referral"
+                            onClick={() => {
+                              setCreditModalMode('invite-only');
+                              setShowCreditModal(true);
+                              setAccountMenuOpen(false);
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                            role="menuitem"
+                          >
+                            <Gift className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>{t('referrals.inviteFriends', 'Invite Friends')}</span>
+                            <span className="ms-auto rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200">
+                              {t('referrals.creditsBonus', '+5 Credits')}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSettingsModal(true);
+                              setAccountMenuOpen(false);
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+                            role="menuitem"
+                          >
+                            <Settings className="h-4 w-4" />
+                            <span>{t('common.settings', 'Settings')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={toggleTheme}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+                            role="menuitem"
+                          >
+                            {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
+                            <span>{t('common.toggleTheme', 'Toggle theme')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              signOut();
+                              setAccountMenuOpen(false);
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+                            role="menuitem"
+                          >
+                            <LogOut className="h-4 w-4" />
+                            <span>{t("common.signOut")}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
-                <GlassButton
-                  onClick={signInWithGoogle}
-                  variant="prominent"
-                  size="md"
-                  className={cn(
-                    "group relative font-bold",
-                    isSignedOutHeader && "bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
-                  )}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-                  <LogIn className="h-4 w-4 mr-2" />
-                  {t("common.signIn")}
-                </GlassButton>
+                <>
+                  <button
+                    onClick={toggleTheme}
+                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-all duration-300 shadow-sm bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                    aria-label={t('common.toggleTheme', 'Toggle theme')}
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
+                  </button>
+                  <LanguageSwitcher />
+                  <GlassButton
+                    onClick={signInWithGoogle}
+                    variant="prominent"
+                    size="md"
+                    className="group relative font-bold bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                    <LogIn className="h-4 w-4 mr-2" />
+                    {t("common.signIn")}
+                  </GlassButton>
+                </>
               )}
             </div>
 
-            {/* Mobile: Hamburger menu button */}
-            <button
-              onClick={() => setMobileNavOpen(true)}
-              className={cn(
-                "md:hidden relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-all duration-300 active:scale-95",
-                isSignedOutHeader
-                  ? "bg-white border-slate-200 text-slate-950 hover:bg-slate-50 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
-                  : "bg-white/40 dark:bg-white/5 border-gray-300/40 dark:border-white/10 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10"
+            {/* Mobile: compact credits plus menu button */}
+            <div className="md:hidden flex min-w-0 items-center gap-2">
+              {user && (
+                <div data-tour="credits" className="min-w-0">
+                  <CreditBalance
+                    variant="compact"
+                    onClick={() => {
+                      setCreditModalMode('full');
+                      setShowCreditModal(true);
+                    }}
+                  />
+                </div>
               )}
-              aria-label="Open navigation menu"
-              aria-expanded={mobileNavOpen}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+              <button
+                onClick={() => setMobileNavOpen(true)}
+                className={cn(
+                  "relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-all duration-300 active:scale-95",
+                  isSignedOutHeader
+                    ? "bg-white border-slate-200 text-slate-950 hover:bg-slate-50 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                    : "bg-white/90 dark:bg-black/55 border-gray-300/70 dark:border-white/15 text-gray-900 dark:text-white hover:bg-white dark:hover:bg-black/70"
+                )}
+                aria-label={t('common.openNavigation', 'Open navigation menu')}
+                aria-expanded={mobileNavOpen}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </nav>
 
@@ -440,14 +525,14 @@ export default function Header() {
                 <button
                   onClick={toggleTheme}
                   className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
-                  aria-label="Toggle Theme"
+                  aria-label={t('common.toggleTheme', 'Toggle theme')}
                 >
-                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
+                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-600" /> : <Moon className="h-5 w-5 text-emerald-600 dark:text-emerald-600" />}
                 </button>
                 <button
                   onClick={() => setMobileNavOpen(false)}
                   className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
-                  aria-label="Close navigation menu"
+                  aria-label={t('common.closeNavigation', 'Close navigation menu')}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -458,14 +543,18 @@ export default function Header() {
             <div className="flex flex-col p-5 space-y-4">
               {/* Language Switcher */}
               <div className="pb-4 border-b border-gray-200 dark:border-white/10">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50 mb-3">{t("common.language")}</p>
+                <p className="text-xs font-semibold tracking-wider text-gray-500 dark:text-white/50 mb-3">
+                  {t("common.language", "Language")}
+                </p>
                 <LanguageSwitcher />
               </div>
 
               {/* Credit Balance */}
               {user && (
                 <div className="pb-4 border-b border-gray-200 dark:border-white/10 space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50 mb-3">{t("credits.balance")}</p>
+                  <p className="text-xs font-semibold tracking-wider text-gray-500 dark:text-white/50 mb-3">
+                    {t("credits.balance", "Credits")}
+                  </p>
                   <div className="min-h-[44px]">
                     <CreditBalance onClick={() => {
                       setCreditModalMode('full');
@@ -473,6 +562,15 @@ export default function Header() {
                       setMobileNavOpen(false);
                     }} />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenPlans}
+                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span>{t('pricing.workspaceCta', 'Need more credits? View plans')}</span>
+                  </button>
 
                   {/* Invite Friends Button (Mobile) */}
                   <button
@@ -557,6 +655,15 @@ export default function Header() {
         isOpen={showCreditModal}
         onClose={() => setShowCreditModal(false)}
         viewMode={creditModalMode}
+      />
+
+      {/* Quiet authenticated plans CTA */}
+      <UpgradeModal
+        isOpen={showPlansModal}
+        onClose={() => setShowPlansModal(false)}
+        creditsRemaining={credits?.remaining ?? 0}
+        dismissKey="watheq:headerViewPlans"
+        source="pricing"
       />
 
       {/* Settings Modal */}

@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import { processMatchOnly } from "../lib/gemini-client.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas.js";
-import { initSentry, captureError } from "../lib/sentry.js";
+import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
@@ -138,7 +138,7 @@ const baseHandler: Handler = async (event) => {
         })
       ).catch((dbError: Error) => {
         // Non-blocking DB error - just log it
-        console.warn('[ai-match] Background DB insert failed:', dbError.message);
+        console.warn('[ai-match] Background DB insert failed:', summarizeErrorForLog(dbError));
       });
     }
 
@@ -153,22 +153,21 @@ const baseHandler: Handler = async (event) => {
 
   } catch (error) {
     const errorDetails = error as any;
-    console.error("Match error details:", {
-      message: errorDetails?.message || 'Unknown error',
-      stack: errorDetails?.stack || 'No stack trace',
-      name: errorDetails?.name || 'Error',
-      code: errorDetails?.code || '',
-      status: errorDetails?.status || 'unknown',
-    });
+    console.error("Match error details:", summarizeErrorForLog(error));
 
     // Don't send timeout errors to Sentry (expected behavior under load)
     if (errorDetails?.name !== 'TimeoutError') {
-      const rawBody = JSON.parse(event.body || '{}');
+      let rawBody: Record<string, unknown> = {};
+      try {
+        rawBody = event.body ? JSON.parse(event.body) : {};
+      } catch {
+        rawBody = {};
+      }
       captureError(error, {
         function: 'ai-match',
         payload: {
-          resumeTextLength: rawBody.resumeText?.length || 0,
-          jobTextLength: rawBody.jobText?.length || 0,
+          resumeTextLength: typeof rawBody.resumeText === 'string' ? rawBody.resumeText.length : 0,
+          jobTextLength: typeof rawBody.jobText === 'string' ? rawBody.jobText.length : 0,
           hasResumeText: Boolean(rawBody.resumeText),
           hasJobText: Boolean(rawBody.jobText),
           language: rawBody.language || null,
@@ -192,7 +191,6 @@ const baseHandler: Handler = async (event) => {
         error: isTimeout
           ? 'Analysis timed out due to high AI service load. This is automatically retried - please wait.'
           : "Failed to analyze match. Please try again.",
-        message: errorDetails?.message || 'Unknown error occurred',
         retryable: isTimeout,
         troubleshooting: isTimeout
           ? 'The AI service (OpenRouter) is experiencing delays. Automatic retries are in progress.'
@@ -204,14 +202,13 @@ const baseHandler: Handler = async (event) => {
   } catch (outerError) {
     // This catches ANY uncaught error (e.g., from checkCredits, getClientIP, getSupabaseClient)
     // Without this, the error escapes the handler and Netlify returns 502
-    console.error('[ai-match] Uncaught handler error:', outerError);
+    console.error('[ai-match] Uncaught handler error:', summarizeErrorForLog(outerError));
     captureError(outerError, { function: 'ai-match', phase: 'outer-catch' });
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         error: "An unexpected error occurred. Please try again.",
-        message: outerError instanceof Error ? outerError.message : String(outerError),
       }),
     };
   }

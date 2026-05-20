@@ -15,8 +15,10 @@ import {
   Target,
 } from "lucide-react";
 
-import { ProductWalkthrough } from "@/components/sections/ProductWalkthrough";
-import { getSkylineUrls } from "@/lib/assets";
+import { ProductWalkthrough } from "../components/sections/ProductWalkthrough";
+import { PricingSection } from "../components/sections/PricingSection";
+import { ComparisonTable } from "../components/ui/ComparisonTable";
+import { getSkylineUrls } from "../lib/assets";
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -348,6 +350,29 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       </section>
 
       <ProductWalkthrough onGetStarted={onGetStarted} />
+
+      <section className="bg-[#0a1f1a] px-5 py-16 text-white dark:bg-[#031713] sm:px-8 lg:py-20" aria-labelledby="landing-comparison-title">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <p className="inline-flex rounded-full border border-emerald-300/25 bg-emerald-300/10 px-4 py-1.5 text-sm font-black uppercase tracking-[0.16em] text-emerald-200">
+              {t("landing.comparison.title")}
+            </p>
+            <h2 id="landing-comparison-title" className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl">
+              {t("landing.comparison.title")}
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-white/72">
+              {t("landing.comparison.subtitle")}
+            </p>
+          </div>
+          <ComparisonTable />
+        </div>
+      </section>
+
+      <div className="bg-[#0a1f1a] px-5 pb-16 text-white dark:bg-[#031713] sm:px-8 lg:pb-20">
+        <div className="mx-auto max-w-7xl">
+          <PricingSection />
+        </div>
+      </div>
 
       <section className="bg-[#eef8f4] px-5 py-16 text-[#171717] dark:bg-[#041c17] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-final-title">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_auto] lg:items-center">

@@ -12,6 +12,7 @@
 import { Handler } from '@netlify/functions';
 import { requireAdminMutationGate } from '../lib/admin-gates.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
+import { summarizeErrorForLog } from '../lib/sentry.js';
 
 const handler: Handler = async (event) => {
   const gate = requireAdminMutationGate(event, 'ALLOW_DEV_RESET');
@@ -90,7 +91,7 @@ const handler: Handler = async (event) => {
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   } catch (error) {
-    console.error('[dev-reset-credits] Error:', error);
+    console.error('[dev-reset-credits] Error:', summarizeErrorForLog(error));
     return {
       statusCode: 500,
       body: JSON.stringify({

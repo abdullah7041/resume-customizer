@@ -14,6 +14,7 @@
 
 import { Redis } from '@upstash/redis';
 import { createHash } from 'crypto';
+import { summarizeErrorForLog } from './sentry.js';
 
 // ---------------------------------------------------------------------------
 // Singleton Redis client (lazy-initialized)
@@ -35,7 +36,7 @@ function getRedis(): Redis | null {
     _redis = new Redis({ url, token });
     return _redis;
   } catch (err) {
-    console.error('[redis-cache] Failed to initialize Redis client:', err);
+    console.error('[redis-cache] Failed to initialize Redis client:', summarizeErrorForLog(err));
     return null;
   }
 }
@@ -80,7 +81,7 @@ export async function getCached<T>(key: string): Promise<T | null> {
     return JSON.parse(raw) as T;
   } catch (err) {
     // Log but never throw — a cache failure should never break the request.
-    console.error('[redis-cache] GET error:', err);
+    console.error('[redis-cache] GET error:', summarizeErrorForLog(err));
     return null;
   }
 }
@@ -105,6 +106,6 @@ export async function setCached(
     await redis.set(key, JSON.stringify(value), { ex: ttlSecs });
     console.log(`[redis-cache] SET ${key.substring(0, 40)}... (TTL ${ttlSecs}s)`);
   } catch (err) {
-    console.error('[redis-cache] SET error:', err);
+    console.error('[redis-cache] SET error:', summarizeErrorForLog(err));
   }
 }
