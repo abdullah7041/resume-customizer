@@ -1,12 +1,13 @@
 import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, LogIn } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
   optimizeResume,
   optimizeResumeStream,
   generateClarifications,
+  extractJobMetadata,
 } from "../../services/api.js";
 import { ClarificationModal, type ClarificationQuestion } from "../modals/ClarificationModal";
 import { useAuth } from "../../hooks/useAuth";
@@ -22,14 +23,19 @@ const BulkAnalysisSection = lazy(() => import("../sections/BulkAnalysisSection")
 const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").then(m => ({ default: m.CoverLetterSection })));
 const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
+const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m => ({ default: m.PipelineSection })));
 
 import { GlassTabs, type Tab } from "../ui/GlassTabs";
 import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflowNav";
 import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
+import { GlassCard } from "../ui/GlassCard";
 import { ParallaxContainer } from "../ui/ParallaxSection";
 import { exportResumeToPdf } from "../../services/exportPdf.js";
 import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
+import { attachExportToJobApplication, updateJobApplication } from "../../services/pipeline";
+import { analytics } from "../../services/analytics";
+import type { ExtractedJobMetadata } from "../../types/pipeline";
 import ViewTextModal from "../ui/ViewTextModal";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
@@ -90,10 +96,11 @@ const getTabsConfig = (t) => [
   { value: "bulk", label: t("tabs.bulk"), icon: FileText },
   { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail },
   { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true },
+  { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase },
 ];
-const PRE_UPLOAD_TAB_VALUES = new Set(["resume", "match", "optimize"]);
+const PRE_UPLOAD_TAB_VALUES = new Set(["resume", "match", "optimize", "pipeline"]);
 const MOBILE_PRIMARY_TAB_VALUES = ["resume", "match", "optimize", "templates"];
-const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030"];
+const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030", "pipeline"];
 
 const containerClass = "app-shell w-full";
 
@@ -105,6 +112,7 @@ const TOAST_IDS = {
 const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
+const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -121,6 +129,11 @@ const scheduleTimeout = (callback, delay) => {
 export default function MainContent() {
   const { t, i18n } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
+  const [guestMode, setGuestMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
+  });
+  const isGuestMode = !user && guestMode;
   const isPremium = Boolean(
     user?.user_metadata?.is_premium ||
     user?.user_metadata?.tier === "premium" ||
@@ -227,6 +240,10 @@ export default function MainContent() {
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, _setAiDebug] = useState(null);
+  const [activeJobApplicationId, setActiveJobApplicationId] = useState<string | null>(null);
+  const [pendingAttachment, setPendingAttachment] = useState<{ filePath: string; fileName: string } | null>(null);
+  const [exportedJobApplicationId, setExportedJobApplicationId] = useState<string | null>(null);
+  const [extractedMetadata, setExtractedMetadata] = useState<ExtractedJobMetadata | null>(null);
   // Clarification interrogation state
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -234,6 +251,42 @@ export default function MainContent() {
   const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[] } | null>(null);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.MODE === "development";
+
+  useEffect(() => {
+    if (!user || !guestMode || typeof window === "undefined") return;
+    window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+    setGuestMode(false);
+  }, [guestMode, user]);
+
+  const enterGuestMode = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
+      window.localStorage.setItem("watheq:landingSeen", "true");
+    }
+    setGuestMode(true);
+    setActiveTab("resume");
+  }, []);
+
+  const exitGuestMode = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+    }
+    setGuestMode(false);
+    setActiveTab("resume");
+  }, []);
+
+  const resetPipelineContext = useCallback(() => {
+    setActiveJobApplicationId(null);
+    setPendingAttachment(null);
+    setExportedJobApplicationId(null);
+    setExtractedMetadata(null);
+  }, []);
+
+  const handleJobSavedToPipeline = useCallback((id: string) => {
+    setActiveJobApplicationId(id);
+    setPendingAttachment(null);
+    setExportedJobApplicationId(null);
+  }, []);
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -267,6 +320,27 @@ export default function MainContent() {
     (toast) => pushToast(toast, { id: TOAST_IDS.upload }),
     [pushToast]
   );
+
+  const guestProtectedActionTitle = t(
+    "workspace.guest.protectedActionTitle",
+    "Sign in required"
+  );
+  const guestProtectedActionDescription = t(
+    "workspace.guest.protectedActionDesc",
+    "Sign in to run AI analysis and save your progress."
+  );
+
+  const requireSignInForGuestAction = useCallback(() => {
+    pushToast({
+      type: "warning",
+      title: guestProtectedActionTitle,
+      description: guestProtectedActionDescription,
+    });
+  }, [guestProtectedActionDescription, guestProtectedActionTitle, pushToast]);
+
+  const handleGuestSignIn = useCallback(() => {
+    void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
+  }, [signInWithGoogle]);
 
   useEffect(() => {
     const host = typeof window !== "undefined" ? window : globalThis;
@@ -429,6 +503,7 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setActiveTab("resume");
+    resetPipelineContext();
 
     // Reset persisted Zustand store state
     useResumeStore.getState().clearAll();
@@ -440,7 +515,7 @@ export default function MainContent() {
       title: t("toasts.dataClearedTitle"),
       description: t("toasts.dataClearedDesc"),
     });
-  }, [pushToast, t]);
+  }, [pushToast, resetPipelineContext, t]);
 
   const handleClearResume = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -452,14 +527,16 @@ export default function MainContent() {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    resetPipelineContext();
     pushToast({ type: "success", title: t("toasts.resumeClearedTitle"), description: t("toasts.resumeClearedDesc") });
-  }, [pushToast, t]);
+  }, [pushToast, resetPipelineContext, t]);
 
   const handleClearMatch = useCallback(() => {
     setMatchAnalysis(null);
     setJobDescription("");
+    resetPipelineContext();
     pushToast({ type: "success", title: t("toasts.matchClearedTitle"), description: t("toasts.matchClearedDesc") });
-  }, [pushToast, t]);
+  }, [pushToast, resetPipelineContext, t]);
 
   const handleClearOptimizations = useCallback(() => {
     // Clear local component state
@@ -577,6 +654,7 @@ export default function MainContent() {
         setOptimizations([]);
         setOptimizationData(null);
         setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+        resetPipelineContext();
         emitHRSuperSaudEvent('resume.uploaded');
         pushToast(
           {
@@ -604,11 +682,16 @@ export default function MainContent() {
         throw error;
       }
     },
-    [normalizeResumePayload, pushToast, t]
+    [normalizeResumePayload, pushToast, resetPipelineContext, t]
   );
 
   const handleAnalyzeMatchAI = useCallback(
     async (jobDescriptionInput) => {
+      if (isGuestMode) {
+        requireSignInForGuestAction();
+        throw new Error(guestProtectedActionDescription);
+      }
+
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -631,6 +714,22 @@ export default function MainContent() {
           { id: TOAST_IDS.match }
         );
         const trimmedJob = jobDescriptionInput.trim();
+        resetPipelineContext();
+
+        // Non-blocking metadata extraction from pasted job description
+        extractJobMetadata(trimmedJob, i18n.language)
+          .then((metadata) => {
+            setExtractedMetadata(metadata ?? null);
+            if (metadata?.companyName || metadata?.jobTitle || metadata?.location) {
+              analytics.trackJobMetadataExtracted(metadata.confidence);
+            } else {
+              analytics.trackJobMetadataExtractionFailed('no_metadata_extracted');
+            }
+          })
+          .catch(() => {
+            setExtractedMetadata(null);
+            analytics.trackJobMetadataExtractionFailed('request_failed');
+          });
 
         // Fix B1: Always analyze the ORIGINAL resume text for match scoring
         // This prevents the optimized score (e.g. 87) from leaking into match analysis
@@ -704,12 +803,17 @@ export default function MainContent() {
         setIsAnalyzing(false);
       }
     },
-    [i18n.language, pushToast, resumeData, t]
+    [guestProtectedActionDescription, i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resetPipelineContext, resumeData, t]
   );
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
     async ({ mode, workHistory, userClarifications }: { mode: string; workHistory?: any[]; userClarifications?: string }) => {
+      if (isGuestMode) {
+        requireSignInForGuestAction();
+        return null;
+      }
+
       if (!resumeData?.plainText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
@@ -912,12 +1016,17 @@ export default function MainContent() {
         setIsOptimizing(false);
       }
     },
-    [i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, resumeData, t]
+    [i18n.language, isGuestMode, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, requireSignInForGuestAction, resumeData, t]
   );
 
   // Gate function: runs clarification step first, then delegates to handleOptimizeActual
   const handleOptimize = useCallback(
     async (mode) => {
+      if (isGuestMode) {
+        requireSignInForGuestAction();
+        return null;
+      }
+
       if (!resumeData?.plainText || !jobDescription) {
         pushToast({
           type: "warning",
@@ -981,7 +1090,7 @@ export default function MainContent() {
         return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined });
       }
     },
-    [handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, pushToast, resumeData, t]
+    [handleOptimizeActual, i18n.language, isGuestMode, isInterrogating, isOptimizing, jobDescription, pushToast, requireSignInForGuestAction, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
@@ -1032,6 +1141,56 @@ export default function MainContent() {
     }
   }, [i18n.language, jobDescription, handleClarificationSkip, resumeData]);
 
+  const handleMarkApplied = useCallback(async () => {
+    if (isGuestMode) {
+      requireSignInForGuestAction();
+      return;
+    }
+
+    if (!activeJobApplicationId) return;
+    try {
+      const { data, error } = await updateJobApplication(activeJobApplicationId, { status: 'applied' });
+      if (!error && data) {
+        pushToast({
+          type: 'success',
+          title: t('pipeline.markAsApplied', 'Mark as Applied'),
+          description: t('pipeline.applied', 'Applied'),
+        });
+        setActiveJobApplicationId(data.id);
+      }
+    } catch (e) {
+      console.warn('[MainContent] handleMarkApplied error:', e);
+    }
+  }, [activeJobApplicationId, isGuestMode, pushToast, requireSignInForGuestAction, t]);
+
+  const handleAttachExport = useCallback(async () => {
+    if (isGuestMode) {
+      requireSignInForGuestAction();
+      return;
+    }
+
+    if (!activeJobApplicationId || !pendingAttachment) return;
+    try {
+      const { data, error } = await attachExportToJobApplication(
+        activeJobApplicationId,
+        pendingAttachment.filePath,
+        pendingAttachment.fileName
+      );
+      if (!error && data) {
+        pushToast({
+          type: 'success',
+          title: t('pipeline.exportAttached', 'Resume attached'),
+          description: pendingAttachment.fileName,
+        });
+        setPendingAttachment(null);
+        setExportedJobApplicationId(data.id);
+        analytics.trackPipelineExportAttached();
+      }
+    } catch (e) {
+      console.warn('[MainContent] handleAttachExport error:', e);
+    }
+  }, [activeJobApplicationId, isGuestMode, pendingAttachment, pushToast, requireSignInForGuestAction, t]);
+
   const handleCopy = useCallback(
     async (value) => {
       try {
@@ -1081,6 +1240,11 @@ export default function MainContent() {
       const normalizedVariant = variant === "ats-plain" ? "ats-plain" : "styled";
 
       try {
+        if (isGuestMode && exportMethod === "supabase") {
+          requireSignInForGuestAction();
+          return;
+        }
+
         // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
         const mergedResume = mergeResumeData(resumeData, {
           optimization: optimizationData,
@@ -1125,8 +1289,16 @@ export default function MainContent() {
           pushToast({
             type: "success",
             title: t("toasts.savedToAccount"),
-            description: `Your resume "${result.fileName}" has been saved securely.`,
+            description: t("toasts.resumeSavedSecurely", 'Your resume "{{fileName}}" has been saved securely.', { fileName: result.fileName }),
           });
+
+          if (activeJobApplicationId && result.filePath && result.fileName) {
+            setPendingAttachment({
+              filePath: result.filePath,
+              fileName: result.fileName,
+            });
+            setExportedJobApplicationId(activeJobApplicationId);
+          }
 
           if (result.signedUrl) {
             const link = document.createElement('a');
@@ -1164,7 +1336,7 @@ export default function MainContent() {
         });
       }
     },
-    [jobDescription, matchAnalysis, optimizationData, optimizations, optimizationKeywords, pushToast, resumeData, user, t]
+    [activeJobApplicationId, isGuestMode, jobDescription, matchAnalysis, optimizationData, optimizations, optimizationKeywords, pushToast, requireSignInForGuestAction, resumeData, user, t]
   );
 
   const renderedToasts = useMemo(
@@ -1195,9 +1367,49 @@ export default function MainContent() {
       </button>
     ) : undefined;
 
+  const guestNotice = t(
+    "workspace.guest.notice",
+    "Sign in is needed to run AI match/optimization, save pipeline jobs, or export to your account."
+  );
+
+  const renderGuestProtectedPanel = (title: string) => (
+    <GlassCard className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+      <LogIn className="h-10 w-10 text-emerald-600 dark:text-emerald-300" />
+      <div className="space-y-2">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
+        <p className="mx-auto max-w-md text-sm text-gray-600 dark:text-emerald-100/75">
+          {guestProtectedActionDescription}
+        </p>
+      </div>
+      <GlassButton variant="primary" onClick={handleGuestSignIn}>
+        <LogIn className="h-4 w-4 me-2" />
+        {t("workspace.guest.signInCta", "Sign in to save progress")}
+      </GlassButton>
+    </GlassCard>
+  );
+
   const workspace = (
     <ParallaxContainer enableLayers={false} className="py-1">
       <div className="space-y-3 sm:space-y-3 text-gray-900 dark:text-surface-50">
+        {isGuestMode && (
+          <div className="rounded-[var(--radius-card)] border border-emerald-900/12 bg-white/92 p-4 shadow-soft dark:border-emerald-200/16 dark:bg-[#071f1a]/94">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold leading-6 text-gray-700 dark:text-emerald-100/82">
+                {guestNotice}
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
+                <GlassButton variant="primary" size="sm" onClick={handleGuestSignIn}>
+                  <LogIn className="h-4 w-4 me-2" />
+                  {t("workspace.guest.signInCta", "Sign in to save progress")}
+                </GlassButton>
+                <GlassButton variant="secondary" size="sm" onClick={exitGuestMode}>
+                  {t("workspace.guest.backToLanding", "Back to landing")}
+                </GlassButton>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Workflow navigation */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -1225,6 +1437,11 @@ export default function MainContent() {
                 {resumeGateReason}
               </p>
             )}
+            {hasResume && (
+              <p className="mt-2 hidden text-center text-xs font-medium text-gray-500 dark:text-emerald-100/70 sm:block sm:text-start">
+                {t("workspace.stepFlowHelper", "Step 1: Upload or paste resume → Step 2: Paste job description → Step 3: Review match → Step 4: Optimize & export")}
+              </p>
+            )}
           </div>
         </div>
 
@@ -1248,6 +1465,12 @@ export default function MainContent() {
                   resumeText={resumeData?.plainText || ''}
                   onToast={pushToast}
                   onClear={handleClearMatch}
+                  jobDescription={jobDescription}
+                  extractedMetadata={extractedMetadata}
+                  onJobSaved={handleJobSavedToPipeline}
+                  isGuestMode={isGuestMode}
+                  onRequireSignIn={requireSignInForGuestAction}
+                  protectedActionMessage={guestProtectedActionDescription}
                 />
               </Suspense>
             </LazyErrorBoundary>
@@ -1255,10 +1478,14 @@ export default function MainContent() {
           {activeTab === "vision2030" && (
             <LazyErrorBoundary label="Vision 2030 section">
               <Suspense fallback={<SectionSkeleton />}>
-                <Vision2030Section
-                  resumeText={resumeData?.plainText || ''}
-                  onToast={pushToast}
-                />
+                {isGuestMode
+                  ? renderGuestProtectedPanel(t("tabs.vision2030", "Vision 2030"))
+                  : (
+                    <Vision2030Section
+                      resumeText={resumeData?.plainText || ''}
+                      onToast={pushToast}
+                    />
+                  )}
               </Suspense>
             </LazyErrorBoundary>
           )}
@@ -1278,6 +1505,14 @@ export default function MainContent() {
                   canExport={Boolean(resumeData?.plainText)}
                   hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
                   onClear={handleClearOptimizations}
+                  activeJobApplicationId={activeJobApplicationId}
+                  pendingAttachment={pendingAttachment}
+                  onMarkApplied={handleMarkApplied}
+                  onAttachExport={handleAttachExport}
+                  hasExportedForActiveJob={exportedJobApplicationId === activeJobApplicationId}
+                  isGuestMode={isGuestMode}
+                  onRequireSignIn={requireSignInForGuestAction}
+                  protectedActionMessage={guestProtectedActionDescription}
                 />
               </Suspense>
             </LazyErrorBoundary>
@@ -1292,33 +1527,54 @@ export default function MainContent() {
           {activeTab === "interview" && (
             <LazyErrorBoundary label="Interview section">
               <Suspense fallback={<SectionSkeleton />}>
-                <InterviewSection
-                  jobDescription={jobDescription}
-                  resumeText={resumeData?.plainText || ""}
-                  matchAnalysis={matchAnalysis}
-                  resumeData={resumeData}
-                  onUpdate={handleResumeDataUpdate}
-                />
+                {isGuestMode
+                  ? renderGuestProtectedPanel(t("tabs.interview", "Interview"))
+                  : (
+                    <InterviewSection
+                      jobDescription={jobDescription}
+                      resumeText={resumeData?.plainText || ""}
+                      matchAnalysis={matchAnalysis}
+                      resumeData={resumeData}
+                      onUpdate={handleResumeDataUpdate}
+                    />
+                  )}
               </Suspense>
             </LazyErrorBoundary>
           )}
           {activeTab === "bulk" && (
             <LazyErrorBoundary label="Bulk Analysis section">
               <Suspense fallback={<SectionSkeleton />}>
-                <BulkAnalysisSection
-                  jobDescription={jobDescription}
-                />
+                {isGuestMode
+                  ? renderGuestProtectedPanel(t("tabs.bulk", "Bulk"))
+                  : (
+                    <BulkAnalysisSection
+                      jobDescription={jobDescription}
+                    />
+                  )}
               </Suspense>
             </LazyErrorBoundary>
           )}
           {activeTab === "cover-letter" && (
             <LazyErrorBoundary label="Cover Letter section">
               <Suspense fallback={<SectionSkeleton />}>
-                <CoverLetterSection
-                  resumeText={resumeData?.plainText || ""}
-                  jobDescription={jobDescription}
-                  resumeData={resumeData}
-                />
+                {isGuestMode
+                  ? renderGuestProtectedPanel(t("tabs.coverLetter", "Cover Letter"))
+                  : (
+                    <CoverLetterSection
+                      resumeText={resumeData?.plainText || ""}
+                      jobDescription={jobDescription}
+                      resumeData={resumeData}
+                    />
+                  )}
+              </Suspense>
+            </LazyErrorBoundary>
+          )}
+          {activeTab === "pipeline" && (
+            <LazyErrorBoundary label="Pipeline section">
+              <Suspense fallback={<SectionSkeleton />}>
+                {isGuestMode
+                  ? renderGuestProtectedPanel(t("tabs.pipeline", "Pipeline"))
+                  : <PipelineSection />}
               </Suspense>
             </LazyErrorBoundary>
           )}
@@ -1343,7 +1599,7 @@ export default function MainContent() {
     </ParallaxContainer>
   );
 
-  if (!user) {
+  if (!user && !isGuestMode) {
     if (loading) {
       return (
         <div className="relative isolate z-20 flex-1 flex flex-col w-full h-full">
@@ -1359,12 +1615,8 @@ export default function MainContent() {
         <ToastContainer>{renderedToasts}</ToastContainer>
         <Suspense fallback={<SectionSkeleton />}>
           <LandingPage
-            onGetStarted={() => {
-              if (typeof window !== "undefined") {
-                window.localStorage.setItem("watheq:landingSeen", "true");
-              }
-              signInWithGoogle();
-            }}
+            onGetStarted={enterGuestMode}
+            onSignIn={handleGuestSignIn}
           />
         </Suspense>
       </div>

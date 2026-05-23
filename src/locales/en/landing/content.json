@@ -1,0 +1,106 @@
+{
+  "landing": {
+    "trustBadge": "Built for Saudi-market applications",
+    "finalCta": {
+      "benefits": [
+        "ATS-friendly PDF export",
+        "Saudi-market keyword matching",
+        "Reviewable AI suggestions"
+      ]
+    },
+    "howItWorks": {
+      "title": "Get Results in 3 Simple Steps",
+      "step1": {
+        "title": "Upload Resume",
+        "description": "Drop a text-based PDF/DOCX or paste text. Scanned image-only resumes are not supported yet."
+      },
+      "step2": {
+        "title": "Add Job Description",
+        "description": "Paste the job posting. AI identifies skills gaps and optimization opportunities."
+      },
+      "step3": {
+        "title": "Optimize & Download",
+        "description": "Apply AI suggestions, pick a template, and export your ATS-ready PDF."
+      },
+      "cta": "Start Optimizing Now"
+    },
+    "stats": {
+      "atsPassRate": {
+        "value": "ATS-Friendly",
+        "label": "ATS Guidance",
+        "description": "Built for Saudi-market applications"
+      },
+      "averageTime": {
+        "value": "5 min",
+        "label": "Average Time",
+        "description": "From upload to optimized PDF"
+      },
+      "moreInterviews": {
+        "value": "Evidence-Safe",
+        "label": "Optimization",
+        "description": "Ask-before-rewrite workflow"
+      },
+      "industries": {
+        "value": "50+",
+        "label": "Industries",
+        "description": "Templates tailored for"
+      }
+    },
+    "industries": {
+      "title": "Optimized for Saudi's Growing Industries",
+      "subtitle": "Templates and keywords tailored for Vision 2030 job market",
+      "hiring": "hiring",
+      "banking": {
+        "name": "Banking & Finance",
+        "growth": "+24%"
+      },
+      "technology": {
+        "name": "Technology",
+        "growth": "+47%"
+      },
+      "education": {
+        "name": "Education",
+        "growth": "+18%"
+      },
+      "healthcare": {
+        "name": "Healthcare",
+        "growth": "+32%"
+      }
+    },
+    "comparison": {
+      "title": "Why Choose Watheq?",
+      "subtitle": "Compare Watheq with common resume workflows",
+      "watheq": "Watheq",
+      "genericResumeBuilder": "Generic Resume Builder",
+      "keywordScanner": "Keyword Scanner",
+      "manualEditing": "Manual Editing",
+      "features": {
+        "vision2030": "Vision 2030 Alignment",
+        "antiHallucination": "Evidence Protection",
+        "clarification": "Ask-before-rewrite clarification",
+        "fitScoring": "Evidence-based fit scoring before rewriting",
+        "jobMatch": "AI Job Match",
+        "atsPassRate": "ATS and Job-Ad Alignment",
+        "interviewPrep": "Interview Preparation"
+      },
+      "values": {
+        "yes": "Yes",
+        "no": "No",
+        "partial": "Partial",
+        "unknown": "Unknown",
+        "watheqAts": "Evidence-aware alignment",
+        "resumeBuilderAts": "Template-focused",
+        "keywordScannerAts": "Keyword signals only",
+        "manualEditingAts": "Depends on review",
+        "watheqClarification": "Asks when proof is missing",
+        "resumeBuilderClarification": "No structured questions",
+        "keywordScannerClarification": "Flags keywords only",
+        "manualEditingClarification": "Depends on reviewer",
+        "watheqFitScoring": "Scores evidence before rewriting",
+        "resumeBuilderFitScoring": "Template-first guidance",
+        "keywordScannerFitScoring": "Keyword count focus",
+        "manualEditingFitScoring": "Manual judgment"
+      }
+    }
+  }
+}

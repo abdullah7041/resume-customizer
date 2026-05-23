@@ -5,23 +5,16 @@
  */
 
 import { summarizeErrorForLog } from './sentry.js';
+import {
+  MODELS,
+  GEMINI_MODELS,
+  DEFAULT_MAX_TOKENS,
+} from './model-registry.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-const MODELS = {
-  lite:  'google/gemini-2.5-flash-lite',
-  flash: 'google/gemini-2.5-flash',
-};
-
-const GEMINI_MODELS = {
-  lite:  'gemini-2.5-flash-lite',
-  flash: 'gemini-2.5-flash',
-};
-
-const DEFAULT_MAX_TOKENS = { lite: 4096, flash: 6144 };
 
 /**
  * Convert Google AI SDK JSON Schema format to OpenRouter format
@@ -47,7 +40,7 @@ function convertGoogleSchemaToOpenRouter(googleSchema) {
  * @returns {Promise<ReadableStream<Uint8Array>>}
  */
 export async function streamFromOpenRouter(modelType, messages, jsonSchema = null, options = {}) {
-  const model = MODELS[modelType] || MODELS.flash;
+  const model = options.modelId || MODELS[modelType] || MODELS.flash;
 
   const requestBody = {
     model,
@@ -111,7 +104,9 @@ export async function streamFromOpenRouter(modelType, messages, jsonSchema = nul
  * @returns {Promise<ReadableStream<Uint8Array>>}
  */
 export async function streamFromGemini(modelType, messages, jsonSchema = null, options = {}) {
-  const geminiModel = GEMINI_MODELS[modelType] || GEMINI_MODELS.flash;
+  const geminiModel = options.modelId
+    ? (options.modelId.startsWith('google/') ? options.modelId.replace('google/', '') : options.modelId)
+    : (GEMINI_MODELS[modelType] || GEMINI_MODELS.flash);
   // streamGenerateContent with alt=sse returns Server-Sent Events
   const url = `${GEMINI_BASE_URL}/${geminiModel}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 

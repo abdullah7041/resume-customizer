@@ -1,0 +1,71 @@
+{
+  "sections": {
+    "match": {
+      "title": "المطابقة",
+      "subtitle": "قارن سيرتك الذاتية مع أوصاف الوظائف",
+      "jobInput": {
+        "title": "وصف الوظيفة",
+        "placeholder": "الصق وصف الوظيفة هنا...",
+        "url": "أو أدخل رابط إعلان الوظيفة"
+      },
+      "results": {
+        "title": "تحليل المطابقة",
+        "score": "نسبة التطابق",
+        "keywords": "الكلمات المفتاحية الموجودة",
+        "missing": "الكلمات المفتاحية المفقودة",
+        "suggestions": "الاقتراحات",
+        "calculation": {
+          "title": "كيف حسبناها؟"
+        }
+      },
+      "analyze": "تحليل المطابقة",
+      "analyzing": "يحلل...",
+      "noResume": "لو سمحت ارفع السيرة الذاتية أولاً",
+      "categoryScores": {
+        "hardSkills": "المهارات التقنية",
+        "experience": "الخبرة",
+        "education": "التعليم",
+        "softSkills": "المهارات الشخصية",
+        "hardSkillsDesc": "مطابقة الكلمات المفتاحية التقنية",
+        "experienceDesc": "المسميات الوظيفية وسنوات الخبرة",
+        "educationDesc": "الدرجة العلمية ومجال الدراسة",
+        "softSkillsDesc": "السمات الشخصية والقيادية"
+      },
+      "variant": {
+        "strongMatch": "تطابق قوي",
+        "goodStart": "بداية جيدة",
+        "needsWork": "يحتاج تحسين"
+      },
+      "variantLabels": {
+        "strongMatch": "تطابق قوي",
+        "goodStart": "بداية جيدة",
+        "needsWork": "يحتاج تحسين"
+      },
+      "optimizedBanner": "تحليل السيرة الذاتية المحسّنة. إذا قمت بالتصدير وإعادة الرفع، توقّع نتيجة حوالي {{score}}.",
+      "scoreLabel": "النتيجة",
+      "assistant": {
+        "label": "HR Super Saud",
+        "hide": "إخفاء ملاحظات HR Super Saud",
+        "restore": "إظهار ملاحظات HR Super Saud",
+        "minimized": "HR Super Saud",
+        "disable": "تعطيل HR Super Saud",
+        "enable": "تفعيل HR Super Saud",
+        "disabled": "تم تعطيل HR Super Saud",
+        "moods": {
+          "strong": {
+            "status": "تطابق قوي",
+            "message": "تطابق قوي. سيرتك تتكلم بلغة الوظيفة."
+          },
+          "goodStart": {
+            "status": "بداية جيدة",
+            "message": "بداية جيدة. تعديلات مركزة تقدر ترفع النتيجة."
+          },
+          "needsWork": {
+            "status": "يحتاج تركيز",
+            "message": "هذه الوظيفة تحتاج تطابق أوضح. خلنا نبرز الفجوات بهدوء."
+          }
+        }
+      }
+    }
+  }
+}

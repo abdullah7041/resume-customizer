@@ -517,7 +517,7 @@ https://watheqai.app
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
         You signed up for our waitlist, and we're thrilled to let you know that <strong>Watheq Pro</strong> is now live!
-        Get unlimited access to all AI-powered features and take your resume optimization to the next level.
+        Get higher limits for AI-powered features and take your resume optimization to the next level.
       </p>
 
       <div class="price-box">
@@ -753,7 +753,7 @@ https://watheqai.app
       </p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-        We're working hard to bring you unlimited AI-powered resume optimization tools. You'll be among the first to know when we launch!
+        We're working hard to bring you higher-limit AI-powered resume optimization tools. You'll be among the first to know when we launch!
       </p>
 
       <div style="background-color: #f0fdf4; border-left: 4px solid #006C35; padding: 16px; margin: 24px 0; border-radius: 4px;">
@@ -787,7 +787,7 @@ You're on the Waitlist!
 
 Thanks for your interest in Watheq Pro! You've been successfully added to our waitlist.
 
-We're working hard to bring you unlimited AI-powered resume optimization tools. You'll be among the first to know when we launch!
+We're working hard to bring you higher-limit AI-powered resume optimization tools. You'll be among the first to know when we launch!
 
 What happens next?
 - We'll email you when Pro launches
@@ -1089,7 +1089,7 @@ https://watheqai.app
       <div class="credits-badge">+5</div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center; margin: 20px 0;">
-        Use your credits to optimize your resume and land your dream job!
+        Use your credits to optimize your resume for the roles you want to pursue.
       </p>
 
       <div style="text-align: center;">
@@ -1119,7 +1119,7 @@ Thanks for joining Watheq! ${referrerName ? `Since you were referred by ${referr
 
 +5 Credits Added
 
-Use your credits to optimize your resume and land your dream job!
+Use your credits to optimize your resume for the roles you want to pursue.
 
 Start optimizing: https://watheqai.app
 

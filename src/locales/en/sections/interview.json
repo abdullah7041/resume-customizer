@@ -1,0 +1,126 @@
+{
+  "sections": {
+    "interview": {
+      "title": "Interview",
+      "subtitle": "Prepare for interviews with AI-generated questions",
+      "noJobTitle": "No job description",
+      "noJobDesc": "Add a job description in the Match tab to generate interview questions.",
+      "readyTitle": "Prepare for your interview",
+      "readyDesc": "Generate likely interview questions based on the job description.",
+      "generate": "Generate Questions",
+      "generating": "Generating questions...",
+      "questionsTitle": "Likely Questions",
+      "roleLevel": "Role Level",
+      "focusAreas": "Focus Areas",
+      "noFocusAreas": "Generate questions to see focus areas",
+      "export": "Export",
+      "regenerate": "Regenerate",
+      "framework": "Answer Framework",
+      "practiceAnswer": "Practice your answer",
+      "answerPlaceholder": "Write your answer here...",
+      "errors": {
+        "noJob": "Please add a job description first",
+        "failed": "Failed to generate questions"
+      },
+      "categories": {
+        "behavioral": "Behavioral",
+        "technical": "Technical",
+        "situational": "Situational",
+        "general": "General"
+      },
+      "question": {
+        "sample": "Sample Answer",
+        "tips": "Tips",
+        "practice": "Practice"
+      },
+      "settings": {
+        "difficulty": "Difficulty",
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard",
+        "count": "Number of Questions"
+      },
+      "regenerateBehavioral": "Regenerate Behavioral",
+      "generateBehavioral": "Generate Behavioral Questions",
+      "regenerateTechnical": "Regenerate Technical",
+      "generateTechnical": "Generate Technical Questions",
+      "starMethod": {
+        "title": "Use the STAR Method",
+        "recommended": "Recommended",
+        "description": "Structure your answers for maximum impact. This proven framework helps you tell compelling stories that demonstrate your skills effectively.",
+        "steps": {
+          "situation": {
+            "title": "Situation",
+            "desc": "Set the context"
+          },
+          "task": {
+            "title": "Task",
+            "desc": "Your responsibility"
+          },
+          "action": {
+            "title": "Action",
+            "desc": "What you did"
+          },
+          "result": {
+            "title": "Result",
+            "desc": "Measurable outcome"
+          }
+        }
+      },
+      "typesDescription": {
+        "behavioral": {
+          "label": "Behavioral:",
+          "desc": "Soft skills, leadership, teamwork (suitable for all companies)"
+        },
+        "technical": {
+          "label": "Technical:",
+          "desc": "Deep technical skills, system design, algorithms (for rigorous tech interviews)"
+        }
+      },
+      "starTips": {
+        "header": "How to answer using STAR:",
+        "behavioral": {
+          "situation": "Briefly describe the project/challenge context",
+          "task": "Explain your specific role and what was expected",
+          "action": "Detail the steps YOU took (use 'I', not 'we')",
+          "result": "Quantify the outcome: %, $, time saved, etc."
+        },
+        "situational": {
+          "situation": "Reference a specific instance when you did this",
+          "task": "What problem were you solving?",
+          "action": "Walk through your methodology step-by-step",
+          "result": "What was the measurable improvement?"
+        },
+        "default": {
+          "situation": "Set the scene with relevant context",
+          "task": "Define what you needed to accomplish",
+          "action": "Describe your specific contributions",
+          "result": "Share concrete, quantifiable outcomes"
+        }
+      },
+      "vulnerability": {
+        "title": "Career Vulnerability Questions",
+        "subtitle": "Questions targeting potential red flags in your career timeline",
+        "noVulnerabilities": "No red flags detected in your career timeline",
+        "noVulnerabilitiesDesc": "Your career progression looks consistent. Focus on the standard questions below.",
+        "coachingTip": "Coaching Tip",
+        "types": {
+          "short_tenure": "Short Tenure",
+          "gap": "Career Gap",
+          "pivot": "Career Pivot",
+          "job_hopping": "Job Hopping",
+          "demotion": "Demotion Signal"
+        }
+      },
+      "privateToYou": "Private to you",
+      "csvHeaders": {
+        "number": "#",
+        "question": "Question",
+        "type": "Type",
+        "difficulty": "Difficulty",
+        "category": "Category",
+        "answer": "Your Answer"
+      }
+    }
+  }
+}

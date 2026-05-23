@@ -1,0 +1,21 @@
+{
+  "resume": {
+    "sections": {
+      "about": "About",
+      "summary": "Professional Summary",
+      "experience": "Experience",
+      "workExperience": "Professional Experience",
+      "projects": "Projects",
+      "keyProjects": "Key Projects",
+      "education": "Education",
+      "skills": "Skills",
+      "skillsExpertise": "Skills & Expertise",
+      "technicalSkills": "Technical Skills",
+      "coreCompetencies": "Core Competencies",
+      "languages": "Languages",
+      "certificates": "Certificates",
+      "certifications": "Certifications",
+      "certificationsTraining": "Certifications & Training"
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "credits": {
+    "balance": "Credits",
+    "balanceDisplay": "{{remaining}} / {{total}} credits",
+    "remaining": "credits",
+    "resetsIn": "Resets in {{time}}",
+    "resetsInWithDate": "Resets in {{days}} days ({{date}})",
+    "resetsSoon": "Resets soon",
+    "refresh": "Refresh credits",
+    "transactionTotal": "{{total}} total",
+    "confirm": {
+      "title": "Confirm Action",
+      "message": "This will use {{cost}} credits.",
+      "current": "Current balance: {{remaining}} / {{total}}",
+      "continue": "Continue ({{cost}} credits)",
+      "insufficient": "Insufficient credits. You need {{required}} but have {{available}}.",
+      "waitlistCta": "Will notify you when Pro launches ."
+    },
+    "upgrade": {
+      "title": "Upgrade to Premium",
+      "lowCredits": "You're running low on credits ({{remaining}} remaining)",
+      "lowCreditsTitle": "Low credits balance",
+      "comingSoon": "Coming Soon",
+      "joinWaitlist": "Join Waitlist",
+      "earnTip": "Tip: Earn bonus credits by submitting feedback!",
+      "emailLabel": "Get notified when Pro launches:",
+      "waitlistSuccess": "Thanks! We'll notify you when Pro launches.",
+      "waitlistSuccessTitle": "You're on the list!",
+      "badge": "EARLY ACCESS",
+      "invalidEmail": "Please enter a valid email address",
+      "subtitle": "Supercharge your resume optimization with higher limits and expert features.",
+      "proFeatures": "What you get",
+      "features": {
+        "credits": "100 credits/month",
+        "support": "Priority support",
+        "earlyAccess": "Early access to new features"
+      }
+    },
+    "usage": {
+      "title": "Credit Usage",
+      "feedbackEarned": "From feedback",
+      "referralEarned": "From referrals",
+      "history": "Recent activity",
+      "noTransactions": "No activity yet",
+      "time": {
+        "justNow": "Just now",
+        "minutesAgo": "{{count}}m ago",
+        "hoursAgo": "{{count}}h ago",
+        "daysAgo": "{{count}}d ago"
+      },
+      "features": {
+        "parse_resume": "Resume parsing",
+        "ai_match": "Job match",
+        "vision2030": "Vision 2030",
+        "optimize": "Optimization",
+        "interview_prep": "Interview prep",
+        "cover_letter": "Cover letter",
+        "export_template": "Template export"
+      }
+    },
+    "referralEarned": "Referral bonus earned!",
+    "referralEarnedDesc": "You received {{creditsAdded}} credits from a successful referral. Keep sharing!",
+    "features": {
+      "smartParsing": {
+        "label": "Smart Parsing",
+        "desc": "Extract Arabic/English resumes in 30 seconds"
+      },
+      "matchScore": {
+        "label": "AI Match Score",
+        "desc": "Get 0-100 scores with AI insights"
+      },
+      "aiOptimization": {
+        "label": "AI Optimization",
+        "desc": "Rewrite without inventing fake data"
+      },
+      "keywords": {
+        "label": "Keyword Analysis",
+        "desc": "Beat ATS with strategic keywords"
+      },
+      "templates": {
+        "label": "Pro Templates",
+        "desc": "5 ATS-optimized PDF formats"
+      },
+      "interview": {
+        "label": "Interview Prep",
+        "desc": "Role-specific questions in seconds"
+      },
+      "bulk": {
+        "label": "Bulk Analysis",
+        "desc": "Compare multiple resume versions"
+      },
+      "coverLetter": {
+        "label": "Cover Letters",
+        "desc": "Tailored letters for each role"
+      },
+      "vision2030": {
+        "label": "Vision 2030",
+        "desc": "Align with Saudi national priorities"
+      },
+      "antiHallucination": {
+        "label": "Evidence-Aware AI",
+        "desc": "Designed to avoid invented experience"
+      }
+    }
+  }
+}

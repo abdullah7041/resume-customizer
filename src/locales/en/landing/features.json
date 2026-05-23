@@ -1,0 +1,64 @@
+{
+  "landing": {
+    "features": {
+      "title": "Everything You Need to Stand Out",
+      "subtitle": "Powerful AI tools designed to give you an unfair advantage in the Saudi job market",
+      "smartParsing": {
+        "title": "Smart Resume Parsing",
+        "description": "Upload PDF, DOCX, or paste text. AI extracts and structures your experience instantly.",
+        "badge": "Text parsing",
+        "capabilities": [
+          "Multi-format support",
+          "Arabic & English",
+          "Structured extraction"
+        ]
+      },
+      "jobMatch": {
+        "title": "Job Match Scoring",
+        "description": "Get instant 0-100 match scores. See exactly which keywords you're missing.",
+        "capabilities": [
+          "Real-time analysis",
+          "Keyword gap detection",
+          "Industry benchmarks"
+        ]
+      },
+      "aiOptimization": {
+        "title": "AI Optimization",
+        "description": "Rewrite sections with stronger language and better keywords—without inventing facts.",
+        "capabilities": [
+          "Context-aware rewrites",
+          "Metric suggestions",
+          "Tone adjustment"
+        ]
+      },
+      "keywordAnalysis": {
+        "title": "Keyword Analysis",
+        "description": "Identify high-impact keywords and optimize your resume to beat ATS systems.",
+        "capabilities": [
+          "Frequency analysis",
+          "Competitor comparison",
+          "Industry trends"
+        ]
+      },
+      "atsExport": {
+        "title": "ATS-Friendly Export",
+        "description": "Download professionally formatted PDFs that pass applicant tracking systems.",
+        "capabilities": [
+          "Multiple templates",
+          "Font embedding",
+          "Section formatting"
+        ]
+      },
+      "interviewPrep": {
+        "title": "Interview Prep",
+        "description": "Generate tailored interview questions based on your resume and job requirements.",
+        "badge": "New",
+        "capabilities": [
+          "Role-specific questions",
+          "STAR format tips",
+          "Difficulty levels"
+        ]
+      }
+    }
+  }
+}

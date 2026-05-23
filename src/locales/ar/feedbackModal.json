@@ -1,0 +1,42 @@
+{
+  "feedbackModal": {
+    "title": "كيف كانت تجربتك؟",
+    "ratingLabel": "اختر تقييمك:",
+    "testimonialLabel": "تبي تكتب شي نستخدمه كتوصية؟ (اختياري)",
+    "testimonialPlaceholder": "وش أكثر شي عجبك في واثق؟",
+    "skip": "تخطي",
+    "submit": "إرسال",
+    "creditHint": "الملاحظات تكسبك +1 رصيد (الحد الأقصى 3)",
+    "beta": {
+      "whatFeltWrong": "وش اللي حسيته غلط أو عام؟",
+      "shortNotePlaceholder": "اختياري - اكتب ملاحظة قصيرة",
+      "trustToApply": "هل تثق في هذه السيرة بما يكفي للتقديم؟",
+      "wouldPay": "هل تدفع مقابل هذا لو وفر لك وقتا؟",
+      "trustOptions": {
+        "yes": "نعم",
+        "somewhat": "نوعا ما",
+        "no": "لا"
+      },
+      "payOptions": {
+        "yes": "نعم",
+        "maybe": "ربما",
+        "no": "لا"
+      }
+    },
+    "success": {
+      "title": "شكرا على ملاحظاتك!",
+      "creditAdded": "+1 رصيد",
+      "currentBalance": "الرصيد الحالي: {{count}}",
+      "maxReached": "وصلت للحد الأعلى من أرصدة الملاحظات (3)",
+      "closing": "سيتم الإغلاق خلال 4 ثوان..."
+    },
+    "errors": {
+      "signInRequired": "يجب تسجيل الدخول أولا لإرسال الملاحظات",
+      "ratingRequired": "الرجاء اختيار تقييم",
+      "authToken": "تعذر الحصول على رمز المصادقة",
+      "serverPrefix": "خطأ في الخادم",
+      "submitFailed": "تعذر إرسال الملاحظات",
+      "unexpectedResponse": "استجابة غير متوقعة"
+    }
+  }
+}

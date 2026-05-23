@@ -1,0 +1,12 @@
+{
+  "bulkAnalysis": {
+    "title": "التحليل المجمع",
+    "uploadMultiple": "رفع سير ذاتية متعددة",
+    "comparing": "يقارن...",
+    "compareResults": "نتائج المقارنة",
+    "bestMatch": "أفضل تطابق",
+    "ranking": "الترتيب",
+    "selectAll": "تحديد الكل",
+    "clearAll": "مسح الكل"
+  }
+}

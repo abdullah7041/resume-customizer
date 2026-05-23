@@ -134,6 +134,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isHoveringSelector, setIsHoveringSelector] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
 
@@ -183,6 +184,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     ? (storeActiveResume || storeOriginalResume)
     : propResumeData;
   const hasRealResume = Boolean(resumeData?.basics?.name);
+  const exportFailureMessage = t(
+    'sections.templates.export.failed',
+    'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
+  );
 
   // Filter to only active templates (Modern, Classic, Technical)
   const activeTemplates = useMemo(() => {
@@ -304,14 +309,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Download PDF — Server-side Puppeteer rendering
   const handleDownloadPdf = async () => {
-    if (isDownloading) return; // CRITICAL: blocks re-entrant calls — fixes freeze
-
-    if (!hasRealResume) {
-      console.warn('Cannot download PDF: No resume data available');
-      return;
-    }
-
+    if (isDownloading || !hasRealResume || !resumeData) return;
     setIsDownloading(true);
+    setExportError(null);
+    analytics.trackExportClicked(selectedTemplate.id, 'pdf');
 
     try {
       const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
@@ -414,6 +415,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       if (!response.ok) throw new Error(`[PDFDownload] Server error: ${response.status}`);
 
       const blob = await response.blob();
+      if (!blob || blob.size === 0) throw new Error('[PDFDownload] Server returned an empty PDF');
 
       // 6. Mobile-safe Download
       // iOS Safari frequently blocks navigator.share or blob URLs after async fetch delays.
@@ -436,12 +438,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         saveAs(blob, typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
       }
 
-      analytics.trackExport(selectedTemplate.id, 'pdf');
+      analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
       useResumeStore.getState().setHasDownloaded(true);
 
     } catch (err) {
       console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', summarizeErrorForConsole(err));
-      
+      analytics.trackExportFailed(selectedTemplate.id, 'pdf', 'server_error');
+
       try {
         // Dynamic import to keep bundle size small
         const [{ toCanvas }, { jsPDF }] = await Promise.all([
@@ -583,13 +586,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
         const finalFilename = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
         pdf.save(finalFilename);
-        
-        analytics.trackExport(selectedTemplate.id, 'pdf');
+
+        analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
         useResumeStore.getState().setHasDownloaded(true);
-        
+
       } catch (clientErr) {
         console.error('[PDFDownload] Client-side fallback also failed:', summarizeErrorForConsole(clientErr));
-        // We could show a toast error here
+        analytics.trackExportFailed(selectedTemplate.id, 'pdf', 'client_fallback_error');
+        setExportError(exportFailureMessage);
       }
     } finally {
       setIsDownloading(false);
@@ -602,6 +606,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     if (isDownloadingDocx || !hasRealResume || !resumeData) return;
 
     setIsDownloadingDocx(true);
+    setExportError(null);
+    analytics.trackExportClicked(selectedTemplate.id, 'docx');
     try {
       // Get keywords and bold preference from store
       const store = useResumeStore.getState();
@@ -615,13 +621,16 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         templateId: selectedTemplate.id as TemplateId,
         direction: contentDirection,
       });
+      if (!blob || blob.size === 0) throw new Error('DOCX export returned an empty file');
       const filename = getSmartFilename(resumeData, selectedTemplate.id, 'docx');
       saveAs(blob, filename);
 
-      analytics.trackExport(selectedTemplate.id, 'docx');
+      analytics.trackExportSuccess(selectedTemplate.id, 'docx');
       useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
       console.error('DOCX Download failed:', summarizeErrorForConsole(err));
+      analytics.trackExportFailed(selectedTemplate.id, 'docx', 'client_error');
+      setExportError(exportFailureMessage);
     } finally {
       setIsDownloadingDocx(false);
     }
@@ -629,6 +638,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   const handleSelectTemplate = (template: typeof resumeTemplates[0]) => {
     setSelectedTemplate(template);
+    setExportError(null);
     setStoreTemplate(template.id as any);
 
     // Track template selection
@@ -761,6 +771,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
 
           <KeywordBoldingToggle />
+
+          {exportError && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-200"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-300" />
+              <p>{exportError}</p>
+            </div>
+          )}
         </div>
 
         {/* Zoom Controls Overlay - hidden on mobile (auto-fit), shown on desktop on hover */}

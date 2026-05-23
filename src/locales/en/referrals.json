@@ -1,0 +1,23 @@
+{
+  "referrals": {
+    "yourLink": "Your referral link",
+    "yourStats": "Referral stats",
+    "linkUnavailable": "Referral link unavailable",
+    "statsUnavailable": "Referral stats unavailable",
+    "shareInfo": "Share your link and get +5 credits when a friend signs up.",
+    "totalReferrals": "Total",
+    "completedReferrals": "Active",
+    "creditsEarned": "Earned",
+    "noReferralsYet": "Share your link to earn credits.",
+    "pendingReferrals": "{{count}} referrals pending activation",
+    "allCompleted": "All referrals are active!",
+    "shareLinkedIn": "Share on LinkedIn",
+    "inviteEarn": "Invite friends and earn",
+    "inviteShort": "Invite",
+    "inviteFriends": "Invite Friends",
+    "creditsBonus": "+5 Credits",
+    "shareLink": "Share your personal link with friends",
+    "youGet": "You get 5 credits",
+    "theyGet": "They get 5 credits"
+  }
+}

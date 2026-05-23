@@ -1,0 +1,63 @@
+{
+  "upload": {
+    "title": "Upload Your Resume",
+    "dragDrop": "Drag and drop your file here",
+    "or": "or",
+    "browse": "Browse Files",
+    "supported": "Supported formats: PDF, DOCX, TXT",
+    "maxSize": "Maximum file size: 5MB",
+    "paste": "Or paste your resume text",
+    "card": {
+      "step": "Step 1",
+      "title": "Upload or Paste Your Resume",
+      "subtitle": "Drag a PDF, DOCX, or TXT file, or paste the text to let our AI optimize every line.",
+      "maxSize": "Max 5MB",
+      "pdf": "PDF",
+      "docx": "DOCX",
+      "txt": "TXT",
+      "and": "&",
+      "dropText": "Drop your resume here or click to browse",
+      "securityText": "We keep uploads private and secure.",
+      "prepareButton": "Prepare Resume",
+      "prepareFileButton": "Prepare Selected File",
+      "preparePastedButton": "Prepare Pasted Text",
+      "processingButton": "Processing...",
+      "clearButton": "Clear inputs",
+      "uploadFileLabel": "Upload resume file",
+      "removeFileLabel": "Remove selected file",
+      "savedTitle": "Resume ready and saved",
+      "readyTitle": "Ready to prepare",
+      "status": {
+        "uploading": "Uploading resume…",
+        "parsing": "Parsing resume with AI…",
+        "success": "Resume ready!",
+        "error": "We couldn't process that file."
+      },
+      "selectFile": "Select File",
+      "supportedFormats": "Supported formats: PDF, DOCX, TXT",
+      "maxSizeLabel": "Max size: 5MB",
+      "bestPractice": "For best results, use selectable text. Scanned images are not supported.",
+      "pasteLabel": "Or paste your resume text",
+      "pastePlaceholder": "Paste selectable resume text here...",
+      "pasteHelp": "Use either a file or pasted text. The latest input will be used.",
+      "saudi": {
+        "label": "Are you Saudi?",
+        "description": "Adds \"Saudi\" to your resume summary to align with Saudization ATS filters"
+      }
+    },
+    "errors": {
+      "unsupportedType": "Only PDF, DOCX, or TXT resumes are supported.",
+      "unsupportedTypeHint": "Upload a PDF or DOCX, or paste plain text.",
+      "tooLarge": "File must be 5MB or smaller.",
+      "tooLargeHint": "Compress the resume and try again.",
+      "readFailed": "We couldn't read that text file.",
+      "readFailedHint": "Paste the contents manually instead."
+    },
+    "stage": {
+      "uploading": "Uploading...",
+      "parsing": "Parsing...",
+      "analyzing": "AI Analyzing...",
+      "complete": "Complete!"
+    }
+  }
+}

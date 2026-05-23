@@ -1,0 +1,23 @@
+{
+  "landing": {
+    "demo": {
+      "title": "See the Transformation",
+      "subtitle": "Watch how AI turns generic bullets into impactful achievements",
+      "original": "Original",
+      "analyzing": "AI Analyzing",
+      "optimized": "Optimized",
+      "originalText": "Managed sales team and increased revenue.",
+      "analyzingText": "Analyzing: team size, revenue figures, location context...",
+      "issues": {
+        "vagueImpact": "Vague impact",
+        "noMetrics": "No metrics",
+        "genericPhrasing": "Generic phrasing"
+      },
+      "benefits": {
+        "quantifiableImpact": "Quantifiable Impact",
+        "localContext": "Local Context",
+        "strongActionVerbs": "Strong Action Verbs"
+      }
+    }
+  }
+}

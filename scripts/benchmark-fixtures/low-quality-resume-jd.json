@@ -1,0 +1,7 @@
+{
+  "name": "Low-Quality Vague Resume + English JD (Clarification Trigger)",
+  "language": "en",
+  "resumeText": "JOHN DOE\nDeveloper\n\nSUMMARY\nI am a developer with some experience. I like coding and learning new things.\n\nEXPERIENCE\n\nDeveloper — Some Company\n2020 – Present\n• Worked on various projects\n• Helped the team with tasks\n• Used some tools and technologies\n\nDeveloper — Another Place\n2018 – 2020\n• Did development work\n• Fixed bugs\n\nEDUCATION\nB.S. Computer Science — Generic University\n\nSKILLS\nProgramming, databases, web development",
+  "jobDescription": "Senior Backend Engineer\n\nWe are hiring a senior backend engineer to design and build high-performance APIs and microservices.\n\nRequirements:\n• 5+ years of backend development experience\n• Expert-level proficiency in Python, Go, or Java\n• Deep experience with PostgreSQL, Redis, and message queues\n• Proven track record of designing scalable systems\n• Experience with Kubernetes and cloud-native architectures\n• Strong understanding of distributed systems and concurrency\n• Bachelor's degree in Computer Science or related field\n\nNice to have:\n• Experience with GraphQL and gRPC\n• Contributions to open-source backend projects",
+  "expectedLanguageDirection": "ltr"
+}

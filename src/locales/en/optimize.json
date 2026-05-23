@@ -1,0 +1,42 @@
+{
+  "optimize": {
+    "title": "AI Optimization",
+    "suggestions": "Suggestions",
+    "apply": "Apply Suggestion",
+    "applyAll": "Apply All",
+    "original": "Original",
+    "optimized": "Optimized",
+    "generating": "Generating optimizations...",
+    "gapAnalysis": {
+      "title": "Gap Analysis",
+      "critical": "Critical Gap",
+      "moderate": "Moderate Gap",
+      "minor": "Minor Gap",
+      "currentState": "Current State",
+      "recommendation": "Recommendation",
+      "collapseAll": "Collapse All",
+      "expandAll": "Expand All",
+      "criticalCount": "Critical",
+      "moderateCount": "Moderate"
+    },
+    "scoreBreakdown": {
+      "title": "Score Breakdown",
+      "before": "Current",
+      "after": "Optimized",
+      "experienceMatch": "Experience Match",
+      "skillCoverage": "Skill Coverage",
+      "keywordMatch": "Keyword Match",
+      "gapPenalties": "Gap Penalties",
+      "finalScore": "Final Score"
+    },
+    "hiddenMatches": {
+      "title": "Hidden Advantages",
+      "description": "Skills you have that match job requirements using different terminology:"
+    },
+    "mirroredKeywords": {
+      "title": "JD Phrases Injected",
+      "description": "These exact phrases from the job description were woven into your optimized resume:",
+      "structuralChanges": "Strategic Reorganization"
+    }
+  }
+}

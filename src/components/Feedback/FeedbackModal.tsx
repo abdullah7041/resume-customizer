@@ -15,6 +15,7 @@ import { useUserCredits } from '../../hooks/useUserCredits';
 import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase';
+import { analytics } from '../../services/analytics';
 import { GlassButton } from '../ui/GlassButton';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
@@ -70,7 +71,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
   const { user } = useAuth();
   const { refetch: refreshCredits } = useUserCredits();
   const { getSessionContext } = useFeatureTracking();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
 
   const [selectedRating, setSelectedRating] = useState<EmojiRating | null>(null);
@@ -82,6 +83,11 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
     maxReached: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [betaFeedback, setBetaFeedback] = useState({
+    whatFeltWrong: '',
+    trustToApply: '',
+    wouldPay: '',
+  });
 
   // Reset state when modal closes
   const handleClose = useCallback(() => {
@@ -105,12 +111,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
     e.preventDefault();
 
     if (!user) {
-      setError(isArabic ? 'يجب تسجيل الدخول أولاً' : 'You must be logged in to submit feedback');
+      setError(t('feedbackModal.errors.signInRequired'));
       return;
     }
 
     if (!selectedRating) {
-      setError(isArabic ? 'الرجاء اختيار تقييم' : 'Please select a rating');
+      setError(t('feedbackModal.errors.ratingRequired'));
       return;
     }
 
@@ -122,7 +128,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session?.access_token) {
-        throw new Error(isArabic ? 'فشل الحصول على رمز المصادقة' : 'Failed to get authentication token');
+        throw new Error(t('feedbackModal.errors.authToken'));
       }
 
       // Get session context for analytics
@@ -138,7 +144,10 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         body: JSON.stringify({
           emoji_rating: selectedRating,
           testimonial_text: testimonial || undefined,
-          context: sessionContext, // Rich context data for analytics
+          context: {
+            ...sessionContext,
+            beta_feedback: betaFeedback,
+          },
         }),
       });
 
@@ -151,18 +160,19 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
       } catch {
         // If JSON parsing fails, the server likely returned an error as plain text
         console.error('[FeedbackModal] Failed to parse response as JSON:', responseText);
-        throw new Error(
-          isArabic
-            ? `فشل في الاتصال بالخادم: ${responseText.substring(0, 100)}`
-            : `Server error: ${responseText.substring(0, 100)}`
-        );
+        throw new Error(`${t('feedbackModal.errors.serverPrefix')}: ${responseText.substring(0, 100)}`);
       }
 
       if (!response.ok) {
-        throw new Error(result.error || (isArabic ? 'فشل إرسال الملاحظات' : 'Failed to submit feedback'));
+        throw new Error(result.error || t('feedbackModal.errors.submitFailed'));
       }
 
       if (result.success) {
+        analytics.trackFeedbackSubmitted(
+          selectedRating,
+          Boolean(testimonial),
+          (sessionContext as unknown as Record<string, unknown>)?.context_feature as string || undefined
+        );
         setSuccessData({
           creditAwarded: result.credit.awarded,
           creditsRemaining: result.credit.creditsRemaining,
@@ -172,16 +182,16 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         // Refresh credits in header
         await refreshCredits();
       } else {
-        throw new Error(isArabic ? 'استجابة غير متوقعة' : 'Unexpected response format');
+        throw new Error(t('feedbackModal.errors.unexpectedResponse'));
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : (isArabic ? 'فشل إرسال الملاحظات' : 'Failed to submit feedback');
+      const errorMsg = err instanceof Error ? err.message : t('feedbackModal.errors.submitFailed');
       setError(errorMsg);
       console.error('[FeedbackModal] Submit failed:', err);
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, selectedRating, testimonial, isArabic, refreshCredits, getSessionContext]);
+  }, [user, selectedRating, testimonial, refreshCredits, getSessionContext, betaFeedback, t]);
 
   if (!isOpen) return null;
 
@@ -212,33 +222,28 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             <CheckCircle2 className="w-16 h-16 text-emerald-400" />
 
             <h3 className="text-xl font-bold text-white">
-              {isArabic ? 'شكراً على ملاحظاتك!' : 'Thank you for your feedback!'}
+              {t('feedbackModal.success.title')}
             </h3>
 
             {successData.creditAwarded && (
               <div className={cn(glass.card, 'p-4 w-full border-emerald-500/30')}>
                 <p className="text-emerald-400 font-semibold mb-1">
-                  {isArabic ? '✅ +1 رصيد' : '✅ +1 Credit Added'}
+                  {t('feedbackModal.success.creditAdded')}
                 </p>
                 <p className="text-sm text-gray-400">
-                  {isArabic
-                    ? `الرصيد الحالي: ${successData.creditsRemaining}`
-                    : `Current balance: ${successData.creditsRemaining} credits`
-                  }
+                  {t('feedbackModal.success.currentBalance', { count: successData.creditsRemaining })}
                 </p>
               </div>
             )}
 
             {successData.maxReached && (
               <p className="text-sm text-gray-400">
-                {isArabic
-                  ? 'لقد حصلت على الحد الأقصى من أرصدة الملاحظات (3)'
-                  : 'You\'ve already earned max feedback credits (3)'}
+                {t('feedbackModal.success.maxReached')}
               </p>
             )}
 
             <p className="text-xs text-gray-500">
-              {isArabic ? 'سيتم الإغلاق خلال 4 ثوانٍ...' : 'Closing in 4 seconds...'}
+              {t('feedbackModal.success.closing')}
             </p>
           </div>
         </div>
@@ -274,13 +279,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-emerald-400" />
             <h3 id="feedback-title" className="text-lg font-semibold text-white">
-              {isArabic ? 'كيف كانت تجربتك؟' : 'How was your experience?'}
+              {t('feedbackModal.title')}
             </h3>
           </div>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-white transition-colors"
-            aria-label={isArabic ? 'إغلاق' : 'Close'}
+            aria-label={t('common.closeDialog', 'Close dialog')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -298,7 +303,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
           {/* Emoji rating selection */}
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-300">
-              {isArabic ? 'اختر تقييمك:' : 'Choose your rating:'}
+              {t('feedbackModal.ratingLabel')}
             </label>
             <div className="grid grid-cols-5 gap-2">
               {EMOJI_OPTIONS.map((option) => (
@@ -324,17 +329,82 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
+          {/* Beta feedback questions */}
+          {selectedRating && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  {t('feedbackModal.beta.whatFeltWrong')}
+                </label>
+                <textarea
+                  value={betaFeedback.whatFeltWrong}
+                  onChange={(e) => setBetaFeedback(prev => ({ ...prev, whatFeltWrong: e.target.value.slice(0, 300) }))}
+                  placeholder={t('feedbackModal.beta.shortNotePlaceholder')}
+                  className={cn('w-full px-4 py-3 rounded-lg resize-none bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all')}
+                  rows={2}
+                  dir={isArabic ? 'rtl' : 'ltr'}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  {t('feedbackModal.beta.trustToApply')}
+                </label>
+                <div className="flex gap-2">
+                  {['yes', 'somewhat', 'no'].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setBetaFeedback(prev => ({ ...prev, trustToApply: val }))}
+                      className={cn(
+                        'flex-1 py-2 rounded-lg text-xs font-medium transition-all border',
+                        betaFeedback.trustToApply === val
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-white'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-emerald-500/30'
+                      )}
+                    >
+                      {t(`feedbackModal.beta.trustOptions.${val}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  {t('feedbackModal.beta.wouldPay')}
+                </label>
+                <div className="flex gap-2">
+                  {['yes', 'maybe', 'no'].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setBetaFeedback(prev => ({ ...prev, wouldPay: val }))}
+                      className={cn(
+                        'flex-1 py-2 rounded-lg text-xs font-medium transition-all border',
+                        betaFeedback.wouldPay === val
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-white'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-emerald-500/30'
+                      )}
+                    >
+                      {t(`feedbackModal.beta.payOptions.${val}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Testimonial textarea (only for positive ratings) */}
           {selectedRating && isPositiveRating && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
               <label htmlFor="testimonial" className="block text-sm font-medium text-gray-300">
-                {isArabic ? 'تبي تكتب شي نستخدمه كتوصية؟ (اختياري)' : 'Share a testimonial? (optional)'}
+                {t('feedbackModal.testimonialLabel')}
               </label>
               <textarea
                 id="testimonial"
                 value={testimonial}
                 onChange={(e) => setTestimonial(e.target.value.slice(0, 500))}
-                placeholder={isArabic ? 'وش أكثر شي عجبك في واثق؟' : 'What did you like most about Watheq?'}
+                placeholder={t('feedbackModal.testimonialPlaceholder')}
                 className={cn(
                   'w-full px-4 py-3 rounded-lg resize-none',
                   'bg-white/5 border border-white/10',
@@ -363,7 +433,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
               disabled={isSubmitting}
               className="flex-1"
             >
-              {isArabic ? 'تخطي' : 'Skip'}
+              {t('feedbackModal.skip')}
             </GlassButton>
             <GlassButton
               type="submit"
@@ -373,18 +443,15 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
               className="flex-1"
             >
               {isSubmitting
-                ? (isArabic ? 'جاري الإرسال...' : 'Sending...')
-                : (isArabic ? 'إرسال' : 'Submit')
+                ? t('common.submitting')
+                : t('feedbackModal.submit')
               }
             </GlassButton>
           </div>
 
           {/* Info text */}
           <p className="text-xs text-gray-500 text-center">
-            {isArabic
-              ? '💚 الملاحظات الإيجابية تكسبك +1 رصيد (الحد الأقصى 3)'
-              : '💚 Positive feedback earns +1 credit (max 3 lifetime)'
-            }
+            {t('feedbackModal.creditHint')}
           </p>
         </form>
       </div>

@@ -1,0 +1,14 @@
+{
+  "templates": {
+    "title": "Resume Templates",
+    "select": "Select Template",
+    "preview": "Preview",
+    "download": "Download PDF",
+    "downloading": "Downloading...",
+    "atsOptimized": "ATS Optimized",
+    "modern": "Modern",
+    "classic": "Classic",
+    "technical": "Technical",
+    "professional": "Professional"
+  }
+}

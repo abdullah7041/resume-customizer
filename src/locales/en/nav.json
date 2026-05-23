@@ -1,0 +1,18 @@
+{
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "pricing": "Pricing",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "workflowSteps": {
+      "upload": "Upload & Parse",
+      "match": "Match Job",
+      "optimize": "AI Optimize",
+      "download": "Review & Export",
+      "yourWorkflow": "Your Workflow",
+      "inProgress": "In Progress"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "analysis": {
+    "title": "Resume Analysis",
+    "matchScore": "Match Score",
+    "atsScore": "ATS Score",
+    "keywords": {
+      "title": "Keywords",
+      "found": "Found",
+      "missing": "Missing"
+    },
+    "skills": {
+      "title": "Skills Gap Analysis",
+      "matched": "Matched Skills",
+      "missing": "Missing Skills"
+    }
+  }
+}

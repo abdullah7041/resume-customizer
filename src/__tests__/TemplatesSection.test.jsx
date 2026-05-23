@@ -44,11 +44,22 @@ vi.mock('../services/analytics', () => ({
     analytics: {
         trackTemplateSelected: vi.fn(),
         trackExport: vi.fn(),
+        trackExportClicked: vi.fn(),
+        trackExportSuccess: vi.fn(),
+        trackExportFailed: vi.fn(),
     },
 }));
 
 vi.mock('file-saver', () => ({
     saveAs: vi.fn(),
+}));
+
+vi.mock('html-to-image', () => ({
+    toCanvas: vi.fn(() => Promise.reject(new Error('canvas failed'))),
+}));
+
+vi.mock('jspdf', () => ({
+    jsPDF: vi.fn(() => ({})),
 }));
 
 vi.mock('../services/api', () => ({
@@ -314,6 +325,62 @@ describe('TemplatesSection', () => {
                     expect.objectContaining({ direction: 'rtl' })
                 );
             });
+        });
+
+        it('shows a localized error when server PDF and client fallback export both fail', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            globalThis.fetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                blob: () => Promise.resolve(new Blob([], { type: 'application/pdf' })),
+            });
+
+            try {
+                renderWithProviders(<TemplateGallery resumeData={{
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    work: [],
+                    education: [],
+                    skills: [],
+                    projects: [],
+                }} />);
+
+                fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+                await waitFor(() => {
+                    expect(screen.getByRole('alert')).toHaveTextContent(
+                        'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
+                    );
+                });
+                expect(screen.queryByText(/canvas failed/i)).not.toBeInTheDocument();
+            } finally {
+                consoleError.mockRestore();
+            }
+        });
+
+        it('shows a localized error when DOCX export fails', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            exportResumeAsDocx.mockRejectedValueOnce(new Error('docx failed'));
+
+            try {
+                renderWithProviders(<TemplateGallery resumeData={{
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    work: [],
+                    education: [],
+                    skills: [],
+                    projects: [],
+                }} />);
+
+                fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+
+                await waitFor(() => {
+                    expect(screen.getByRole('alert')).toHaveTextContent(
+                        'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
+                    );
+                });
+                expect(screen.queryByText(/docx failed/i)).not.toBeInTheDocument();
+            } finally {
+                consoleError.mockRestore();
+            }
         });
     });
 

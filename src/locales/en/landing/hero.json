@@ -1,0 +1,18 @@
+{
+  "landing": {
+    "hero": {
+      "title": "Land Your Dream Job with",
+      "dynamicPhrases": [
+        "AI-Powered Resumes",
+        "Higher Match Scores",
+        "Job-Ad Alignment",
+        "Your Dream Job"
+      ],
+      "subtitle": "Transform your resume in <strong>under 5 minutes</strong>. Match job descriptions with evidence. Get ATS-friendly guidance. <em>Built for Saudi careers.</em>",
+      "cta": "Try free without sign-in",
+      "signInCta": "Sign in only when you want to save progress",
+      "worksWithArabicEnglish": "Works with Arabic & English",
+      "exportUnlimitedPDFs": "Export PDF resumes"
+    }
+  }
+}

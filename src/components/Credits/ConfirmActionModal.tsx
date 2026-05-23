@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { FEATURE_COSTS, FEATURE_LABELS, type FeatureName } from '../../types/credits';
 import { supabase } from '../../services/supabase';
 import { useUserCredits } from '../../hooks/useUserCredits';
+import { analytics } from '../../services/analytics';
 
 interface ConfirmActionModalProps {
   isOpen: boolean;
@@ -72,6 +73,8 @@ export function ConfirmActionModal({
       }
     }
 
+    analytics.trackPricingIntent({ source: 'insufficient_credits_modal', planHint: 'pro' });
+
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -110,6 +113,7 @@ export function ConfirmActionModal({
         }
 
         setSubmitSuccess(true);
+        analytics.trackWaitlistJoined('insufficient_credits_modal');
         localStorage.setItem(attemptKey, Date.now().toString());
       }
     } catch (err) {
@@ -153,7 +157,7 @@ export function ConfirmActionModal({
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
-            aria-label="Close dialog"
+            aria-label={t('common.closeDialog', 'Close dialog')}
           >
             <X className="w-5 h-5" />
           </button>

@@ -1,0 +1,106 @@
+{
+  "landing": {
+    "trustBadge": "مصمم لطلبات التوظيف في السوق السعودي",
+    "finalCta": {
+      "benefits": [
+        "تصدير PDF متوافق مع ATS",
+        "مطابقة كلمات مفتاحية للسوق السعودي",
+        "اقتراحات ذكاء اصطناعي موثقة"
+      ]
+    },
+    "howItWorks": {
+      "title": "احصل على النتائج في 3 خطوات بسيطة",
+      "step1": {
+        "title": "ارفع السيرة الذاتية",
+        "description": "أسقط ملف PDF/DOCX نصي أو الصق النص. السير القائمة على صور ممسوحة ضوئياً غير مدعومة حالياً."
+      },
+      "step2": {
+        "title": "أضف الوصف الوظيفي",
+        "description": "الصق إعلان الوظيفة. الذكاء الاصطناعي يحدد فجوات المهارات وفرص التحسين."
+      },
+      "step3": {
+        "title": "حسّن وحمّل",
+        "description": "طبّق اقتراحات الذكاء الاصطناعي، اختر قالب، وصدّر PDF جاهز لـ ATS."
+      },
+      "cta": "يلا ابدأ التحسين"
+    },
+    "stats": {
+      "atsPassRate": {
+        "value": "متوافق مع ATS",
+        "label": "إرشادات ATS",
+        "description": "مصمم لطلبات التوظيف في السوق السعودي"
+      },
+      "averageTime": {
+        "value": "5 دقائق",
+        "label": "متوسط الوقت",
+        "description": "من الرفع إلى PDF المحسّن"
+      },
+      "moreInterviews": {
+        "value": "آمن الأدلة",
+        "label": "تحسين",
+        "description": "سير عمل يسأل قبل إعادة الصياغة"
+      },
+      "industries": {
+        "value": "50+",
+        "label": "صناعة",
+        "description": "قوالب مصممة لها"
+      }
+    },
+    "industries": {
+      "title": "محسّن لصناعات السعودية المتنامية",
+      "subtitle": "قوالب وكلمات مفتاحية مصممة لسوق عمل رؤية 2030",
+      "hiring": "توظيف",
+      "banking": {
+        "name": "البنوك والتمويل",
+        "growth": "+24%"
+      },
+      "technology": {
+        "name": "التكنولوجيا",
+        "growth": "+47%"
+      },
+      "education": {
+        "name": "التعليم",
+        "growth": "+18%"
+      },
+      "healthcare": {
+        "name": "الرعاية الصحية",
+        "growth": "+32%"
+      }
+    },
+    "comparison": {
+      "title": "ليش تختار واثق؟",
+      "subtitle": "قارن واثق مع طرق شائعة لتحسين السيرة الذاتية",
+      "watheq": "واثق",
+      "genericResumeBuilder": "منشئ سيرة ذاتية عام",
+      "keywordScanner": "أداة فحص كلمات مفتاحية",
+      "manualEditing": "تعديل يدوي",
+      "features": {
+        "vision2030": "توافق رؤية 2030",
+        "antiHallucination": "حماية الأدلة",
+        "clarification": "أسئلة توضيحية قبل إعادة الصياغة",
+        "fitScoring": "تقييم ملاءمة مبني على الأدلة قبل الكتابة",
+        "jobMatch": "مطابقة الوظائف بالذكاء الاصطناعي",
+        "atsPassRate": "توافق ATS وإعلان الوظيفة",
+        "interviewPrep": "تحضير المقابلة"
+      },
+      "values": {
+        "yes": "نعم",
+        "no": "لا",
+        "partial": "جزئي",
+        "unknown": "غير معروف",
+        "watheqAts": "توافق مبني على أدلة",
+        "resumeBuilderAts": "يركز على القالب",
+        "keywordScannerAts": "إشارات كلمات فقط",
+        "manualEditingAts": "يعتمد على المراجعة",
+        "watheqClarification": "يسأل عند نقص الأدلة",
+        "resumeBuilderClarification": "لا توجد أسئلة منظمة",
+        "keywordScannerClarification": "ينبه للكلمات فقط",
+        "manualEditingClarification": "يعتمد على المراجع",
+        "watheqFitScoring": "يقيم الأدلة قبل الصياغة",
+        "resumeBuilderFitScoring": "إرشاد يبدأ بالقالب",
+        "keywordScannerFitScoring": "يركز على عدد الكلمات",
+        "manualEditingFitScoring": "حكم يدوي"
+      }
+    }
+  }
+}

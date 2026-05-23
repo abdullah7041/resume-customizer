@@ -1,0 +1,29 @@
+{
+  "sections": {
+    "bulk": {
+      "title": "Bulk Resume Analysis",
+      "subtitle": "Compare multiple versions side-by-side",
+      "uploadTitle": "Upload Resume Files",
+      "uploadDesc": "Drag & drop or click to browse. Supports PDF & DOCX.",
+      "uploaded": "Uploaded",
+      "chooseFiles": "Select Files",
+      "clearAll": "Clear All",
+      "export": "Export Report",
+      "noJobWarning": "Add a job description in the Match tab to analyze results.",
+      "comparisonTitle": "Detailed Comparison",
+      "emptyTitle": "Ready to Analyze",
+      "emptyDesc": "Upload multiple resume versions to see which one matches the job best.",
+      "upload": {
+        "title": "Upload Files",
+        "subtitle": "Upload multiple files for batch processing",
+        "limit": "Up to 10 files at a time"
+      },
+      "results": {
+        "title": "Analysis Results",
+        "processing": "Processing",
+        "complete": "Complete",
+        "failed": "Failed"
+      }
+    }
+  }
+}

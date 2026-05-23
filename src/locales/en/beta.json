@@ -1,0 +1,10 @@
+{
+  "beta": {
+    "title": "Early Access",
+    "subtitle": "Enter your beta access code to continue",
+    "placeholder": "Enter access code",
+    "submit": "Continue",
+    "invalidCode": "Invalid access code. Please try again.",
+    "welcome": "Welcome to the Beta!"
+  }
+}

@@ -307,6 +307,11 @@ export const SessionContextSchema = z.object({
     total_lifetime_uses: z.number(),
     current_milestone: z.number().nullable(),
     user_segment: z.enum(['new_user', 'casual_user', 'regular_user', 'power_user']),
+    beta_feedback: z.object({
+        whatFeltWrong: z.string().max(300).optional(),
+        trustToApply: z.enum(['yes', 'somewhat', 'no', '']).optional(),
+        wouldPay: z.enum(['yes', 'maybe', 'no', '']).optional(),
+    }).optional(),
 }).optional();
 
 export const SubmitFeedbackRequestSchema = z.object({

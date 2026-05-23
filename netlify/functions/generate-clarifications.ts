@@ -15,6 +15,7 @@
 
 import { Handler } from '@netlify/functions';
 import { callOpenRouter } from '../lib/openrouter-client.js';
+import { resolveFeatureConfig } from '../lib/model-router.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { ClarificationRequestSchema, formatZodError } from '../lib/resume-schemas.js';
 import { initSentry, captureError, redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
@@ -189,10 +190,13 @@ const baseHandler: Handler = async (event) => {
 
     console.log(`[generate-clarifications] Calling AI (user: ${redactForLog(user.email)}, ip: ${getClientIP(event)})`);
 
-    const text = await callOpenRouter('flash', messages, CLARIFICATION_SCHEMA, {
-      maxTokens: 2048,
-      timeoutMs: 20000,
-      reasoningBudget: 512,
+    const config = resolveFeatureConfig('clarification_questions');
+    const text = await callOpenRouter(config.modelType, messages, CLARIFICATION_SCHEMA, {
+      maxTokens: config.maxTokens,
+      timeoutMs: config.timeoutMs,
+      reasoningBudget: config.reasoningBudget,
+      featureName: 'generate_clarifications',
+      modelId: config.modelId,
     });
 
     let parsed: { clarifications: unknown[] };

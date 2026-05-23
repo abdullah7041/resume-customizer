@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "accountInformation": "Account information",
+    "verifiedAccount": "Verified account",
+    "dataPrivacy": "Data & Privacy",
+    "exportPersonalData": "Export personal data",
+    "exportPersonalDataDescription": "Download a copy of your resumes and optimizations in JSON format.",
+    "deleteAccountDescription": "Permanently delete your account and all associated data.",
+    "deleteConfirmQuestion": "Are you sure?",
+    "errors": {
+      "authToken": "Could not get an authentication token from the active session.",
+      "deleteFailed": "Failed to delete account.",
+      "deleteGeneric": "An error occurred while deleting account.",
+      "exportFailed": "Failed to export data.",
+      "exportGeneric": "An error occurred while exporting data."
+    }
+  }
+}

@@ -5,29 +5,55 @@
  */
 
 import { summarizeErrorForLog } from './sentry.js';
+import { recordAiUsageEvent } from './ai-usage-logger.js';
+import {
+  MODELS,
+  GEMINI_MODELS,
+  DEFAULT_MAX_TOKENS,
+  estimateCostUsd,
+} from './model-registry.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-// Model mapping: Internal names → provider-specific model IDs
-const MODELS = {
-  lite:  'google/gemini-2.5-flash-lite',
-  flash: 'google/gemini-2.5-flash',
-};
-
-// Direct Google model IDs (without the google/ prefix)
-const GEMINI_MODELS = {
-  lite:  'gemini-2.5-flash-lite',
-  flash: 'gemini-2.5-flash',
-};
-
-// Per-tier output token defaults (avoids a wasteful 16 384 ceiling on lite)
-const DEFAULT_MAX_TOKENS = { lite: 4096, flash: 6144 };
-
 if (!OPENROUTER_API_KEY && !GEMINI_API_KEY) {
   console.error('[AI Client] Error: Neither OPENROUTER_API_KEY nor GEMINI_API_KEY is set');
+}
+
+function toGeminiModelId(modelId, modelType) {
+  if (!modelId) return GEMINI_MODELS[modelType] || GEMINI_MODELS.flash;
+  return modelId.startsWith('google/') ? modelId.replace('google/', '') : modelId;
+}
+
+function recordUsageEvent({
+  options,
+  model,
+  provider,
+  usage = {},
+  reasoningTokens = 0,
+  startTime,
+  success,
+  errorCode = null,
+}) {
+  const promptTokens = usage.prompt_tokens || 0;
+  const completionTokens = usage.completion_tokens || 0;
+  const estimatedCost = estimateCostUsd(model, promptTokens, completionTokens);
+
+  recordAiUsageEvent({
+    feature_name: options.featureName || 'unknown',
+    model,
+    provider,
+    prompt_tokens: promptTokens,
+    completion_tokens: completionTokens,
+    reasoning_tokens: reasoningTokens,
+    total_tokens: usage.total_tokens || 0,
+    estimated_cost_usd: estimatedCost,
+    latency_ms: Date.now() - startTime,
+    success,
+    error_code: errorCode,
+  }).catch(() => {});
 }
 
 /**
@@ -74,6 +100,7 @@ function isFallbackEligible(error) {
  * Call OpenRouter API (primary provider)
  */
 async function callOpenRouterDirect(modelType, model, messages, jsonSchema, options, controller) {
+  const startTime = Date.now();
   const requestBody = {
     model,
     messages,
@@ -127,16 +154,22 @@ async function callOpenRouterDirect(modelType, model, messages, jsonSchema, opti
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content;
 
-  // Log token usage including reasoning tokens for observability
-  if (data.usage) {
-    const u = data.usage;
-    const reasoning = u.reasoning_tokens || u.completion_tokens_details?.reasoning_tokens || 0;
-    console.log(`[AI Client] Tokens — prompt: ${u.prompt_tokens}, completion: ${u.completion_tokens}, reasoning: ${reasoning}, total: ${u.total_tokens}`);
-  }
-
   if (!content) {
     throw new Error('OpenRouter returned empty response');
   }
+
+  const usage = data.usage || {};
+  const reasoning = usage.reasoning_tokens || usage.completion_tokens_details?.reasoning_tokens || 0;
+  console.log(`[AI Client] Tokens — prompt: ${usage.prompt_tokens || 0}, completion: ${usage.completion_tokens || 0}, reasoning: ${reasoning}, total: ${usage.total_tokens || 0}`);
+  recordUsageEvent({
+    options,
+    model,
+    provider: 'openrouter',
+    usage,
+    reasoningTokens: reasoning,
+    startTime,
+    success: true,
+  });
 
   return content;
 }
@@ -146,7 +179,8 @@ async function callOpenRouterDirect(modelType, model, messages, jsonSchema, opti
  * Uses REST API — no SDK dependency
  */
 async function callGeminiDirect(modelType, messages, jsonSchema, options, controller) {
-  const geminiModel = GEMINI_MODELS[modelType] || GEMINI_MODELS.flash;
+  const model = options.modelId || MODELS[modelType] || MODELS.flash;
+  const geminiModel = toGeminiModelId(model, modelType);
   const url = `${GEMINI_BASE_URL}/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
 
   // Convert OpenAI-style messages to Gemini format
@@ -230,7 +264,8 @@ async function callGeminiDirect(modelType, messages, jsonSchema, options, contro
  * @returns {Promise<string>} - Response text (JSON string if schema provided)
  */
 export async function callOpenRouter(modelType, messages, jsonSchema = null, options = {}) {
-  const model = MODELS[modelType] || MODELS.flash;
+  const model = options.modelId || MODELS[modelType] || MODELS.flash;
+  const geminiModel = toGeminiModelId(model, modelType);
   const TIMEOUT_MS = options.timeoutMs ?? 40000;
 
   const controller = new AbortController();
@@ -241,11 +276,21 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
     if (OPENROUTER_API_KEY) {
       console.log(`[AI Client] PRIMARY: OpenRouter ${model} (${messages.length} msgs, timeout: ${TIMEOUT_MS}ms)`);
 
+      const openRouterStartTime = Date.now();
       try {
         const content = await callOpenRouterDirect(modelType, model, messages, jsonSchema, options, controller);
         console.log(`[AI Client] OpenRouter success (${content.length} chars)`);
         return content;
       } catch (openRouterError) {
+        recordUsageEvent({
+          options,
+          model,
+          provider: 'openrouter',
+          startTime: openRouterStartTime,
+          success: false,
+          errorCode: openRouterError.status?.toString?.() || openRouterError.name || 'unknown',
+        });
+
         // If fallback is available and error is eligible, try Gemini
         if (GEMINI_API_KEY && isFallbackEligible(openRouterError)) {
           console.warn('[AI Client] OpenRouter failed, falling back to Gemini direct:', summarizeErrorForLog(openRouterError));
@@ -255,11 +300,27 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
           const remainingMs = Math.max(TIMEOUT_MS - 5000, 10000); // At least 10s for fallback
           const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), remainingMs);
 
+          const geminiStartTime = Date.now();
           try {
             const content = await callGeminiDirect(modelType, messages, jsonSchema, options, fallbackController);
+            recordUsageEvent({
+              options,
+              model: geminiModel,
+              provider: 'gemini',
+              startTime: geminiStartTime,
+              success: true,
+            });
             console.log(`[AI Client] Gemini fallback success (${content.length} chars)`);
             return content;
           } catch (geminiError) {
+            recordUsageEvent({
+              options,
+              model: geminiModel,
+              provider: 'gemini',
+              startTime: geminiStartTime,
+              success: false,
+              errorCode: geminiError.status?.toString?.() || geminiError.name || 'unknown',
+            });
             console.error('[AI Client] Gemini fallback also failed:', summarizeErrorForLog(geminiError));
             // Throw original OpenRouter error (more informative)
             throw openRouterError;
@@ -280,10 +341,30 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
 
     // Strategy 2: Gemini-only (no OpenRouter key)
     if (GEMINI_API_KEY) {
-      console.log(`[AI Client] DIRECT: Gemini ${GEMINI_MODELS[modelType]} (${messages.length} msgs, timeout: ${TIMEOUT_MS}ms)`);
-      const content = await callGeminiDirect(modelType, messages, jsonSchema, options, controller);
-      console.log(`[AI Client] Gemini success (${content.length} chars)`);
-      return content;
+      console.log(`[AI Client] DIRECT: Gemini ${geminiModel} (${messages.length} msgs, timeout: ${TIMEOUT_MS}ms)`);
+      const geminiStartTime = Date.now();
+      try {
+        const content = await callGeminiDirect(modelType, messages, jsonSchema, options, controller);
+        recordUsageEvent({
+          options,
+          model: geminiModel,
+          provider: 'gemini',
+          startTime: geminiStartTime,
+          success: true,
+        });
+        console.log(`[AI Client] Gemini success (${content.length} chars)`);
+        return content;
+      } catch (geminiError) {
+        recordUsageEvent({
+          options,
+          model: geminiModel,
+          provider: 'gemini',
+          startTime: geminiStartTime,
+          success: false,
+          errorCode: geminiError.status?.toString?.() || geminiError.name || 'unknown',
+        });
+        throw geminiError;
+      }
     }
 
     throw new Error('No AI provider configured. Set OPENROUTER_API_KEY or GEMINI_API_KEY.');

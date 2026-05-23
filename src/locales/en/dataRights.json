@@ -1,0 +1,22 @@
+{
+  "dataRights": {
+    "title": "Your Data Rights",
+    "export": {
+      "title": "Export Your Data",
+      "description": "Download all personal data we have stored about you in JSON format.",
+      "button": "Export Data",
+      "exporting": "Exporting..."
+    },
+    "delete": {
+      "title": "Delete Account",
+      "description": "Permanently delete your account and all associated data. This action cannot be undone.",
+      "button": "Delete Account",
+      "deleting": "Deleting...",
+      "confirm": {
+        "title": "Delete Account?",
+        "message": "This will permanently delete all your data including resumes, analyses, and account information. This action cannot be undone."
+      },
+      "confirmButton": "Yes, Delete Everything"
+    }
+  }
+}

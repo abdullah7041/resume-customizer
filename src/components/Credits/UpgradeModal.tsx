@@ -13,6 +13,7 @@ import { GlassInput } from '../ui/GlassInput';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase';
+import { analytics } from '../../services/analytics';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -77,6 +78,8 @@ export function UpgradeModal({
       }
     }
 
+    analytics.trackPricingIntent({ source: source === 'credits' ? 'low_credits_modal' : 'pricing_page', planHint: 'pro' });
+
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -113,11 +116,8 @@ export function UpgradeModal({
         }
 
         setSubmitSuccess(true);
+        analytics.trackWaitlistJoined(source === 'credits' ? 'low_credits_modal' : 'pricing_page');
         localStorage.setItem(attemptKey, Date.now().toString());
-
-        setTimeout(() => {
-          handleDismiss();
-        }, 3500);
       }
     } catch (err) {
       console.error('[UpgradeModal] Failed to join waitlist:', err);

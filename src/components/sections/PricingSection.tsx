@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, Sparkles, Crown } from 'lucide-react';
+import { Check, Sparkles, Crown, X } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
 import { cn } from '../../lib/utils/cn';
 import { UpgradeModal } from '../Credits/UpgradeModal';
+import { analytics } from '../../services/analytics';
 
 interface PlanConfig {
     key: 'free' | 'pro';
@@ -13,6 +15,10 @@ interface PlanConfig {
     gradient: string;
     active?: boolean;
     comingSoon?: boolean;
+}
+
+interface PricingSectionProps {
+    onGetStarted?: () => void;
 }
 
 const plans: PlanConfig[] = [
@@ -30,9 +36,20 @@ const plans: PlanConfig[] = [
     },
 ];
 
-export function PricingSection() {
+export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
     const { t, i18n } = useTranslation();
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [pricingIntent, setPricingIntent] = useState<'pack_9_sar' | 'monthly_29_sar' | null>(null);
+    const canRenderPortal = typeof document !== 'undefined';
+
+    const handlePricingIntent = (intent: 'pack_9_sar' | 'monthly_29_sar') => {
+        if (intent === 'pack_9_sar') {
+            analytics.trackPricingIntentPack9Sar('pricing_page');
+        } else {
+            analytics.trackPricingIntentMonthly29Sar('pricing_page');
+        }
+        setPricingIntent(intent);
+    };
 
     return (
         <section
@@ -145,8 +162,10 @@ export function PricingSection() {
                                         <div className="pt-4">
                                             {plan.active ? (
                                                 <GlassButton
+                                                    type="button"
                                                     variant="primary"
                                                     size="lg"
+                                                    onClick={onGetStarted}
                                                     className="w-full font-bold shadow-lg shadow-emerald-900/20"
                                                 >
                                                     {t('pricing.getStarted')}
@@ -155,7 +174,10 @@ export function PricingSection() {
                                                 <GlassButton
                                                     variant="secondary"
                                                     size="lg"
-                                                    onClick={() => setShowUpgradeModal(true)}
+                                                    onClick={() => {
+                                                        analytics.trackPricingIntent({ source: 'pricing_page', planHint: 'pro' });
+                                                        setShowUpgradeModal(true);
+                                                    }}
                                                     className="w-full border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-white/40 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white transition-colors"
                                                 >
                                                     {t('pricing.joinWaitlist')}
@@ -170,6 +192,33 @@ export function PricingSection() {
                 </div>
             </div>
 
+            {/* Pricing Intent — Help us decide */}
+            <div className="mt-10 text-center">
+                <p className="text-sm font-medium text-white/70 mb-4">
+                    {t('pricing.intent.title', 'Help us decide pricing')}
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button
+                        type="button"
+                        onClick={() => handlePricingIntent('pack_9_sar')}
+                        className="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4 transition-colors"
+                    >
+                        {t('pricing.intent.pack9Sar', 'Would you pay 9 SAR per application pack?')}
+                    </button>
+                    <span className="hidden sm:inline text-white/30">|</span>
+                    <button
+                        type="button"
+                        onClick={() => handlePricingIntent('monthly_29_sar')}
+                        className="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4 transition-colors"
+                    >
+                        {t('pricing.intent.monthly29Sar', 'Would you pay 29 SAR/month while job searching?')}
+                    </button>
+                </div>
+                <p className="mt-3 text-xs text-white/40">
+                    {t('pricing.intent.notChargingYet', 'Paid plans are not launched yet — this helps us decide what to build.')}
+                </p>
+            </div>
+
             {/* Waitlist Modal */}
             <UpgradeModal
                 isOpen={showUpgradeModal}
@@ -178,6 +227,55 @@ export function PricingSection() {
                 dismissKey="watheq:pricingWaitlist"
                 source="pricing"
             />
+            {pricingIntent && canRenderPortal && createPortal(
+                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                    <div
+                        className="fixed inset-0 bg-black/70 backdrop-blur-md"
+                        onClick={() => setPricingIntent(null)}
+                        aria-hidden="true"
+                    />
+                    <div
+                        className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#071b17] p-6 text-white shadow-2xl"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="pricing-intent-title"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setPricingIntent(null)}
+                            className="absolute end-4 top-4 rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+                            aria-label={t('common.closeDialog', 'Close dialog')}
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                        <div className="pe-8">
+                            <p id="pricing-intent-title" className="text-lg font-bold">
+                                {t('pricing.intent.confirmTitle')}
+                            </p>
+                            <p className="mt-3 text-sm leading-6 text-white/72">
+                                {t(
+                                    pricingIntent === 'pack_9_sar'
+                                        ? 'pricing.intent.confirmPack9Sar'
+                                        : 'pricing.intent.confirmMonthly29Sar'
+                                )}
+                            </p>
+                            <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-100">
+                                {t('pricing.intent.notChargingYet')}
+                            </p>
+                        </div>
+                        <GlassButton
+                            type="button"
+                            variant="primary"
+                            size="lg"
+                            onClick={() => setPricingIntent(null)}
+                            className="mt-6 w-full"
+                        >
+                            {t('common.close')}
+                        </GlassButton>
+                    </div>
+                </div>,
+                document.body
+            )}
         </section>
     );
 }

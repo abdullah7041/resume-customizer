@@ -1,0 +1,62 @@
+{
+  "pricing": {
+    "title": "Pricing",
+    "subtitle": "Simple, transparent pricing for everyone",
+    "workspaceCta": "Need more credits? View plans",
+    "comingSoon": "Coming Soon",
+    "detailsComingSoon": "Details will be announced soon",
+    "forever": "/forever",
+    "proPrice": "Price coming soon",
+    "getStarted": "Get Started Free",
+    "joinWaitlist": "Join Waitlist",
+    "notifyMe": "Get Notified for Pro",
+    "notifyDescription": "Be the first to know when Pro features launch.",
+    "emailPlaceholder": "Enter your email",
+    "notify": "Notify Me",
+    "subscribed": "✓ Joined waitlist!",
+    "intent": {
+      "title": "Help us decide pricing",
+      "pack9Sar": "Would you pay 9 SAR per application pack?",
+      "monthly29Sar": "Would you pay 29 SAR/month while job searching?",
+      "notChargingYet": "Paid plans are not launched yet - this helps us decide what to build.",
+      "confirmTitle": "Thanks for the signal",
+      "confirmPack9Sar": "You clicked interest in a 9 SAR application pack. This is only validation feedback.",
+      "confirmMonthly29Sar": "You clicked interest in a 29 SAR monthly plan. This is only validation feedback."
+    },
+    "waitlist": {
+      "alreadyJoined": "You're already on the waitlist!",
+      "invalidEmail": "Please enter a valid email address",
+      "tooManyAttempts": "Please wait a moment before trying again",
+      "error": "Failed to join waitlist. Please try again."
+    },
+    "plans": {
+      "free": {
+        "name": "Free",
+        "description": "Perfect for getting started",
+        "features": [
+          "20 credits monthly",
+          "AI Resume Analysis (2 credits)",
+          "Resume Optimization (5 credits)",
+          "Interview Prep (3 credits)",
+          "Cover Letter (4 credits)",
+          "Vision 2030 Alignment (2 credits)",
+          "Resume uploads included",
+          "PDF exports included",
+          "5 professional templates",
+          "Referral rewards (5 credits per friend)"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "For serious job seekers",
+        "features": [
+          "More resume uploads",
+          "Advanced AI optimization",
+          "Cover letter generation",
+          "Interview preparation",
+          "Priority support"
+        ]
+      }
+    }
+  }
+}

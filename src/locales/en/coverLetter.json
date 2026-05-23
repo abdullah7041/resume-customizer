@@ -1,0 +1,16 @@
+{
+  "coverLetter": {
+    "title": "Cover Letter",
+    "generate": "Generate Letter",
+    "generating": "Generating...",
+    "tone": "Letter Tone",
+    "formal": "Formal",
+    "friendly": "Friendly",
+    "confident": "Confident",
+    "jobDescription": "Job Description",
+    "pasteJob": "Paste job description here",
+    "copyToClipboard": "Copy to Clipboard",
+    "copied": "Copied!",
+    "downloadWord": "Download Word"
+  }
+}

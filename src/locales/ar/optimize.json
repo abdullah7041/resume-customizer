@@ -1,0 +1,42 @@
+{
+  "optimize": {
+    "title": "التحسين بالذكاء الاصطناعي",
+    "suggestions": "الاقتراحات",
+    "apply": "تطبيق الاقتراح",
+    "applyAll": "تطبيق الكل",
+    "original": "الأصلي",
+    "optimized": "المحسّن",
+    "generating": "ينشئ التحسينات...",
+    "gapAnalysis": {
+      "title": "تحليل الفجوات",
+      "critical": "فجوة حرجة",
+      "moderate": "فجوة متوسطة",
+      "minor": "فجوة بسيطة",
+      "currentState": "الحالة الحالية",
+      "recommendation": "التوصية",
+      "collapseAll": "طي الكل",
+      "expandAll": "توسيع الكل",
+      "criticalCount": "حرجة",
+      "moderateCount": "متوسطة"
+    },
+    "scoreBreakdown": {
+      "title": "تفصيل النتيجة",
+      "before": "الحالي",
+      "after": "المُحسَّن",
+      "experienceMatch": "مطابقة الخبرة",
+      "skillCoverage": "تغطية المهارات",
+      "keywordMatch": "مطابقة الكلمات المفتاحية",
+      "gapPenalties": "خصومات الفجوات",
+      "finalScore": "النتيجة النهائية"
+    },
+    "hiddenMatches": {
+      "title": "المزايا الخفية",
+      "description": "مهارات لديك تطابق متطلبات الوظيفة بمصطلحات مختلفة:"
+    },
+    "mirroredKeywords": {
+      "title": "عبارات الوصف الوظيفي المضافة",
+      "description": "تم دمج هذه العبارات بالضبط من الوصف الوظيفي في سيرتك الذاتية المحسّنة:",
+      "structuralChanges": "إعادة التنظيم الاستراتيجي"
+    }
+  }
+}

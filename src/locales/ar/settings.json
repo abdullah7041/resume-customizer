@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "accountInformation": "معلومات الحساب",
+    "verifiedAccount": "حساب موثّق",
+    "dataPrivacy": "البيانات والخصوصية",
+    "exportPersonalData": "تصدير البيانات الشخصية",
+    "exportPersonalDataDescription": "نزّل نسخة من سيرك الذاتية والتحسينات بصيغة JSON.",
+    "deleteAccountDescription": "حذف حسابك نهائياً مع كل البيانات المرتبطة به.",
+    "deleteConfirmQuestion": "هل أنت متأكد؟",
+    "errors": {
+      "authToken": "تعذر الحصول على رمز المصادقة من الجلسة الحالية.",
+      "deleteFailed": "تعذر حذف الحساب.",
+      "deleteGeneric": "حدث خطأ أثناء حذف الحساب.",
+      "exportFailed": "تعذر تصدير البيانات.",
+      "exportGeneric": "حدث خطأ أثناء تصدير البيانات."
+    }
+  }
+}

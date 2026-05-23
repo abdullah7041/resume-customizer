@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
       "pdfjs-dist/legacy/build/pdf.mjs": fileURLToPath(
         new URL("./src/test/__mocks__/pdfjs-dist.mjs", import.meta.url)
       ),

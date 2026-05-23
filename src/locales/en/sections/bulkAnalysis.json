@@ -1,0 +1,23 @@
+{
+  "sections": {
+    "bulkAnalysis": {
+      "title": "Bulk Analysis",
+      "subtitle": "Analyze multiple resumes or job descriptions at once",
+      "upload": {
+        "title": "Upload Files",
+        "subtitle": "Upload multiple files for batch processing",
+        "limit": "Up to 10 files at a time"
+      },
+      "results": {
+        "title": "Analysis Results",
+        "processing": "Processing",
+        "complete": "Complete",
+        "failed": "Failed"
+      },
+      "export": {
+        "csv": "Export CSV",
+        "pdf": "Export Report"
+      }
+    }
+  }
+}

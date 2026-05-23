@@ -116,8 +116,8 @@ export default function UploadCard({
       onValidationError?.(
         new AppError({
           code: "file/unsupported-type",
-          message: "Only PDF, DOCX, or TXT resumes are supported.",
-          hint: "Upload a PDF or DOCX, or paste plain text.",
+          message: t('upload.errors.unsupportedType', 'Only PDF, DOCX, or TXT resumes are supported.'),
+          hint: t('upload.errors.unsupportedTypeHint', 'Upload a PDF or DOCX, or paste plain text.'),
         })
       );
       return;
@@ -127,8 +127,8 @@ export default function UploadCard({
       onValidationError?.(
         new AppError({
           code: "file/too-large",
-          message: "File must be 5MB or smaller.",
-          hint: "Compress the resume and try again.",
+          message: t('upload.errors.tooLarge', 'File must be 5MB or smaller.'),
+          hint: t('upload.errors.tooLargeHint', 'Compress the resume and try again.'),
         })
       );
       return;
@@ -142,8 +142,8 @@ export default function UploadCard({
         onValidationError?.(
           new AppError({
             code: "file/read-failed",
-            message: "We couldn't read that text file.",
-            hint: "Paste the contents manually instead.",
+            message: t('upload.errors.readFailed', "We couldn't read that text file."),
+            hint: t('upload.errors.readFailedHint', 'Paste the contents manually instead.'),
           })
         );
       }
@@ -256,6 +256,9 @@ export default function UploadCard({
         </p>
         <p className="text-xs text-gray-600 dark:text-emerald-100/70">
           {t('upload.card.bestPractice', 'For best results, use selectable text. Scanned images are not supported.')}
+        </p>
+        <p className="text-xs text-gray-600 dark:text-emerald-100/70">
+          {t('trust.noInvention', 'Watheq does not invent employers, degrees, certifications, or metrics.')}
         </p>
       </div>
 
@@ -451,7 +454,14 @@ export default function UploadCard({
           {(status === "uploading" || status === "parsing") ? (
             <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t('upload.card.processingButton', 'Processing...')}</>
           ) : (
-            <>{t("upload.card.prepareButton")} <span className="ml-2">→</span></>
+            <>
+              {pastedText && !fileName
+                ? t('upload.card.preparePastedButton', 'Prepare Pasted Text')
+                : fileName && !pastedText
+                ? t('upload.card.prepareFileButton', 'Prepare Selected File')
+                : t("upload.card.prepareButton")}
+              <span className="ml-2">→</span>
+            </>
           )}
         </GlassButton>
       </div>

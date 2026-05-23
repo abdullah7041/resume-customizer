@@ -1,0 +1,93 @@
+{
+  "vision2030": {
+    "title": "Vision 2030 Alignment",
+    "resultsAlignment": "Vision 2030 Alignment",
+    "targetSectors": "Target Sectors",
+    "primary": "Primary",
+    "strong": "Strong",
+    "basic": "Basic",
+    "detectedCareerPath": "Detected Career Path",
+    "skillsDetected": "Vision 2030 Skills Detected",
+    "sectors": "2030 Sectors",
+    "subtitle": "How your skills align with Saudi national priorities",
+    "overallScore": "Overall Score",
+    "sectorBreakdown": "Sector Breakdown",
+    "matchedSkills": "Matched Vision 2030 Skills",
+    "suggestions": "Suggested Skills to Add",
+    "excellent": "Excellent",
+    "good": "Good",
+    "needsImprovement": "Needs Improvement",
+    "skills": "skills",
+    "analysisNote": "Analysis based on Saudi Vision 2030 sector priorities",
+    "modal": {
+      "title": "🇸🇦 Understanding Vision 2030",
+      "whatIs": "What is Vision 2030?",
+      "description": "Saudi Vision 2030 is the Kingdom's ambitious plan to diversify its economy and reduce dependence on oil. It focuses on developing key sectors including technology, tourism, entertainment, healthcare, and renewable energy to create millions of new jobs for Saudi citizens and residents.",
+      "sectors": "Key Growth Sectors",
+      "alignment": "How We Help You Align",
+      "help1": "Analyze your resume for Vision 2030 sector keywords",
+      "help2": "Identify skills gaps in high-demand areas",
+      "help3": "Suggest relevant keywords to boost your profile",
+      "help4": "Match you with jobs in growing sectors",
+      "learnMore": "Learn More on vision2030.gov.sa"
+    },
+    "badge": {
+      "ready": "Vision 2030 Ready",
+      "aligned": "Vision 2030 Aligned"
+    },
+    "landing": {
+      "title": "Aligned with Saudi Vision 2030",
+      "subtitle": "Position yourself for the jobs of tomorrow in Saudi Arabia's fastest-growing sectors",
+      "cta": "Analyze Your V2030 Fit",
+      "techJobs": "Tech Jobs by 2030",
+      "tourismJobs": "Tourism Jobs",
+      "healthcareGrowth": "Healthcare Growth",
+      "renewableEnergy": "Renewable Energy Investment"
+    },
+    "matchSection": {
+      "title": "Vision 2030 Alignment",
+      "viewDetails": "View Details",
+      "learnMore": "Learn about Vision 2030"
+    },
+    "section": {
+      "title": "Vision 2030 Alignment Analysis",
+      "subtitle": "See how your experience and skills align with strategic Vision goals",
+      "description": "Review how your experience and skills support Vision 2030 sectors, with AI-assisted insights and recommendations.",
+      "analyze": "Analyze resume (2 credits)",
+      "clear": "Clear Results",
+      "cleared": "Results Cleared",
+      "clearedDesc": "Analysis results have been cleared.",
+      "viewRecommendations": "Recommendations",
+      "reanalyze": "Re-analyze (2 credits)",
+      "analyzing": "Analyzing...",
+      "analyzingDesc": "Analyzing your resume against Vision 2030 sectors...",
+      "analyzingProgress": "Mapping your skills to strategic Vision sectors...",
+      "noResume": "Upload your resume first",
+      "noResumeDesc": "Please upload your resume first.",
+      "complete": "Analysis Complete",
+      "completeDesc": "Your Vision 2030 alignment report is ready.",
+      "failed": "Analysis failed",
+      "failedDesc": "We could not complete the Vision analysis. Please try again.",
+      "yourAlignment": "Your Vision alignment",
+      "careerPath": "Detected career path",
+      "overallScore": "Overall score",
+      "topSectors": "Top matching sectors",
+      "included": "What is included:",
+      "feature1": "Overall score and alignment with Vision sectors",
+      "feature2": "Sector breakdown and matched skills",
+      "feature3": "Targeted recommendations to improve alignment",
+      "feature4": "Suggested Arabic and English keywords",
+      "howCalculated": "How is this score calculated?"
+    },
+    "summary": {
+      "excellent": "Excellent Vision 2030 alignment!",
+      "strong": "Strong alignment with Vision 2030!",
+      "good": "Good foundation for Vision 2030!",
+      "building": "Building your Vision 2030 profile!",
+      "suggestedSkills": "Suggested Skills to Add:"
+    },
+    "demoMode": "Example Analysis",
+    "demoBanner": "This shows how a well-optimized resume aligns with Vision 2030. Upload yours to see your personal score!",
+    "uploadPrompt": "Upload your resume to see your alignment"
+  }
+}

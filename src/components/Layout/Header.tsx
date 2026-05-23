@@ -175,7 +175,8 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "hero-bg-animate relative isolate flex flex-col overflow-hidden h-auto",
+        "relative isolate flex flex-col overflow-hidden h-auto",
+        !isSignedOutHeader && "hero-bg-animate",
         isSignedOutHeader
           ? "bg-[#fbfcfa] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
           : "text-gray-900 dark:text-white pb-4"
@@ -450,7 +451,9 @@ export default function Header() {
                   </button>
                   <LanguageSwitcher />
                   <GlassButton
-                    onClick={signInWithGoogle}
+                    onClick={() => {
+                      void signInWithGoogle({ intent: "signin", source: "header_desktop" });
+                    }}
                     variant="prominent"
                     size="md"
                     className="group relative font-bold bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
@@ -618,7 +621,7 @@ export default function Header() {
                 ) : (
                   <button
                     onClick={() => {
-                      signInWithGoogle();
+                      void signInWithGoogle({ intent: "signin", source: "header_mobile" });
                       setMobileNavOpen(false);
                     }}
                     className="btn-metal w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-transparent"

@@ -1,0 +1,14 @@
+{
+  "tabs": {
+    "resume": "Resume",
+    "match": "Match",
+    "optimize": "Optimize",
+    "keywords": "Keywords",
+    "templates": "Templates",
+    "interview": "Interview",
+    "bulk": "Bulk Analysis",
+    "coverLetter": "Cover Letter",
+    "vision2030": "Vision 2030",
+    "pipeline": "Pipeline"
+  }
+}

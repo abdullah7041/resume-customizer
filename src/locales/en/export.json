@@ -1,0 +1,8 @@
+{
+  "export": {
+    "title": "Export Resume",
+    "styled": "Styled PDF",
+    "ats": "ATS-Friendly PDF",
+    "downloading": "Preparing download..."
+  }
+}

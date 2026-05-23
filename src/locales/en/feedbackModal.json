@@ -1,0 +1,42 @@
+{
+  "feedbackModal": {
+    "title": "How was your experience?",
+    "ratingLabel": "Choose your rating:",
+    "testimonialLabel": "Share a testimonial? (optional)",
+    "testimonialPlaceholder": "What did you like most about Watheq?",
+    "skip": "Skip",
+    "submit": "Submit",
+    "creditHint": "Positive feedback earns +1 credit (max 3 lifetime)",
+    "beta": {
+      "whatFeltWrong": "What felt wrong or generic?",
+      "shortNotePlaceholder": "Optional - short note",
+      "trustToApply": "Would you trust this resume enough to apply?",
+      "wouldPay": "Would you pay for this if it saved you time?",
+      "trustOptions": {
+        "yes": "Yes",
+        "somewhat": "Somewhat",
+        "no": "No"
+      },
+      "payOptions": {
+        "yes": "Yes",
+        "maybe": "Maybe",
+        "no": "No"
+      }
+    },
+    "success": {
+      "title": "Thank you for your feedback!",
+      "creditAdded": "+1 Credit Added",
+      "currentBalance": "Current balance: {{count}} credits",
+      "maxReached": "You've already earned max feedback credits (3)",
+      "closing": "Closing in 4 seconds..."
+    },
+    "errors": {
+      "signInRequired": "You must be logged in to submit feedback",
+      "ratingRequired": "Please select a rating",
+      "authToken": "Failed to get authentication token",
+      "serverPrefix": "Server error",
+      "submitFailed": "Failed to submit feedback",
+      "unexpectedResponse": "Unexpected response format"
+    }
+  }
+}

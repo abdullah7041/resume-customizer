@@ -1,0 +1,50 @@
+{
+  "sections": {
+    "coverLetter": {
+      "title": "Cover Letter Generator",
+      "subtitle": "Create a compelling, tailored cover letter using AI",
+      "emptyTitle": "Missing Information",
+      "emptyDesc": "Upload your resume and add a job description to generate a tailored cover letter.",
+      "companyName": "Company Name",
+      "companyPlaceholder": "e.g., Aramco",
+      "hiringManager": "Hiring Manager",
+      "managerPlaceholder": "e.g., Abdullah Al-Otaibi",
+      "signatureName": "Signature Name",
+      "signatureNamePlaceholder": "Your full name",
+      "signatureHint": "Auto-filled from your resume. Edit if needed.",
+      "tone": "Select Tone",
+      "generate": "Generate Cover Letter",
+      "regenerate": "Regenerate Cover Letter",
+      "generating": "Crafting your letter...",
+      "craftingTitle": "AI is writing...",
+      "crafting": "Analyzing your resume and job description to draft a tailored cover letter.",
+      "yourLetter": "Your Cover Letter",
+      "words": "words",
+      "toneLabel": "tone",
+      "highlights": "Key Highlights Included",
+      "tipLabel": "Pro Tip",
+      "tipText": "Review and edit the generated text to add your personal touch before sending.",
+      "errors": {
+        "missing": "Please provide both resume and job description",
+        "failed": "Failed to generate cover letter"
+      },
+      "inputs": {
+        "company": "Company Name",
+        "position": "Position",
+        "tone": "Tone",
+        "tones": {
+          "professional": "Professional",
+          "friendly": "Friendly",
+          "confident": "Confident",
+          "enthusiastic": "Enthusiastic"
+        }
+      },
+      "result": {
+        "title": "Your Cover Letter",
+        "copy": "Copy",
+        "download": "Download",
+        "regenerate": "Regenerate"
+      }
+    }
+  }
+}

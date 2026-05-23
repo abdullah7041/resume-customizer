@@ -1,0 +1,77 @@
+{
+  "header": {
+    "badge": "Trusted AI · Real Data",
+    "badgeAlt": "Built for Ambitious Saudis",
+    "heroTitle": "Watheq - AI Resume Optimizer",
+    "heroDescription": "Turn your real experience into a clearer application story. Watheq analyzes, matches, and improves your resume for Saudi-market roles.",
+    "workflow": {
+      "title": "Workflow",
+      "step1": {
+        "title": "Upload or paste your resume",
+        "desc": "Smart parsing for PDF and DOCX files"
+      },
+      "step2": {
+        "title": "Compare with Saudi roles",
+        "desc": "See match score and missing keywords"
+      },
+      "step3": {
+        "title": "Improve with evidence-aware AI",
+        "desc": "Suggestions designed for employer review"
+      },
+      "step4": {
+        "title": "Review ATS keywords",
+        "desc": "Understand applicant-tracking signals"
+      },
+      "step5": {
+        "title": "Prepare for interviews",
+        "desc": "Role-specific questions and coaching tips"
+      },
+      "step6": {
+        "title": "Draft cover letters",
+        "desc": "Tailored letters for each role"
+      }
+    },
+    "features": {
+      "smartParsing": {
+        "label": "Smart Parsing",
+        "desc": "Extract Arabic/English resumes quickly"
+      },
+      "matchScore": {
+        "label": "AI Match Score",
+        "desc": "Get 0-100 scores with AI insights"
+      },
+      "aiOptimization": {
+        "label": "AI Optimization",
+        "desc": "Rewrite without inventing fake data"
+      },
+      "keywords": {
+        "label": "Keyword Analysis",
+        "desc": "Review ATS signals with strategic keywords"
+      },
+      "templates": {
+        "label": "Professional Templates",
+        "desc": "ATS-aware PDF formats"
+      },
+      "interview": {
+        "label": "Interview Prep",
+        "desc": "Role-specific questions in seconds"
+      },
+      "bulk": {
+        "label": "Bulk Analysis",
+        "desc": "Compare multiple resume versions"
+      },
+      "coverLetter": {
+        "label": "Cover Letters",
+        "desc": "Tailored letters for each role"
+      },
+      "vision2030": {
+        "label": "Vision 2030",
+        "desc": "Align with Saudi national priorities"
+      },
+      "antiHallucination": {
+        "label": "Evidence-Aware AI",
+        "desc": "Designed to avoid invented experience"
+      }
+    }
+  }
+}

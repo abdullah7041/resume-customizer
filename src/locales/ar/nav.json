@@ -1,0 +1,18 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "dashboard": "لوحة التحكم",
+    "pricing": "الأسعار",
+    "login": "دخول",
+    "signup": "سجّل",
+    "logout": "خروج",
+    "workflowSteps": {
+      "upload": "رفع وتحليل السيرة",
+      "match": "مطابقة الوظيفة",
+      "optimize": "تحسين بالذكاء الاصطناعي",
+      "download": "مراجعة وتحميل",
+      "yourWorkflow": "سير العمل",
+      "inProgress": "جاري العمل"
+    }
+  }
+}

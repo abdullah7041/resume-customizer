@@ -1,0 +1,17 @@
+{
+  "interview": {
+    "title": "التحضير للمقابلة",
+    "predictedQuestions": "الأسئلة المتوقعة",
+    "generateQuestions": "إنشاء أسئلة",
+    "questionType": "نوع السؤال",
+    "behavioral": "سلوكي",
+    "technical": "تقني",
+    "situational": "موقفي",
+    "sampleAnswer": "إجابة نموذجية",
+    "tips": "نصائح للإجابة",
+    "difficulty": "مستوى الصعوبة",
+    "easy": "سهل",
+    "medium": "متوسط",
+    "hard": "صعب"
+  }
+}

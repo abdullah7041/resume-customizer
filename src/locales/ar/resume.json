@@ -1,0 +1,21 @@
+{
+  "resume": {
+    "sections": {
+      "about": "نبذة عني",
+      "summary": "الملخص المهني",
+      "experience": "الخبرة",
+      "workExperience": "الخبرة المهنية",
+      "projects": "المشاريع",
+      "keyProjects": "المشاريع الرئيسية",
+      "education": "التعليم",
+      "skills": "المهارات",
+      "skillsExpertise": "المهارات والخبرات",
+      "technicalSkills": "المهارات التقنية",
+      "coreCompetencies": "الكفاءات الأساسية",
+      "languages": "اللغات",
+      "certificates": "الشهادات",
+      "certifications": "الشهادات",
+      "certificationsTraining": "الشهادات والتدريب"
+    }
+  }
+}

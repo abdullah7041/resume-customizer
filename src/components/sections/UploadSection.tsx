@@ -55,6 +55,7 @@ export default function UploadSection({
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
+        setPastedText('');
         setError(null);
         setStatus('idle');
         setWarnings([]);

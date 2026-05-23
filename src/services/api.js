@@ -380,7 +380,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
 
       // Handle quota exceeded
       if (error.quotaExceeded) {
-        throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Upgrade your account for unlimited analyses.`);
+        throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Join the Pro waitlist for higher limits when paid plans launch.`);
       }
 
       // Handle timeout/gateway errors with better messaging
@@ -435,7 +435,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
 
       // Handle quota exceeded errors with user-friendly message
       if (error.quotaExceeded) {
-        throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Upgrade your account for unlimited optimizations.`);
+        throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Join the Pro waitlist for higher limits when paid plans launch.`);
       }
 
       // Handle timeout/gateway errors with consistent messaging
@@ -636,6 +636,57 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
       throw error;
     }
   }, 3, 2000); // 3 retries, 2s base delay
+};
+
+
+
+export const extractJobMetadata = async (jobText, language = 'en') => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(FUNCTION_BASE_PATH + '/extract-job-metadata', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ jobText, language }),
+    });
+
+    if (!response.ok) {
+      console.warn('[API] extractJobMetadata returned non-OK status:', response.status);
+      return {
+        companyName: null,
+        jobTitle: null,
+        location: null,
+        employmentType: null,
+        seniority: null,
+        sector: null,
+        confidence: { companyName: 0, jobTitle: 0, location: 0 },
+        needsUserConfirmation: true,
+      };
+    }
+
+    const data = await response.json();
+    return {
+      companyName: data.companyName || null,
+      jobTitle: data.jobTitle || null,
+      location: data.location || null,
+      employmentType: data.employmentType || null,
+      seniority: data.seniority || null,
+      sector: data.sector || null,
+      confidence: data.confidence || { companyName: 0, jobTitle: 0, location: 0 },
+      needsUserConfirmation: data.needsUserConfirmation ?? true,
+    };
+  } catch (error) {
+    console.warn('[API] extractJobMetadata failed (non-fatal):', summarizeErrorForConsole(error));
+    return {
+      companyName: null,
+      jobTitle: null,
+      location: null,
+      employmentType: null,
+      seniority: null,
+      sector: null,
+      confidence: { companyName: 0, jobTitle: 0, location: 0 },
+      needsUserConfirmation: true,
+    };
+  }
 };
 
 // Legacy exports to prevent breaking imports if any remain

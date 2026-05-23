@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MainContent from "../components/Layout/MainContent";
 
@@ -18,14 +18,36 @@ const {
 }));
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
+const landingMockProps = vi.hoisted(() => ({ current: null }));
+const authMockState = vi.hoisted(() => ({
+  user: { id: "user-123", user_metadata: {}, app_metadata: {} },
+  loading: false,
+  signInWithGoogle: vi.fn(),
+}));
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({
-    user: { id: "user-123", user_metadata: {}, app_metadata: {} },
-    loading: false,
-    signInWithGoogle: vi.fn(),
+    user: authMockState.user,
+    loading: authMockState.loading,
+    signInWithGoogle: authMockState.signInWithGoogle,
   }),
 }));
+
+vi.mock("../pages/LandingPage", () => {
+  const React = require("react");
+  return {
+    __esModule: true,
+    default: (props) => {
+      landingMockProps.current = props;
+      return React.createElement(
+        "div",
+        { "data-testid": "landing-page-mock" },
+        React.createElement("button", { onClick: props.onGetStarted }, "Try free without sign-in"),
+        React.createElement("button", { onClick: props.onSignIn }, "Sign in only when you want to save progress")
+      );
+    },
+  };
+});
 
 vi.mock("../components/sections/UploadSection", () => {
   const React = require("react");
@@ -108,14 +130,18 @@ vi.mock("../services/supabase.js", () => ({
 vi.mock("../services/supabaseExport.js", () => ({
   saveResumeToSupabase: vi.fn(),
   saveOptimizationToSupabase: vi.fn(),
+  exportToSupabase: vi.fn(),
+  isSupabaseExportAvailable: vi.fn(() => false),
 }));
 
 vi.mock("../services/api.js", () => ({
   parseResume: parseResumeMock,
   analyzeResume: analyzeResumeMock,
+  analyzeResumeWithAI: analyzeResumeMock,
   optimizeResume: optimizeResumeMock,
   optimizeResumeStream: optimizeResumeStreamMock,
   generateClarifications: generateClarificationsMock,
+  extractJobMetadata: vi.fn(() => Promise.resolve(null)),
   AI_DEFAULT_TEMPERATURE: 0.32,
 }));
 
@@ -134,6 +160,10 @@ vi.mock("../hooks/useUserCredits", () => ({
 describe("MainContent resume parsing", () => {
   beforeEach(() => {
     resumeUploadMockProps.current = null;
+    landingMockProps.current = null;
+    authMockState.user = { id: "user-123", user_metadata: {}, app_metadata: {} };
+    authMockState.loading = false;
+    authMockState.signInWithGoogle.mockReset();
     parseResumeMock.mockReset();
     parseResumeMock.mockResolvedValue({
       plainText: "Parsed resume",
@@ -221,6 +251,34 @@ describe("MainContent resume parsing", () => {
     expect(resumeUploadMockProps.current.resumeDocument).toEqual(resumeData);
 
     removeItemSpy.mockRestore();
+  });
+
+  it("opens guest workspace from the signed-out try CTA without starting Google sign-in", async () => {
+    authMockState.user = null;
+
+    render(<MainContent />);
+
+    expect(localStorage.getItem("watheq:guestMode")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: /try free without sign-in/i }));
+
+    expect(authMockState.signInWithGoogle).not.toHaveBeenCalled();
+    expect(localStorage.getItem("watheq:guestMode")).toBe("true");
+    expect(await screen.findByTestId("resume-upload-mock")).toBeInTheDocument();
+  });
+
+  it("shows guest sign-in and exit controls when guest mode is intentionally persisted", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:guestMode", "true");
+
+    render(<MainContent />);
+
+    expect(await screen.findByText(/Sign in is needed to run AI match\/optimization/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign in to save progress/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /back to landing/i }));
+
+    expect(localStorage.getItem("watheq:guestMode")).toBeNull();
+    expect(await screen.findByTestId("landing-page-mock")).toBeInTheDocument();
   });
 
   it("does not render landing pricing or comparison blocks in the authenticated workspace", () => {

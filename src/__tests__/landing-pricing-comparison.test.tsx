@@ -17,10 +17,10 @@ vi.mock('react-i18next', () => ({
         'landing.comparison.manualEditing': 'Manual Editing',
         'landing.comparison.features.vision2030': 'Vision 2030 Alignment',
         'landing.comparison.features.antiHallucination': 'Evidence Protection',
-        'landing.comparison.features.arabicSupport': 'Native Arabic Support',
+        'landing.comparison.features.clarification': 'Ask-before-rewrite clarification',
+        'landing.comparison.features.fitScoring': 'Evidence-based fit scoring before rewriting',
         'landing.comparison.features.jobMatch': 'AI Job Match',
         'landing.comparison.features.atsPassRate': 'ATS and Job-Ad Alignment',
-        'landing.comparison.features.templates': 'Professional Templates',
         'landing.comparison.features.interviewPrep': 'Interview Preparation',
         'landing.comparison.values.yes': 'Yes',
         'landing.comparison.values.no': 'No',
@@ -29,10 +29,14 @@ vi.mock('react-i18next', () => ({
         'landing.comparison.values.resumeBuilderAts': 'Template-focused',
         'landing.comparison.values.keywordScannerAts': 'Keyword signals only',
         'landing.comparison.values.manualEditingAts': 'Depends on review',
-        'landing.comparison.values.watheqTemplates': 'ATS-friendly formats',
-        'landing.comparison.values.resumeBuilderTemplates': 'Template library',
-        'landing.comparison.values.keywordScannerTemplates': 'Limited formatting help',
-        'landing.comparison.values.manualEditingTemplates': 'Self-managed formatting',
+        'landing.comparison.values.watheqClarification': 'Asks when proof is missing',
+        'landing.comparison.values.resumeBuilderClarification': 'No structured questions',
+        'landing.comparison.values.keywordScannerClarification': 'Flags keywords only',
+        'landing.comparison.values.manualEditingClarification': 'Depends on reviewer',
+        'landing.comparison.values.watheqFitScoring': 'Scores evidence before rewriting',
+        'landing.comparison.values.resumeBuilderFitScoring': 'Template-first guidance',
+        'landing.comparison.values.keywordScannerFitScoring': 'Keyword count focus',
+        'landing.comparison.values.manualEditingFitScoring': 'Manual judgment',
         'landing.productWalkthrough.finalEyebrow': 'Ready',
         'landing.productWalkthrough.finalTitle': 'Start with your next application',
         'landing.productWalkthrough.cta': 'Get Started',
@@ -77,6 +81,10 @@ describe('Landing pricing and comparison placement', () => {
     expect(screen.getByText('Generic Resume Builder')).toBeInTheDocument();
     expect(screen.getByText('Keyword Scanner')).toBeInTheDocument();
     expect(screen.getByText('Manual Editing')).toBeInTheDocument();
+    expect(screen.getByText('Ask-before-rewrite clarification')).toBeInTheDocument();
+    expect(screen.getByText('Evidence-based fit scoring before rewriting')).toBeInTheDocument();
+    expect(screen.queryByText('Native Arabic Support')).not.toBeInTheDocument();
+    expect(screen.queryByText('Professional Templates')).not.toBeInTheDocument();
     expect(screen.queryByText(RegExp(['Generic', 'Tool', 'A'].join(' '), 'i'))).not.toBeInTheDocument();
     expect(screen.getByText('Public pricing plans')).toBeInTheDocument();
   });

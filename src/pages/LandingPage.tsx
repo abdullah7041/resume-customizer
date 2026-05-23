@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -19,9 +19,11 @@ import { ProductWalkthrough } from "../components/sections/ProductWalkthrough";
 import { PricingSection } from "../components/sections/PricingSection";
 import { ComparisonTable } from "../components/ui/ComparisonTable";
 import { getSkylineUrls } from "../lib/assets";
+import { analytics } from "../services/analytics";
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onSignIn?: () => void;
 }
 
 function translatedList(t: ReturnType<typeof useTranslation>["t"], key: string) {
@@ -59,7 +61,7 @@ function HeroProductStage() {
     <div className="relative mx-auto w-full max-w-5xl">
       <div className="landing-proof-panel relative overflow-hidden rounded-[1.5rem] bg-[#f4f9f7] px-4 py-5 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#082b23] dark:shadow-black/30 dark:ring-white/10 sm:px-8 sm:py-8 lg:px-12">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(251,252,250,0.94)_0%,rgba(239,248,245,0.84)_46%,rgba(232,238,248,0.58)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(16,185,129,0.08)_52%,rgba(236,72,153,0.05)_100%)]" />
-        <picture className="absolute inset-x-4 top-0 h-48 opacity-20 sm:inset-x-8 sm:h-64">
+        <picture className="pointer-events-none absolute inset-x-4 top-0 h-48 opacity-20 sm:inset-x-8 sm:h-64">
           <source
             media="(max-width: 767px)"
             srcSet={skylineUrls.mobile}
@@ -198,11 +200,34 @@ function StoryCard({
   );
 }
 
-export default function LandingPage({ onGetStarted }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps) {
   const { t } = useTranslation();
   const shouldReduceMotion = useReducedMotion();
   const skylineUrls = useMemo(() => getSkylineUrls(), []);
   const isFallbackSkyline = skylineUrls.desktop.startsWith("data:image/");
+
+  useEffect(() => {
+    analytics.trackLandingViewed();
+  }, []);
+
+  const handleHeroCta = () => {
+    analytics.trackGetStartedClicked('hero');
+    onGetStarted();
+  };
+
+  const handleSignInCta = () => {
+    onSignIn?.();
+  };
+
+  const handleWalkthroughCta = () => {
+    analytics.trackGetStartedClicked('walkthrough');
+    onGetStarted();
+  };
+
+  const handleFinalCta = () => {
+    analytics.trackGetStartedClicked('final_cta');
+    onGetStarted();
+  };
 
   const trustSignals = [
     { icon: ListChecks, label: t("landing.productWalkthrough.heroProof.clarify") },
@@ -282,7 +307,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             >
               <button
                 type="button"
-                onClick={onGetStarted}
+                onClick={handleHeroCta}
                 className="group relative inline-flex min-h-[52px] items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#0b1026] to-[#2b8994] px-8 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:from-emerald-600 dark:to-emerald-400 dark:text-slate-950 dark:shadow-emerald-500/10 dark:hover:shadow-emerald-400/20"
               >
                 <span className="relative z-10">{t("landing.hero.cta")}</span>
@@ -292,18 +317,21 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               <span className="text-sm font-semibold text-slate-500 dark:text-white/52">
                 {t("landing.productWalkthrough.heroNote")}
               </span>
+              {onSignIn && (
+                <button
+                  type="button"
+                  onClick={handleSignInCta}
+                  className="text-sm font-black text-[#0c5963] underline decoration-[#2b8994]/40 underline-offset-4 transition hover:text-[#2b8994] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:text-emerald-200 dark:hover:text-emerald-100"
+                >
+                  {t("landing.hero.signInCta", "Sign in only when you want to save progress")}
+                </button>
+              )}
             </motion.div>
           </div>
 
-          <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-            className="mx-auto mt-9 max-w-5xl"
-          >
+          <div className="mx-auto mt-9 max-w-5xl">
             <HeroProductStage />
-          </motion.div>
+          </div>
 
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
@@ -349,7 +377,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
-      <ProductWalkthrough onGetStarted={onGetStarted} />
+      <ProductWalkthrough onGetStarted={handleWalkthroughCta} />
 
       <section className="bg-[#0a1f1a] px-5 py-16 text-white dark:bg-[#031713] sm:px-8 lg:py-20" aria-labelledby="landing-comparison-title">
         <div className="mx-auto max-w-7xl">
@@ -370,7 +398,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
 
       <div className="bg-[#0a1f1a] px-5 pb-16 text-white dark:bg-[#031713] sm:px-8 lg:pb-20">
         <div className="mx-auto max-w-7xl">
-          <PricingSection />
+          <PricingSection onGetStarted={handleFinalCta} />
         </div>
       </div>
 
@@ -394,7 +422,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           <button
             type="button"
-            onClick={onGetStarted}
+            onClick={handleFinalCta}
             className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#5eead4] px-8 py-3.5 text-sm font-black text-[#052e2b] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#eef8f4] dark:focus-visible:ring-offset-[#092018]"
           >
             {t("landing.productWalkthrough.cta")}

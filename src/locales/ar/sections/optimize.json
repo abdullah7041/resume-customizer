@@ -1,0 +1,111 @@
+{
+  "sections": {
+    "optimize": {
+      "title": "صقل كل قسم",
+      "subtitle": "اقتراحات مدعومة بالذكاء الاصطناعي لتحسين سيرتك الذاتية",
+      "optimizeBtn": "تحسين السيرة الذاتية بالذكاء الاصطناعي",
+      "runMatchFirst": "ارفع السيرة الذاتية أولاً",
+      "keywordFocus": "تركيز الكلمات المفتاحية",
+      "noItems": "لا توجد عناصر بعد",
+      "previewMode": "وضع المعاينة",
+      "previewDesc": "تشغيل معاينة مجاني—لن يتم حفظ النتائج حتى تقوم بالترقية.",
+      "previewHint": "المعاينة تتيح لك اختبار المسار. قم بالترقية للحفظ/التصدير.",
+      "unlockPremium": "فتح الرؤى المتقدمة",
+      "preview": "معاينة",
+      "sideBySide": "جنباً إلى جنب",
+      "inlineDiff": "فرق مضمن",
+      "original": "الأصلي",
+      "optimized": "المحسّن",
+      "noOriginal": "لا يوجد نص أصلي",
+      "noOptimized": "لا يوجد نص محسّن",
+      "emptyState": "قم بتشغيل التحليل لرؤية بطاقات التحسين بالذكاء الاصطناعي هنا.",
+      "sections": {
+        "summary": "الملخص المهني",
+        "experience": "الخبرة العملية",
+        "skills": "المهارات",
+        "headline": "العنوان",
+        "all": "جميع الأقسام"
+      },
+      "actions": {
+        "optimize": "تحسين",
+        "apply": "تطبيق",
+        "applyAll": "تطبيق الكل",
+        "revert": "التراجع",
+        "compare": "مقارنة"
+      },
+      "status": {
+        "original": "الأصلي",
+        "optimized": "المحسّن",
+        "applied": "مُطبّق",
+        "pending": "معلق"
+      },
+      "generating": "ينشئ التحسينات...",
+      "noChanges": "لا توجد تحسينات متاحة",
+      "tabs": {
+        "all": "جميع الأقسام",
+        "headline": "العنوان",
+        "summary": "الملخص",
+        "experience": "الخبرة",
+        "skills": "المهارات",
+        "projects": "المشاريع",
+        "certifications": "الشهادات"
+      },
+      "chipLabels": {
+        "add": "أضف للسيرة",
+        "neutral": "احتفظ كما هي",
+        "remove": "قلل التأكيد"
+      },
+      "noKeywords": "لا توجد كلمات مفتاحية",
+      "collapseAll": "طي الكل",
+      "expandAll": "توسيع الكل",
+      "noHeadline": "لا يوجد عنوان",
+      "noSummary": "لا يوجد ملخص",
+      "noOptimizations": "لم يتم إنشاء تحسينات. قد يحتاج الذكاء الاصطناعي إلى مزيد من السياق.",
+      "emptyOptimizations": "حصل الذكاء الاصطناعي على اقتراحات فارغة. يرجى المحاولة مرة أخرى.",
+      "failedGenerate": "فشل في توليد التحسينات",
+      "uploadFirst": "يرجى رفع سيرة ذاتية أولاً",
+      "optimizingResume": "جاري التحسين...",
+      "currentScore": "الحالي",
+      "optimizedScore": "المُحسَّن",
+      "shareResult": "شارك نتيجتك",
+      "revert": "تراجع",
+      "applyAll": "تطبيق الكل",
+      "privateToYou": "خاص بك",
+      "autoVerifying": "جاري التحقق التلقائي من النتيجة...",
+      "autoVerifyDesc": "تحليل السيرة الذاتية المحسّنة بالذكاء الاصطناعي",
+      "noGapsDetected": "لم يتم اكتشاف فجوات حرجة",
+      "originalContent": "الأصلي",
+      "optimizedVersion": "المحسّن",
+      "revertChanges": "التراجع",
+      "applySuggestion": "تطبيق",
+      "compare": "مقارنة",
+      "skillsRecommendationTooltip": "هذه توصيات فقط ولن تُضاف تلقائياً إلى سيرتك الذاتية",
+      "results": {
+        "title": "نتائج التحسين",
+        "subtitle": "كيف تحسنت سيرتك الذاتية لتناسب الوظيفة",
+        "matchScore": "درجة التوافق",
+        "before": "قبل",
+        "after": "بعد",
+        "improvementsFound": "التحسينات الموجودة",
+        "applied": "تم التطبيق",
+        "scoreBoost": "تحسن الدرجة",
+        "potentialScore": "حتى +{{points}}% ممكن",
+        "keywordsAdded": "كلمات مفتاحية مضافة لمطابقة الوصف",
+        "keywordsMatching": "كلمات مفتاحية متطابقة أصلا",
+        "more": "المزيد",
+        "improvementsApplied": "التحسينات المطبقة",
+        "applyAllRemaining": "تطبيق الكل ({{count}} متبقي)",
+        "exportPdf": "تصدير PDF",
+        "sectionLabels": {
+          "headline": "العنوان محسّن لأنظمة ATS",
+          "summary": "الملخص أعيدت صياغته بتأثير",
+          "experience": "نقاط الخبرة أصبحت أوضح بالأرقام",
+          "skills": "المهارات موائمة مع المتطلبات",
+          "education": "قسم التعليم محسّن",
+          "projects": "المشاريع مبرزة بوضوح"
+        }
+      },
+      "optimizedResumeWarning": "يتم تحليل السيرة المحسّنة. إذا صدّرتها وأعدت رفعها، قد تظهر درجة قريبة من {{score}}."
+    }
+  }
+}

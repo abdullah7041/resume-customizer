@@ -12,6 +12,8 @@ import {
   Copy,
   ChevronDown,
   Check,
+  CheckCircle2,
+  Briefcase,
   RotateCcw,
   ArrowLeftRight,
   AlertCircle,
@@ -87,6 +89,15 @@ interface OptimizeSectionProps {
   canExport?: boolean;
   // Optional: can pass resume text directly or use store
   resumeText?: string | null;
+  // Pipeline integration
+  activeJobApplicationId?: string | null;
+  pendingAttachment?: { filePath: string; fileName: string } | null;
+  onMarkApplied?: () => void;
+  onAttachExport?: () => void;
+  hasExportedForActiveJob?: boolean;
+  isGuestMode?: boolean;
+  onRequireSignIn?: () => void;
+  protectedActionMessage?: string;
 }
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
@@ -126,6 +137,14 @@ export function OptimizeSection({
   hasMatchAnalysis: propHasMatchAnalysis = false,
   onClear,
   resumeText: propResumeText,
+  activeJobApplicationId,
+  pendingAttachment,
+  onMarkApplied,
+  onAttachExport,
+  hasExportedForActiveJob = false,
+  isGuestMode = false,
+  onRequireSignIn,
+  protectedActionMessage,
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
@@ -168,7 +187,7 @@ export function OptimizeSection({
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
   const { user } = useAuth();
-  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
+  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
 
   // Sync prop optimizations to store when they change
   // IMPORTANT: Merge with existing store state to preserve applied flags
@@ -546,10 +565,10 @@ export function OptimizeSection({
       });
 
       // Track feature use for feedback prompt
-      trackFeatureUse('optimize');
+      const reachedFeedbackMilestone = trackFeatureUse('optimize');
 
       // Show feedback modal at milestones (if user hasn't reached max 3 submissions)
-      if (shouldShowFeedback && user?.id) {
+      if (reachedFeedbackMilestone && user?.id) {
         try {
           const { data: userCredits, error: _creditsError } = await supabase
             .from('user_credits')
@@ -779,6 +798,15 @@ export function OptimizeSection({
 
     } catch (err) {
       console.error('Optimization error:', err);
+      let errorCategory = 'unknown';
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('rate limit') || msg.includes('too many requests')) errorCategory = 'rate_limit';
+      else if (msg.includes('timeout') || msg.includes('timed out')) errorCategory = 'timeout';
+      else if (msg.includes('network') || msg.includes('fetch')) errorCategory = 'network';
+      else if (msg.includes('insufficient') || msg.includes('credits')) errorCategory = 'validation';
+      else if (msg.includes('AI') || msg.includes('model')) errorCategory = 'ai_error';
+      analytics.trackOptimizationFailed(errorCategory);
+
       // Check if this is a rate limit error
       if (!handleRateLimitError(err)) {
         setError(err instanceof Error ? err.message : t('toasts.optimizationFailed', 'Failed to generate optimizations'));
@@ -792,6 +820,16 @@ export function OptimizeSection({
 
   // Wrapper function that shows confirmation modal first
   const handleGenerate = () => {
+    if (isGuestMode) {
+      const message = protectedActionMessage || t(
+        'workspace.guest.protectedActionDesc',
+        'Sign in to run AI analysis and save your progress.'
+      );
+      setError(message);
+      onRequireSignIn?.();
+      return;
+    }
+
     // Wait for credits to load before showing modal
     if (creditsLoading) {
       return;
@@ -1105,6 +1143,13 @@ export function OptimizeSection({
             )}
           </div>
         </button>
+        {hasResume && (
+          <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
+            {t('trust.askBeforeRewrite', 'When proof may be missing, Watheq can ask clarifying questions before rewriting.')}
+            {' '}
+            {t('trust.reviewBeforeExport', 'Review every suggestion before export.')}
+          </p>
+        )}
       </GlassCard >
 
       {/* Keyword Focus Section - Manual Buckets */}
@@ -1248,6 +1293,49 @@ export function OptimizeSection({
             onClose={() => setShowShareCard(false)}
           />
         </Suspense>
+      )}
+
+      {/* Pipeline attachment and mark-applied CTAs */}
+      {activeJobApplicationId && pendingAttachment && (
+        <GlassCard padding="md" className="mb-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <Briefcase className="w-5 h-5 text-blue-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {t('pipeline.attachExport', 'Attach this resume to saved job?')}
+              </p>
+              <p className="text-xs text-gray-500">{pendingAttachment.fileName}</p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <GlassButton variant="secondary" size="sm" onClick={onAttachExport}>
+                {t('pipeline.attachExportBtn', 'Attach Resume')}
+              </GlassButton>
+              <GlassButton variant="ghost" size="sm" onClick={onMarkApplied}>
+                {t('pipeline.markAsApplied', 'Mark as Applied')}
+              </GlassButton>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      {activeJobApplicationId && hasExportedForActiveJob && !pendingAttachment && (
+        <GlassCard padding="md" className="mb-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {t('pipeline.markAppliedQuestion', 'Did you apply with this version?')}
+              </p>
+            </div>
+            <GlassButton variant="secondary" size="sm" onClick={onMarkApplied}>
+              {t('pipeline.markAsApplied', 'Mark as Applied')}
+            </GlassButton>
+          </div>
+        </GlassCard>
       )}
 
       {

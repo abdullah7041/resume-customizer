@@ -1,0 +1,21 @@
+{
+  "hrSuperSaud": {
+    "ready": "Ready when you are.",
+    "stepOneHint": "Upload a selectable PDF, DOCX, or TXT resume to begin.",
+    "resumeUploadedHint": "Great. Now continue to match your resume with a job ad.",
+    "waveGreeting": "Hello. Ready to help you sharpen this application.",
+    "waveLabel": "Wave to HR Super Saud",
+    "moods": {
+      "confident": "On track",
+      "coach": "Career coach",
+      "caution": "Review needed"
+    },
+    "reactions": {
+      "resumeUploaded": "Great. Now continue to match your resume with a job ad.",
+      "matchHigh": "Strong match. Review the evidence, then tailor with care.",
+      "matchLow": "There are gaps to close before this application is ready.",
+      "optimizeSuccess": "Optimization is ready. Review every suggestion before export.",
+      "errorGeneric": "Something did not complete. Save your work and try again."
+    }
+  }
+}

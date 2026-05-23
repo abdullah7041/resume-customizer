@@ -1,0 +1,19 @@
+{
+  "optimization": {
+    "title": "تحسين السيرة الذاتية",
+    "original": "النص الأصلي",
+    "optimized": "النص المحسّن",
+    "apply": "تطبيق",
+    "applied": "تم التطبيق",
+    "pending": "قيد الانتظار",
+    "revert": "تراجع",
+    "applyAll": "تطبيق الكل",
+    "noSuggestions": "لا توجد اقتراحات",
+    "analyzing": "يحلل...",
+    "suggested": "مُقترح",
+    "recommendation": "توصية",
+    "before": "قبل",
+    "after": "بعد",
+    "optimizedView": "العرض المحسّن"
+  }
+}

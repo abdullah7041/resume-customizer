@@ -1,0 +1,92 @@
+{
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last Updated",
+    "sections": {
+      "intro": {
+        "title": "Introduction",
+        "content": "Watheq (\"we\", \"us\", \"our\") is committed to protecting your personal data in accordance with the Saudi Personal Data Protection Law (PDPL). This policy explains how we collect, use, and protect your information."
+      },
+      "controller": {
+        "title": "Data Controller",
+        "name": "Watheq",
+        "address": "Riyadh, Kingdom of Saudi Arabia",
+        "email": "privacy@watheqai.app"
+      },
+      "dataCollected": {
+        "title": "Data We Collect",
+        "personal": {
+          "title": "Personal Data",
+          "items": {
+            "name": "Full name",
+            "email": "Email address",
+            "phone": "Phone number (optional)",
+            "resume": "Resume content and work history"
+          }
+        },
+        "technical": {
+          "title": "Technical Data",
+          "items": {
+            "ip": "IP address",
+            "browser": "Browser type and version",
+            "device": "Device information"
+          }
+        }
+      },
+      "purpose": {
+        "title": "Purpose of Processing",
+        "items": {
+          "service": "To provide resume optimization services",
+          "improvement": "To improve our AI algorithms and services",
+          "communication": "To communicate with you about your account",
+          "legal": "To comply with legal obligations"
+        }
+      },
+      "legalBasis": {
+        "title": "Legal Basis for Processing",
+        "content": "Under Saudi PDPL Article 5, we process your data based on: (1) Your explicit consent, (2) Performance of our contract with you, (3) Our legitimate business interests, (4) Legal obligations."
+      },
+      "rights": {
+        "title": "Your Rights Under PDPL",
+        "access": {
+          "title": "Right to Access",
+          "description": "Request a copy of all personal data we hold about you."
+        },
+        "rectification": {
+          "title": "Right to Rectification",
+          "description": "Request correction of inaccurate personal data."
+        },
+        "deletion": {
+          "title": "Right to Deletion",
+          "description": "Request deletion of your personal data."
+        },
+        "portability": {
+          "title": "Right to Portability",
+          "description": "Receive your data in a structured, machine-readable format."
+        },
+        "withdraw": {
+          "title": "Right to Withdraw Consent",
+          "description": "Withdraw your consent at any time without affecting prior processing."
+        },
+        "complaint": {
+          "title": "Right to Complain",
+          "description": "Lodge a complaint with SDAIA if you believe your rights have been violated."
+        }
+      },
+      "retention": {
+        "title": "Data Retention",
+        "content": "We retain your personal data for as long as your account is active or as needed to provide services. Resume data is deleted 30 days after account deletion. Some data may be retained longer for legal compliance."
+      },
+      "crossBorder": {
+        "title": "Cross-Border Data Transfers",
+        "content": "Your data is primarily processed within Saudi Arabia. If transferred internationally, we ensure adequate protection measures are in place as required by PDPL Article 29."
+      },
+      "contact": {
+        "title": "Contact Us",
+        "content": "For any privacy-related questions or to exercise your rights, contact our Data Protection Officer:",
+        "button": "Contact Privacy Team"
+      }
+    },
+    "sdaiaReference": "This policy complies with the Saudi Personal Data Protection Law (PDPL) issued by Royal Decree M/19 dated 9/2/1443H. For more information about your data protection rights, visit the Saudi Data & AI Authority (SDAIA) website."
+  }
+}

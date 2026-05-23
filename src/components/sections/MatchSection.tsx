@@ -33,6 +33,8 @@ import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { FeedbackModal } from '../Feedback/FeedbackModal';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
+import type { ExtractedJobMetadata } from '../../types/pipeline';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 const resolveVariant = (score: number) => {
@@ -108,6 +110,12 @@ interface MatchSectionProps {
   resumeText?: string;
   onToast?: (toast: Toast) => void;
   onClear?: () => void;
+  jobDescription?: string;
+  extractedMetadata?: ExtractedJobMetadata | null;
+  onJobSaved?: (id: string) => void;
+  isGuestMode?: boolean;
+  onRequireSignIn?: () => void;
+  protectedActionMessage?: string;
 }
 
 export function MatchSection({
@@ -117,7 +125,13 @@ export function MatchSection({
   hasResume = false,
   resumeText = '',
   onToast,
-  onClear
+  onClear,
+  jobDescription = '',
+  extractedMetadata,
+  onJobSaved,
+  isGuestMode = false,
+  onRequireSignIn,
+  protectedActionMessage,
 }: MatchSectionProps) {
   const { t } = useTranslation();
   const { showOptimized } = useResumeStore();
@@ -132,7 +146,7 @@ export function MatchSection({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
-  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
+  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -175,15 +189,17 @@ export function MatchSection({
       return;
     }
     setError("");
+    analytics.trackJobDescriptionSubmitted();
+    analytics.trackMatchAnalysisStarted();
     try {
       const result = await onAnalyzeMatchAI(trimmedJob);
       // Track match analysis run
       if (result && typeof result.score === 'number') {
-        analytics.trackMatchAnalysis(result.score);
-        trackFeatureUse('match'); // Track for feedback prompt
+        analytics.trackMatchAnalysisSuccess(result.score);
+        const reachedFeedbackMilestone = trackFeatureUse('match'); // Track for feedback prompt
 
         // Check if we should show feedback modal (with 5-10 second delay for better UX)
-        if (shouldShowFeedback) {
+        if (reachedFeedbackMilestone) {
           const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
           setTimeout(() => {
             setShowFeedbackModal(true);
@@ -195,6 +211,13 @@ export function MatchSection({
     } catch (err) {
       const msg = (err as Error)?.message || t('sections.match.errors.analyzeFailed', 'We could not analyze this match.');
       setError(msg);
+
+      let errorCategory = 'unknown';
+      if (msg.includes('high load') || msg.includes('timed out') || msg.includes('wait 30 seconds')) errorCategory = 'timeout';
+      else if (msg.includes('rate limit')) errorCategory = 'rate_limit';
+      else if (msg.includes('network')) errorCategory = 'network';
+      else if (msg.includes('validation')) errorCategory = 'validation';
+      analytics.trackMatchAnalysisFailed(errorCategory);
 
       // Show info toast for degraded-service errors
       if (msg.includes('high load') || msg.includes('timed out') || msg.includes('wait 30 seconds')) {
@@ -218,6 +241,16 @@ export function MatchSection({
         title: t('sections.match.errors.jobNeeded', 'Job description needed'),
         description: message,
       });
+      return;
+    }
+
+    if (isGuestMode) {
+      const message = protectedActionMessage || t(
+        'workspace.guest.protectedActionDesc',
+        'Sign in to run AI analysis and save your progress.'
+      );
+      setError(message);
+      onRequireSignIn?.();
       return;
     }
 
@@ -700,6 +733,15 @@ export function MatchSection({
                 {t('sections.match.emptyState', 'Paste a job description to see how well your resume matches the requirements.')}
               </p>
             </div>
+          )}
+          {hasResults && !isAnalyzing && jobDescription && (
+            <SaveJobToPipelineCard
+              jobDescription={jobDescription}
+              matchScore={score}
+              extractedMetadata={extractedMetadata}
+              onSaved={onJobSaved}
+              onToast={onToast}
+            />
           )}
         </GlassCard>
       </div>

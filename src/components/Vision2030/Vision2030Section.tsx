@@ -38,7 +38,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { credits: _credits, isLoading: creditsLoading, refetch: refreshCredits } = useUserCredits();
-  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
+  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
   const isArabic = i18n.language === 'ar';
 
   // Initialize analysis from localStorage
@@ -184,10 +184,10 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       });
 
       // Track feature use for feedback prompt
-      trackFeatureUse('vision2030');
+      const reachedFeedbackMilestone = trackFeatureUse('vision2030');
 
       // Check if we should show feedback modal (with 5-10 second delay for better UX)
-      if (shouldShowFeedback) {
+      if (reachedFeedbackMilestone) {
         const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
         setTimeout(() => {
           setShowFeedbackModal(true);
@@ -213,7 +213,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         // Ignore storage errors
       }
     }
-  }, [resumeText, isArabic, onToast, t, refreshCredits, trackFeatureUse, shouldShowFeedback]);
+  }, [resumeText, isArabic, onToast, t, refreshCredits, trackFeatureUse]);
 
   // Get score color based on value
   const getScoreColor = (score: number) => {

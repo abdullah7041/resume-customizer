@@ -1,0 +1,123 @@
+{
+  "landing": {
+    "productWalkthrough": {
+      "eyebrow": "Product walkthrough",
+      "title": "One base resume becomes one targeted application",
+      "subtitle": "Follow the job-specific flow: upload your base resume, paste the job ad, clarify missing proof, align to the role and Saudi market, then prepare ATS-ready output and interview questions.",
+      "heroTitle": "Tailor every resume to the job without inventing a thing.",
+      "heroSubtitle": "Watheq helps you turn one existing resume into a targeted application for each job ad with job matching, clarifying questions, Saudi-market context, ATS improvement, and interview preparation.",
+      "heroNote": "No fake experience. No generic rewrite.",
+      "heroCardEyebrow": "Future-ready application",
+      "heroCardTitle": "From draft to ATS-ready",
+      "heroCardCta": "Get Started",
+      "stageSubtitle": "Start with your real resume and the job ad. Watheq highlights fit, asks before rewriting, and keeps suggestions grounded in your evidence.",
+      "currentStep": "Step {{current}} of {{total}}",
+      "scrollHint": "Scroll to move through the workflow",
+      "emailPlaceholder": "Your professional email",
+      "answerPlaceholder": "Type your answer here...",
+      "finalEyebrow": "Ready when you are",
+      "finalTitle": "Build a resume that proves fit before you apply.",
+      "identity": {
+        "verified": "Reviewable AI suggestions",
+        "bilingual": "Arabic + English support",
+        "vision": "Vision 2030 positioning"
+      },
+      "heroProof": {
+        "eyebrow": "Live product proof",
+        "title": "Senior Business Analyst application",
+        "items": [
+          "Parses resume evidence before suggesting changes.",
+          "Asks clarifying questions when the impact is underspecified.",
+          "Shows ATS lift, matched keywords, and an improved bullet."
+        ],
+        "clarify": "Ask-before-optimization",
+        "vision": "Saudi-market fit",
+        "interview": "Interview preparation"
+      },
+      "stepLabel": "Step {{number}}",
+    "cta": "Try free without sign-in",
+      "ctaNote": "Base resume, job ad, clarification, alignment, ATS, interview prep.",
+      "steps": {
+        "upload": {
+          "title": "Upload your base resume",
+          "description": "Start from the resume you already have. Watheq structures the real experience, skills, roles, and language that can be safely reused.",
+          "metric": "Base resume"
+        },
+        "match": {
+          "title": "Paste the job ad",
+          "description": "Watheq reads the job's skills, tools, responsibilities, keywords, and proof expectations so the tailoring starts from the specific role.",
+          "metric": "Role signal"
+        },
+        "clarify": {
+          "title": "Clarify before rewriting",
+          "description": "If a claim needs scope, numbers, or context, Watheq asks first instead of guessing, keeping the rewrite defensible.",
+          "metric": "Ask first"
+        },
+        "vision": {
+          "title": "Align to the role and Saudi market",
+          "description": "Watheq connects your evidence to the role, Saudi-market language, and Vision 2030 priorities where they are relevant to the job ad.",
+          "metric": "Saudi + role fit"
+        },
+        "optimize": {
+          "title": "Prepare ATS-ready output",
+          "description": "Watheq combines your answers, matched keywords, and original evidence into targeted bullets and ATS-ready positioning without inventing experience.",
+          "metric": "ATS-ready"
+        },
+        "interview": {
+          "title": "Prepare for the interview",
+          "description": "Use the same resume and job evidence to generate role-specific interview questions, STAR prompts, and focus areas before the call.",
+          "metric": "Interview prep"
+        }
+      },
+      "preview": {
+        "workspace": "Watheq workspace",
+        "role": "Senior Business Analyst",
+        "resumeTitle": "Resume evidence",
+        "experience": "Original claim",
+        "originalBullet": "Managed reports and helped the team improve performance.",
+        "bilingualSignal": "Arabic + English resume support",
+        "uploadTitle": "Resume parsed",
+        "uploadMeta": "Sections, roles, skills, and language detected",
+        "matchScore": "Job match score",
+        "goodStart": "Good start",
+        "skills": "Skills",
+        "keywords": "Keywords",
+        "experienceFit": "Experience fit",
+        "exampleLabel": "Example",
+        "clarifyEyebrow": "Watheq asks first",
+        "clarifyTitle": "Quick questions to sharpen results",
+        "clarifyMeta": "3 questions · about 1 minute",
+        "clarifyQuestions": [
+          "What business decision did the reporting improve?",
+          "How many stakeholders used the dashboard?",
+          "Can you verify the time or cost saved?"
+        ],
+        "before": "Before",
+        "after": "After",
+        "keywordLift": "ATS and keyword lift",
+        "keywordTags": [
+          "stakeholder management",
+          "Power BI",
+          "KPI reporting"
+        ],
+        "optimizedBullet": "Improved: Built Power BI KPI dashboards for 9 stakeholders, reducing weekly reporting time by 35% and improving decision visibility.",
+        "exportReady": "ATS-friendly PDF ready",
+        "visionTitle": "Vision 2030 signal check",
+        "visionDescription": "Identify where the role connects to Saudi growth sectors, localization priorities, and bilingual evidence already present in the resume.",
+        "visionSignals": [
+          "Digital transformation",
+          "Saudization positioning",
+          "Bilingual stakeholder work"
+        ],
+        "interviewTitle": "Interview prep from the same evidence",
+        "interviewMeta": "Role-specific prompts",
+        "interviewQuestions": [
+          "Tell me about a dashboard that changed a business decision.",
+          "How did you handle competing stakeholder priorities?",
+          "Which Vision 2030 sector experience is most relevant here?"
+        ],
+        "interviewReady": "Practice answers with the same claims used in the tailored resume."
+      }
+    }
+  }
+}

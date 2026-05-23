@@ -1,0 +1,111 @@
+{
+  "sections": {
+    "optimize": {
+      "title": "Optimize",
+      "subtitle": "AI-powered suggestions to improve your resume",
+      "optimizeBtn": "Optimize resume with AI",
+      "runMatchFirst": "Upload your resume first",
+      "keywordFocus": "Keyword focus",
+      "noItems": "No items yet",
+      "previewMode": "Preview mode",
+      "previewDesc": "Free preview - results are not saved until you upgrade.",
+      "previewHint": "Preview lets you test the flow. Upgrade to save/export.",
+      "unlockPremium": "Unlock advanced insights",
+      "preview": "Preview",
+      "sideBySide": "Side by side",
+      "inlineDiff": "Inline diff",
+      "original": "Original",
+      "optimized": "Optimized",
+      "noOriginal": "No original text",
+      "noOptimized": "No optimized text",
+      "emptyState": "Run an analysis to see AI optimization cards here.",
+      "sections": {
+        "summary": "Professional Summary",
+        "experience": "Work Experience",
+        "skills": "Skills",
+        "headline": "Headline",
+        "all": "All Sections"
+      },
+      "actions": {
+        "optimize": "Optimize",
+        "apply": "Apply",
+        "applyAll": "Apply All",
+        "revert": "Revert",
+        "compare": "Compare"
+      },
+      "status": {
+        "original": "Original",
+        "optimized": "Optimized",
+        "applied": "Applied",
+        "pending": "Pending"
+      },
+      "generating": "Generating optimizations...",
+      "noChanges": "No optimizations available",
+      "tabs": {
+        "all": "All Sections",
+        "headline": "Headline",
+        "summary": "Summary",
+        "experience": "Experience",
+        "skills": "Skills",
+        "projects": "Projects",
+        "certifications": "Certifications"
+      },
+      "chipLabels": {
+        "add": "Add to Resume",
+        "neutral": "Keep as is",
+        "remove": "Consider Removing"
+      },
+      "noKeywords": "No keywords identified",
+      "collapseAll": "Collapse All",
+      "expandAll": "Expand All",
+      "noHeadline": "No headline",
+      "noSummary": "No summary",
+      "noOptimizations": "No optimizations were generated. The AI may need more context.",
+      "emptyOptimizations": "The AI returned empty suggestions. Please try again.",
+      "failedGenerate": "Failed to generate optimizations",
+      "uploadFirst": "Please upload a resume first",
+      "optimizingResume": "Optimizing Resume...",
+      "currentScore": "Current Score",
+      "optimizedScore": "Optimized Score",
+      "shareResult": "Share Your Result",
+      "revert": "Revert",
+      "applyAll": "Apply All",
+      "privateToYou": "Private to you",
+      "autoVerifying": "Auto-verifying match score...",
+      "autoVerifyDesc": "Running AI re-analysis on your optimized resume",
+      "noGapsDetected": "No Critical Gaps Detected",
+      "originalContent": "Original Content",
+      "optimizedVersion": "Optimized Version",
+      "revertChanges": "Revert Changes",
+      "applySuggestion": "Apply Suggestion",
+      "compare": "Compare",
+      "skillsRecommendationTooltip": "These are recommendations only and will not be added to your resume",
+      "results": {
+        "title": "Optimization Results",
+        "subtitle": "How your resume improved to match the job",
+        "matchScore": "Match Score",
+        "before": "Before",
+        "after": "After",
+        "improvementsFound": "Improvements Found",
+        "applied": "Applied",
+        "scoreBoost": "Score Boost",
+        "potentialScore": "Up to +{{points}}% possible",
+        "keywordsAdded": "Keywords Added to Match JD",
+        "keywordsMatching": "Keywords Already Matching JD",
+        "more": "more",
+        "improvementsApplied": "Improvements Applied",
+        "applyAllRemaining": "Apply All ({{count}} remaining)",
+        "exportPdf": "Export PDF",
+        "sectionLabels": {
+          "headline": "Headline optimized for ATS",
+          "summary": "Summary rewritten with impact",
+          "experience": "Experience bullets quantified",
+          "skills": "Skills aligned with requirements",
+          "education": "Education section enhanced",
+          "projects": "Projects highlighted effectively"
+        }
+      },
+      "optimizedResumeWarning": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}."
+    }
+  }
+}

@@ -115,7 +115,7 @@ Return JSON with this structure:
 
     // Use OpenRouter with lite model for parsing
     const messages = [{ role: 'user', content: prompt }];
-    const text = await callOpenRouter(MODEL_TIER, messages, null, { temperature: 0, maxTokens: 4096 });
+    const text = await callOpenRouter(MODEL_TIER, messages, null, { temperature: 0, maxTokens: 4096, featureName: 'parse_arabic_resume' });
 
     // Parse JSON response (callOpenRouter returns raw text)
     let parsed: ParsedResume;

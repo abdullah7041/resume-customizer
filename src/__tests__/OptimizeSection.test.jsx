@@ -272,6 +272,25 @@ describe('OptimizeSection', () => {
             const button = screen.getByRole('button', { name: /optimize resume/i });
             expect(button).not.toBeDisabled();
         });
+
+        it('blocks guest optimization before opening credit confirmation', () => {
+            mockStoreState.originalResume = { basics: { name: 'Test User' } };
+            const onRequireSignIn = vi.fn();
+
+            renderWithProviders(
+                <OptimizeSection
+                    isGuestMode
+                    onRequireSignIn={onRequireSignIn}
+                    protectedActionMessage="Sign in to run AI analysis and save your progress."
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /optimize resume/i }));
+
+            expect(onRequireSignIn).toHaveBeenCalledTimes(1);
+            expect(screen.getByText('Sign in to run AI analysis and save your progress.')).toBeInTheDocument();
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        });
     });
 
     describe('Keywords Display', () => {

@@ -1,0 +1,45 @@
+{
+  "landing": {
+    "productStory": {
+      "why": {
+        "eyebrow": "The core Watheq idea",
+        "title": "One resume is not enough for every job.",
+        "subtitle": "A generic resume is not enough because every job ad has different priorities, keywords, and proof expectations. Recruiters and ATS systems look for role-specific relevance.",
+        "bridge": "One base resume -> one targeted application for this specific job -> better ATS readiness -> better interview preparation.",
+        "cards": {
+          "role": {
+            "title": "Every job ad has a different signal",
+            "description": "Job descriptions use specific skills, tools, responsibilities, and wording. Watheq starts with the job ad so your resume can speak to this role, not just any role."
+          },
+          "ats": {
+            "title": "Generic resumes hide your best proof",
+            "description": "Relevant achievements can disappear when they are buried or framed for another role. Watheq helps surface the strongest real evidence for this application."
+          },
+          "proof": {
+            "title": "Tailoring should stay truthful",
+            "description": "Watheq improves positioning while preserving your real experience, asking clarifying questions before rewriting when proof is missing."
+          }
+        }
+      },
+      "truth": {
+        "eyebrow": "Truthful optimization",
+        "title": "Watheq improves the application around your real evidence.",
+        "subtitle": "The workflow is built to reduce generic rewrites and unsupported claims by matching first, asking when proof is missing, and keeping interview prep tied to the same source material.",
+        "cards": {
+          "match": {
+            "title": "Job matching before rewriting",
+            "description": "Watheq compares the resume to the job ad so optimization starts from actual gaps, keywords, and role expectations."
+          },
+          "clarify": {
+            "title": "Questions before assumptions",
+            "description": "When impact is vague, Watheq asks for scope, metrics, or context before turning a bullet into a stronger claim."
+          },
+          "noFakes": {
+            "title": "No fake experience",
+            "description": "Suggestions are framed as defensible improvements, not invented credentials, employers, numbers, or responsibilities."
+          }
+        }
+      }
+    }
+  }
+}

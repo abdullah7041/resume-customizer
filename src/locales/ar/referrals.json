@@ -1,0 +1,23 @@
+{
+  "referrals": {
+    "yourLink": "رابط الإحالة حقك",
+    "yourStats": "إحصائيات الإحالات",
+    "linkUnavailable": "رابط الإحالة مو متوفر",
+    "statsUnavailable": "الإحصائيات مو متوفرة",
+    "shareInfo": "شارك رابطك واحصل +5 نقاط اذا يسجل خويك!",
+    "totalReferrals": "الإجمالي",
+    "completedReferrals": "النشطة",
+    "creditsEarned": "المكتسب",
+    "noReferralsYet": "شارك رابطك عشان تكسب النقاط!",
+    "pendingReferrals": "{{count}} إحالة قيد التفعيل",
+    "allCompleted": "جميع الإحالات نشطة! 🎉",
+    "shareLinkedIn": "شارك على لينكد إن",
+    "inviteEarn": "ادعو ربعك واكسب",
+    "inviteShort": "دعوة",
+    "inviteFriends": "ادعُ الأصدقاء",
+    "creditsBonus": "+5 رصيد",
+    "shareLink": "شارك رابطك الخاص مع أخوياك",
+    "youGet": "تجيك 5 نقاط",
+    "theyGet": "وتجيهم 5 نقاط"
+  }
+}

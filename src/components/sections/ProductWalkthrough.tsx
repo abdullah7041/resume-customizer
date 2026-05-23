@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils/cn";
+import { useTheme } from "@/hooks/useTheme";
 
 type WalkthroughStepId = "upload" | "match" | "clarify" | "vision" | "optimize" | "interview";
 const stepOrder: WalkthroughStepId[] = ["upload", "match", "clarify", "vision", "optimize", "interview"];
@@ -79,15 +80,17 @@ function getWalkthroughSteps(t: ReturnType<typeof useTranslation>["t"]): Walkthr
 function DemoStage({ activeStep }: { activeStep: WalkthroughStep }) {
   const { t } = useTranslation();
   const shouldReduceMotion = useReducedMotion();
+  const [theme] = useTheme();
+  const shouldUseStaticMotion = shouldReduceMotion || theme === "dark";
   const activeStepNumber = stepOrder.indexOf(activeStep.id) + 1;
 
-  const layerTransition = shouldReduceMotion
+  const layerTransition = shouldUseStaticMotion
     ? { duration: 0 }
     : ({ type: "spring", stiffness: 280, damping: 26 } as const);
 
   return (
     <div className="relative mx-auto w-full max-w-5xl">
-      <div className="landing-proof-panel relative overflow-hidden rounded-2xl bg-[#f3f8f6] shadow-sm ring-1 ring-slate-900/5 dark:bg-[#082b23] dark:ring-white/8 sm:rounded-[20px]">
+      <div className="landing-proof-panel relative overflow-hidden rounded-2xl bg-[#f3f8f6] shadow-sm ring-1 ring-slate-900/5 dark:bg-[#082b23] dark:shadow-none dark:ring-white/8 sm:rounded-[20px]">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(251,252,250,0.94),rgba(235,246,242,0.72),rgba(229,240,237,0.32))] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.03),rgba(16,185,129,0.04),rgba(255,255,255,0.01))]" />
 
         {/* Header */}
@@ -125,10 +128,10 @@ function DemoStage({ activeStep }: { activeStep: WalkthroughStep }) {
           <div className="relative min-h-[300px] sm:min-h-[340px]">
             <BaseResumeCard />
             <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={shouldUseStaticMotion ? false : { opacity: 0, y: 10 }}
+              animate={shouldUseStaticMotion ? undefined : { opacity: 1, y: 0 }}
               transition={layerTransition}
-              className="absolute inset-0"
+              className="landing-motion-static absolute inset-0"
             >
               {activeStep.id === "upload" && <UploadLayer />}
               {activeStep.id === "match" && <MatchLayer />}
@@ -148,7 +151,7 @@ function BaseResumeCard() {
   const { t } = useTranslation();
 
   return (
-    <div className="absolute left-0 top-4 w-[82%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:ring-white/8 sm:top-6 sm:w-[68%] sm:rounded-2xl sm:p-5 rtl:left-auto rtl:right-0">
+    <div className="landing-demo-card absolute left-0 top-4 w-[82%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:shadow-none dark:ring-white/8 sm:top-6 sm:w-[68%] sm:rounded-2xl sm:p-5 rtl:left-auto rtl:right-0">
       <div className="flex items-center gap-2">
         <FileText className="h-4 w-4 text-[#2b8994] dark:text-emerald-300" />
         <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/50">
@@ -174,7 +177,7 @@ function UploadLayer() {
   const { t } = useTranslation();
 
   return (
-    <div className="absolute right-0 top-20 w-[76%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:ring-white/8 sm:top-16 sm:w-[64%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
+    <div className="landing-demo-card absolute right-0 top-20 w-[76%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:shadow-none dark:ring-white/8 sm:top-16 sm:w-[64%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
       <div className="rounded-xl border border-dashed border-[#9ac9cf] bg-[#eff8f7] p-5 text-center dark:border-emerald-300/20 dark:bg-emerald-300/8 sm:p-7">
         <UploadCloud className="mx-auto h-8 w-8 text-[#2b8994] dark:text-emerald-300" />
         <div className="mt-3 text-base font-bold text-slate-950 dark:text-white">
@@ -197,7 +200,7 @@ function MatchLayer() {
   ];
 
   return (
-    <div className="absolute right-0 top-6 w-[84%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:ring-white/8 sm:w-[68%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
+    <div className="landing-demo-card absolute right-0 top-6 w-[84%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:shadow-none dark:ring-white/8 sm:w-[68%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
       <div className="flex items-end justify-between">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
@@ -236,7 +239,7 @@ function ClarifyLayer() {
   const questions = t("landing.productWalkthrough.preview.clarifyQuestions", { returnObjects: true }) as string[];
 
   return (
-    <div className="absolute inset-x-0 top-0 w-full rounded-xl bg-[#061c16] p-4 text-white shadow-lg shadow-slate-950/15 ring-1 ring-emerald-300/15 dark:bg-[#06231d] sm:inset-x-auto sm:right-0 sm:w-[76%] sm:rounded-2xl rtl:sm:left-0 rtl:sm:right-auto">
+    <div className="landing-demo-card absolute inset-x-0 top-0 w-full rounded-xl bg-[#061c16] p-4 text-white shadow-lg shadow-slate-950/15 ring-1 ring-emerald-300/15 dark:bg-[#06231d] dark:shadow-none sm:inset-x-auto sm:right-0 sm:w-[76%] sm:rounded-2xl rtl:sm:left-0 rtl:sm:right-auto">
       <div className="flex items-center gap-2.5">
         <div className="rounded-xl bg-emerald-300/10 p-1.5 text-emerald-200">
           <MessageSquareText className="h-4 w-4" />
@@ -272,16 +275,16 @@ function OptimizeLayer() {
   return (
     <div className="absolute right-0 top-2 w-[86%] space-y-3 sm:w-[74%] rtl:left-0 rtl:right-auto">
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-[#fbfcfa] p-4 shadow-md shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:ring-white/8">
+        <div className="landing-demo-card rounded-xl bg-[#fbfcfa] p-4 shadow-md shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:shadow-none dark:ring-white/8">
           <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">{t("landing.productWalkthrough.preview.before")}</div>
           <div className="mt-1.5 text-3xl font-bold tabular-nums text-slate-400 sm:text-4xl">52</div>
         </div>
-        <div className="rounded-xl bg-[#2b8994] p-4 text-white shadow-md shadow-slate-950/6">
+        <div className="landing-demo-card rounded-xl bg-[#2b8994] p-4 text-white shadow-md shadow-slate-950/6 dark:shadow-none">
           <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/60">{t("landing.productWalkthrough.preview.after")}</div>
           <div className="mt-1.5 text-3xl font-bold tabular-nums sm:text-4xl">86</div>
         </div>
       </div>
-      <div className="rounded-xl bg-[#fbfcfa] p-4 shadow-md shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:ring-white/8">
+      <div className="landing-demo-card rounded-xl bg-[#fbfcfa] p-4 shadow-md shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:shadow-none dark:ring-white/8">
         <div className="mb-2.5 flex justify-between text-sm font-bold text-slate-950 dark:text-white">
           <span>{t("landing.productWalkthrough.preview.keywordLift")}</span>
           <span className="text-[#2b8994] dark:text-emerald-300">+34</span>
@@ -294,7 +297,7 @@ function OptimizeLayer() {
           ))}
         </div>
       </div>
-      <div className="rounded-xl bg-[#fbfcfa] p-4 text-sm font-medium leading-7 text-slate-600 shadow-md shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:text-white/70 dark:ring-white/8">
+      <div className="landing-demo-card rounded-xl bg-[#fbfcfa] p-4 text-sm font-medium leading-7 text-slate-600 shadow-md shadow-slate-950/6 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:text-white/70 dark:shadow-none dark:ring-white/8">
         {t("landing.productWalkthrough.preview.optimizedBullet")}
       </div>
     </div>
@@ -306,7 +309,7 @@ function VisionLayer() {
   const sectors = t("landing.productWalkthrough.preview.visionSignals", { returnObjects: true }) as string[];
 
   return (
-    <div className="absolute right-0 top-6 w-[86%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:ring-white/8 sm:w-[72%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
+    <div className="landing-demo-card absolute right-0 top-6 w-[86%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:shadow-none dark:ring-white/8 sm:w-[72%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
@@ -337,7 +340,7 @@ function InterviewLayer() {
   const questions = t("landing.productWalkthrough.preview.interviewQuestions", { returnObjects: true }) as string[];
 
   return (
-    <div className="absolute right-0 top-6 w-[86%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:ring-white/8 sm:w-[72%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
+    <div className="landing-demo-card absolute right-0 top-6 w-[86%] rounded-xl bg-[#fbfcfa] p-4 shadow-lg shadow-slate-950/8 ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:shadow-none dark:ring-white/8 sm:w-[72%] sm:rounded-2xl sm:p-5 rtl:left-0 rtl:right-auto">
       <div className="flex items-center gap-2.5">
         <div className="rounded-xl bg-[#eff8f7] p-1.5 text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
           <MessageSquareText className="h-4 w-4" />
@@ -369,6 +372,8 @@ function InterviewLayer() {
 export function ProductWalkthrough({ onGetStarted }: ProductWalkthroughProps) {
   const { t } = useTranslation();
   const shouldReduceMotion = useReducedMotion();
+  const [theme] = useTheme();
+  const shouldUseStaticMotion = shouldReduceMotion || theme === "dark";
   const steps = useMemo(() => getWalkthroughSteps(t), [t]);
   const [activeStepId, setActiveStepId] = useState<WalkthroughStepId>("upload");
   const stepRefs = useRef<Record<WalkthroughStepId, HTMLElement | null>>({
@@ -446,19 +451,19 @@ export function ProductWalkthrough({ onGetStarted }: ProductWalkthroughProps) {
 
   const activeIndex = Math.max(0, steps.findIndex((step) => step.id === activeStepId));
 
-  const springTransition = shouldReduceMotion
+  const springTransition = shouldUseStaticMotion
     ? { duration: 0 }
     : ({ type: "spring", stiffness: 260, damping: 24 } as const);
 
   return (
-    <section className="relative bg-[#fbfcfa] px-5 py-16 text-slate-950 dark:bg-[#031713] dark:text-white sm:px-8 lg:py-24" aria-labelledby="product-walkthrough-title">
+    <section className="landing-walkthrough-performance relative bg-[#fbfcfa] px-5 py-16 text-slate-950 dark:bg-[#031713] dark:text-white sm:px-8 lg:py-24" aria-labelledby="product-walkthrough-title">
       <div className="mx-auto max-w-7xl">
         <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={shouldUseStaticMotion ? false : { opacity: 0, y: 20 }}
+          whileInView={shouldUseStaticMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={springTransition}
-          className="mx-auto max-w-3xl text-center"
+          className="landing-motion-static mx-auto max-w-3xl text-center"
         >
           <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#2b8994] dark:text-emerald-300">
             {t("landing.productWalkthrough.eyebrow")}
@@ -482,7 +487,7 @@ export function ProductWalkthrough({ onGetStarted }: ProductWalkthroughProps) {
                   <div className="flex flex-col items-center gap-2">
                     <div
                       className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors duration-300",
+                        "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors duration-300 dark:transition-none",
                         isActive
                           ? "bg-[#2b8994] text-white dark:bg-emerald-400 dark:text-[#052e2b]"
                           : isCompleted
@@ -494,7 +499,7 @@ export function ProductWalkthrough({ onGetStarted }: ProductWalkthroughProps) {
                     </div>
                     <span
                       className={cn(
-                        "text-[11px] font-semibold transition-colors duration-300",
+                        "text-[11px] font-semibold transition-colors duration-300 dark:transition-none",
                         isActive ? "text-[#171717] dark:text-white" : "text-slate-400 dark:text-white/40"
                       )}
                     >
@@ -504,9 +509,9 @@ export function ProductWalkthrough({ onGetStarted }: ProductWalkthroughProps) {
                   {index < steps.length - 1 && (
                     <div className="mx-3 h-px flex-1 bg-slate-200 dark:bg-white/10">
                       <motion.div
-                        className="h-full bg-[#2b8994] dark:bg-emerald-400"
+                        className="landing-motion-static h-full bg-[#2b8994] dark:bg-emerald-400"
                         animate={{ width: isCompleted ? "100%" : "0%" }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        transition={shouldUseStaticMotion ? { duration: 0 } : { duration: 0.4, ease: "easeOut" }}
                       />
                     </div>
                   )}
@@ -527,12 +532,12 @@ export function ProductWalkthrough({ onGetStarted }: ProductWalkthroughProps) {
                   stepRefs.current[step.id] = node;
                 }}
                 data-step-id={step.id}
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={shouldUseStaticMotion ? false : { opacity: 0, y: 16 }}
+                whileInView={shouldUseStaticMotion ? undefined : { opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.35 }}
                 transition={{ ...springTransition, delay: index * 0.04 }}
                 className={cn(
-                  "landing-scroll-step relative overflow-hidden rounded-2xl bg-[#f4f9f7] p-5 shadow-sm ring-1 ring-slate-900/5 transition-colors duration-300 dark:bg-white/[0.04] dark:ring-white/8 sm:p-6",
+                  "landing-motion-static landing-scroll-step relative overflow-hidden rounded-2xl bg-[#f4f9f7] p-5 shadow-sm ring-1 ring-slate-900/5 transition-colors duration-300 dark:bg-white/[0.04] dark:shadow-none dark:transition-none dark:ring-white/8 sm:p-6",
                   isActive && "bg-[#eef8f4] dark:bg-white/[0.07]"
                 )}
               >
@@ -542,7 +547,7 @@ export function ProductWalkthrough({ onGetStarted }: ProductWalkthroughProps) {
                 <div className="flex items-start gap-4">
                   <div
                     className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition-colors duration-300",
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition-colors duration-300 dark:transition-none",
                       isActive ? "bg-[#2b8994]" : "bg-[#0b1026] dark:bg-white/10"
                     )}
                   >

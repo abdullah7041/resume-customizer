@@ -1,0 +1,40 @@
+{
+  "workspace": {
+    "howItWorks": "How it Works",
+    "gettingStarted": "Getting Started",
+    "clearAll": "Clear All",
+    "continue": "Continue",
+    "resumeGateHint": "Upload a resume first to unlock Match, Optimize, Templates, and Interview.",
+    "stepFlowHelper": "Step 1: Upload or paste resume → Step 2: Paste job description → Step 3: Review match → Step 4: Optimize & export",
+    "resumeRequiredTitle": "Resume required",
+    "signInToUnlock": "Sign in to unlock insights",
+    "signInDescription": "Connect your account to securely upload resumes, run match analysis, and save optimization drafts.",
+    "signInViaGoogle": "Sign in via Google",
+    "guest": {
+      "notice": "Sign in is needed to run AI match/optimization, save pipeline jobs, or export to your account.",
+      "protectedActionTitle": "Sign in required",
+      "protectedActionDesc": "Sign in to run AI analysis and save your progress.",
+      "signInCta": "Sign in to save progress",
+      "backToLanding": "Back to landing"
+    },
+    "mobileWorkflow": {
+      "ariaLabel": "Workflow navigation",
+      "stepProgress": "Step {{current}} of {{total}}",
+      "toolProgress": "Tool",
+      "currentStep": "Current step",
+      "nextAction": "Next: {{label}}",
+      "openSteps": "All steps and tools",
+      "moreTools": "More tools",
+      "current": "Current",
+      "available": "Available",
+      "locked": "Locked",
+      "lockedHelper": "Upload a resume first to unlock the next steps.",
+      "steps": {
+        "resume": "Resume",
+        "jobAd": "Job Ad",
+        "optimize": "Optimize",
+        "export": "Export"
+      }
+    }
+  }
+}

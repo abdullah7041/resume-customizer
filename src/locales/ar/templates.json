@@ -1,0 +1,14 @@
+{
+  "templates": {
+    "title": "قوالب السيرة الذاتية",
+    "select": "اختر القالب",
+    "preview": "معاينة",
+    "download": "تحميل PDF",
+    "downloading": "يحمّل...",
+    "atsOptimized": "محسّن لنظام ATS",
+    "modern": "عصري",
+    "classic": "كلاسيكي",
+    "technical": "تقني",
+    "professional": "احترافي"
+  }
+}

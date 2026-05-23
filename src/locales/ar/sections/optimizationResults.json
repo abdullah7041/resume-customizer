@@ -1,0 +1,53 @@
+{
+  "sections": {
+    "optimizationResults": {
+      "title": "ملخص نتائج التحسين",
+      "subtitle": "كيف تحسنت سيرتك الذاتية لتتناسب مع الوظيفة",
+      "matchScore": "نسبة التطابق",
+      "before": "قبل",
+      "after": "بعد",
+      "improvementsFound": "تحسينات متاحة",
+      "applied": "تم تطبيقها",
+      "scoreBoost": "تحسن النسبة",
+      "potentialBoost": "حتى +{{points}}% ممكن",
+      "keywordsAdded": "الكلمات المفتاحية المضافة لمطابقة الوظيفة",
+      "keywordsMatching": "الكلمات المتطابقة مع الوظيفة",
+      "more": "المزيد",
+      "improvementsApplied": "التحسينات المطبقة",
+      "sectionLabels": {
+        "headline": "تم تحسين العنوان لأنظمة ATS",
+        "summary": "تمت إعادة كتابة الملخص بتأثير",
+        "experience": "تم تحديد كمي لنقاط الخبرة",
+        "skills": "تم مواءمة المهارات مع المتطلبات",
+        "education": "تم تحسين قسم التعليم",
+        "projects": "تم إبراز المشاريع بفعالية"
+      },
+      "applyAll": "تطبيق الكل ({{remaining}} متبقي)",
+      "exportPdf": "تصدير PDF",
+      "shareResult": "شارك نتيجتك",
+      "assistant": {
+        "label": "HR Super Saud",
+        "hide": "إخفاء ملاحظات HR Super Saud للتحسين",
+        "restore": "إظهار ملاحظات HR Super Saud للتحسين",
+        "minimized": "HR Super Saud",
+        "disable": "تعطيل HR Super Saud",
+        "enable": "تفعيل HR Super Saud",
+        "disabled": "تم تعطيل HR Super Saud",
+        "moods": {
+          "strong": {
+            "status": "نتيجة مصقولة",
+            "message": "تحسن ممتاز. سيرتك المحسنة جاهزة لتقديم أقوى."
+          },
+          "goodStart": {
+            "status": "تحسن جيد",
+            "message": "تقدم جميل. طبق أقوى التعديلات قبل التصدير."
+          },
+          "needsWork": {
+            "status": "فيه مساحة",
+            "message": "ما زال فيه مجال للتحسين. ابدأ بالفجوات الأعلى تأثيرا."
+          }
+        }
+      }
+    }
+  }
+}

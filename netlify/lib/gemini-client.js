@@ -1,5 +1,6 @@
 // OpenRouter API client for Gemini models
-import { callOpenRouter, MODELS } from './openrouter-client.js';
+import { callOpenRouter } from './openrouter-client.js';
+import { MODELS } from './model-registry.js';
 import { summarizeErrorForLog } from './sentry.js';
 
 // Shared OCR resilience rule injected into both optimizeResume and processMatchOnly prompts.
@@ -210,7 +211,7 @@ function sanitizeAndParseJSON(text) {
  * @param {boolean} isPdf - True if inputData is base64 PDF, false if text.
  * @returns {Promise<object>} - JSON Resume schema with plainText extension.
  */
-export async function parseResumeOnly(inputData, isPdf = true) {
+export async function parseResumeOnly(inputData, isPdf = true, options = {}) {
   // OpenRouter doesn't support inline PDF data - must use text mode only
   if (isPdf) {
     throw new Error('PDF inline data not supported with OpenRouter. Please convert PDF to text first using OCR.');
@@ -257,7 +258,13 @@ RESUME CONTENT:
 ${trimmedInput}`;
 
     const messages = [{ role: 'user', content: `${systemInstruction}\n\n${prompt}` }];
-    const text = await callOpenRouter('lite', messages, null, { temperature: 0, maxTokens: 3072, timeoutMs: 50000 });
+    const text = await callOpenRouter('lite', messages, null, {
+      temperature: 0,
+      maxTokens: 3072,
+      timeoutMs: 50000,
+      featureName: options.featureName || 'parse_resume',
+      modelId: options.modelId,
+    });
     const parsed = sanitizeAndParseJSON(text);
 
     // plainText: Use the ORIGINAL input (before truncation) only when we know it is
@@ -357,7 +364,7 @@ ${trimmedInput}`;
  * @param {string} jobDescription - Job description text.
  * @returns {Promise<object>} - Optimization suggestions with original and improved content.
  */
-export async function optimizeResume(resumeText, jobDescription, language = 'en', vulnerabilities = [], userClarifications = '') {
+export async function optimizeResume(resumeText, jobDescription, language = 'en', vulnerabilities = [], userClarifications = '', options = {}) {
   // PERF FIX: Truncate oversized inputs to prevent AI timeouts.
   // optimize needs less text than parse — 15K resume + 5K JD is more than sufficient.
   const MAX_RESUME_CHARS = 15000;
@@ -472,12 +479,12 @@ RULES:
    If a bullet seems unrelated, find the transferable angle — never dismiss it.
 
    STAR + METRIC ENFORCEMENT (MANDATORY for every improved bullet):
-   - Every "improved" bullet MUST use the inverted impact structure to front-load the result: [Action Verb] [Quantified Result] by [Specific Task/Technology]
-   - Minimum 1 metric per bullet (%, $, time saved, volume, team size, or efficiency gain)
-   - If the original lacks metrics, infer plausible ones from context and append "(verify)" so the user knows to confirm
-   - Example: "Managed team" → "Led cross-functional team of 8 engineers, delivering $2.3M project 2 weeks ahead of schedule"
-   - Example: "Handled customer issues" → "Resolved 50+ customer escalations/month with 94% satisfaction rate (verify), reducing churn by 12%"
-   - Structure bullets to front-load the impact where possible: [Action Verb] [Quantified Result] by [Specific Task/Technology]. Example: "Reduced cloud costs by 24% by orchestrating Docker container scaling."
+   - Prefer the inverted impact structure when verified metrics are present: [Action Verb] [Verified Quantified Result] by [Specific Task/Technology]
+   - Use only metrics, employers, degrees, certifications, tools, dates, titles, and claims present in the resume, job description, or user clarifications.
+   - If the original lacks metrics, do NOT invent exact numbers. Rewrite with evidence-backed scope and add a concise "verify metric" note in the rationale instead.
+   - Example with source metric: "Managed team of 8" → "Led 8-person engineering team by coordinating sprint delivery and stakeholder updates"
+   - Example without source metric: "Handled customer issues" → "Resolved customer escalations by triaging issues, coordinating fixes, and documenting recurring patterns" with rationale "Ask the user to verify volume or satisfaction metrics before adding numbers."
+   - Structure bullets to front-load the impact where possible without fabricating data.
    - CRITICAL: Absolutely NO first-person pronouns (I, me, my, we, our). Start every bullet directly with the Action Verb.
 
    KEYWORD WEAVING (MANDATORY):
@@ -571,7 +578,9 @@ ${userClarifications}
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
       timeoutMs: 100000,
-      reasoningBudget: 2048
+      reasoningBudget: 2048,
+      featureName: options.featureName || 'optimize_resume',
+      modelId: options.modelId,
     });
     console.log(`[OpenRouter] Optimize response length: ${text.length} chars`);
 
@@ -592,7 +601,7 @@ ${userClarifications}
  * @param {string} jobDescription - Job description text.
  * @returns {Promise<object>} - Match score, keywords, and reasoning.
  */
-export async function processMatchOnly(resumeText, jobDescription, language = 'en') {
+export async function processMatchOnly(resumeText, jobDescription, language = 'en', options = {}) {
   // Truncate oversized inputs to prevent AI timeouts
   const MAX_RESUME = 15000;
   const MAX_JD = 5000;
@@ -678,7 +687,9 @@ Analyze step by step, then provide your final score.`;
     const text = await callOpenRouter('flash', messages, schema, {
       maxTokens: 16384,
       timeoutMs: 65000,
-      reasoningBudget: 1024
+      reasoningBudget: 1024,
+      featureName: options.featureName || 'ai_match',
+      modelId: options.modelId,
     });
     console.log(`[OpenRouter] Match response: ${text.length} chars`);
 
@@ -707,7 +718,7 @@ Analyze step by step, then provide your final score.`;
  * @param {string} questionType - Type of questions: 'behavioral', 'technical', or 'mixed' (default).
  * @returns {Promise<object>} - Interview prep data with questions and focus areas.
  */
-export async function predictInterviewQuestions(resumeText, jobDescription, questionType = 'mixed', vulnerabilities = [], language = 'en') {
+export async function predictInterviewQuestions(resumeText, jobDescription, questionType = 'mixed', vulnerabilities = [], language = 'en', options = {}) {
   console.log(`[Gemini] Predicting interview questions (${questionType}) with ${MODELS.lite}, vulnerabilities: ${vulnerabilities.length}`);
 
   const schema = {
@@ -845,7 +856,13 @@ ${resumeText}
 
   try {
     const messages = [{ role: 'user', content: prompt + langInstruction }];
-    const text = await callOpenRouter('lite', messages, schema, { temperature: 0.3, maxTokens: 4096, timeoutMs: 50000 });
+    const text = await callOpenRouter('lite', messages, schema, {
+      temperature: 0.3,
+      maxTokens: 4096,
+      timeoutMs: 50000,
+      featureName: options.featureName || 'interview_prep',
+      modelId: options.modelId,
+    });
     console.log(`[OpenRouter] Interview prep response: ${text.length} chars`);
 
     let parsed;
@@ -869,7 +886,7 @@ ${resumeText}
  * @param {string} jobDescription - Job description text.
  * @returns {Promise<{ draft_text: string }>} - Generated cover letter.
  */
-export async function generateCoverLetter(resumeText, jobDescription, language = 'en', tone = 'professional') {
+export async function generateCoverLetter(resumeText, jobDescription, language = 'en', tone = 'professional', options = {}) {
   console.log(`[Gemini] Generating cover letter with ${MODELS.flash} (tone: ${tone})`);
 
   const schema = {
@@ -908,7 +925,13 @@ Return ONLY the cover letter text in the draft_text field.
 
   try {
     const messages = [{ role: 'user', content: prompt + langInstruction }];
-    const text = await callOpenRouter('flash', messages, schema, { maxTokens: 16384, timeoutMs: 50000, reasoningBudget: 1024 });
+    const text = await callOpenRouter('flash', messages, schema, {
+      maxTokens: 16384,
+      timeoutMs: 50000,
+      reasoningBudget: 1024,
+      featureName: options.featureName || 'cover_letter',
+      modelId: options.modelId,
+    });
     console.log(`[OpenRouter] Cover letter response: ${text.length} chars`);
 
     let parsed;

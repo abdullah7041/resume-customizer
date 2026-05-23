@@ -1,0 +1,53 @@
+{
+  "sections": {
+    "optimizationResults": {
+      "title": "Optimization Results",
+      "subtitle": "How your resume improved to match the job",
+      "matchScore": "Match Score",
+      "before": "Before",
+      "after": "After",
+      "improvementsFound": "Improvements Found",
+      "applied": "Applied",
+      "scoreBoost": "Score Boost",
+      "potentialBoost": "Up to +{{points}}% possible",
+      "keywordsAdded": "Keywords Added to Match JD",
+      "keywordsMatching": "Keywords Already Matching JD",
+      "more": "more",
+      "improvementsApplied": "Improvements Applied",
+      "sectionLabels": {
+        "headline": "Headline optimized for ATS",
+        "summary": "Summary rewritten with impact",
+        "experience": "Experience bullets quantified",
+        "skills": "Skills aligned with requirements",
+        "education": "Education section enhanced",
+        "projects": "Projects highlighted effectively"
+      },
+      "applyAll": "Apply All ({{remaining}} remaining)",
+      "exportPdf": "Export PDF",
+      "shareResult": "Share Your Result",
+      "assistant": {
+        "label": "HR Super Saud",
+        "hide": "Hide HR Super Saud optimization feedback",
+        "restore": "Show HR Super Saud optimization feedback",
+        "minimized": "HR Super Saud",
+        "disable": "Disable HR Super Saud",
+        "enable": "Enable HR Super Saud",
+        "disabled": "HR Super Saud disabled",
+        "moods": {
+          "strong": {
+            "status": "Polished result",
+            "message": "Great lift. Your optimized resume is ready for a sharper application."
+          },
+          "goodStart": {
+            "status": "Solid lift",
+            "message": "Nice progress. Apply the strongest edits before you export."
+          },
+          "needsWork": {
+            "status": "More room",
+            "message": "There is still room to improve. Focus on the highest-impact gaps first."
+          }
+        }
+      }
+    }
+  }
+}

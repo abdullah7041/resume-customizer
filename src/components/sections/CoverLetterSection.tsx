@@ -68,7 +68,7 @@ const getToneLabel = (value: string, fallback: string, isArabic: boolean) => {
 export function CoverLetterSection({ resumeText, jobDescription, resumeData }: CoverLetterSectionProps) {
   const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
-  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
+  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
   const isArabic = i18n.language === 'ar';
   const documentDirection = isArabic ? 'rtl' : 'ltr';
 
@@ -207,10 +207,10 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       }
 
       // Track feature use for feedback prompt
-      trackFeatureUse('cover-letter');
+      const reachedFeedbackMilestone = trackFeatureUse('cover-letter');
 
       // Check if we should show feedback modal (with 5-10 second delay for better UX)
-      if (shouldShowFeedback) {
+      if (reachedFeedbackMilestone) {
         const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
         setTimeout(() => {
           setShowFeedbackModal(true);
@@ -224,7 +224,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
     } finally {
       setIsGenerating(false);
     }
-  }, [resumeText, jobDescription, companyName, hiringManager, tone, signatureName, refetchCredits, trackFeatureUse, shouldShowFeedback, t, i18n.language]);
+  }, [resumeText, jobDescription, companyName, hiringManager, tone, signatureName, refetchCredits, trackFeatureUse, t, i18n.language]);
 
   // Wrapper function that shows confirmation modal first
   const generateCoverLetter = () => {
@@ -552,7 +552,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
               {t('sections.coverLetter.craftingTitle', 'AI is writing...')}
             </h3>
             <p className="text-gray-500 dark:text-gray-400 max-w-sm">
-              {t('sections.coverLetter.crafting', 'Analyzing your resume and job description to create the perfect cover letter.')}
+              {t('sections.coverLetter.crafting', 'Analyzing your resume and job description to draft a tailored cover letter.')}
             </p>
           </div>
         </GlassCard>

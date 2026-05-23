@@ -1,0 +1,65 @@
+{
+  "showcase": {
+    "eyebrow": "Complete Toolkit",
+    "title": "Everything You Need to Land Your Dream Job",
+    "subtitle": "Powerful AI tools designed specifically for the Saudi job market",
+    "parsing": {
+      "title": "Smart Resume Parsing",
+      "description": "Upload PDF or DOCX files and our AI extracts your information instantly with advanced OCR technology.",
+      "benefit1": "Automatic section detection",
+      "benefit2": "Supports Arabic and English",
+      "benefit3": "Preserves formatting accuracy"
+    },
+    "matching": {
+      "title": "Job Match Scoring",
+      "description": "Get instant 0-100 match scores against any job description. See exactly where you stand.",
+      "benefit1": "Real-time analysis",
+      "benefit2": "Keyword gap detection",
+      "benefit3": "Industry benchmarks"
+    },
+    "optimization": {
+      "title": "AI-Powered Optimization",
+      "description": "Not a general chatbot. A purpose-built AI that only does one thing: optimize resumes for the Saudi job market.",
+      "benefit1": "Context-aware rewrites",
+      "benefit2": "Metric suggestions",
+      "benefit3": "Tone adjustment"
+    },
+    "keywords": {
+      "title": "Keyword Analysis",
+      "description": "Identify high-impact keywords and optimize your resume to beat ATS systems.",
+      "benefit1": "Frequency analysis",
+      "benefit2": "Competitor comparison",
+      "benefit3": "Industry trend insights"
+    },
+    "templates": {
+      "title": "Professional Templates",
+      "description": "Download professionally formatted PDFs that pass applicant tracking systems.",
+      "benefit1": "Multiple modern designs",
+      "benefit2": "Font embedding",
+      "benefit3": "ATS-optimized formatting"
+    },
+    "interview": {
+      "title": "Interview Preparation",
+      "description": "Generate tailored interview questions based on your resume and job requirements.",
+      "benefit1": "Role-specific questions",
+      "benefit2": "STAR format tips",
+      "benefit3": "Difficulty levels"
+    },
+    "coverLetter": {
+      "title": "Cover Letter Generator",
+      "description": "Create compelling, personalized cover letters tailored to each job application.",
+      "benefit1": "AI-powered writing",
+      "benefit2": "Multiple tone options",
+      "benefit3": "Company personalization"
+    },
+    "vision2030": {
+      "title": "Vision 2030 Alignment",
+      "description": "Position yourself for Saudi Arabia's fastest-growing sectors with targeted optimization.",
+      "benefit1": "Sector-specific keywords",
+      "benefit2": "Priority industry focus",
+      "benefit3": "National goals alignment"
+    },
+    "viewAllFeatures": "View all 5 features",
+    "showLess": "Show less"
+  }
+}

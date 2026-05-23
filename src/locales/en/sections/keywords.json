@@ -1,0 +1,49 @@
+{
+  "sections": {
+    "keywords": {
+      "title": "Keywords",
+      "subtitle": "Analyze and optimize keywords in your resume",
+      "emptyTitle": "No data available",
+      "emptyDesc": "Upload your resume and add a job description to analyze keyword density.",
+      "analyzing": "Analyzing keywords...",
+      "matchScore": "Match Score",
+      "criticalGaps": "Critical Gaps",
+      "boostFrequency": "Boost Frequency",
+      "yourStrengths": "Your Strengths",
+      "noGaps": "No critical gaps",
+      "frequencyGood": "Frequency looks good",
+      "noStrengths": "No strong matches yet",
+      "addThis": "Add this keyword",
+      "increase": "Increase from",
+      "to": "to",
+      "resumeKeywords": "Top resume keywords",
+      "jobKeywords": "Top job keywords",
+      "keywords": "keywords",
+      "noResumeKeywords": "No keywords were extracted from the resume.",
+      "noJobKeywords": "No keywords were extracted from the job description.",
+      "stats": {
+        "resumeWords": "Resume words",
+        "uniqueKeywords": "Unique keywords",
+        "jobKeywords": "Job keywords",
+        "matchRate": "Match rate"
+      },
+      "analysis": {
+        "title": "Keyword Analysis",
+        "density": "Keyword Density",
+        "relevance": "Relevance Score",
+        "atsScore": "ATS Score"
+      },
+      "categories": {
+        "technical": "Technical Skills",
+        "soft": "Soft Skills",
+        "industry": "Industry Terms",
+        "action": "Action Verbs"
+      },
+      "suggestions": {
+        "title": "Suggested Keywords",
+        "add": "Add to Resume",
+        "added": "Added"
+      }
+    }
+  }
+}

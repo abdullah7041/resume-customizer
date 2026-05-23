@@ -1,0 +1,12 @@
+{
+  "bulkAnalysis": {
+    "title": "Bulk Analysis",
+    "uploadMultiple": "Upload Multiple Resumes",
+    "comparing": "Comparing...",
+    "compareResults": "Comparison Results",
+    "bestMatch": "Best Match",
+    "ranking": "Ranking",
+    "selectAll": "Select All",
+    "clearAll": "Clear All"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "rateLimit": {
+    "title": "Slow down there!",
+    "message": "You've made too many requests. Please wait before trying again.",
+    "retry": "Try Again",
+    "dismiss": "Dismiss"
+  }
+}

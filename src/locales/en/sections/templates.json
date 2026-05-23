@@ -1,0 +1,41 @@
+{
+  "sections": {
+    "templates": {
+      "title": "Templates",
+      "subtitle": "Choose a professional template for your resume",
+      "showingOptimized": "Showing optimized",
+      "showingOriginal": "Showing original",
+      "optimizedVersion": "Optimized version",
+      "originalVersion": "Original version",
+      "compare": "View changes",
+      "downloadPdf": "Download PDF",
+      "generating": "Generating...",
+      "noResumeWarning": "This is a preview. Upload your resume to see your data.",
+      "swipeToBrowse": "Swipe to browse",
+      "categories": {
+        "all": "All",
+        "modern": "Modern",
+        "classic": "Classic",
+        "technical": "Technical"
+      },
+      "preview": {
+        "title": "Preview",
+        "showing": "Showing",
+        "original": "Original",
+        "optimized": "Optimized"
+      },
+      "export": {
+        "download": "Download PDF",
+        "ats": "ATS-Friendly",
+        "styled": "Styled",
+        "failed": "Export failed. Please try again, or switch to the ATS-friendly template and retry."
+      },
+      "pageBreak": "Page Break",
+      "showPageBreaks": "Show Page Breaks",
+      "resumeLanguage": "Resume Language",
+      "languageEnglish": "English",
+      "languageArabic": "Arabic",
+      "languageMixed": "Mixed"
+    }
+  }
+}

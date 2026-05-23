@@ -1,0 +1,71 @@
+{
+  "sections": {
+    "match": {
+      "title": "Match",
+      "subtitle": "Compare your resume against job descriptions",
+      "jobInput": {
+        "title": "Job Description",
+        "placeholder": "Paste the job description here...",
+        "url": "Or enter job posting URL"
+      },
+      "results": {
+        "title": "Match Analysis",
+        "score": "Match Score",
+        "keywords": "Keywords Found",
+        "missing": "Missing Keywords",
+        "suggestions": "Suggestions",
+        "calculation": {
+          "title": "How is this calculated?"
+        }
+      },
+      "analyze": "Analyze Match",
+      "analyzing": "Analyzing...",
+      "noResume": "Please upload a resume first",
+      "variant": {
+        "strongMatch": "Strong Match",
+        "goodStart": "Good Start",
+        "needsWork": "Needs Work"
+      },
+      "categoryScores": {
+        "hardSkills": "Hard Skills",
+        "experience": "Experience",
+        "education": "Education",
+        "softSkills": "Soft Skills",
+        "hardSkillsDesc": "Matching technical keywords",
+        "experienceDesc": "Job titles & years relevance",
+        "educationDesc": "Degree & field match",
+        "softSkillsDesc": "Behavioral & leadership traits"
+      },
+      "variantLabels": {
+        "strongMatch": "Strong Match",
+        "goodStart": "Good Start",
+        "needsWork": "Needs Work"
+      },
+      "optimizedBanner": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.",
+      "scoreLabel": "Score",
+      "assistant": {
+        "label": "HR Super Saud",
+        "hide": "Hide HR Super Saud feedback",
+        "restore": "Show HR Super Saud feedback",
+        "minimized": "HR Super Saud",
+        "disable": "Disable HR Super Saud",
+        "enable": "Enable HR Super Saud",
+        "disabled": "HR Super Saud disabled",
+        "moods": {
+          "strong": {
+            "status": "Strong match",
+            "message": "Strong match. Your resume is speaking the job's language."
+          },
+          "goodStart": {
+            "status": "Good start",
+            "message": "Good start. A few targeted edits can lift this."
+          },
+          "needsWork": {
+            "status": "Needs focus",
+            "message": "This role needs a closer match. Let's make the gaps clearer."
+          }
+        }
+      }
+    }
+  }
+}

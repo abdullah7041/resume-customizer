@@ -12,6 +12,7 @@ import { useEffect, useState, useCallback } from 'react';
 const STORAGE_PREFIX = 'watheq:';
 const FEATURE_USES_KEY = `${STORAGE_PREFIX}feature_uses_count`;
 const PROMPTED_MILESTONES_KEY = `${STORAGE_PREFIX}prompted_milestones`;
+const SESSION_PROMPTED_KEY = `${STORAGE_PREFIX}feedback_prompted_this_session`;
 
 // Strategic milestones based on user journey (Best Practice)
 const PROMPT_MILESTONES = [3, 15, 40];
@@ -20,14 +21,30 @@ interface UseFeedbackPromptResult {
   shouldShowFeedback: boolean;
   featureUsesCount: number;
   currentMilestone: number | null;
-  incrementFeatureUses: () => void;
+  incrementFeatureUses: () => boolean;
   dismissFeedback: () => void;
+  hasPromptedThisSession: boolean;
 }
 
 export function useFeedbackPrompt(): UseFeedbackPromptResult {
   const [shouldShowFeedback, setShouldShowFeedback] = useState(false);
   const [featureUsesCount, setFeatureUsesCount] = useState(0);
   const [currentMilestone, setCurrentMilestone] = useState<number | null>(null);
+  const [hasPromptedThisSession, setHasPromptedThisSession] = useState(() => {
+    try {
+      return sessionStorage.getItem(SESSION_PROMPTED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const getHasPromptedThisSession = useCallback((): boolean => {
+    try {
+      return sessionStorage.getItem(SESSION_PROMPTED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }, []);
 
   // Get prompted milestones from localStorage
   const getPromptedMilestones = useCallback((): Set<number> => {
@@ -55,6 +72,10 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
 
   // Check if current count is a milestone that hasn't been shown
   const checkForMilestone = useCallback((count: number): number | null => {
+    if (getHasPromptedThisSession()) {
+      return null;
+    }
+
     const prompted = getPromptedMilestones();
 
     // Find the milestone we just reached (if any)
@@ -65,7 +86,17 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
     }
 
     return null;
-  }, [getPromptedMilestones]);
+  }, [getHasPromptedThisSession, getPromptedMilestones]);
+
+  // Mark session as prompted (one feedback prompt per session max)
+  const markSessionPrompted = useCallback(() => {
+    try {
+      sessionStorage.setItem(SESSION_PROMPTED_KEY, 'true');
+      setHasPromptedThisSession(true);
+    } catch (error) {
+      console.error('[useFeedbackPrompt] Failed to mark session prompted:', error);
+    }
+  }, []);
 
   // Initialize from localStorage
   useEffect(() => {
@@ -77,16 +108,17 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
       // Check if we're at a milestone on mount (for page refresh scenarios)
       const milestone = checkForMilestone(count);
       if (milestone) {
+        markSessionPrompted();
         setCurrentMilestone(milestone);
         setShouldShowFeedback(true);
       }
     } catch (error) {
       console.error('[useFeedbackPrompt] Failed to initialize:', error);
     }
-  }, [checkForMilestone]);
+  }, [checkForMilestone, markSessionPrompted]);
 
   // Increment feature usage count
-  const incrementFeatureUses = useCallback(() => {
+  const incrementFeatureUses = useCallback((): boolean => {
     try {
       const current = featureUsesCount + 1;
       setFeatureUsesCount(current);
@@ -95,13 +127,16 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
       // Check if we've reached a new milestone
       const milestone = checkForMilestone(current);
       if (milestone) {
+        markSessionPrompted();
         setCurrentMilestone(milestone);
         setShouldShowFeedback(true);
+        return true;
       }
     } catch (error) {
       console.error('[useFeedbackPrompt] Failed to increment feature uses:', error);
     }
-  }, [featureUsesCount, checkForMilestone]);
+    return false;
+  }, [featureUsesCount, checkForMilestone, markSessionPrompted]);
 
   // Dismiss feedback and mark milestone as prompted
   const dismissFeedback = useCallback(() => {
@@ -111,8 +146,9 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
       markMilestonePrompted(currentMilestone);
     }
 
+    markSessionPrompted();
     setCurrentMilestone(null);
-  }, [currentMilestone, markMilestonePrompted]);
+  }, [currentMilestone, markMilestonePrompted, markSessionPrompted]);
 
   return {
     shouldShowFeedback,
@@ -120,5 +156,6 @@ export function useFeedbackPrompt(): UseFeedbackPromptResult {
     currentMilestone,
     incrementFeatureUses,
     dismissFeedback,
+    hasPromptedThisSession,
   };
 }

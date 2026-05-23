@@ -1,12 +1,21 @@
 import { useEffect, useState, useRef, createContext, useContext } from "react";
 import { resolveAuthRedirectUrl } from "../lib/auth/authRedirect";
+import { analytics } from "../services/analytics";
 import { supabase } from "../services/supabase";
 import type { User } from "@supabase/supabase-js";
+
+type AuthIntent = "signin" | "signup";
+type AuthEntrySource = "header_desktop" | "header_mobile" | "landing_get_started";
+
+interface SignInWithGoogleOptions {
+  intent?: AuthIntent;
+  source?: AuthEntrySource;
+}
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<string | undefined>;
+  signInWithGoogle: (options?: SignInWithGoogleOptions) => Promise<string | undefined>;
   signOut: () => Promise<void>;
 }
 
@@ -118,7 +127,13 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (options: SignInWithGoogleOptions = {}) => {
+    if (options.intent === "signup") {
+      analytics.trackSignupStarted(options.source);
+    } else {
+      analytics.trackSigninStarted(options.source);
+    }
+
     const redirectUrl = resolveRedirectUrl();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",

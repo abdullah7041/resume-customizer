@@ -1,0 +1,41 @@
+{
+  "sections": {
+    "templates": {
+      "title": "القوالب",
+      "subtitle": "اختر قالباً احترافياً لسيرتك الذاتية",
+      "showingOptimized": "عرض المحسّن",
+      "showingOriginal": "عرض الأصلي",
+      "optimizedVersion": "النسخة المحسّنة",
+      "originalVersion": "النسخة الأصلية",
+      "compare": "عرض التغييرات",
+      "downloadPdf": "تحميل PDF",
+      "generating": "ينشئ...",
+      "noResumeWarning": "هذه معاينة. ارفع سيرتك الذاتية لرؤية بياناتك.",
+      "swipeToBrowse": "مرر للتصفح",
+      "pageBreak": "فاصل صفحة",
+      "showPageBreaks": "إظهار فواصل الصفحات",
+      "resumeLanguage": "لغة السيرة الذاتية",
+      "languageEnglish": "الإنجليزية",
+      "languageArabic": "العربية",
+      "languageMixed": "مختلط",
+      "categories": {
+        "all": "الكل",
+        "modern": "عصري",
+        "classic": "كلاسيكي",
+        "technical": "تقني"
+      },
+      "preview": {
+        "title": "معاينة",
+        "showing": "عرض",
+        "original": "الأصلي",
+        "optimized": "المحسّن"
+      },
+      "export": {
+        "download": "تحميل PDF",
+        "ats": "متوافق مع ATS",
+        "styled": "منسّق",
+        "failed": "تعذّر تصدير السيرة. جرّب مرة أخرى، أو اختر القالب المتوافق مع ATS وأعد المحاولة."
+      }
+    }
+  }
+}

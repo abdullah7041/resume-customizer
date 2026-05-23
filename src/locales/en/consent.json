@@ -1,0 +1,30 @@
+{
+  "consent": {
+    "pill": "We Value Your Privacy",
+    "title": "We Value Your Privacy",
+    "description": "We use cookies and process your data to provide and improve our services. In compliance with Saudi PDPL, we need your consent.",
+    "managePreferences": "Manage preferences",
+    "acceptAll": "Accept All",
+    "rejectOptional": "Reject",
+    "privacyPolicy": "Privacy Policy",
+    "required": "Required",
+    "compliance": "Compliant with Saudi Personal Data Protection Law (PDPL) - Royal Decree M/19",
+    "pdplReference": "Compliant with Saudi Personal Data Protection Law (PDPL) - Royal Decree M/19",
+    "functional": {
+      "title": "Functional Cookies",
+      "description": "Essential for the website to function. Cannot be disabled."
+    },
+    "dataProcessing": {
+      "title": "Resume Data Processing",
+      "description": "Allow AI to analyze and optimize your resume content."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Help us understand how you use our service to improve it."
+    },
+    "marketing": {
+      "title": "Marketing",
+      "description": "Receive personalized offers and updates."
+    }
+  }
+}

@@ -43,11 +43,18 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
       manualEditing: "partial",
     },
     {
-      feature: t("landing.comparison.features.arabicSupport"),
-      watheq: "yes",
-      resumeBuilder: "partial",
-      keywordScanner: "partial",
-      manualEditing: "partial",
+      feature: t("landing.comparison.features.clarification"),
+      watheq: t("landing.comparison.values.watheqClarification"),
+      resumeBuilder: t("landing.comparison.values.resumeBuilderClarification"),
+      keywordScanner: t("landing.comparison.values.keywordScannerClarification"),
+      manualEditing: t("landing.comparison.values.manualEditingClarification"),
+    },
+    {
+      feature: t("landing.comparison.features.fitScoring"),
+      watheq: t("landing.comparison.values.watheqFitScoring"),
+      resumeBuilder: t("landing.comparison.values.resumeBuilderFitScoring"),
+      keywordScanner: t("landing.comparison.values.keywordScannerFitScoring"),
+      manualEditing: t("landing.comparison.values.manualEditingFitScoring"),
     },
     {
       feature: t("landing.comparison.features.jobMatch"),
@@ -62,13 +69,6 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
       resumeBuilder: t("landing.comparison.values.resumeBuilderAts"),
       keywordScanner: t("landing.comparison.values.keywordScannerAts"),
       manualEditing: t("landing.comparison.values.manualEditingAts"),
-    },
-    {
-      feature: t("landing.comparison.features.templates"),
-      watheq: t("landing.comparison.values.watheqTemplates"),
-      resumeBuilder: t("landing.comparison.values.resumeBuilderTemplates"),
-      keywordScanner: t("landing.comparison.values.keywordScannerTemplates"),
-      manualEditing: t("landing.comparison.values.manualEditingTemplates"),
     },
     {
       feature: t("landing.comparison.features.interviewPrep"),

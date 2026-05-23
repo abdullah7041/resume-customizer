@@ -1,0 +1,16 @@
+{
+  "quota": {
+    "title": "Beta Quota",
+    "features": {
+      "upload": "Upload",
+      "extract": "Extract Resume",
+      "match": "Match Analysis",
+      "optimize": "Optimize",
+      "predict": "Interview Prep",
+      "coverLetter": "Cover Letter"
+    },
+    "refreshNote": "Quotas refresh when you enter a new beta code.",
+    "exhausted": "Exhausted",
+    "available": "Available"
+  }
+}

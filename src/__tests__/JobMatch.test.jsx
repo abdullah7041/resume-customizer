@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { vi, beforeEach, describe, it, expect } from 'vitest';
 import { MatchSection as JobMatch } from '../components/sections/MatchSection';
 
@@ -112,6 +112,33 @@ describe('JobMatch', () => {
       screen.getByPlaceholderText(/paste the job description/i)
     ).toHaveValue('Saved JD');
     expect(screen.getByText(/matches the requirements/i)).toBeInTheDocument();
+  });
+
+  it('blocks guest match analysis before opening credit confirmation', () => {
+    const onAnalyzeMatchAI = vi.fn();
+    const onRequireSignIn = vi.fn();
+
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={onAnalyzeMatchAI}
+        matchAnalysis={null}
+        isAnalyzing={false}
+        hasResume
+        isGuestMode
+        onRequireSignIn={onRequireSignIn}
+        protectedActionMessage="Sign in to run AI analysis and save your progress."
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/paste the job description/i), {
+      target: { value: 'Senior product manager role with roadmap ownership and stakeholder leadership.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /analyze match with ai/i }));
+
+    expect(onRequireSignIn).toHaveBeenCalledTimes(1);
+    expect(onAnalyzeMatchAI).not.toHaveBeenCalled();
+    expect(screen.getByText('Sign in to run AI analysis and save your progress.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
 

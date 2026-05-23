@@ -1,0 +1,19 @@
+{
+  "optimization": {
+    "title": "Resume Optimization",
+    "original": "Original Text",
+    "optimized": "Optimized Text",
+    "apply": "Apply",
+    "applied": "Applied",
+    "pending": "Pending",
+    "revert": "Revert",
+    "applyAll": "Apply All",
+    "noSuggestions": "No suggestions",
+    "analyzing": "Analyzing...",
+    "suggested": "Suggested",
+    "recommendation": "Recommendation",
+    "before": "Before",
+    "after": "After",
+    "optimizedView": "Optimized View"
+  }
+}

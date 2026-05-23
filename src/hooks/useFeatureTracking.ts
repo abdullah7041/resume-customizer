@@ -20,7 +20,7 @@ const LAST_FEATURE_KEY = `${STORAGE_PREFIX}last_feature`;
 const SESSION_START_KEY = `${STORAGE_PREFIX}session_start`;
 
 interface UseFeatureTrackingResult {
-  trackFeatureUse: (feature: FeatureType) => void;
+  trackFeatureUse: (feature: FeatureType) => boolean;
   shouldShowFeedback: boolean;
   dismissFeedback: () => void;
   featureUsesCount: number;
@@ -139,7 +139,7 @@ export function useFeatureTracking(): UseFeatureTrackingResult {
    * Track a feature use and increment the counter.
    * Records feature in sequence and updates last used.
    */
-  const trackFeatureUse = useCallback((feature: FeatureType) => {
+  const trackFeatureUse = useCallback((feature: FeatureType): boolean => {
     // Update last feature used
     setLastFeatureUsed(feature);
     localStorage.setItem(LAST_FEATURE_KEY, feature);
@@ -157,7 +157,7 @@ export function useFeatureTracking(): UseFeatureTrackingResult {
     analytics.track('feature_used', context);
 
     // Increment the feedback prompt counter (checks for milestones)
-    incrementFeatureUses();
+    return incrementFeatureUses();
   }, [incrementFeatureUses, featureUsesCount, currentMilestone, addToFeatureSequence]);
 
   return {

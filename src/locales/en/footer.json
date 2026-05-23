@@ -1,0 +1,23 @@
+{
+  "footer": {
+    "tagline": "AI-Powered Resume Optimization for Saudi Arabia",
+    "linksLabel": "Legal links",
+    "links": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "contact": "Contact Us"
+    },
+    "columns": {
+      "product": "Product",
+      "legal": "Legal",
+      "connect": "Connect"
+    },
+    "newsletter": {
+      "label": "Stay updated",
+      "desc": "Get tips on Saudi hiring and product updates.",
+      "placeholder": "Enter your email",
+      "button": "Subscribe"
+    },
+    "copyright": "© 2024 Watheq. All rights reserved."
+  }
+}

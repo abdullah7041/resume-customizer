@@ -1,0 +1,50 @@
+{
+  "sections": {
+    "coverLetter": {
+      "title": "مولد خطاب التقديم",
+      "subtitle": "أنشئ خطاب تقديم مقنع ومخصص باستخدام الذكاء الاصطناعي",
+      "emptyTitle": "معلومات مفقودة",
+      "emptyDesc": "لو سمحت ارفع سيرتك الذاتية وأدخل الوصف الوظيفي لإنشاء خطاب التقديم.",
+      "companyName": "اسم الشركة",
+      "companyPlaceholder": "مثال: أرامكو",
+      "hiringManager": "مدير التوظيف",
+      "managerPlaceholder": "مثال: عبدالله بن احمد",
+      "signatureName": "اسم التوقيع",
+      "signatureNamePlaceholder": "اسمك الكامل",
+      "signatureHint": "تم التعبئة تلقائياً من سيرتك الذاتية. عدّله إذا لزم الأمر.",
+      "tone": "النبرة",
+      "generate": "إنشاء خطاب التقديم",
+      "regenerate": "إعادة الإنشاء",
+      "generating": "ينشئ...",
+      "craftingTitle": "الذكاء الاصطناعي يكتب...",
+      "crafting": "يصيغ خطاب التقديم المخصص لك...",
+      "yourLetter": "خطاب التقديم الخاص بك",
+      "words": "كلمة",
+      "toneLabel": "نبرة",
+      "highlights": "أبرز النقاط المضمنة",
+      "tipLabel": "نصيحة",
+      "tipText": "قم بتحرير النص المولد لإضافة لمساتك الشخصية وضمان الدقة.",
+      "errors": {
+        "missing": "لو سمحت قدم السيرة الذاتية والوصف الوظيفي",
+        "failed": "ما زبط إنشاء خطاب التقديم"
+      },
+      "inputs": {
+        "company": "اسم الشركة",
+        "position": "المنصب",
+        "tone": "النبرة",
+        "tones": {
+          "professional": "مهني",
+          "friendly": "ودي",
+          "confident": "واثق",
+          "enthusiastic": "حماسي"
+        }
+      },
+      "result": {
+        "title": "خطاب التقديم الخاص بك",
+        "copy": "نسخ",
+        "download": "تحميل",
+        "regenerate": "إعادة الإنشاء"
+      }
+    }
+  }
+}

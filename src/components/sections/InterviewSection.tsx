@@ -255,7 +255,7 @@ export function InterviewSection({
 }: InterviewSectionProps) {
   const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
-  const { trackFeatureUse, shouldShowFeedback, dismissFeedback } = useFeatureTracking();
+  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [roleLevel, setRoleLevel] = useState('');
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
@@ -406,10 +406,10 @@ export function InterviewSection({
       }
 
       // Track feature use for feedback prompt
-      trackFeatureUse('interview');
+      const reachedFeedbackMilestone = trackFeatureUse('interview');
 
       // Check if we should show feedback modal (with 5-10 second delay for better UX)
-      if (shouldShowFeedback) {
+      if (reachedFeedbackMilestone) {
         const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
         setTimeout(() => {
           setShowFeedbackModal(true);
@@ -423,7 +423,7 @@ export function InterviewSection({
     } finally {
       setIsLoading(false);
     }
-  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, trackFeatureUse, shouldShowFeedback, t, i18n.language]);
+  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, trackFeatureUse, t, i18n.language]);
 
   // State to track which question type was selected
   const [pendingQuestionType, setPendingQuestionType] = useState<'behavioral' | 'technical'>('behavioral');

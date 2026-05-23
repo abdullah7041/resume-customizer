@@ -1,0 +1,16 @@
+{
+  "coverLetter": {
+    "title": "خطاب التقديم",
+    "generate": "إنشاء خطاب",
+    "generating": "ينشئ...",
+    "tone": "نبرة الخطاب",
+    "formal": "رسمي",
+    "friendly": "ودي",
+    "confident": "واثق",
+    "jobDescription": "وصف الوظيفة",
+    "pasteJob": "الصق وصف الوظيفة هنا",
+    "copyToClipboard": "نسخ للحافظة",
+    "copied": "تم النسخ!",
+    "downloadWord": "تحميل Word"
+  }
+}

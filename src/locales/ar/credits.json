@@ -1,0 +1,106 @@
+{
+  "credits": {
+    "balance": "الرصيد",
+    "balanceDisplay": "{{remaining}} من {{total}} رصيد",
+    "remaining": "نقطة",
+    "resetsIn": "إعادة التعيين في {{time}}",
+    "resetsInWithDate": "يتجدد خلال {{days}} يوم ({{date}})",
+    "resetsSoon": "إعادة التعيين قريباً",
+    "refresh": "تحديث الرصيد",
+    "transactionTotal": "الإجمالي {{total}}",
+    "confirm": {
+      "title": "تأكيد العملية",
+      "message": "سيتم استخدام {{cost}} نقاط.",
+      "current": "الرصيد الحالي: {{remaining}} / {{total}}",
+      "continue": "متابعة ({{cost}} نقاط)",
+      "insufficient": "رصيد غير كافٍ. تحتاج {{required}} وعندك{{available}}.",
+      "waitlistCta": "نبلغك وقت مانعلن عن الباقة"
+    },
+    "upgrade": {
+      "title": "الترقية إلى المميز",
+      "lowCredits": "رصيدك بيخلص ({{remaining}} متبقي)",
+      "lowCreditsTitle": "رصيد منخفض",
+      "comingSoon": "قريب",
+      "joinWaitlist": "انضم لقائمة الانتظار",
+      "earnTip": "نصيحة: اكسب نقاطاً إضافية من خلال انك ترسل ملاحظاتك!",
+      "emailLabel": "احصل على إشعار اذا اطلقنا برو:",
+      "waitlistSuccess": "! تم بنعلمك متى",
+      "waitlistSuccessTitle": "تم تسجيلك في القائمة!",
+      "badge": "وصول مبكر",
+      "invalidEmail": "حط بريد إلكتروني صحيح",
+      "subtitle": "طور سيرتك الذاتية بمميزات احترافية وحدود أعلى",
+      "proFeatures": "وش بتحصل عليه؟",
+      "features": {
+        "credits": "100 نقطة شهرياً",
+        "support": "دعم فني خاص",
+        "earlyAccess": "أولوية تجربة الميزات الجديدة"
+      }
+    },
+    "usage": {
+      "title": "استخدم النقاط",
+      "feedbackEarned": "من الملاحظات",
+      "referralEarned": "من الإحالات",
+      "history": "النشاط الأخير",
+      "noTransactions": "مافي نشاط بعد",
+      "time": {
+        "justNow": "الآن",
+        "minutesAgo": "قبل {{count}} د",
+        "hoursAgo": "قبل {{count}} س",
+        "daysAgo": "قبل {{count}} يوم"
+      },
+      "features": {
+        "parse_resume": "تحليل السيرة",
+        "ai_match": "مطابقة الوظيفة",
+        "vision2030": "رؤية 2030",
+        "optimize": "التحسين",
+        "interview_prep": "التحضير للمقابلة",
+        "cover_letter": "خطاب التقديم",
+        "export_template": "تصدير القالب"
+      }
+    },
+    "referralEarned": "🎉 حصلت على مكافأة إحالة!",
+    "referralEarnedDesc": "حصلت على {{creditsAdded}} نقطة من إحالة ناجحة. استمر في المشاركة!",
+    "features": {
+      "smartParsing": {
+        "label": "تحليل ذكي",
+        "desc": "استخراج السير العربية والإنجليزية بسرعة"
+      },
+      "matchScore": {
+        "label": "نسبة التوافق الذكية",
+        "desc": "احصل على درجة من 0 إلى 100 مع رؤى ذكية"
+      },
+      "aiOptimization": {
+        "label": "تحسين ذكي",
+        "desc": "إعادة الصياغة بدون اختراع بيانات غير موجودة"
+      },
+      "keywords": {
+        "label": "تحليل الكلمات المفتاحية",
+        "desc": "راجع إشارات ATS بكلمات استراتيجية"
+      },
+      "templates": {
+        "label": "قوالب احترافية",
+        "desc": "تنسيقات PDF تراعي أنظمة ATS"
+      },
+      "interview": {
+        "label": "تحضير المقابلة",
+        "desc": "أسئلة مخصصة للدور في ثوان"
+      },
+      "bulk": {
+        "label": "تحليل مجمع",
+        "desc": "قارن بين نسخ متعددة من سيرتك"
+      },
+      "coverLetter": {
+        "label": "خطابات التقديم",
+        "desc": "خطابات مخصصة لكل دور"
+      },
+      "vision2030": {
+        "label": "رؤية 2030",
+        "desc": "مواءمة مع الأولويات الوطنية السعودية"
+      },
+      "antiHallucination": {
+        "label": "ذكاء يراعي الدليل",
+        "desc": "مصمم لتجنب اختراع خبرات غير موجودة"
+      }
+    }
+  }
+}

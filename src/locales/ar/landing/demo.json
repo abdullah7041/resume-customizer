@@ -1,0 +1,23 @@
+{
+  "landing": {
+    "demo": {
+      "title": "شاهد التحول",
+      "subtitle": "شاهد كيف يحوّل الذكاء الاصطناعي النقاط العامة إلى إنجازات مؤثرة",
+      "original": "الأصلي",
+      "analyzing": "جاري التحليل",
+      "optimized": "المحسّن",
+      "originalText": "أدرت فريق المبيعات وزدت الإيرادات.",
+      "analyzingText": "تحليل: حجم الفريق، أرقام الإيرادات، السياق المحلي...",
+      "issues": {
+        "vagueImpact": "تأثير غامض",
+        "noMetrics": "لا توجد أرقام",
+        "genericPhrasing": "صياغة عامة"
+      },
+      "benefits": {
+        "quantifiableImpact": "تأثير قابل للقياس",
+        "localContext": "سياق محلي",
+        "strongActionVerbs": "أفعال عمل قوية"
+      }
+    }
+  }
+}

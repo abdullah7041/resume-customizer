@@ -1,0 +1,17 @@
+{
+  "interview": {
+    "title": "Interview Preparation",
+    "predictedQuestions": "Predicted Questions",
+    "generateQuestions": "Generate Questions",
+    "questionType": "Question Type",
+    "behavioral": "Behavioral",
+    "technical": "Technical",
+    "situational": "Situational",
+    "sampleAnswer": "Sample Answer",
+    "tips": "Answer Tips",
+    "difficulty": "Difficulty Level",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  }
+}

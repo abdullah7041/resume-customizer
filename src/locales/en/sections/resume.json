@@ -1,0 +1,16 @@
+{
+  "sections": {
+    "resume": {
+      "title": "Resume",
+      "upload": {
+        "title": "Upload Your Resume",
+        "subtitle": "Drag & drop or click to upload",
+        "formats": "PDF, DOCX up to 5MB",
+        "paste": "Or paste your resume text",
+        "pastePlaceholder": "Paste your resume content here...",
+        "analyzing": "Analyzing your resume...",
+        "success": "Resume uploaded successfully"
+      }
+    }
+  }
+}

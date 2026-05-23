@@ -29,7 +29,16 @@ vi.mock("react-i18next", () => ({
         "upload.card.processingButton": "Processing...",
         "upload.card.pasteLabel": "Or paste your resume text",
         "upload.card.pastePlaceholder": "Paste selectable resume text here...",
-        "upload.card.pasteHelp": "Pasted text will be used instead of a selected file.",
+        "upload.card.pasteHelp": "Use either a file or pasted text. The latest input will be used.",
+        "upload.card.prepareFileButton": "Prepare Selected File",
+        "upload.card.preparePastedButton": "Prepare Pasted Text",
+        "upload.errors.unsupportedType": "Only PDF, DOCX, or TXT resumes are supported.",
+        "upload.errors.unsupportedTypeHint": "Upload a PDF or DOCX, or paste plain text.",
+        "upload.errors.tooLarge": "File must be 5MB or smaller.",
+        "upload.errors.tooLargeHint": "Compress the resume and try again.",
+        "upload.errors.readFailed": "We couldn't read that text file.",
+        "upload.errors.readFailedHint": "Paste the contents manually instead.",
+        "trust.noInvention": "Watheq does not invent employers, degrees, certifications, or metrics.",
       };
       return translations[key] || key;
     },
@@ -107,7 +116,7 @@ describe("ResumeUpload", () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
     });
 
-    const submitButton = screen.getByRole("button", { name: /prepare resume/i });
+    const submitButton = screen.getByRole("button", { name: /prepare selected file/i });
 
     await act(async () => {
       fireEvent.click(submitButton);
@@ -162,7 +171,7 @@ describe("ResumeUpload", () => {
       fireEvent.change(pasteInput, { target: { value: "Experienced analyst" } });
     });
 
-    const submitButton = screen.getByRole("button", { name: /prepare resume/i });
+    const submitButton = screen.getByRole("button", { name: /prepare pasted text/i });
     await act(async () => {
       fireEvent.click(submitButton);
     });
