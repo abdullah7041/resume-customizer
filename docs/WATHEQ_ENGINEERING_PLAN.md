@@ -23,6 +23,10 @@
 
 ## Current Session Summary
 
+- Latest shipped commit reconciled: `2e3bdc9` (`Add pipeline, i18n, and AI usage updates`) adds the validation/launch plan, AI usage SQL handoff, pipeline surfaces, i18n split bundles, auth-entry analytics wiring, and centralized AI usage telemetry.
+- Launch analytics state after `2e3bdc9`: `src/services/analytics.ts` has metadata-only `signin_started` / `signup_started` helpers, and `src/hooks/useAuth.tsx` emits them from the Google OAuth boundary. Current call sites include desktop header sign-in, mobile header sign-in, and landing get-started.
+- AI usage telemetry state after `2e3bdc9`: `netlify/lib/openrouter-client.js` records provider/model/token/latency/success/error metadata through `netlify/lib/ai-usage-logger.js`; approximate cost comes from `netlify/lib/model-registry.js`; `optimize-stream` is tagged as `optimize_stream` in the current dirty tree.
+- Current open loops are validation/operation loops, not already-fixed app-code gaps: confirm production analytics volume/dashboard reporting, and observe at least one production AI request writing to `public.ai_usage_events`. The manual Supabase client-role grant hardening tracked in `docs/SUPABASE_SCHEMA_DRIFT_20260522.md` was re-checked live on 2026-05-29 and is resolved.
 - P0-1 Supabase server-client hardening status: implemented in the current dirty tree. `netlify/lib/supabase-client.ts` now requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for privileged server work, with focused tests present under `netlify/lib/__tests__/supabase-client.test.ts`.
 - `scoreFromCategoryScores()` blocker status: fixed in `netlify/lib/score-utils.ts`. Empty, partial, missing-score, malformed, or non-finite category scores now return `null` instead of becoming a synthetic baseline. Focused score and optimize caller tests passed.
 - `optimize-stream` endpoint-specific rate-limit blocker status: fixed in `netlify/lib/rate-limiter.ts`. Upstash rate limiters are now cached per endpoint config, and `optimize-stream` enforces 10 requests per 60 seconds. A new focused test file proves request 11 is rejected.
@@ -143,22 +147,28 @@
 
 ## Next Recommended Task
 
-- Title: No stabilization task is currently queued after the resolved contrast-gate mismatch.
-- Why it is next: `src/lib/styles/glass.ts` and `src/__tests__/light-mode-contrast.test.ts` are aligned; the focused contrast test, full quality gate, and production build all passed on 2026-05-20.
+- Title: Production analytics traffic smoke.
+- Why it is next: The 2026-05-29 Supabase live-state check confirmed the project is healthy and grant hardening is applied, but there has been no Supabase-backed app activity since the AI usage migration. Mixpanel/dashboard event visibility for `signin_started` / `signup_started` and the first `ai_usage_events` insert still need real production traffic or dashboard access.
 - Files likely involved:
-  - None until the next user-selected stabilization task.
+  - `docs/VALIDATION_AND_LAUNCH_DECISION_PLAN.md`
+  - `docs/AI_USAGE_EVENTS_SQL.md`
+  - Netlify production environment/dashboard, if available.
+  - Mixpanel dashboard, if available.
 - Acceptance criteria:
-  - Wait for the next user-approved task instead of starting creative backlog work or unrelated feature changes.
+  - Trigger or observe one production sign-in and sign-up intent, then confirm `signin_started` / `signup_started` in Mixpanel with expected `source` values.
+  - Trigger or observe one production AI request, then confirm a corresponding server-side `public.ai_usage_events` row.
+  - If a production AI request occurs but no row appears, inspect Netlify env/logs for `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and non-blocking `[AIUsage]` failures before changing app code.
 - Focused verification commands:
-  - None pending.
-  - Latest completed: `npm run test -- src/__tests__/light-mode-contrast.test.ts`, `npm run quality:parallel`, and `npm run build`.
-  - Exact latest result: focused contrast test passed with 8 tests; full quality gate passed with 585 tests passed and 2 skipped; build passed with existing non-blocking Vite/Rolldown warnings only.
+  - Read-only Mixpanel/dashboard review for auth-entry events.
+  - Read-only Supabase query for `public.ai_usage_events` counts and recent grouped rows.
+  - If docs are edited only, no app test gate is required; run `rtk git diff --check` before handoff.
 - What not to touch:
+  - Do not rework already-wired auth-entry analytics, referral idempotency, AI usage call sites, or Supabase grant SQL without fresh evidence of a regression.
   - Do not start creative backlog work or unrelated feature changes.
 
 ## Stabilization Priority Queue
 
-1. No queued stabilization item remains after the 2026-05-20 contrast-gate verification.
+1. Production analytics traffic smoke.
 
 ## Completed Since Last Handoff
 
@@ -319,6 +329,13 @@
   - Removed imported `generateClarifications` from two hook dependency arrays without changing clarification behavior.
   - Verified `rtk lint` reports no issues.
   - Verified `npm run quality:parallel` passed with 62 test files, 556 passed tests, 2 skipped tests, and 0 lint/type errors.
+- [x] Launch telemetry live-state verification:
+  - Used the Supabase connector against project `Resume-customizer` (`cwcjeujextkwpmzdfzdz`) on 2026-05-29.
+  - Confirmed project status is `ACTIVE_HEALTHY`, migrations include `20260520231528 add_ai_usage_events`, `20260521090252 add_job_applications`, and `20260521090446 harden_job_applications_updated_at_search_path`.
+  - Confirmed `public.ai_usage_events` exists with RLS enabled, no policies, no `anon` or `authenticated` grants, and service-role insert capability retained.
+  - Confirmed `public.job_applications` has RLS enabled, four owner-only policies, no `anon` grants, and only `SELECT`, `INSERT`, `UPDATE`, `DELETE` for `authenticated`.
+  - Confirmed `public.ai_usage_events` has zero rows and `pg_stat_user_tables.n_tup_ins = 0`; no `job_matches`, users, feedback, waitlist, credit transactions, or auth logs showed recent production app activity after the telemetry migration.
+  - No app-code instrumentation gap was verified; remaining launch telemetry work is production traffic/dashboard confirmation, not manual grant SQL.
 
 ## Continuation Checklist
 
@@ -392,7 +409,7 @@ The most important engineering theme before feature expansion is tightening trus
 - [x] P1: development-only credit mutation functions need production gating review before wider rollout.
 - [x] P2: mobile scan/upload UI previously exposed an image capture path while validation supported PDF/DOCX/TXT; visible upload affordances and regression tests now match supported parser inputs.
 - [x] P2: Arabic resume rendering/export can be forced LTR in template output, risking broken Arabic/RTL PDFs and previews.
-- [ ] P2: export behavior is fragmented between template PDF/DOCX export and optimize HTML/print export paths.
+- [x] P2: export behavior is intentionally separated between Templates PDF/DOCX export handlers and Optimize HTML/print fallback paths; export analytics should stay on actual export handlers.
 
 ## 4. P0 Tasks — Must Fix Before Feature Expansion
 
@@ -442,13 +459,12 @@ The most important engineering theme before feature expansion is tightening trus
 
 ## 8. Recommended Next Implementation Task
 
-- [ ] Fix referral idempotency before awarding referral credits:
-  - Make referral tracking atomic/idempotent in `netlify/lib/referral-manager.js`.
-  - Award credits only after a confirmed unique referral relationship write.
-  - Add focused regression coverage in `netlify/lib/__tests__/referral-manager.test.js`.
-  - Run `npm run test -- netlify/lib/__tests__/referral-manager.test.js` and `npm run test -- netlify/functions/__tests__/referral-api.test.ts`.
+- [ ] Production analytics traffic smoke:
+  - Review Mixpanel/dashboard data for the Phase 4 funnel events in `docs/VALIDATION_AND_LAUNCH_DECISION_PLAN.md`, including `signin_started` and `signup_started` source values.
+  - Trigger or observe one production AI request and confirm a corresponding `public.ai_usage_events` insert.
+  - If production traffic happens without telemetry rows, inspect Netlify env/logs before changing app code.
 
-Do not start P3 creative planning until remaining P1/P2 stabilization risks are handled or explicitly deferred by the user.
+Do not start P3 creative planning until remaining launch-readiness validation loops are handled or explicitly deferred by the user.
 
 ## 9. Verification Command Matrix
 

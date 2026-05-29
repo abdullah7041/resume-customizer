@@ -105,6 +105,17 @@ const VALID_TEMPLATE_IDS = [
   'executive-professional'
 ] as const;
 
+const ALLOWED_RENDER_REQUEST_PROTOCOLS = new Set(["about:", "data:", "blob:"]);
+
+function isAllowedRenderRequest(requestUrl: string): boolean {
+  try {
+    const parsed = new URL(requestUrl);
+    return ALLOWED_RENDER_REQUEST_PROTOCOLS.has(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 function sanitizeFilename(value: unknown): string {
   if (typeof value !== "string") return "resume-optimized";
 
@@ -177,8 +188,15 @@ const baseHandler: Handler = async (event) => {
     // Set fixed viewport matching A4 (210mm x 297mm @ 96dpi)
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-    // Allow external resources needed for rendering (fonts, images)
-    await page.setRequestInterception(false);
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      if (isAllowedRenderRequest(request.url())) {
+        void request.continue();
+        return;
+      }
+
+      void request.abort("blockedbyclient");
+    });
 
     // Disable JavaScript to prevent script execution from client-provided HTML
     await page.setJavaScriptEnabled(false);

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, createContext, useContext } from "react";
 import { resolveAuthRedirectUrl } from "../lib/auth/authRedirect";
+import { useResumeStore } from "@/lib/stores/resumeStore";
 import { analytics } from "../services/analytics";
 import { supabase } from "../services/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -20,6 +21,57 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const AUTH_SESSION_USER_STORAGE_KEY = "watheq:lastAuthUserId";
+
+const SENSITIVE_SESSION_STORAGE_KEYS = [
+  "resume-storage",
+  "watheq:resumeData",
+  "airo:resumeData",
+  "watheq:lastJobDescription",
+  "airo:lastJobDescription",
+  "watheq:vision2030Analysis",
+  "watheq:vision2030Analyzing",
+  "watheq:vision2030_state",
+  "watheq:coverLetter",
+  "airo:coverLetter",
+  "watheq:interviewQuestions",
+  "airo:interviewQuestions",
+  "watheq:bulkAnalysis",
+  "airo:bulkAnalysis",
+];
+
+const setStoredAuthUserId = (userId: string | null) => {
+  if (typeof window === "undefined") return;
+
+  if (userId) {
+    window.localStorage.setItem(AUTH_SESSION_USER_STORAGE_KEY, userId);
+    return;
+  }
+
+  window.localStorage.removeItem(AUTH_SESSION_USER_STORAGE_KEY);
+};
+
+const clearSensitiveSessionData = () => {
+  useResumeStore.getState().clearAll();
+
+  if (typeof window !== "undefined") {
+    for (const key of SENSITIVE_SESSION_STORAGE_KEYS) {
+      window.localStorage.removeItem(key);
+    }
+  }
+};
+
+const reconcileSensitiveSessionDataForUser = (currentUserId: string | null) => {
+  if (typeof window === "undefined") return;
+
+  const storedUserId = window.localStorage.getItem(AUTH_SESSION_USER_STORAGE_KEY);
+  if (storedUserId && storedUserId !== currentUserId) {
+    clearSensitiveSessionData();
+  }
+
+  setStoredAuthUserId(currentUserId);
+};
 
 const resolveRedirectUrl = () => {
   return resolveAuthRedirectUrl({
@@ -104,21 +156,30 @@ export const AuthProvider = ({ children }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user || null;
+      const currentUserId = currentUser?.id || null;
+      const previousUserId = lastUserIdRef.current;
+      if (previousUserId && previousUserId !== currentUserId) {
+        clearSensitiveSessionData();
+      }
+      reconcileSensitiveSessionDataForUser(currentUserId);
+
       setUser(currentUser);
       setLoading(false);
 
       // Track referral for new signups
-      if (currentUser && !lastUserIdRef.current && _event === "SIGNED_IN") {
+      if (currentUser && !previousUserId && _event === "SIGNED_IN") {
         trackReferralAfterSignup(currentUser.id, session?.access_token);
       }
 
-      lastUserIdRef.current = currentUser?.id || null;
+      lastUserIdRef.current = currentUserId;
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user || null;
+      const currentUserId = currentUser?.id || null;
+      reconcileSensitiveSessionDataForUser(currentUserId);
       setUser(currentUser);
-      lastUserIdRef.current = currentUser?.id || null;
+      lastUserIdRef.current = currentUserId;
       setLoading(false);
     });
 
@@ -165,11 +226,14 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearSensitiveSessionData();
+    setStoredAuthUserId(null);
+    lastUserIdRef.current = null;
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider key={user?.id || "anonymous"} value={{ user, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

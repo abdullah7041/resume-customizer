@@ -40,6 +40,7 @@ create table if not exists public.job_applications (
 
 revoke all on public.job_applications from anon;
 revoke all on public.job_applications from authenticated;
+-- Authenticated browser clients need CRUD only; do not grant REFERENCES, TRIGGER, or TRUNCATE.
 grant select, insert, update, delete on public.job_applications to authenticated;
 
 -- Indexes for common query patterns

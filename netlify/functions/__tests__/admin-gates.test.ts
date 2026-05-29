@@ -102,6 +102,20 @@ describe('protected Netlify function gates', () => {
     expect(sendWaitlistNotificationMock).not.toHaveBeenCalled();
   });
 
+  it('does not accept admin secrets from query strings', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.ADMIN_SECRET = 'strong-secret';
+
+    const response = await runHandler(
+      notifyWaitlistHandler,
+      buildEvent({ queryStringParameters: { secret: 'strong-secret' } })
+    );
+
+    expect(response.statusCode).toBe(401);
+    expect(createClientMock).not.toHaveBeenCalled();
+    expect(sendWaitlistNotificationMock).not.toHaveBeenCalled();
+  });
+
   it('blocks direct scheduled credit reset calls before service-role work', async () => {
     process.env.NODE_ENV = 'production';
 

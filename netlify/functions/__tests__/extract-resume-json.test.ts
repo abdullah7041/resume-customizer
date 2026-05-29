@@ -31,6 +31,16 @@ const mockRateLimiter = {
     withRateLimit: (_name: string, handler: Function) => handler
 };
 
+const mockSupabaseClient = {
+    auth: {
+        getUser: vi.fn()
+    }
+};
+
+const mockSupabaseClientModule = {
+    getSupabaseClient: vi.fn(() => mockSupabaseClient)
+};
+
 const mockSentry = {
     initSentry: vi.fn(),
     captureError: vi.fn(),
@@ -40,6 +50,7 @@ const mockSentry = {
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
 vi.mock('../../lib/resumeText.js', () => mockResumeText);
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
+vi.mock('../../lib/supabase-client.js', () => mockSupabaseClientModule);
 vi.mock('../../lib/sentry', () => mockSentry);
 
 // Import handler
@@ -50,6 +61,11 @@ describe('extract-resume-json function', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         process.env.OPENROUTER_API_KEY = 'test-key';
+        mockSupabaseClientModule.getSupabaseClient.mockReturnValue(mockSupabaseClient);
+        mockSupabaseClient.auth.getUser.mockResolvedValue({
+            data: { user: { id: 'user-1', email: 'user@example.com' } },
+            error: null,
+        });
     });
 
     it('rejects GET requests with 405', async () => {
@@ -64,11 +80,23 @@ describe('extract-resume-json function', () => {
         const event = {
             httpMethod: 'POST',
             body: '{}',
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
         const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(500);
         expect(result.body).toContain('Server configuration error');
+    });
+
+    it('requires authentication before parsing resume content', async () => {
+        const event = {
+            httpMethod: 'POST',
+            body: JSON.stringify({ kind: 'text', value: 'John Doe Software Engineer Python Django REST APIs cloud infrastructure' }),
+            headers: {}
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as any, mockContext) as HandlerResponse;
+        expect(result.statusCode).toBe(401);
+        expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
     });
 
     it('handles direct text input', async () => {
@@ -83,7 +111,7 @@ describe('extract-resume-json function', () => {
         const event = {
             httpMethod: 'POST',
             body: JSON.stringify({ kind: 'text', value: text }),
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
@@ -114,7 +142,7 @@ describe('extract-resume-json function', () => {
                 data: Buffer.from('fake-pdf').toString('base64'),
                 mime: 'application/pdf'
             }),
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
@@ -135,7 +163,7 @@ describe('extract-resume-json function', () => {
                 name: 'scanned.pdf',
                 data: Buffer.from('image-pdf').toString('base64')
             }),
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
@@ -156,7 +184,7 @@ describe('extract-resume-json function', () => {
                 data: Buffer.from('low-text-pdf').toString('base64'),
                 mime: 'application/pdf'
             }),
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
@@ -175,7 +203,7 @@ describe('extract-resume-json function', () => {
         const event = {
             httpMethod: 'POST',
             body: JSON.stringify({ kind: 'text', value: realisticText }),
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
@@ -201,7 +229,7 @@ describe('extract-resume-json function', () => {
                 data: Buffer.from('fake-pdf').toString('base64'),
                 mime: 'application/pdf'
             }),
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
@@ -220,7 +248,7 @@ describe('extract-resume-json function', () => {
         const event = {
             httpMethod: 'POST',
             body: JSON.stringify({ kind: 'text', value: cidGarbage }),
-            headers: { 'X-Beta-Code': 'WATHEQ01' }
+            headers: { Authorization: 'Bearer test-token' }
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;

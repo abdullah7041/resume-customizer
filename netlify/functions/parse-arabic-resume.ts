@@ -1,11 +1,14 @@
 import { Handler } from '@netlify/functions';
 import { callOpenRouter } from '../lib/openrouter-client.js';
+import { withRateLimit } from '../lib/rate-limiter.js';
+import { getSupabaseClient } from '../lib/supabase-client.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 
 initSentry();
 
 // Model tier constant for resume parsing
 const MODEL_TIER = 'lite'; // Fast, cost-effective model for parsing tasks
+const MAX_RESUME_TEXT_CHARS = 50_000;
 
 // Type definition for parsed resume structure
 interface ParsedResume {
@@ -41,9 +44,37 @@ interface ParsedResume {
   }>;
 }
 
-export const handler: Handler = async (event) => {
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method not allowed' };
+  }
+
+  const authHeader = event.headers.authorization || event.headers.Authorization;
+  if (!authHeader) {
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Authentication required. Please sign in.' }),
+    };
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Server configuration error. Please contact support.' }),
+    };
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Invalid or expired authentication token' }),
+    };
   }
 
   // Validate environment configuration
@@ -59,8 +90,16 @@ export const handler: Handler = async (event) => {
   try {
     const { resumeText, targetLanguage = 'ar' } = JSON.parse(event.body || '{}');
 
-    if (!resumeText) {
+    if (typeof resumeText !== 'string' || !resumeText.trim()) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Resume text required' }) };
+    }
+
+    if (resumeText.length > MAX_RESUME_TEXT_CHARS) {
+      return {
+        statusCode: 413,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Resume text is too large. Please shorten it and try again.' }),
+      };
     }
 
     const systemPrompt = targetLanguage === 'ar'
@@ -153,3 +192,5 @@ Return JSON with this structure:
     };
   }
 };
+
+export const handler = withRateLimit('parse-arabic-resume', baseHandler);

@@ -289,6 +289,7 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // File processing (OCR, parsing) - INCREASED from 10 to 20 for better UX
   "parse-resume": { maxRequests: 20 },
   "extract-resume-json": { maxRequests: 20 },
+  "parse-arabic-resume": { maxRequests: 20 },
 
   // AI endpoints using "Flash" model - INCREASED from 10 to 15
   "ai-match": { maxRequests: 15 },        // Flash model for matching

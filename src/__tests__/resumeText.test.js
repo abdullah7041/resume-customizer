@@ -78,6 +78,20 @@ describe("resume text helpers", () => {
     expect(text).toContain("Senior Engineer");
     expect(text).toContain("Led projects");
   });
+
+  it("rejects docx payloads whose document xml inflates past the safety limit", async () => {
+    const oversizedXml =
+      '<?xml version="1.0" encoding="UTF-8"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' +
+      `<w:p><w:r><w:t>${"A".repeat(6 * 1024 * 1024)}</w:t></w:r></w:p>` +
+      "</w:body></w:document>";
+
+    const arrayBuffer = buildDocxArchive(oversizedXml);
+    const text = await extractPlainTextFromArrayBuffer(arrayBuffer, {
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+
+    expect(text).toBe("");
+  });
 });
 
 const buildDocxArchive = (xml) => {

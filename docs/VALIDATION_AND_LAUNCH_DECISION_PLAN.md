@@ -23,6 +23,8 @@ This document defines the beta validation funnel, success metrics, and launch/no
 |-------|---------|------------|
 | `landing_viewed` | Landing page mount | `language` |
 | `get_started_clicked` | Any primary CTA | `source: hero/walkthrough/final_cta` |
+| `signin_started` | Google sign-in OAuth initiated | `source: header_desktop/header_mobile/landing_get_started` |
+| `signup_started` | Google sign-up OAuth initiated | `source: header_desktop/header_mobile/landing_get_started` |
 | `job_description_submitted` | User clicks Analyze Match | `language` |
 | `match_analysis_started` | Match API request sent | `language` |
 | `match_analysis_success` | Match API success | `score_bucket` |
@@ -38,11 +40,13 @@ This document defines the beta validation funnel, success metrics, and launch/no
 
 ---
 
-## 1.1 Missing Event Gaps
+## 1.1 Event Ownership and Open Reporting Gaps
 
-- Sign-in/sign-up intent events exist in the analytics service but still need wiring to the auth entry points before launch reporting depends on them.
+- Sign-in/sign-up intent wiring is complete in `src/hooks/useAuth.tsx`; current shipped entry points call it from desktop header sign-in, mobile header sign-in, and landing get-started. Do not re-open this as an app-code gap unless a new auth entry point is added without `intent`/`source`.
 - Export analytics is owned by the actual export handlers in `TemplatesSection.tsx`; do not add export tracking to non-export components.
 - Avoid duplicate emissions: when a Phase 4 success/failure event covers a user action, do not emit an equivalent legacy event for the same action unless the dashboard explicitly requires both.
+- Launch readiness still requires real Mixpanel/dashboard review and production event volume against the thresholds below; code instrumentation alone does not satisfy the launch criteria.
+- 2026-05-29 Supabase live-state review found no auth logs in the last 24 hours and no new Supabase-backed app activity since the AI usage migration, so `signin_started` / `signup_started` visibility remains intentionally unconfirmed until Mixpanel or production traffic is reviewed.
 
 ---
 
@@ -83,7 +87,7 @@ Session dedup: max **one feedback prompt per session**.
 | Users indicating willingness to pay | 5–10 |
 | Active testers clicking pricing-intent CTA | 20–30% |
 | Users asking for more credits/exports/packs | Observable |
-| AI cost logging working | Confirmed |
+| AI cost logging working | Pending first observed production `ai_usage_events` insert |
 | No major trust/privacy issues | Confirmed |
 
 ---

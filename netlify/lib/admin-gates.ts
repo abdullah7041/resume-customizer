@@ -28,7 +28,6 @@ function getRequestAdminSecret(event: HandlerEvent): string | undefined {
   return (
     getHeader(event, 'x-admin-secret') ||
     getHeader(event, 'x-watheq-admin-secret') ||
-    event.queryStringParameters?.secret ||
     undefined
   );
 }

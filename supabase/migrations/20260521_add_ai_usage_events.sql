@@ -18,13 +18,14 @@ create table if not exists public.ai_usage_events (
   created_at timestamptz not null default now()
 );
 
--- Enable RLS but allow service-role inserts only
+-- Enable RLS and keep browser client roles off this internal telemetry table.
 alter table public.ai_usage_events enable row level security;
 
 -- Be explicit about Data API privileges. RLS blocks rows without policies, but
 -- TRUNCATE and table exposure are privilege-level concerns, not row policies.
 revoke all on public.ai_usage_events from anon;
 revoke all on public.ai_usage_events from authenticated;
+-- Server-side logging uses SUPABASE_SERVICE_ROLE_KEY.
 grant insert on public.ai_usage_events to service_role;
 
 -- No policy for anon/users: inserts happen only from server-side service role.

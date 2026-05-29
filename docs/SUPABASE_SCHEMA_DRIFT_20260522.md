@@ -1,5 +1,7 @@
 # Supabase Schema Drift Check - 2026-05-22
 
+Last grant re-check: 2026-05-29 via Supabase connector, read-only query.
+
 ## Scope
 
 Compared the live Supabase project `Resume-customizer` (`cwcjeujextkwpmzdfzdz`) against:
@@ -32,18 +34,20 @@ No migrations were applied during this check.
 - RLS policies match the local intent: authenticated users can select, insert, update, and delete only rows where `auth.uid() = user_id`.
 - Supabase migration history contains `20260521090252 add_job_applications` and `20260521090446 harden_job_applications_updated_at_search_path`.
 
-## Drift Found
+## Drift Status
 
-The live schema matches the local table/constraint/index/trigger/RLS policy shape. The drift is in table privileges:
+Resolved as of the 2026-05-29 read-only re-check. The live schema matches the local table/constraint/index/trigger/RLS policy shape, and the previously documented client-role grant drift is no longer present:
 
-- `public.ai_usage_events` currently grants broad privileges to `anon` and `authenticated`, despite having no policies.
-- `public.job_applications` correctly revokes `anon`, but `authenticated` currently has extra `REFERENCES`, `TRIGGER`, and `TRUNCATE` privileges in addition to the intended `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+- `public.ai_usage_events` has no `anon` or `authenticated` grants; `service_role` retains server-side table privileges including `INSERT`.
+- `public.job_applications` has no `anon` grants; `authenticated` has only `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
 
-RLS prevents row access where policies do not allow it, but privilege-level operations such as `TRUNCATE` are not row-policy checks. The local SQL now explicitly revokes broad grants before granting only the intended access.
+The same read-only grant query still shows broad `service_role` grants on both tables. This note does not recommend revoking `service_role`: Watheq server-side Supabase access intentionally uses `SUPABASE_SERVICE_ROLE_KEY`.
 
-## Manual Dashboard SQL Still Needed
+RLS prevents row access where policies do not allow it, but privilege-level operations such as `TRUNCATE` are not row-policy checks. The local SQL explicitly revokes broad client-role grants before granting only the intended access.
 
-Run this in the Supabase SQL editor to bring the live privileges in line with the hardened local migrations. Do not rerun the full create-table migrations against production.
+## Manual Dashboard SQL
+
+No manual dashboard SQL is currently needed for this grant drift. Keep this block as the safe, idempotent recovery SQL only if a future read-only grant query shows the same client-role drift has returned. Do not rerun the full create-table migrations against production.
 
 ```sql
 revoke all on public.ai_usage_events from anon;
@@ -68,10 +72,12 @@ order by table_name, grantee, privilege_type;
 
 Expected result:
 
-- `ai_usage_events`: no `anon` or `authenticated` grants; `service_role` can insert.
-- `job_applications`: no `anon` grants; `authenticated` has only `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+- `ai_usage_events`: no `anon` or `authenticated` grants; `service_role` still has insert capability for server-side logging.
+- `job_applications`: no `anon` grants; `authenticated` has only `SELECT`, `INSERT`, `UPDATE`, and `DELETE`; `service_role` remains available for server-side maintenance paths.
+
+2026-05-29 live result matched this expected client-role shape.
 
 ## Notes
 
-- The local migration filenames do not match the already-applied live Supabase migration versions, so treat the local files as source-controlled reference SQL and use the manual hardening SQL above for production drift correction.
+- The local migration filenames do not match the already-applied live Supabase migration versions, so treat the local files as source-controlled reference SQL and use the recovery SQL above only if a future read-only grant check shows client-role drift has returned.
 - Supabase Security Advisor reports `RLS Enabled No Policy` for `public.ai_usage_events`. That is expected for the current service-role-only logging design.

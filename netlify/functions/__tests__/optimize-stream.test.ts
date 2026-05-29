@@ -157,6 +157,36 @@ describe('optimize-stream function', () => {
     );
   });
 
+  it('labels AI usage events for the streaming endpoint without passing content in options', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 5,
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    await response.text();
+
+    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledWith(
+      'Resume text with enough detail',
+      'Job description with enough detail',
+      'en',
+      [],
+      undefined,
+      { featureName: 'optimize_stream' }
+    );
+    const options = mockGeminiClient.optimizeResume.mock.calls[0][5];
+    expect(options).not.toHaveProperty('resumeText');
+    expect(options).not.toHaveProperty('jobText');
+    expect(options).not.toHaveProperty('messages');
+  });
+
   it('does not cache a fake zero score when the AI omits score data', async () => {
     mockRedisCache.getCached.mockResolvedValue(null);
     mockGeminiClient.optimizeResume.mockResolvedValue({

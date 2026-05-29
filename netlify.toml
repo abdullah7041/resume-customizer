@@ -73,9 +73,11 @@
 # Scheduled Functions (Cron Jobs)
 [functions."cron-reset-credits"]
   timeout = 30
+  schedule = "0 23 * * *"
 
 [functions."cron-monthly-summary"]
   timeout = 30
+  schedule = "0 7 28 * *"
 
 [[redirects]]
   from = "/*"

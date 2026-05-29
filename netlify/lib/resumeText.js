@@ -267,6 +267,8 @@ const extractPdfPlainText = async (arrayBuffer) => {
 const ZIP_END_SIGNATURE = new Uint8Array([0x50, 0x4b, 0x05, 0x06]);
 const ZIP_CENTRAL_SIGNATURE = 0x02014b50;
 const ZIP_LOCAL_SIGNATURE = 0x04034b50;
+const MAX_DOCX_COMPRESSED_XML_BYTES = 2 * 1024 * 1024;
+const MAX_DOCX_INFLATED_XML_BYTES = 5 * 1024 * 1024;
 
 const equalsSignature = (bytes, offset, signature) => {
   if (offset < 0 || offset + signature.length > bytes.length) {
@@ -286,7 +288,7 @@ const inflateWithNode = async (bytes) => {
       // Use require instead of dynamic import for serverless functions
       const { inflateRawSync } = require("zlib");
       const buffer = Buffer.from(bytes);
-      const inflated = inflateRawSync(buffer);
+      const inflated = inflateRawSync(buffer, { maxOutputLength: MAX_DOCX_INFLATED_XML_BYTES });
       return new Uint8Array(inflated.buffer, inflated.byteOffset, inflated.byteLength);
     } catch {
       return null;
@@ -318,6 +320,9 @@ const inflateWithStream = async (bytes) => {
       if (value) {
         chunks.push(value);
         total += value.length;
+        if (total > MAX_DOCX_INFLATED_XML_BYTES) {
+          throw new Error("DOCX document.xml exceeds size limit");
+        }
       }
     }
 
@@ -409,6 +414,7 @@ const findDocumentXml = async (arrayBuffer) => {
 
       const compression = view.getUint16(offset + 10, true);
       const compressedSize = view.getUint32(offset + 20, true);
+      const uncompressedSize = view.getUint32(offset + 24, true);
       const nameLength = view.getUint16(offset + 28, true);
       const extraLength = view.getUint16(offset + 30, true);
       const commentLength = view.getUint16(offset + 32, true);
@@ -427,6 +433,14 @@ const findDocumentXml = async (arrayBuffer) => {
         const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
         const dataEnd = dataStart + compressedSize;
         const compressed = bytes.subarray(dataStart, dataEnd);
+
+        if (
+          compressedSize > MAX_DOCX_COMPRESSED_XML_BYTES ||
+          uncompressedSize > MAX_DOCX_INFLATED_XML_BYTES
+        ) {
+          console.warn("[resumeText] DOCX document.xml exceeds safe extraction size");
+          return "";
+        }
 
         if (compression === 0) {
           return decodeUtf8(compressed);

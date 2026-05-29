@@ -78,7 +78,7 @@ describe('admin and scheduled function gates', () => {
     });
   });
 
-  it('accepts configured admin secrets from headers or query parameters', () => {
+  it('accepts configured admin secrets from headers only', () => {
     process.env.NODE_ENV = 'production';
     process.env.ALLOW_DEV_RESET = 'true';
     process.env.ADMIN_SECRET = 'strong-secret';
@@ -95,7 +95,11 @@ describe('admin and scheduled function gates', () => {
         buildEvent({}, { secret: 'strong-secret' }),
         'ALLOW_DEV_RESET'
       )
-    ).toEqual({ ok: true });
+    ).toEqual({
+      ok: false,
+      statusCode: 401,
+      error: 'Unauthorized',
+    });
   });
 
   it('rejects incorrect admin secrets before protected work can run', () => {

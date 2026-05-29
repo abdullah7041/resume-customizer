@@ -4,8 +4,9 @@
  * Manual trigger endpoint to send Pro plan launch notifications to waitlist users.
  *
  * Usage:
- *   GET /.netlify/functions/notify-waitlist?secret=<ADMIN_SECRET>&plan_type=pro
- *   GET /.netlify/functions/notify-waitlist?secret=<ADMIN_SECRET>&dry_run=true
+ *   GET /.netlify/functions/notify-waitlist?plan_type=pro
+ *   GET /.netlify/functions/notify-waitlist?dry_run=true
+ *   Header: x-admin-secret: <ADMIN_SECRET>
  */
 
 import { Handler } from "@netlify/functions";

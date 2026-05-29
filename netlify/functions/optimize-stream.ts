@@ -216,7 +216,9 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 3: AI Processing (this is the long step)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "ai_processing" })));
 
-        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications);
+        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, {
+          featureName: "optimize_stream",
+        });
 
         const aiDuration = Date.now() - startTime;
         console.log(`[optimize-stream] AI call took ${aiDuration}ms`);

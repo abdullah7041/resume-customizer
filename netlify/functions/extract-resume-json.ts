@@ -1,11 +1,14 @@
 import { parseResumeOnly } from "../lib/gemini-client.js";
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
+import { getSupabaseClient } from "../lib/supabase-client.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 
 initSentry();
 
 const MIN_READABLE_TEXT_LENGTH = 100;
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_TEXT_CHARS = 50_000;
 
 const UNREADABLE_FILE_RESPONSE = {
   statusCode: 422,
@@ -19,6 +22,34 @@ const UNREADABLE_FILE_RESPONSE = {
 const baseHandler = async (event: { httpMethod: string; body: string; headers: any; }) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  const authHeader = event.headers?.authorization || event.headers?.Authorization;
+  if (!authHeader) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Authentication required. Please sign in." }),
+    };
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Server configuration error. Please contact support." }),
+    };
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return {
+      statusCode: 401,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or expired authentication token" }),
+    };
   }
 
   // Check for API key before proceeding
@@ -61,6 +92,14 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       // This ensures we always have the full text regardless of Gemini's response
       try {
         const buffer = Buffer.from(data, "base64");
+        if (buffer.byteLength > MAX_FILE_BYTES) {
+          return {
+            statusCode: 413,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ error: "Uploaded file is too large. Please upload a smaller resume file." }),
+          };
+        }
+
         const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
         const mimeType = inferMimeType({ mimeType: mime, fileName: name });
         const rawExtracted = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: name });
@@ -85,6 +124,14 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       analysis = await parseResumeOnly(extractedPlainText, false);
       console.log("[extract-resume-json] parseResumeOnly returned success.");
     } else if (kind === "text" && body.value) {
+      if (typeof body.value !== "string" || body.value.length > MAX_TEXT_CHARS) {
+        return {
+          statusCode: 413,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ error: "Resume text is too large. Please shorten it and try again." }),
+        };
+      }
+
       // Defense-in-depth: reject garbage even if it slipped past the client-side check.
       // This catches cases where the client had a stale bundle or a bug in isReadableText.
       if (!isReadableText(body.value)) {
