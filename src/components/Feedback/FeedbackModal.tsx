@@ -1,462 +1,242 @@
-/**
- * FeedbackModal Component
- *
- * Modal for submitting emoji ratings and testimonials.
- * Shows success state with credit notification.
- * Only displays testimonial field for positive ratings.
- * Supports Arabic/English with RTL layout.
- */
-
-import React, { useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Sparkles, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { useUserCredits } from '../../hooks/useUserCredits';
-import { useFeatureTracking } from '../../hooks/useFeatureTracking';
+import { CheckCircle2, Loader2, MessageSquare, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../../services/supabase';
-import { analytics } from '../../services/analytics';
-import { GlassButton } from '../ui/GlassButton';
-import { glass } from '../../lib/styles/glass';
-import { cn } from '../../lib/utils/cn';
+import { cn } from '@/lib/utils/cn';
+import { submitFeedbackReport } from '@/services/feedback';
+import type { FeedbackType, SubmitFeedbackResponse } from '@/types/feedback';
 
 interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type EmojiRating = 'love' | 'happy' | 'neutral' | 'sad' | 'terrible';
-
-interface EmojiOption {
-  value: EmojiRating;
-  emoji: string;
-  labelEn: string;
-  labelAr: string;
-}
-
-const EMOJI_OPTIONS: EmojiOption[] = [
-  {
-    value: 'love',
-    emoji: '😍',
-    labelEn: 'Love it!',
-    labelAr: 'رائع!',
-  },
-  {
-    value: 'happy',
-    emoji: '😊',
-    labelEn: 'Happy',
-    labelAr: 'سعيد',
-  },
-  {
-    value: 'neutral',
-    emoji: '😐',
-    labelEn: 'Okay',
-    labelAr: 'عادي',
-  },
-  {
-    value: 'sad',
-    emoji: '😕',
-    labelEn: 'Sad',
-    labelAr: 'حزين',
-  },
-  {
-    value: 'terrible',
-    emoji: '😢',
-    labelEn: 'Bad',
-    labelAr: 'سيئ',
-  },
+const FEEDBACK_TYPES: FeedbackType[] = [
+  'bug',
+  'resume_quality',
+  'confusing_ux',
+  'feature_request',
+  'pricing_credits',
+  'other',
 ];
 
-export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
-  const { refetch: refreshCredits } = useUserCredits();
-  const { getSessionContext } = useFeatureTracking();
+const MIN_MESSAGE_LENGTH = 30;
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const { t, i18n } = useTranslation();
-  const isArabic = i18n.language === 'ar';
-
-  const [selectedRating, setSelectedRating] = useState<EmojiRating | null>(null);
-  const [testimonial, setTestimonial] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [type, setType] = useState<FeedbackType>('bug');
+  const [message, setMessage] = useState('');
+  const [rating, setRating] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successData, setSuccessData] = useState<{
-    creditAwarded: boolean;
-    creditsRemaining: number;
-    maxReached: boolean;
-  } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [betaFeedback, setBetaFeedback] = useState({
-    whatFeltWrong: '',
-    trustToApply: '',
-    wouldPay: '',
-  });
+  const [result, setResult] = useState<SubmitFeedbackResponse | null>(null);
+  const remainingCharacters = Math.max(0, MIN_MESSAGE_LENGTH - message.trim().length);
 
-  // Reset state when modal closes
-  const handleClose = useCallback(() => {
-    setSelectedRating(null);
-    setTestimonial('');
-    setSuccessData(null);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
     setError(null);
-    onClose();
-  }, [onClose]);
+  }, [isOpen]);
 
-  // Auto-close on success after 4 seconds
-  React.useEffect(() => {
-    if (successData) {
-      const timer = setTimeout(handleClose, 4000);
-      return () => clearTimeout(timer);
+  const rewardCopy = useMemo(() => {
+    if (!result) return t('feedback.reward.copy', 'Eligible first feedback earns +5 credits.');
+    if (result.creditsAwarded > 0) {
+      return t('feedback.reward.awarded', {
+        credits: result.creditsAwarded,
+        defaultValue: '+{{credits}} credits added to your balance.',
+      });
     }
-  }, [successData, handleClose]);
-
-  // Handle form submission
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!user) {
-      setError(t('feedbackModal.errors.signInRequired'));
-      return;
+    if (result.rewardStatus === 'already_awarded') {
+      return t(
+        'feedback.reward.alreadyAwarded',
+        'Thanks again. The +5 credit reward is available once per account.'
+      );
     }
+    return t('feedback.reward.notAwarded', 'Thanks. No credit reward was added for this report.');
+  }, [result, t]);
 
-    if (!selectedRating) {
-      setError(t('feedbackModal.errors.ratingRequired'));
+  if (!isOpen || !mounted) return null;
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setResult(null);
+
+    if (message.trim().length < MIN_MESSAGE_LENGTH) {
+      setError(
+        t('feedback.errors.messageTooShort', {
+          count: remainingCharacters,
+          defaultValue: 'Add {{count}} more characters so the report is useful.',
+        })
+      );
       return;
     }
 
     setIsSubmitting(true);
-    setError(null);
-
     try {
-      // Get the user's session token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.access_token) {
-        throw new Error(t('feedbackModal.errors.authToken'));
-      }
-
-      // Get session context for analytics
-      const sessionContext = getSessionContext();
-
-      // Call the submit-feedback endpoint
-      const response = await fetch('/.netlify/functions/submit-feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          emoji_rating: selectedRating,
-          testimonial_text: testimonial || undefined,
-          context: {
-            ...sessionContext,
-            beta_feedback: betaFeedback,
-          },
-        }),
+      const response = await submitFeedbackReport({
+        type,
+        message: message.trim(),
+        rating: rating ? Number(rating) : null,
       });
-
-      // Get response text first, then try to parse as JSON
-      const responseText = await response.text();
-      let result;
-
-      try {
-        result = JSON.parse(responseText);
-      } catch {
-        // If JSON parsing fails, the server likely returned an error as plain text
-        console.error('[FeedbackModal] Failed to parse response as JSON:', responseText);
-        throw new Error(`${t('feedbackModal.errors.serverPrefix')}: ${responseText.substring(0, 100)}`);
+      setResult(response);
+      setMessage('');
+      setRating('');
+      if (response.creditsAwarded > 0) {
+        window.dispatchEvent(new Event('refreshCredits'));
       }
-
-      if (!response.ok) {
-        throw new Error(result.error || t('feedbackModal.errors.submitFailed'));
-      }
-
-      if (result.success) {
-        analytics.trackFeedbackSubmitted(
-          selectedRating,
-          Boolean(testimonial),
-          (sessionContext as unknown as Record<string, unknown>)?.context_feature as string || undefined
-        );
-        setSuccessData({
-          creditAwarded: result.credit.awarded,
-          creditsRemaining: result.credit.creditsRemaining,
-          maxReached: result.credit.maxFeedbackCreditsReached || false,
-        });
-
-        // Refresh credits in header
-        await refreshCredits();
-      } else {
-        throw new Error(t('feedbackModal.errors.unexpectedResponse'));
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : t('feedbackModal.errors.submitFailed');
-      setError(errorMsg);
-      console.error('[FeedbackModal] Submit failed:', err);
+    } catch (submitError) {
+      setError(
+        getErrorMessage(
+          submitError,
+          t('feedback.errors.submitFailed', 'We could not submit feedback right now.')
+        )
+      );
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, selectedRating, testimonial, refreshCredits, getSessionContext, betaFeedback, t]);
+  };
 
-  if (!isOpen) return null;
-
-  const isPositiveRating = selectedRating === 'love' || selectedRating === 'happy';
-
-  // Success state
-  if (successData) {
-    const modal = (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-md"
-          onClick={handleClose}
-          aria-hidden="true"
-        />
-
-        {/* Success Modal */}
-        <div
-          className={cn(
-            glass.elevated,
-            'relative rounded-xl p-8 max-w-md w-full text-center',
-            isArabic && 'rtl'
-          )}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="flex flex-col items-center gap-4">
-            <CheckCircle2 className="w-16 h-16 text-emerald-400" />
-
-            <h3 className="text-xl font-bold text-white">
-              {t('feedbackModal.success.title')}
-            </h3>
-
-            {successData.creditAwarded && (
-              <div className={cn(glass.card, 'p-4 w-full border-emerald-500/30')}>
-                <p className="text-emerald-400 font-semibold mb-1">
-                  {t('feedbackModal.success.creditAdded')}
-                </p>
-                <p className="text-sm text-gray-400">
-                  {t('feedbackModal.success.currentBalance', { count: successData.creditsRemaining })}
-                </p>
-              </div>
-            )}
-
-            {successData.maxReached && (
-              <p className="text-sm text-gray-400">
-                {t('feedbackModal.success.maxReached')}
-              </p>
-            )}
-
-            <p className="text-xs text-gray-500">
-              {t('feedbackModal.success.closing')}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-
-    return createPortal(modal, document.body);
-  }
-
-  // Main feedback form
   const modal = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" dir={i18n.dir()}>
+      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-md dark:bg-black/75" onClick={onClose} />
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md"
-        onClick={handleClose}
-        aria-hidden="true"
-      />
-
-      {/* Modal */}
-      <div
-        className={cn(
-          glass.elevated,
-          'relative rounded-xl max-w-md w-full',
-          isArabic && 'rtl'
-        )}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="feedback-title"
+        aria-labelledby="feedback-modal-title"
+        className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#071f1a]"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-emerald-400" />
-            <h3 id="feedback-title" className="text-lg font-semibold text-white">
-              {t('feedbackModal.title')}
-            </h3>
+        <div className="flex items-center justify-between border-b border-gray-200 p-5 dark:border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+              <MessageSquare className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 id="feedback-modal-title" className="text-lg font-bold text-gray-950 dark:text-white">
+                {t('feedback.title', 'Send feedback')}
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-white/65">
+                {t('feedback.subtitle', 'Report a bug, confusing step, or product idea.')}
+              </p>
+            </div>
           </div>
           <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-950 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
             aria-label={t('common.closeDialog', 'Close dialog')}
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Error message */}
-          {error && (
-            <div className={cn(glass.card, 'p-3 border-red-500/30')}>
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="space-y-5 p-5">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
+            {rewardCopy}
+          </div>
 
-          {/* Emoji rating selection */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-300">
-              {t('feedbackModal.ratingLabel')}
-            </label>
-            <div className="grid grid-cols-5 gap-2">
-              {EMOJI_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setSelectedRating(option.value)}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-3 rounded-lg transition-all',
-                    selectedRating === option.value
-                      ? 'bg-emerald-500/20 border-2 border-emerald-500/50 scale-105'
-                      : cn(glass.card, 'border-transparent hover:border-emerald-500/30 hover:scale-105')
-                  )}
-                  aria-label={isArabic ? option.labelAr : option.labelEn}
-                  title={isArabic ? option.labelAr : option.labelEn}
-                >
-                  <div className="text-3xl">{option.emoji}</div>
-                  <span className="text-xs font-medium text-gray-400 text-center">
-                    {isArabic ? option.labelAr : option.labelEn}
-                  </span>
-                </button>
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-800 dark:text-white">
+              {t('feedback.fields.type', 'Type')}
+            </span>
+            <select
+              value={type}
+              onChange={(event) => setType(event.target.value as FeedbackType)}
+              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-white/15 dark:bg-black/30 dark:text-white"
+            >
+              {FEEDBACK_TYPES.map((feedbackType) => (
+                <option key={feedbackType} value={feedbackType}>
+                  {t(`feedback.types.${feedbackType}`)}
+                </option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
 
-          {/* Beta feedback questions */}
-          {selectedRating && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  {t('feedbackModal.beta.whatFeltWrong')}
-                </label>
-                <textarea
-                  value={betaFeedback.whatFeltWrong}
-                  onChange={(e) => setBetaFeedback(prev => ({ ...prev, whatFeltWrong: e.target.value.slice(0, 300) }))}
-                  placeholder={t('feedbackModal.beta.shortNotePlaceholder')}
-                  className={cn('w-full px-4 py-3 rounded-lg resize-none bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all')}
-                  rows={2}
-                  dir={isArabic ? 'rtl' : 'ltr'}
-                />
-              </div>
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-800 dark:text-white">
+              {t('feedback.fields.message', 'Message')}
+            </span>
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              rows={6}
+              maxLength={4000}
+              placeholder={t('feedback.fields.messagePlaceholder', 'Tell us what happened and what you expected instead.')}
+              className="w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-white/15 dark:bg-black/30 dark:text-white"
+            />
+            <span className={cn('mt-1 block text-xs', remainingCharacters > 0 ? 'text-gray-500 dark:text-white/55' : 'text-emerald-700 dark:text-emerald-300')}>
+              {remainingCharacters > 0
+                ? t('feedback.fields.minimumRemaining', {
+                    count: remainingCharacters,
+                    defaultValue: '{{count}} more characters needed',
+                  })
+                : t('feedback.fields.minimumMet', 'Looks detailed enough.')}
+            </span>
+          </label>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  {t('feedbackModal.beta.trustToApply')}
-                </label>
-                <div className="flex gap-2">
-                  {['yes', 'somewhat', 'no'].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setBetaFeedback(prev => ({ ...prev, trustToApply: val }))}
-                      className={cn(
-                        'flex-1 py-2 rounded-lg text-xs font-medium transition-all border',
-                        betaFeedback.trustToApply === val
-                          ? 'bg-emerald-500/20 border-emerald-500/50 text-white'
-                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-emerald-500/30'
-                      )}
-                    >
-                      {t(`feedbackModal.beta.trustOptions.${val}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-800 dark:text-white">
+              {t('feedback.fields.rating', 'Rating (optional)')}
+            </span>
+            <select
+              value={rating}
+              onChange={(event) => setRating(event.target.value)}
+              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-white/15 dark:bg-black/30 dark:text-white"
+            >
+              <option value="">{t('feedback.fields.noRating', 'No rating')}</option>
+              {[1, 2, 3, 4, 5].map((value) => (
+                <option key={value} value={value}>
+                  {t('feedback.fields.ratingValue', {
+                    count: value,
+                    defaultValue: '{{count}} / 5',
+                  })}
+                </option>
+              ))}
+            </select>
+          </label>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  {t('feedbackModal.beta.wouldPay')}
-                </label>
-                <div className="flex gap-2">
-                  {['yes', 'maybe', 'no'].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setBetaFeedback(prev => ({ ...prev, wouldPay: val }))}
-                      className={cn(
-                        'flex-1 py-2 rounded-lg text-xs font-medium transition-all border',
-                        betaFeedback.wouldPay === val
-                          ? 'bg-emerald-500/20 border-emerald-500/50 text-white'
-                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-emerald-500/30'
-                      )}
-                    >
-                      {t(`feedbackModal.beta.payOptions.${val}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {error && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-200">
+              {error}
             </div>
           )}
 
-          {/* Testimonial textarea (only for positive ratings) */}
-          {selectedRating && isPositiveRating && (
-            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-              <label htmlFor="testimonial" className="block text-sm font-medium text-gray-300">
-                {t('feedbackModal.testimonialLabel')}
-              </label>
-              <textarea
-                id="testimonial"
-                value={testimonial}
-                onChange={(e) => setTestimonial(e.target.value.slice(0, 500))}
-                placeholder={t('feedbackModal.testimonialPlaceholder')}
-                className={cn(
-                  'w-full px-4 py-3 rounded-lg resize-none',
-                  'bg-white/5 border border-white/10',
-                  'text-white placeholder-gray-500',
-                  'focus:outline-none focus:ring-2 focus:ring-emerald-500/50',
-                  'transition-all'
-                )}
-                rows={3}
-                dir={isArabic ? 'rtl' : 'ltr'}
-              />
-              <div className={cn(
-                'text-xs text-gray-400',
-                isArabic ? 'text-left' : 'text-right'
-              )}>
-                {testimonial.length}/500
-              </div>
+          {result && (
+            <div role="status" className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{t('feedback.success', 'Thanks. Your feedback was submitted.')}</span>
             </div>
           )}
 
-          {/* Submit button */}
-          <div className="flex gap-3 pt-4">
-            <GlassButton
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
               type="button"
-              variant="secondary"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="flex-1"
+              onClick={onClose}
+              className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-white/15 dark:text-white/80 dark:hover:bg-white/10"
             >
-              {t('feedbackModal.skip')}
-            </GlassButton>
-            <GlassButton
+              {t('common.cancel', 'Cancel')}
+            </button>
+            <button
               type="submit"
-              variant="primary"
-              disabled={isSubmitting || !selectedRating}
-              isLoading={isSubmitting}
-              className="flex-1"
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting
-                ? t('common.submitting')
-                : t('feedbackModal.submit')
-              }
-            </GlassButton>
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isSubmitting ? t('feedback.submitting', 'Submitting...') : t('feedback.submit', 'Submit feedback')}
+            </button>
           </div>
-
-          {/* Info text */}
-          <p className="text-xs text-gray-500 text-center">
-            {t('feedbackModal.creditHint')}
-          </p>
         </form>
       </div>
     </div>
   );
 
   return createPortal(modal, document.body);
-};
+}

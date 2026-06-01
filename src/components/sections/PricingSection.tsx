@@ -60,12 +60,12 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
             <div className="space-y-6">
                 {/* Section Header */}
                 <div className="text-center space-y-4">
-                    <h2 className="inline-block text-3xl sm:text-4xl lg:text-5xl font-bold drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]">
-                        <span className="text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 dark:bg-clip-text dark:text-transparent pb-1">
+                    <h2 className="inline-block text-3xl sm:text-4xl lg:text-5xl font-bold text-[#171717] dark:drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+                        <span className="dark:bg-gradient-to-r dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 dark:bg-clip-text dark:text-transparent pb-1">
                             {t('pricing.title')}
                         </span>
                     </h2>
-                    <p className="text-lg sm:text-xl font-medium text-white dark:text-white/80 max-w-2xl mx-auto drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
+                    <p className="text-lg sm:text-xl font-medium text-slate-600 dark:text-white/80 max-w-2xl mx-auto dark:drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
                         {t('pricing.subtitle')}
                     </p>
                 </div>
@@ -194,27 +194,27 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
 
             {/* Pricing Intent — Help us decide */}
             <div className="mt-10 text-center">
-                <p className="text-sm font-medium text-white/70 mb-4">
+                <p className="text-sm font-medium text-slate-500 dark:text-white/70 mb-4">
                     {t('pricing.intent.title', 'Help us decide pricing')}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <button
                         type="button"
                         onClick={() => handlePricingIntent('pack_9_sar')}
-                        className="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4 transition-colors"
+                        className="text-sm font-semibold text-[#0c5963] underline underline-offset-4 transition-colors hover:text-[#2b8994] dark:text-emerald-300 dark:hover:text-emerald-200"
                     >
                         {t('pricing.intent.pack9Sar', 'Would you pay 9 SAR per application pack?')}
                     </button>
-                    <span className="hidden sm:inline text-white/30">|</span>
+                    <span className="hidden text-slate-300 dark:text-white/30 sm:inline">|</span>
                     <button
                         type="button"
                         onClick={() => handlePricingIntent('monthly_29_sar')}
-                        className="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4 transition-colors"
+                        className="text-sm font-semibold text-[#0c5963] underline underline-offset-4 transition-colors hover:text-[#2b8994] dark:text-emerald-300 dark:hover:text-emerald-200"
                     >
                         {t('pricing.intent.monthly29Sar', 'Would you pay 29 SAR/month while job searching?')}
                     </button>
                 </div>
-                <p className="mt-3 text-xs text-white/40">
+                <p className="mt-3 text-xs text-slate-500 dark:text-white/40">
                     {t('pricing.intent.notChargingYet', 'Paid plans are not launched yet — this helps us decide what to build.')}
                 </p>
             </div>

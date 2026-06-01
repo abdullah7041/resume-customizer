@@ -72,6 +72,10 @@ vi.mock('../components/Layout/MainContent', () => ({
   default: () => <main>Workspace</main>,
 }));
 
+vi.mock('../pages/AdminFeedbackPage', () => ({
+  AdminFeedbackPage: () => <main>Admin feedback dashboard</main>,
+}));
+
 vi.mock('../components/compliance/ConsentBanner', () => ({
   ConsentBanner: () => <div>Consent Banner</div>,
 }));
@@ -155,6 +159,14 @@ describe('App compliance navigation', () => {
     render(<App />);
 
     expect(screen.getByRole('heading', { name: /terms of service/i })).toBeInTheDocument();
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+  });
+
+  it('renders the admin feedback dashboard at /admin/feedback', () => {
+    setPath('/admin/feedback');
+    render(<App />);
+
+    expect(screen.getByText('Admin feedback dashboard')).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
   });
 });

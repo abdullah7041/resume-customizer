@@ -83,7 +83,7 @@ export const emailTemplates = {
       </div>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-        <strong>Tip:</strong> You can earn more credits by inviting friends (5 bonus credits per referral) or leaving feedback on your experience.
+        <strong>Tip:</strong> You can earn more credits by inviting friends (5 bonus credits per referral).
       </p>
 
       <a href="https://watheqai.app" class="cta-button">Start Using Your Credits</a>
@@ -112,7 +112,7 @@ What you can do with your credits:
 - Interview Preparation (3 credits) - Generate likely interview questions
 - Cover Letter Generation (4 credits) - Create tailored cover letters
 
-Tip: You can earn more credits by inviting friends (5 bonus credits per referral) or leaving feedback.
+Tip: You can earn more credits by inviting friends (5 bonus credits per referral).
 
 Start optimizing: https://watheqai.app
 

@@ -543,7 +543,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     items.map((item, idx) => (
                         <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
                             <div>
-                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.name || 'Untitled Project'}</h4>
+                            <h4 className="font-semibold text-gray-900 dark:text-white">{item.name || (isArabic ? 'مشروع بدون عنوان' : 'Untitled Project')}</h4>
                                 <p className="text-sm text-gray-500 dark:text-white/60 line-clamp-1">{item.description}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -663,7 +663,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         label={isArabic ? 'المستوى' : 'Fluency'}
                         value={item.fluency || ''}
                         onChange={(e) => updateItem('languages', editingIndex, 'fluency', e.target.value)}
-                        placeholder="Native, Fluent, Beginner..."
+                        placeholder={isArabic ? 'لغة أم، متقدم، مبتدئ...' : 'Native, Fluent, Beginner...'}
                     />
                     <div className="flex justify-end pt-2">
                         <GlassButton variant="primary" onClick={() => setEditingIndex(null)}>
@@ -680,7 +680,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     items.map((item, idx) => (
                         <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
                             <div>
-                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.language || 'Unknown'}</h4>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">{item.language || (isArabic ? 'غير محدد' : 'Unknown')}</h4>
                                 <p className="text-sm text-gray-500 dark:text-white/60">{item.fluency}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -726,9 +726,9 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                 />
 
                 <div className="flex justify-between text-xs text-gray-500 dark:text-white/50">
-                    <span>Small (80%)</span>
-                    <span>Standard (100%)</span>
-                    <span>Large (120%)</span>
+                    <span>{isArabic ? 'صغير (80%)' : 'Small (80%)'}</span>
+                    <span>{isArabic ? 'قياسي (100%)' : 'Standard (100%)'}</span>
+                    <span>{isArabic ? 'كبير (120%)' : 'Large (120%)'}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-white/50 pt-2 border-t border-gray-200 dark:border-white/5">
                     {isArabic

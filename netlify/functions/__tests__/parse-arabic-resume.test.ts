@@ -93,8 +93,16 @@ describe('parse-arabic-resume function', () => {
     expect(mockOpenRouter.callOpenRouter).toHaveBeenCalledWith(
       'lite',
       expect.any(Array),
-      null,
-      expect.objectContaining({ featureName: 'parse_arabic_resume' })
+      expect.objectContaining({
+        required: expect.arrayContaining(['personalInfo', 'skills']),
+      }),
+      expect.objectContaining({
+        featureName: 'parse_arabic_resume',
+        schemaName: 'parse_arabic_resume',
+      })
     );
+    const messages = mockOpenRouter.callOpenRouter.mock.calls[0][1];
+    expect(messages[0].content).toContain('untrusted data');
+    expect(messages[1].content).toContain('<resume_text>');
   });
 });

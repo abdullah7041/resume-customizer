@@ -43,14 +43,13 @@ import sections_bulk from './sections/bulk.json';
 import sections_bulkAnalysis from './sections/bulkAnalysis.json';
 import sections_coverLetter from './sections/coverLetter.json';
 import rateLimit from './rateLimit.json';
-import feedback from './feedback.json';
-import feedbackModal from './feedbackModal.json';
 import showcase from './showcase.json';
 import beta from './beta.json';
 import quota from './quota.json';
 import resume from './resume.json';
 import tour from './tour.json';
 import pipeline from './pipeline.json';
+import feedback from './feedback.json';
 
 import { deepMerge } from '../utils';
 
@@ -100,14 +99,13 @@ const sources = [
     sections_bulkAnalysis,
     sections_coverLetter,
     rateLimit,
-    feedback,
-    feedbackModal,
     showcase,
     beta,
     quota,
     resume,
     tour,
     pipeline,
+    feedback,
 ];
 
 export default deepMerge(sources);

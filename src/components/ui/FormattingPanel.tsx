@@ -96,7 +96,7 @@ function SliderControl({ label, value, min, max, step, unit, onChange }: SliderC
 }
 
 export function FormattingPanel() {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const [isExpanded, setIsExpanded] = useState(true);
 
@@ -135,7 +135,7 @@ export function FormattingPanel() {
                                 exit={{ opacity: 0, width: 0 }}
                                 className="font-semibold text-gray-900 dark:text-white whitespace-nowrap overflow-hidden"
                             >
-                                {isArabic ? 'التنسيق' : 'Formatting'}
+                                {t('templates.formatting.title', 'Formatting')}
                             </motion.span>
                         )}
                     </AnimatePresence>
@@ -163,14 +163,14 @@ export function FormattingPanel() {
                             <div className="flex items-center gap-2 text-gray-500 dark:text-white/50">
                                 <Type className="w-4 h-4" />
                                 <span className="text-xs font-medium uppercase tracking-wider">
-                                    {isArabic ? 'تنسيق الخط' : 'Font Formatting'}
+                                    {t('templates.formatting.fontFormatting', 'Font Formatting')}
                                 </span>
                             </div>
 
                             {/* Font Style Dropdown */}
                             <div className="space-y-2">
                                 <label className="text-sm text-gray-700 dark:text-white/70">
-                                    {isArabic ? 'نوع الخط' : 'Font Style'}
+                                    {t('templates.formatting.fontStyle', 'Font Style')}
                                 </label>
                                 <motion.select
                                     whileTap={{ scale: 0.98 }}
@@ -187,7 +187,7 @@ export function FormattingPanel() {
                             </div>
 
                             <SliderControl
-                                label={isArabic ? 'حجم الخط' : 'Font Size'}
+                                label={t('templates.formatting.fontSize', 'Font Size')}
                                 value={displayOptions.baseFontSize}
                                 min={9}
                                 max={12}
@@ -197,7 +197,7 @@ export function FormattingPanel() {
                             />
 
                             <SliderControl
-                                label={isArabic ? 'حجم العناوين' : 'Heading Size'}
+                                label={t('templates.formatting.headingSize', 'Heading Size')}
                                 value={displayOptions.headingSize}
                                 min={12}
                                 max={18}
@@ -215,12 +215,12 @@ export function FormattingPanel() {
                             <div className="flex items-center gap-2 text-gray-500 dark:text-white/50">
                                 <FileText className="w-4 h-4" />
                                 <span className="text-xs font-medium uppercase tracking-wider">
-                                    {isArabic ? 'تنسيق المستند' : 'Document Formatting'}
+                                    {t('templates.formatting.documentFormatting', 'Document Formatting')}
                                 </span>
                             </div>
 
                             <SliderControl
-                                label={isArabic ? 'تباعد الأقسام' : 'Section Spacing'}
+                                label={t('templates.formatting.sectionSpacing', 'Section Spacing')}
                                 value={displayOptions.sectionSpacing}
                                 min={4}
                                 max={20}
@@ -230,7 +230,7 @@ export function FormattingPanel() {
                             />
 
                             <SliderControl
-                                label={isArabic ? 'تباعد الفقرات' : 'Paragraph Spacing'}
+                                label={t('templates.formatting.paragraphSpacing', 'Paragraph Spacing')}
                                 value={displayOptions.paragraphSpacing}
                                 min={2}
                                 max={12}
@@ -240,7 +240,7 @@ export function FormattingPanel() {
                             />
 
                             <SliderControl
-                                label={isArabic ? 'تباعد الأسطر' : 'Line Spacing'}
+                                label={t('templates.formatting.lineSpacing', 'Line Spacing')}
                                 value={displayOptions.lineHeight}
                                 min={1.2}
                                 max={2.0}
@@ -250,7 +250,7 @@ export function FormattingPanel() {
                             />
 
                             <SliderControl
-                                label={isArabic ? 'الهوامش العلوية/السفلية' : 'Top & Bottom Margin'}
+                                label={t('templates.formatting.verticalMargins', 'Top & Bottom Margin')}
                                 value={displayOptions.marginTop}
                                 min={0.3}
                                 max={1.0}
@@ -260,7 +260,7 @@ export function FormattingPanel() {
                             />
 
                             <SliderControl
-                                label={isArabic ? 'الهوامش الجانبية' : 'Side Margins'}
+                                label={t('templates.formatting.sideMargins', 'Side Margins')}
                                 value={displayOptions.marginSide}
                                 min={0.3}
                                 max={1.0}
@@ -272,7 +272,7 @@ export function FormattingPanel() {
                             {/* Page Break Toggle */}
                             <div className="flex items-center justify-between pt-2">
                                 <span className="text-sm text-gray-700 dark:text-white/70">
-                                    {isArabic ? 'إظهار فواصل الصفحات' : 'Show Page Breaks'}
+                                    {t('templates.formatting.showPageBreaks', 'Show Page Breaks')}
                                 </span>
                                 <motion.button
                                     whileTap={{ scale: 0.9 }}
@@ -306,7 +306,7 @@ export function FormattingPanel() {
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 btn-metal rounded-lg text-white text-sm font-medium"
                             >
                                 <Sparkles className="w-4 h-4" />
-                                {isArabic ? 'ضبط تلقائي مُحسَّن' : 'Recommended Fit'}
+                                {t('templates.formatting.recommendedFit', 'Recommended Fit')}
                             </motion.button>
 
                             {/* Reset Button - Secondary */}
@@ -318,7 +318,7 @@ export function FormattingPanel() {
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2 btn-spring neu-inset hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-gray-600 hover:text-gray-900 dark:text-white/70 dark:hover:text-white text-sm"
                             >
                                 <RotateCcw className="w-4 h-4" />
-                                {isArabic ? 'إعادة تعيين' : 'Reset to Defaults'}
+                                {t('templates.formatting.reset', 'Reset to Defaults')}
                             </motion.button>
                         </div>
                     </motion.div>

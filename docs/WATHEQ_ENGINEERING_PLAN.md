@@ -26,7 +26,7 @@
 - Latest shipped commit reconciled: `2e3bdc9` (`Add pipeline, i18n, and AI usage updates`) adds the validation/launch plan, AI usage SQL handoff, pipeline surfaces, i18n split bundles, auth-entry analytics wiring, and centralized AI usage telemetry.
 - Launch analytics state after `2e3bdc9`: `src/services/analytics.ts` has metadata-only `signin_started` / `signup_started` helpers, and `src/hooks/useAuth.tsx` emits them from the Google OAuth boundary. Current call sites include desktop header sign-in, mobile header sign-in, and landing get-started.
 - AI usage telemetry state after `2e3bdc9`: `netlify/lib/openrouter-client.js` records provider/model/token/latency/success/error metadata through `netlify/lib/ai-usage-logger.js`; approximate cost comes from `netlify/lib/model-registry.js`; `optimize-stream` is tagged as `optimize_stream` in the current dirty tree.
-- Current open loops are validation/operation loops, not already-fixed app-code gaps: confirm production analytics volume/dashboard reporting, and observe at least one production AI request writing to `public.ai_usage_events`. The manual Supabase client-role grant hardening tracked in `docs/SUPABASE_SCHEMA_DRIFT_20260522.md` was re-checked live on 2026-05-29 and is resolved.
+- Current open loops are validation/operation loops, not already-fixed app-code gaps: confirm production analytics volume/dashboard reporting, and observe at least one production AI request writing to `public.ai_usage_events`. The manual Supabase client-role grant hardening tracked in `docs/SUPABASE_SCHEMA_DRIFT_20260522.md` was re-checked live on 2026-06-02 and is resolved.
 - P0-1 Supabase server-client hardening status: implemented in the current dirty tree. `netlify/lib/supabase-client.ts` now requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for privileged server work, with focused tests present under `netlify/lib/__tests__/supabase-client.test.ts`.
 - `scoreFromCategoryScores()` blocker status: fixed in `netlify/lib/score-utils.ts`. Empty, partial, missing-score, malformed, or non-finite category scores now return `null` instead of becoming a synthetic baseline. Focused score and optimize caller tests passed.
 - `optimize-stream` endpoint-specific rate-limit blocker status: fixed in `netlify/lib/rate-limiter.ts`. Upstash rate limiters are now cached per endpoint config, and `optimize-stream` enforces 10 requests per 60 seconds. A new focused test file proves request 11 is rejected.
@@ -148,7 +148,7 @@
 ## Next Recommended Task
 
 - Title: Production analytics traffic smoke.
-- Why it is next: The 2026-05-29 Supabase live-state check confirmed the project is healthy and grant hardening is applied, but there has been no Supabase-backed app activity since the AI usage migration. Mixpanel/dashboard event visibility for `signin_started` / `signup_started` and the first `ai_usage_events` insert still need real production traffic or dashboard access.
+- Why it is next: The 2026-06-02 Supabase live-state check confirmed the project is healthy and grant hardening is applied, but there is still no evidence of qualifying production traffic after the AI usage migration. Mixpanel/dashboard event visibility for `signin_started` / `signup_started` and the first `ai_usage_events` insert still need real production traffic or dashboard access.
 - Files likely involved:
   - `docs/VALIDATION_AND_LAUNCH_DECISION_PLAN.md`
   - `docs/AI_USAGE_EVENTS_SQL.md`
@@ -161,6 +161,7 @@
 - Focused verification commands:
   - Read-only Mixpanel/dashboard review for auth-entry events.
   - Read-only Supabase query for `public.ai_usage_events` counts and recent grouped rows.
+  - Read-only Supabase auth/log/table check to confirm whether qualifying production traffic actually occurred before treating zero telemetry rows as an app-code gap.
   - If docs are edited only, no app test gate is required; run `rtk git diff --check` before handoff.
 - What not to touch:
   - Do not rework already-wired auth-entry analytics, referral idempotency, AI usage call sites, or Supabase grant SQL without fresh evidence of a regression.
@@ -336,6 +337,13 @@
   - Confirmed `public.job_applications` has RLS enabled, four owner-only policies, no `anon` grants, and only `SELECT`, `INSERT`, `UPDATE`, `DELETE` for `authenticated`.
   - Confirmed `public.ai_usage_events` has zero rows and `pg_stat_user_tables.n_tup_ins = 0`; no `job_matches`, users, feedback, waitlist, credit transactions, or auth logs showed recent production app activity after the telemetry migration.
   - No app-code instrumentation gap was verified; remaining launch telemetry work is production traffic/dashboard confirmation, not manual grant SQL.
+- [x] Post-weekend launch telemetry re-check:
+  - Used the Supabase connector against project `Resume-customizer` (`cwcjeujextkwpmzdfzdz`) on 2026-06-02 in read-only mode.
+  - Confirmed project status is still `ACTIVE_HEALTHY`.
+  - Confirmed `public.ai_usage_events` still has zero rows, no latest event timestamp, and `pg_stat_user_tables.n_tup_ins = 0`.
+  - Confirmed `public.job_applications` still has zero rows; auth logs for the prior 24 hours were empty; `auth.users` newest row is from 2026-04-07; adjacent persisted app activity reviewed through `job_matches`, `credit_transactions`, `feedback`, and `user_credits` topped out on 2026-05-09.
+  - Re-confirmed grant/RLS posture: `public.ai_usage_events` has no `anon` or `authenticated` grants, `service_role` retains server-side privileges, both `ai_usage_events` and `job_applications` have RLS enabled, and `job_applications` keeps the four authenticated owner-only policies.
+  - No production traffic evidence was found, so future runs should treat traffic/dashboard observation as the blocker unless they can prove a production AI request occurred without an `ai_usage_events` row.
 
 ## Continuation Checklist
 

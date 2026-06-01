@@ -105,7 +105,16 @@
           "projects": "Projects highlighted effectively"
         }
       },
-      "optimizedResumeWarning": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}."
+      "optimizedResumeWarning": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.",
+      "diff": {
+        "title": "View Changes",
+        "appliedCount_one": "{{count}} optimization applied",
+        "appliedCount_other": "{{count}} optimizations applied",
+        "added": "Added",
+        "improved": "Improved",
+        "empty": "Empty",
+        "noChanges": "No changes applied yet"
+      }
     }
   }
 }

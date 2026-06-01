@@ -21,13 +21,27 @@
     },
     "scoreBreakdown": {
       "title": "Score Breakdown",
+      "subtitle": "Detailed analysis of your resume match score",
+      "outOf": "Out of 100",
       "before": "Current",
       "after": "Optimized",
       "experienceMatch": "Experience Match",
       "skillCoverage": "Skill Coverage",
       "keywordMatch": "Keyword Match",
       "gapPenalties": "Gap Penalties",
-      "finalScore": "Final Score"
+      "finalScore": "Final Score",
+      "categories": {
+        "hardSkills": "Hard Skills",
+        "experience": "Experience",
+        "education": "Education",
+        "softSkills": "Soft Skills"
+      },
+      "categoryDescriptions": {
+        "hardSkills": "Measures the match of technical keywords and tools mentioned in the job description.",
+        "experience": "Analyzes past job titles, years of experience, and relevance to the target role.",
+        "education": "Checks academic level and field of study to ensure requirements are met.",
+        "softSkills": "Detects behavioral, leadership, and communication traits from your resume context."
+      }
     },
     "hiddenMatches": {
       "title": "Hidden Advantages",

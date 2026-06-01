@@ -29,7 +29,9 @@ function formatContent(value: string | string[]): string {
   return value;
 }
 
-function DiffSection({ opt, lang }: { opt: OptimizationResult; lang: string }) {
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function DiffSection({ opt, lang, t }: { opt: OptimizationResult; lang: string; t: Translate }) {
   const isAr = lang === 'ar';
   const label = SECTION_TYPE_LABELS[opt.sectionType] ?? { en: opt.sectionType, ar: opt.sectionType };
   const originalText = formatContent(opt.original);
@@ -47,11 +49,11 @@ function DiffSection({ opt, lang }: { opt: OptimizationResult; lang: string }) {
         </h3>
         {isAdded ? (
           <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-            {isAr ? 'مُضاف' : 'Added'}
+            {t('sections.optimize.diff.added', 'Added')}
           </span>
         ) : (
           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-            {isAr ? 'مُحسَّن' : 'Improved'}
+            {t('sections.optimize.diff.improved', 'Improved')}
           </span>
         )}
       </div>
@@ -60,17 +62,17 @@ function DiffSection({ opt, lang }: { opt: OptimizationResult; lang: string }) {
       <div className="hidden md:grid md:grid-cols-2 gap-3">
         <div className="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 p-4">
           <p className="text-xs font-medium text-gray-400 dark:text-white/50 mb-2 uppercase">
-            {isAr ? 'الأصلي' : 'Original'}
+            {t('sections.optimize.original', 'Original')}
           </p>
           <p className="text-sm text-gray-600 dark:text-white/70 whitespace-pre-line leading-relaxed">
             {Array.isArray(opt.original) ? opt.original.map((item, i) => (
               <span key={i} className="block">• {item}</span>
-            )) : originalText || <span className="italic text-gray-400 dark:text-white/30">{isAr ? 'فارغ' : 'Empty'}</span>}
+            )) : originalText || <span className="italic text-gray-400 dark:text-white/30">{t('sections.optimize.diff.empty', 'Empty')}</span>}
           </p>
         </div>
         <div className={`rounded-lg border p-4 ${isAdded ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
           <p className="text-xs font-medium text-emerald-400/70 mb-2 uppercase">
-            {isAr ? 'المحسّن' : 'Optimized'}
+            {t('sections.optimize.optimized', 'Optimized')}
           </p>
           <p className="text-sm text-gray-800 dark:text-white/90 whitespace-pre-line leading-relaxed">
             {Array.isArray(opt.optimized) ? opt.optimized.map((item, i) => (
@@ -84,17 +86,17 @@ function DiffSection({ opt, lang }: { opt: OptimizationResult; lang: string }) {
       <div className="md:hidden space-y-2">
         <div className="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 p-3">
           <p className="text-xs font-medium text-gray-400 dark:text-white/50 mb-1 uppercase">
-            {isAr ? 'الأصلي' : 'Original'}
+            {t('sections.optimize.original', 'Original')}
           </p>
           <p className="text-sm text-gray-600 dark:text-white/70 whitespace-pre-line leading-relaxed">
             {Array.isArray(opt.original) ? opt.original.map((item, i) => (
               <span key={i} className="block">• {item}</span>
-            )) : originalText || <span className="italic text-gray-400 dark:text-white/30">{isAr ? 'فارغ' : 'Empty'}</span>}
+            )) : originalText || <span className="italic text-gray-400 dark:text-white/30">{t('sections.optimize.diff.empty', 'Empty')}</span>}
           </p>
         </div>
         <div className={`rounded-lg border-l-4 border-emerald-500/50 ${isAdded ? 'bg-emerald-500/10' : 'bg-emerald-500/5'} p-3`}>
           <p className="text-xs font-medium text-emerald-400/70 mb-1 uppercase">
-            {isAr ? 'المحسّن' : 'Optimized'}
+            {t('sections.optimize.optimized', 'Optimized')}
           </p>
           <p className="text-sm text-gray-800 dark:text-white/90 whitespace-pre-line leading-relaxed">
             {Array.isArray(opt.optimized) ? opt.optimized.map((item, i) => (
@@ -108,7 +110,7 @@ function DiffSection({ opt, lang }: { opt: OptimizationResult; lang: string }) {
 }
 
 export default function ResumeDiffView({ isOpen, onClose, optimizations }: ResumeDiffViewProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [mobileView, setMobileView] = useState<'original' | 'optimized'>('optimized');
   const lang = i18n.language;
   const isAr = lang === 'ar';
@@ -135,12 +137,10 @@ export default function ResumeDiffView({ isOpen, onClose, optimizations }: Resum
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/10 px-6 py-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {isAr ? 'عرض التغييرات' : 'View Changes'}
+              {t('sections.optimize.diff.title', 'View Changes')}
             </h2>
             <p className="text-sm text-gray-400 dark:text-white/50 mt-0.5">
-              {isAr
-                ? `${appliedOpts.length} تحسين مطبّق`
-                : `${appliedOpts.length} optimization${appliedOpts.length !== 1 ? 's' : ''} applied`}
+              {t('sections.optimize.diff.appliedCount', { count: appliedOpts.length })}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -150,13 +150,13 @@ export default function ResumeDiffView({ isOpen, onClose, optimizations }: Resum
                 onClick={() => setMobileView('original')}
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors ${mobileView === 'original' ? 'bg-gray-200 dark:bg-white/15 text-gray-900 dark:text-white' : 'text-gray-400 dark:text-white/50'}`}
               >
-                {isAr ? 'الأصلي' : 'Original'}
+                {t('sections.optimize.original', 'Original')}
               </button>
               <button
                 onClick={() => setMobileView('optimized')}
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors ${mobileView === 'optimized' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-white/50'}`}
               >
-                {isAr ? 'المحسّن' : 'Optimized'}
+                {t('sections.optimize.optimized', 'Optimized')}
               </button>
             </div>
             <button onClick={onClose} className="p-2 text-gray-400 dark:text-white/50 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 rounded-lg transition-colors">
@@ -170,7 +170,7 @@ export default function ResumeDiffView({ isOpen, onClose, optimizations }: Resum
           {appliedOpts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-white/40">
               <ArrowLeftRight className="w-12 h-12 mb-4 opacity-50" />
-              <p className="text-lg">{isAr ? 'لا توجد تغييرات مطبّقة بعد' : 'No changes applied yet'}</p>
+              <p className="text-lg">{t('sections.optimize.diff.noChanges', 'No changes applied yet')}</p>
             </div>
           ) : (
             /* Desktop: full diff sections, Mobile: filtered by toggle */
@@ -181,7 +181,7 @@ export default function ResumeDiffView({ isOpen, onClose, optimizations }: Resum
                   const opts = grouped[type];
                   if (!opts) return null;
                   return opts.map(opt => (
-                    <DiffSection key={opt.sectionId} opt={opt} lang={lang} />
+                    <DiffSection key={opt.sectionId} opt={opt} lang={lang} t={t} />
                   ));
                 })}
               </div>
@@ -217,14 +217,14 @@ export default function ResumeDiffView({ isOpen, onClose, optimizations }: Resum
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'bg-blue-500/20 text-blue-400'
                             }`}>
-                              {isAdded ? (isAr ? 'مُضاف' : 'Added') : (isAr ? 'مُحسَّن' : 'Improved')}
+                              {isAdded ? t('sections.optimize.diff.added', 'Added') : t('sections.optimize.diff.improved', 'Improved')}
                             </span>
                           )}
                         </div>
                         <p className={`text-sm whitespace-pre-line leading-relaxed ${isOptimizedView ? 'text-gray-800 dark:text-white/90' : 'text-gray-600 dark:text-white/70'}`}>
                           {Array.isArray(content) ? content.map((item, i) => (
                             <span key={i} className="block">• {item}</span>
-                          )) : formatContent(content) || <span className="italic text-gray-400 dark:text-white/30">{isAr ? 'فارغ' : 'Empty'}</span>}
+                          )) : formatContent(content) || <span className="italic text-gray-400 dark:text-white/30">{t('sections.optimize.diff.empty', 'Empty')}</span>}
                         </p>
                       </div>
                     );
@@ -238,7 +238,7 @@ export default function ResumeDiffView({ isOpen, onClose, optimizations }: Resum
         {/* Footer */}
         <div className="border-t border-gray-200 dark:border-white/10 px-6 py-3 flex justify-end">
           <GlassButton onClick={onClose} variant="secondary" size="sm" className="border border-gray-200 dark:border-white/20">
-            {isAr ? 'إغلاق' : 'Close'}
+            {t('common.close', 'Close')}
           </GlassButton>
         </div>
       </div>

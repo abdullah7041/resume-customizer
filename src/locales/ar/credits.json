@@ -2,46 +2,45 @@
   "credits": {
     "balance": "الرصيد",
     "balanceDisplay": "{{remaining}} من {{total}} رصيد",
-    "remaining": "نقطة",
-    "resetsIn": "إعادة التعيين في {{time}}",
+    "remaining": "رصيد",
+    "resetsIn": "يتجدد خلال {{time}}",
     "resetsInWithDate": "يتجدد خلال {{days}} يوم ({{date}})",
-    "resetsSoon": "إعادة التعيين قريباً",
+    "resetsSoon": "يتجدد قريبًا",
     "refresh": "تحديث الرصيد",
     "transactionTotal": "الإجمالي {{total}}",
     "confirm": {
       "title": "تأكيد العملية",
-      "message": "سيتم استخدام {{cost}} نقاط.",
+      "message": "سيتم استخدام {{cost}} رصيد.",
       "current": "الرصيد الحالي: {{remaining}} / {{total}}",
-      "continue": "متابعة ({{cost}} نقاط)",
-      "insufficient": "رصيد غير كافٍ. تحتاج {{required}} وعندك{{available}}.",
-      "waitlistCta": "نبلغك وقت مانعلن عن الباقة"
+      "continue": "متابعة ({{cost}} رصيد)",
+      "insufficient": "الرصيد غير كافٍ. تحتاج {{required}} والمتاح {{available}}.",
+      "waitlistCta": "أبلغني عند إطلاق الباقة"
     },
     "upgrade": {
       "title": "الترقية إلى المميز",
-      "lowCredits": "رصيدك بيخلص ({{remaining}} متبقي)",
+      "lowCredits": "رصيدك منخفض (المتبقي {{remaining}})",
       "lowCreditsTitle": "رصيد منخفض",
       "comingSoon": "قريب",
       "joinWaitlist": "انضم لقائمة الانتظار",
-      "earnTip": "نصيحة: اكسب نقاطاً إضافية من خلال انك ترسل ملاحظاتك!",
-      "emailLabel": "احصل على إشعار اذا اطلقنا برو:",
-      "waitlistSuccess": "! تم بنعلمك متى",
+      "emailLabel": "احصل على إشعار عند إطلاق الباقة الاحترافية:",
+      "waitlistSuccess": "تم التسجيل. سنبلغك عند الإطلاق.",
       "waitlistSuccessTitle": "تم تسجيلك في القائمة!",
       "badge": "وصول مبكر",
-      "invalidEmail": "حط بريد إلكتروني صحيح",
+      "invalidEmail": "أدخل بريدًا إلكترونيًا صحيحًا",
       "subtitle": "طور سيرتك الذاتية بمميزات احترافية وحدود أعلى",
-      "proFeatures": "وش بتحصل عليه؟",
+      "proFeatures": "ماذا تتضمن الباقة؟",
       "features": {
-        "credits": "100 نقطة شهرياً",
+        "credits": "100 رصيد شهريًا",
         "support": "دعم فني خاص",
         "earlyAccess": "أولوية تجربة الميزات الجديدة"
       }
     },
     "usage": {
-      "title": "استخدم النقاط",
+      "title": "استخدام الرصيد",
       "feedbackEarned": "من الملاحظات",
       "referralEarned": "من الإحالات",
       "history": "النشاط الأخير",
-      "noTransactions": "مافي نشاط بعد",
+      "noTransactions": "لا يوجد نشاط حتى الآن",
       "time": {
         "justNow": "الآن",
         "minutesAgo": "قبل {{count}} د",
@@ -59,7 +58,7 @@
       }
     },
     "referralEarned": "🎉 حصلت على مكافأة إحالة!",
-    "referralEarnedDesc": "حصلت على {{creditsAdded}} نقطة من إحالة ناجحة. استمر في المشاركة!",
+    "referralEarnedDesc": "حصلت على {{creditsAdded}} رصيد من إحالة ناجحة. استمر في المشاركة!",
     "features": {
       "smartParsing": {
         "label": "تحليل ذكي",
@@ -75,11 +74,11 @@
       },
       "keywords": {
         "label": "تحليل الكلمات المفتاحية",
-        "desc": "راجع إشارات ATS بكلمات استراتيجية"
+        "desc": "راجع إشارات نظام تتبع المتقدمين ATS بكلمات استراتيجية"
       },
       "templates": {
         "label": "قوالب احترافية",
-        "desc": "تنسيقات PDF تراعي أنظمة ATS"
+        "desc": "تنسيقات PDF تراعي نظام تتبع المتقدمين ATS"
       },
       "interview": {
         "label": "تحضير المقابلة",

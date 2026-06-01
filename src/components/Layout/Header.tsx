@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
-import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings, UserCircle } from "lucide-react";
+import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings, UserCircle, MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
 import { useAuth } from "../../hooks/useAuth";
@@ -10,6 +10,7 @@ import { CreditBalance } from "../Credits/CreditBalance";
 import { CreditUsageModal } from "../Credits/CreditUsageModal";
 import { UpgradeModal } from "../Credits/UpgradeModal";
 import { SettingsModal } from "../Settings/SettingsModal";
+import { FeedbackModal } from "../Feedback/FeedbackModal";
 import { useTheme } from "../../hooks/useTheme";
 import { useUserCredits } from "../../hooks/useUserCredits";
 import { createPortal } from "react-dom";
@@ -45,6 +46,7 @@ export default function Header() {
   const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const { credits } = useUserCredits();
   const showFixedSkyline = Boolean(user);
   const isSignedOutHeader = !user;
@@ -350,6 +352,14 @@ export default function Header() {
                       }}
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedbackModal(true)}
+                    className="btn-spring inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/90 px-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>{t('feedback.cta', 'Feedback')}</span>
+                  </button>
                   <div ref={accountMenuRef} className="relative">
                     <button
                       type="button"
@@ -420,7 +430,7 @@ export default function Header() {
                             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
                             role="menuitem"
                           >
-                            {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
+                            {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
                             <span>{t('common.toggleTheme', 'Toggle theme')}</span>
                           </button>
                           <button
@@ -447,7 +457,7 @@ export default function Header() {
                     className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-all duration-300 shadow-sm bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
                     aria-label={t('common.toggleTheme', 'Toggle theme')}
                   >
-                    {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-emerald-600" />}
+                  {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
                   </button>
                   <LanguageSwitcher />
                   <GlassButton
@@ -513,7 +523,7 @@ export default function Header() {
           {/* Nav Panel - slides in from right */}
           <div
             ref={mobileNavRef}
-            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-l border-gray-200 dark:border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
+            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-white dark:bg-[#031713] border-l border-gray-200 dark:border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
           >
             {/* Header with close button */}
             <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
@@ -527,10 +537,10 @@ export default function Header() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleTheme}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white transition-all duration-300 hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95"
                   aria-label={t('common.toggleTheme', 'Toggle theme')}
                 >
-                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-600" /> : <Moon className="h-5 w-5 text-emerald-600 dark:text-emerald-600" />}
+                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
                 </button>
                 <button
                   onClick={() => setMobileNavOpen(false)}
@@ -565,6 +575,18 @@ export default function Header() {
                       setMobileNavOpen(false);
                     }} />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowFeedbackModal(true);
+                      setMobileNavOpen(false);
+                    }}
+                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>{t('feedback.cta', 'Feedback')}</span>
+                  </button>
 
                   <button
                     type="button"
@@ -673,6 +695,11 @@ export default function Header() {
       <SettingsModal 
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+      />
+
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
     </header>
   );

@@ -1,8 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
-import { callOpenRouter } from '../lib/openrouter-client.js';
-import { resolveFeatureConfig } from '../lib/model-router.js';
+import { executeAiContract } from '../lib/ai-contracts/index.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 import { z } from 'zod';
 
@@ -74,62 +73,10 @@ const baseHandler: Handler = async (event) => {
 
     const { jobText, language } = parseResult.data;
 
-    const systemPrompt = language === 'ar'
-      ? 'انت مساعد لاستخراج بيانات الوظائف من نصوص اعلانات التوظيف. استخرج فقط ما هو واضح ومؤكد. لا تخمن.'
-      : 'You are a job metadata extraction assistant. Extract only what is clearly stated. Never hallucinate. If information is missing, return null.';
-
-    const userPrompt = language === 'ar'
-      ? 'استخرج البيانات التالية من اعلان الوظيفة هذا:\n\n' + jobText + '\n\nأعد النتيجة كـ JSON فقط بدون أي نص إضافي.'
-      : 'Extract the following fields from this job posting:\n\n' + jobText + '\n\nReturn ONLY valid JSON, no extra text.';
-
-    const jsonSchema = {
-      type: 'object',
-      properties: {
-        companyName: { type: 'string', description: 'Company name if clearly stated, otherwise null' },
-        jobTitle: { type: 'string', description: 'Exact job title if clearly stated, otherwise null' },
-        location: { type: 'string', description: 'Job location if stated, otherwise null' },
-        employmentType: { type: 'string', description: 'Full-time, part-time, contract, etc. if stated, otherwise null' },
-        seniority: { type: 'string', description: 'Entry, mid, senior, lead, etc. if stated, otherwise null' },
-        sector: { type: 'string', description: 'Industry/sector if stated, otherwise null' },
-        confidence: {
-          type: 'object',
-          properties: {
-            companyName: { type: 'number' },
-            jobTitle: { type: 'number' },
-            location: { type: 'number' },
-          },
-          required: ['companyName', 'jobTitle', 'location'],
-        },
-        needsUserConfirmation: { type: 'boolean' },
-      },
-      required: ['companyName', 'jobTitle', 'location', 'employmentType', 'seniority', 'sector', 'confidence', 'needsUserConfirmation'],
-    };
-
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    const config = resolveFeatureConfig('job_metadata_extraction');
-    const aiResponse = await callOpenRouter(config.modelType, messages, jsonSchema, {
-      temperature: config.temperature,
-      maxTokens: config.maxTokens,
-      timeoutMs: config.timeoutMs,
-      featureName: 'extract_job_metadata',
-      modelId: config.modelId,
+    const parsed = await executeAiContract('job_metadata_extraction', {
+      jobText,
+      language,
     });
-
-    let parsed;
-    try {
-      parsed = JSON.parse(aiResponse);
-    } catch {
-      const jsonMatch = aiResponse.match(/`json\s*([\s\S]*?)\s*`/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[1]);
-      } else {
-        throw new Error('Failed to parse AI response as JSON');
-      }
-    }
 
     const validated = ResponseSchema.parse(parsed);
 

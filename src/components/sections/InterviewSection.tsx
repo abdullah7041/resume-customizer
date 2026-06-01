@@ -25,10 +25,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { UpgradeModal } from '../Credits/UpgradeModal';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
-import { FeedbackModal } from '../Feedback/FeedbackModal';
 import type { VulnerabilityType } from '../../types/analysis';
 
 const FUNCTION_BASE_PATH = '/.netlify/functions';
@@ -255,7 +253,6 @@ export function InterviewSection({
 }: InterviewSectionProps) {
   const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
-  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [roleLevel, setRoleLevel] = useState('');
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
@@ -265,7 +262,6 @@ export function InterviewSection({
   const [savedAnswers, setSavedAnswers] = useState<Record<number, string>>({});
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [pendingRegenerate, setPendingRegenerate] = useState(false);
   const [skillFilter, setSkillFilter] = useState<string | null>(null);
 
@@ -405,17 +401,6 @@ export function InterviewSection({
         });
       }
 
-      // Track feature use for feedback prompt
-      const reachedFeedbackMilestone = trackFeatureUse('interview');
-
-      // Check if we should show feedback modal (with 5-10 second delay for better UX)
-      if (reachedFeedbackMilestone) {
-        const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
-        setTimeout(() => {
-          setShowFeedbackModal(true);
-        }, delay);
-      }
-
       // Refetch credits to update balance (credits were consumed by backend)
       setTimeout(() => refetchCredits(), 500);
     } catch (err) {
@@ -423,7 +408,7 @@ export function InterviewSection({
     } finally {
       setIsLoading(false);
     }
-  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, trackFeatureUse, t, i18n.language]);
+  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, t, i18n.language]);
 
   // State to track which question type was selected
   const [pendingQuestionType, setPendingQuestionType] = useState<'behavioral' | 'technical'>('behavioral');
@@ -1098,15 +1083,6 @@ export function InterviewSection({
         onConfirm={handleConfirmGenerate}
         feature="interview_prep"
         isLoading={isLoading}
-      />
-
-      {/* Feedback Modal */}
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => {
-          setShowFeedbackModal(false);
-          dismissFeedback();
-        }}
       />
     </div>
   );

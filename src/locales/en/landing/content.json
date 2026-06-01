@@ -67,6 +67,40 @@
         "growth": "+32%"
       }
     },
+    "featureHighlights": {
+      "vision": {
+        "eyebrow": "Saudi-market alignment",
+        "title": "Position yourself for Vision 2030 opportunities.",
+        "subtitle": "Watheq identifies where your experience connects to Saudi growth sectors, localization priorities, and bilingual requirements already present in the job ad.",
+        "benefits": [
+          "Automatic Vision 2030 sector mapping",
+          "Bilingual keyword positioning (Arabic + English)",
+          "Saudization-ready language where relevant"
+        ],
+        "alignmentScore": "alignment score"
+      },
+      "clarify": {
+        "eyebrow": "Ask-before-optimization",
+        "title": "Smart questions before smart suggestions.",
+        "subtitle": "When your resume needs stronger proof, Watheq asks for scope, metrics, or context before rewriting — keeping every suggestion defensible and real.",
+        "benefits": [
+          "No invented experience or fake metrics",
+          "Clarification questions tailored to the job ad",
+          "Answers feed directly into optimization"
+        ],
+        "aiPowered": "AI asks before rewriting — no assumptions"
+      },
+      "interview": {
+        "eyebrow": "Interview preparation",
+        "title": "Practice with questions from your own resume.",
+        "subtitle": "Watheq generates role-specific interview questions, STAR prompts, and focus areas using the same evidence in your tailored resume and the job ad.",
+        "benefits": [
+          "Questions generated from your actual experience",
+          "STAR-format prompts for behavioral questions",
+          "Focus areas matched to the job requirements"
+        ]
+      }
+    },
     "comparison": {
       "title": "Why Choose Watheq?",
       "subtitle": "Compare Watheq with common resume workflows",

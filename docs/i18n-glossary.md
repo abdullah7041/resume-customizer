@@ -5,10 +5,10 @@ This glossary preserves existing Arabic wording from the app. Use these terms co
 | English | Arabic | Context |
 |---|---|---|
 | resume | السيرة الذاتية | General UI, uploads, parsing |
-| ATS | أنظمة تتبع المتقدمين | Feature descriptions, trust badges |
+| ATS | نظام تتبع المتقدمين ATS | First mention in a flow; short labels may use ATS |
 | job match | مطابقة الوظيفة | Match analysis, scores |
 | optimization | التحسين | AI rewrite suggestions |
-| credits | الرصيد / النقاط | Credit system (both used in app) |
+| credits | الرصيد / الأرصدة | Credit system |
 | waitlist | قائمة الانتظار | Pro plan waitlist |
 | application | طلب التقديم | Job application context |
 | cover letter | خطاب التقديم | Cover letter generator |
@@ -17,7 +17,7 @@ This glossary preserves existing Arabic wording from the app. Use these terms co
 | template | القالب | Resume template selection |
 | keyword | الكلمة المفتاحية | Keyword analysis feature |
 | export | تصدير / تحميل | PDF export (both used) |
-| upload | رفع / إرفاق | Resume upload (both used) |
+| upload | رفع | Resume upload |
 | dashboard | لوحة التحكم | User dashboard |
 | settings | الإعدادات | Account/settings modal |
 | feedback | الملاحظات | User feedback modal |
@@ -32,7 +32,7 @@ This glossary preserves existing Arabic wording from the app. Use these terms co
 
 ## Tone Notes
 
-- Use formal but clear SaaS Arabic (not overly academic, not overly casual).
-- For Saudi audience, occasional Saudi dialect phrases are acceptable in microcopy (e.g., "يلا ابدأ", "ما زبط") but keep core UI in Modern Standard Arabic.
+- Use formal but clear Saudi-friendly SaaS Arabic (not overly academic, not overly casual).
+- Keep heavy dialect out of core product, auth, privacy, legal, pricing, credits, analysis, ATS, and export flows. Light Saudi warmth is acceptable only in helper/assistant microcopy.
 - Preserve all interpolation variables exactly as `{{variableName}}`.
 - Preserve HTML tags (`<strong>`, `<em>`) when present in English.

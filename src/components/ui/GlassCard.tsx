@@ -44,14 +44,12 @@ export function GlassCard({
     <motion.div
       whileHover={{
         y: -1,
-        boxShadow: 'var(--shadow-card)',
         transition: { type: "spring", stiffness: 260, damping: 24 }
       }}
       className={cn(
         variantStyles[variant],
         paddingMap[padding],
         roundedMap[rounded],
-        "transform-gpu",
         className
       )}
       {...props}

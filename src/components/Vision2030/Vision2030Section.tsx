@@ -13,7 +13,6 @@ import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
 import { analyzeVision2030 } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { useVision2030Tour } from '../../hooks/useVision2030Tour';
 import { Vision2030AnalysisResponse } from '../../types/vision2030';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
@@ -22,7 +21,6 @@ import { RecommendationsModal } from './RecommendationsModal';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCard } from '../ui/GlassCard';
 import EmptyState from '../ui/EmptyState';
-import { FeedbackModal } from '../Feedback/FeedbackModal';
 import { Vision2030CalculationModal } from '../ui/Vision2030CalculationModal';
 import { TourTooltip } from '../Tour/TourTooltip';
 
@@ -38,7 +36,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { credits: _credits, isLoading: creditsLoading, refetch: refreshCredits } = useUserCredits();
-  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
   const isArabic = i18n.language === 'ar';
 
   // Initialize analysis from localStorage
@@ -75,7 +72,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showCalculationModal, setShowCalculationModal] = useState(false);
 
   // Vision 2030 tour
@@ -183,17 +179,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         description: t('vision2030.section.completeDesc', 'Your Vision 2030 alignment report is ready.'),
       });
 
-      // Track feature use for feedback prompt
-      const reachedFeedbackMilestone = trackFeatureUse('vision2030');
-
-      // Check if we should show feedback modal (with 5-10 second delay for better UX)
-      if (reachedFeedbackMilestone) {
-        const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
-        setTimeout(() => {
-          setShowFeedbackModal(true);
-        }, delay);
-      }
-
       // Refresh credits after consumption
       await refreshCredits();
     } catch (error: any) {
@@ -213,7 +198,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         // Ignore storage errors
       }
     }
-  }, [resumeText, isArabic, onToast, t, refreshCredits, trackFeatureUse]);
+  }, [resumeText, isArabic, onToast, t, refreshCredits]);
 
   // Get score color based on value
   const getScoreColor = (score: number) => {
@@ -385,15 +370,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           onClose={() => setShowRecommendationsModal(false)}
           missingSuggestions={analysis.missingSuggestions}
           isArabic={isArabic}
-        />
-
-        {/* Feedback Modal */}
-        <FeedbackModal
-          isOpen={showFeedbackModal}
-          onClose={() => {
-            setShowFeedbackModal(false);
-            dismissFeedback();
-          }}
         />
 
         {/* Credit Confirmation Modal - needed for re-analyze */}

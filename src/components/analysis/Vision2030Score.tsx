@@ -10,7 +10,7 @@ interface Vision2030ScoreProps {
 }
 
 export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const [showCalculationHelp, setShowCalculationHelp] = useState(false);
 
@@ -21,9 +21,9 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
   };
 
   const getScoreLabel = (score: number) => {
-    if (score >= 70) return isArabic ? 'كفو' : 'Excellent';
-    if (score >= 40) return isArabic ? 'أمورك طيبة' : 'Good';
-    return isArabic ? 'يبي لك شدة حيل' : 'Needs Improvement';
+    if (score >= 70) return t('vision2030.excellent', 'Excellent');
+    if (score >= 40) return t('vision2030.good', 'Good');
+    return t('vision2030.needsImprovement', 'Needs Improvement');
   };
 
   return (
@@ -35,12 +35,10 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
         </div>
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
-            {isArabic ? 'توافقك مع رؤية 2030' : 'Vision 2030 Alignment'}
+            {t('vision2030.scoreCard.title', 'Vision 2030 Alignment')}
           </h3>
           <p className="text-sm text-gray-500">
-            {isArabic
-              ? 'وش كثر مهاراتك تخدم أولوياتنا'
-              : 'How your skills align with Saudi national priorities'}
+            {t('vision2030.scoreCard.subtitle', 'How your skills align with Saudi national priorities')}
           </p>
         </div>
       </div>
@@ -49,19 +47,13 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
       <div className="bg-white rounded-xl p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <span className="text-gray-600 flex items-center gap-2">
-            {isArabic ? 'نتيجتك النهائية' : 'Overall Score'}
+            {t('vision2030.scoreCard.overallScore', 'Overall Score')}
             <button
               type="button"
               onClick={() => setShowCalculationHelp(true)}
               className="inline-flex items-center justify-center w-5 h-5 ml-2 text-xs font-bold text-emerald-700 bg-emerald-100 rounded-full hover:bg-emerald-200 hover:text-emerald-900 transition-colors ring-1 ring-emerald-300"
-              title={isArabic
-                ? 'كيف حسبناها؟'
-                : 'How is this score calculated?'
-              }
-              aria-label={isArabic
-                ? 'شف تفاصيل الحسبة'
-                : 'Show calculation details'
-              }
+              title={t('vision2030.scoreCard.calculationTitle', 'How is this score calculated?')}
+              aria-label={t('vision2030.scoreCard.calculationAria', 'Show calculation details')}
             >
               ?
             </button>
@@ -88,7 +80,7 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
       <div className="mb-6">
         <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-emerald-600" />
-          {isArabic ? 'تفصيل القطاعات' : 'Sector Breakdown'}
+          {t('vision2030.sectorBreakdown', 'Sector Breakdown')}
         </h4>
         <div className="space-y-3">
           {analysis.sectorBreakdown.slice(0, 5).map(sector => (
@@ -103,7 +95,7 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
                   </span>
                 </div>
                 <span className="text-sm text-gray-500">
-                  {sector.matchedCount}/{sector.totalSkills} {isArabic ? 'مهارات' : 'skills'}
+                  {sector.matchedCount}/{sector.totalSkills} {t('vision2030.skills', 'skills')}
                 </span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-2">
@@ -121,7 +113,7 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
       {analysis.matchedSkills.length > 0 && (
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-4">
-            {isArabic ? 'مهاراتك اللي تخدم الرؤية' : 'Matched Vision 2030 Skills'}
+            {t('vision2030.matchedSkills', 'Matched Vision 2030 Skills')}
           </h4>
           <div className="flex flex-wrap gap-2">
             {analysis.matchedSkills.map((skill, index) => (
@@ -141,7 +133,7 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
         <div>
           <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
             <Lightbulb className="w-5 h-5 text-amber-500" />
-            {isArabic ? 'مهارات ننصحك تضيفها' : 'Suggested Skills to Add'}
+            {t('vision2030.suggestions', 'Suggested Skills to Add')}
           </h4>
           <div className="space-y-2">
             {analysis.missingSuggestions.map((suggestion, index) => (
@@ -171,9 +163,7 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
             2030
           </div>
           <p className="text-xs text-gray-500">
-            {isArabic
-              ? 'تحليلنا مبني على أولويات سوق العمل برؤية 2030'
-              : 'Analysis based on Saudi Vision 2030 sector priorities'}
+            {t('vision2030.analysisNote', 'Analysis based on Saudi Vision 2030 sector priorities')}
           </p>
         </div>
       </div>

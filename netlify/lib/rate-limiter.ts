@@ -304,7 +304,6 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   "predict-questions": { maxRequests: 10 },  // Uses 'lite' model
 
   // Feedback system - INCREASED from 5 to 10
-  "submit-feedback": { maxRequests: 10 },  // Allow more feedback submissions
 
   // Batch processing - INCREASED from 5 to 8
   "batch-api": { maxRequests: 8 },

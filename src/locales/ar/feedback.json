@@ -1,8 +1,81 @@
 {
   "feedback": {
-    "helpful": "هل فادك؟",
-    "thankYou": "يعطيك العافية!",
-    "thumbsUp": "ايه، فادني",
-    "thumbsDown": "لا، ما فادني"
+    "cta": "الملاحظات",
+    "title": "إرسال ملاحظة",
+    "subtitle": "أبلغنا عن خطأ أو خطوة غير واضحة أو فكرة للمنتج.",
+    "submit": "إرسال الملاحظة",
+    "submitting": "جار الإرسال...",
+    "success": "شكرًا لك. تم إرسال ملاحظتك.",
+    "types": {
+      "bug": "خطأ",
+      "resume_quality": "جودة السيرة الذاتية",
+      "confusing_ux": "تجربة غير واضحة",
+      "feature_request": "طلب ميزة",
+      "pricing_credits": "الأسعار أو الرصيد",
+      "other": "أخرى"
+    },
+    "fields": {
+      "type": "النوع",
+      "message": "الرسالة",
+      "messagePlaceholder": "اكتب ما حدث وما الذي كنت تتوقعه بدلًا من ذلك.",
+      "minimumRemaining": "تبقى {{count}} حرفًا",
+      "minimumMet": "التفاصيل كافية.",
+      "rating": "التقييم (اختياري)",
+      "noRating": "بدون تقييم",
+      "ratingValue": "{{count}} / 5"
+    },
+    "reward": {
+      "copy": "أول ملاحظة مؤهلة تمنحك +5 أرصدة.",
+      "awarded": "تمت إضافة +{{credits}} أرصدة إلى رصيدك.",
+      "alreadyAwarded": "شكرًا لك مرة أخرى. مكافأة +5 أرصدة متاحة مرة واحدة لكل حساب.",
+      "notAwarded": "شكرًا لك. لم تتم إضافة مكافأة رصيد لهذا البلاغ."
+    },
+    "rewardStatus": {
+      "awarded": "تمت المكافأة",
+      "not_eligible": "غير مؤهل",
+      "duplicate": "مكرر",
+      "already_awarded": "مكافأة سابقة"
+    },
+    "errors": {
+      "messageTooShort": "أضف {{count}} حرفًا حتى تكون الملاحظة مفيدة.",
+      "submitFailed": "تعذر إرسال الملاحظة الآن."
+    },
+    "admin": {
+      "eyebrow": "الإدارة",
+      "title": "بلاغات الملاحظات",
+      "count": "{{count}} بلاغ",
+      "listTitle": "الملاحظات الواردة",
+      "detailTitle": "تفاصيل البلاغ",
+      "empty": "لا توجد بلاغات ملاحظات بعد.",
+      "selectPrompt": "اختر بلاغًا لمراجعته.",
+      "save": "حفظ التغييرات",
+      "accessDeniedTitle": "صلاحية الإدارة مطلوبة",
+      "accessDeniedBody": "هذه اللوحة متاحة لمشرفي واثق فقط.",
+      "fields": {
+        "status": "الحالة",
+        "priority": "الأولوية",
+        "adminNotes": "ملاحظات الإدارة",
+        "user": "المستخدم",
+        "page": "الصفحة",
+        "reward": "المكافأة",
+        "created": "تاريخ الإنشاء"
+      },
+      "status": {
+        "new": "جديد",
+        "reviewing": "قيد المراجعة",
+        "resolved": "تم الحل",
+        "closed": "مغلق"
+      },
+      "priority": {
+        "low": "منخفضة",
+        "normal": "عادية",
+        "high": "مرتفعة",
+        "urgent": "عاجلة"
+      },
+      "errors": {
+        "loadFailed": "تعذر تحميل بلاغات الملاحظات.",
+        "saveFailed": "تعذر حفظ تغييرات البلاغ."
+      }
+    }
   }
 }

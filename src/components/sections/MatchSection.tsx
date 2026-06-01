@@ -29,8 +29,6 @@ import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { useFeatureTracking } from '../../hooks/useFeatureTracking';
-import { FeedbackModal } from '../Feedback/FeedbackModal';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
@@ -144,9 +142,7 @@ export function MatchSection({
   const [error, setError] = useState("");
   const [whyOpen, setWhyOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
-  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -196,15 +192,6 @@ export function MatchSection({
       // Track match analysis run
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
-        const reachedFeedbackMilestone = trackFeatureUse('match'); // Track for feedback prompt
-
-        // Check if we should show feedback modal (with 5-10 second delay for better UX)
-        if (reachedFeedbackMilestone) {
-          const delay = 5000 + Math.random() * 5000; // Random 5-10 seconds
-          setTimeout(() => {
-            setShowFeedbackModal(true);
-          }, delay);
-        }
       }
       // Refresh credits after consumption
       setTimeout(() => refetchCredits(), 500);
@@ -755,15 +742,6 @@ export function MatchSection({
         onConfirm={handleConfirmMatch}
         feature="ai_match"
         isLoading={isAnalyzing}
-      />
-
-      {/* Feedback Modal */}
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => {
-          setShowFeedbackModal(false);
-          dismissFeedback();
-        }}
       />
     </>
   );

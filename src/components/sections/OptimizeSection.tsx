@@ -34,10 +34,6 @@ import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { PositionSuggestionBanner } from '../PositionSuggestionBanner';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { FeedbackModal } from '../Feedback/FeedbackModal';
-import { supabase } from '../../services/supabase';
-import { useAuth } from '../../hooks/useAuth';
-import { useFeatureTracking } from '../../hooks/useFeatureTracking';
 import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
 
 // Key for job description in localStorage (shared with MatchSection)
@@ -180,14 +176,11 @@ export function OptimizeSection({
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
-  const { user } = useAuth();
-  const { trackFeatureUse, dismissFeedback } = useFeatureTracking();
 
   // Sync prop optimizations to store when they change
   // IMPORTANT: Merge with existing store state to preserve applied flags
@@ -563,36 +556,6 @@ export function OptimizeSection({
         optimization_count: newOptimizations.length,
         time_ms: performance.now() - startTime,
       });
-
-      // Track feature use for feedback prompt
-      const reachedFeedbackMilestone = trackFeatureUse('optimize');
-
-      // Show feedback modal at milestones (if user hasn't reached max 3 submissions)
-      if (reachedFeedbackMilestone && user?.id) {
-        try {
-          const { data: userCredits, error: _creditsError } = await supabase
-            .from('user_credits')
-            .select('feedback_credits_earned')
-            .eq('email', user.email)
-            .single();
-
-          // Only show if user has < 3 feedback submissions (max limit)
-          if (!userCredits || (userCredits.feedback_credits_earned ?? 0) < 3) {
-            // Add 5-10 second delay for better UX
-            const delay = 5000 + Math.random() * 5000;
-            setTimeout(() => {
-              setShowFeedbackModal(true);
-            }, delay);
-          }
-        } catch (error) {
-          // Default to showing modal on error (better UX)
-          console.error('[OptimizeSection] Failed to check feedback credits:', error);
-          const delay = 5000 + Math.random() * 5000;
-          setTimeout(() => {
-            setShowFeedbackModal(true);
-          }, delay);
-        }
-      }
 
       // Also update keyword suggestions from API response
       if (data.keywords) {
@@ -1746,15 +1709,6 @@ export function OptimizeSection({
         onConfirm={handleConfirmOptimize}
         feature="optimize"
         isLoading={isOptimizing}
-      />
-
-      {/* Feedback Modal - triggered after 3 feature uses */}
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => {
-          setShowFeedbackModal(false);
-          dismissFeedback(); // Mark as prompted for this session
-        }}
       />
     </div >
   );

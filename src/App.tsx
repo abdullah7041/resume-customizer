@@ -17,6 +17,7 @@ import { useOnboardingTour } from "./hooks/useOnboardingTour";
 import { TourTooltip } from "./components/Tour/TourTooltip";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { TermsOfService } from "./pages/TermsOfService";
+import { AdminFeedbackPage } from "./pages/AdminFeedbackPage";
 import { HRSuperSaudOverlay, HRSuperSaudProvider } from "./features/hr-super-saud";
 
 const getCurrentPath = () => {
@@ -64,6 +65,8 @@ export default function App() {
               <PrivacyPolicy />
             ) : currentPath === "/terms" ? (
               <TermsOfService />
+            ) : currentPath === "/admin/feedback" ? (
+              <AdminFeedbackPage />
             ) : (
               <MainContent />
             )}
@@ -78,7 +81,7 @@ export default function App() {
               dismissKey={upgradeDismissedKey || ''}
             />
 
-            {currentPath !== "/privacy" && currentPath !== "/terms" && (
+            {currentPath !== "/privacy" && currentPath !== "/terms" && currentPath !== "/admin/feedback" && (
               <HRSuperSaudOverlay isOnboardingActive={run} />
             )}
 

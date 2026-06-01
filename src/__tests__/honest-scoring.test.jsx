@@ -8,31 +8,31 @@ import { join } from 'path';
 describe('Honest Scoring System', () => {
   // Test A: AI rubric prompt does NOT contain prescriptive scoring language
   describe('AI Scoring Rubric', () => {
-    const geminiClientPath = join(__dirname, '../../netlify/lib/gemini-client.js');
-    let geminiClientSource;
+    const aiContractPath = join(__dirname, '../../netlify/lib/ai-contracts/contracts/index.js');
+    let aiContractSource;
 
     try {
-      geminiClientSource = readFileSync(geminiClientPath, 'utf-8');
+      aiContractSource = readFileSync(aiContractPath, 'utf-8');
     } catch {
-      geminiClientSource = '';
+      aiContractSource = '';
     }
 
     it('should NOT contain "should score 85-95" in rubric', () => {
-      expect(geminiClientSource).not.toContain('should score 85-95');
+      expect(aiContractSource).not.toContain('should score 85-95');
     });
 
     it('should NOT contain "Be GENEROUS" bias language', () => {
-      expect(geminiClientSource.toUpperCase()).not.toContain('BE GENEROUS');
+      expect(aiContractSource.toUpperCase()).not.toContain('BE GENEROUS');
     });
 
     it('should NOT tell AI what an optimized resume "should" score', () => {
-      expect(geminiClientSource).not.toContain('optimized match should score');
-      expect(geminiClientSource).not.toContain('excellent/optimized match should score');
+      expect(aiContractSource).not.toContain('optimized match should score');
+      expect(aiContractSource).not.toContain('excellent/optimized match should score');
     });
 
     it('should contain evidence-based scoring criteria', () => {
       // The rubric should use evidence-based language
-      expect(geminiClientSource).toContain('demonstrated proficiency');
+      expect(aiContractSource).toContain('demonstrated proficiency');
     });
   });
 

@@ -1,13 +1,11 @@
 import { Handler } from '@netlify/functions';
-import { callOpenRouter } from '../lib/openrouter-client.js';
+import { executeAiContract } from '../lib/ai-contracts/index.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 
 initSentry();
 
-// Model tier constant for resume parsing
-const MODEL_TIER = 'lite'; // Fast, cost-effective model for parsing tasks
 const MAX_RESUME_TEXT_CHARS = 50_000;
 
 // Type definition for parsed resume structure
@@ -102,79 +100,10 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const systemPrompt = targetLanguage === 'ar'
-      ? `أنت محلل سير ذاتية متخصص. قم بتحليل السيرة الذاتية واستخراج المعلومات بتنسيق JSON.
-         يجب أن يكون الرد بالعربية للمحتوى العربي وبالإنجليزية للمحتوى الإنجليزي.
-         حافظ على الدقة ولا تضف معلومات غير موجودة في النص الأصلي.`
-      : `You are a professional resume analyst. Parse the resume and extract information in JSON format.
-         Preserve the original language of the content. Do not add information not present in the original text.`;
-
-    const prompt = `${systemPrompt}
-
-Parse this resume into structured JSON:
-
-${resumeText}
-
-Return JSON with this structure:
-{
-  "personalInfo": {
-    "name": "",
-    "email": "",
-    "phone": "",
-    "location": "",
-    "linkedin": ""
-  },
-  "objective": "",
-  "experience": [
-    {
-      "title": "",
-      "titleEn": "",
-      "company": "",
-      "location": "",
-      "startDate": "",
-      "endDate": "",
-      "current": false,
-      "description": []
-    }
-  ],
-  "education": [
-    {
-      "degree": "",
-      "institution": "",
-      "graduationDate": "",
-      "gpa": ""
-    }
-  ],
-  "skills": [],
-  "certifications": [],
-  "languages": [
-    { "name": "", "level": "" }
-  ]
-}`;
-
-    // Use OpenRouter with lite model for parsing
-    const messages = [{ role: 'user', content: prompt }];
-    const text = await callOpenRouter(MODEL_TIER, messages, null, { temperature: 0, maxTokens: 4096, featureName: 'parse_arabic_resume' });
-
-    // Parse JSON response (callOpenRouter returns raw text)
-    let parsed: ParsedResume;
-    try {
-      parsed = JSON.parse(text);
-    } catch (parseError) {
-      // Try to extract JSON from markdown code blocks
-      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        try {
-          parsed = JSON.parse(jsonMatch[1].trim());
-        } catch (innerError) {
-          const errorMsg = innerError instanceof Error ? innerError.message : 'Unknown error';
-          throw new Error(`Failed to parse JSON from markdown block: ${errorMsg}. Response length: ${text.length}.`);
-        }
-      } else {
-        const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown error';
-        throw new Error(`Failed to parse AI response as JSON: ${errorMsg}. Response length: ${text.length}.`);
-      }
-    }
+    const parsed = await executeAiContract('parse_arabic_resume', {
+      resumeText,
+      targetLanguage,
+    }) as ParsedResume;
 
     return {
       statusCode: 200,

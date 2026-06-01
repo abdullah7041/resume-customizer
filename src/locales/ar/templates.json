@@ -5,10 +5,26 @@
     "preview": "معاينة",
     "download": "تحميل PDF",
     "downloading": "يحمّل...",
-    "atsOptimized": "محسّن لنظام ATS",
+    "atsOptimized": "محسّن لنظام تتبع المتقدمين ATS",
     "modern": "عصري",
     "classic": "كلاسيكي",
     "technical": "تقني",
-    "professional": "احترافي"
+    "professional": "احترافي",
+    "formatting": {
+      "title": "التنسيق",
+      "fontFormatting": "تنسيق الخط",
+      "fontStyle": "نوع الخط",
+      "fontSize": "حجم الخط",
+      "headingSize": "حجم العناوين",
+      "documentFormatting": "تنسيق المستند",
+      "sectionSpacing": "تباعد الأقسام",
+      "paragraphSpacing": "تباعد الفقرات",
+      "lineSpacing": "تباعد الأسطر",
+      "verticalMargins": "الهوامش العلوية والسفلية",
+      "sideMargins": "الهوامش الجانبية",
+      "showPageBreaks": "إظهار فواصل الصفحات",
+      "recommendedFit": "ضبط تلقائي",
+      "reset": "إعادة تعيين"
+    }
   }
 }

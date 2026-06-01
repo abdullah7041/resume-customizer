@@ -228,10 +228,6 @@ class Analytics {
         this.track('waitlist_joined', { source });
     }
 
-    trackFeedbackSubmitted(rating: string, hasTestimonial: boolean, contextFeature?: string) {
-        this.track('feedback_submitted', { rating, has_testimonial: hasTestimonial, context_feature: contextFeature });
-    }
-
     trackPricingIntentPack9Sar(source: string) {
         this.track('pricing_intent_pack_9_sar', { source });
     }

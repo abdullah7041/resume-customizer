@@ -1,6 +1,6 @@
 # Supabase Schema Drift Check - 2026-05-22
 
-Last grant re-check: 2026-05-29 via Supabase connector, read-only query.
+Last grant re-check: 2026-06-02 via Supabase connector, read-only query.
 
 ## Scope
 
@@ -36,7 +36,7 @@ No migrations were applied during this check.
 
 ## Drift Status
 
-Resolved as of the 2026-05-29 read-only re-check. The live schema matches the local table/constraint/index/trigger/RLS policy shape, and the previously documented client-role grant drift is no longer present:
+Resolved as of the 2026-06-02 read-only re-check. The live schema matches the local table/constraint/index/trigger/RLS policy shape, and the previously documented client-role grant drift is no longer present:
 
 - `public.ai_usage_events` has no `anon` or `authenticated` grants; `service_role` retains server-side table privileges including `INSERT`.
 - `public.job_applications` has no `anon` grants; `authenticated` has only `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
@@ -75,9 +75,10 @@ Expected result:
 - `ai_usage_events`: no `anon` or `authenticated` grants; `service_role` still has insert capability for server-side logging.
 - `job_applications`: no `anon` grants; `authenticated` has only `SELECT`, `INSERT`, `UPDATE`, and `DELETE`; `service_role` remains available for server-side maintenance paths.
 
-2026-05-29 live result matched this expected client-role shape.
+2026-06-02 live result matched this expected client-role shape.
 
 ## Notes
 
 - The local migration filenames do not match the already-applied live Supabase migration versions, so treat the local files as source-controlled reference SQL and use the recovery SQL above only if a future read-only grant check shows client-role drift has returned.
 - Supabase Security Advisor reports `RLS Enabled No Policy` for `public.ai_usage_events`. That is expected for the current service-role-only logging design.
+- The 2026-06-02 read-only telemetry check found `public.ai_usage_events` still empty with `n_tup_ins = 0`. That is tracked as missing production traffic evidence, not schema drift.

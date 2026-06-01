@@ -162,18 +162,15 @@
   --panel-highlight: rgba(52, 211, 153, 0.18);
 
   --shadow-card:
-    0 0 0 1px rgba(94, 234, 212, 0.14),
-    0 26px 54px -28px rgba(0, 10, 8, 0.88),
-    0 18px 40px -32px rgba(16, 185, 129, 0.22);
+    0 0 0 1px rgba(94, 234, 212, 0.12),
+    0 18px 36px -28px rgba(0, 10, 8, 0.72);
   --shadow-soft:
-    0 0 0 1px rgba(94, 234, 212, 0.11),
-    0 16px 38px -28px rgba(0, 10, 8, 0.86),
-    0 10px 26px -30px rgba(16, 185, 129, 0.18);
+    0 0 0 1px rgba(94, 234, 212, 0.1),
+    0 12px 28px -24px rgba(0, 10, 8, 0.64);
   --shadow-lift:
-    0 0 0 1px rgba(94, 234, 212, 0.18),
-    0 30px 60px -30px rgba(16, 185, 129, 0.34),
-    0 20px 48px -32px rgba(16, 185, 129, 0.24);
-  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 20px 46px -34px rgba(52, 211, 153, 0.28);
+    0 0 0 1px rgba(94, 234, 212, 0.14),
+    0 20px 42px -30px rgba(16, 185, 129, 0.22);
+  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 16px 34px -30px rgba(52, 211, 153, 0.2);
   --shadow-ring: 0 0 0 1px rgba(16, 185, 129, 0.5);
 
   --glass-border: rgba(16, 185, 129, 0.16);

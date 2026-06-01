@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -18,7 +18,12 @@ import {
 import { ProductWalkthrough } from "../components/sections/ProductWalkthrough";
 import { PricingSection } from "../components/sections/PricingSection";
 import { ComparisonTable } from "../components/ui/ComparisonTable";
+import { FeatureHighlightSection } from "../components/sections/FeatureHighlightSection";
+import { Vision2030Mockup } from "../components/sections/landing/Vision2030Mockup";
+import { ClarificationMockup } from "../components/sections/landing/ClarificationMockup";
+import { InterviewPrepMockup } from "../components/sections/landing/InterviewPrepMockup";
 import { getSkylineUrls } from "../lib/assets";
+
 import { analytics } from "../services/analytics";
 
 interface LandingPageProps {
@@ -60,7 +65,6 @@ function HeroProductStage() {
   return (
     <div className="relative mx-auto w-full max-w-5xl">
       <div className="landing-proof-panel relative overflow-hidden rounded-[1.5rem] bg-[#f4f9f7] px-4 py-5 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#082b23] dark:shadow-black/30 dark:ring-white/10 sm:px-8 sm:py-8 lg:px-12">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(251,252,250,0.94)_0%,rgba(239,248,245,0.84)_46%,rgba(232,238,248,0.58)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(16,185,129,0.08)_52%,rgba(236,72,153,0.05)_100%)]" />
         <picture className="pointer-events-none absolute inset-x-4 top-0 h-48 opacity-20 sm:inset-x-8 sm:h-64">
           <source
             media="(max-width: 767px)"
@@ -75,6 +79,7 @@ function HeroProductStage() {
             fetchPriority="high"
           />
         </picture>
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(251,252,250,0.94)_0%,rgba(239,248,245,0.84)_46%,rgba(232,238,248,0.58)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(16,185,129,0.08)_52%,rgba(236,72,153,0.05)_100%)]" />
 
         <div className="relative grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
           <div className="space-y-5 pt-1 sm:pt-4">
@@ -124,8 +129,8 @@ function HeroProductStage() {
               transition={{ duration: 0.65, delay: 0.08, ease: "easeOut" }}
               className="mx-auto w-full max-w-sm rounded-[1.5rem] bg-[#fbfcfa] p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10 sm:p-5"
             >
-              <div className="rounded-[1.25rem] bg-[#0b1026] p-4 text-white dark:bg-[#06231d]">
-                <div className="flex items-center justify-between text-xs font-bold text-white/70">
+              <div className="rounded-[1.25rem] bg-white p-4 text-[#171717] shadow-sm ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:text-white dark:ring-white/10">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-white/70">
                   <span>{t("landing.productWalkthrough.heroCardTitle")}</span>
                   <span>{t("landing.productWalkthrough.preview.exampleLabel")}</span>
                 </div>
@@ -133,12 +138,12 @@ function HeroProductStage() {
                   <ProofMetric value="62%" label={t("landing.productWalkthrough.preview.matchScore")} />
                   <ProofMetric value="86" label={t("landing.productWalkthrough.preview.after")} />
                 </div>
-                <div className="mt-4 text-sm font-semibold text-white/72">
+                <div className="mt-4 text-sm font-semibold text-slate-600 dark:text-white/72">
                   {t("landing.productWalkthrough.preview.keywordLift")}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {keywordTags.map((keyword) => (
-                    <span key={keyword} className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-white/78 ring-1 ring-white/10">
+                    <span key={keyword} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-white/10 dark:text-white/78 dark:ring-white/10">
                       {keyword}
                     </span>
                   ))}
@@ -206,6 +211,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
   const skylineUrls = useMemo(() => getSkylineUrls(), []);
   const isFallbackSkyline = skylineUrls.desktop.startsWith("data:image/");
 
+
   useEffect(() => {
     analytics.trackLandingViewed();
   }, []);
@@ -245,7 +251,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
   const finalBenefits = translatedList(t, "landing.finalCta.benefits");
 
   return (
-    <main className="landing-page relative isolate flex min-h-screen flex-col bg-[#fbfcfa] text-slate-950 dark:bg-[#031713] dark:text-white">
+    <main className="landing-page landing-walkthrough-performance relative isolate flex min-h-screen flex-col bg-white text-slate-950 dark:bg-[#031713] dark:text-white">
       <section className="relative overflow-hidden px-5 pb-12 pt-16 sm:px-8 lg:pb-16 lg:pt-24">
         <picture className="pointer-events-none absolute inset-0 z-0 block opacity-[0.28] dark:opacity-[0.34]">
           <source
@@ -333,18 +339,18 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             <HeroProductStage />
           </div>
 
-          <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.25, ease: "easeOut" }}
-            className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            {trustSignals.map((signal) => (
-              <div
-                key={signal.label}
-                className="flex cursor-default items-center justify-center gap-3 rounded-2xl bg-[#f4f9f7] p-3 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.06] dark:text-white/72 dark:ring-white/10"
-              >
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.25, ease: "easeOut" }}
+              className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              {trustSignals.map((signal) => (
+                <div
+                  key={signal.label}
+                  className="flex cursor-default items-center justify-center gap-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.06] dark:text-white/72 dark:ring-white/10"
+                >
                 <signal.icon className="h-5 w-5 shrink-0 text-[#2b8994] dark:text-emerald-300" />
                 <span>{signal.label}</span>
               </div>
@@ -353,9 +359,14 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         </div>
       </section>
 
-      <section className="bg-[#eef8f4] px-5 py-14 dark:bg-[#041c17] sm:px-8 lg:py-20" aria-labelledby="tailoring-title">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
+      <section className="bg-[#fafcfb] px-5 py-14 dark:bg-[#041c17] sm:px-8 lg:py-20" aria-labelledby="tailoring-title">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="order-2 grid gap-4 md:grid-cols-3 lg:order-1 lg:grid-cols-1">
+            {tailoringCards.map((card) => (
+              <StoryCard key={card.title} {...card} />
+            ))}
+          </div>
+          <div className="order-1 lg:order-2">
             <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
               {t("landing.productStory.why.eyebrow")}
             </p>
@@ -365,30 +376,54 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600 dark:text-white/62">
               {t("landing.productStory.why.subtitle")}
             </p>
-            <p className="mt-6 max-w-xl rounded-[1.25rem] bg-[#f4f9f7]/70 p-4 text-sm font-black leading-7 text-[#0c5963] shadow-sm ring-1 ring-[#cfe8e5] dark:bg-white/[0.06] dark:text-emerald-100 dark:ring-white/10">
+            <p className="mt-6 max-w-xl rounded-[1.25rem] bg-white/80 p-4 text-sm font-black leading-7 text-[#0c5963] shadow-sm ring-1 ring-[#cfe8e5] dark:bg-white/[0.06] dark:text-emerald-100 dark:ring-white/10">
               {t("landing.productStory.why.bridge")}
             </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1">
-            {tailoringCards.map((card) => (
-              <StoryCard key={card.title} {...card} />
-            ))}
           </div>
         </div>
       </section>
 
+      <FeatureHighlightSection
+        eyebrow={t("landing.featureHighlights.vision.eyebrow")}
+        title={t("landing.featureHighlights.vision.title")}
+        subtitle={t("landing.featureHighlights.vision.subtitle")}
+        benefits={translatedList(t, "landing.featureHighlights.vision.benefits")}
+        visual={<Vision2030Mockup />}
+        bgClassName="bg-white dark:bg-[#031713]"
+        accentColor="text-[#006C35] dark:text-emerald-300"
+      />
+
+      <FeatureHighlightSection
+        eyebrow={t("landing.featureHighlights.clarify.eyebrow")}
+        title={t("landing.featureHighlights.clarify.title")}
+        subtitle={t("landing.featureHighlights.clarify.subtitle")}
+        benefits={translatedList(t, "landing.featureHighlights.clarify.benefits")}
+        visual={<ClarificationMockup />}
+        reverse
+        bgClassName="bg-[#fafcfb] dark:bg-[#041c17]"
+      />
+
+      <FeatureHighlightSection
+        eyebrow={t("landing.featureHighlights.interview.eyebrow")}
+        title={t("landing.featureHighlights.interview.title")}
+        subtitle={t("landing.featureHighlights.interview.subtitle")}
+        benefits={translatedList(t, "landing.featureHighlights.interview.benefits")}
+        visual={<InterviewPrepMockup />}
+        bgClassName="bg-white dark:bg-[#031713]"
+      />
+
       <ProductWalkthrough onGetStarted={handleWalkthroughCta} />
 
-      <section className="bg-[#0a1f1a] px-5 py-16 text-white dark:bg-[#031713] sm:px-8 lg:py-20" aria-labelledby="landing-comparison-title">
+      <section className="bg-white px-5 py-16 text-[#171717] dark:bg-[#031713] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-comparison-title">
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="inline-flex rounded-full border border-emerald-300/25 bg-emerald-300/10 px-4 py-1.5 text-sm font-black uppercase tracking-[0.16em] text-emerald-200">
+            <p className="inline-flex rounded-full border border-[#2b8994]/25 bg-[#2b8994]/10 px-4 py-1.5 text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:border-emerald-300/25 dark:bg-emerald-300/10 dark:text-emerald-200">
               {t("landing.comparison.title")}
             </p>
-            <h2 id="landing-comparison-title" className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl">
+            <h2 id="landing-comparison-title" className="mt-4 text-3xl font-black leading-tight text-[#171717] dark:text-white sm:text-4xl">
               {t("landing.comparison.title")}
             </h2>
-            <p className="mt-4 text-lg leading-8 text-white/72">
+            <p className="mt-4 text-lg leading-8 text-slate-600 dark:text-white/72">
               {t("landing.comparison.subtitle")}
             </p>
           </div>
@@ -396,13 +431,13 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         </div>
       </section>
 
-      <div className="bg-[#0a1f1a] px-5 pb-16 text-white dark:bg-[#031713] sm:px-8 lg:pb-20">
+      <div className="bg-white px-5 pb-16 text-[#171717] dark:bg-[#031713] dark:text-white sm:px-8 lg:pb-20">
         <div className="mx-auto max-w-7xl">
           <PricingSection onGetStarted={handleFinalCta} />
         </div>
       </div>
 
-      <section className="bg-[#eef8f4] px-5 py-16 text-[#171717] dark:bg-[#041c17] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-final-title">
+      <section className="bg-[#fafcfb] px-5 py-16 text-[#171717] dark:bg-[#041c17] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-final-title">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
@@ -413,7 +448,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             </h2>
             <div className="mt-6 flex flex-wrap gap-3">
               {finalBenefits.map((benefit) => (
-                <span key={benefit} className="inline-flex items-center gap-2 rounded-full bg-[#f4f9f7] px-4 py-2 text-sm font-bold text-[#0c5963] ring-1 ring-[#cfe8e5] dark:bg-white/10 dark:text-white/78 dark:ring-white/10">
+                <span key={benefit} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#0c5963] ring-1 ring-[#cfe8e5] dark:bg-white/10 dark:text-white/78 dark:ring-white/10">
                   <CheckCircle2 className="h-4 w-4 text-[#2b8994] dark:text-[#5eead4]" />
                   {benefit}
                 </span>
@@ -423,7 +458,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
           <button
             type="button"
             onClick={handleFinalCta}
-            className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#5eead4] px-8 py-3.5 text-sm font-black text-[#052e2b] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#eef8f4] dark:focus-visible:ring-offset-[#092018]"
+            className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#5eead4] px-8 py-3.5 text-sm font-black text-[#052e2b] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafcfb] dark:focus-visible:ring-offset-[#092018]"
           >
             {t("landing.productWalkthrough.cta")}
             <ArrowRight className="h-4 w-4 rtl:rotate-180" />

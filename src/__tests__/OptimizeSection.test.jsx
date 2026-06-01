@@ -76,24 +76,6 @@ vi.mock('../services/analytics', () => ({
     },
 }));
 
-// Mock supabase to avoid initialization errors
-vi.mock('../services/supabase', () => ({
-    supabase: {
-        from: vi.fn(() => ({
-            insert: vi.fn(() => Promise.resolve({ error: null })),
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn(() => Promise.resolve({ data: { feedback_credits_earned: 0 }, error: null })),
-        })),
-    },
-    AppError: class AppError extends Error {
-        constructor(message, type) {
-            super(message);
-            this.type = type;
-        }
-    },
-}));
-
 vi.mock('../hooks/useRateLimit', () => ({
     useRateLimit: () => ({
         isRateLimited: false,

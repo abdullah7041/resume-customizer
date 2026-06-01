@@ -9,6 +9,22 @@
     "modern": "Modern",
     "classic": "Classic",
     "technical": "Technical",
-    "professional": "Professional"
+    "professional": "Professional",
+    "formatting": {
+      "title": "Formatting",
+      "fontFormatting": "Font Formatting",
+      "fontStyle": "Font Style",
+      "fontSize": "Font Size",
+      "headingSize": "Heading Size",
+      "documentFormatting": "Document Formatting",
+      "sectionSpacing": "Section Spacing",
+      "paragraphSpacing": "Paragraph Spacing",
+      "lineSpacing": "Line Spacing",
+      "verticalMargins": "Top & Bottom Margin",
+      "sideMargins": "Side Margins",
+      "showPageBreaks": "Show Page Breaks",
+      "recommendedFit": "Recommended Fit",
+      "reset": "Reset to Defaults"
+    }
   }
 }

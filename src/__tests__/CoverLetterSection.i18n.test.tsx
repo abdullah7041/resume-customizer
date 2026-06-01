@@ -23,14 +23,6 @@ vi.mock('../hooks/useUserCredits', () => ({
   }),
 }));
 
-vi.mock('../hooks/useFeatureTracking', () => ({
-  useFeatureTracking: () => ({
-    trackFeatureUse: vi.fn(),
-    shouldShowFeedback: false,
-    dismissFeedback: vi.fn(),
-  }),
-}));
-
 vi.mock('../lib/stores/resumeStore', () => ({
   useResumeStore: {
     getState: () => ({
@@ -52,10 +44,6 @@ vi.mock('../components/Credits/UpgradeModal', () => ({
 
 vi.mock('../components/Credits/ConfirmActionModal', () => ({
   ConfirmActionModal: () => null,
-}));
-
-vi.mock('../components/Feedback/FeedbackModal', () => ({
-  FeedbackModal: () => null,
 }));
 
 const renderCoverLetter = () => render(

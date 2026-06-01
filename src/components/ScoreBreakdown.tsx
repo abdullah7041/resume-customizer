@@ -81,8 +81,7 @@ export function ScoreBreakdown({
     isPlaceholderImprovement = false,
     className = ''
 }: ScoreBreakdownProps) {
-    const { t, i18n } = useTranslation();
-    const isArabic = i18n.language === 'ar';
+    const { t } = useTranslation();
     // Improvement calculation available but currently unused - kept for future features
     // const improvement = afterScore - beforeScore;
     const [expanded, setExpanded] = useState(true);
@@ -90,10 +89,10 @@ export function ScoreBreakdown({
     // Use new categorical scores if available
     if (categoryScores) {
         const categories = [
-            { key: 'hard_skills' as const, label: isArabic ? 'المهارات التقنية' : 'Hard Skills' },
-            { key: 'experience' as const, label: isArabic ? 'الخبرة' : 'Experience' },
-            { key: 'education' as const, label: isArabic ? 'التعليم' : 'Education' },
-            { key: 'soft_skills' as const, label: isArabic ? 'المهارات الشخصية' : 'Soft Skills' }
+            { key: 'hard_skills' as const, label: t('optimize.scoreBreakdown.categories.hardSkills', 'Hard Skills') },
+            { key: 'experience' as const, label: t('optimize.scoreBreakdown.categories.experience', 'Experience') },
+            { key: 'education' as const, label: t('optimize.scoreBreakdown.categories.education', 'Education') },
+            { key: 'soft_skills' as const, label: t('optimize.scoreBreakdown.categories.softSkills', 'Soft Skills') }
         ];
 
         // Use the authoritative match analysis score as the displayed total.
@@ -112,7 +111,7 @@ export function ScoreBreakdown({
                                 {t('optimize.scoreBreakdown.title', 'Score Breakdown')}
                             </h3>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                {isArabic ? 'تحليل مفصل لدرجة مطابقة سيرتك الذاتية' : 'Detailed analysis of your resume match score'}
+                                {t('optimize.scoreBreakdown.subtitle', 'Detailed analysis of your resume match score')}
                             </p>
                         </div>
                         <div className="flex items-center gap-4">
@@ -233,42 +232,34 @@ export function ScoreBreakdown({
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                                             <span className="text-xs font-bold text-blue-600 dark:text-blue-400 block mb-1">
-                                                {isArabic ? 'المهارات التقنية' : 'Hard Skills'}
+                                                {t('optimize.scoreBreakdown.categories.hardSkills', 'Hard Skills')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                                                {isArabic
-                                                    ? 'يقيس تطابق الكلمات المفتاحية التقنية والأدوات المذكورة في الوصف الوظيفي.'
-                                                    : 'Measures the match of technical keywords and tools mentioned in the job description.'}
+                                                {t('optimize.scoreBreakdown.categoryDescriptions.hardSkills', 'Measures the match of technical keywords and tools mentioned in the job description.')}
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                                             <span className="text-xs font-bold text-purple-600 dark:text-purple-400 block mb-1">
-                                                {isArabic ? 'الخبرة' : 'Experience'}
+                                                {t('optimize.scoreBreakdown.categories.experience', 'Experience')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                                                {isArabic
-                                                    ? 'يحلل المسميات الوظيفية السابقة وسنوات الخبرة ومدى صلتها بالدور المطلوب.'
-                                                    : 'Analyzes past job titles, years of experience, and relevance to the target role.'}
+                                                {t('optimize.scoreBreakdown.categoryDescriptions.experience', 'Analyzes past job titles, years of experience, and relevance to the target role.')}
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                                             <span className="text-xs font-bold text-amber-600 dark:text-amber-400 block mb-1">
-                                                {isArabic ? 'التعليم' : 'Education'}
+                                                {t('optimize.scoreBreakdown.categories.education', 'Education')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                                                {isArabic
-                                                    ? 'يتحقق من المستوى الأكاديمي ومجال الدراسة للتأكد من استيفاء المتطلبات.'
-                                                    : 'Checks academic level and field of study to ensure requirements are met.'}
+                                                {t('optimize.scoreBreakdown.categoryDescriptions.education', 'Checks academic level and field of study to ensure requirements are met.')}
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                                             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block mb-1">
-                                                {isArabic ? 'المهارات الشخصية' : 'Soft Skills'}
+                                                {t('optimize.scoreBreakdown.categories.softSkills', 'Soft Skills')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                                                {isArabic
-                                                    ? 'يكتشف السمات الشخصية والقيادية والتواصل من خلال سياق سيرتك الذاتية.'
-                                                    : 'Detects behavioral, leadership, and communication traits from your resume context.'}
+                                                {t('optimize.scoreBreakdown.categoryDescriptions.softSkills', 'Detects behavioral, leadership, and communication traits from your resume context.')}
                                             </p>
                                         </div>
                                     </div>
@@ -289,22 +280,22 @@ export function ScoreBreakdown({
     // Legacy breakdown display
     const breakdownItems = [
         {
-            label: isArabic ? 'مطابقة الخبرة' : 'Experience Match',
+            label: t('optimize.scoreBreakdown.experienceMatch', 'Experience Match'),
             value: data.base_score,
             type: 'base' as const
         },
         {
-            label: isArabic ? 'تغطية المهارات' : 'Skill Coverage',
+            label: t('optimize.scoreBreakdown.skillCoverage', 'Skill Coverage'),
             value: data.skill_match_bonus,
             type: 'bonus' as const
         },
         {
-            label: isArabic ? 'مطابقة الكلمات المفتاحية' : 'Keyword Match',
+            label: t('optimize.scoreBreakdown.keywordMatch', 'Keyword Match'),
             value: data.keyword_coverage_bonus,
             type: 'bonus' as const
         },
         {
-            label: isArabic ? 'خصومات الفجوات' : 'Gap Penalties',
+            label: t('optimize.scoreBreakdown.gapPenalties', 'Gap Penalties'),
             value: -data.gap_penalties,
             type: 'penalty' as const
         },

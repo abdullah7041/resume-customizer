@@ -1,8 +1,81 @@
 {
   "feedback": {
-    "helpful": "Was this helpful?",
-    "thankYou": "Thanks for your feedback!",
-    "thumbsUp": "Yes, helpful",
-    "thumbsDown": "Not helpful"
+    "cta": "Feedback",
+    "title": "Send feedback",
+    "subtitle": "Report a bug, confusing step, or product idea.",
+    "submit": "Submit feedback",
+    "submitting": "Submitting...",
+    "success": "Thanks. Your feedback was submitted.",
+    "types": {
+      "bug": "Bug",
+      "resume_quality": "Resume quality",
+      "confusing_ux": "Confusing UX",
+      "feature_request": "Feature request",
+      "pricing_credits": "Pricing or credits",
+      "other": "Other"
+    },
+    "fields": {
+      "type": "Type",
+      "message": "Message",
+      "messagePlaceholder": "Tell us what happened and what you expected instead.",
+      "minimumRemaining": "{{count}} more characters needed",
+      "minimumMet": "Looks detailed enough.",
+      "rating": "Rating (optional)",
+      "noRating": "No rating",
+      "ratingValue": "{{count}} / 5"
+    },
+    "reward": {
+      "copy": "Eligible first feedback earns +5 credits.",
+      "awarded": "+{{credits}} credits added to your balance.",
+      "alreadyAwarded": "Thanks again. The +5 credit reward is available once per account.",
+      "notAwarded": "Thanks. No credit reward was added for this report."
+    },
+    "rewardStatus": {
+      "awarded": "Awarded",
+      "not_eligible": "Not eligible",
+      "duplicate": "Duplicate",
+      "already_awarded": "Already awarded"
+    },
+    "errors": {
+      "messageTooShort": "Add {{count}} more characters so the report is useful.",
+      "submitFailed": "We could not submit feedback right now."
+    },
+    "admin": {
+      "eyebrow": "Admin",
+      "title": "Feedback reports",
+      "count": "{{count}} reports",
+      "listTitle": "Incoming feedback",
+      "detailTitle": "Report details",
+      "empty": "No feedback reports yet.",
+      "selectPrompt": "Select a report to review.",
+      "save": "Save changes",
+      "accessDeniedTitle": "Admin access required",
+      "accessDeniedBody": "This dashboard is only available to Watheq admins.",
+      "fields": {
+        "status": "Status",
+        "priority": "Priority",
+        "adminNotes": "Admin notes",
+        "user": "User",
+        "page": "Page",
+        "reward": "Reward",
+        "created": "Created"
+      },
+      "status": {
+        "new": "New",
+        "reviewing": "Reviewing",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "priority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "errors": {
+        "loadFailed": "Could not load feedback reports.",
+        "saveFailed": "Could not save feedback changes."
+      }
+    }
   }
 }
