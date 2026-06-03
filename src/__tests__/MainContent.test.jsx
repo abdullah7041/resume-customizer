@@ -311,6 +311,7 @@ describe("MainContent resume parsing", () => {
       requiresSignIn: true,
       authRequiredTitle: "Sign in required",
       authRequiredMessage: "Please sign in to securely process your resume.",
+      authActionLabel: "Create or sign in with Google",
     });
 
     act(() => {
@@ -318,6 +319,15 @@ describe("MainContent resume parsing", () => {
     });
 
     expect(await screen.findByText(/Sign in required Please sign in to securely process your resume/i)).toBeInTheDocument();
+
+    act(() => {
+      resumeUploadMockProps.current.onAuthAction();
+    });
+
+    expect(authMockState.signInWithGoogle).toHaveBeenCalledWith({
+      intent: "signup",
+      source: "upload_auth_required",
+    });
   });
 
   it("gates guest match analysis before backend calls", async () => {

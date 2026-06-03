@@ -63,7 +63,7 @@ The manual modal collects:
 
 When automatic value-moment prompting is added after match success, optimize success, export success, or pipeline save, apply session dedup with `watheq:feedbackPromptedThisSession` so the prompt appears at most once per session.
 
-Implementation note: until a feedback metadata column/RPC parameter exists, the backend persists only allowlisted validation answers in a compact `watheq_feedback_validation` footer on the stored feedback message. Duplicate detection intentionally includes that footer because `message_hash` is computed from the final stored report body.
+Implementation note: feedback validation answers are persisted as structured categorical `feedback_reports.trust_to_apply` and `feedback_reports.willingness_to_pay` fields through the service-role-only `submit_feedback_report(...)` RPC. Duplicate detection includes the message plus those categorical answers in the server-computed hash, while raw resume text, job descriptions, prompts, and AI output stay out of feedback storage and analytics.
 
 ---
 

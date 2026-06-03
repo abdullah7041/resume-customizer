@@ -85,12 +85,16 @@ function validPostBody(overrides: Record<string, unknown> = {}) {
   });
 }
 
-function withValidationFooter(
+function feedbackHashInput(
   message = 'The export button gets stuck after I retry a failed PDF download.',
-  trustToApply = 'somewhat',
-  willingnessToPay = 'maybe'
+  trustToApply: string | null = 'somewhat',
+  willingnessToPay: string | null = 'maybe'
 ) {
-  return `${message}\n\n[watheq_feedback_validation trust_to_apply=${trustToApply} willingness_to_pay=${willingnessToPay}]`;
+  return JSON.stringify({
+    message,
+    trust_to_apply: trustToApply,
+    willingness_to_pay: willingnessToPay,
+  });
 }
 
 describe('feedback-api', () => {
@@ -169,7 +173,7 @@ describe('feedback-api', () => {
   });
 
   it('submits only authenticated identity, safe context, and server-derived reward fields', async () => {
-    const storedMessage = withValidationFooter();
+    const storedMessage = 'The export button gets stuck after I retry a failed PDF download.';
     const response = (await handler(
       makeEvent({
         headers: { authorization: 'Bearer token' },
@@ -197,20 +201,50 @@ describe('feedback-api', () => {
       p_type: 'bug',
       p_message: storedMessage,
       p_rating: 4,
+      p_trust_to_apply: 'somewhat',
+      p_willingness_to_pay: 'maybe',
       p_page_path: '/admin/feedback',
       p_user_agent: 'Vitest Browser',
       p_viewport: 'desktop 1440x900',
-      p_message_hash: hashFeedbackMessage(storedMessage),
+      p_message_hash: hashFeedbackMessage(feedbackHashInput()),
     });
 
     const rpcPayload = rpcMock.mock.calls[0][1];
-    expect(JSON.stringify(rpcPayload)).toContain('watheq_feedback_validation');
-    expect(JSON.stringify(rpcPayload)).toContain('trust_to_apply=somewhat');
-    expect(JSON.stringify(rpcPayload)).toContain('willingness_to_pay=maybe');
+    expect(rpcPayload.p_message).not.toContain('watheq_feedback_validation');
+    expect(rpcPayload.p_trust_to_apply).toBe('somewhat');
+    expect(rpcPayload.p_willingness_to_pay).toBe('maybe');
     expect(JSON.stringify(rpcPayload)).not.toContain('secret resume');
     expect(JSON.stringify(rpcPayload)).not.toContain('secret job');
     expect(JSON.stringify(rpcPayload)).not.toContain('attacker');
     expect(JSON.stringify(rpcPayload)).not.toContain('500');
+  });
+
+  it('keeps duplicate detection sensitive to validation answers without storing them in the message', async () => {
+    const message = 'The export button gets stuck after I retry a failed PDF download.';
+
+    await handler(
+      makeEvent({
+        headers: { authorization: 'Bearer token' },
+        body: validPostBody({
+          message,
+          validation: {
+            trustToApply: 'no',
+            willingnessToPay: 'yes',
+          },
+        }),
+      }),
+      context
+    );
+
+    expect(rpcMock).toHaveBeenCalledWith(
+      'submit_feedback_report',
+      expect.objectContaining({
+        p_message: message,
+        p_trust_to_apply: 'no',
+        p_willingness_to_pay: 'yes',
+        p_message_hash: hashFeedbackMessage(feedbackHashInput(message, 'no', 'yes')),
+      })
+    );
   });
 
   it('rejects duplicate same-user feedback messages without awarding credits', async () => {
@@ -411,5 +445,23 @@ describe('feedback-api', () => {
       'revoke execute on function public.rls_auto_enable() from public, anon, authenticated, service_role'
     );
     expect(migrationSql).toContain('set search_path = public, pg_temp');
+  });
+
+  it('ships a structured feedback validation migration without storing answers in message text', () => {
+    const migrationSql = readFileSync(
+      join(process.cwd(), 'supabase/migrations/20260603102000_add_feedback_validation_answers.sql'),
+      'utf8'
+    ).toLowerCase();
+
+    expect(migrationSql).toContain('add column if not exists trust_to_apply text');
+    expect(migrationSql).toContain('add column if not exists willingness_to_pay text');
+    expect(migrationSql).toContain("trust_to_apply is null or trust_to_apply in ('yes', 'somewhat', 'no')");
+    expect(migrationSql).toContain("willingness_to_pay is null or willingness_to_pay in ('yes', 'maybe', 'no')");
+    expect(migrationSql).toContain('p_trust_to_apply text');
+    expect(migrationSql).toContain('p_willingness_to_pay text');
+    expect(migrationSql).toContain('drop function if exists public.submit_feedback_report');
+    expect(migrationSql).not.toContain('watheq_feedback_validation');
+    expect(migrationSql).not.toContain('resume text');
+    expect(migrationSql).not.toContain('job description text');
   });
 });

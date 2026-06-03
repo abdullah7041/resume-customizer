@@ -338,6 +338,10 @@ export default function MainContent() {
     "workspace.guest.resumeProcessingAuthDesc",
     "Please sign in to securely process your resume."
   );
+  const resumeProcessingAuthActionLabel = t(
+    "workspace.guest.createOrSignInCta",
+    "Create or sign in with Google"
+  );
 
   const requireSignInForGuestAction = useCallback(() => {
     pushToast({
@@ -360,6 +364,10 @@ export default function MainContent() {
 
   const handleGuestSignIn = useCallback(() => {
     void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
+  }, [signInWithGoogle]);
+
+  const handleUploadAuthAction = useCallback(() => {
+    void signInWithGoogle({ intent: "signup", source: "upload_auth_required" });
   }, [signInWithGoogle]);
 
   useEffect(() => {
@@ -1485,6 +1493,8 @@ export default function MainContent() {
               authRequiredTitle={resumeProcessingAuthTitle}
               authRequiredMessage={resumeProcessingAuthMessage}
               onAuthRequired={requireSignInForResumeProcessing}
+              authActionLabel={resumeProcessingAuthActionLabel}
+              onAuthAction={handleUploadAuthAction}
             />
           )}
           {activeTab === "match" && (

@@ -140,6 +140,7 @@ describe("ResumeUpload", () => {
   it("blocks signed-out file selection before parsing", async () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn();
+    const onAuthAction = vi.fn();
 
     render(
       <ResumeUpload
@@ -149,6 +150,8 @@ describe("ResumeUpload", () => {
         requiresSignIn
         authRequiredTitle="Sign in required"
         authRequiredMessage="Please sign in to securely process your resume."
+        authActionLabel="Create or sign in with Google"
+        onAuthAction={onAuthAction}
       />
     );
 
@@ -172,6 +175,9 @@ describe("ResumeUpload", () => {
       title: "Sign in required",
       description: "Please sign in to securely process your resume.",
     });
+
+    fireEvent.click(screen.getByRole("button", { name: /create or sign in with google/i }));
+    expect(onAuthAction).toHaveBeenCalledTimes(1);
   });
 
   it("shows auth-required UX instead of parse-failed copy for auth errors", async () => {

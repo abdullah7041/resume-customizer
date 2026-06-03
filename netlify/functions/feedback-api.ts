@@ -135,20 +135,20 @@ export function hashFeedbackMessage(message: string): string {
   return createHash('sha256').update(normalizeFeedbackMessage(message)).digest('hex');
 }
 
-function buildValidationFooter({
+function buildMessageHashInput({
+  message,
   trustToApply,
   willingnessToPay,
 }: {
+  message: string;
   trustToApply: TrustToApply | null;
   willingnessToPay: WillingnessToPay | null;
 }): string {
-  if (!trustToApply && !willingnessToPay) {
-    return '';
-  }
-
-  // Temporary no-schema strategy: the current table/RPC has no metadata column,
-  // so persist only backend-validated enum answers in a compact machine-readable footer.
-  return `\n\n[watheq_feedback_validation trust_to_apply=${trustToApply ?? 'not_answered'} willingness_to_pay=${willingnessToPay ?? 'not_answered'}]`;
+  return JSON.stringify({
+    message,
+    trust_to_apply: trustToApply ?? null,
+    willingness_to_pay: willingnessToPay ?? null,
+  });
 }
 
 function isAdmin(user: AuthenticatedUser): boolean {
@@ -217,19 +217,16 @@ function parseSubmitBody(event: HandlerEvent) {
     WILLINGNESS_TO_PAY_ANSWERS,
     'willingness_to_pay'
   );
-  const validationFooter = buildValidationFooter({ trustToApply, willingnessToPay });
-  const storedMessage = `${message}${validationFooter}`;
-
   return {
     type: type as FeedbackType,
-    message: storedMessage,
+    message,
     rating,
+    trustToApply,
+    willingnessToPay,
     pagePath: optionalString(body.context?.pagePath, '/').slice(0, 500) || '/',
     userAgent: optionalString(body.context?.userAgent).slice(0, 1000),
     viewport: optionalString(body.context?.viewport).slice(0, 200),
-    // Duplicate detection intentionally includes the validation footer because
-    // this no-schema fallback stores the enum answers as part of the report body.
-    messageHash: hashFeedbackMessage(storedMessage),
+    messageHash: hashFeedbackMessage(buildMessageHashInput({ message, trustToApply, willingnessToPay })),
   };
 }
 
@@ -248,6 +245,8 @@ async function submitFeedback(event: HandlerEvent) {
     p_type: payload.type,
     p_message: payload.message,
     p_rating: payload.rating,
+    p_trust_to_apply: payload.trustToApply,
+    p_willingness_to_pay: payload.willingnessToPay,
     p_page_path: payload.pagePath,
     p_user_agent: payload.userAgent,
     p_viewport: payload.viewport,
@@ -302,7 +301,7 @@ async function listFeedback(event: HandlerEvent) {
   const status = event.queryStringParameters?.status;
   let query = supabase
     .from('feedback_reports')
-    .select('id,user_id,user_email,type,message,page_path,status,priority,reward_status,credits_awarded,admin_notes,created_at,updated_at')
+    .select('id,user_id,user_email,type,message,rating,trust_to_apply,willingness_to_pay,page_path,status,priority,reward_status,credits_awarded,admin_notes,created_at,updated_at')
     .order('created_at', { ascending: false })
     .limit(100);
 

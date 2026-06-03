@@ -68,6 +68,8 @@
         "status": "الحالة",
         "priority": "الأولوية",
         "adminNotes": "ملاحظات الإدارة",
+        "trustToApply": "الثقة للتقديم",
+        "willingnessToPay": "الاستعداد للدفع",
         "user": "المستخدم",
         "page": "الصفحة",
         "reward": "المكافأة",

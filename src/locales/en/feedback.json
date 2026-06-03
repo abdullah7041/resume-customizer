@@ -68,6 +68,8 @@
         "status": "Status",
         "priority": "Priority",
         "adminNotes": "Admin notes",
+        "trustToApply": "Trust to apply",
+        "willingnessToPay": "Willingness to pay",
         "user": "User",
         "page": "Page",
         "reward": "Reward",

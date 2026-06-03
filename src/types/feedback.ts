@@ -45,6 +45,9 @@ export interface FeedbackReport {
   user_email: string;
   type: FeedbackType;
   message: string;
+  rating: number | null;
+  trust_to_apply: FeedbackTrustToApply | null;
+  willingness_to_pay: FeedbackWillingnessToPay | null;
   page_path: string;
   status: FeedbackStatus;
   priority: FeedbackPriority;

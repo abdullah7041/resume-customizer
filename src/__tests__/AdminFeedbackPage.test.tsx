@@ -30,6 +30,10 @@ vi.mock('react-i18next', () => ({
         'feedback.admin.listTitle': 'Incoming feedback',
         'feedback.admin.empty': 'No feedback reports yet.',
         'feedback.admin.selectPrompt': 'Select a report to review.',
+        'feedback.admin.fields.trustToApply': 'Trust to apply',
+        'feedback.admin.fields.willingnessToPay': 'Willingness to pay',
+        'feedback.trustToApply.somewhat': 'Somewhat',
+        'feedback.willingnessToPay.maybe': 'Maybe',
       };
       return translations[key] ?? key;
     },
@@ -71,5 +75,41 @@ describe('AdminFeedbackPage', () => {
 
     expect(await screen.findByText('Feedback reports')).toBeInTheDocument();
     expect(listFeedbackReportsMock).toHaveBeenCalled();
+  });
+
+  it('renders structured validation answers in the admin detail panel', async () => {
+    authState.user = {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      app_metadata: { role: 'admin' },
+      user_metadata: {},
+    };
+    listFeedbackReportsMock.mockResolvedValue([
+      {
+        id: 'feedback-1',
+        user_id: 'user-1',
+        user_email: 'user@example.com',
+        type: 'resume_quality',
+        message: 'The improved summary became too generic for my original resume context.',
+        rating: 3,
+        trust_to_apply: 'somewhat',
+        willingness_to_pay: 'maybe',
+        page_path: '/workspace',
+        status: 'new',
+        priority: 'normal',
+        reward_status: 'awarded',
+        credits_awarded: 5,
+        admin_notes: null,
+        created_at: '2026-06-03T10:00:00.000Z',
+        updated_at: '2026-06-03T10:00:00.000Z',
+      },
+    ]);
+
+    render(<AdminFeedbackPage />);
+
+    expect(await screen.findByText('Trust to apply')).toBeInTheDocument();
+    expect(screen.getByText('Willingness to pay')).toBeInTheDocument();
+    expect(screen.getByText('Somewhat')).toBeInTheDocument();
+    expect(screen.getByText('Maybe')).toBeInTheDocument();
   });
 });

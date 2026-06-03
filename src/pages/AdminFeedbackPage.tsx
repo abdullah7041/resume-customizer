@@ -3,7 +3,13 @@ import { AlertTriangle, Loader2, MessageSquare, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { listFeedbackReports, updateFeedbackReport } from '@/services/feedback';
-import type { FeedbackPriority, FeedbackReport, FeedbackStatus } from '@/types/feedback';
+import type {
+  FeedbackPriority,
+  FeedbackReport,
+  FeedbackStatus,
+  FeedbackTrustToApply,
+  FeedbackWillingnessToPay,
+} from '@/types/feedback';
 
 const STATUS_OPTIONS: FeedbackStatus[] = ['new', 'reviewing', 'resolved', 'closed'];
 const PRIORITY_OPTIONS: FeedbackPriority[] = ['low', 'normal', 'high', 'urgent'];
@@ -19,6 +25,14 @@ function formatDate(value: string, language: string) {
 
 function previewMessage(message: string) {
   return message.length > 140 ? `${message.slice(0, 137)}...` : message;
+}
+
+function formatTrustAnswer(value: FeedbackTrustToApply | null, t: (key: string) => string) {
+  return value ? t(`feedback.trustToApply.${value}`) : t('feedback.fields.noAnswer');
+}
+
+function formatPayAnswer(value: FeedbackWillingnessToPay | null, t: (key: string) => string) {
+  return value ? t(`feedback.willingnessToPay.${value}`) : t('feedback.fields.noAnswer');
 }
 
 export function AdminFeedbackPage() {
@@ -257,6 +271,14 @@ export function AdminFeedbackPage() {
               </label>
 
               <dl className="grid grid-cols-2 gap-3 text-xs text-gray-600 dark:text-white/60">
+                <div>
+                  <dt className="font-bold">{t('feedback.admin.fields.trustToApply')}</dt>
+                  <dd>{formatTrustAnswer(selectedReport.trust_to_apply, t)}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold">{t('feedback.admin.fields.willingnessToPay')}</dt>
+                  <dd>{formatPayAnswer(selectedReport.willingness_to_pay, t)}</dd>
+                </div>
                 <div>
                   <dt className="font-bold">{t('feedback.admin.fields.user')}</dt>
                   <dd>{selectedReport.user_email}</dd>

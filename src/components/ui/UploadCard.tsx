@@ -89,6 +89,8 @@ export default function UploadCard({
   onSaudiNationalChange,
   requiresSignIn = false,
   onAuthRequired,
+  authActionLabel,
+  onAuthAction,
 }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
@@ -408,10 +410,21 @@ export default function UploadCard({
 
       {
         error && (
-          <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
+          <div className="mt-4 space-y-3 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
             <p className="text-sm font-medium text-red-700 dark:text-red-200" role="alert">
               {error}
             </p>
+            {requiresSignIn && onAuthAction && (
+              <GlassButton
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={onAuthAction}
+                className="mx-auto min-h-[40px]"
+              >
+                {authActionLabel || t("workspace.guest.createOrSignInCta", "Create or sign in with Google")}
+              </GlassButton>
+            )}
           </div>
         )
       }

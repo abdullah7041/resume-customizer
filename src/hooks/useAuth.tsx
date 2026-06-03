@@ -6,7 +6,7 @@ import { supabase } from "../services/supabase";
 import type { User } from "@supabase/supabase-js";
 
 type AuthIntent = "signin" | "signup";
-type AuthEntrySource = "header_desktop" | "header_mobile" | "landing_get_started";
+type AuthEntrySource = "header_desktop" | "header_mobile" | "landing_get_started" | "upload_auth_required";
 
 interface SignInWithGoogleOptions {
   intent?: AuthIntent;

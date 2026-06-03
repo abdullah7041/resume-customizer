@@ -36,6 +36,8 @@ interface UploadSectionProps {
     authRequiredTitle?: string;
     authRequiredMessage?: string;
     onAuthRequired?: () => void;
+    authActionLabel?: string;
+    onAuthAction?: () => void;
 }
 
 export default function UploadSection({
@@ -47,6 +49,8 @@ export default function UploadSection({
     authRequiredTitle = 'Sign in required',
     authRequiredMessage = 'Please sign in to securely process your resume.',
     onAuthRequired,
+    authActionLabel,
+    onAuthAction,
 }: UploadSectionProps) {
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'success' | 'error'>('idle');
@@ -281,6 +285,8 @@ export default function UploadSection({
                 onSaudiNationalChange={setSaudiNational}
                 requiresSignIn={requiresSignIn}
                 onAuthRequired={handleAuthRequired}
+                authActionLabel={authActionLabel}
+                onAuthAction={onAuthAction}
             />
 
 

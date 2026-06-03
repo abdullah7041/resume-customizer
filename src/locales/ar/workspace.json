@@ -16,6 +16,7 @@
       "protectedActionDesc": "سجّل دخولك لتشغيل تحليل الذكاء الاصطناعي وحفظ تقدمك.",
       "resumeProcessingAuthTitle": "تسجيل الدخول مطلوب",
       "resumeProcessingAuthDesc": "يرجى تسجيل الدخول لمعالجة سيرتك الذاتية بأمان.",
+      "createOrSignInCta": "أنشئ حسابًا أو سجّل دخولك عبر Google",
       "signInCta": "سجّل دخولك لحفظ تقدمك",
       "backToLanding": "العودة للصفحة الرئيسية"
     },
