@@ -9,17 +9,26 @@ export type FeedbackType =
 export type FeedbackStatus = 'new' | 'reviewing' | 'resolved' | 'closed';
 export type FeedbackPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type FeedbackRewardStatus = 'awarded' | 'not_eligible' | 'duplicate' | 'already_awarded';
+export type FeedbackTrustToApply = 'yes' | 'somewhat' | 'no';
+export type FeedbackWillingnessToPay = 'yes' | 'maybe' | 'no';
+
+export interface FeedbackValidationAnswers {
+  trustToApply?: FeedbackTrustToApply | null;
+  willingnessToPay?: FeedbackWillingnessToPay | null;
+}
 
 export interface FeedbackContext {
   pagePath: string;
   userAgent: string;
   viewport: string;
+  contextFeature: string;
 }
 
 export interface SubmitFeedbackInput {
   type: FeedbackType;
   message: string;
   rating?: number | null;
+  validation?: FeedbackValidationAnswers;
 }
 
 export interface SubmitFeedbackResponse {

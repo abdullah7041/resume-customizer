@@ -64,7 +64,16 @@ vi.mock("../components/sections/MatchSection", () => {
   const React = require("react");
   return {
     __esModule: true,
-    MatchSection: () => React.createElement("div", { "data-testid": "job-match-mock" }),
+    MatchSection: (props) =>
+      React.createElement(
+        "div",
+        { "data-testid": "job-match-mock" },
+        React.createElement("button", {
+          onClick: () => {
+            Promise.resolve(props.onAnalyzeMatchAI?.("Target job description")).catch(() => {});
+          },
+        }, "Run match")
+      ),
   };
 });
 
@@ -72,7 +81,12 @@ vi.mock("../components/sections/OptimizeSection", () => {
   const React = require("react");
   return {
     __esModule: true,
-    OptimizeSection: () => React.createElement("div", { "data-testid": "optimization-mock" }),
+    OptimizeSection: (props) =>
+      React.createElement(
+        "div",
+        { "data-testid": "optimization-mock" },
+        React.createElement("button", { onClick: () => props.onOptimize?.("auto") }, "Run optimize")
+      ),
   };
 });
 
@@ -165,6 +179,11 @@ describe("MainContent resume parsing", () => {
     authMockState.loading = false;
     authMockState.signInWithGoogle.mockReset();
     parseResumeMock.mockReset();
+    analyzeResumeMock.mockReset();
+    optimizeResumeMock.mockReset();
+    optimizeResumeStreamMock.mockReset();
+    generateClarificationsMock.mockReset();
+    generateClarificationsMock.mockResolvedValue({ clarifications: [] });
     parseResumeMock.mockResolvedValue({
       plainText: "Parsed resume",
       bullets: [],
@@ -279,6 +298,56 @@ describe("MainContent resume parsing", () => {
 
     expect(localStorage.getItem("watheq:guestMode")).toBeNull();
     expect(await screen.findByTestId("landing-page-mock")).toBeInTheDocument();
+  });
+
+  it("passes sign-in-required upload props in guest workspace", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:guestMode", "true");
+
+    render(<MainContent />);
+
+    expect(await screen.findByTestId("resume-upload-mock")).toBeInTheDocument();
+    expect(resumeUploadMockProps.current).toMatchObject({
+      requiresSignIn: true,
+      authRequiredTitle: "Sign in required",
+      authRequiredMessage: "Please sign in to securely process your resume.",
+    });
+
+    act(() => {
+      resumeUploadMockProps.current.onAuthRequired();
+    });
+
+    expect(await screen.findByText(/Sign in required Please sign in to securely process your resume/i)).toBeInTheDocument();
+  });
+
+  it("gates guest match analysis before backend calls", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:guestMode", "true");
+    localStorage.setItem("watheq:lastActiveTab", "match");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
+
+    expect(analyzeResumeMock).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
+  });
+
+  it("gates guest optimization and clarifications before backend calls", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:guestMode", "true");
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    expect(generateClarificationsMock).not.toHaveBeenCalled();
+    expect(optimizeResumeMock).not.toHaveBeenCalled();
+    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
   });
 
   it("does not render landing pricing or comparison blocks in the authenticated workspace", () => {

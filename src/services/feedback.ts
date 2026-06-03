@@ -9,6 +9,14 @@ import type {
 
 const FEEDBACK_ENDPOINT = '/.netlify/functions/feedback-api';
 
+function getContextFeature(pagePath: string): string {
+  if (pagePath.includes('templates')) return 'templates';
+  if (pagePath.includes('pipeline')) return 'pipeline';
+  if (pagePath.includes('admin')) return 'admin';
+  if (pagePath === '/' || pagePath.includes('landing')) return 'landing';
+  return 'workspace';
+}
+
 async function getFeedbackAuthHeaders() {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const {
@@ -36,6 +44,7 @@ export function buildFeedbackContext(): FeedbackContext {
       pagePath: '/',
       userAgent: '',
       viewport: 'server',
+      contextFeature: 'server',
     };
   }
 
@@ -44,10 +53,13 @@ export function buildFeedbackContext(): FeedbackContext {
   const pointer = window.matchMedia?.('(pointer: coarse)').matches ? 'touch' : 'pointer';
   const size = width < 768 ? 'mobile' : width < 1024 ? 'tablet' : 'desktop';
 
+  const pagePath = window.location.pathname || '/';
+
   return {
-    pagePath: window.location.pathname || '/',
+    pagePath,
     userAgent: window.navigator.userAgent || '',
     viewport: `${size} ${width}x${height} ${pointer}`,
+    contextFeature: getContextFeature(pagePath),
   };
 }
 
@@ -77,6 +89,7 @@ export async function submitFeedbackReport(
       type: input.type,
       message: input.message,
       rating: input.rating ?? null,
+      validation: input.validation ?? {},
       context: buildFeedbackContext(),
     }),
   });

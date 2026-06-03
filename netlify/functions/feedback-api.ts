@@ -17,6 +17,8 @@ const FEEDBACK_TYPES = new Set([
 
 const FEEDBACK_STATUSES = new Set(['new', 'reviewing', 'resolved', 'closed']);
 const FEEDBACK_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
+const TRUST_TO_APPLY_ANSWERS = new Set(['yes', 'somewhat', 'no']);
+const WILLINGNESS_TO_PAY_ANSWERS = new Set(['yes', 'maybe', 'no']);
 
 type FeedbackType =
   | 'bug'
@@ -25,6 +27,9 @@ type FeedbackType =
   | 'feature_request'
   | 'pricing_credits'
   | 'other';
+
+type TrustToApply = 'yes' | 'somewhat' | 'no';
+type WillingnessToPay = 'yes' | 'maybe' | 'no';
 
 interface AuthenticatedUser {
   id: string;
@@ -42,10 +47,15 @@ interface SubmitFeedbackBody {
   type?: unknown;
   message?: unknown;
   rating?: unknown;
+  validation?: {
+    trustToApply?: unknown;
+    willingnessToPay?: unknown;
+  };
   context?: {
     pagePath?: unknown;
     userAgent?: unknown;
     viewport?: unknown;
+    contextFeature?: unknown;
   };
 }
 
@@ -101,12 +111,44 @@ function optionalString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
+function optionalAllowedString<T extends string>(
+  value: unknown,
+  allowedValues: Set<string>,
+  fieldName: string
+): T | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  if (typeof value !== 'string' || !allowedValues.has(value)) {
+    throw httpError(400, `Invalid ${fieldName}`, 'invalid_validation_answer');
+  }
+
+  return value as T;
+}
+
 function normalizeFeedbackMessage(message: string): string {
   return message.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 export function hashFeedbackMessage(message: string): string {
   return createHash('sha256').update(normalizeFeedbackMessage(message)).digest('hex');
+}
+
+function buildValidationFooter({
+  trustToApply,
+  willingnessToPay,
+}: {
+  trustToApply: TrustToApply | null;
+  willingnessToPay: WillingnessToPay | null;
+}): string {
+  if (!trustToApply && !willingnessToPay) {
+    return '';
+  }
+
+  // Temporary no-schema strategy: the current table/RPC has no metadata column,
+  // so persist only backend-validated enum answers in a compact machine-readable footer.
+  return `\n\n[watheq_feedback_validation trust_to_apply=${trustToApply ?? 'not_answered'} willingness_to_pay=${willingnessToPay ?? 'not_answered'}]`;
 }
 
 function isAdmin(user: AuthenticatedUser): boolean {
@@ -165,14 +207,29 @@ function parseSubmitBody(event: HandlerEvent) {
     rating = numericRating;
   }
 
+  const trustToApply = optionalAllowedString<TrustToApply>(
+    body.validation?.trustToApply,
+    TRUST_TO_APPLY_ANSWERS,
+    'trust_to_apply'
+  );
+  const willingnessToPay = optionalAllowedString<WillingnessToPay>(
+    body.validation?.willingnessToPay,
+    WILLINGNESS_TO_PAY_ANSWERS,
+    'willingness_to_pay'
+  );
+  const validationFooter = buildValidationFooter({ trustToApply, willingnessToPay });
+  const storedMessage = `${message}${validationFooter}`;
+
   return {
     type: type as FeedbackType,
-    message,
+    message: storedMessage,
     rating,
     pagePath: optionalString(body.context?.pagePath, '/').slice(0, 500) || '/',
     userAgent: optionalString(body.context?.userAgent).slice(0, 1000),
     viewport: optionalString(body.context?.viewport).slice(0, 200),
-    messageHash: hashFeedbackMessage(message),
+    // Duplicate detection intentionally includes the validation footer because
+    // this no-schema fallback stores the enum answers as part of the report body.
+    messageHash: hashFeedbackMessage(storedMessage),
   };
 }
 

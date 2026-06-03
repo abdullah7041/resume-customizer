@@ -405,7 +405,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       // 5. Send to Server (Netlify Function)
       const { getAuthHeaders } = await import('../../services/api');
-      const apiHeaders = await getAuthHeaders();
+      const apiHeaders = await getAuthHeaders({ requireAuth: true });
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
         headers: { ...apiHeaders, 'Content-Type': 'application/json' },

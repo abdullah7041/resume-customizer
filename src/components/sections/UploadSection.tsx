@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import UploadCard from '../ui/UploadCard';
+import { isAuthRequiredError } from '../../services/api.js';
 import { AppError } from '../../services/supabase.js';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
@@ -31,6 +32,10 @@ interface UploadSectionProps {
     resumeDocument: ResumeDocument | null;
     onToast: (toast: Toast) => void;
     onClear: () => void;
+    requiresSignIn?: boolean;
+    authRequiredTitle?: string;
+    authRequiredMessage?: string;
+    onAuthRequired?: () => void;
 }
 
 export default function UploadSection({
@@ -38,6 +43,10 @@ export default function UploadSection({
     resumeDocument,
     onToast,
     onClear,
+    requiresSignIn = false,
+    authRequiredTitle = 'Sign in required',
+    authRequiredMessage = 'Please sign in to securely process your resume.',
+    onAuthRequired,
 }: UploadSectionProps) {
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'success' | 'error'>('idle');
@@ -52,6 +61,20 @@ export default function UploadSection({
 
     // Get store actions
     const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload, isSaudiNational, setSaudiNational } = useResumeStore();
+
+    const handleAuthRequired = useCallback(() => {
+        setStatus('idle');
+        setProgress(0);
+        setError(authRequiredMessage);
+        onAuthRequired?.();
+        if (!onAuthRequired) {
+            onToast({
+                type: 'warning',
+                title: authRequiredTitle,
+                description: authRequiredMessage,
+            });
+        }
+    }, [authRequiredMessage, authRequiredTitle, onAuthRequired, onToast]);
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
@@ -109,6 +132,11 @@ export default function UploadSection({
     }, [status, onToast]);
 
     const handleSubmit = useCallback(async () => {
+        if (requiresSignIn) {
+            handleAuthRequired();
+            return;
+        }
+
         if (!file && !pastedText) {
             onToast({
                 type: 'warning',
@@ -206,6 +234,11 @@ export default function UploadSection({
 
             if (!parseRequestActive.current) return;
 
+            if (isAuthRequiredError(err)) {
+                handleAuthRequired();
+                return;
+            }
+
             setStatus('error');
             setProgress(0);
             const message = err instanceof Error ? err.message : 'Failed to parse resume';
@@ -220,7 +253,7 @@ export default function UploadSection({
                 description: message,
             });
         }
-    }, [file, pastedText, onParseResume, onToast, setOriginalResume, setParsedResumeText, resetForNewUpload]);
+    }, [file, handleAuthRequired, onParseResume, onToast, pastedText, requiresSignIn, resetForNewUpload, setOriginalResume, setParsedResumeText]);
 
     const fileName = file?.name || resumeDocument?.fileName || '';
     const disabled = !file && !pastedText && !resumeDocument?.plainText;
@@ -246,6 +279,8 @@ export default function UploadSection({
                 onCancel={handleCancel}
                 isSaudiNational={isSaudiNational}
                 onSaudiNationalChange={setSaudiNational}
+                requiresSignIn={requiresSignIn}
+                onAuthRequired={handleAuthRequired}
             />
 
 

@@ -34,7 +34,7 @@ This document defines the beta validation funnel, success metrics, and launch/no
 | `export_success` | Export completed | `template_id`, `format` |
 | `export_failed` | Export failed | `template_id`, `format`, `error_category` |
 | `waitlist_joined` | Waitlist insert success | `source` |
-| `feedback_submitted` | Feedback API success | `rating`, `has_testimonial`, `context_feature` |
+| `feedback_submitted` | Feedback API success | `feedback_type`, `rating`, `rating_bucket`, `has_message`, `trust_to_apply`, `willingness_to_pay`, `context_feature` |
 | `pricing_intent_pack_9_sar` | Fake-door anchor click | `source` |
 | `pricing_intent_monthly_29_sar` | Fake-door anchor click | `source` |
 
@@ -52,14 +52,18 @@ This document defines the beta validation funnel, success metrics, and launch/no
 
 ## 2. Feedback Questions
 
-After value moments (match success, optimize success, export success, pipeline save), users see an optional feedback modal with:
+Current shipped state: authenticated users can open the manual feedback modal from the header. Automatic value-moment prompting is not currently wired.
 
-1. **Emoji rating** (love / happy / neutral / sad / terrible)
-2. **What felt wrong or generic?** (optional short text)
+The manual modal collects:
+
+1. **Rating** (optional 1-5 satisfaction signal)
+2. **What felt wrong, generic, or confusing?** (required meaningful text)
 3. **Would you trust this resume enough to apply?** (Yes / Somewhat / No)
 4. **Would you pay for this if it saved you time?** (Yes / Maybe / No)
 
-Session dedup: max **one feedback prompt per session**.
+When automatic value-moment prompting is added after match success, optimize success, export success, or pipeline save, apply session dedup with `watheq:feedbackPromptedThisSession` so the prompt appears at most once per session.
+
+Implementation note: until a feedback metadata column/RPC parameter exists, the backend persists only allowlisted validation answers in a compact `watheq_feedback_validation` footer on the stored feedback message. Duplicate detection intentionally includes that footer because `message_hash` is computed from the final stored report body.
 
 ---
 

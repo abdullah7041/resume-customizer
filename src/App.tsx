@@ -19,6 +19,7 @@ import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { TermsOfService } from "./pages/TermsOfService";
 import { AdminFeedbackPage } from "./pages/AdminFeedbackPage";
 import { HRSuperSaudOverlay, HRSuperSaudProvider } from "./features/hr-super-saud";
+import { useResumeStore } from "./lib/stores/resumeStore";
 
 const getCurrentPath = () => {
   if (typeof window === "undefined") return "/";
@@ -27,6 +28,7 @@ const getCurrentPath = () => {
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
+  const hasResume = useResumeStore((state) => Boolean(state.originalResume || state.parsedResumeText));
 
   // Run storage migration once on app initialization
   useEffect(() => {
@@ -56,7 +58,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <DirectionProvider>
         <HRSuperSaudProvider>
-          <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-gradient-to-b from-[#f1fcf7] via-[#e6f7f1] to-[#dcf2e9] dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
+          <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-[#f5f4f0] dark:bg-gradient-to-b dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
             <OfflineIndicator />
             <EnvironmentBadge />
             <Header />
@@ -82,7 +84,7 @@ export default function App() {
             />
 
             {currentPath !== "/privacy" && currentPath !== "/terms" && currentPath !== "/admin/feedback" && (
-              <HRSuperSaudOverlay isOnboardingActive={run} />
+              <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
             )}
 
             {/* Onboarding Tour — react-joyride v3 API */}

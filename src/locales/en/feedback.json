@@ -16,13 +16,26 @@
     },
     "fields": {
       "type": "Type",
-      "message": "Message",
-      "messagePlaceholder": "Tell us what happened and what you expected instead.",
+      "message": "What felt wrong, generic, or confusing?",
+      "messagePlaceholder": "Tell us what felt off and what you expected instead.",
       "minimumRemaining": "{{count}} more characters needed",
       "minimumMet": "Looks detailed enough.",
       "rating": "Rating (optional)",
       "noRating": "No rating",
-      "ratingValue": "{{count}} / 5"
+      "ratingValue": "{{count}} / 5",
+      "trustToApply": "Would you trust this resume enough to apply?",
+      "willingnessToPay": "Would you pay for this if it saved you time?",
+      "noAnswer": "No answer"
+    },
+    "trustToApply": {
+      "yes": "Yes",
+      "somewhat": "Somewhat",
+      "no": "No"
+    },
+    "willingnessToPay": {
+      "yes": "Yes",
+      "maybe": "Maybe",
+      "no": "No"
     },
     "reward": {
       "copy": "Eligible first feedback earns +5 credits.",

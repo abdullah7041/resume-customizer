@@ -68,7 +68,7 @@ const sanitizeTextInput = (text) => {
 
 
 const chipClass =
-  "inline-flex items-center justify-center rounded-full border border-emerald-900/12 bg-white/92 text-emerald-700 shadow-soft dark:border-emerald-200/16 dark:bg-black/36 dark:text-emerald-200";
+  "inline-flex items-center justify-center rounded-full border border-emerald-900/12 bg-white text-emerald-700 shadow-soft dark:border-emerald-200/16 dark:bg-black/36 dark:text-emerald-200";
 
 
 export default function UploadCard({
@@ -87,6 +87,8 @@ export default function UploadCard({
   onCancel,
   isSaudiNational,
   onSaudiNationalChange,
+  requiresSignIn = false,
+  onAuthRequired,
 }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
@@ -105,7 +107,14 @@ export default function UploadCard({
     error: t("upload.card.status.error"),
   };
 
+  const gateAuthRequired = () => {
+    if (!requiresSignIn) return false;
+    onAuthRequired?.();
+    return true;
+  };
+
   const handleFile = async (file) => {
+    if (gateAuthRequired()) return;
     if (!file) return;
 
     const size = typeof file.size === "number" ? file.size : 0;
@@ -156,6 +165,7 @@ export default function UploadCard({
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
+    if (gateAuthRequired()) return;
     const file = event.dataTransfer.files?.[0];
     if (file) {
       void handleFile(file);
@@ -164,6 +174,7 @@ export default function UploadCard({
 
   const handleDragOver = (event) => {
     event.preventDefault();
+    if (requiresSignIn) return;
     setIsDragging(true);
   };
 
@@ -173,6 +184,12 @@ export default function UploadCard({
   };
 
   const handleFileChange = (event) => {
+    if (gateAuthRequired()) {
+      if (event.target) {
+        event.target.value = "";
+      }
+      return;
+    }
     const file = event.target.files?.[0];
     if (file) {
       void handleFile(file);
@@ -190,7 +207,7 @@ export default function UploadCard({
   return (
     <GlassCard
       padding="lg"
-      className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden bg-white/95 dark:bg-[#082b23]/95"
+      className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden bg-white dark:bg-[#082b23]/95"
     >
       <header data-tour="upload-header" className="space-y-1.5 sm:space-y-2 text-center sm:text-left mb-6 sm:mb-8">
         <div className="flex items-center justify-between gap-2">
@@ -207,10 +224,14 @@ export default function UploadCard({
         tabIndex={0}
         aria-label={uploadFileLabel}
         title={uploadFileLabel}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => {
+          if (gateAuthRequired()) return;
+          inputRef.current?.click();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
+            if (gateAuthRequired()) return;
             inputRef.current?.click();
           }
         }}
@@ -218,10 +239,10 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-2.5 sm:gap-4 overflow-hidden rounded-lg sm:rounded-xl border-2 border-dashed border-emerald-800/22 bg-emerald-50/45 px-3 pt-12 pb-6 sm:px-6 sm:py-12 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-emerald-200/24 dark:bg-black/24 dark:focus-visible:ring-offset-[#082b23] cursor-pointer",
-          "hover:border-emerald-600/42 hover:bg-emerald-50/70 dark:hover:border-emerald-200/35 dark:hover:bg-black/32",
+          "group relative flex flex-col items-center justify-center gap-2.5 sm:gap-4 overflow-hidden rounded-lg sm:rounded-xl border-2 border-dashed border-emerald-700/30 bg-emerald-50/80 px-3 pt-12 pb-6 sm:px-6 sm:py-12 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--workspace-surface)] dark:border-emerald-200/24 dark:bg-black/24 dark:focus-visible:ring-offset-[#082b23] cursor-pointer",
+          "hover:border-emerald-600/50 hover:bg-emerald-50 dark:hover:border-emerald-200/35 dark:hover:bg-black/32",
           isDragging &&
-          "border-emerald-500/70 bg-emerald-100/70 dark:border-emerald-300/50 dark:bg-emerald-500/12 scale-[1.01]"
+          "border-emerald-500/70 bg-emerald-100/90 dark:border-emerald-300/50 dark:bg-emerald-500/12 scale-[1.01]"
         )}
       >
         <span className={cn("absolute right-2 rtl:right-auto rtl:left-2 sm:right-6 sm:rtl:left-6 sm:rtl:right-auto top-3 sm:top-6 px-2 sm:px-3 py-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.15em] sm:tracking-[0.2em]", chipClass)}>
@@ -272,14 +293,17 @@ export default function UploadCard({
         <textarea
           id="resume-paste-text"
           value={pastedText}
-          onChange={(event) => onTextChange?.(sanitizeTextInput(event.target.value))}
+          onChange={(event) => {
+            if (gateAuthRequired()) return;
+            onTextChange?.(sanitizeTextInput(event.target.value));
+          }}
           disabled={status === "uploading" || status === "parsing"}
           rows={4}
           className="w-full resize-y rounded-xl border border-gray-300/80 bg-white/95 px-4 py-3 text-sm text-gray-900 shadow-inner outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-500 dark:border-white/15 dark:bg-black/32 dark:text-white dark:placeholder:text-emerald-100/45 dark:focus:border-emerald-300/70 dark:focus:ring-emerald-300/18 dark:disabled:bg-white/5 dark:disabled:text-gray-400"
           placeholder={t('upload.card.pastePlaceholder', 'Paste selectable resume text here...')}
         />
         <p className="text-xs text-gray-600 dark:text-emerald-100/70">
-          {t('upload.card.pasteHelp', 'Pasted text will be used instead of a selected file.')}
+          {t('upload.card.pasteHelp', 'Use either a file or pasted text. The latest input will be used.')}
         </p>
       </div>
 
@@ -298,7 +322,10 @@ export default function UploadCard({
       <div className="flex flex-col sm:hidden gap-2 w-full mt-4">
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            if (gateAuthRequired()) return;
+            inputRef.current?.click();
+          }}
           className="flex items-center justify-center gap-2 w-full min-h-[48px] rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-sm shadow-[0_10px_22px_-16px_rgba(16,185,129,0.55)] transition-all duration-300 active:scale-[0.98]"
         >
           <UploadCloud className="h-5 w-5" />

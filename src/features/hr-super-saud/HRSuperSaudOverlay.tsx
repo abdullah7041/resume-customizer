@@ -210,7 +210,7 @@ function getWorkflowHint(workflowState: HRSuperSaudWorkflowState) {
   };
 }
 
-export function HRSuperSaudOverlay({ isOnboardingActive = false }: { isOnboardingActive?: boolean }) {
+export function HRSuperSaudOverlay({ isOnboardingActive = false, forceMinimized = false }: { isOnboardingActive?: boolean; forceMinimized?: boolean }) {
   const { dismissReaction, reaction, workflowState } = useHRSuperSaud();
   const { t } = useTranslation();
   const [isMinimized, setIsMinimized] = useState(readInitialMinimized);
@@ -378,7 +378,7 @@ export function HRSuperSaudOverlay({ isOnboardingActive = false }: { isOnboardin
     );
   }
 
-  if (isMinimized || shouldUseMinimalPresentation) {
+  if (isMinimized || shouldUseMinimalPresentation || forceMinimized) {
     if (shouldUseMinimalPresentation) {
       return (
         <div

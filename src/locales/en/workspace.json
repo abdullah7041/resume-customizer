@@ -14,6 +14,8 @@
       "notice": "Sign in is needed to run AI match/optimization, save pipeline jobs, or export to your account.",
       "protectedActionTitle": "Sign in required",
       "protectedActionDesc": "Sign in to run AI analysis and save your progress.",
+      "resumeProcessingAuthTitle": "Sign in required",
+      "resumeProcessingAuthDesc": "Please sign in to securely process your resume.",
       "signInCta": "Sign in to save progress",
       "backToLanding": "Back to landing"
     },

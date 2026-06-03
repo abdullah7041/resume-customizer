@@ -1,9 +1,9 @@
 :root {
-  /* Atmosphere - Light Mode */
-  --bg: #eef5f2;
+  /* Atmosphere - Light Mode (Warm Grey Foundation) */
+  --bg: #f5f4f0;
   --surface: #ffffff;
-  --surface-strong: #f3f8f5;
-  --surface-glass-rgb: 251 252 250;
+  --surface-strong: #fafaf8;
+  --surface-glass-rgb: 255 255 255;
   --surface-glass: rgba(255, 255, 255, 0.84);
   --surface-glass-strong: rgba(255, 255, 255, 0.94);
   --ink: #021715;
@@ -24,6 +24,14 @@
   --panel-bg: rgba(255, 255, 255, 0.9);
   --panel-stroke: rgba(13, 84, 72, 0.18);
   --panel-highlight: rgba(52, 211, 153, 0.12);
+
+  /* Workspace surfaces - Light Mode */
+  --workspace-bg: #f5f4f0;
+  --workspace-surface: #ffffff;
+  --workspace-surface-raised: #ffffff;
+  --workspace-border: rgba(13, 84, 72, 0.10);
+  --workspace-border-strong: rgba(13, 84, 72, 0.18);
+  --workspace-shadow: 0 2px 8px rgba(0, 18, 16, 0.06), 0 12px 32px -12px rgba(0, 18, 16, 0.10);
 
   /* Elevation + sheen - Light Mode */
   --shadow-card:
@@ -50,8 +58,8 @@
   --glass-gold-sheen: linear-gradient(115deg, rgba(244, 211, 125, 0.15) 0%, rgba(52, 211, 153, 0.05) 55%, rgba(244, 211, 125, 0.1) 100%);
 
   /* Color system */
-  --surface-50: #e6f7f1;
-  --surface-50-rgb: 230 247 241;
+  --surface-50: #f5f4f0;
+  --surface-50-rgb: 245 244 240;
   --surface-900: #021715;
   --surface-900-rgb: 2 23 21;
 
@@ -109,8 +117,8 @@
   --gradient-primary-value: linear-gradient(135deg, rgba(7, 89, 81, 0.95) 0%, rgba(15, 118, 110, 0.9) 38%, rgba(34, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
   --gradient-primary-soft: linear-gradient(135deg, rgba(13, 148, 136, 0.82) 0%, rgba(45, 197, 159, 0.74) 45%, rgba(162, 255, 217, 0.65) 100%);
   --gradient-emerald: linear-gradient(135deg, rgba(14, 164, 114, 0.95) 0%, rgba(52, 211, 153, 0.9) 100%);
-  --gradient-muted-value: linear-gradient(120deg, rgba(238, 246, 242, 0.9) 0%, rgba(224, 236, 230, 0.76) 52%, rgba(208, 224, 216, 0.62) 100%);
-  --gradient-card-value: linear-gradient(150deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 250, 248, 0.92) 48%, rgba(239, 247, 243, 0.86) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(245, 244, 240, 0.9) 0%, rgba(240, 239, 235, 0.76) 52%, rgba(235, 234, 230, 0.62) 100%);
+  --gradient-card-value: linear-gradient(150deg, rgba(255, 255, 255, 0.96) 0%, rgba(252, 252, 250, 0.92) 48%, rgba(248, 248, 246, 0.86) 100%);
   --gradient-halo: radial-gradient(circle at 18% 0%, rgba(15, 118, 110, 0.1) 0%, rgba(15, 118, 110, 0) 60%);
 
   --shadow-card-value: var(--shadow-card);
@@ -132,7 +140,7 @@
   --button-primary-shadow-strong: 0 16px 32px -12px rgba(52, 211, 153, 0.4), 0 12px 24px -10px rgba(3, 47, 44, 0.3);
   --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 65%, var(--secondary));
 
-  --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(251, 252, 250, 0.8) 0%, rgba(251, 252, 250, 0) 70%);
+  --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(245, 244, 240, 0.8) 0%, rgba(245, 244, 240, 0) 70%);
 }
 
 :root.dark,
@@ -160,6 +168,14 @@
   --panel-bg: rgba(7, 36, 31, 0.9);
   --panel-stroke: rgba(94, 234, 212, 0.18);
   --panel-highlight: rgba(52, 211, 153, 0.18);
+
+  /* Workspace surfaces - Dark Mode */
+  --workspace-bg: rgba(7, 36, 31, 0.65);
+  --workspace-surface: rgba(7, 36, 31, 0.92);
+  --workspace-surface-raised: rgba(8, 43, 35, 0.95);
+  --workspace-border: rgba(94, 234, 212, 0.10);
+  --workspace-border-strong: rgba(94, 234, 212, 0.18);
+  --workspace-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 8px 24px -12px rgba(0, 0, 0, 0.4);
 
   --shadow-card:
     0 0 0 1px rgba(94, 234, 212, 0.12),

@@ -65,10 +65,6 @@ vi.mock('../lib/assets', () => ({
   }),
 }));
 
-vi.mock('../components/sections/ProductWalkthrough', () => ({
-  ProductWalkthrough: () => <section>Product walkthrough</section>,
-}));
-
 vi.mock('../components/sections/PricingSection', () => ({
   PricingSection: () => <section id="pricing">Public pricing plans</section>,
 }));

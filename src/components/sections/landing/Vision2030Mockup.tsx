@@ -15,7 +15,7 @@ export function Vision2030Mockup() {
     <div className="relative mx-auto w-full max-w-md">
       <motion.div
         {...float}
-        className="relative overflow-hidden rounded-[1.5rem] bg-[#fbfcfa] p-5 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10"
+        className="relative overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] p-5 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10"
       >
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(0,108,53,0.04)_0%,rgba(43,137,148,0.06)_100%)] dark:bg-[linear-gradient(135deg,rgba(0,108,53,0.08)_0%,rgba(52,211,153,0.06)_100%)]" />
 
@@ -49,7 +49,7 @@ export function Vision2030Mockup() {
             {sectors.map((sector) => (
               <div
                 key={sector}
-                className="flex items-center justify-between rounded-xl bg-[#f4f9f7] px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-900/6 dark:bg-white/[0.06] dark:text-white/78 dark:ring-white/10"
+                className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-900/6 dark:bg-white/[0.06] dark:text-white/78 dark:ring-white/10"
               >
                 <span>{sector}</span>
                 <CheckCircle2 className="h-4 w-4 text-[#006C35] dark:text-emerald-300" />

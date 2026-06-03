@@ -77,7 +77,7 @@ export function MobileWorkflowNav({
           isActive
             ? 'border-emerald-400/70 bg-emerald-50 text-gray-950 shadow-sm dark:border-emerald-300/45 dark:bg-emerald-300/12 dark:text-white'
             : 'border-gray-200 bg-white/75 text-gray-700 hover:border-emerald-300 hover:bg-emerald-50/70 dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50/85 dark:hover:border-emerald-300/40 dark:hover:bg-emerald-300/10',
-          isDisabled && 'cursor-not-allowed border-gray-200 bg-gray-100/80 text-gray-500 opacity-70 hover:border-gray-200 hover:bg-gray-100/80 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/45 dark:hover:bg-white/[0.03]'
+          isDisabled && 'cursor-not-allowed border-transparent bg-transparent text-gray-400 opacity-60 hover:border-transparent hover:bg-transparent dark:border-transparent dark:bg-transparent dark:text-white/40 dark:hover:bg-transparent'
         )}
       >
         <span
@@ -105,7 +105,7 @@ export function MobileWorkflowNav({
     <nav
       aria-label={t('workspace.mobileWorkflow.ariaLabel', 'Workflow navigation')}
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="rounded-2xl border border-emerald-900/15 bg-white/94 p-3 shadow-soft dark:border-white/15 dark:bg-black/50"
+      className="rounded-2xl border border-transparent bg-transparent p-3 dark:border-white/15 dark:bg-black/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

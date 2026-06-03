@@ -12,6 +12,7 @@ npm run dev                # Vite dev server (port 5173)
 npm run dev:netlify        # Netlify dev with functions (port 8888)
 npm run build              # Production build
 npm run quality:parallel   # Lint + TypeScript + Tests in parallel (ALWAYS run after changes)
+npm run quality:full       # Fast quality gate + production build + i18n validation
 npm run lint:fix           # Auto-fix ESLint issues
 npm run type:check         # TypeScript check
 npm run test               # Vitest unit tests
@@ -31,7 +32,7 @@ npm run test               # Vitest unit tests
 
 ## Quality — NON-NEGOTIABLE
 
-After EVERY code change, run `npm run quality:parallel`. Fix all errors immediately — do not ask permission, do not mark task complete until zero errors. Auto-fix workflow: `npm run lint:fix` → `npm run quality:parallel`.
+After EVERY code change, run `npm run quality:parallel`. Use `npm run quality:full` before launch, release, or handoff decisions that need build and i18n coverage. Fix all errors immediately — do not ask permission, do not mark task complete until zero errors. Auto-fix workflow: `npm run lint:fix` → `npm run quality:parallel`.
 
 ## Critical Gotchas
 

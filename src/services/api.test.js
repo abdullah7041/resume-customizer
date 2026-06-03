@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { analyzeResume, optimizeResume, parseResume } from './api.js';
+import { AUTH_REQUIRED, analyzeResume, optimizeResume, parseResume } from './api.js';
+import { supabase } from './supabase';
 
 const mockResumeText = vi.hoisted(() => ({
   extractPlainTextFromArrayBuffer: vi.fn(),
@@ -25,6 +26,10 @@ beforeEach(() => {
   mockResumeText.extractPlainTextFromArrayBuffer.mockReset();
   mockResumeText.inferMimeType.mockReset();
   mockResumeText.inferMimeType.mockReturnValue('application/pdf');
+  supabase.auth.getSession.mockResolvedValue({
+    data: { session: { access_token: 'test-access-token' } },
+    error: null,
+  });
 
   // Mock localStorage with beta code
   const localStorageMock = {
@@ -84,6 +89,78 @@ describe('parseResume', () => {
     await expect(parseResume('   ')).rejects.toThrow('Parse failed');
   });
 
+  it('blocks signed-out text parsing before extract-resume-json', async () => {
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+
+    await expect(parseResume('Sample resume')).rejects.toMatchObject({
+      status: 401,
+      type: AUTH_REQUIRED,
+      message: 'Please sign in to securely process your resume.',
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('blocks signed-out readable client-extracted PDFs before server parsing', async () => {
+    const readableText = [
+      'Product Manager Riyadh Saudi Arabia',
+      'Led digital transformation programs across finance and operations',
+      'Managed stakeholder communication and delivery timelines',
+    ].join('\n');
+    mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue(readableText);
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+
+    const file = new File(['%PDF-readable'], 'resume.pdf', { type: 'application/pdf' });
+
+    await expect(parseResume(file)).rejects.toMatchObject({
+      status: 401,
+      type: AUTH_REQUIRED,
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('blocks signed-out low-text file fallback before server parsing', async () => {
+    const onOcrFallback = vi.fn();
+    mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue('too short');
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+
+    const file = new File(['%PDF-low-text'], 'scanned.pdf', { type: 'application/pdf' });
+
+    await expect(parseResume(file, { onOcrFallback })).rejects.toMatchObject({
+      status: 401,
+      type: AUTH_REQUIRED,
+    });
+
+    expect(onOcrFallback).toHaveBeenCalledTimes(1);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('maps extract-resume-json 401 responses to AUTH_REQUIRED', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+      json: async () => ({ error: 'Authentication required. Please sign in.' }),
+    });
+
+    await expect(parseResume('Sample resume')).rejects.toMatchObject({
+      status: 401,
+      type: AUTH_REQUIRED,
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('sends low-text PDFs as files with auth headers and surfaces 422 without OCR claims', async () => {
     const onOcrFallback = vi.fn();
     mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue('too short');
@@ -95,12 +172,6 @@ describe('parseResume', () => {
       json: async () => ({
         error: 'This file appears to be scanned or image-only. Upload a text-based PDF, DOCX, TXT, or paste text.',
       }),
-    });
-
-    const { supabase } = await import('./supabase');
-    supabase.auth.getSession.mockResolvedValueOnce({
-      data: { session: { access_token: 'test-access-token' } },
-      error: null,
     });
 
     const file = new File(['%PDF-low-text'], 'scanned.pdf', { type: 'application/pdf' });
@@ -169,6 +240,20 @@ describe('parseResume', () => {
 });
 
 describe('analyzeResume', () => {
+  it('blocks signed-out match analysis before ai-match', async () => {
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+
+    await expect(analyzeResume('resume text', 'job text')).rejects.toMatchObject({
+      status: 401,
+      type: AUTH_REQUIRED,
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('calls ai-match endpoint', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,

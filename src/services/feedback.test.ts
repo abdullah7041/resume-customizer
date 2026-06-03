@@ -44,6 +44,7 @@ describe('feedback service privacy', () => {
     expect(context.pagePath).toBe('/templates');
     expect(context.userAgent).toBe(window.navigator.userAgent);
     expect(context.viewport).toMatch(/desktop|tablet|mobile/);
+    expect(context.contextFeature).toBe('templates');
     expect(JSON.stringify(context)).not.toContain('Sensitive parsed resume state');
     expect(JSON.stringify(context)).not.toContain('Sensitive job text');
     expect(JSON.stringify(context)).not.toContain('Sensitive optimization output');
@@ -54,18 +55,29 @@ describe('feedback service privacy', () => {
       type: 'resume_quality',
       message: 'The improved summary became too generic for my original resume context.',
       rating: 3,
+      validation: {
+        trustToApply: 'somewhat',
+        willingnessToPay: 'maybe',
+      },
     });
 
     const fetchCall = vi.mocked(fetch).mock.calls[0];
     const body = JSON.parse(String(fetchCall[1]?.body)) as Record<string, unknown>;
     const serializedBody = JSON.stringify(body);
 
+    expect(fetchCall[0]).toBe('/.netlify/functions/feedback-api');
+    expect(fetchCall[1]?.method).toBe('POST');
     expect(body).toMatchObject({
       type: 'resume_quality',
       message: 'The improved summary became too generic for my original resume context.',
       rating: 3,
+      validation: {
+        trustToApply: 'somewhat',
+        willingnessToPay: 'maybe',
+      },
       context: expect.objectContaining({
         pagePath: '/templates',
+        contextFeature: 'templates',
       }),
     });
     expect(serializedBody).not.toContain('Sensitive parsed resume state');
@@ -74,5 +86,7 @@ describe('feedback service privacy', () => {
     expect(serializedBody).not.toContain('resumeText');
     expect(serializedBody).not.toContain('jobText');
     expect(serializedBody).not.toContain('optimization');
+    expect(serializedBody).not.toContain('creditsAwarded');
+    expect(serializedBody).not.toContain('rewardStatus');
   });
 });

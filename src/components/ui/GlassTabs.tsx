@@ -35,7 +35,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
 
   return (
     <nav
-      className={cn("relative flex w-full items-center rounded-2xl border border-emerald-900/15 bg-white/92 p-1.5 shadow-soft dark:border-white/15 dark:bg-black/50", className)}
+      className={cn("relative flex w-full items-center rounded-2xl border border-transparent bg-transparent p-1.5 dark:border-white/15 dark:bg-black/50", className)}
       role="tablist"
       data-tour={dataTour}
     >
@@ -66,7 +66,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               className={cn(
                 'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap outline-none select-none shrink-0 z-10 rounded-xl ml-0.5 mr-0.5',
                 isDisabled
-                  ? 'cursor-not-allowed border border-gray-300/60 bg-gray-100/70 text-gray-500 opacity-45 dark:border-white/10 dark:bg-white/5 dark:text-gray-400'
+                  ? 'cursor-not-allowed text-gray-400 opacity-45 dark:text-gray-500'
                   : isActive
                   ? tab.isPremium ? 'text-white drop-shadow-md' : 'text-gray-900 dark:text-white drop-shadow-md'
                   : tab.isPremium

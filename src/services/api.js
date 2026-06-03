@@ -12,6 +12,19 @@ const OPTIMIZE_STREAM_ENDPOINT = `/api/optimize-stream`;
 const CLARIFY_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-clarifications`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
+export const AUTH_REQUIRED = 'AUTH_REQUIRED';
+export const AUTH_REQUIRED_RESUME_MESSAGE = 'Please sign in to securely process your resume.';
+
+export const createAuthRequiredError = (message = AUTH_REQUIRED_RESUME_MESSAGE) => {
+  const error = new Error(message);
+  error.status = 401;
+  error.type = AUTH_REQUIRED;
+  error.code = 'auth/required';
+  return error;
+};
+
+export const isAuthRequiredError = (error) =>
+  error?.type === AUTH_REQUIRED || error?.code === 'auth/required' || error?.status === 401;
 
 const summarizeErrorForConsole = (error) => ({
   name: error?.name || 'Error',
@@ -21,7 +34,8 @@ const summarizeErrorForConsole = (error) => ({
 });
 
 // Helper to get auth headers
-export const getAuthHeaders = async () => {
+export const getAuthHeaders = async (options = {}) => {
+  const { requireAuth = false, authRequiredMessage } = options;
   const headers = { "Content-Type": "application/json" };
 
   try {
@@ -34,11 +48,20 @@ export const getAuthHeaders = async () => {
     if (session?.access_token) {
       headers.Authorization = `Bearer ${session.access_token}`;
     } else {
+      if (requireAuth) {
+        throw createAuthRequiredError(authRequiredMessage);
+      }
       console.warn('[API] No active session found - request will be sent without authentication');
     }
   } catch (error) {
+    if (isAuthRequiredError(error)) {
+      throw error;
+    }
     console.error('[API] Unexpected error retrieving auth session:', summarizeErrorForConsole(error));
-    // Don't throw - allow the endpoint to decide if auth is required
+    if (requireAuth) {
+      throw createAuthRequiredError(authRequiredMessage);
+    }
+    // Don't throw for optional-auth endpoints - allow the endpoint to decide if auth is required.
   }
 
   return headers;
@@ -113,10 +136,7 @@ const handleResponse = async (response) => {
 
   // Handle authentication errors
   if (response.status === 401) {
-    const error = new Error(data.error || "Authentication required. Please sign in again.");
-    error.status = 401;
-    error.type = 'AUTH_REQUIRED';
-    throw error;
+    throw createAuthRequiredError(data.error || AUTH_REQUIRED_RESUME_MESSAGE);
   }
 
   // Handle Bad Gateway errors (502) - often caused by timeouts
@@ -246,7 +266,10 @@ export const parseResume = async (resumeInput, options = {}) => {
         payload = { kind: "text", value: resumeInput };
       }
 
-      const headers = await getAuthHeaders();
+      const headers = await getAuthHeaders({
+        requireAuth: true,
+        authRequiredMessage: AUTH_REQUIRED_RESUME_MESSAGE,
+      });
 
       const response = await fetch(PARSE_ENDPOINT, {
         method: "POST",
@@ -275,10 +298,15 @@ export const parseResume = async (resumeInput, options = {}) => {
         throw cancelError;
       }
 
-      console.error("Parse failed:", summarizeErrorForConsole(error));
-
       // Enrich error with status for retry logic
       error.status = error.status || 500;
+
+      if (isAuthRequiredError(error)) {
+        console.warn('[API] Resume parsing requires sign-in:', summarizeErrorForConsole(error));
+        throw error;
+      }
+
+      console.error("Parse failed:", summarizeErrorForConsole(error));
 
       // Capture error in Sentry (even if quota exceeded - helps track usage patterns)
       Sentry.captureException(error, {
@@ -328,7 +356,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
 
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders();
+      const headers = await getAuthHeaders({ requireAuth: true });
 
       const response = await fetch(MATCH_ENDPOINT, {
         method: "POST",
@@ -375,7 +403,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
 
       // Handle authentication errors
       if (error.status === 401 || error.type === 'AUTH_REQUIRED') {
-        throw new Error('Authentication expired. Please sign out and sign in again.');
+        throw error;
       }
 
       // Handle quota exceeded
@@ -403,7 +431,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
   }
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders();
+      const headers = await getAuthHeaders({ requireAuth: true });
 
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
@@ -462,7 +490,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
  */
 export const generateClarifications = async ({ resumeText, jobDesc, language = 'en' }) => {
   try {
-    const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders({ requireAuth: true });
     const response = await fetch(CLARIFY_ENDPOINT, {
       method: 'POST',
       headers,
@@ -474,6 +502,9 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
     }
     return await response.json();
   } catch (error) {
+    if (isAuthRequiredError(error)) {
+      throw error;
+    }
     console.warn('[API] generateClarifications failed (non-fatal), proceeding without:', summarizeErrorForConsole(error));
     return { clarifications: [] };
   }
@@ -492,7 +523,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
 
-  const headers = await getAuthHeaders();
+  const headers = await getAuthHeaders({ requireAuth: true });
   // Remove Content-Type for SSE request compatibility — the body is still JSON
   // but we need to accept text/event-stream response
   const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
@@ -595,7 +626,7 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
 
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders();
+      const headers = await getAuthHeaders({ requireAuth: true });
 
       const response = await fetch(VISION2030_ENDPOINT, {
         method: "POST",
@@ -642,7 +673,7 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
 
 export const extractJobMetadata = async (jobText, language = 'en') => {
   try {
-    const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders({ requireAuth: true });
     const response = await fetch(FUNCTION_BASE_PATH + '/extract-job-metadata', {
       method: 'POST',
       headers,

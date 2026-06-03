@@ -20,25 +20,6 @@
             "description": "Watheq improves positioning while preserving your real experience, asking clarifying questions before rewriting when proof is missing."
           }
         }
-      },
-      "truth": {
-        "eyebrow": "Truthful optimization",
-        "title": "Watheq improves the application around your real evidence.",
-        "subtitle": "The workflow is built to reduce generic rewrites and unsupported claims by matching first, asking when proof is missing, and keeping interview prep tied to the same source material.",
-        "cards": {
-          "match": {
-            "title": "Job matching before rewriting",
-            "description": "Watheq compares the resume to the job ad so optimization starts from actual gaps, keywords, and role expectations."
-          },
-          "clarify": {
-            "title": "Questions before assumptions",
-            "description": "When impact is vague, Watheq asks for scope, metrics, or context before turning a bullet into a stronger claim."
-          },
-          "noFakes": {
-            "title": "No fake experience",
-            "description": "Suggestions are framed as defensible improvements, not invented credentials, employers, numbers, or responsibilities."
-          }
-        }
       }
     }
   }

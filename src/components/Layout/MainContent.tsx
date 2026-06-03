@@ -8,6 +8,7 @@ import {
   optimizeResumeStream,
   generateClarifications,
   extractJobMetadata,
+  isAuthRequiredError,
 } from "../../services/api.js";
 import { ClarificationModal, type ClarificationQuestion } from "../modals/ClarificationModal";
 import { useAuth } from "../../hooks/useAuth";
@@ -329,6 +330,14 @@ export default function MainContent() {
     "workspace.guest.protectedActionDesc",
     "Sign in to run AI analysis and save your progress."
   );
+  const resumeProcessingAuthTitle = t(
+    "workspace.guest.resumeProcessingAuthTitle",
+    "Sign in required"
+  );
+  const resumeProcessingAuthMessage = t(
+    "workspace.guest.resumeProcessingAuthDesc",
+    "Please sign in to securely process your resume."
+  );
 
   const requireSignInForGuestAction = useCallback(() => {
     pushToast({
@@ -337,6 +346,17 @@ export default function MainContent() {
       description: guestProtectedActionDescription,
     });
   }, [guestProtectedActionDescription, guestProtectedActionTitle, pushToast]);
+
+  const requireSignInForResumeProcessing = useCallback(() => {
+    pushToast(
+      {
+        type: "warning",
+        title: resumeProcessingAuthTitle,
+        description: resumeProcessingAuthMessage,
+      },
+      { id: TOAST_IDS.upload }
+    );
+  }, [pushToast, resumeProcessingAuthMessage, resumeProcessingAuthTitle]);
 
   const handleGuestSignIn = useCallback(() => {
     void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
@@ -669,6 +689,11 @@ export default function MainContent() {
         return enriched;
       } catch (error) {
         setFlowProgress(0);
+        if (isAuthRequiredError(error)) {
+          requireSignInForResumeProcessing();
+          throw error;
+        }
+
         emitHRSuperSaudEvent('error.generic');
         pushToast(
           {
@@ -682,7 +707,7 @@ export default function MainContent() {
         throw error;
       }
     },
-    [normalizeResumePayload, pushToast, resetPipelineContext, t]
+    [normalizeResumePayload, pushToast, requireSignInForResumeProcessing, resetPipelineContext, t]
   );
 
   const handleAnalyzeMatchAI = useCallback(
@@ -1122,6 +1147,10 @@ export default function MainContent() {
 
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {
+    if (isGuestMode) {
+      requireSignInForGuestAction();
+      return;
+    }
     if (!resumeData?.plainText || !jobDescription) return;
     setIsRegenerating(true);
     try {
@@ -1139,7 +1168,7 @@ export default function MainContent() {
     } finally {
       setIsRegenerating(false);
     }
-  }, [i18n.language, jobDescription, handleClarificationSkip, resumeData]);
+  }, [i18n.language, isGuestMode, jobDescription, handleClarificationSkip, requireSignInForGuestAction, resumeData]);
 
   const handleMarkApplied = useCallback(async () => {
     if (isGuestMode) {
@@ -1392,9 +1421,9 @@ export default function MainContent() {
     <ParallaxContainer enableLayers={false} className="py-1">
       <div className="space-y-3 sm:space-y-3 text-gray-900 dark:text-surface-50">
         {isGuestMode && (
-          <div className="rounded-[var(--radius-card)] border border-emerald-900/12 bg-white/92 p-4 shadow-soft dark:border-emerald-200/16 dark:bg-[#071f1a]/94">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold leading-6 text-gray-700 dark:text-emerald-100/82">
+          <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/50 px-4 py-3 dark:border-emerald-200/14 dark:bg-emerald-900/20">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium leading-5 text-gray-700 dark:text-emerald-100/82">
                 {guestNotice}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
@@ -1445,13 +1474,17 @@ export default function MainContent() {
           </div>
         </div>
 
-        <div className="relative min-h-[420px] rounded-[var(--radius-card)] border border-emerald-900/12 bg-white/95 p-4 shadow-card transition-shadow duration-300 dark:border-emerald-200/16 dark:bg-[#071f1a]/95 sm:min-h-[480px] sm:p-5 lg:p-6">
+        <div className="workspace-panel relative min-h-[420px] p-4 transition-shadow duration-300 sm:min-h-[480px] sm:p-5 lg:p-6">
           {activeTab === "resume" && (
             <UploadSection
               onParseResume={handleParseResume}
               resumeDocument={resumeData}
               onToast={handleUploadToast}
               onClear={handleClearResume}
+              requiresSignIn={isGuestMode}
+              authRequiredTitle={resumeProcessingAuthTitle}
+              authRequiredMessage={resumeProcessingAuthMessage}
+              onAuthRequired={requireSignInForResumeProcessing}
             />
           )}
           {activeTab === "match" && (
@@ -1688,8 +1721,8 @@ export default function MainContent() {
           </div>
         </div>
       )}
-      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-gray-900 dark:text-surface-50`}>
-        <div className="rounded-[var(--radius-card)] border border-white/70 bg-white/88 p-4 shadow-soft transition-shadow duration-300 dark:border-white/12 dark:bg-[#041c17]/90 sm:p-7 lg:p-8">
+      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-gray-900 dark:text-surface-50 p-4 sm:p-6 lg:p-8`}>
+        <div>
           {flowProgress > 0 && (
             <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-emerald-900/10 dark:bg-black/45">
               <div

@@ -19,7 +19,7 @@ Watheq is a proprietary Saudi-market AI resume optimizer. The app uses React 19,
 - Do not change app code during repository bootstrap or instruction-maintenance tasks.
 - Before feature work, diagnose the data flow and identify impacted frontend, API, validation, and persistence boundaries.
 - Keep generated guidance concise. Link to focused context files instead of pasting large persona or process blocks into this file.
-- Prefer npm scripts already defined in `package.json`; use `npm run quality:parallel` after code changes when feasible.
+- Prefer npm scripts already defined in `package.json`; use `npm run quality:parallel` as the fast gate after code changes when feasible, and `npm run quality:full` before launch, release, or handoff decisions that need build and i18n coverage.
 - Database migrations should be output for the user to run in Supabase, not applied directly by an agent.
 - Keep repo workflow guidance in this file rather than creating broad workflow skills.
 - Use focused skills in `.agents/skills/` only for scoped jobs such as feature architecture, AI resume pipeline changes, backend boundaries, or frontend UX work.
@@ -37,6 +37,7 @@ Watheq is a proprietary Saudi-market AI resume optimizer. The app uses React 19,
 - Prefer explicit RTK commands only when they exist: `rtk git status`, `rtk git diff --stat`, `rtk git diff`, `rtk read <file>`, `rtk grep "<pattern>" <path>`, `rtk find "<glob>" <path>`, `rtk test <command>`, `rtk lint`, and `rtk tsc`.
 - Do not run PowerShell cmdlets as RTK subcommands. Wrong: `rtk Get-Content AGENTS.md`. Right: `rtk read AGENTS.md`.
 - Do not use `rtk rg`; use `rtk grep` instead.
+- Avoid running multiple `rtk read` or `rtk grep` commands in parallel under short tool timeouts. Run them sequentially, or give RTK calls about 30 seconds when parallelism is necessary; if RTK still hangs, use a narrow PowerShell fallback and report it.
 - If PowerShell syntax or cmdlets are required, wrap them with `rtk proxy`, for example `rtk proxy powershell -NoProfile -Command "Get-Content -Raw -LiteralPath 'AGENTS.md'"` or `rtk proxy powershell -NoProfile -Command "Test-Path -LiteralPath './src'"`.
 - If RTK search hits access-denied errors, first verify the working directory, then restrict the search to repo paths such as `src`, `netlify`, `docs`, `supabase`, and `.agents`.
 - If RTK output is insufficient, use a narrow non-RTK fallback and explicitly explain why.

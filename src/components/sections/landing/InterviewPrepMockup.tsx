@@ -15,13 +15,13 @@ export function InterviewPrepMockup() {
     <div className="relative mx-auto w-full max-w-md">
       <motion.div
         {...float}
-        className="relative overflow-hidden rounded-[1.5rem] bg-[#fbfcfa] p-5 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10"
+        className="relative overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] p-5 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10"
       >
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(43,137,148,0.04)_0%,rgba(14,165,233,0.03)_100%)] dark:bg-[linear-gradient(135deg,rgba(52,211,153,0.06)_0%,rgba(14,165,233,0.04)_100%)]" />
 
         <div className="relative">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eff8f7] text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
               <MessageSquareText className="h-4 w-4" />
             </div>
             <div>
@@ -42,7 +42,7 @@ export function InterviewPrepMockup() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.15 + index * 0.1, ease: "easeOut" }}
-                className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-900/5 dark:bg-white/[0.05] dark:ring-white/10"
+                className="rounded-xl bg-white p-4 ring-1 ring-slate-900/5 dark:bg-white/[0.05] dark:ring-white/10"
               >
                 <div className="flex items-start gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#2b8994]/10 text-[11px] font-black text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-300">

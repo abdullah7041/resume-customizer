@@ -72,6 +72,10 @@ function validPostBody(overrides: Record<string, unknown> = {}) {
     type: 'bug',
     message: 'The export button gets stuck after I retry a failed PDF download.',
     rating: 4,
+    validation: {
+      trustToApply: 'somewhat',
+      willingnessToPay: 'maybe',
+    },
     context: {
       pagePath: '/workspace',
       userAgent: 'Vitest Browser',
@@ -79,6 +83,14 @@ function validPostBody(overrides: Record<string, unknown> = {}) {
     },
     ...overrides,
   });
+}
+
+function withValidationFooter(
+  message = 'The export button gets stuck after I retry a failed PDF download.',
+  trustToApply = 'somewhat',
+  willingnessToPay = 'maybe'
+) {
+  return `${message}\n\n[watheq_feedback_validation trust_to_apply=${trustToApply} willingness_to_pay=${willingnessToPay}]`;
 }
 
 describe('feedback-api', () => {
@@ -137,7 +149,27 @@ describe('feedback-api', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it('rejects invalid validation answers before calling the feedback RPC', async () => {
+    const response = (await handler(
+      makeEvent({
+        headers: { authorization: 'Bearer token' },
+        body: validPostBody({
+          validation: {
+            trustToApply: 'definitely',
+            willingnessToPay: 'maybe',
+          },
+        }),
+      }),
+      context
+    )) as HandlerResponse;
+
+    expect(response.statusCode).toBe(400);
+    expect(parseBody(response).code).toBe('invalid_validation_answer');
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
   it('submits only authenticated identity, safe context, and server-derived reward fields', async () => {
+    const storedMessage = withValidationFooter();
     const response = (await handler(
       makeEvent({
         headers: { authorization: 'Bearer token' },
@@ -163,17 +195,18 @@ describe('feedback-api', () => {
       p_user_id: 'real-user-id',
       p_user_email: 'real-user@example.com',
       p_type: 'bug',
-      p_message: 'The export button gets stuck after I retry a failed PDF download.',
+      p_message: storedMessage,
       p_rating: 4,
       p_page_path: '/admin/feedback',
       p_user_agent: 'Vitest Browser',
       p_viewport: 'desktop 1440x900',
-      p_message_hash: hashFeedbackMessage(
-        'The export button gets stuck after I retry a failed PDF download.'
-      ),
+      p_message_hash: hashFeedbackMessage(storedMessage),
     });
 
     const rpcPayload = rpcMock.mock.calls[0][1];
+    expect(JSON.stringify(rpcPayload)).toContain('watheq_feedback_validation');
+    expect(JSON.stringify(rpcPayload)).toContain('trust_to_apply=somewhat');
+    expect(JSON.stringify(rpcPayload)).toContain('willingness_to_pay=maybe');
     expect(JSON.stringify(rpcPayload)).not.toContain('secret resume');
     expect(JSON.stringify(rpcPayload)).not.toContain('secret job');
     expect(JSON.stringify(rpcPayload)).not.toContain('attacker');
@@ -338,5 +371,45 @@ describe('feedback-api', () => {
     expect(migrationSql).toContain('insert into public.credit_transactions');
     expect(migrationSql).toContain("'feedback_reward'");
     expect(migrationSql).toContain('credits_remaining = v_credits_after');
+  });
+
+  it('ships a forward hardening migration for exposed SECURITY DEFINER RPC privileges', () => {
+    const migrationSql = readFileSync(
+      join(process.cwd(), 'supabase/migrations/20260602093000_harden_exposed_security_definer_rpcs.sql'),
+      'utf8'
+    ).toLowerCase();
+
+    for (const functionName of [
+      'add_credits',
+      'add_feedback_credits',
+      'consume_user_credits',
+      'initialize_user_credits',
+      'rls_auto_enable',
+    ]) {
+      expect(migrationSql).toContain(functionName);
+    }
+
+    expect(migrationSql).toContain('revoke execute on function %i.%i(%s) from public, anon, authenticated');
+    expect(migrationSql).toContain('grant execute on function public.add_credits');
+    expect(migrationSql).toContain('grant execute on function public.consume_user_credits');
+    expect(migrationSql).toContain('revoke execute on function public.add_feedback_credits(varchar) from public, anon, authenticated, service_role');
+    expect(migrationSql).toContain('alter function %i.%i(%s) set search_path = public, pg_temp');
+  });
+
+  it('ships a follow-up migration that removes service-role execute from inactive helper RPCs', () => {
+    const migrationSql = readFileSync(
+      join(process.cwd(), 'supabase/migrations/20260602101000_restrict_inactive_helper_rpc_service_role.sql'),
+      'utf8'
+    ).toLowerCase();
+
+    expect(migrationSql).toContain('initialize_user_credits');
+    expect(migrationSql).toContain('rls_auto_enable');
+    expect(migrationSql).toContain(
+      'revoke execute on function public.initialize_user_credits() from public, anon, authenticated, service_role'
+    );
+    expect(migrationSql).toContain(
+      'revoke execute on function public.rls_auto_enable() from public, anon, authenticated, service_role'
+    );
+    expect(migrationSql).toContain('set search_path = public, pg_temp');
   });
 });

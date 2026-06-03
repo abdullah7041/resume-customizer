@@ -817,6 +817,19 @@
     color: var(--ink-900);
   }
 
+  /* Workspace-specific surface utilities */
+  .workspace-panel {
+    background: var(--workspace-surface);
+    border: 1px solid var(--workspace-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--workspace-shadow);
+  }
+
+  .workspace-shell {
+    background: var(--workspace-bg);
+    border-radius: var(--radius-card);
+  }
+
   .app-shell {
     max-width: var(--app-shell-max);
     margin-inline: auto;
@@ -1564,7 +1577,7 @@
 
   .tab-embossed[data-state="active"],
   .tab-embossed.active {
-    background: var(--surface-strong);
+    background: #ffffff;
     color: var(--ink);
     border: 1px solid var(--panel-stroke);
     box-shadow:

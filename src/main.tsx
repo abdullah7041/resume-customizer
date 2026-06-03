@@ -45,9 +45,6 @@ import "./index.css";
 // Initialize analytics (respects consent)
 analytics.init();
 
-// Pre-warm the PDF generation serverless function to drastically reduce cold starts
-fetch('/.netlify/functions/generate-pdf', { method: 'HEAD' }).catch(() => {});
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>

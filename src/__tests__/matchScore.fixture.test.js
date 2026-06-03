@@ -6,7 +6,7 @@ vi.mock('../services/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn().mockResolvedValue({
-        data: { session: null },
+        data: { session: { access_token: 'test-token' } },
         error: null
       })
     }

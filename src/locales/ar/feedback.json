@@ -16,13 +16,26 @@
     },
     "fields": {
       "type": "النوع",
-      "message": "الرسالة",
-      "messagePlaceholder": "اكتب ما حدث وما الذي كنت تتوقعه بدلًا من ذلك.",
+      "message": "ما الذي بدا غير دقيق أو عامًا أو مربكًا؟",
+      "messagePlaceholder": "اكتب ما الذي لم يكن مناسبًا وما الذي كنت تتوقعه بدلًا من ذلك.",
       "minimumRemaining": "تبقى {{count}} حرفًا",
       "minimumMet": "التفاصيل كافية.",
       "rating": "التقييم (اختياري)",
       "noRating": "بدون تقييم",
-      "ratingValue": "{{count}} / 5"
+      "ratingValue": "{{count}} / 5",
+      "trustToApply": "هل تثق بهذه السيرة بما يكفي للتقديم؟",
+      "willingnessToPay": "هل ستدفع مقابل ذلك إذا وفر عليك الوقت؟",
+      "noAnswer": "بدون إجابة"
+    },
+    "trustToApply": {
+      "yes": "نعم",
+      "somewhat": "إلى حد ما",
+      "no": "لا"
+    },
+    "willingnessToPay": {
+      "yes": "نعم",
+      "maybe": "ربما",
+      "no": "لا"
     },
     "reward": {
       "copy": "أول ملاحظة مؤهلة تمنحك +5 أرصدة.",

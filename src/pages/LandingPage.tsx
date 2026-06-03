@@ -15,7 +15,6 @@ import {
   Target,
 } from "lucide-react";
 
-import { ProductWalkthrough } from "../components/sections/ProductWalkthrough";
 import { PricingSection } from "../components/sections/PricingSection";
 import { ComparisonTable } from "../components/ui/ComparisonTable";
 import { FeatureHighlightSection } from "../components/sections/FeatureHighlightSection";
@@ -38,7 +37,7 @@ function translatedList(t: ReturnType<typeof useTranslation>["t"], key: string) 
 
 function ProofMetric({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-2xl bg-[#fbfcfa]/86 p-4 text-start shadow-sm ring-1 ring-slate-900/6 backdrop-blur dark:bg-white/[0.08] dark:ring-white/10">
+    <div className="rounded-2xl bg-white/86 p-4 text-start shadow-sm ring-1 ring-slate-900/6 backdrop-blur dark:bg-white/[0.08] dark:ring-white/10">
       <div className="text-3xl font-black tabular-nums text-[#0b1026] dark:text-white">{value}</div>
       <div className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-[#2b8994] dark:text-emerald-300">{label}</div>
     </div>
@@ -64,7 +63,7 @@ function HeroProductStage() {
 
   return (
     <div className="relative mx-auto w-full max-w-5xl">
-      <div className="landing-proof-panel relative overflow-hidden rounded-[1.5rem] bg-[#f4f9f7] px-4 py-5 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#082b23] dark:shadow-black/30 dark:ring-white/10 sm:px-8 sm:py-8 lg:px-12">
+      <div className="landing-proof-panel relative overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] px-4 py-5 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#082b23] dark:shadow-black/30 dark:ring-white/10 sm:px-8 sm:py-8 lg:px-12">
         <picture className="pointer-events-none absolute inset-x-4 top-0 h-48 opacity-20 sm:inset-x-8 sm:h-64">
           <source
             media="(max-width: 767px)"
@@ -79,11 +78,11 @@ function HeroProductStage() {
             fetchPriority="high"
           />
         </picture>
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(251,252,250,0.94)_0%,rgba(239,248,245,0.84)_46%,rgba(232,238,248,0.58)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(16,185,129,0.08)_52%,rgba(236,72,153,0.05)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(245,244,240,0.84)_46%,rgba(240,239,235,0.58)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(16,185,129,0.08)_52%,rgba(236,72,153,0.05)_100%)]" />
 
         <div className="relative grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
           <div className="space-y-5 pt-1 sm:pt-4">
-            <div className="inline-flex items-center rounded-full bg-[#f4f9f7] px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/10 dark:text-emerald-200 dark:ring-white/10">
+            <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/10 dark:text-emerald-200 dark:ring-white/10">
               {t("landing.productWalkthrough.heroProof.eyebrow")}
             </div>
             <h2 className="max-w-md text-2xl font-black leading-tight text-[#171717] dark:text-white sm:text-3xl">
@@ -94,7 +93,7 @@ function HeroProductStage() {
             </p>
             <div className="grid max-w-md gap-2">
               {proofItems.map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-2xl bg-[#fbfcfa]/82 p-3 text-sm font-bold leading-6 text-[#0c3541] shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.07] dark:text-white/78 dark:ring-white/10">
+                <div key={item} className="flex items-start gap-3 rounded-2xl bg-white/82 p-3 text-sm font-bold leading-6 text-[#0c3541] shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.07] dark:text-white/78 dark:ring-white/10">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#2b8994] dark:text-emerald-300" />
                   <span>{item}</span>
                 </div>
@@ -108,18 +107,18 @@ function HeroProductStage() {
               animate={{ opacity: 1, y: 0, rotate: -4 }}
               transition={{ duration: 0.55, ease: "easeOut" }}
               {...floatSlow}
-              className="absolute left-0 top-10 hidden w-56 rounded-[1.5rem] bg-[#fbfcfa] p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 lg:block dark:bg-[#06231d] dark:ring-white/10"
+              className="absolute left-0 top-10 hidden w-56 rounded-[1.5rem] bg-white p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 lg:block dark:bg-[#06231d] dark:ring-white/10"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                   {t("landing.productWalkthrough.preview.before")}
                 </span>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-500 dark:bg-white/10 dark:text-white/60">52</span>
+                <span className="rounded-full bg-[#f5f4f0] px-2 py-1 text-xs font-black text-slate-500 dark:bg-white/10 dark:text-white/60">52</span>
               </div>
               <div className="mt-4 space-y-2">
-                <div className="h-2 w-4/5 rounded-full bg-slate-200 dark:bg-white/10" />
-                <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-white/10" />
-                <div className="h-2 w-3/5 rounded-full bg-slate-200 dark:bg-white/10" />
+                <div className="h-2 w-4/5 rounded-full bg-[#f5f4f0] dark:bg-white/10" />
+                <div className="h-2 w-full rounded-full bg-[#f5f4f0] dark:bg-white/10" />
+                <div className="h-2 w-3/5 rounded-full bg-[#f5f4f0] dark:bg-white/10" />
               </div>
             </motion.div>
 
@@ -127,7 +126,7 @@ function HeroProductStage() {
               initial={shouldReduceMotion ? false : { opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, delay: 0.08, ease: "easeOut" }}
-              className="mx-auto w-full max-w-sm rounded-[1.5rem] bg-[#fbfcfa] p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10 sm:p-5"
+              className="mx-auto w-full max-w-sm rounded-[1.5rem] bg-white p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10 sm:p-5"
             >
               <div className="rounded-[1.25rem] bg-white p-4 text-[#171717] shadow-sm ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:text-white dark:ring-white/10">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-white/70">
@@ -143,7 +142,7 @@ function HeroProductStage() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {keywordTags.map((keyword) => (
-                    <span key={keyword} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-white/10 dark:text-white/78 dark:ring-white/10">
+                    <span key={keyword} className="rounded-full bg-[#f5f4f0] px-2.5 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-white/10 dark:text-white/78 dark:ring-white/10">
                       {keyword}
                     </span>
                   ))}
@@ -155,7 +154,7 @@ function HeroProductStage() {
                   t("landing.productWalkthrough.heroProof.vision"),
                   t("landing.productWalkthrough.heroProof.interview"),
                 ].map((item) => (
-                  <div key={item} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600 dark:bg-white/[0.06] dark:text-white/72">
+                  <div key={item} className="flex items-center justify-between rounded-2xl bg-[#f5f4f0] px-4 py-3 text-sm font-bold text-slate-600 dark:bg-white/[0.06] dark:text-white/72">
                     <span>{item}</span>
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
                   </div>
@@ -168,7 +167,7 @@ function HeroProductStage() {
               animate={{ opacity: 1, y: 0, rotate: 3 }}
               transition={{ duration: 0.55, delay: 0.16, ease: "easeOut" }}
               {...floatSlower}
-              className="absolute bottom-0 right-0 w-[88%] rounded-[1.35rem] bg-[#fbfcfa] p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10 sm:w-72 lg:bottom-8"
+              className="absolute bottom-0 right-0 w-[88%] rounded-[1.35rem] bg-white p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10 sm:w-72 lg:bottom-8"
             >
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
                 <MessageSquareText className="h-4 w-4" />
@@ -195,8 +194,8 @@ function StoryCard({
   description: string;
 }) {
   return (
-    <article className="rounded-[1.25rem] bg-[#f4f9f7] p-5 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.055] dark:ring-white/10">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eff8f7] text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
+    <article className="rounded-[1.25rem] bg-white p-5 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.055] dark:ring-white/10">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f5f4f0] text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="mt-5 text-xl font-black text-[#171717] dark:text-white">{title}</h3>
@@ -223,11 +222,6 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
 
   const handleSignInCta = () => {
     onSignIn?.();
-  };
-
-  const handleWalkthroughCta = () => {
-    analytics.trackGetStartedClicked('walkthrough');
-    onGetStarted();
   };
 
   const handleFinalCta = () => {
@@ -267,7 +261,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             fetchPriority="high"
           />
         </picture>
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(251,252,250,0.88)_0%,rgba(251,252,250,0.78)_52%,rgba(251,252,250,0.98)_100%)] dark:bg-[linear-gradient(180deg,rgba(6,19,15,0.76)_0%,rgba(6,19,15,0.84)_55%,rgba(6,19,15,1)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(245,244,240,0.78)_52%,rgba(255,255,255,0.98)_100%)] dark:bg-[linear-gradient(180deg,rgba(6,19,15,0.76)_0%,rgba(6,19,15,0.84)_55%,rgba(6,19,15,1)_100%)]" />
 
         <div className="relative z-10 mx-auto w-full max-w-7xl">
           <div className="mx-auto max-w-4xl text-center">
@@ -276,7 +270,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#f4f9f7] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 shadow-sm dark:border-white/10 dark:bg-white/[0.08] dark:text-emerald-200"
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 shadow-sm dark:border-white/10 dark:bg-white/[0.08] dark:text-emerald-200"
             >
               <Sparkles className="h-3.5 w-3.5" />
               {t("landing.trustBadge")}
@@ -359,7 +353,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         </div>
       </section>
 
-      <section className="bg-[#fafcfb] px-5 py-14 dark:bg-[#041c17] sm:px-8 lg:py-20" aria-labelledby="tailoring-title">
+      <section className="bg-[#f5f4f0] px-5 py-14 dark:bg-[#041c17] sm:px-8 lg:py-20" aria-labelledby="tailoring-title">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="order-2 grid gap-4 md:grid-cols-3 lg:order-1 lg:grid-cols-1">
             {tailoringCards.map((card) => (
@@ -400,7 +394,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         benefits={translatedList(t, "landing.featureHighlights.clarify.benefits")}
         visual={<ClarificationMockup />}
         reverse
-        bgClassName="bg-[#fafcfb] dark:bg-[#041c17]"
+        bgClassName="bg-[#f5f4f0] dark:bg-[#041c17]"
       />
 
       <FeatureHighlightSection
@@ -411,8 +405,6 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         visual={<InterviewPrepMockup />}
         bgClassName="bg-white dark:bg-[#031713]"
       />
-
-      <ProductWalkthrough onGetStarted={handleWalkthroughCta} />
 
       <section className="bg-white px-5 py-16 text-[#171717] dark:bg-[#031713] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-comparison-title">
         <div className="mx-auto max-w-7xl">
@@ -437,7 +429,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         </div>
       </div>
 
-      <section className="bg-[#fafcfb] px-5 py-16 text-[#171717] dark:bg-[#041c17] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-final-title">
+      <section className="bg-[#f5f4f0] px-5 py-16 text-[#171717] dark:bg-[#041c17] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-final-title">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
@@ -458,7 +450,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
           <button
             type="button"
             onClick={handleFinalCta}
-            className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#5eead4] px-8 py-3.5 text-sm font-black text-[#052e2b] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafcfb] dark:focus-visible:ring-offset-[#092018]"
+            className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#5eead4] px-8 py-3.5 text-sm font-black text-[#052e2b] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f4f0] dark:focus-visible:ring-offset-[#092018]"
           >
             {t("landing.productWalkthrough.cta")}
             <ArrowRight className="h-4 w-4 rtl:rotate-180" />

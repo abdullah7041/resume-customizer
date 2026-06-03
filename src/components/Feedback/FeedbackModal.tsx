@@ -3,8 +3,14 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, Loader2, MessageSquare, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils/cn';
-import { submitFeedbackReport } from '@/services/feedback';
-import type { FeedbackType, SubmitFeedbackResponse } from '@/types/feedback';
+import { analytics } from '@/services/analytics';
+import { buildFeedbackContext, submitFeedbackReport } from '@/services/feedback';
+import type {
+  FeedbackTrustToApply,
+  FeedbackType,
+  FeedbackWillingnessToPay,
+  SubmitFeedbackResponse,
+} from '@/types/feedback';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -22,6 +28,9 @@ const FEEDBACK_TYPES: FeedbackType[] = [
 
 const MIN_MESSAGE_LENGTH = 30;
 
+const TRUST_TO_APPLY_OPTIONS: FeedbackTrustToApply[] = ['yes', 'somewhat', 'no'];
+const WILLINGNESS_TO_PAY_OPTIONS: FeedbackWillingnessToPay[] = ['yes', 'maybe', 'no'];
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -32,6 +41,8 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [type, setType] = useState<FeedbackType>('bug');
   const [message, setMessage] = useState('');
   const [rating, setRating] = useState('');
+  const [trustToApply, setTrustToApply] = useState('');
+  const [willingnessToPay, setWillingnessToPay] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitFeedbackResponse | null>(null);
@@ -86,10 +97,24 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         type,
         message: message.trim(),
         rating: rating ? Number(rating) : null,
+        validation: {
+          trustToApply: trustToApply ? (trustToApply as FeedbackTrustToApply) : null,
+          willingnessToPay: willingnessToPay ? (willingnessToPay as FeedbackWillingnessToPay) : null,
+        },
+      });
+      analytics.trackFeedbackSubmitted({
+        feedbackType: type,
+        rating: rating ? Number(rating) : null,
+        hasMessage: message.trim().length > 0,
+        trustToApply: trustToApply ? (trustToApply as FeedbackTrustToApply) : null,
+        willingnessToPay: willingnessToPay ? (willingnessToPay as FeedbackWillingnessToPay) : null,
+        contextFeature: buildFeedbackContext().contextFeature,
       });
       setResult(response);
       setMessage('');
       setRating('');
+      setTrustToApply('');
+      setWillingnessToPay('');
       if (response.creditsAwarded > 0) {
         window.dispatchEvent(new Event('refreshCredits'));
       }
@@ -162,14 +187,14 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
           <label className="block">
             <span className="mb-2 block text-sm font-semibold text-gray-800 dark:text-white">
-              {t('feedback.fields.message', 'Message')}
+              {t('feedback.fields.message', 'What felt wrong, generic, or confusing?')}
             </span>
             <textarea
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               rows={6}
               maxLength={4000}
-              placeholder={t('feedback.fields.messagePlaceholder', 'Tell us what happened and what you expected instead.')}
+              placeholder={t('feedback.fields.messagePlaceholder', 'Tell us what felt off and what you expected instead.')}
               className="w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-white/15 dark:bg-black/30 dark:text-white"
             />
             <span className={cn('mt-1 block text-xs', remainingCharacters > 0 ? 'text-gray-500 dark:text-white/55' : 'text-emerald-700 dark:text-emerald-300')}>
@@ -180,6 +205,42 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   })
                 : t('feedback.fields.minimumMet', 'Looks detailed enough.')}
             </span>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-800 dark:text-white">
+              {t('feedback.fields.trustToApply', 'Would you trust this resume enough to apply?')}
+            </span>
+            <select
+              value={trustToApply}
+              onChange={(event) => setTrustToApply(event.target.value)}
+              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-white/15 dark:bg-black/30 dark:text-white"
+            >
+              <option value="">{t('feedback.fields.noAnswer', 'No answer')}</option>
+              {TRUST_TO_APPLY_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {t(`feedback.trustToApply.${value}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-800 dark:text-white">
+              {t('feedback.fields.willingnessToPay', 'Would you pay for this if it saved you time?')}
+            </span>
+            <select
+              value={willingnessToPay}
+              onChange={(event) => setWillingnessToPay(event.target.value)}
+              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-white/15 dark:bg-black/30 dark:text-white"
+            >
+              <option value="">{t('feedback.fields.noAnswer', 'No answer')}</option>
+              {WILLINGNESS_TO_PAY_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {t(`feedback.willingnessToPay.${value}`)}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="block">

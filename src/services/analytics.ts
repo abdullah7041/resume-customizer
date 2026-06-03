@@ -1,5 +1,10 @@
 import mixpanel from 'mixpanel-browser';
 import { useConsentStore } from '../lib/stores/consentStore';
+import type {
+    FeedbackTrustToApply,
+    FeedbackType,
+    FeedbackWillingnessToPay,
+} from '@/types/feedback';
 
 const MIXPANEL_TOKEN = import.meta.env.VITE_MIXPANEL_TOKEN;
 
@@ -11,6 +16,13 @@ function getScoreBucket(score: number): '0-39' | '40-59' | '60-79' | '80-100' {
     if (score < 60) return '40-59';
     if (score < 80) return '60-79';
     return '80-100';
+}
+
+function getRatingBucket(rating?: number | null): 'none' | '1-2' | '3' | '4-5' {
+    if (!rating) return 'none';
+    if (rating <= 2) return '1-2';
+    if (rating === 3) return '3';
+    return '4-5';
 }
 
 /**
@@ -169,6 +181,32 @@ class Analytics {
             source,
             plan_hint: planHint ?? 'pro',
             pro_launched: false,
+        });
+    }
+
+    trackFeedbackSubmitted({
+        feedbackType,
+        rating,
+        hasMessage,
+        trustToApply,
+        willingnessToPay,
+        contextFeature,
+    }: {
+        feedbackType: FeedbackType;
+        rating?: number | null;
+        hasMessage: boolean;
+        trustToApply?: FeedbackTrustToApply | null;
+        willingnessToPay?: FeedbackWillingnessToPay | null;
+        contextFeature?: string;
+    }) {
+        this.track('feedback_submitted', {
+            feedback_type: feedbackType,
+            rating: rating ?? null,
+            rating_bucket: getRatingBucket(rating),
+            has_message: hasMessage,
+            trust_to_apply: trustToApply ?? null,
+            willingness_to_pay: willingnessToPay ?? null,
+            context_feature: contextFeature ?? 'unknown',
         });
     }
 

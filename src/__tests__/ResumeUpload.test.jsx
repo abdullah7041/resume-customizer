@@ -96,6 +96,9 @@ describe("ResumeUpload", () => {
     expect(
       screen.getByLabelText(/paste your resume text/i)
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/use either a file or pasted text\. the latest input will be used\./i)
+    ).toBeInTheDocument();
   });
 
   it("uploads PDFs and shows a success toast", async () => {
@@ -132,6 +135,81 @@ describe("ResumeUpload", () => {
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({ type: "success", title: "Resume parsed successfully" })
     );
+  });
+
+  it("blocks signed-out file selection before parsing", async () => {
+    const onToast = vi.fn();
+    const onParseResume = vi.fn();
+
+    render(
+      <ResumeUpload
+        onParseResume={onParseResume}
+        onToast={onToast}
+        onClear={vi.fn()}
+        requiresSignIn
+        authRequiredTitle="Sign in required"
+        authRequiredMessage="Please sign in to securely process your resume."
+      />
+    );
+
+    const fileInput = screen
+      .getAllByLabelText(/upload resume file/i)
+      .find((element) => element.tagName === "INPUT");
+    if (!(fileInput instanceof HTMLInputElement)) {
+      throw new Error("Hidden file input not found");
+    }
+
+    const file = new File(["resume"], "resume.pdf", { type: "application/pdf" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    expect(onParseResume).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /prepare selected file/i })).not.toBeInTheDocument();
+    expect(onToast).toHaveBeenCalledWith({
+      type: "warning",
+      title: "Sign in required",
+      description: "Please sign in to securely process your resume.",
+    });
+  });
+
+  it("shows auth-required UX instead of parse-failed copy for auth errors", async () => {
+    const onToast = vi.fn();
+    const authError = new Error("Please sign in to securely process your resume.");
+    authError.status = 401;
+    authError.type = "AUTH_REQUIRED";
+    const onParseResume = vi.fn().mockRejectedValue(authError);
+
+    render(
+      <ResumeUpload
+        onParseResume={onParseResume}
+        onToast={onToast}
+        onClear={vi.fn()}
+        authRequiredTitle="Sign in required"
+        authRequiredMessage="Please sign in to securely process your resume."
+      />
+    );
+
+    const pasteInput = screen.getByLabelText(/paste your resume text/i);
+    await act(async () => {
+      fireEvent.change(pasteInput, { target: { value: "Experienced analyst" } });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /prepare pasted text/i }));
+    });
+
+    expect(onParseResume).toHaveBeenCalledTimes(1);
+    expect(onToast).toHaveBeenCalledWith({
+      type: "warning",
+      title: "Sign in required",
+      description: "Please sign in to securely process your resume.",
+    });
+    expect(onToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Parse failed" })
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Please sign in to securely process your resume.");
   });
 
   it("rejects files over 5MB with a warning toast", async () => {

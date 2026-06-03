@@ -190,7 +190,7 @@ export default function Header() {
         {/* Interactive gradient that follows mouse */}
         {isSignedOutHeader && (
           <div
-            className="absolute h-[520px] w-[520px] rounded-full opacity-[0.08] blur-[44px] transition-all duration-1000 ease-out"
+            className="absolute h-[520px] w-[520px] rounded-full opacity-[0.05] blur-[44px] transition-all duration-1000 ease-out"
             style={{
               background: "radial-gradient(circle, rgba(16,185,129,0.4) 0%, transparent 70%)",
               left: `${mousePosition.x - 20}%`,
@@ -199,20 +199,6 @@ export default function Header() {
             }}
           />
         )}
-
-
-
-        {/* Animated grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-            `,
-            backgroundSize: '60px 60px',
-          }}
-        />
 
         {/* Noise texture overlay - reduced opacity for better text contrast */}
         <div className="absolute inset-0 opacity-[0.01] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
