@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 
 const { authState, mockSignIn, mockSignOut, mockOnAuth, mockGetSession } = vi.hoisted(() => {
   const authState = { callback: undefined };
@@ -163,6 +164,39 @@ describe('useAuth', () => {
     expect(localStorage.getItem("watheq:lastAuthUserId")).toBe("user-b");
     expect(localStorage.getItem("watheq:onboardingTourCompleted")).toBe("true");
     expect(useResumeStore.getState().parsedResumeText).toBeNull();
+  });
+
+  it('shares the pending initial session lookup across StrictMode remounts', async () => {
+    let resolveSession;
+    mockGetSession.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSession = resolve;
+        })
+    );
+
+    const wrapper = ({ children }) => (
+      <StrictMode>
+        <AuthProvider>{children}</AuthProvider>
+      </StrictMode>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveSession({
+        data: {
+          session: {
+            user: { id: "user-strict" },
+            access_token: "token-strict",
+          },
+        },
+      });
+    });
+
+    await waitFor(() => expect(result.current.user?.id).toBe("user-strict"));
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1,11 +1,11 @@
 {
   "landing": {
     "features": {
-      "title": "Everything You Need to Stand Out",
-      "subtitle": "Powerful AI tools designed to give you an unfair advantage in the Saudi job market",
+      "title": "Everything You Need to Prove Fit",
+      "subtitle": "Evidence-aware resume tools for Saudi-market applications",
       "smartParsing": {
         "title": "Smart Resume Parsing",
-        "description": "Upload PDF, DOCX, or paste text. AI extracts and structures your experience instantly.",
+        "description": "Upload PDF, DOCX, or paste text. Watheq structures your experience so it can be compared with a real job ad.",
         "badge": "Text parsing",
         "capabilities": [
           "Multi-format support",
@@ -15,11 +15,11 @@
       },
       "jobMatch": {
         "title": "Job Match Scoring",
-        "description": "Get instant 0-100 match scores. See exactly which keywords you're missing.",
+        "description": "Review 0-100 match scores, keyword gaps, and evidence signals before rewriting.",
         "capabilities": [
-          "Real-time analysis",
+          "Evidence-based analysis",
           "Keyword gap detection",
-          "Industry benchmarks"
+          "Role-specific fit signals"
         ]
       },
       "aiOptimization": {
@@ -33,16 +33,16 @@
       },
       "keywordAnalysis": {
         "title": "Keyword Analysis",
-        "description": "Identify high-impact keywords and optimize your resume to beat ATS systems.",
+        "description": "Identify job-ad keywords and improve ATS alignment without promising screening outcomes.",
         "capabilities": [
           "Frequency analysis",
-          "Competitor comparison",
-          "Industry trends"
+          "Job-ad comparison",
+          "Evidence-aware wording"
         ]
       },
       "atsExport": {
         "title": "ATS-Friendly Export",
-        "description": "Download professionally formatted PDFs that pass applicant tracking systems.",
+        "description": "Download professionally formatted PDFs with ATS-aware structure and readable sections.",
         "capabilities": [
           "Multiple templates",
           "Font embedding",

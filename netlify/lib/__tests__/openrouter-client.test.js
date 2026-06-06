@@ -248,6 +248,37 @@ describe('openrouter-client fallback and timeout behavior', () => {
     }));
   });
 
+  it('waits for successful usage telemetry before resolving OpenRouter content', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"test":1}' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    let resolveTelemetry;
+    const telemetryDone = new Promise(resolve => {
+      resolveTelemetry = resolve;
+    });
+    mocks.recordAiUsageEvent.mockReturnValueOnce(telemetryDone);
+
+    const { callOpenRouter } = await importClient();
+    let resolved = false;
+    const promise = callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'parse_resume',
+    }).then((content) => {
+      resolved = true;
+      return content;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    resolveTelemetry();
+    await expect(promise).resolves.toBe('{"test":1}');
+    expect(resolved).toBe(true);
+  });
+
   it('records null estimated_cost_usd for unknown models', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
       choices: [{ message: { content: '{"test":1}' } }],

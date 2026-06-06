@@ -75,9 +75,9 @@ export function MobileWorkflowNav({
         className={cn(
           'flex w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-start transition',
           isActive
-            ? 'border-emerald-400/70 bg-emerald-50 text-gray-950 shadow-sm dark:border-emerald-300/45 dark:bg-emerald-300/12 dark:text-white'
-            : 'border-gray-200 bg-white/75 text-gray-700 hover:border-emerald-300 hover:bg-emerald-50/70 dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50/85 dark:hover:border-emerald-300/40 dark:hover:bg-emerald-300/10',
-          isDisabled && 'cursor-not-allowed border-transparent bg-transparent text-gray-400 opacity-60 hover:border-transparent hover:bg-transparent dark:border-transparent dark:bg-transparent dark:text-white/40 dark:hover:bg-transparent'
+            ? 'border-[color:var(--glass-border-strong)] bg-[color:var(--surface-glass-elevated)] text-gray-950 shadow-sm dark:border-emerald-300/45 dark:bg-emerald-300/12 dark:text-white'
+            : 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-700 hover:border-[color:var(--glass-border-strong)] hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50/85 dark:hover:border-emerald-300/40 dark:hover:bg-emerald-300/10',
+          isDisabled && 'cursor-not-allowed border-[color:var(--glass-border)] bg-transparent text-gray-500 opacity-75 hover:border-[color:var(--glass-border)] hover:bg-transparent dark:border-white/10 dark:bg-transparent dark:text-white/40 dark:hover:bg-transparent'
         )}
       >
         <span
@@ -86,8 +86,8 @@ export function MobileWorkflowNav({
             isActive
               ? 'border-emerald-500 bg-emerald-500 text-white'
               : isDisabled
-                ? 'border-gray-300 bg-gray-200 text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-white/45'
-                : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-300/25 dark:bg-emerald-300/10 dark:text-emerald-100'
+                ? 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-white/45'
+                : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:border-emerald-300/25 dark:bg-emerald-300/10 dark:text-emerald-100'
           )}
           aria-hidden="true"
         >
@@ -105,7 +105,7 @@ export function MobileWorkflowNav({
     <nav
       aria-label={t('workspace.mobileWorkflow.ariaLabel', 'Workflow navigation')}
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="rounded-2xl border border-transparent bg-transparent p-3 dark:border-white/15 dark:bg-black/50"
+      className="rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] p-3 shadow-sm backdrop-blur-xl dark:border-white/15 dark:bg-black/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -135,7 +135,7 @@ export function MobileWorkflowNav({
       </div>
 
       {primarySteps.some((step) => step.disabledReason) && (
-        <p className="mt-3 rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 dark:border-amber-300/25 dark:bg-amber-300/10 dark:text-amber-100">
+        <p className="mt-3 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-900 dark:border-amber-300/25 dark:bg-amber-300/10 dark:text-amber-100">
           {gateReason}
         </p>
       )}
@@ -155,7 +155,7 @@ export function MobileWorkflowNav({
       )}
 
       <details className="mt-3 group">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white/80 px-3 py-3 text-sm font-bold text-gray-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 py-3 text-sm font-bold text-gray-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50">
           <span>{t('workspace.mobileWorkflow.openSteps', 'All steps and tools')}</span>
           <ChevronDown className="h-4 w-4 transition group-open:rotate-180" aria-hidden="true" />
         </summary>

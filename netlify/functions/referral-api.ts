@@ -4,6 +4,7 @@
  * Handles all referral-related operations via action parameter:
  * - GET  ?action=get-link               → Get/generate referral link
  * - GET  ?action=get-stats              → Get referral statistics
+ * - GET  ?action=get-summary            → Get link and statistics
  * - POST { action: "track", ... }         → Track a new referral
  */
 
@@ -138,6 +139,15 @@ async function handleGetStats(email: string) {
     };
 }
 
+async function handleGetSummary(email: string) {
+    const [link, stats] = await Promise.all([
+        handleGetLink(email),
+        handleGetStats(email)
+    ]);
+
+    return { ...link, ...stats };
+}
+
 /**
  * Handle POST /track - Track a new referral
  * Expects: { referral_code: string }
@@ -195,9 +205,17 @@ const handler: Handler = async (event) => {
                 };
             }
 
+            if (action === 'get-summary') {
+                const summary = await handleGetSummary(email);
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({ success: true, ...summary }),
+                };
+            }
+
             return {
                 statusCode: 400,
-                body: JSON.stringify({ error: 'Invalid action. Use: get-link, get-stats' }),
+                body: JSON.stringify({ error: 'Invalid action. Use: get-link, get-stats, get-summary' }),
             };
         }
 

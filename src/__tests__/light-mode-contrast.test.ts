@@ -35,12 +35,15 @@ describe('Light mode contrast', () => {
       const inputLine = glassTs.match(/input:\s*'([^']+)'/)?.[1] ?? '';
       expect(inputLine).toContain('dark:bg-white/5');
       expect(inputLine).toContain('dark:border-white/10');
+      expect(inputLine).toContain('var(--surface-control)');
+      expect(inputLine).toContain('var(--focus-ring)');
     });
 
     it('button.secondary includes dark: variants', () => {
       const secondaryLine = glassTs.match(/secondary:\s*'([^']+)'/)?.[1] ?? '';
       expect(secondaryLine).toContain('dark:bg-gray-900/80');
       expect(secondaryLine).toContain('dark:text-white');
+      expect(secondaryLine).toContain('var(--surface-control)');
     });
 
     it('badge.neutral includes dark: variants', () => {

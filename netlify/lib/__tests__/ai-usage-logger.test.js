@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getSupabaseClient: vi.fn(),
@@ -35,6 +35,10 @@ describe('ai-usage-logger', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     mocks.getSupabaseClient.mockReset();
     delete process.env.BENCHMARK_DISABLE_USAGE_LOGGING;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('warns when Supabase resolves an insert error', async () => {
@@ -74,6 +78,27 @@ describe('ai-usage-logger', () => {
     await Promise.resolve();
 
     expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('returns after a bounded wait when telemetry persistence stalls', async () => {
+    vi.useFakeTimers();
+    const insert = vi.fn(() => new Promise(() => {}));
+    mocks.getSupabaseClient.mockReturnValue({
+      from: vi.fn(() => ({ insert })),
+    });
+
+    const { recordAiUsageEvent } = await import('../ai-usage-logger.js');
+    const promise = recordAiUsageEvent(baseEvent);
+
+    await vi.advanceTimersByTimeAsync(1500);
+
+    await expect(promise).resolves.toBeUndefined();
+    expect(console.warn).toHaveBeenCalledWith(
+      '[AI Usage] Persist attempt timed out, non-fatal:',
+      expect.objectContaining({
+        timeout_ms: 1500,
+      }),
+    );
   });
 
   it('skips persistence when BENCHMARK_DISABLE_USAGE_LOGGING is true', async () => {

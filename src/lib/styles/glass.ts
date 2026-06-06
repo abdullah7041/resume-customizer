@@ -18,13 +18,13 @@ export const glass = {
   subtle: 'neu-card shadow-soft',
 
   // Input fields
-  input: 'bg-white/92 dark:bg-white/5 border border-gray-300/70 dark:border-white/10 focus:border-emerald-500/70 focus:bg-white dark:focus:bg-black/50',
+  input: 'bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 focus:border-[color:var(--focus-ring)] focus:bg-[color:var(--surface-glass-strong)] dark:focus:bg-black/50',
 
   // Buttons
   button: {
     primary: 'btn-metal',
     prominent: 'btn-metal shadow-md shadow-emerald-900/10',
-    secondary: 'btn-spring bg-white/92 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-black/70 border border-gray-300/70 dark:border-white/10 text-gray-900 dark:text-white shadow-sm',
+    secondary: 'btn-spring bg-[color:var(--surface-control)] dark:bg-gray-900/80 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-black/70 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white shadow-sm',
     ghost: 'btn-spring hover:bg-black/5 dark:hover:bg-white/8 text-gray-700 dark:text-gray-200 hover:text-gray-950 dark:hover:text-white disabled:border disabled:border-gray-300/60 disabled:bg-gray-100/70 disabled:text-gray-500 disabled:dark:border-white/10 disabled:dark:bg-white/5 disabled:dark:text-gray-400',
   },
 

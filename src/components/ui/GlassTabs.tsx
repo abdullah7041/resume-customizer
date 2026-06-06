@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { LockKeyhole } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
 
@@ -35,7 +36,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
 
   return (
     <nav
-      className={cn("relative flex w-full items-center rounded-2xl border border-transparent bg-transparent p-1.5 dark:border-white/15 dark:bg-black/50", className)}
+      className={cn("relative flex w-full items-center rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] p-1.5 shadow-sm backdrop-blur-xl dark:border-white/15 dark:bg-black/50", className)}
       role="tablist"
       data-tour={dataTour}
     >
@@ -64,14 +65,14 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               disabled={isDisabled}
               title={tab.disabledReason}
               className={cn(
-                'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap outline-none select-none shrink-0 z-10 rounded-xl ml-0.5 mr-0.5',
+                'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold whitespace-nowrap outline-none select-none shrink-0 z-10 rounded-xl ml-0.5 mr-0.5 border border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]',
                 isDisabled
-                  ? 'cursor-not-allowed text-gray-400 opacity-45 dark:text-gray-500'
+                  ? 'cursor-not-allowed border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-500 opacity-75 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/45'
                   : isActive
-                  ? tab.isPremium ? 'text-white drop-shadow-md' : 'text-gray-900 dark:text-white drop-shadow-md'
+                  ? tab.isPremium ? 'text-white drop-shadow-md' : 'text-gray-950 dark:text-white'
                   : tab.isPremium
-                    ? 'text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/15 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-100 dark:border-emerald-500/20'
+                    : 'text-gray-600 hover:bg-[color:var(--surface-control-hover)] hover:text-gray-950 dark:text-gray-300 dark:hover:bg-white/8 dark:hover:text-white'
               )}
             >
               {/* Animated active indicator background */}
@@ -94,11 +95,12 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               {Icon && (
                 <Icon
                   className={cn(
-                    "w-4 h-4 transition-transform duration-300",
+                    "w-4 h-4 shrink-0 transition-transform duration-300",
                     isActive ? "scale-110" : "group-hover:scale-110"
                   )}
                 />
               )}
+              {isDisabled && <LockKeyhole className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
               {/* Show text on mobile for better UX, container scrolls */}
               <span className="relative z-10">{isArabic && tab.labelAr ? tab.labelAr : tab.label}</span>
             </motion.button>
@@ -107,7 +109,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
       </div>
 
       {rightAction && (
-        <div className="flex-shrink-0 flex items-center pl-1 ml-1 border-l border-gray-200 dark:border-white/10">
+        <div className="flex-shrink-0 flex items-center ps-1 ms-1 border-s border-[color:var(--glass-border)] dark:border-white/10">
           {rightAction}
         </div>
       )}

@@ -27,7 +27,7 @@ function toGeminiModelId(modelId, modelType) {
   return modelId.startsWith('google/') ? modelId.replace('google/', '') : modelId;
 }
 
-function recordUsageEvent({
+async function recordUsageEvent({
   options,
   model,
   provider,
@@ -41,7 +41,7 @@ function recordUsageEvent({
   const completionTokens = usage.completion_tokens || 0;
   const estimatedCost = estimateCostUsd(model, promptTokens, completionTokens);
 
-  recordAiUsageEvent({
+  await recordAiUsageEvent({
     feature_name: options.featureName || 'unknown',
     model,
     provider,
@@ -53,7 +53,7 @@ function recordUsageEvent({
     latency_ms: Date.now() - startTime,
     success,
     error_code: errorCode,
-  }).catch(() => {});
+  });
 }
 
 /**
@@ -161,7 +161,7 @@ async function callOpenRouterDirect(modelType, model, messages, jsonSchema, opti
   const usage = data.usage || {};
   const reasoning = usage.reasoning_tokens || usage.completion_tokens_details?.reasoning_tokens || 0;
   console.log(`[AI Client] Tokens — prompt: ${usage.prompt_tokens || 0}, completion: ${usage.completion_tokens || 0}, reasoning: ${reasoning}, total: ${usage.total_tokens || 0}`);
-  recordUsageEvent({
+  await recordUsageEvent({
     options,
     model,
     provider: 'openrouter',
@@ -282,7 +282,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
         console.log(`[AI Client] OpenRouter success (${content.length} chars)`);
         return content;
       } catch (openRouterError) {
-        recordUsageEvent({
+        await recordUsageEvent({
           options,
           model,
           provider: 'openrouter',
@@ -303,7 +303,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
           const geminiStartTime = Date.now();
           try {
             const content = await callGeminiDirect(modelType, messages, jsonSchema, options, fallbackController);
-            recordUsageEvent({
+            await recordUsageEvent({
               options,
               model: geminiModel,
               provider: 'gemini',
@@ -313,7 +313,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
             console.log(`[AI Client] Gemini fallback success (${content.length} chars)`);
             return content;
           } catch (geminiError) {
-            recordUsageEvent({
+            await recordUsageEvent({
               options,
               model: geminiModel,
               provider: 'gemini',
@@ -345,7 +345,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
       const geminiStartTime = Date.now();
       try {
         const content = await callGeminiDirect(modelType, messages, jsonSchema, options, controller);
-        recordUsageEvent({
+        await recordUsageEvent({
           options,
           model: geminiModel,
           provider: 'gemini',
@@ -355,7 +355,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
         console.log(`[AI Client] Gemini success (${content.length} chars)`);
         return content;
       } catch (geminiError) {
-        recordUsageEvent({
+        await recordUsageEvent({
           options,
           model: geminiModel,
           provider: 'gemini',

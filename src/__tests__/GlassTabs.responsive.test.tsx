@@ -67,6 +67,7 @@ describe('GlassTabs responsive behavior', () => {
     expect(lockedTab).toBeDisabled();
     expect(lockedTab).toHaveAttribute('aria-disabled', 'true');
     expect(lockedTab).toHaveAttribute('title', 'Upload a resume first.');
-    expect(lockedTab).toHaveClass('opacity-45');
+    expect(lockedTab).toHaveClass('cursor-not-allowed');
+    expect(lockedTab).toHaveClass('opacity-75');
   });
 });

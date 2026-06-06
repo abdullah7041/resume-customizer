@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Users, CheckCircle, Coins } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../services/supabase';
+import { fetchReferralSummary } from '../../services/referrals';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
@@ -39,24 +39,12 @@ export function ReferralStats({ className }: ReferralStatsProps) {
 
     async function fetchStats() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error('Authentication required');
-        }
-
-        const response = await fetch('/.netlify/functions/referral-api?action=get-stats', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+        const summary = await fetchReferralSummary();
+        setStats({
+          totalReferrals: summary.totalReferrals,
+          completedReferrals: summary.completedReferrals,
+          creditsEarned: summary.creditsEarned,
         });
-        const data = await response.json();
-
-        if (data.success) {
-          setStats({
-            totalReferrals: data.totalReferrals,
-            completedReferrals: data.completedReferrals,
-            creditsEarned: data.creditsEarned,
-          });
-        }
       } catch (error) {
         console.error('[ReferralStats] Failed to fetch stats:', error);
       } finally {

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Header from '../components/Layout/Header';
@@ -16,6 +16,7 @@ vi.mock('../hooks/useAuth', () => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => fallback ?? key,
+    i18n: { dir: () => 'ltr' },
   }),
 }));
 
@@ -99,5 +100,21 @@ describe('Header feedback action', () => {
     render(<Header />);
 
     expect(screen.getByRole('button', { name: /feedback/i })).toBeInTheDocument();
+  });
+
+  it('renders the authenticated account menu outside the clipped header when opened', async () => {
+    authState.user = {
+      id: 'user-1',
+      email: 'user@example.com',
+      app_metadata: {},
+      user_metadata: {},
+    };
+
+    render(<Header />);
+
+    fireEvent.click(screen.getByRole('button', { name: /account menu/i }));
+
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    expect(screen.getAllByText('Language').length).toBeGreaterThan(0);
   });
 });

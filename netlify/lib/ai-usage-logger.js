@@ -1,9 +1,11 @@
 import { getSupabaseClient } from './supabase-client.js';
 import { summarizeErrorForLog } from './sentry.js';
 
+const AI_USAGE_PERSIST_TIMEOUT_MS = 1500;
+
 /**
  * Record an AI usage event for future cost tracking.
- * Non-blocking: failures are logged but never thrown.
+ * Failures are logged but never thrown.
  *
  * @param {object} event
  * @param {string} event.feature_name
@@ -29,22 +31,42 @@ export async function recordAiUsageEvent(event) {
       console.warn('[AI Usage] Supabase unavailable, structured log:', JSON.stringify(event));
       return;
     }
-    // Fire-and-forget: never block the user request.
     // Supabase query builder returns PromiseLike, so wrap with Promise.resolve
-    // before .catch() per project conventions.
-    Promise.resolve(client.from('ai_usage_events').insert(event))
-      .then(({ error }) => {
-        if (error) {
-          console.warn('[AI Usage] Failed to persist event, non-fatal:', {
-            message: error.message,
-            code: error.code,
-            status: error.status,
-          });
-        }
-      })
-      .catch((err) => {
-        console.warn('[AI Usage] Failed to persist event, non-fatal:', summarizeErrorForLog(err));
+    // before awaiting per project conventions.
+    let timeoutId;
+    const insertPromise = Promise.resolve(client.from('ai_usage_events').insert(event));
+    const timedInsert = Promise.race([
+      insertPromise,
+      new Promise((resolve) => {
+        timeoutId = setTimeout(() => resolve({ timedOut: true }), AI_USAGE_PERSIST_TIMEOUT_MS);
+      }),
+    ]);
+
+    let result;
+    try {
+      result = await timedInsert;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (result?.timedOut) {
+      insertPromise.catch((err) => {
+        console.warn('[AI Usage] Delayed persist failed after timeout, non-fatal:', summarizeErrorForLog(err));
       });
+      console.warn('[AI Usage] Persist attempt timed out, non-fatal:', {
+        timeout_ms: AI_USAGE_PERSIST_TIMEOUT_MS,
+      });
+      return;
+    }
+
+    const { error } = result;
+    if (error) {
+      console.warn('[AI Usage] Failed to persist event, non-fatal:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+      });
+    }
   } catch (err) {
     console.warn('[AI Usage] Unexpected error, non-fatal:', summarizeErrorForLog(err));
   }

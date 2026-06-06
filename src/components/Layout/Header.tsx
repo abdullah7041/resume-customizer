@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type MouseEvent } from "react";
 import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings, UserCircle, MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
@@ -18,6 +18,10 @@ import { createPortal } from "react-dom";
 
 
 const containerClass = "app-shell w-full";
+const ACCOUNT_MENU_WIDTH = 288;
+const ACCOUNT_MENU_GAP = 12;
+const ACCOUNT_MENU_MARGIN = 16;
+const ACCOUNT_MENU_MIN_HEIGHT = 240;
 
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") return false;
@@ -25,7 +29,7 @@ const getPrefersReducedMotion = () => {
 };
 
 export default function Header() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, signInWithGoogle, signOut } = useAuth();
   const skylineUrls = useMemo(() => getSkylineUrls(), []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
@@ -41,7 +45,9 @@ export default function Header() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [badgeFlipped, setBadgeFlipped] = useState(false);
   const mobileNavRef = useRef<HTMLDivElement>(null);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const accountMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const accountMenuPanelRef = useRef<HTMLDivElement>(null);
+  const [accountMenuStyle, setAccountMenuStyle] = useState<CSSProperties | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [creditModalMode, setCreditModalMode] = useState<'full' | 'invite-only'>('full');
   const [showPlansModal, setShowPlansModal] = useState(false);
@@ -52,6 +58,45 @@ export default function Header() {
   const isSignedOutHeader = !user;
 
   const [theme, toggleTheme] = useTheme();
+  const textDirection = i18n.dir();
+
+  const updateAccountMenuPosition = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const trigger = accountMenuButtonRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const menuHeight = accountMenuPanelRef.current?.offsetHeight ?? 408;
+    const preferredLeft = textDirection === "rtl" ? rect.left : rect.right - ACCOUNT_MENU_WIDTH;
+    const maxLeft = viewportWidth - ACCOUNT_MENU_WIDTH - ACCOUNT_MENU_MARGIN;
+    const left = Math.min(
+      Math.max(ACCOUNT_MENU_MARGIN, preferredLeft),
+      Math.max(ACCOUNT_MENU_MARGIN, maxLeft)
+    );
+
+    const availableBelow = viewportHeight - rect.bottom - ACCOUNT_MENU_GAP - ACCOUNT_MENU_MARGIN;
+    const availableAbove = rect.top - ACCOUNT_MENU_GAP - ACCOUNT_MENU_MARGIN;
+    const shouldOpenAbove =
+      availableBelow < ACCOUNT_MENU_MIN_HEIGHT && availableAbove > availableBelow;
+    const maxHeight = Math.max(
+      ACCOUNT_MENU_MIN_HEIGHT,
+      Math.min(480, shouldOpenAbove ? availableAbove : availableBelow)
+    );
+    const top = shouldOpenAbove
+      ? Math.max(ACCOUNT_MENU_MARGIN, rect.top - ACCOUNT_MENU_GAP - Math.min(menuHeight, maxHeight))
+      : Math.min(rect.bottom + ACCOUNT_MENU_GAP, viewportHeight - ACCOUNT_MENU_MARGIN - ACCOUNT_MENU_MIN_HEIGHT);
+
+    setAccountMenuStyle({
+      position: "fixed",
+      top,
+      left,
+      width: ACCOUNT_MENU_WIDTH,
+      maxHeight,
+      zIndex: 120,
+    });
+  }, [textDirection]);
 
   // Mouse tracking for interactive gradient
   const handleMouseMove = useCallback((e: MouseEvent<HTMLElement>) => {
@@ -91,13 +136,35 @@ export default function Header() {
     if (!accountMenuOpen) return undefined;
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (accountMenuRef.current?.contains(event.target as Node)) return;
+      const target = event.target as Node;
+      if (accountMenuButtonRef.current?.contains(target)) return;
+      if (accountMenuPanelRef.current?.contains(target)) return;
       setAccountMenuOpen(false);
     };
 
     window.addEventListener('pointerdown', handlePointerDown);
     return () => window.removeEventListener('pointerdown', handlePointerDown);
   }, [accountMenuOpen]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) {
+      setAccountMenuStyle(null);
+      return undefined;
+    }
+
+    updateAccountMenuPosition();
+    window.addEventListener("resize", updateAccountMenuPosition);
+    window.addEventListener("scroll", updateAccountMenuPosition, true);
+    window.visualViewport?.addEventListener("resize", updateAccountMenuPosition);
+    window.visualViewport?.addEventListener("scroll", updateAccountMenuPosition);
+
+    return () => {
+      window.removeEventListener("resize", updateAccountMenuPosition);
+      window.removeEventListener("scroll", updateAccountMenuPosition, true);
+      window.visualViewport?.removeEventListener("resize", updateAccountMenuPosition);
+      window.visualViewport?.removeEventListener("scroll", updateAccountMenuPosition);
+    };
+  }, [accountMenuOpen, updateAccountMenuPosition]);
 
   // Close mobile nav on outside click
   const handleMobileNavOutsideClick = useCallback((e: MouseEvent) => {
@@ -180,7 +247,7 @@ export default function Header() {
         "relative isolate flex flex-col overflow-hidden h-auto",
         !isSignedOutHeader && "hero-bg-animate",
         isSignedOutHeader
-          ? "bg-[#fbfcfa] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
+          ? "bg-[color:var(--bg)] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
           : "text-gray-900 dark:text-white pb-4"
       )}
       onMouseMove={handleMouseMove}
@@ -240,10 +307,10 @@ export default function Header() {
         <nav className={cn(
           "border-b",
           isSignedOutHeader
-            ? "border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-[#031713]/90"
+            ? "border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] backdrop-blur-xl dark:border-white/10 dark:bg-[#031713]/90"
             : showFixedSkyline
-              ? "border-white/12 bg-[#041c17]/92"
-              : "border-slate-200/80 bg-white/92 backdrop-blur-md"
+              ? "border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] shadow-sm shadow-black/5 backdrop-blur-xl dark:border-white/12 dark:bg-[#041c17]/92"
+              : "border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] backdrop-blur-md"
         )}>
           <div className={`${containerClass} flex items-center justify-between gap-4 py-3.5 sm:py-4`}>
             {/* Logo section */}
@@ -268,7 +335,7 @@ export default function Header() {
                   isSignedOutHeader
                     ? "text-slate-950 dark:text-white"
                     : showFixedSkyline
-                    ? "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.72)] dark:drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)]"
+                    ? "text-slate-950 dark:text-white dark:drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)]"
                     : "text-slate-950"
                 )}>
                   {t("common.appName")}
@@ -308,7 +375,7 @@ export default function Header() {
             {isSignedOutHeader && (
               <button
                 onClick={() => setBadgeFlipped(!badgeFlipped)}
-                className="hidden lg:inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold tracking-wide text-emerald-700 backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:border-emerald-300 group dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
+                className="hidden lg:inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-4 py-1.5 text-xs font-semibold tracking-wide text-emerald-700 backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:border-emerald-300 group dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
                 aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
                 title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
               >
@@ -341,16 +408,17 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => setShowFeedbackModal(true)}
-                    className="btn-spring inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/90 px-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                    className="btn-spring inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-[color:var(--surface-control)] px-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-[color:var(--surface-control-hover)] dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
                   >
                     <MessageSquare className="h-4 w-4" />
                     <span>{t('feedback.cta', 'Feedback')}</span>
                   </button>
-                  <div ref={accountMenuRef} className="relative">
+                  <div className="relative">
                     <button
                       type="button"
+                      ref={accountMenuButtonRef}
                       onClick={() => setAccountMenuOpen((open) => !open)}
-                      className="btn-spring inline-flex h-10 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-gray-300/80 bg-white/90 px-3 text-gray-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 dark:border-white/15 dark:bg-black/55 dark:text-gray-100 dark:hover:bg-black/70 dark:hover:text-white"
+                      className="btn-spring inline-flex h-10 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-gray-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)] dark:border-white/15 dark:bg-black/55 dark:text-gray-100 dark:hover:bg-black/70 dark:hover:text-white"
                       aria-label={t('common.accountMenu', 'Account menu')}
                       aria-expanded={accountMenuOpen}
                       aria-haspopup="menu"
@@ -359,12 +427,14 @@ export default function Header() {
                       <Menu className="h-4 w-4" />
                     </button>
 
-                    {accountMenuOpen && (
+                    {accountMenuOpen && accountMenuStyle && createPortal(
                       <div
+                        ref={accountMenuPanelRef}
                         role="menu"
-                        className="absolute end-0 top-full z-50 mt-3 w-72 rounded-2xl border border-gray-200/90 bg-white/95 p-3 text-gray-800 shadow-xl backdrop-blur-sm dark:border-white/15 dark:bg-[#071f1a]/95 dark:text-gray-100"
+                        style={accountMenuStyle}
+                        className="overflow-y-auto rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] p-3 text-gray-800 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#071f1a]/95 dark:text-gray-100"
                       >
-                        <div className="border-b border-gray-200 pb-3 dark:border-white/10">
+                        <div className="border-b border-[color:var(--glass-border)] pb-3 dark:border-white/10">
                           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50">
                             {t("common.language", "Language")}
                           </p>
@@ -375,7 +445,7 @@ export default function Header() {
                           <button
                             type="button"
                             onClick={handleOpenPlans}
-                            className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                            className="flex w-full items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-500/15 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
                             role="menuitem"
                           >
                             <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
@@ -389,7 +459,7 @@ export default function Header() {
                               setShowCreditModal(true);
                               setAccountMenuOpen(false);
                             }}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
                             role="menuitem"
                           >
                             <Gift className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -404,7 +474,7 @@ export default function Header() {
                               setShowSettingsModal(true);
                               setAccountMenuOpen(false);
                             }}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
                             role="menuitem"
                           >
                             <Settings className="h-4 w-4" />
@@ -413,7 +483,7 @@ export default function Header() {
                           <button
                             type="button"
                             onClick={toggleTheme}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
                             role="menuitem"
                           >
                             {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
@@ -425,14 +495,15 @@ export default function Header() {
                               signOut();
                               setAccountMenuOpen(false);
                             }}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
                             role="menuitem"
                           >
                             <LogOut className="h-4 w-4" />
                             <span>{t("common.signOut")}</span>
                           </button>
                         </div>
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </div>
                 </>
@@ -440,7 +511,7 @@ export default function Header() {
                 <>
                   <button
                     onClick={toggleTheme}
-                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-all duration-300 shadow-sm bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-all duration-300 shadow-sm bg-[color:var(--surface-control)] border-[color:var(--glass-border)] text-slate-700 hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
                     aria-label={t('common.toggleTheme', 'Toggle theme')}
                   >
                   {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
@@ -480,8 +551,8 @@ export default function Header() {
                 className={cn(
                   "relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-all duration-300 active:scale-95",
                   isSignedOutHeader
-                    ? "bg-white border-slate-200 text-slate-950 hover:bg-slate-50 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
-                    : "bg-white/90 dark:bg-black/55 border-gray-300/70 dark:border-white/15 text-gray-900 dark:text-white hover:bg-white dark:hover:bg-black/70"
+                    ? "bg-[color:var(--surface-control)] border-[color:var(--glass-border)] text-slate-950 hover:bg-[color:var(--surface-control-hover)] dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                    : "bg-[color:var(--surface-control)] dark:bg-black/55 border-[color:var(--glass-border)] dark:border-white/15 text-gray-900 dark:text-white hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-black/70"
                 )}
                 aria-label={t('common.openNavigation', 'Open navigation menu')}
                 aria-expanded={mobileNavOpen}
@@ -509,7 +580,7 @@ export default function Header() {
           {/* Nav Panel - slides in from right */}
           <div
             ref={mobileNavRef}
-            className="absolute right-0 top-0 h-full w-[85%] max-w-[320px] bg-white dark:bg-[#031713] border-l border-gray-200 dark:border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
+            className="absolute end-0 top-0 h-full w-[85%] max-w-[320px] bg-[color:var(--surface-glass-elevated)] dark:bg-[#031713] border-s border-[color:var(--glass-border)] dark:border-white/10 shadow-[-10px_0_40px_rgba(39,31,18,0.12)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
           >
             {/* Header with close button */}
             <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
@@ -523,14 +594,14 @@ export default function Header() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleTheme}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white transition-all duration-300 hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95"
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-slate-700 dark:text-white transition-all duration-300 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-95"
                   aria-label={t('common.toggleTheme', 'Toggle theme')}
                 >
                   {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
                 </button>
                 <button
                   onClick={() => setMobileNavOpen(false)}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-95"
                   aria-label={t('common.closeNavigation', 'Close navigation menu')}
                 >
                   <X className="h-5 w-5" />
@@ -568,7 +639,7 @@ export default function Header() {
                       setShowFeedbackModal(true);
                       setMobileNavOpen(false);
                     }}
-                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-[color:var(--surface-control)] px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-[color:var(--surface-control-hover)] dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
                   >
                     <MessageSquare className="h-4 w-4" />
                     <span>{t('feedback.cta', 'Feedback')}</span>

@@ -1,14 +1,14 @@
 {
   "landing": {
     "hero": {
-      "title": "Land Your Dream Job with",
+      "title": "Tailor your resume with",
       "dynamicPhrases": [
-        "AI-Powered Resumes",
-        "Higher Match Scores",
+        "Evidence-Safe Suggestions",
+        "Job Match Scoring",
         "Job-Ad Alignment",
-        "Your Dream Job"
+        "Saudi-Market Context"
       ],
-      "subtitle": "Transform your resume in <strong>under 5 minutes</strong>. Match job descriptions with evidence. Get ATS-friendly guidance. <em>Built for Saudi careers.</em>",
+      "subtitle": "Match job descriptions with your real evidence. Get ATS-friendly guidance, clarification questions, and Saudi-market context. <em>Built for Saudi careers.</em>",
       "cta": "Try free without sign-in",
       "signInCta": "Sign in only when you want to save progress",
       "worksWithArabicEnglish": "Works with Arabic & English",

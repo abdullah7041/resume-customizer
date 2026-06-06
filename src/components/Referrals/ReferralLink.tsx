@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, Share2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../services/supabase';
+import { fetchReferralSummary } from '../../services/referrals';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
@@ -36,22 +36,11 @@ export function ReferralLink({ className }: ReferralLinkProps) {
 
     async function fetchReferralLink() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error('Authentication required');
-        }
-
-        const response = await fetch('/.netlify/functions/referral-api?action=get-link', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        const data = await response.json();
-
-        if (data.success && data.referralUrl) {
-          setReferralUrl(data.referralUrl);
+        const summary = await fetchReferralSummary();
+        if (summary.referralUrl) {
+          setReferralUrl(summary.referralUrl);
         } else {
-          console.error('[ReferralLink] API returned error:', data);
-          setError(data.error || 'Failed to generate referral link');
+          setError('Failed to generate referral link');
         }
       } catch (error) {
         console.error('[ReferralLink] Failed to fetch referral link:', error);

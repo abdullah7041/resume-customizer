@@ -25,6 +25,31 @@
         "vision": "Saudi-market fit",
         "interview": "Interview preparation"
       },
+      "actionDemo": {
+        "eyebrow": "See it in action",
+        "heroLink": "See it in action",
+        "title": "Watch a weak bullet become proof-led.",
+        "subtitle": "Start with a common resume line, then switch to the optimized version to see how Watheq keeps the same truth while making the value clearer for the job ad.",
+        "sampleLabel": "Sample resume context",
+        "sampleTitle": "Senior Business Analyst application",
+        "weakLabel": "Before",
+        "optimizedLabel": "Optimized",
+        "showOptimized": "Show optimized",
+        "showWeak": "Show before",
+        "weakBullet": "Prepared weekly reports and dashboards for management.",
+        "optimizedBullet": "Built weekly Power BI dashboards that helped leadership track KPI trends and prioritize stakeholder follow-ups across business units.",
+        "jobContextLabel": "Target job signal",
+        "jobContext": "The role asks for KPI reporting, Power BI, stakeholder management, and decision-support evidence.",
+        "questionLabel": "Watheq asks before adding numbers",
+        "question": "Can you verify how many stakeholders used the dashboard or which decision the reporting improved?",
+        "changedTitle": "What changed",
+        "changes": [
+          "Specific tool and job-ad keywords surfaced.",
+          "Impact is framed as decision support, not generic reporting.",
+          "No fake metrics were added; missing numbers stay a clarification question."
+        ],
+        "verifyNote": "Sample only. Watheq should use the user's real resume evidence and ask before adding unverified scope, time, cost, or percentage claims."
+      },
       "cta": "Try free without sign-in",
       "preview": {
         "exampleLabel": "Example",

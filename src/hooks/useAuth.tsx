@@ -23,6 +23,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const AUTH_SESSION_USER_STORAGE_KEY = "watheq:lastAuthUserId";
+type AuthSessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>;
+let pendingInitialSessionPromise: Promise<AuthSessionResult> | null = null;
+
+const getInitialAuthSession = () => {
+  if (!pendingInitialSessionPromise) {
+    pendingInitialSessionPromise = supabase.auth
+      .getSession()
+      .finally(() => {
+        pendingInitialSessionPromise = null;
+      });
+  }
+
+  return pendingInitialSessionPromise;
+};
 
 const SENSITIVE_SESSION_STORAGE_KEYS = [
   "resume-storage",
@@ -151,10 +165,12 @@ export const AuthProvider = ({ children }) => {
   const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let isActive = true;
     // Capture referral parameter on mount
     captureReferralParam();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isActive) return;
       const currentUser = session?.user || null;
       const currentUserId = currentUser?.id || null;
       const previousUserId = lastUserIdRef.current;
@@ -174,7 +190,8 @@ export const AuthProvider = ({ children }) => {
       lastUserIdRef.current = currentUserId;
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getInitialAuthSession().then(({ data: { session } }) => {
+      if (!isActive) return;
       const currentUser = session?.user || null;
       const currentUserId = currentUser?.id || null;
       reconcileSensitiveSessionDataForUser(currentUserId);
@@ -184,6 +201,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => {
+      isActive = false;
       authListener.subscription.unsubscribe();
     };
   }, []);

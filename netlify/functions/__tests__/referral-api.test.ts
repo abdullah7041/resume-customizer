@@ -152,4 +152,39 @@ describe('referral-api auth binding', () => {
     const eqMock = selectResult.eq;
     expect(eqMock).toHaveBeenCalledWith('email', 'real-user@example.com');
   });
+
+  it('returns referral summary with one token verification', async () => {
+    getReferralStatsMock.mockResolvedValue({
+      total: 3,
+      completed: 2,
+      pending: 1,
+      creditsEarned: 10,
+    });
+    supabaseFromMock.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { referral_code: 'REALCODE' },
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: {
+          action: 'get-summary',
+        },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(200);
+    expect(getUserMock).toHaveBeenCalledTimes(1);
+    expect(response.body).toContain('REALCODE');
+    expect(response.body).toContain('"creditsEarned":10');
+  });
 });

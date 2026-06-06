@@ -31,9 +31,9 @@
         "description": "Built for Saudi-market applications"
       },
       "averageTime": {
-        "value": "5 min",
-        "label": "Average Time",
-        "description": "From upload to optimized PDF"
+        "value": "Evidence-first",
+        "label": "Workflow",
+        "description": "Score fit before rewriting"
       },
       "moreInterviews": {
         "value": "Evidence-Safe",
@@ -41,9 +41,9 @@
         "description": "Ask-before-rewrite workflow"
       },
       "industries": {
-        "value": "50+",
-        "label": "Industries",
-        "description": "Templates tailored for"
+        "value": "Bilingual",
+        "label": "Market Context",
+        "description": "Arabic and English support"
       }
     },
     "industries": {
@@ -52,19 +52,19 @@
       "hiring": "hiring",
       "banking": {
         "name": "Banking & Finance",
-        "growth": "+24%"
+        "growth": "Sector signal"
       },
       "technology": {
         "name": "Technology",
-        "growth": "+47%"
+        "growth": "Sector signal"
       },
       "education": {
         "name": "Education",
-        "growth": "+18%"
+        "growth": "Sector signal"
       },
       "healthcare": {
         "name": "Healthcare",
-        "growth": "+32%"
+        "growth": "Sector signal"
       }
     },
     "featureHighlights": {
@@ -102,8 +102,9 @@
       }
     },
     "comparison": {
-      "title": "Why Choose Watheq?",
-      "subtitle": "Compare Watheq with common resume workflows",
+      "eyebrow": "Workflow comparison",
+      "title": "Compare proof, not just templates.",
+      "subtitle": "See how Watheq protects evidence, scores fit before rewriting, and prepares the same application for ATS and interviews.",
       "watheq": "Watheq",
       "genericResumeBuilder": "Generic Resume Builder",
       "keywordScanner": "Keyword Scanner",

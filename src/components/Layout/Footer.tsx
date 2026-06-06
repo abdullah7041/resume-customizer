@@ -5,9 +5,9 @@ export default function Footer() {
   const { t } = useTranslation();
 
   return (
-    <footer className="relative border-t border-[color:var(--hairline-soft)] bg-[color:var(--surface)] py-12 text-[color:var(--ink-muted)]">
+    <footer className="relative border-t border-[color:var(--glass-border)] bg-[color:var(--bg)] py-10 text-[color:var(--ink-muted)] dark:border-white/10 dark:bg-[#031713]/80">
       <div className="app-shell mx-auto w-full max-w-7xl px-5 sm:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] p-5 shadow-sm backdrop-blur-xl sm:grid-cols-2 sm:p-6 lg:grid-cols-3 dark:border-white/10 dark:bg-white/[0.03]">
           {/* Brand */}
           <div className="space-y-4">
             <div className="text-lg font-black text-[color:var(--ink)]">
@@ -62,7 +62,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-[color:var(--hairline-soft)] pt-8 sm:flex-row">
+        <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-[color:var(--glass-border)] pt-6 sm:flex-row dark:border-white/10">
           <p className="text-sm">
             © {new Date().getFullYear()} {t("common.appName")} — {t("common.byAuthor")}
           </p>
@@ -70,7 +70,7 @@ export default function Footer() {
             href="https://www.linkedin.com/in/3binahmed/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-emerald-100 hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:bg-white/10 dark:text-white/60 dark:hover:bg-emerald-300/20 dark:hover:text-emerald-300"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-slate-500 transition-colors hover:bg-emerald-500/10 hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg)] dark:border-white/10 dark:bg-white/10 dark:text-white/60 dark:hover:bg-emerald-300/20 dark:hover:text-emerald-300"
             aria-label={t("footer.social.linkedin", "LinkedIn")}
             title={t("footer.social.linkedin", "LinkedIn")}
           >

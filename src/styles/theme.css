@@ -1,11 +1,14 @@
 :root {
   /* Atmosphere - Light Mode (Warm Grey Foundation) */
-  --bg: #f5f4f0;
-  --surface: #ffffff;
-  --surface-strong: #fafaf8;
-  --surface-glass-rgb: 255 255 255;
-  --surface-glass: rgba(255, 255, 255, 0.84);
-  --surface-glass-strong: rgba(255, 255, 255, 0.94);
+  --bg: #f3f1eb;
+  --surface: #faf8f2;
+  --surface-strong: #fffdf8;
+  --surface-glass-rgb: 250 248 242;
+  --surface-glass: rgba(250, 248, 242, 0.84);
+  --surface-glass-strong: rgba(255, 253, 248, 0.94);
+  --surface-glass-elevated: rgba(255, 254, 250, 0.97);
+  --surface-control: rgba(255, 253, 248, 0.9);
+  --surface-control-hover: rgba(247, 244, 237, 0.96);
   --ink: #021715;
   --ink-muted: #435a56;
   --ink-soft: #61726e;
@@ -21,17 +24,18 @@
   --accent-gold-soft: rgba(197, 160, 89, 0.2);
 
   /* Panels - Light Mode */
-  --panel-bg: rgba(255, 255, 255, 0.9);
-  --panel-stroke: rgba(13, 84, 72, 0.18);
+  --panel-bg: var(--surface-glass);
+  --panel-bg-elevated: var(--surface-glass-elevated);
+  --panel-stroke: rgba(76, 68, 53, 0.13);
   --panel-highlight: rgba(52, 211, 153, 0.12);
 
   /* Workspace surfaces - Light Mode */
-  --workspace-bg: #f5f4f0;
-  --workspace-surface: #ffffff;
-  --workspace-surface-raised: #ffffff;
-  --workspace-border: rgba(13, 84, 72, 0.10);
-  --workspace-border-strong: rgba(13, 84, 72, 0.18);
-  --workspace-shadow: 0 2px 8px rgba(0, 18, 16, 0.06), 0 12px 32px -12px rgba(0, 18, 16, 0.10);
+  --workspace-bg: #f3f1eb;
+  --workspace-surface: rgba(250, 248, 242, 0.82);
+  --workspace-surface-raised: rgba(255, 254, 250, 0.96);
+  --workspace-border: rgba(76, 68, 53, 0.11);
+  --workspace-border-strong: rgba(13, 84, 72, 0.17);
+  --workspace-shadow: 0 2px 8px rgba(39, 31, 18, 0.05), 0 18px 38px -24px rgba(39, 31, 18, 0.16);
 
   /* Elevation + sheen - Light Mode */
   --shadow-card:
@@ -50,16 +54,17 @@
   --shadow-glow: 0 0 0 1px rgba(13, 84, 72, 0.08), 0 18px 42px -32px rgba(52, 211, 153, 0.18);
   --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.28);
 
-  --glass-border: rgba(13, 84, 72, 0.18);
-  --glass-border-strong: rgba(13, 148, 136, 0.28);
+  --glass-border: rgba(76, 68, 53, 0.15);
+  --glass-border-strong: rgba(13, 84, 72, 0.24);
   --glass-border-hover: rgba(13, 148, 136, 0.38);
+  --focus-ring: rgba(15, 118, 110, 0.36);
   --glass-reflection: linear-gradient(130deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 45%, rgba(255, 255, 255, 0.2) 70%);
   --glass-reflection-hover: linear-gradient(130deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.5) 45%, rgba(255, 255, 255, 0.3) 70%);
   --glass-gold-sheen: linear-gradient(115deg, rgba(244, 211, 125, 0.15) 0%, rgba(52, 211, 153, 0.05) 55%, rgba(244, 211, 125, 0.1) 100%);
 
   /* Color system */
-  --surface-50: #f5f4f0;
-  --surface-50-rgb: 245 244 240;
+  --surface-50: #f3f1eb;
+  --surface-50-rgb: 243 241 235;
   --surface-900: #021715;
   --surface-900-rgb: 2 23 21;
 
@@ -152,6 +157,9 @@
   --surface-glass-rgb: 11 51 42;
   --surface-glass: rgba(7, 36, 31, 0.86);
   --surface-glass-strong: rgba(7, 36, 31, 0.95);
+  --surface-glass-elevated: rgba(7, 36, 31, 0.97);
+  --surface-control: rgba(255, 255, 255, 0.05);
+  --surface-control-hover: rgba(255, 255, 255, 0.09);
   --ink: #f1fcf7;
   --ink-muted: #c8ded7;
   --ink-soft: #a9c4bc;
@@ -166,6 +174,7 @@
   --accent-gold-soft: rgba(197, 160, 89, 0.2);
 
   --panel-bg: rgba(7, 36, 31, 0.9);
+  --panel-bg-elevated: rgba(8, 43, 35, 0.95);
   --panel-stroke: rgba(94, 234, 212, 0.18);
   --panel-highlight: rgba(52, 211, 153, 0.18);
 
@@ -191,6 +200,7 @@
 
   --glass-border: rgba(16, 185, 129, 0.16);
   --glass-border-strong: rgba(45, 212, 191, 0.28);
+  --focus-ring: rgba(16, 185, 129, 0.5);
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 65%);
   --glass-gold-sheen: linear-gradient(125deg, rgba(244, 211, 125, 0.26) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(244, 211, 125, 0.14) 100%);
 

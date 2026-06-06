@@ -469,7 +469,7 @@ describe('OptimizeSection', () => {
 
             // Diff view shows strikethrough text
             // The component should now be in diff mode
-            expect(diffButton).toHaveClass('bg-white');
+            expect(diffButton).toHaveAttribute('aria-pressed', 'true');
         });
     });
 

@@ -47,6 +47,7 @@ This document defines the beta validation funnel, success metrics, and launch/no
 - Avoid duplicate emissions: when a Phase 4 success/failure event covers a user action, do not emit an equivalent legacy event for the same action unless the dashboard explicitly requires both.
 - Launch readiness still requires real Mixpanel/dashboard review and production event volume against the thresholds below; code instrumentation alone does not satisfy the launch criteria.
 - 2026-06-02 Supabase live-state review found no auth logs in the prior 24 hours, no auth users after 2026-04-07, no `ai_usage_events` rows or inserts, no `job_applications` rows, and no adjacent persisted app activity after 2026-05-09. `signin_started` / `signup_started` visibility remains intentionally unconfirmed until Mixpanel or production traffic is reviewed.
+- 2026-06-04 telemetry follow-up fixed a plausible serverless race where AI usage logging returned before the Supabase insert settled. Payment readiness still requires one post-deploy production AI request with a confirmed `ai_usage_events` row.
 
 ---
 
@@ -91,7 +92,7 @@ Implementation note: feedback validation answers are persisted as structured cat
 | Users indicating willingness to pay | 5–10 |
 | Active testers clicking pricing-intent CTA | 20–30% |
 | Users asking for more credits/exports/packs | Observable |
-| AI cost logging working | Pending first observed production AI request and corresponding `ai_usage_events` insert |
+| AI cost logging working | Code durability fix complete; pending post-deploy production AI request and corresponding `ai_usage_events` insert |
 | No major trust/privacy issues | Confirmed |
 
 ---

@@ -114,9 +114,86 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
     );
   };
 
+  const renderMobileValue = (value: string, isWatheq = false) => {
+    if (value === "yes") {
+      return (
+        <span className={cn("inline-flex items-center gap-2 text-sm font-semibold", isWatheq ? "text-emerald-700 dark:text-emerald-200" : "text-gray-600 dark:text-white/72")}>
+          <Check className="h-4 w-4" strokeWidth={3} />
+          {t("landing.comparison.values.yes")}
+        </span>
+      );
+    }
+
+    if (value === "no") {
+      return (
+        <span className="inline-flex items-center gap-2 text-sm text-gray-400 dark:text-white/40">
+          <X className="h-4 w-4" />
+          {t("landing.comparison.values.no")}
+        </span>
+      );
+    }
+
+    if (value === "partial") {
+      return (
+        <span className="inline-flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300/85">
+          <Minus className="h-4 w-4" />
+          {t("landing.comparison.values.partial")}
+        </span>
+      );
+    }
+
+    return (
+      <span className={cn("text-sm leading-6", isWatheq ? "font-bold text-emerald-700 dark:text-emerald-200" : "text-gray-500 dark:text-white/62")}>
+        {value}
+      </span>
+    );
+  };
+
   return (
-    <div className={cn("w-full overflow-hidden neu-card", className)}>
-      <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
+    <div className={cn("w-full", className)}>
+      <div className="space-y-4 md:hidden">
+        {comparisonData.map((row) => (
+          <article
+            key={row.feature}
+            className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.055] dark:ring-white/10"
+          >
+            <h3 className="text-base font-black leading-6 text-gray-900 dark:text-white">
+              {row.feature}
+            </h3>
+
+            <div className="mt-4 rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-600/12 dark:bg-emerald-300/[0.08] dark:ring-emerald-300/15">
+              <div className="flex flex-col gap-2 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
+                <span className="text-sm font-black text-emerald-800 dark:text-emerald-100">
+                  {t("landing.comparison.watheq")}
+                </span>
+                <div className="min-w-0 min-[420px]:max-w-[62%] min-[420px]:text-end">
+                  {renderMobileValue(row.watheq, true)}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {categoryColumns.map(({ key, label, icon: Icon }) => (
+                <div
+                  key={key}
+                  className="flex flex-col gap-2 rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-200 dark:bg-white/[0.035] dark:ring-white/10 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between"
+                >
+                  <span className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-600 dark:text-white/62">
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0">{label}</span>
+                  </span>
+                  <div className="min-w-0 min-[420px]:max-w-[58%] min-[420px]:text-end">
+                    {renderMobileValue(row[key])}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-hidden neu-card md:block">
+        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
         <div className="min-w-[820px]">
           {/* Header */}
           <div className="grid grid-cols-5 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
@@ -179,6 +256,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
             ))}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

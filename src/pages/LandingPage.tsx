@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -184,22 +184,157 @@ function HeroProductStage() {
   );
 }
 
-function StoryCard({
+function SeeItInActionDemo() {
+  const { t } = useTranslation();
+  const resultRegionId = useId();
+  const shouldReduceMotion = useReducedMotion();
+  const [showOptimized, setShowOptimized] = useState(false);
+  const changeItems = translatedList(t, "landing.productWalkthrough.actionDemo.changes");
+  const activeBulletKey = showOptimized ? "optimizedBullet" : "weakBullet";
+  const activeLabelKey = showOptimized ? "optimizedLabel" : "weakLabel";
+
+  return (
+    <section
+      id="see-it-in-action"
+      className="bg-white px-5 py-14 text-[#171717] dark:bg-[#031713] dark:text-white sm:px-8 lg:py-20"
+      aria-labelledby="see-action-title"
+    >
+      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.48, ease: "easeOut" }}
+          className="max-w-xl"
+        >
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
+            {t("landing.productWalkthrough.actionDemo.eyebrow")}
+          </p>
+          <h2 id="see-action-title" className="mt-4 text-4xl font-black leading-[0.98] sm:text-5xl">
+            {t("landing.productWalkthrough.actionDemo.title")}
+          </h2>
+          <p className="mt-5 text-lg leading-8 text-slate-600 dark:text-white/62">
+            {t("landing.productWalkthrough.actionDemo.subtitle")}
+          </p>
+
+          <div className="mt-7 rounded-[1.25rem] bg-[#f5f4f0] p-4 ring-1 ring-slate-900/6 dark:bg-white/[0.055] dark:ring-white/10">
+            <div className="flex items-start gap-3">
+              <MessageSquareText className="mt-1 h-5 w-5 shrink-0 text-[#2b8994] dark:text-emerald-300" />
+              <div>
+                <p className="text-sm font-black text-[#0c5963] dark:text-emerald-100">
+                  {t("landing.productWalkthrough.actionDemo.questionLabel")}
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-white/70">
+                  {t("landing.productWalkthrough.actionDemo.question")}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.55, delay: 0.08, ease: "easeOut" }}
+          className="landing-proof-panel overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] p-4 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:shadow-none dark:ring-white/10 sm:p-5"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500 dark:text-white/45">
+                {t("landing.productWalkthrough.actionDemo.sampleLabel")}
+              </p>
+              <h3 className="mt-1 text-xl font-black text-[#171717] dark:text-white">
+                {t("landing.productWalkthrough.actionDemo.sampleTitle")}
+              </h3>
+            </div>
+            <button
+              type="button"
+              aria-pressed={showOptimized}
+              aria-controls={resultRegionId}
+              onClick={() => setShowOptimized((value) => !value)}
+              className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full bg-[#0b1026] px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#2b8994] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f4f0] motion-reduce:transform-none dark:bg-emerald-300 dark:text-[#052e2b] dark:hover:bg-emerald-200 dark:focus-visible:ring-offset-[#06231d] sm:w-auto"
+            >
+              <Sparkles className="h-4 w-4" />
+              {t(showOptimized ? "landing.productWalkthrough.actionDemo.showWeak" : "landing.productWalkthrough.actionDemo.showOptimized")}
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.82fr]">
+            <div
+              id={resultRegionId}
+              aria-live="polite"
+              className="rounded-[1.25rem] bg-white p-4 ring-1 ring-slate-900/6 dark:bg-white/[0.06] dark:ring-white/10 sm:p-5"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[#f5f4f0] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-white/10 dark:text-white/55">
+                  {t(`landing.productWalkthrough.actionDemo.${activeLabelKey}`)}
+                </span>
+                <span className="rounded-full bg-[#2b8994]/10 px-3 py-1 text-xs font-black text-[#0c5963] dark:bg-emerald-300/10 dark:text-emerald-200">
+                  {showOptimized ? "86%" : "52%"} {t("landing.productWalkthrough.preview.matchScore")}
+                </span>
+              </div>
+              <p className="mt-4 text-base font-black leading-7 text-[#171717] dark:text-white">
+                {t(`landing.productWalkthrough.actionDemo.${activeBulletKey}`)}
+              </p>
+              <div className="mt-5 rounded-xl bg-[#f5f4f0] p-4 dark:bg-[#031713]">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                  {t("landing.productWalkthrough.actionDemo.jobContextLabel")}
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-white/70">
+                  {t("landing.productWalkthrough.actionDemo.jobContext")}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-[1.25rem] bg-[#0b1026] p-4 text-white dark:bg-[#031713] dark:ring-1 dark:ring-white/10 sm:p-5">
+              <p className="text-sm font-black text-emerald-200">
+                {t("landing.productWalkthrough.actionDemo.changedTitle")}
+              </p>
+              <ul className="mt-4 space-y-3">
+                {changeItems.map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm font-semibold leading-6 text-white/78">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-5 rounded-xl bg-white/10 p-3 text-xs font-bold leading-5 text-emerald-100">
+                {t("landing.productWalkthrough.actionDemo.verifyNote")}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function ProofWorkflowStep({
   icon: Icon,
   title,
   description,
+  index,
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
+  index: number;
 }) {
   return (
-    <article className="rounded-[1.25rem] bg-white p-5 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.055] dark:ring-white/10">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f5f4f0] text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
-        <Icon className="h-5 w-5" />
+    <article className="group grid gap-4 rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-slate-900/6 transition hover:-translate-y-0.5 hover:ring-[#2b8994]/20 dark:bg-white/[0.055] dark:ring-white/10 dark:hover:ring-emerald-300/20 sm:grid-cols-[auto_1fr] sm:p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0b1026] text-xs font-black tabular-nums text-white dark:bg-emerald-300 dark:text-[#052e2b]">
+          {index + 1}
+        </span>
       </div>
-      <h3 className="mt-5 text-xl font-black text-[#171717] dark:text-white">{title}</h3>
-      <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-white/62">{description}</p>
+      <div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f5f4f0] text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
+        <Icon className="h-5 w-5" />
+        </div>
+        <h3 className="mt-4 text-xl font-black text-[#171717] dark:text-white">{title}</h3>
+        <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-white/62">{description}</p>
+      </div>
     </article>
   );
 }
@@ -266,9 +401,8 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         <div className="relative z-10 mx-auto w-full max-w-7xl">
           <div className="mx-auto max-w-4xl text-center">
             <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
               className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 shadow-sm dark:border-white/10 dark:bg-white/[0.08] dark:text-emerald-200"
             >
@@ -277,9 +411,8 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             </motion.div>
 
             <motion.h1
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.05, ease: "easeOut" }}
               className="text-balance text-4xl font-black leading-[0.96] sm:text-6xl lg:text-7xl"
             >
@@ -289,9 +422,8 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             </motion.h1>
 
             <motion.p
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: 0.1, ease: "easeOut" }}
               className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-white/64 sm:text-xl"
             >
@@ -299,21 +431,27 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             </motion.p>
 
             <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
               className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
             >
               <button
                 type="button"
                 onClick={handleHeroCta}
-                className="group relative inline-flex min-h-[52px] items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#0b1026] to-[#2b8994] px-8 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:from-emerald-600 dark:to-emerald-400 dark:text-slate-950 dark:shadow-emerald-500/10 dark:hover:shadow-emerald-400/20"
+                className="group relative inline-flex min-h-[52px] items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#0b1026] to-[#2b8994] px-8 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transform-none dark:from-emerald-600 dark:to-emerald-400 dark:text-slate-950 dark:shadow-emerald-500/10 dark:hover:shadow-emerald-400/20"
               >
                 <span className="relative z-10">{t("landing.hero.cta")}</span>
                 <ArrowRight className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#2b8994] to-[#0b1026] opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:from-emerald-400 dark:to-emerald-600" />
               </button>
+              <a
+                href="#see-it-in-action"
+                className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-[#2b8994]/25 bg-white/82 px-5 py-2.5 text-sm font-black text-[#0c5963] shadow-sm ring-1 ring-white/50 transition hover:-translate-y-0.5 hover:border-[#2b8994]/45 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transform-none dark:border-white/10 dark:bg-white/[0.07] dark:text-emerald-100 dark:ring-white/10 dark:hover:bg-white/[0.11]"
+              >
+                <MessageSquareText className="h-4 w-4" />
+                {t("landing.productWalkthrough.actionDemo.heroLink")}
+              </a>
               <span className="text-sm font-semibold text-slate-500 dark:text-white/52">
                 {t("landing.productWalkthrough.heroNote")}
               </span>
@@ -353,14 +491,11 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         </div>
       </section>
 
+      <SeeItInActionDemo />
+
       <section className="bg-[#f5f4f0] px-5 py-14 dark:bg-[#041c17] sm:px-8 lg:py-20" aria-labelledby="tailoring-title">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="order-2 grid gap-4 md:grid-cols-3 lg:order-1 lg:grid-cols-1">
-            {tailoringCards.map((card) => (
-              <StoryCard key={card.title} {...card} />
-            ))}
-          </div>
-          <div className="order-1 lg:order-2">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
+          <div className="lg:sticky lg:top-24">
             <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
               {t("landing.productStory.why.eyebrow")}
             </p>
@@ -373,6 +508,11 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             <p className="mt-6 max-w-xl rounded-[1.25rem] bg-white/80 p-4 text-sm font-black leading-7 text-[#0c5963] shadow-sm ring-1 ring-[#cfe8e5] dark:bg-white/[0.06] dark:text-emerald-100 dark:ring-white/10">
               {t("landing.productStory.why.bridge")}
             </p>
+          </div>
+          <div className="grid gap-4">
+            {tailoringCards.map((card, index) => (
+              <ProofWorkflowStep key={card.title} {...card} index={index} />
+            ))}
           </div>
         </div>
       </section>
@@ -410,7 +550,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <p className="inline-flex rounded-full border border-[#2b8994]/25 bg-[#2b8994]/10 px-4 py-1.5 text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:border-emerald-300/25 dark:bg-emerald-300/10 dark:text-emerald-200">
-              {t("landing.comparison.title")}
+              {t("landing.comparison.eyebrow")}
             </p>
             <h2 id="landing-comparison-title" className="mt-4 text-3xl font-black leading-tight text-[#171717] dark:text-white sm:text-4xl">
               {t("landing.comparison.title")}

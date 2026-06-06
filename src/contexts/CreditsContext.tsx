@@ -21,6 +21,81 @@ interface CreditsContextValue {
 }
 
 const CreditsContext = createContext<CreditsContextValue | undefined>(undefined);
+const CREDITS_CACHE_TTL_MS = 1000;
+
+interface UserCreditsRow {
+    credits_remaining: number;
+    credits_total: number;
+    feedback_credits_earned: number;
+    referral_credits_earned: number | null;
+    last_reset_date: string;
+}
+
+interface CreditsCacheEntry {
+    fetchedAt: number;
+    credits: UserCredits;
+}
+
+const inFlightCreditsFetches = new Map<string, Promise<UserCredits>>();
+const recentCreditsByEmail = new Map<string, CreditsCacheEntry>();
+
+const mapCreditsRow = (data: UserCreditsRow): UserCredits => ({
+    remaining: data.credits_remaining,
+    total: data.credits_total,
+    feedbackCreditsEarned: data.feedback_credits_earned,
+    referralCreditsEarned: data.referral_credits_earned || 0,
+    resetDate: data.last_reset_date,
+});
+
+const getDefaultCredits = (): UserCredits => ({
+    remaining: 0,
+    total: 0,
+    feedbackCreditsEarned: 0,
+    referralCreditsEarned: 0,
+    resetDate: new Date().toISOString(),
+});
+
+const fetchCreditsForEmail = (email: string, options: { forceRefresh?: boolean } = {}) => {
+    const cached = recentCreditsByEmail.get(email);
+    if (!options.forceRefresh && cached && Date.now() - cached.fetchedAt < CREDITS_CACHE_TTL_MS) {
+        return Promise.resolve(cached.credits);
+    }
+
+    const inFlight = inFlightCreditsFetches.get(email);
+    if (inFlight) {
+        return inFlight;
+    }
+
+    const request = Promise.resolve(supabase
+        .from('user_credits')
+        .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date')
+        .eq('email', email)
+        .single())
+        .then(({ data, error: fetchError }) => {
+            if (fetchError) {
+                if (fetchError.code === 'PGRST116') {
+                    return getDefaultCredits();
+                }
+                throw fetchError;
+            }
+
+            if (!data) {
+                return getDefaultCredits();
+            }
+
+            return mapCreditsRow(data as UserCreditsRow);
+        })
+        .then((credits) => {
+            recentCreditsByEmail.set(email, { fetchedAt: Date.now(), credits });
+            return credits;
+        })
+        .finally(() => {
+            inFlightCreditsFetches.delete(email);
+        });
+
+    inFlightCreditsFetches.set(email, request);
+    return request;
+};
 
 interface CreditsProviderProps {
     children: ReactNode;
@@ -28,6 +103,7 @@ interface CreditsProviderProps {
 
 export function CreditsProvider({ children }: CreditsProviderProps) {
     const { user } = useAuth();
+    const userEmail = user?.email ?? null;
     const [credits, setCredits] = useState<UserCredits | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -45,7 +121,7 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
         if (isFetchingRef.current && !immediate) {
             return;
         }
-        if (!user) {
+        if (!userEmail) {
             setCredits(null);
             setIsLoading(false);
             isFetchingRef.current = false;
@@ -58,75 +134,39 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             if (!hasLoadedOnceRef.current) {
                 setIsLoading(true);
             }
-            const { data, error: fetchError } = await supabase
-                .from('user_credits')
-                .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date')
-                .eq('email', user.email)
-                .single();
+            const newCredits = await fetchCreditsForEmail(userEmail, {
+                forceRefresh: immediate && hasLoadedOnceRef.current,
+            });
 
-            if (fetchError) {
-                // Handle "No rows found" (PGRST116) by defaulting to 0 credits
-                if (fetchError.code === 'PGRST116') {
-                    const defaultCredits = {
-                        remaining: 0,
-                        total: 0,
-                        feedbackCreditsEarned: 0,
-                        referralCreditsEarned: 0,
-                        resetDate: new Date().toISOString(),
-                    };
-                    setCredits(defaultCredits);
-                    previousCreditsRef.current = defaultCredits;
-                    setError(null); // Clear any previous errors
-                    return;
-                }
-
-                console.error('[CreditsContext] Fetch error:', {
-                    message: fetchError.message,
-                    details: fetchError.details,
-                    hint: fetchError.hint,
-                    code: fetchError.code,
-                });
-                throw fetchError;
+            // Detect referral credit increases using ref (not state)
+            const prevCredits = previousCreditsRef.current;
+            if (prevCredits && newCredits.referralCreditsEarned > prevCredits.referralCreditsEarned) {
+                const creditsAdded = (newCredits.referralCreditsEarned - prevCredits.referralCreditsEarned) * 5;
+                // Dispatch custom event for toast notification
+                window.dispatchEvent(new CustomEvent('referralCreditsEarned', {
+                    detail: { creditsAdded }
+                }));
             }
 
-            if (data) {
-                const newCredits = {
-                    remaining: data.credits_remaining,
-                    total: data.credits_total,
-                    feedbackCreditsEarned: data.feedback_credits_earned,
-                    referralCreditsEarned: data.referral_credits_earned || 0,
-                    resetDate: data.last_reset_date,
-                };
-
-                // Detect referral credit increases using ref (not state)
-                const prevCredits = previousCreditsRef.current;
-                if (prevCredits && newCredits.referralCreditsEarned > prevCredits.referralCreditsEarned) {
-                    const creditsAdded = (newCredits.referralCreditsEarned - prevCredits.referralCreditsEarned) * 5;
-                    // Dispatch custom event for toast notification
-                    window.dispatchEvent(new CustomEvent('referralCreditsEarned', {
-                        detail: { creditsAdded }
-                    }));
-                }
-
-                previousCreditsRef.current = newCredits;
-                setCredits(newCredits);
-            }
-        } catch (err) {
-            const error = err as any;
+            previousCreditsRef.current = newCredits;
+            setCredits(newCredits);
+            setError(null);
+        } catch (error: unknown) {
+            const fetchError = error as Partial<{ message: string; details: string; hint: string; code: string }>;
 
             // Enhanced error logging
             console.error('[CreditsContext] Failed to fetch credits:', {
-                message: error?.message || 'Unknown error',
-                details: error?.details || 'No details available',
-                hint: error?.hint || '',
-                code: error?.code || '',
+                message: fetchError?.message || 'Unknown error',
+                details: fetchError?.details || 'No details available',
+                hint: fetchError?.hint || '',
+                code: fetchError?.code || '',
             });
 
             // Only set error state for non-PGRST116 errors
-            if (error?.code !== 'PGRST116') {
+            if (fetchError?.code !== 'PGRST116') {
                 // Keep previous credits if available to avoid UI flash
                 if (!previousCreditsRef.current) {
-                    setError(err instanceof Error ? err : new Error('Failed to fetch credits'));
+                    setError(error instanceof Error ? error : new Error('Failed to fetch credits'));
                 } else {
                     // Silently fail but keep showing previous data
                     console.warn('[CreditsContext] Using cached credits due to fetch failure');
@@ -137,7 +177,7 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
             isFetchingRef.current = false;
             hasLoadedOnceRef.current = true;
         }
-    }, [user]);
+    }, [userEmail]);
 
     // Debounced version of fetchCredits for real-time updates
     const debouncedFetchCredits = useCallback(() => {
@@ -159,17 +199,17 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
 
     // Real-time subscription with debouncing
     useEffect(() => {
-        if (!user) return;
+        if (!userEmail) return;
 
         const subscription = supabase
-            .channel(`user_credits_global:${user.email}`)
+            .channel(`user_credits_global:${userEmail}`)
             .on(
                 'postgres_changes',
                 {
                     event: '*',
                     schema: 'public',
                     table: 'user_credits',
-                    filter: `email=eq.${user.email}`,
+                    filter: `email=eq.${userEmail}`,
                 },
                 (payload) => {
                     // Use debounced version to prevent rapid updates
@@ -185,7 +225,7 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
                 clearTimeout(fetchTimeoutRef.current);
             }
         };
-    }, [user, debouncedFetchCredits]);
+    }, [userEmail, debouncedFetchCredits]);
 
     // Listen for manual credit refresh events (e.g., after referral tracking)
     useEffect(() => {
