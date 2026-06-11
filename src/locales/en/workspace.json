@@ -4,14 +4,25 @@
     "gettingStarted": "Getting Started",
     "clearAll": "Clear All",
     "continue": "Continue",
-    "resumeGateHint": "Upload a resume first to unlock Match, Optimize, Templates, and Interview.",
-    "stepFlowHelper": "Step 1: Upload or paste resume → Step 2: Paste job description → Step 3: Review match → Step 4: Optimize & export",
+    "resumeGateHint": "Upload a resume first to unlock Match, Optimize, Export, and More tools.",
+    "stepper": {
+      "resume": "Resume",
+      "resumeHint": "Upload or paste",
+      "jobAd": "Job Ad",
+      "jobAdHint": "Add description",
+      "match": "Match",
+      "matchHint": "Analyze fit",
+      "optimize": "Optimize",
+      "optimizeHint": "Improve resume",
+      "export": "Export / Pipeline",
+      "exportHint": "Save and track"
+    },
     "resumeRequiredTitle": "Resume required",
     "signInToUnlock": "Sign in to unlock insights",
     "signInDescription": "Connect your account to securely upload resumes, run match analysis, and save optimization drafts.",
     "signInViaGoogle": "Sign in via Google",
     "guest": {
-      "notice": "Sign in is needed to run AI match/optimization, save pipeline jobs, or export to your account.",
+      "notice": "Preview the workflow here. Sign in to process resumes, run AI, save progress, or export to your account.",
       "protectedActionTitle": "Sign in required",
       "protectedActionDesc": "Sign in to run AI analysis and save your progress.",
       "resumeProcessingAuthTitle": "Sign in required",
@@ -35,9 +46,14 @@
       "steps": {
         "resume": "Resume",
         "jobAd": "Job Ad",
+        "match": "Match",
         "optimize": "Optimize",
         "export": "Export"
       }
+    },
+    "moreTools": {
+      "description": "Use these after the core resume workflow when you need deeper preparation or tracking.",
+      "openTool": "Open tool"
     }
   }
 }

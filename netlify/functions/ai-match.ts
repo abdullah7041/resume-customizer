@@ -7,6 +7,7 @@ import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { normalizeScore } from "../lib/score-utils.js";
+import { buildStrategicRealityCheckSummary } from "../lib/strategic-reality-check.js";
 
 initSentry();
 
@@ -114,6 +115,7 @@ const baseHandler: Handler = async (event) => {
         )
       },
       categoryScores: match.categoryScores || null,
+      strategicRealityCheck: match.strategicRealityCheck || null,
       interviewPrep: null,
       gapAnalysis: [],
       keywordStrategy: null
@@ -122,24 +124,27 @@ const baseHandler: Handler = async (event) => {
     // Consume credits AFTER successful match (BEFORE database writes to minimize latency)
     const creditResult = await consumeCredits(userEmail, 'ai_match');
 
-    // Save to database ASYNCHRONOUSLY (don't await - fire and forget)
-    // This prevents database latency from eating into the 90s Netlify timeout
+    // Save privacy-safe summary metadata ASYNCHRONOUSLY (don't await - fire and forget)
+    // This prevents database latency from eating into the 90s Netlify timeout.
     if (userEmail && client) {
-      // Fire-and-forget: don't await, don't block response
-      // Note: Supabase query builder returns PromiseLike (no .catch), so wrap with Promise.resolve
-      Promise.resolve(
-        client.from('job_matches').insert({
-          email: userEmail,
-          resume_text: resumeText.substring(0, 5000), // Truncate for storage
-          job_text: jobText.substring(0, 5000), // Truncate for storage
-          score: normalizedScore,
-          missing_keywords: match.missingKeywords,
-          suggestions: match.strongMatches,
-        })
-      ).catch((dbError: Error) => {
-        // Non-blocking DB error - just log it
-        console.warn('[ai-match] Background DB insert failed:', summarizeErrorForLog(dbError));
+      const realityCheckSummary = buildStrategicRealityCheckSummary({
+        userId: user.id,
+        matchScore: normalizedScore,
+        language,
+        resumeText,
+        jobText,
+        strategicRealityCheck: response.strategicRealityCheck,
       });
+
+      if (realityCheckSummary) {
+        Promise.resolve(
+          client.from('strategic_reality_checks').insert(realityCheckSummary)
+        ).catch((dbError: Error) => {
+          console.warn('[ai-match] Reality Check summary insert failed:', summarizeErrorForLog(dbError));
+        });
+      } else {
+        console.warn('[ai-match] Reality Check summary persistence skipped: missing hash secret or invalid summary');
+      }
     }
 
     return {

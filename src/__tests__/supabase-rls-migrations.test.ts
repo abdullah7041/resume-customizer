@@ -50,4 +50,35 @@ describe('Supabase RLS migration hardening', () => {
     expect(migrationSql.match(/\(select auth\.uid\(\)\) = user_id/g)?.length).toBeGreaterThanOrEqual(10);
     expect(migrationSql).toContain('(select auth.uid()) = id');
   });
+
+  it('repairs pipeline statuses and removes direct strategic reality browser access', () => {
+    const migrationSql = readFileSync(
+      join(process.cwd(), 'supabase/migrations/20260608180535_repair_pipeline_database_integrity.sql'),
+      'utf8'
+    ).toLowerCase();
+
+    expect(migrationSql).toContain("where status = 'interview'");
+    expect(migrationSql).toContain("set\n        status = 'applied'");
+    expect(migrationSql).toContain('drop column if exists interview_at');
+    expect(migrationSql).toContain("check (status in ('saved', 'applied', 'offer', 'rejected', 'withdrawn'))");
+    expect(migrationSql).not.toContain("'interview','offer'");
+
+    expect(migrationSql).toContain('revoke all on public.strategic_reality_checks from public, anon, authenticated');
+    expect(migrationSql).toContain('grant insert, select, delete on public.strategic_reality_checks to service_role');
+    expect(migrationSql).toContain('drop policy if exists "strategic_reality_checks_select_own_user_id"');
+    expect(migrationSql).toContain('drop policy if exists "strategic_reality_checks_delete_own_user_id"');
+  });
+
+  it('keeps legacy account tables service-role-only until explicit archival drop', () => {
+    const migrationSql = readFileSync(
+      join(process.cwd(), 'supabase/migrations/20260608180535_repair_pipeline_database_integrity.sql'),
+      'utf8'
+    ).toLowerCase();
+
+    for (const tableName of ['resumes', 'job_matches', 'feedback']) {
+      expect(migrationSql).toContain(`revoke all on public.${tableName} from public, anon, authenticated`);
+      expect(migrationSql).toContain(`grant select, delete on public.${tableName} to service_role`);
+      expect(migrationSql).toContain(`comment on table public.${tableName}`);
+    }
+  });
 });

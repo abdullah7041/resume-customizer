@@ -3,31 +3,30 @@
     "title": "Pricing",
     "subtitle": "Simple, transparent pricing for everyone",
     "workspaceCta": "Need more credits? View plans",
-    "comingSoon": "Coming Soon",
-    "detailsComingSoon": "Details will be announced soon",
     "forever": "/forever",
-    "proPrice": "Price coming soon",
     "getStarted": "Get Started Free",
-    "joinWaitlist": "Join Waitlist",
-    "notifyMe": "Get Notified for Pro",
-    "notifyDescription": "Be the first to know when Pro features launch.",
     "emailPlaceholder": "Enter your email",
-    "notify": "Notify Me",
-    "subscribed": "✓ Joined waitlist!",
-    "intent": {
-      "title": "Help us decide pricing",
-      "pack9Sar": "Would you pay 9 SAR per application pack?",
-      "monthly29Sar": "Would you pay 29 SAR/month while job searching?",
-      "notChargingYet": "Paid plans are not launched yet - this helps us decide what to build.",
-      "confirmTitle": "Thanks for the signal",
-      "confirmPack9Sar": "You clicked interest in a 9 SAR application pack. This is only validation feedback.",
-      "confirmMonthly29Sar": "You clicked interest in a 29 SAR monthly plan. This is only validation feedback."
-    },
     "waitlist": {
+      "badge": "Pricing Waitlist",
+      "title": "Join the pricing waitlist",
+      "subtitle": "Paid plans are not live yet. Join the list and help shape launch pricing.",
+      "trust": "No payment required. We'll only notify you when pricing opens.",
+      "cta": "Join pricing waitlist",
+      "emailLabel": "Your email",
+      "intentLabel": "Which pricing would you consider? (optional)",
+      "priceFinalizing": "Pricing still being finalized",
+      "notLiveNote": "Paid plans are not live yet — joining the waitlist helps us shape launch pricing.",
+      "successTitle": "You're on the list",
+      "success": "We'll only notify you when pricing opens. No payment required.",
       "alreadyJoined": "You're already on the waitlist!",
       "invalidEmail": "Please enter a valid email address",
       "tooManyAttempts": "Please wait a moment before trying again",
-      "error": "Failed to join waitlist. Please try again."
+      "error": "Failed to join waitlist. Please try again.",
+      "intent": {
+        "pack9Sar": "9 SAR application pack",
+        "monthly29Sar": "29 SAR monthly while job searching",
+        "notSure": "Not sure yet"
+      }
     },
     "plans": {
       "free": {
@@ -50,11 +49,10 @@
         "name": "Pro",
         "description": "For serious job seekers",
         "features": [
-          "More resume uploads",
-          "Advanced AI optimization",
-          "Cover letter generation",
-          "Interview preparation",
-          "Priority support"
+          "More optimization credits",
+          "Save and track more jobs",
+          "Priority improvements and early feature access",
+          "Pricing still being finalized"
         ]
       }
     }

@@ -57,6 +57,13 @@ const FEATURE_CONFIGS = {
     reasoningBudget: 1024,
     timeoutMs: 65000,
   },
+  ai_match_reality_check: {
+    modelType: 'flash',
+    maxTokens: 6144,
+    temperature: 0,
+    reasoningBudget: 512,
+    timeoutMs: 65000,
+  },
   job_metadata_extraction: {
     modelType: 'lite',
     maxTokens: 1024,

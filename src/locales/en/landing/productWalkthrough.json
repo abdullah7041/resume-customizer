@@ -50,7 +50,7 @@
         ],
         "verifyNote": "Sample only. Watheq should use the user's real resume evidence and ask before adding unverified scope, time, cost, or percentage claims."
       },
-      "cta": "Try free without sign-in",
+      "cta": "Preview the workflow",
       "preview": {
         "exampleLabel": "Example",
         "matchScore": "Job match score",

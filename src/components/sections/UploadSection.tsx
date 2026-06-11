@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import UploadCard from '../ui/UploadCard';
 import { isAuthRequiredError } from '../../services/api.js';
 import { AppError } from '../../services/supabase.js';
@@ -58,6 +58,14 @@ export default function UploadSection({
     const [error, setError] = useState<string | null>(null);
     const [pastedText, setPastedText] = useState('');
     const [warnings, setWarnings] = useState<ParsingWarning[]>([]);
+
+    const previousAuthMessageRef = useRef(authRequiredMessage);
+
+    useEffect(() => {
+        const previousAuthMessage = previousAuthMessageRef.current;
+        previousAuthMessageRef.current = authRequiredMessage;
+        setError((current) => current === previousAuthMessage ? authRequiredMessage : current);
+    }, [authRequiredMessage]);
 
     // Ref for tracking active parse request to support cancellation
     const parseRequestActive = useRef(false);

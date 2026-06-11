@@ -2,17 +2,20 @@
   "settings": {
     "accountInformation": "معلومات الحساب",
     "verifiedAccount": "حساب موثّق",
+    "preferences": "التفضيلات",
+    "appearance": "المظهر",
+    "appearanceDescription": "التبديل بين الوضع الفاتح والداكن.",
+    "lightMode": "فاتح",
+    "darkMode": "داكن",
     "dataPrivacy": "البيانات والخصوصية",
-    "exportPersonalData": "تصدير البيانات الشخصية",
-    "exportPersonalDataDescription": "نزّل نسخة من سيرك الذاتية والتحسينات بصيغة JSON.",
+    "privacyInfoTitle": "كيف نتعامل مع بياناتك",
+    "privacyInfoDescription": "اطّلع على ما نحفظه ولماذا وكيف نحميه.",
     "deleteAccountDescription": "حذف حسابك نهائياً مع كل البيانات المرتبطة به.",
     "deleteConfirmQuestion": "هل أنت متأكد؟",
     "errors": {
       "authToken": "تعذر الحصول على رمز المصادقة من الجلسة الحالية.",
       "deleteFailed": "تعذر حذف الحساب.",
-      "deleteGeneric": "حدث خطأ أثناء حذف الحساب.",
-      "exportFailed": "تعذر تصدير البيانات.",
-      "exportGeneric": "حدث خطأ أثناء تصدير البيانات."
+      "deleteGeneric": "حدث خطأ أثناء حذف الحساب."
     }
   }
 }

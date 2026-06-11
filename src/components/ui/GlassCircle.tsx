@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 interface GlassCircleProps extends HTMLMotionProps<"div"> {
     children: ReactNode;
     size?: 'sm' | 'md' | 'lg' | 'xl';
-    variant?: 'default' | 'success' | 'warning' | 'info' | 'purple' | 'blue' | 'indigo';
+    variant?: 'default' | 'success' | 'warning' | 'info' | 'purple' | 'blue' | 'indigo' | 'gold';
     className?: string;
 }
 
@@ -54,6 +54,12 @@ const variantStyles = {
         background: 'linear-gradient(145deg, rgba(99,102,241,0.5) 0%, rgba(99,102,241,0.25) 50%, rgba(99,102,241,0.15) 100%)',
         border: '1px solid rgba(99,102,241,0.6)',
         boxShadow: '0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(99,102,241,0.2), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
+    },
+    // Soft gold — restrained accent for the Warm Saudi Premium direction (calm glow)
+    gold: {
+        background: 'linear-gradient(145deg, rgba(197,160,89,0.45) 0%, rgba(197,160,89,0.22) 50%, rgba(197,160,89,0.12) 100%)',
+        border: '1px solid rgba(197,160,89,0.55)',
+        boxShadow: '0 0 24px rgba(197,160,89,0.22), 0 8px 24px rgba(0,0,0,0.12), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.08)'
     }
 };
 

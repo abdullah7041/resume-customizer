@@ -19,17 +19,20 @@ const mockSentry = {
     summarizeErrorForLog: vi.fn((error: unknown) => error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) })
 };
 
+const mockDbInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+const mockDbFrom = vi.fn((table: string) => ({
+    insert: (payload: unknown) => mockDbInsert(table, payload)
+}));
+
 const mockSupabase = {
     createClient: vi.fn(() => ({
         auth: {
             getUser: vi.fn().mockResolvedValue({
-                data: { user: { id: 'test-user-123' } },
+                data: { user: { id: 'test-user-123', email: 'user@example.com', email_confirmed_at: new Date().toISOString() } },
                 error: null
             })
         },
-        from: vi.fn(() => ({
-            insert: vi.fn().mockResolvedValue({ data: null, error: null })
-        }))
+        from: mockDbFrom
     }))
 };
 
@@ -80,6 +83,9 @@ describe('AI Integration Functions', () => {
         process.env.SUPABASE_URL = 'https://test.supabase.co';
         process.env.SUPABASE_ANON_KEY = 'test-anon-key';
         process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+        process.env.STRATEGIC_REALITY_CHECK_HASH_SECRET = 'test-secret';
+        mockDbInsert.mockResolvedValue({ data: null, error: null });
+        mockDbFrom.mockClear();
     });
 
     describe('ai-match function', () => {
@@ -107,7 +113,18 @@ describe('AI Integration Functions', () => {
                 score: 85,
                 strongMatches: ['typescript'],
                 missingKeywords: ['react'],
-                reasoning: 'Good match'
+                reasoning: 'Good match',
+                strategicRealityCheck: {
+                    riskTier: 'low',
+                    recommendation: 'optimize_now',
+                    confidence: 'high',
+                    riskTypes: ['other'],
+                    summary: 'Evidence supports optimization.',
+                    strengths: [],
+                    confirmedRisks: [],
+                    unclearRisks: [],
+                    limits: { cannotDetermine: [], assumptions: [] },
+                },
             });
 
             const event = {
@@ -122,6 +139,95 @@ describe('AI Integration Functions', () => {
             const body = JSON.parse(result.body);
             expect(body.score).toBe(85);
             expect(body.strongMatches).toContain('typescript');
+            expect(body.strategicRealityCheck.riskTier).toBe('low');
+            expect(mockDbFrom).toHaveBeenCalledWith('strategic_reality_checks');
+            expect(mockDbFrom).not.toHaveBeenCalledWith('job_matches');
+            expect(mockDbInsert).toHaveBeenCalledWith(
+                'strategic_reality_checks',
+                expect.objectContaining({
+                    user_id: 'test-user-123',
+                    match_score: 85,
+                    resume_hash: expect.any(String),
+                    job_hash: expect.any(String),
+                })
+            );
+        });
+
+        it('returns critical Reality Check and treats summary persistence failure as non-fatal', async () => {
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 42,
+                strongMatches: ['SQL'],
+                missingKeywords: ['machine learning'],
+                reasoning: 'Significant gaps',
+                strategicRealityCheck: {
+                    riskTier: 'critical',
+                    recommendation: 'add_evidence_first',
+                    confidence: 'medium',
+                    riskTypes: ['missing_required_skill'],
+                    summary: 'Critical evidence gap.',
+                    strengths: [],
+                    confirmedRisks: [],
+                    unclearRisks: [{
+                        type: 'missing_required_skill',
+                        topic: 'Machine learning',
+                        reason: 'Resume evidence is unclear.',
+                        evidenceNeeded: 'Add verifiable machine learning work only if it exists.',
+                    }],
+                    limits: { cannotDetermine: ['Employer decisions'], assumptions: [] },
+                },
+            });
+            mockDbInsert.mockRejectedValueOnce(new Error('insert failed'));
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'SQL resume', jobText: 'machine learning job' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(200);
+
+            const body = JSON.parse(result.body);
+            expect(body.score).toBe(42);
+            expect(body.strategicRealityCheck.riskTier).toBe('critical');
+            expect(mockCreditManager.consumeCredits).toHaveBeenCalledWith('user@example.com', 'ai_match');
+            expect(mockDbFrom).toHaveBeenCalledWith('strategic_reality_checks');
+        });
+
+        it('skips Reality Check summary persistence when the hash secret is missing', async () => {
+            delete process.env.STRATEGIC_REALITY_CHECK_HASH_SECRET;
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 72,
+                strongMatches: ['SQL'],
+                missingKeywords: ['Python'],
+                reasoning: 'Competitive with gaps',
+                strategicRealityCheck: {
+                    riskTier: 'medium',
+                    recommendation: 'answer_clarifications_first',
+                    confidence: 'low',
+                    riskTypes: ['evidence_quality'],
+                    summary: 'Needs clearer evidence.',
+                    strengths: [],
+                    confirmedRisks: [],
+                    unclearRisks: [],
+                    limits: { cannotDetermine: ['Employer decisions'], assumptions: [] },
+                },
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'SQL resume', jobText: 'Python job' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+            expect(result.statusCode).toBe(200);
+            expect(JSON.parse(result.body).score).toBe(72);
+            expect(mockCreditManager.consumeCredits).toHaveBeenCalledWith('user@example.com', 'ai_match');
+            expect(mockDbFrom).not.toHaveBeenCalledWith('strategic_reality_checks');
+            expect(mockDbFrom).not.toHaveBeenCalledWith('job_matches');
+            expect(mockDbInsert).not.toHaveBeenCalled();
         });
 
         it('clamps out-of-range match scores before responding and storing', async () => {

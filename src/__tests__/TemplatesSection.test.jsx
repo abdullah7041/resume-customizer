@@ -456,9 +456,13 @@ describe('TemplatesSection', () => {
             expect(getPreviewScale(scaleWrapper)).toBeLessThan(0.9);
         });
 
-        it('keeps formatting and zoom controls reserved for large screens', () => {
+        it('keeps advanced formatting and zoom controls hidden until requested', () => {
             setViewportWidth(768);
             const { container } = renderWithProviders(<TemplateGallery />);
+
+            expect(container.querySelector('.hidden.lg\\:block.flex-shrink-0')).not.toBeInTheDocument();
+            expect(container.querySelector('.hidden.lg\\:flex')).not.toBeInTheDocument();
+            fireEvent.click(screen.getAllByRole('button', { name: /advanced formatting/i })[0]);
 
             expect(container.querySelector('.hidden.lg\\:block.flex-shrink-0')).toBeInTheDocument();
             expect(container.querySelector('.hidden.lg\\:flex')).toBeInTheDocument();

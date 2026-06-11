@@ -11,7 +11,7 @@ import OfflineIndicator from "./components/ui/OfflineIndicator";
 import { DirectionProvider } from "./components/providers/DirectionProvider";
 import { ConsentBanner } from "./components/compliance/ConsentBanner";
 import { migrateStorageKeys } from "./lib/utils/storage-migration";
-import { UpgradeModal } from "./components/Credits/UpgradeModal";
+import { PricingWaitlistModal } from "./components/Credits/PricingWaitlistModal";
 import { useUserCredits } from "./hooks/useUserCredits";
 import { useOnboardingTour } from "./hooks/useOnboardingTour";
 import { TourTooltip } from "./components/Tour/TourTooltip";
@@ -75,12 +75,13 @@ export default function App() {
             <Footer />
             <ConsentBanner />
 
-            {/* Credit Upgrade Modal */}
-            <UpgradeModal
+            {/* Low-credits pricing-waitlist modal */}
+            <PricingWaitlistModal
               isOpen={showUpgrade}
               onClose={() => setShowUpgrade(false)}
               creditsRemaining={credits?.remaining || 0}
               dismissKey={upgradeDismissedKey || ''}
+              source="credits"
             />
 
             {currentPath !== "/privacy" && currentPath !== "/terms" && currentPath !== "/admin/feedback" && (

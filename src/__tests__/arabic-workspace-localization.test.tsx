@@ -155,6 +155,9 @@ vi.mock('../components/Credits/CreditUsageModal', () => ({
 vi.mock('../components/Credits/UpgradeModal', () => ({
   UpgradeModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Plans modal</div> : null),
 }));
+vi.mock('../components/Credits/PricingWaitlistModal', () => ({
+  PricingWaitlistModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Pricing waitlist modal</div> : null),
+}));
 
 describe('Arabic workspace localization', () => {
   beforeEach(() => {
@@ -216,6 +219,7 @@ describe('Arabic workspace localization', () => {
     expect(screen.getByText('معلومات الحساب')).toBeInTheDocument();
     expect(screen.getByText('البيانات والخصوصية')).toBeInTheDocument();
     expect(screen.getByText('تصدير البيانات الشخصية')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تصدير البيانات' })).toBeInTheDocument();
     expect(screen.getAllByText('حذف الحساب')).toHaveLength(2);
     expect(screen.queryByText(/Account Information|Data & Privacy|Export Personal Data/)).not.toBeInTheDocument();
   });

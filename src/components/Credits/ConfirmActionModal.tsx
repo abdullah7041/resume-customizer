@@ -7,7 +7,7 @@
 
 import { createPortal } from 'react-dom';
 import { useState } from 'react';
-import { X, AlertTriangle, Sparkles, Mail, Crown, Check } from 'lucide-react';
+import { X, AlertTriangle, Sparkles, Mail, ListChecks, Check } from 'lucide-react';
 import { GlassButton } from '../ui/GlassButton';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
@@ -212,19 +212,19 @@ export function ConfirmActionModal({
                 <div className={cn(glass.card, 'p-4 border-emerald-500/30 text-center')}>
                   <Check className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
                   <p className="text-emerald-400 font-medium">
-                    {t('credits.upgrade.waitlistSuccess', "Thanks! We'll notify you when Pro launches.")}
+                    {t('pricing.waitlist.success', "We'll only notify you when pricing opens. No payment required.")}
                   </p>
                 </div>
               ) : (
                 <div className={cn(glass.card, 'p-4 border-gold-500/30')}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Crown className="w-4 h-4 text-gold-400" />
+                    <ListChecks className="w-4 h-4 text-gold-400" />
                     <p className="text-sm font-semibold text-gold-400">
-                      {t('credits.upgrade.comingSoon', 'Pro Plan Coming Soon!')}
+                      {t('pricing.waitlist.title', 'Join the pricing waitlist')}
                     </p>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    {t('credits.confirm.waitlistCta', 'Get 100 credits/mo when you join the Pro waitlist.')}
+                    {t('pricing.waitlist.subtitle', 'Paid plans are not live yet. Join the list and help shape launch pricing.')}
                   </p>
                   <form onSubmit={handleSubmitWaitlist} className="space-y-2">
                     <div className="relative">
@@ -252,7 +252,7 @@ export function ConfirmActionModal({
                       className="w-full"
                       size="sm"
                     >
-                      {isSubmitting ? t('common.submitting', 'Sending...') : t('pricing.notify', 'Join Waitlist')}
+                      {isSubmitting ? t('common.submitting', 'Sending...') : t('pricing.waitlist.cta', 'Join pricing waitlist')}
                     </GlassButton>
                     {submitError && (
                       <p className="text-red-400 text-xs">{submitError}</p>

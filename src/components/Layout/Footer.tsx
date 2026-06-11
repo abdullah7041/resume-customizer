@@ -1,8 +1,51 @@
 import { Linkedin } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export default function Footer() {
   const { t } = useTranslation();
+  const [isWorkspaceFooter, setIsWorkspaceFooter] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const updateFooterMode = () => {
+      setIsWorkspaceFooter(Boolean(document.querySelector("[data-app-main]")));
+    };
+
+    updateFooterMode();
+    const timeoutId = window.setTimeout(updateFooterMode, 0);
+    const observer = new MutationObserver(updateFooterMode);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, []);
+
+  if (isWorkspaceFooter) {
+    return (
+      <footer className="relative border-t border-[color:var(--glass-border)] bg-[color:var(--bg)] py-4 text-xs text-[color:var(--ink-muted)] dark:border-white/10 dark:bg-[#031713]/80">
+        <div className="app-shell mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 px-5 sm:flex-row sm:px-8">
+          <p>
+            © {new Date().getFullYear()} {t("common.appName")}
+          </p>
+          <nav aria-label={t("footer.linksLabel", "Legal links")} className="flex flex-wrap items-center justify-center gap-4">
+            <a href="/privacy" className="font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
+              {t("footer.links.privacy")}
+            </a>
+            <a href="/terms" className="font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
+              {t("footer.links.terms")}
+            </a>
+            <a href="mailto:support@watheqai.app" className="font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
+              {t("footer.links.contact")}
+            </a>
+          </nav>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="relative border-t border-[color:var(--glass-border)] bg-[color:var(--bg)] py-10 text-[color:var(--ink-muted)] dark:border-white/10 dark:bg-[#031713]/80">

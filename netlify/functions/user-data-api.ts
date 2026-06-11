@@ -56,23 +56,47 @@ function getServiceClient() {
 /**
  * Handle export action - GDPR data export
  */
-async function handleExport(email: string) {
+async function handleExport(email: string, userId: string) {
     const supabase = getServiceClient();
 
     const [
         { data: profile },
-        { data: resumes },
-        { data: jobMatches },
+        { data: userCredits },
+        { data: creditTransactions },
+        { data: jobApplications },
+        { data: feedbackReports },
+        { data: strategicRealityChecks },
+        { data: legacyResumes },
+        { data: legacyJobMatches },
+        { data: legacyFeedback },
     ] = await Promise.all([
         supabase.from('user_profiles').select('*').eq('email', email).single(),
+        supabase.from('user_credits').select('*').eq('email', email).single(),
+        supabase.from('credit_transactions').select('*').eq('email', email),
+        supabase.from('job_applications').select('*').eq('user_id', userId),
+        supabase.from('feedback_reports').select('*').eq('user_id', userId),
+        supabase.from('strategic_reality_checks').select('*').eq('user_id', userId),
         supabase.from('resumes').select('*').eq('email', email),
         supabase.from('job_matches').select('*').eq('email', email),
+        supabase.from('feedback').select('*').eq('email', email),
     ]);
 
     return {
         exportDate: new Date().toISOString(),
         exportType: 'GDPR_DATA_EXPORT',
-        userData: { profile, resumes, jobMatches },
+        userData: {
+            profile,
+            userCredits,
+            creditTransactions,
+            jobApplications,
+            feedbackReports,
+            strategicRealityChecks,
+            legacyDeprecated: {
+                resumes: legacyResumes,
+                jobMatches: legacyJobMatches,
+                feedback: legacyFeedback,
+            },
+        },
     };
 }
 
@@ -92,20 +116,47 @@ async function handleDelete(email: string, userId: string, confirmDelete: boolea
     // Log deletion before removing the account
     const { error: logError } = await supabase.from('deletion_log').insert({
         user_id_hash: emailHash,
-        deleted_at: new Date().toISOString()
+        deletion_date: new Date().toISOString()
     });
     
     if (logError) {
         console.error("Could not log to deletion_log (table might not exist)", summarizeErrorForLog(logError));
     }
 
-    // Delete in order (respecting foreign keys)
-    await supabase.from('job_matches').delete().eq('email', email);
-    await supabase.from('resumes').delete().eq('email', email);
-    await supabase.from('user_profiles').delete().eq('email', email);
+    // Delete in order (respecting foreign keys). Supabase resolves rather than
+    // throws on row errors, so inspect each result and surface any failure
+    // BEFORE deleting the auth user — otherwise a partial deletion would be
+    // silently reported as success (GDPR risk).
+    const deletions: Array<{ table: string; error: unknown }> = [
+        { table: 'strategic_reality_checks', error: (await supabase.from('strategic_reality_checks').delete().eq('user_id', userId)).error },
+        { table: 'feedback_reports', error: (await supabase.from('feedback_reports').delete().eq('user_id', userId)).error },
+        { table: 'job_applications', error: (await supabase.from('job_applications').delete().eq('user_id', userId)).error },
+        { table: 'credit_transactions', error: (await supabase.from('credit_transactions').delete().eq('email', email)).error },
+        { table: 'job_matches', error: (await supabase.from('job_matches').delete().eq('email', email)).error },
+        { table: 'resumes', error: (await supabase.from('resumes').delete().eq('email', email)).error },
+        { table: 'feedback', error: (await supabase.from('feedback').delete().eq('email', email)).error },
+        { table: 'user_credits', error: (await supabase.from('user_credits').delete().eq('email', email)).error },
+        { table: 'user_profiles', error: (await supabase.from('user_profiles').delete().eq('email', email)).error },
+    ];
+
+    const failedDeletions = deletions.filter((deletion) => deletion.error);
+    if (failedDeletions.length > 0) {
+        for (const failed of failedDeletions) {
+            console.error(`[user-data-api] Failed to delete from ${failed.table}:`, summarizeErrorForLog(failed.error));
+        }
+        throw {
+            statusCode: 500,
+            message: `Account deletion incomplete: ${failedDeletions.map((deletion) => deletion.table).join(', ')} could not be cleared`,
+        };
+    }
 
     // Delete auth user (cascades remaining data)
-    await supabase.auth.admin.deleteUser(userId);
+    const authDeleteResult = await supabase.auth.admin.deleteUser(userId);
+    const authDeleteError = authDeleteResult?.error;
+    if (authDeleteError) {
+        console.error('[user-data-api] Failed to delete auth user:', summarizeErrorForLog(authDeleteError));
+        throw { statusCode: 500, message: 'Account data cleared but auth user deletion failed' };
+    }
 
     console.log(`User ${redactForLog(email)} deleted their account at ${new Date().toISOString()}`);
 
@@ -134,7 +185,7 @@ export const handler: Handler = async (event) => {
 
         // ===================== Export Action =====================
         if (action === 'export') {
-            const exportData = await handleExport(userEmail);
+            const exportData = await handleExport(userEmail, userId);
             return {
                 statusCode: 200,
                 headers: {

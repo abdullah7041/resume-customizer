@@ -13,27 +13,7 @@
       "message": "This will use {{cost}} credits.",
       "current": "Current balance: {{remaining}} / {{total}}",
       "continue": "Continue ({{cost}} credits)",
-      "insufficient": "Insufficient credits. You need {{required}} but have {{available}}.",
-      "waitlistCta": "Will notify you when Pro launches ."
-    },
-    "upgrade": {
-      "title": "Upgrade to Premium",
-      "lowCredits": "You're running low on credits ({{remaining}} remaining)",
-      "lowCreditsTitle": "Low credits balance",
-      "comingSoon": "Coming Soon",
-      "joinWaitlist": "Join Waitlist",
-      "emailLabel": "Get notified when Pro launches:",
-      "waitlistSuccess": "Thanks! We'll notify you when Pro launches.",
-      "waitlistSuccessTitle": "You're on the list!",
-      "badge": "EARLY ACCESS",
-      "invalidEmail": "Please enter a valid email address",
-      "subtitle": "Supercharge your resume optimization with higher limits and expert features.",
-      "proFeatures": "What you get",
-      "features": {
-        "credits": "100 credits/month",
-        "support": "Priority support",
-        "earlyAccess": "Early access to new features"
-      }
+      "insufficient": "Insufficient credits. You need {{required}} but have {{available}}."
     },
     "usage": {
       "title": "Credit Usage",

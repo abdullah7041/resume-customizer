@@ -23,7 +23,7 @@ import { useState, useMemo, useLayoutEffect, useRef, useCallback, lazy, Suspense
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
-import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal, FileText, ArrowLeftRight } from "lucide-react";
+import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateCcw, GripHorizontal, FileText, ArrowLeftRight, SlidersHorizontal } from "lucide-react";
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
@@ -137,6 +137,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [exportError, setExportError] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
+  const [showAdvancedFormatting, setShowAdvancedFormatting] = useState(false);
 
   // Draggable template bar state
   const [barPosition, setBarPosition] = useState({ x: 0, y: 0 });
@@ -223,8 +224,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const tabletPadding = 24 * 2 + 16 * 2;
         const tabletScale = (width - tabletPadding) / a4WidthPx;
         setScale(Math.max(Math.min(tabletScale, 0.9), 0.65));
-      } else if (width < 1280) { // Small desktop, formatting panel visible
-        const formattingPanelWidth = 288 + 24;
+      } else if (width < 1280) { // Small desktop
+        const formattingPanelWidth = showAdvancedFormatting ? 288 + 24 : 0;
         const previewPadding = 24 * 2;
         const shellPadding = 32;
         const available = width - formattingPanelWidth - previewPadding - shellPadding;
@@ -238,7 +239,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     handleResize(); // Initial call
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isManuallyZoomed]);
+  }, [isManuallyZoomed, showAdvancedFormatting]);
 
 
   // Zoom controls
@@ -699,6 +700,18 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               )}
 
               <GlassButton
+                onClick={() => setShowAdvancedFormatting((value) => !value)}
+                variant="secondary"
+                className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white"
+                aria-pressed={showAdvancedFormatting}
+              >
+                <SlidersHorizontal className="w-4 h-4 me-2" />
+                {showAdvancedFormatting
+                  ? t('sections.templates.hideAdvancedFormatting', 'Hide formatting')
+                  : t('sections.templates.advancedFormatting', 'Advanced formatting')}
+              </GlassButton>
+
+              <GlassButton
                 onClick={handleDownloadPdf}
                 variant="primary"
                 disabled={!hasRealResume || isDownloading}
@@ -768,9 +781,24 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 <span className="ms-1">{t('sections.templates.compare', 'Changes')}</span>
               </GlassButton>
             )}
+
+            <GlassButton
+              onClick={() => setShowAdvancedFormatting((value) => !value)}
+              variant="secondary"
+              size="sm"
+              className="border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white !px-2.5 !py-1.5 !rounded-lg !text-xs"
+              aria-pressed={showAdvancedFormatting}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+              <span className="ms-1">
+                {showAdvancedFormatting
+                  ? t('sections.templates.hideAdvancedFormatting', 'Hide formatting')
+                  : t('sections.templates.advancedFormatting', 'Advanced formatting')}
+              </span>
+            </GlassButton>
           </div>
 
-          <KeywordBoldingToggle />
+          {showAdvancedFormatting && <KeywordBoldingToggle />}
 
           {exportError && (
             <div
@@ -785,6 +813,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         </div>
 
         {/* Zoom Controls Overlay - hidden on mobile (auto-fit), shown on desktop on hover */}
+        {showAdvancedFormatting && (
         <div className="hidden lg:flex absolute top-24 end-4 lg:end-6 z-30 flex-col gap-2 bg-white/70 dark:bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-gray-300/50 dark:border-white/10 shadow-xl lg:opacity-0 lg:hover:opacity-100 lg:group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handleZoomIn}
@@ -809,6 +838,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>
+        )}
 
 
         {/* No Resume Warning */}
@@ -825,9 +855,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         <div className="relative flex-1 flex overflow-hidden bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-gray-900/50 dark:to-gray-800/30 min-h-0">
 
           {/* Formatting Panel - Left Side */}
+          {showAdvancedFormatting && (
           <div className="hidden lg:block flex-shrink-0 p-3 overflow-y-auto">
             <FormattingPanel />
           </div>
+          )}
 
           {/* Resume Preview - Right Side - Fit on screen, use zoom controls */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 md:p-6">
@@ -844,7 +876,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                 }}
               >
                 {/* Page Break Indicators Overlay */}
-                {displayOptions.showPageBreaks && (
+                {showAdvancedFormatting && displayOptions.showPageBreaks && (
                   <PageBreakOverlay contentHeight={A4_PAGE_HEIGHT_PX * 2} />
                 )}
                 <TemplateRenderer

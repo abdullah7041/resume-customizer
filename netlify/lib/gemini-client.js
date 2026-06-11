@@ -1,6 +1,10 @@
 import { executeAiContract } from './ai-contracts/index.js';
 import { MODELS } from './model-registry.js';
 import { summarizeErrorForLog } from './sentry.js';
+import {
+  buildFallbackStrategicRealityCheck,
+  postProcessStrategicRealityCheck,
+} from './strategic-reality-check.js';
 
 function extractSummaryFromInput(inputData, parsed) {
   let summary = parsed.basics?.summary || '';
@@ -157,13 +161,13 @@ export async function processMatchOnly(resumeText, jobDescription, language = 'e
   console.log(`[Gemini] Fast match analysis with ${MODELS.flash} (resume: ${trimmedResume.length} chars, JD: ${trimmedJD.length} chars)`);
 
   try {
-    const parsed = await executeAiContract('ai_match', {
+    const parsed = await executeAiContract('ai_match_reality_check', {
       resumeText: trimmedResume,
       jobDescription: trimmedJD,
       language,
     }, {
       ...options,
-      featureName: options.featureName || 'ai_match',
+      featureName: options.featureName || 'ai_match_reality_check',
     });
 
     return {
@@ -172,10 +176,40 @@ export async function processMatchOnly(resumeText, jobDescription, language = 'e
       strongMatches: parsed.strongMatches,
       missingKeywords: parsed.missingKeywords,
       reasoning: parsed.reasoning,
+      strategicRealityCheck: postProcessStrategicRealityCheck(parsed.strategicRealityCheck, {
+        resumeText: trimmedResume,
+        jobText: trimmedJD,
+      }),
     };
   } catch (error) {
-    console.error('[Gemini] Error in fast match analysis:', summarizeErrorForLog(error));
-    throw error;
+    if (error?.name === 'TimeoutError' || error?.status === 504) {
+      console.error('[Gemini] Error in fast match analysis:', summarizeErrorForLog(error));
+      throw error;
+    }
+
+    console.warn('[Gemini] Combined match + Reality Check failed, falling back to match-only contract:', summarizeErrorForLog(error));
+    try {
+      const parsed = await executeAiContract('ai_match', {
+        resumeText: trimmedResume,
+        jobDescription: trimmedJD,
+        language,
+      }, {
+        ...options,
+        featureName: options.featureName || 'ai_match',
+      });
+
+      return {
+        score: parsed.score,
+        categoryScores: parsed.categoryScores,
+        strongMatches: parsed.strongMatches,
+        missingKeywords: parsed.missingKeywords,
+        reasoning: parsed.reasoning,
+        strategicRealityCheck: buildFallbackStrategicRealityCheck('Reality Check used a safe fallback after contract validation failed.'),
+      };
+    } catch (fallbackError) {
+      console.error('[Gemini] Error in fast match analysis:', summarizeErrorForLog(fallbackError));
+      throw fallbackError;
+    }
   }
 }
 

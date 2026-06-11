@@ -21,16 +21,13 @@ function summarizeError(error: unknown) {
  * Only sets timestamps if they are currently null.
  */
 function buildTimestampFields(
-  current: Pick<JobApplication, 'applied_at' | 'interview_at' | 'outcome_at'> | null,
+  current: Pick<JobApplication, 'applied_at' | 'outcome_at'> | null,
   newStatus: JobApplicationStatus
-): Partial<Pick<JobApplication, 'applied_at' | 'interview_at' | 'outcome_at'>> {
-  const updates: Partial<Pick<JobApplication, 'applied_at' | 'interview_at' | 'outcome_at'>> = {};
+): Partial<Pick<JobApplication, 'applied_at' | 'outcome_at'>> {
+  const updates: Partial<Pick<JobApplication, 'applied_at' | 'outcome_at'>> = {};
 
   if (newStatus === 'applied' && !current?.applied_at) {
     updates.applied_at = new Date().toISOString();
-  }
-  if (newStatus === 'interview' && !current?.interview_at) {
-    updates.interview_at = new Date().toISOString();
   }
   if (['offer', 'rejected', 'withdrawn'].includes(newStatus) && !current?.outcome_at) {
     updates.outcome_at = new Date().toISOString();
@@ -127,11 +124,11 @@ export async function updateJobApplication(
     }
 
     // If status is changing, fetch current record to apply timestamp rules
-    let timestampUpdates: Partial<Pick<JobApplication, 'applied_at' | 'interview_at' | 'outcome_at'>> = {};
+    let timestampUpdates: Partial<Pick<JobApplication, 'applied_at' | 'outcome_at'>> = {};
     if (input.status) {
       const { data: current } = await supabase
         .from(TABLE)
-        .select('applied_at, interview_at, outcome_at')
+        .select('applied_at, outcome_at')
         .eq('id', id)
         .eq('user_id', user.id)
         .single();

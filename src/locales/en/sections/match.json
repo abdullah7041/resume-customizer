@@ -14,6 +14,19 @@
         "keywords": "Keywords Found",
         "missing": "Missing Keywords",
         "suggestions": "Suggestions",
+        "showDetails": "Show details",
+        "hideDetails": "Hide details",
+        "nextAction": {
+          "optimize": "Next: optimize and export this version.",
+          "closeGaps": "Next: close the top gaps before optimizing.",
+          "reviewFit": "Next: review role fit before spending optimization effort.",
+          "reality": {
+            "optimize_now": "Next: optimize and export this version.",
+            "answer_clarifications_first": "Next: answer clarifying questions before rewriting.",
+            "add_evidence_first": "Next: add verifiable evidence before optimizing.",
+            "review_role_fit": "Next: review role fit before spending optimization effort."
+          }
+        },
         "calculation": {
           "title": "How is this calculated?"
         }
@@ -43,6 +56,30 @@
       },
       "optimizedBanner": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.",
       "scoreLabel": "Score",
+      "realityCheck": {
+        "ariaLabel": "Strategic Reality Check",
+        "title": "Strategic Reality Check",
+        "confidence": "Confidence",
+        "fallbackSummary": "Review the evidence before optimizing this resume.",
+        "unclearLabel": "Unclear",
+        "tiers": {
+          "low": "Low risk",
+          "medium": "Medium risk",
+          "high": "High risk",
+          "critical": "Critical risk"
+        },
+        "confidenceLevels": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        },
+        "recommendations": {
+          "optimize_now": "Evidence is strong enough to optimize now.",
+          "answer_clarifications_first": "Answer quick questions before rewriting.",
+          "add_evidence_first": "Add verifiable evidence before optimizing.",
+          "review_role_fit": "Review role fit before spending optimization effort."
+        }
+      },
       "assistant": {
         "label": "HR Super Saud",
         "hide": "Hide HR Super Saud feedback",

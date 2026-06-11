@@ -242,6 +242,20 @@ class Analytics {
         });
     }
 
+    trackStrategicRealityCheck(data: {
+        riskTier?: string;
+        recommendation?: string;
+        confidence?: string;
+        riskTypes?: string[];
+    }) {
+        this.track('strategic_reality_check_result', {
+            risk_tier: data.riskTier || 'unknown',
+            recommendation: data.recommendation || 'unknown',
+            confidence: data.confidence || 'unknown',
+            risk_types: Array.isArray(data.riskTypes) ? data.riskTypes.slice(0, 6) : [],
+        });
+    }
+
     trackMatchAnalysisFailed(errorCategory: string) {
         this.track('match_analysis_failed', { error_category: errorCategory });
     }

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Settings, Download, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, Settings, Download, Trash2, AlertTriangle, CheckCircle2, ShieldCheck, Sun, Moon, Languages, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,11 +14,11 @@ interface SettingsModalProps {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { user, signOut } = useAuth();
   const { t, i18n } = useTranslation();
+  const [theme, toggleTheme] = useTheme();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -24,6 +26,50 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }, []);
 
   if (!isOpen || !user || !mounted) return null;
+
+  const handleExportData = async () => {
+    try {
+      setIsExporting(true);
+      setError(null);
+      const { supabase } = await import('../../services/supabase');
+      const { data } = await supabase.auth.getSession();
+
+      const token = data.session?.access_token;
+      if (!token) throw new Error(t('settings.errors.authToken', 'Could not get an authentication token from the active session.'));
+
+      const response = await fetch('/.netlify/functions/user-data-api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'export' }),
+      });
+
+      if (!response.ok) {
+        let errorData = t('settings.errors.exportFailed', 'Failed to export data.');
+        try {
+          const json = await response.json();
+          errorData = json.error || json.message || errorData;
+        } catch { /* ignore */ }
+        throw new Error(errorData);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `watheq-data-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('settings.errors.exportGeneric', 'An error occurred while exporting data.'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -47,8 +93,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       if (!response.ok) {
         let errorData = t('settings.errors.deleteFailed', 'Failed to delete account.');
         try {
-           const json = await response.json();
-           errorData = json.error || json.message || errorData;
+          const json = await response.json();
+          errorData = json.error || json.message || errorData;
         } catch { /* ignore */ }
         throw new Error(errorData);
       }
@@ -56,64 +102,27 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       // Success, sign out automatically
       await signOut();
       onClose();
-    } catch (err: any) {
-      setError(err.message || t('settings.errors.deleteGeneric', 'An error occurred while deleting account.'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('settings.errors.deleteGeneric', 'An error occurred while deleting account.'));
       setIsDeleting(false);
       setShowDeleteConfirm(false);
     }
   };
 
-  const handleExportClick = async () => {
-    try {
-      setIsExporting(true);
-      setError(null);
-      const { supabase } = await import('../../services/supabase');
-      const { data } = await supabase.auth.getSession();
-
-      const token = data.session?.access_token;
-      if (!token) throw new Error(t('settings.errors.authToken', 'Could not get an authentication token from the active session.'));
-
-      const response = await fetch('/.netlify/functions/user-data-api', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: 'export' }),
-      });
-
-      if (!response.ok) {
-        throw new Error(t('settings.errors.exportFailed', 'Failed to export data.'));
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `watheq-data-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-    } catch (err: any) {
-      setError(err.message || t('settings.errors.exportGeneric', 'An error occurred while exporting data.'));
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  const sectionLabel = 'text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3';
 
   const modal = (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Calm warm backdrop */}
       <div
-        className="absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-md animate-fade-in"
+        className="absolute inset-0 bg-[color:var(--ink)]/35 backdrop-blur-sm animate-fade-in"
         onClick={() => !isDeleting && onClose()}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg neu-card shadow-2xl rounded-2xl animate-scale-in overflow-hidden" dir={i18n.dir()}>
+      <div className="relative w-full max-w-lg neu-card shadow-xl rounded-2xl animate-scale-in overflow-hidden border border-[color:var(--glass-border)]" dir={i18n.dir()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
+        <div className="flex items-center justify-between p-5 border-b border-[color:var(--glass-border)] dark:border-white/10">
           <div className="flex items-center gap-3 text-gray-900 dark:text-white">
             <div className="p-2 neu-inset rounded-lg">
               <Settings className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -131,19 +140,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[75vh]">
+        <div className="p-6 overflow-y-auto max-h-[75vh] space-y-8">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-start gap-3">
+            <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <p>{error}</p>
             </div>
           )}
 
           {/* Account Details */}
-          <div className="mb-8">
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wider mb-4">
-              {t('settings.accountInformation', 'Account information')}
-            </h3>
+          <div>
+            <h3 className={sectionLabel}>{t('settings.accountInformation', 'Account information')}</h3>
             <div className="p-4 neu-inset rounded-xl">
               <p className="text-gray-900 dark:text-white font-medium">{user.email}</p>
               <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
@@ -153,30 +160,63 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
           </div>
 
-          {/* Data Actions */}
+          {/* Preferences */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wider mb-4">
-              {t('settings.dataPrivacy', 'Data & Privacy')}
-            </h3>
-
+            <h3 className={sectionLabel}>{t('settings.preferences', 'Preferences')}</h3>
             <div className="space-y-4">
-              {/* Export Data */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 neu-inset rounded-xl gap-4">
+              {/* Language */}
+              <div className="p-4 neu-inset rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Languages className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{t('common.language', 'Language')}</h4>
+                </div>
+                <LanguageSwitcher />
+              </div>
+
+              {/* Theme / appearance */}
+              <div className="flex items-center justify-between gap-4 p-4 neu-inset rounded-xl">
                 <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white">
-                    {t('settings.exportPersonalData', 'Export personal data')}
-                  </h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{t('settings.appearance', 'Appearance')}</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('settings.exportPersonalDataDescription', 'Download a copy of your resumes and optimizations in JSON format.')}
+                    {t('settings.appearanceDescription', 'Switch between light and dark mode.')}
                   </p>
                 </div>
                 <button
-                  onClick={handleExportClick}
+                  onClick={toggleTheme}
+                  className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
+                  aria-label={t('common.toggleTheme', 'Toggle theme')}
+                >
+                  {theme === 'dark'
+                    ? <><Sun className="w-4 h-4 text-emerald-400" />{t('settings.lightMode', 'Light')}</>
+                    : <><Moon className="w-4 h-4 text-[#2b8994]" />{t('settings.darkMode', 'Dark')}</>}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Privacy & data */}
+          <div>
+            <h3 className={sectionLabel}>{t('settings.dataPrivacy', 'Privacy & data')}</h3>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-4 p-4 neu-inset rounded-xl sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">
+                      {t('settings.exportPersonalData', 'Export personal data')}
+                    </h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings.exportPersonalDataDescription', 'Download a copy of your resumes and optimizations in JSON format.')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleExportData}
                   disabled={isExporting || isDeleting}
-                  className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm"
+                  className="shrink-0 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {isExporting ? (
-                    <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                   ) : (
                     <Download className="w-4 h-4" />
                   )}
@@ -184,8 +224,28 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </button>
               </div>
 
-              {/* Delete Account */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-red-50/50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/20 rounded-xl gap-4">
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-4 p-4 neu-inset rounded-xl transition-colors hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/5"
+              >
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">
+                      {t('settings.privacyInfoTitle', 'How we handle your data')}
+                    </h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings.privacyInfoDescription', 'Read what we store, why, and how it is protected.')}
+                    </p>
+                  </div>
+                </div>
+                <ExternalLink className="w-4 h-4 text-gray-400 shrink-0" />
+              </a>
+
+              {/* Delete Account danger zone */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-red-50/60 dark:bg-red-500/5 border border-red-100 dark:border-red-500/20 rounded-xl gap-4">
                 <div>
                   <h4 className="font-semibold text-red-600 dark:text-red-400">
                     {t('dataRights.delete.title', 'Delete Account')}
@@ -194,11 +254,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     {t('settings.deleteAccountDescription', 'Permanently delete your account and all associated data.')}
                   </p>
                 </div>
-                
+
                 {!showDeleteConfirm ? (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    disabled={isExporting || isDeleting}
+                    disabled={isDeleting}
                     className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/20 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     <Trash2 className="w-4 h-4" />

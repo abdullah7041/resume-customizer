@@ -4,7 +4,6 @@
 export type JobApplicationStatus =
   | 'saved'
   | 'applied'
-  | 'interview'
   | 'offer'
   | 'rejected'
   | 'withdrawn';
@@ -42,7 +41,6 @@ export interface JobApplication {
   notes: string | null;
   metadata: Record<string, unknown>;
   applied_at: string | null;
-  interview_at: string | null;
   outcome_at: string | null;
   outcome_source: string;
   created_at: string;
@@ -79,7 +77,6 @@ export interface UpdateJobApplicationInput {
   notes?: string | null;
   metadata?: Record<string, unknown>;
   applied_at?: string | null;
-  interview_at?: string | null;
   outcome_at?: string | null;
   outcome_source?: string;
 }

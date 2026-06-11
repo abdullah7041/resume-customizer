@@ -266,7 +266,23 @@ describe('analyzeResume', () => {
           strongMatches: [],
           recommendations: [],
           overallAssessment: 'Good',
-          explanation: { reason: 'Good', tips: [] }
+          explanation: { reason: 'Good', tips: [] },
+          strategicRealityCheck: {
+            riskTier: 'critical',
+            recommendation: 'add_evidence_first',
+            confidence: 'medium',
+            riskTypes: ['missing_required_skill'],
+            summary: 'Critical evidence gap.',
+            strengths: [],
+            confirmedRisks: [],
+            unclearRisks: [{
+              type: 'missing_required_skill',
+              topic: 'Machine learning',
+              reason: 'Evidence is unclear.',
+              evidenceNeeded: 'Add verified evidence only if it exists.',
+            }],
+            limits: { cannotDetermine: ['Employer decisions'], assumptions: [] },
+          },
         }),
     });
 
@@ -280,6 +296,51 @@ describe('analyzeResume', () => {
       body: JSON.stringify({ resumeText: 'resume text', jobText: 'job text', language: 'en' })
     }));
     expect(result.score).toBe(82);
+    expect(result.strategicRealityCheck).toEqual(expect.objectContaining({
+      riskTier: 'critical',
+      recommendation: 'add_evidence_first',
+      confidence: 'medium',
+    }));
+    expect(result.strategicRealityCheck.unclearRisks).toHaveLength(1);
+  });
+
+  it('normalizes malformed Reality Check fields without dropping the match result', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          score: 76,
+          coverage: 0.76,
+          similarity: 0.76,
+          missingKeywords: [],
+          strongMatches: ['SQL'],
+          recommendations: [],
+          overallAssessment: 'Good',
+          explanation: { reason: 'Good', tips: [] },
+          strategicRealityCheck: {
+            riskTier: 'unclear',
+            recommendation: 'unknown',
+            confidence: 'unknown',
+            riskTypes: null,
+            strengths: null,
+            confirmedRisks: null,
+            unclearRisks: null,
+            limits: null,
+          },
+        }),
+    });
+
+    const result = await analyzeResume('resume text', 'job text');
+
+    expect(result.score).toBe(76);
+    expect(result.strategicRealityCheck).toEqual(expect.objectContaining({
+      riskTier: 'medium',
+      recommendation: 'answer_clarifications_first',
+      confidence: 'low',
+      riskTypes: [],
+      confirmedRisks: [],
+      unclearRisks: [],
+    }));
   });
 });
 

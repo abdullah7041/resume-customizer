@@ -140,6 +140,14 @@ const renderWithProviders = (ui) => {
     return render(<DirectionProvider>{ui}</DirectionProvider>);
 };
 
+const sampleOptimization = {
+    sectionId: 'summary-0',
+    sectionType: 'summary',
+    original: 'Built web applications.',
+    optimized: 'Built React applications aligned to product requirements.',
+    applied: false,
+};
+
 beforeAll(() => {
     Object.defineProperty(window, 'matchMedia', {
         writable: true,
@@ -203,6 +211,7 @@ describe('OptimizeSection', () => {
         });
 
         it('renders view mode toggle (Split and Diff)', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.getByText('Split')).toBeInTheDocument();
@@ -210,6 +219,7 @@ describe('OptimizeSection', () => {
         });
 
         it('renders section filter tabs', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.getByText('All Sections')).toBeInTheDocument();
@@ -220,9 +230,15 @@ describe('OptimizeSection', () => {
         });
 
         it('renders keyword strategy section', () => {
-            renderWithProviders(<OptimizeSection />);
+            renderWithProviders(<OptimizeSection keywords={{ add: ['React'], neutral: [], remove: [] }} />);
 
             expect(screen.getByText('Keyword Strategy')).toBeInTheDocument();
+        });
+
+        it('hides keyword strategy section when there is no keyword data', () => {
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.queryByText('Keyword Strategy')).not.toBeInTheDocument();
         });
 
         it('shows empty state when no optimizations', () => {
@@ -308,11 +324,11 @@ describe('OptimizeSection', () => {
             expect(screen.getByText('Outdated')).toBeInTheDocument();
         });
 
-        it('shows empty state when keyword bucket is empty', () => {
+        it('does not render empty keyword buckets before real keyword data exists', () => {
             renderWithProviders(<OptimizeSection />);
 
-            const noKeywordsTexts = screen.getAllByText('No keywords identified');
-            expect(noKeywordsTexts.length).toBe(3); // add, neutral, remove buckets
+            expect(screen.queryByText('No keywords identified')).not.toBeInTheDocument();
+            expect(screen.queryByText('Keyword Strategy')).not.toBeInTheDocument();
         });
 
         it('uses props keywords when store keywords are empty', () => {
@@ -726,9 +742,10 @@ describe('OptimizeSection', () => {
         });
 
         it('section tabs are keyboard navigable', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);
 
-            const tabs = ['All Sections', 'Headline', 'Summary', 'Experience', 'Skills'];
+            const tabs = ['All Sections', 'Headline', /^Summary/, 'Experience', 'Skills'];
             tabs.forEach(tabName => {
                 const tab = screen.getByRole('button', { name: tabName });
                 expect(tab).toBeVisible();
@@ -757,6 +774,7 @@ describe('OptimizeSection', () => {
 
         it.each([360, 390, 768])('keeps filter tabs horizontally scrollable at %ipx', (width) => {
             setViewportWidth(width);
+            mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);
 
             const projectsTab = screen.getByRole('button', { name: 'Projects' });

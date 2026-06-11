@@ -95,6 +95,9 @@ vi.mock('../components/ui/UserProgressNav', () => ({
 vi.mock('../components/Credits/UpgradeModal', () => ({
   UpgradeModal: () => null,
 }));
+vi.mock('../components/Credits/PricingWaitlistModal', () => ({
+  PricingWaitlistModal: () => null,
+}));
 
 vi.mock('../components/providers/DirectionProvider', () => ({
   DirectionProvider: ({ children }: { children: ReactNode }) => <>{children}</>,

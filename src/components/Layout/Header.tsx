@@ -8,7 +8,7 @@ import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
 import { CreditUsageModal } from "../Credits/CreditUsageModal";
-import { UpgradeModal } from "../Credits/UpgradeModal";
+import { PricingWaitlistModal } from "../Credits/PricingWaitlistModal";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { FeedbackModal } from "../Feedback/FeedbackModal";
 import { useTheme } from "../../hooks/useTheme";
@@ -739,12 +739,12 @@ export default function Header() {
         viewMode={creditModalMode}
       />
 
-      {/* Quiet authenticated plans CTA */}
-      <UpgradeModal
+      {/* Quiet authenticated pricing-waitlist CTA */}
+      <PricingWaitlistModal
         isOpen={showPlansModal}
         onClose={() => setShowPlansModal(false)}
         creditsRemaining={credits?.remaining ?? 0}
-        dismissKey="watheq:headerViewPlans"
+        dismissKey="watheq:headerPricingWaitlist"
         source="pricing"
       />
 

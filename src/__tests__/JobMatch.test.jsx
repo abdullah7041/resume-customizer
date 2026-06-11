@@ -55,6 +55,16 @@ vi.mock('../hooks/useUserCredits', () => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options) => {
+      const dictionary = {
+        'sections.match.realityCheck.title': 'Strategic Reality Check',
+        'sections.match.realityCheck.ariaLabel': 'Strategic Reality Check',
+        'sections.match.realityCheck.tiers.critical': 'Critical risk',
+        'sections.match.realityCheck.confidence': 'Confidence',
+        'sections.match.realityCheck.confidenceLevels.medium': 'Medium',
+        'sections.match.realityCheck.unclearLabel': 'Unclear',
+        'sections.match.realityCheck.recommendations.add_evidence_first': 'Add verifiable evidence before optimizing.',
+      };
+      if (dictionary[key]) return dictionary[key];
       // Handle both simple strings and interpolated strings
       if (typeof options === 'string') {
         return options || key;
@@ -74,9 +84,9 @@ describe('JobMatch', () => {
   it('renders analysis results with Saudi styling', () => {
     const match = {
       score: 80,
-      missingKeywords: ['React'],
+      missingKeywords: ['React', 'Node.js', 'PostgreSQL', 'Kubernetes'],
       suggestions: ['Add React experience'],
-      topHits: ['Leadership'],
+      topHits: ['Leadership', 'SQL', 'APIs', 'Docker'],
       coverage: 0.52,
       cosine: 0.71,
     };
@@ -92,8 +102,64 @@ describe('JobMatch', () => {
     expect(screen.getByRole('heading', { name: /match a role/i })).toBeInTheDocument();
     expect(screen.getByText(/missing keywords/i)).toBeInTheDocument();
     expect(screen.getByText(/recognized strengths/i)).toBeInTheDocument();
+    expect(screen.getByText(/optimize and export this version/i)).toBeInTheDocument();
+    expect(screen.queryByText(/kubernetes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/docker/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/add react experience/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
     expect(screen.getByText(/add react experience/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /score breakdown/i })).toBeInTheDocument();
+  });
+
+  it('renders critical Reality Check separately from unclear risks', () => {
+    const match = {
+      score: 45,
+      missingKeywords: ['Machine learning'],
+      suggestions: ['Add evidence only if accurate'],
+      topHits: ['SQL'],
+      coverage: 0.45,
+      cosine: 0.45,
+      strategicRealityCheck: {
+        riskTier: 'critical',
+        recommendation: 'add_evidence_first',
+        confidence: 'medium',
+        riskTypes: ['missing_required_skill'],
+        summary: 'A critical requirement lacks visible resume evidence.',
+        strengths: [],
+        confirmedRisks: [{
+          type: 'missing_required_skill',
+          severity: 'critical',
+          title: 'Machine learning evidence is missing',
+          explanation: 'The job requires production machine learning.',
+          mitigation: 'Add verified machine learning work only if it exists.',
+          evidence: [{ source: 'job_description', snippet: 'machine learning' }],
+        }],
+        unclearRisks: [{
+          type: 'evidence_quality',
+          topic: 'Project ownership',
+          reason: 'Resume wording is not specific.',
+          evidenceNeeded: 'Clarify ownership and measurable outcomes.',
+        }],
+        limits: { cannotDetermine: ['Employer decisions'], assumptions: [] },
+      },
+    };
+
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={match}
+        isAnalyzing={false}
+        hasResume
+      />
+    );
+
+    expect(screen.getByRole('alert', { name: /strategic reality check/i })).toBeInTheDocument();
+    expect(screen.getByText(/critical risk/i)).toBeInTheDocument();
+    expect(screen.queryByText(/machine learning evidence is missing/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/add verifiable evidence before optimizing/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
+    expect(screen.getByText(/machine learning evidence is missing/i)).toBeInTheDocument();
+    expect(screen.getByText(/unclear: project ownership/i)).toBeInTheDocument();
   });
 
   it('prefills saved job description text', () => {

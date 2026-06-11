@@ -8,6 +8,7 @@ const {
   optimizeResumeMock,
   optimizeResumeStreamMock,
   generateClarificationsMock,
+  extractJobMetadataMock,
 } = vi.hoisted(() => ({
   parseResumeMock: vi.fn(),
   analyzeResumeMock: vi.fn(),
@@ -15,6 +16,7 @@ const {
   optimizeResumeStreamMock: vi.fn(),
   // Non-fatal: always returns empty clarifications in tests so the optimize flow proceeds directly
   generateClarificationsMock: vi.fn().mockResolvedValue({ clarifications: [] }),
+  extractJobMetadataMock: vi.fn(() => Promise.resolve(null)),
 }));
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
@@ -42,7 +44,7 @@ vi.mock("../pages/LandingPage", () => {
       return React.createElement(
         "div",
         { "data-testid": "landing-page-mock" },
-        React.createElement("button", { onClick: props.onGetStarted }, "Try free without sign-in"),
+        React.createElement("button", { onClick: props.onGetStarted }, "Preview the workflow"),
         React.createElement("button", { onClick: props.onSignIn }, "Sign in only when you want to save progress")
       );
     },
@@ -68,6 +70,9 @@ vi.mock("../components/sections/MatchSection", () => {
       React.createElement(
         "div",
         { "data-testid": "job-match-mock" },
+        props.matchAnalysis?.strategicRealityCheck
+          ? React.createElement("span", null, `Reality tier: ${props.matchAnalysis.strategicRealityCheck.riskTier}`)
+          : null,
         React.createElement("button", {
           onClick: () => {
             Promise.resolve(props.onAnalyzeMatchAI?.("Target job description")).catch(() => {});
@@ -155,7 +160,7 @@ vi.mock("../services/api.js", () => ({
   optimizeResume: optimizeResumeMock,
   optimizeResumeStream: optimizeResumeStreamMock,
   generateClarifications: generateClarificationsMock,
-  extractJobMetadata: vi.fn(() => Promise.resolve(null)),
+  extractJobMetadata: extractJobMetadataMock,
   AI_DEFAULT_TEMPERATURE: 0.32,
 }));
 
@@ -182,6 +187,8 @@ describe("MainContent resume parsing", () => {
     analyzeResumeMock.mockReset();
     optimizeResumeMock.mockReset();
     optimizeResumeStreamMock.mockReset();
+    extractJobMetadataMock.mockReset();
+    extractJobMetadataMock.mockResolvedValue(null);
     generateClarificationsMock.mockReset();
     generateClarificationsMock.mockResolvedValue({ clarifications: [] });
     parseResumeMock.mockResolvedValue({
@@ -272,13 +279,13 @@ describe("MainContent resume parsing", () => {
     removeItemSpy.mockRestore();
   });
 
-  it("opens guest workspace from the signed-out try CTA without starting Google sign-in", async () => {
+  it("opens guest workspace from the signed-out preview CTA without starting Google sign-in", async () => {
     authMockState.user = null;
 
     render(<MainContent />);
 
     expect(localStorage.getItem("watheq:guestMode")).toBeNull();
-    fireEvent.click(await screen.findByRole("button", { name: /try free without sign-in/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /preview the workflow/i }));
 
     expect(authMockState.signInWithGoogle).not.toHaveBeenCalled();
     expect(localStorage.getItem("watheq:guestMode")).toBe("true");
@@ -291,7 +298,7 @@ describe("MainContent resume parsing", () => {
 
     render(<MainContent />);
 
-    expect(await screen.findByText(/Sign in is needed to run AI match\/optimization/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Preview the workflow here\. Sign in to process resumes/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign in to save progress/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /back to landing/i }));
@@ -344,6 +351,42 @@ describe("MainContent resume parsing", () => {
     expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
   });
 
+  it("stores Reality Check results from match analysis without blocking job metadata extraction", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "match");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    extractJobMetadataMock.mockRejectedValueOnce(new Error("metadata failed"));
+    analyzeResumeMock.mockResolvedValueOnce({
+      score: 44,
+      missingKeywords: ["machine learning"],
+      topHits: ["SQL"],
+      suggestions: [],
+      strategicRealityCheck: {
+        riskTier: "critical",
+        recommendation: "add_evidence_first",
+        confidence: "medium",
+        riskTypes: ["missing_required_skill"],
+        summary: "Critical evidence gap.",
+        strengths: [],
+        confirmedRisks: [],
+        unclearRisks: [{
+          type: "missing_required_skill",
+          topic: "Machine learning",
+          reason: "Evidence is unclear.",
+          evidenceNeeded: "Add verified evidence only if it exists.",
+        }],
+        limits: { cannotDetermine: ["Employer decisions"], assumptions: [] },
+      },
+    });
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
+
+    expect(await screen.findByText(/Reality tier: critical/i)).toBeInTheDocument();
+    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined);
+    expect(extractJobMetadataMock).toHaveBeenCalledWith("Target job description", undefined);
+  });
+
   it("gates guest optimization and clarifications before backend calls", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");
@@ -369,6 +412,29 @@ describe("MainContent resume parsing", () => {
     expect(screen.queryByText(/Keyword Scanner/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Manual Editing/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Pricing/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the simplified primary workflow and keeps secondary tools behind More tools", async () => {
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+
+    render(<MainContent />);
+
+    expect(screen.getByRole("tab", { name: /resume/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /match/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /optimize/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /tabs\.templates/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /export available/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /more tools/i })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /tabs\.interview/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /more tools/i }));
+
+    expect((await screen.findAllByText("Open tool")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/tabs\.interview/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/tabs\.coverLetter/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Vision 2030/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/tabs\.bulk/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Pipeline/i).length).toBeGreaterThan(0);
   });
 });
 

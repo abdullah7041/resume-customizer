@@ -1,20 +1,18 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, Sparkles, Crown, X } from 'lucide-react';
+import { Check, Sparkles, ListChecks } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
 import { cn } from '../../lib/utils/cn';
-import { UpgradeModal } from '../Credits/UpgradeModal';
+import { PricingWaitlistModal } from '../Credits/PricingWaitlistModal';
 import { analytics } from '../../services/analytics';
 
 interface PlanConfig {
     key: 'free' | 'pro';
     icon: typeof Sparkles;
-    gradient: string;
     active?: boolean;
-    comingSoon?: boolean;
+    waitlist?: boolean;
 }
 
 interface PricingSectionProps {
@@ -22,41 +20,21 @@ interface PricingSectionProps {
 }
 
 const plans: PlanConfig[] = [
-    {
-        key: 'free',
-        icon: Sparkles,
-        gradient: 'from-emerald-500 to-teal-500',
-        active: true,
-    },
-    {
-        key: 'pro',
-        icon: Crown,
-        gradient: 'from-purple-500 to-pink-500',
-        comingSoon: true,
-    },
+    { key: 'free', icon: Sparkles, active: true },
+    { key: 'pro', icon: ListChecks, waitlist: true },
 ];
 
 export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
     const { t, i18n } = useTranslation();
-    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-    const [pricingIntent, setPricingIntent] = useState<'pack_9_sar' | 'monthly_29_sar' | null>(null);
-    const canRenderPortal = typeof document !== 'undefined';
+    const [showWaitlistModal, setShowWaitlistModal] = useState(false);
 
-    const handlePricingIntent = (intent: 'pack_9_sar' | 'monthly_29_sar') => {
-        if (intent === 'pack_9_sar') {
-            analytics.trackPricingIntentPack9Sar('pricing_page');
-        } else {
-            analytics.trackPricingIntentMonthly29Sar('pricing_page');
-        }
-        setPricingIntent(intent);
+    const openWaitlist = () => {
+        analytics.trackPricingIntent({ source: 'pricing_page', planHint: 'pro' });
+        setShowWaitlistModal(true);
     };
 
     return (
-        <section
-            id="pricing"
-            className="py-6 sm:py-10"
-            dir={i18n.dir()}
-        >
+        <section id="pricing" className="py-6 sm:py-10" dir={i18n.dir()}>
             <div className="space-y-6">
                 {/* Section Header */}
                 <div className="text-center space-y-4">
@@ -70,7 +48,7 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                     </p>
                 </div>
 
-                {/* Pricing Cards Grid - 2 columns for Free and Pro */}
+                {/* Pricing Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto items-stretch">
                     {plans.map((plan) => {
                         const features = t(`pricing.plans.${plan.key}.features`, { returnObjects: true }) as string[];
@@ -78,17 +56,15 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                         return (
                             <div key={plan.key} className="relative group flex flex-col h-full">
                                 <GlassCard
-                                    variant='default'
+                                    variant="default"
                                     padding="lg"
                                     className={cn(
-                                        "neu-card flex flex-col h-full transition-all duration-500 relative overflow-hidden group/card",
-                                        "hover:-translate-y-1",
-                                        plan.active && "border-emerald-500/40",
-                                        plan.comingSoon && "opacity-80 hover:opacity-100 bg-gray-100 dark:bg-gray-900/90 border-gray-200 dark:border-white/5",
-                                        "p-6 sm:p-8"
+                                        'neu-card flex flex-col h-full transition-all duration-300 relative overflow-hidden p-6 sm:p-8',
+                                        'hover:-translate-y-1',
+                                        plan.active && 'border-emerald-500/40',
+                                        plan.waitlist && 'border-[color:var(--accent-gold)]/30'
                                     )}
                                 >
-                                    {/* Active Plan Highlight */}
                                     {plan.active && (
                                         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500" />
                                     )}
@@ -97,7 +73,7 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                                         {/* Plan Icon & Name */}
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <GlassCircle size="lg" variant={plan.key === 'free' ? 'success' : 'purple'} className="w-12 h-12 shadow-lg">
+                                                <GlassCircle size="lg" variant={plan.active ? 'success' : 'gold'} className="w-12 h-12 shadow-lg">
                                                     <plan.icon className="w-6 h-6 text-white" />
                                                 </GlassCircle>
                                                 <div>
@@ -109,56 +85,47 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                                                     </p>
                                                 </div>
                                             </div>
-                                            {/* Coming Soon Badge for Pro */}
-                                            {plan.comingSoon && (
-                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-gold-500/10 text-gold-400 border border-gold-500/20">
-                                                    {t('pricing.comingSoon')}
+                                            {plan.waitlist && (
+                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border border-[color:var(--accent-gold)]/35 bg-[color:var(--accent-gold-soft)] text-[#8a6d2f] dark:text-gold-400">
+                                                    {t('pricing.waitlist.badge', 'Pricing Waitlist')}
                                                 </span>
                                             )}
                                         </div>
 
-                                        {/* Price */}
+                                        {/* Price / Status line */}
                                         <div className="flex items-baseline gap-1 py-2">
-                                            {plan.key === 'free' ? (
+                                            {plan.active ? (
                                                 <>
                                                     <span className="text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">$0</span>
                                                     <span className="text-gray-500 dark:text-emerald-100/50 font-medium text-lg ml-1">{t('pricing.forever')}</span>
                                                 </>
                                             ) : (
-                                                <div className="flex flex-col">
-                                                    <span className="text-lg font-medium text-gray-500 dark:text-white/50">
-                                                        {t('pricing.comingSoon')}
-                                                    </span>
-                                                </div>
+                                                <span className="text-lg font-semibold text-gray-600 dark:text-white/60">
+                                                    {t('pricing.waitlist.priceFinalizing', 'Pricing still being finalized')}
+                                                </span>
                                             )}
                                         </div>
 
-                                        {/* Features List - Pushed to fill space */}
-                                        {!plan.comingSoon ? (
-                                            <ul className="space-y-4 flex-1">
-                                                {Array.isArray(features) && features.map((feature, idx) => (
-                                                    <li key={idx} className="flex items-start gap-3.5 group/item">
-                                                        <div className={cn(
-                                                            "mt-1 shrink-0 rounded-full p-0.5",
-                                                            "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                                        )}>
-                                                            <Check className="w-3.5 h-3.5" />
-                                                        </div>
-                                                        <span className="text-sm leading-relaxed transition-colors text-gray-600 dark:text-emerald-50/80 group-hover/item:text-gray-900 dark:group-hover/item:text-white">
-                                                            {feature}
-                                                        </span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <div className="flex-1 flex items-center justify-center py-8">
-                                                <p className="text-gray-500 dark:text-white/40 text-sm">
-                                                    {t('pricing.detailsComingSoon', 'Details will be announced soon')}
-                                                </p>
-                                            </div>
-                                        )}
+                                        {/* Features */}
+                                        <ul className="space-y-4 flex-1">
+                                            {Array.isArray(features) && features.map((feature, idx) => (
+                                                <li key={idx} className="flex items-start gap-3.5 group/item">
+                                                    <div className={cn(
+                                                        'mt-1 shrink-0 rounded-full p-0.5',
+                                                        plan.active
+                                                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                                            : 'bg-[color:var(--accent-gold-soft)] text-[#8a6d2f] dark:text-gold-400'
+                                                    )}>
+                                                        <Check className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <span className="text-sm leading-relaxed text-gray-600 dark:text-emerald-50/80">
+                                                        {feature}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
 
-                                        {/* CTA Button - Anchored at bottom */}
+                                        {/* CTA */}
                                         <div className="pt-4">
                                             {plan.active ? (
                                                 <GlassButton
@@ -172,15 +139,14 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                                                 </GlassButton>
                                             ) : (
                                                 <GlassButton
+                                                    type="button"
                                                     variant="secondary"
                                                     size="lg"
-                                                    onClick={() => {
-                                                        analytics.trackPricingIntent({ source: 'pricing_page', planHint: 'pro' });
-                                                        setShowUpgradeModal(true);
-                                                    }}
-                                                    className="w-full border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-white/40 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                                    onClick={openWaitlist}
+                                                    className="w-full font-bold"
                                                 >
-                                                    {t('pricing.joinWaitlist')}
+                                                    <ListChecks className="w-4 h-4 me-2" />
+                                                    {t('pricing.waitlist.cta', 'Join pricing waitlist')}
                                                 </GlassButton>
                                             )}
                                         </div>
@@ -190,92 +156,19 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                         );
                     })}
                 </div>
-            </div>
 
-            {/* Pricing Intent — Help us decide */}
-            <div className="mt-10 text-center">
-                <p className="text-sm font-medium text-slate-500 dark:text-white/70 mb-4">
-                    {t('pricing.intent.title', 'Help us decide pricing')}
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button
-                        type="button"
-                        onClick={() => handlePricingIntent('pack_9_sar')}
-                        className="text-sm font-semibold text-[#0c5963] underline underline-offset-4 transition-colors hover:text-[#2b8994] dark:text-emerald-300 dark:hover:text-emerald-200"
-                    >
-                        {t('pricing.intent.pack9Sar', 'Would you pay 9 SAR per application pack?')}
-                    </button>
-                    <span className="hidden text-slate-300 dark:text-white/30 sm:inline">|</span>
-                    <button
-                        type="button"
-                        onClick={() => handlePricingIntent('monthly_29_sar')}
-                        className="text-sm font-semibold text-[#0c5963] underline underline-offset-4 transition-colors hover:text-[#2b8994] dark:text-emerald-300 dark:hover:text-emerald-200"
-                    >
-                        {t('pricing.intent.monthly29Sar', 'Would you pay 29 SAR/month while job searching?')}
-                    </button>
-                </div>
-                <p className="mt-3 text-xs text-slate-500 dark:text-white/40">
-                    {t('pricing.intent.notChargingYet', 'Paid plans are not launched yet — this helps us decide what to build.')}
+                <p className="text-center text-xs text-slate-500 dark:text-white/40">
+                    {t('pricing.waitlist.notLiveNote', 'Paid plans are not live yet — joining the waitlist helps us shape launch pricing.')}
                 </p>
             </div>
 
-            {/* Waitlist Modal */}
-            <UpgradeModal
-                isOpen={showUpgradeModal}
-                onClose={() => setShowUpgradeModal(false)}
-                creditsRemaining={20}
+            <PricingWaitlistModal
+                isOpen={showWaitlistModal}
+                onClose={() => setShowWaitlistModal(false)}
+                creditsRemaining={0}
                 dismissKey="watheq:pricingWaitlist"
                 source="pricing"
             />
-            {pricingIntent && canRenderPortal && createPortal(
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-                    <div
-                        className="fixed inset-0 bg-black/70 backdrop-blur-md"
-                        onClick={() => setPricingIntent(null)}
-                        aria-hidden="true"
-                    />
-                    <div
-                        className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#071b17] p-6 text-white shadow-2xl"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="pricing-intent-title"
-                    >
-                        <button
-                            type="button"
-                            onClick={() => setPricingIntent(null)}
-                            className="absolute end-4 top-4 rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
-                            aria-label={t('common.closeDialog', 'Close dialog')}
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                        <div className="pe-8">
-                            <p id="pricing-intent-title" className="text-lg font-bold">
-                                {t('pricing.intent.confirmTitle')}
-                            </p>
-                            <p className="mt-3 text-sm leading-6 text-white/72">
-                                {t(
-                                    pricingIntent === 'pack_9_sar'
-                                        ? 'pricing.intent.confirmPack9Sar'
-                                        : 'pricing.intent.confirmMonthly29Sar'
-                                )}
-                            </p>
-                            <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-100">
-                                {t('pricing.intent.notChargingYet')}
-                            </p>
-                        </div>
-                        <GlassButton
-                            type="button"
-                            variant="primary"
-                            size="lg"
-                            onClick={() => setPricingIntent(null)}
-                            className="mt-6 w-full"
-                        >
-                            {t('common.close')}
-                        </GlassButton>
-                    </div>
-                </div>,
-                document.body
-            )}
         </section>
     );
 }

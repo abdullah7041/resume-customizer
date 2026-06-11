@@ -79,6 +79,9 @@ vi.mock('../components/Credits/ConfirmActionModal', () => ({
 vi.mock('../components/Credits/UpgradeModal', () => ({
   UpgradeModal: () => null,
 }));
+vi.mock('../components/Credits/PricingWaitlistModal', () => ({
+  PricingWaitlistModal: () => null,
+}));
 
 // Mock parseResume
 const mockParseResume = vi.fn();

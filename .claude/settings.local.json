@@ -69,7 +69,12 @@
       "WebFetch(domain:status.openrouter.ai)",
       "Bash(npx netlify:*)",
       "Bash(npx netlify env:get:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(claude plugin *)",
+      "Bash(rtk npm *)",
+      "Bash(rtk lint *)",
+      "Bash(rtk vitest *)",
+      "Bash(rtk git *)"
     ]
   },
   "enableAllProjectMcpServers": false,

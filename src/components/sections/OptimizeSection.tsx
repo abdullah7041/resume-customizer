@@ -907,6 +907,8 @@ export function OptimizeSection({
   const filteredOptimizations = activeSection === 'all'
     ? optimizations
     : optimizations.filter(o => o.sectionType === activeSection);
+  const hasOptimizationResults = optimizations.length > 0;
+  const hasKeywordData = keywordBuckets.add.length + keywordBuckets.neutral.length + keywordBuckets.remove.length > 0;
 
   return (
     <div className="space-y-6">
@@ -967,6 +969,7 @@ export function OptimizeSection({
             )}
 
             {/* View Mode Toggle */}
+          {hasOptimizationResults && (
           <div className="flex items-center bg-[color:var(--surface-control)] dark:bg-black/20 rounded-xl p-1 border border-[color:var(--glass-border)] dark:border-white/5">
               <button
                 onClick={() => setViewMode('split')}
@@ -993,6 +996,7 @@ export function OptimizeSection({
                 {t('sections.optimize.inlineDiff', 'Diff')}
               </button>
             </div>
+          )}
 
             {optimizations.length > 0 && (
               <GlassButton
@@ -1009,6 +1013,7 @@ export function OptimizeSection({
         </div >
 
         {/* Section Tabs */}
+        {hasOptimizationResults && (
         <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 mb-6">
           <div className="flex items-center gap-2 p-1 bg-[color:var(--surface-control)] dark:bg-black/20 rounded-xl border border-[color:var(--glass-border)] dark:border-white/5">
             {tabs.map((tab) => {
@@ -1045,6 +1050,7 @@ export function OptimizeSection({
             })}
           </div>
         </div>
+        )}
 
         {/* Error Message */}
         {
@@ -1118,6 +1124,7 @@ export function OptimizeSection({
       </GlassCard >
 
       {/* Keyword Focus Section - Manual Buckets */}
+      {hasKeywordData && (
       <GlassCard>
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -1176,6 +1183,7 @@ export function OptimizeSection({
           })}
         </div>
       </GlassCard >
+      )}
 
       {/* Score Summary — Prominent Top Card */}
       {optimizations.length > 0 && (
@@ -1246,7 +1254,7 @@ export function OptimizeSection({
                 </GlassButton>
               </div>
             )}
-        </GlassCard>
+      </GlassCard>
       )}
 
       {/* Share Score Card Modal */}

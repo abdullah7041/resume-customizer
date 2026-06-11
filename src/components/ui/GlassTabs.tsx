@@ -40,7 +40,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
       role="tablist"
       data-tour={dataTour}
     >
-      <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth px-1 py-1">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth px-1 py-1">
         {tabs.map((tab, idx) => {
           const Icon = tab.icon;
           const isActive = activeValue === tab.value;
@@ -65,7 +65,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               disabled={isDisabled}
               title={tab.disabledReason}
               className={cn(
-                'relative flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold whitespace-nowrap outline-none select-none shrink-0 z-10 rounded-xl ml-0.5 mr-0.5 border border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]',
+                'relative flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold whitespace-nowrap outline-none select-none shrink-0 z-10 rounded-xl ml-0.5 mr-0.5 border border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]',
                 isDisabled
                   ? 'cursor-not-allowed border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-500 opacity-75 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/45'
                   : isActive

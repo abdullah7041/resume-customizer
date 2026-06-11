@@ -33,6 +33,57 @@ const summarizeErrorForConsole = (error) => ({
   type: error?.type || null,
 });
 
+const REALITY_CHECK_FALLBACK = {
+  riskTier: 'medium',
+  recommendation: 'answer_clarifications_first',
+  confidence: 'low',
+  riskTypes: ['evidence_quality'],
+  summary: '',
+  strengths: [],
+  confirmedRisks: [],
+  unclearRisks: [],
+  limits: { cannotDetermine: [], assumptions: [] },
+};
+
+const normalizeArray = (value) => Array.isArray(value) ? value : [];
+
+const normalizeStrategicRealityCheck = (value) => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const riskTier = ['low', 'medium', 'high', 'critical'].includes(value.riskTier)
+    ? value.riskTier
+    : REALITY_CHECK_FALLBACK.riskTier;
+  const recommendation = [
+    'optimize_now',
+    'answer_clarifications_first',
+    'add_evidence_first',
+    'review_role_fit',
+  ].includes(value.recommendation)
+    ? value.recommendation
+    : REALITY_CHECK_FALLBACK.recommendation;
+  const confidence = ['low', 'medium', 'high'].includes(value.confidence)
+    ? value.confidence
+    : REALITY_CHECK_FALLBACK.confidence;
+
+  return {
+    ...REALITY_CHECK_FALLBACK,
+    ...value,
+    riskTier,
+    recommendation,
+    confidence,
+    riskTypes: normalizeArray(value.riskTypes),
+    strengths: normalizeArray(value.strengths),
+    confirmedRisks: normalizeArray(value.confirmedRisks),
+    unclearRisks: normalizeArray(value.unclearRisks),
+    limits: {
+      cannotDetermine: normalizeArray(value.limits?.cannotDetermine),
+      assumptions: normalizeArray(value.limits?.assumptions),
+    },
+  };
+};
+
 // Helper to get auth headers
 export const getAuthHeaders = async (options = {}) => {
   const { requireAuth = false, authRequiredMessage } = options;
@@ -378,6 +429,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
         suggestions: data.recommendations || [],
         missingKeywords: data.missingKeywords || data.missing_keywords || [],
         reasoning: data.overallAssessment || data.explanation?.reason || null, // AI's explanation of the match score
+        strategicRealityCheck: normalizeStrategicRealityCheck(data.strategicRealityCheck),
       };
 
     } catch (error) {

@@ -1,6 +1,6 @@
 import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, LogIn } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, LogIn, MoreHorizontal } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
@@ -93,15 +93,18 @@ const getTabsConfig = (t) => [
   { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
 
   { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate },
+  { value: "more-tools", label: t("tabs.moreTools", "More tools"), icon: MoreHorizontal },
   { value: "interview", label: t("tabs.interview"), icon: MessageSquare },
   { value: "bulk", label: t("tabs.bulk"), icon: FileText },
   { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail },
   { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true },
   { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase },
 ];
-const PRE_UPLOAD_TAB_VALUES = new Set(["resume", "match", "optimize", "pipeline"]);
-const MOBILE_PRIMARY_TAB_VALUES = ["resume", "match", "optimize", "templates"];
+const PRIMARY_TAB_VALUES = ["resume", "match", "optimize", "templates", "more-tools"];
+const PRE_UPLOAD_TAB_VALUES = new Set(PRIMARY_TAB_VALUES);
+const MOBILE_PRIMARY_TAB_VALUES = PRIMARY_TAB_VALUES;
 const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030", "pipeline"];
+const SECONDARY_TAB_VALUES = new Set(MOBILE_SECONDARY_TAB_VALUES);
 
 const containerClass = "app-shell w-full";
 
@@ -179,7 +182,7 @@ export default function MainContent() {
   const { setWorkflowState: setHRSuperSaudWorkflowState } = useHRSuperSaud();
   const resumeGateReason = t(
     "workspace.resumeGateHint",
-    "Upload a resume to unlock Match, Optimize, Templates, and Interview."
+    "Upload a resume first to unlock Match, Optimize, Export, and More tools."
   );
   const mobileWorkflowGateReason = t(
     "workspace.mobileWorkflow.lockedHelper",
@@ -191,7 +194,7 @@ export default function MainContent() {
     () => {
       const baseTabs = getTabsConfig(t);
       const visibleTabs = hasResume
-        ? baseTabs
+        ? baseTabs.filter((tab) => PRIMARY_TAB_VALUES.includes(tab.value))
         : baseTabs.filter((tab) => PRE_UPLOAD_TAB_VALUES.has(tab.value));
 
       return visibleTabs.map((tab) =>
@@ -205,9 +208,10 @@ export default function MainContent() {
   const mobilePrimarySteps = useMemo<MobileWorkflowItem[]>(() => {
     const mobileLabels = {
       resume: t("workspace.mobileWorkflow.steps.resume", "Resume"),
-      match: t("workspace.mobileWorkflow.steps.jobAd", "Job Ad"),
+      match: t("workspace.mobileWorkflow.steps.match", "Match"),
       optimize: t("workspace.mobileWorkflow.steps.optimize", "Optimize"),
       templates: t("workspace.mobileWorkflow.steps.export", "Export"),
+      "more-tools": t("workspace.mobileWorkflow.moreTools", "More tools"),
     };
 
     return getTabsConfig(t)
@@ -491,17 +495,19 @@ export default function MainContent() {
     }
   }, [activeTab, hasResume]);
 
+  const activeNavValue = SECONDARY_TAB_VALUES.has(activeTab) ? "more-tools" : activeTab;
+
   const hasNextTab = useMemo(() => {
-    const index = tabs.findIndex((tab) => tab.value === activeTab);
+    const index = tabs.findIndex((tab) => tab.value === activeNavValue);
     return index >= 0 && index < tabs.length - 1;
-  }, [activeTab, tabs]);
+  }, [activeNavValue, tabs]);
 
   const handleContinue = useCallback(() => {
-    const index = tabs.findIndex((tab) => tab.value === activeTab);
+    const index = tabs.findIndex((tab) => tab.value === activeNavValue);
     if (index >= 0 && index < tabs.length - 1) {
       handleTabChange(tabs[index + 1].value);
     }
-  }, [activeTab, handleTabChange, tabs]);
+  }, [activeNavValue, handleTabChange, tabs]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1390,6 +1396,11 @@ export default function MainContent() {
     [dismissToast, toasts]
   );
 
+  const secondaryToolTabs = useMemo(
+    () => getTabsConfig(t).filter((tab) => SECONDARY_TAB_VALUES.has(tab.value)),
+    [t]
+  );
+
   const renderClearAllAction = (showText: boolean) =>
     resumeData?.plainText ? (
       <button
@@ -1406,7 +1417,7 @@ export default function MainContent() {
 
   const guestNotice = t(
     "workspace.guest.notice",
-    "Sign in is needed to run AI match/optimization, save pipeline jobs, or export to your account."
+    "Preview the workflow here. Sign in to process resumes, run AI, save progress, or export to your account."
   );
 
   const renderGuestProtectedPanel = (title: string) => (
@@ -1422,6 +1433,47 @@ export default function MainContent() {
         <LogIn className="h-4 w-4 me-2" />
         {t("workspace.guest.signInCta", "Sign in to save progress")}
       </GlassButton>
+    </GlassCard>
+  );
+
+  const renderMoreToolsPanel = () => (
+    <GlassCard className="space-y-4">
+      <div>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          {t("tabs.moreTools", "More tools")}
+        </h3>
+        <p className="mt-1 max-w-2xl text-sm text-gray-600 dark:text-emerald-100/75">
+          {t(
+            "workspace.moreTools.description",
+            "Use these after the core resume workflow when you need deeper preparation or tracking."
+          )}
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {secondaryToolTabs.map((tool) => {
+          const Icon = tool.icon;
+          return (
+            <button
+              key={tool.value}
+              type="button"
+              onClick={() => handleTabChange(tool.value)}
+              className="group flex items-center gap-3 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-4 text-start transition-colors hover:border-[color:var(--glass-border-strong)] hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-gray-900 dark:text-white">
+                  {tool.label}
+                </span>
+                <span className="mt-0.5 block text-xs text-gray-500 dark:text-emerald-100/70">
+                  {t("workspace.moreTools.openTool", "Open tool")}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </GlassCard>
   );
 
@@ -1464,21 +1516,11 @@ export default function MainContent() {
               <GlassTabs
                 data-tour="features"
                 tabs={tabs}
-                activeValue={activeTab}
+                activeValue={activeNavValue}
                 onTabChange={handleTabChange}
                 rightAction={renderClearAllAction(false)}
               />
             </div>
-            {!hasResume && (
-              <p className="mt-2 hidden text-center text-xs font-semibold text-gray-600 dark:text-emerald-100/82 sm:block sm:text-start">
-                {resumeGateReason}
-              </p>
-            )}
-            {hasResume && (
-              <p className="mt-2 hidden text-center text-xs font-medium text-gray-500 dark:text-emerald-100/70 sm:block sm:text-start">
-                {t("workspace.stepFlowHelper", "Step 1: Upload or paste resume → Step 2: Paste job description → Step 3: Review match → Step 4: Optimize & export")}
-              </p>
-            )}
           </div>
         </div>
 
@@ -1567,6 +1609,7 @@ export default function MainContent() {
               optimizationData={optimizationData}
             />
           )}
+          {activeTab === "more-tools" && renderMoreToolsPanel()}
           {activeTab === "interview" && (
             <LazyErrorBoundary label="Interview section">
               <Suspense fallback={<SectionSkeleton />}>

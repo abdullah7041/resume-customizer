@@ -18,7 +18,9 @@ import {
   Code2,
   Briefcase,
   GraduationCap,
-  Users
+  Users,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { analytics } from '../../services/analytics';
@@ -35,43 +37,109 @@ import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 import type { ExtractedJobMetadata } from '../../types/pipeline';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
+// Semantic score states with calm, low-glow surfaces (Warm Saudi Premium):
+// strong → emerald, medium → amber, weak → rose.
 const resolveVariant = (score: number) => {
   if (score >= 70) {
     return {
-      gradient: "from-emerald-500/20 via-emerald-500/10 to-emerald-500/5",
-      glow: "bg-emerald-500/30",
+      gradient: "from-emerald-500/10 via-emerald-500/[0.04] to-transparent",
+      glow: "bg-emerald-500/15",
       strokeStart: "#10B981",
       strokeEnd: "#34D399",
       label: "strongMatch",
       icon: Target,
-      text: "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+      text: "text-emerald-700 dark:text-emerald-300"
     };
   }
   if (score >= 40) {
     return {
-      gradient: "from-amber-500/20 via-amber-500/10 to-amber-500/5",
-      glow: "bg-amber-500/20",
+      gradient: "from-amber-500/10 via-amber-500/[0.04] to-transparent",
+      glow: "bg-amber-500/12",
       strokeStart: "#F59E0B",
       strokeEnd: "#FBBF24",
       label: "goodStart",
       icon: Zap,
-      text: "text-amber-400"
+      text: "text-amber-700 dark:text-amber-300"
     };
   }
   return {
-    gradient: "from-rose-500/20 via-rose-500/10 to-rose-500/5",
-    glow: "bg-rose-500/20",
+    gradient: "from-rose-500/10 via-rose-500/[0.04] to-transparent",
+    glow: "bg-rose-500/12",
     strokeStart: "#F43F5E",
     strokeEnd: "#FB7185",
     label: "needsWork",
     icon: Wrench,
-    text: "text-rose-400"
+    text: "text-rose-700 dark:text-rose-300"
   };
 };
 
 const LAST_JOB_KEY = "watheq:lastJobDescription";
 const RING_RADIUS = 60;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+interface StrategicRealityCheck {
+  riskTier: 'low' | 'medium' | 'high' | 'critical';
+  recommendation: 'optimize_now' | 'answer_clarifications_first' | 'add_evidence_first' | 'review_role_fit';
+  confidence: 'low' | 'medium' | 'high';
+  riskTypes: string[];
+  summary: string;
+  strengths: Array<{
+    title: string;
+    whyItMatters?: string;
+    evidence?: Array<{ source: 'resume' | 'job_description' | 'both'; snippet: string }>;
+  }>;
+  confirmedRisks: Array<{
+    type: string;
+    severity: 'medium' | 'high' | 'critical';
+    title: string;
+    explanation: string;
+    mitigation: string;
+    evidence?: Array<{ source: 'resume' | 'job_description' | 'both'; snippet: string }>;
+  }>;
+  unclearRisks: Array<{
+    type: string;
+    topic: string;
+    reason: string;
+    evidenceNeeded: string;
+  }>;
+  limits: {
+    cannotDetermine: string[];
+    assumptions: string[];
+  };
+}
+
+const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => {
+  if (riskTier === 'low') {
+    return {
+      icon: ShieldCheck,
+      container: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100',
+      badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 border-emerald-500/20',
+      role: 'status' as const,
+    };
+  }
+  if (riskTier === 'medium') {
+    return {
+      icon: Info,
+      container: 'border-amber-500/25 bg-amber-500/10 text-amber-950 dark:text-amber-100',
+      badge: 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/25',
+      role: 'status' as const,
+    };
+  }
+  if (riskTier === 'high') {
+    return {
+      icon: ShieldAlert,
+      container: 'border-rose-500/25 bg-rose-500/10 text-rose-950 dark:text-rose-100',
+      badge: 'bg-rose-500/15 text-rose-800 dark:text-rose-200 border-rose-500/25',
+      role: 'alert' as const,
+    };
+  }
+  return {
+    icon: AlertCircle,
+    container: 'border-red-600/30 bg-red-600/10 text-red-950 dark:text-red-100',
+    badge: 'bg-red-600/15 text-red-800 dark:text-red-200 border-red-600/30',
+    role: 'alert' as const,
+  };
+};
 
 interface MatchResult {
   score: number;
@@ -92,6 +160,7 @@ interface MatchResult {
     structuralChanges?: string[];
     hiddenMatches?: HiddenMatch[];
   } | null;
+  strategicRealityCheck?: StrategicRealityCheck | null;
 }
 
 interface Toast {
@@ -141,6 +210,7 @@ export function MatchSection({
   });
   const [error, setError] = useState("");
   const [whyOpen, setWhyOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
 
@@ -192,6 +262,14 @@ export function MatchSection({
       // Track match analysis run
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
+      }
+      if (result?.strategicRealityCheck) {
+        analytics.trackStrategicRealityCheck({
+          riskTier: result.strategicRealityCheck.riskTier,
+          recommendation: result.strategicRealityCheck.recommendation,
+          confidence: result.strategicRealityCheck.confidence,
+          riskTypes: result.strategicRealityCheck.riskTypes,
+        });
       }
       // Refresh credits after consumption
       setTimeout(() => refetchCredits(), 500);
@@ -270,8 +348,35 @@ export function MatchSection({
     () => RING_CIRCUMFERENCE - (progress / 100) * RING_CIRCUMFERENCE,
     [progress]
   );
-  const missing = matchAnalysis?.missingKeywords?.slice(0, 6) ?? [];
-  const hits = matchAnalysis?.topHits?.slice(0, 6) ?? [];
+  const missing = matchAnalysis?.missingKeywords?.slice(0, 3) ?? [];
+  const hits = matchAnalysis?.topHits?.slice(0, 3) ?? [];
+  const realityCheck = matchAnalysis?.strategicRealityCheck ?? null;
+  const realityVariant = realityCheck ? getRealityCheckVariant(realityCheck.riskTier) : null;
+  const RealityIcon = realityVariant?.icon;
+  const nextActionKey = realityCheck
+    ? `reality.${realityCheck.recommendation}`
+    : score !== null && score >= 70
+      ? 'optimize'
+      : score !== null && score >= 40
+        ? 'closeGaps'
+        : 'reviewFit';
+  const nextActionText = t(
+    `sections.match.results.nextAction.${nextActionKey}`,
+    score !== null && score >= 70
+      ? 'Next: optimize and export this version.'
+      : score !== null && score >= 40
+        ? 'Next: close the top gaps before optimizing.'
+        : 'Next: review role fit before spending optimization effort.'
+  );
+  const hasDetailedResults = Boolean(
+    matchAnalysis?.suggestions?.length ||
+    matchAnalysis?.gapAnalysis?.length ||
+    matchAnalysis?.keywordStrategy?.hiddenMatches?.length ||
+    matchAnalysis?.keywordStrategy?.mirroredPhrases?.length ||
+    matchAnalysis?.keywordStrategy?.structuralChanges?.length ||
+    realityCheck?.confirmedRisks?.length ||
+    realityCheck?.unclearRisks?.length
+  );
 
   const buttonDisabled = !jobText.trim() || !hasResume || isAnalyzing;
   const disabledHint = !hasResume
@@ -405,7 +510,7 @@ export function MatchSection({
                   'absolute inset-0 bg-gradient-to-br',
                   variant.gradient
                 )}>
-                  <div className={cn('absolute inset-0 opacity-40 blur-3xl', variant.glow)} />
+                  <div className={cn('absolute inset-0 opacity-20 blur-2xl', variant.glow)} />
                 </div>
 
                 {/* Content */}
@@ -416,7 +521,7 @@ export function MatchSection({
                       className="relative shrink-0 mx-auto" 
                       style={{ width: '140px', height: '140px', minWidth: '140px', minHeight: '140px' }}
                     >
-                      <div className={cn('absolute inset-0 rounded-full blur-2xl opacity-40', variant.glow)} />
+                      <div className={cn('absolute inset-0 rounded-full blur-xl opacity-20', variant.glow)} />
                       <svg
                         className="absolute inset-0 rotate-[-90deg] overflow-visible"
                         style={{ width: '100%', height: '100%' }}
@@ -442,7 +547,7 @@ export function MatchSection({
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="8"
-                          className="text-white/10"
+                          className="text-gray-200 dark:text-white/10"
                         />
                         <circle
                           cx="70"
@@ -454,7 +559,6 @@ export function MatchSection({
                           strokeLinecap="round"
                           strokeDasharray={RING_CIRCUMFERENCE}
                           strokeDashoffset={ringOffset}
-                          filter="url(#glow-shadow)"
                           className="transition-[stroke-dashoffset] duration-1000 ease-out"
                         />
                       </svg>
@@ -464,10 +568,6 @@ export function MatchSection({
                         className="!absolute grid place-items-center gauge-badge overflow-hidden rounded-full"
                         style={{ inset: '12px' }}
                       >
-                        {/* Inner highlight pulse */}
-                        {score >= 70 && (
-                          <div className="absolute inset-0 bg-emerald-500/20 animate-pulse" />
-                        )}
                         <div className="flex flex-col items-center justify-center text-center relative z-10 w-full h-full">
                           <Tooltip
                             content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`}
@@ -477,7 +577,7 @@ export function MatchSection({
                               <AnimatedCounter
                                 to={score}
                                 duration={1500}
-                                className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-lg leading-none"
+                                className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-none"
                               />
                               <span className="text-[10px] font-bold text-gray-400 dark:text-white/50 uppercase tracking-widest mt-1 block w-full text-center">{t('sections.match.scoreLabel', 'Score')}</span>
                             </div>
@@ -500,11 +600,68 @@ export function MatchSection({
                               : t('sections.match.results.weakMessage', 'Consider tailoring your experience to the job requirements.')
                         )}
                       </p>
+                      <p className="mt-2 rounded-xl border border-emerald-500/15 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-800 dark:text-emerald-100">
+                        {nextActionText}
+                      </p>
                       <p className="mt-2 inline-flex items-center justify-center gap-1.5 text-xs text-emerald-400/90 bg-emerald-500/10 px-2.5 py-0.5 rounded-full mx-auto">
                         <Target className="h-3 w-3" />
                         {t('trust.matchAnalysis')}
                       </p>
                     </div>
+
+                    {realityCheck && realityVariant && RealityIcon && (
+                      <section
+                        aria-label={t('sections.match.realityCheck.ariaLabel', 'Strategic Reality Check')}
+                        role={realityVariant.role}
+                        className={cn(
+                          'w-full rounded-xl border p-4 text-start',
+                          realityVariant.container
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <RealityIcon className="mt-0.5 h-5 w-5 shrink-0" />
+                          <div className="min-w-0 flex-1 space-y-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-bold">
+                                {t('sections.match.realityCheck.title', 'Strategic Reality Check')}
+                              </h4>
+                              <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase', realityVariant.badge)}>
+                                {t(`sections.match.realityCheck.tiers.${realityCheck.riskTier}`, realityCheck.riskTier)}
+                              </span>
+                              {detailsOpen && (
+                                <span className="rounded-full border border-gray-300/40 bg-white/30 px-2 py-0.5 text-[11px] font-medium dark:border-white/10 dark:bg-white/10">
+                                  {t('sections.match.realityCheck.confidence', 'Confidence')}: {t(`sections.match.realityCheck.confidenceLevels.${realityCheck.confidence}`, realityCheck.confidence)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm leading-relaxed">
+                              {realityCheck.summary || t('sections.match.realityCheck.fallbackSummary', 'Review the evidence before optimizing this resume.')}
+                            </p>
+                            {detailsOpen && (realityCheck.confirmedRisks.length > 0 || realityCheck.unclearRisks.length > 0) && (
+                              <div className="grid gap-2 text-xs sm:grid-cols-2">
+                                {realityCheck.confirmedRisks.slice(0, 2).map((risk, index) => (
+                                  <div key={`confirmed-${index}`} className="rounded-lg bg-white/35 p-2 dark:bg-black/15">
+                                    <p className="font-semibold">{risk.title}</p>
+                                    <p className="mt-1 opacity-80">{risk.mitigation}</p>
+                                  </div>
+                                ))}
+                                {realityCheck.unclearRisks.slice(0, 2).map((risk, index) => (
+                                  <div key={`unclear-${index}`} className="rounded-lg bg-white/35 p-2 dark:bg-black/15">
+                                    <p className="font-semibold">
+                                      {t('sections.match.realityCheck.unclearLabel', 'Unclear')}: {risk.topic}
+                                    </p>
+                                    <p className="mt-1 opacity-80">{risk.evidenceNeeded || risk.reason}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-xs font-medium opacity-85">
+                              {t(`sections.match.realityCheck.recommendations.${realityCheck.recommendation}`, 'Review evidence before optimizing.')}
+                            </p>
+                          </div>
+                        </div>
+                      </section>
+                    )}
 
                     {/* Optimized Resume Warning Banner */}
                     {showOptimized && score !== null && (
@@ -660,7 +817,22 @@ export function MatchSection({
                 )}
 
                 {/* Suggestions */}
-                {matchAnalysis?.suggestions && matchAnalysis.suggestions.length > 0 && (
+                {hasDetailedResults && (
+                  <button
+                    type="button"
+                    onClick={() => setDetailsOpen((value) => !value)}
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
+                    aria-expanded={detailsOpen}
+                  >
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", detailsOpen && "rotate-180")} />
+                    {detailsOpen
+                      ? t('sections.match.results.hideDetails', 'Hide details')
+                      : t('sections.match.results.showDetails', 'Show details')}
+                  </button>
+                )}
+
+                {/* Suggestions */}
+                {detailsOpen && matchAnalysis?.suggestions && matchAnalysis.suggestions.length > 0 && (
                   <div className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
                     <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-400/90">
                       <div className="p-1 rounded bg-amber-500/20">
@@ -683,17 +855,17 @@ export function MatchSection({
                 )}
 
                 {/* Gap Analysis Section */}
-                {matchAnalysis?.gapAnalysis && matchAnalysis.gapAnalysis.length > 0 && (
+                {detailsOpen && matchAnalysis?.gapAnalysis && matchAnalysis.gapAnalysis.length > 0 && (
                   <GapAnalysisCard gaps={matchAnalysis.gapAnalysis} />
                 )}
 
                 {/* Hidden Matches - Skills that match using different terminology */}
-                {matchAnalysis?.keywordStrategy?.hiddenMatches && matchAnalysis.keywordStrategy.hiddenMatches.length > 0 && (
+                {detailsOpen && matchAnalysis?.keywordStrategy?.hiddenMatches && matchAnalysis.keywordStrategy.hiddenMatches.length > 0 && (
                   <HiddenMatchesCard matches={matchAnalysis.keywordStrategy.hiddenMatches} />
                 )}
 
                 {/* Mirrored Keywords - JD phrases injected into optimized content */}
-                {matchAnalysis?.keywordStrategy && (
+                {detailsOpen && matchAnalysis?.keywordStrategy && (
                   matchAnalysis.keywordStrategy.mirroredPhrases?.length || matchAnalysis.keywordStrategy.structuralChanges?.length
                 ) ? (
                   <MirroredKeywordsCard

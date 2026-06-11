@@ -13,27 +13,7 @@
       "message": "سيتم استخدام {{cost}} رصيد.",
       "current": "الرصيد الحالي: {{remaining}} / {{total}}",
       "continue": "متابعة ({{cost}} رصيد)",
-      "insufficient": "الرصيد غير كافٍ. تحتاج {{required}} والمتاح {{available}}.",
-      "waitlistCta": "أبلغني عند إطلاق الباقة"
-    },
-    "upgrade": {
-      "title": "الترقية إلى المميز",
-      "lowCredits": "رصيدك منخفض (المتبقي {{remaining}})",
-      "lowCreditsTitle": "رصيد منخفض",
-      "comingSoon": "قريب",
-      "joinWaitlist": "انضم لقائمة الانتظار",
-      "emailLabel": "احصل على إشعار عند إطلاق الباقة الاحترافية:",
-      "waitlistSuccess": "تم التسجيل. سنبلغك عند الإطلاق.",
-      "waitlistSuccessTitle": "تم تسجيلك في القائمة!",
-      "badge": "وصول مبكر",
-      "invalidEmail": "أدخل بريدًا إلكترونيًا صحيحًا",
-      "subtitle": "طور سيرتك الذاتية بمميزات احترافية وحدود أعلى",
-      "proFeatures": "ماذا تتضمن الباقة؟",
-      "features": {
-        "credits": "100 رصيد شهريًا",
-        "support": "دعم فني خاص",
-        "earlyAccess": "أولوية تجربة الميزات الجديدة"
-      }
+      "insufficient": "الرصيد غير كافٍ. تحتاج {{required}} والمتاح {{available}}."
     },
     "usage": {
       "title": "استخدام الرصيد",

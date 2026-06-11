@@ -15,7 +15,6 @@ import type { JobApplication, JobApplicationStatus } from '../../types/pipeline'
 const STATUS_OPTIONS: JobApplicationStatus[] = [
   'saved',
   'applied',
-  'interview',
   'offer',
   'rejected',
   'withdrawn',
@@ -146,12 +145,6 @@ export function PipelineSection() {
                 </span>
                 <div className="flex gap-1 shrink-0">
                   <button
-                    onClick={() => handleQuickUpdate(job, 'interview')}
-                    className="px-2 py-1 rounded-md text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors"
-                  >
-                    {t('pipeline.updateToInterview', 'Interview')}
-                  </button>
-                  <button
                     onClick={() => handleQuickUpdate(job, 'rejected')}
                     className="px-2 py-1 rounded-md text-xs bg-rose-500/10 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20 transition-colors"
                   >
@@ -159,9 +152,15 @@ export function PipelineSection() {
                   </button>
                   <button
                     onClick={() => handleQuickUpdate(job, 'offer')}
-                    className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 transition-colors"
+                    className="px-2 py-1 rounded-md text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors"
                   >
                     {t('pipeline.updateToOffer', 'Offer')}
+                  </button>
+                  <button
+                    onClick={() => handleQuickUpdate(job, 'withdrawn')}
+                    className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 transition-colors"
+                  >
+                    {t('pipeline.updateToWithdrawn', 'Withdrawn')}
                   </button>
                   <button
                     onClick={() => handleQuickUpdate(job, 'applied')}
