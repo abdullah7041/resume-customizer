@@ -405,14 +405,6 @@ export default function Header() {
                       }}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowFeedbackModal(true)}
-                    className="btn-spring inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-[color:var(--surface-control)] px-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-[color:var(--surface-control-hover)] dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>{t('feedback.cta', 'Feedback')}</span>
-                  </button>
                   <div className="relative">
                     <button
                       type="button"
@@ -479,6 +471,18 @@ export default function Header() {
                           >
                             <Settings className="h-4 w-4" />
                             <span>{t('common.settings', 'Settings')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowFeedbackModal(true);
+                              setAccountMenuOpen(false);
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+                            role="menuitem"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            <span>{t('feedback.cta', 'Feedback')}</span>
                           </button>
                           <button
                             type="button"
@@ -635,18 +639,6 @@ export default function Header() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowFeedbackModal(true);
-                      setMobileNavOpen(false);
-                    }}
-                    className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-[color:var(--surface-control)] px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-[color:var(--surface-control-hover)] dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>{t('feedback.cta', 'Feedback')}</span>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={handleOpenPlans}
                     className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
                   >
@@ -695,6 +687,16 @@ export default function Header() {
                     >
                       <Settings className="h-4 w-4" />
                       <span>{t('common.settings', 'Settings')}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowFeedbackModal(true);
+                        setMobileNavOpen(false);
+                      }}
+                      className="btn-spring w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-transparent border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{t('feedback.cta', 'Feedback')}</span>
                     </button>
                   </>
                 ) : (

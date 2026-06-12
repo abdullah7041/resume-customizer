@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Header from '../components/Layout/Header';
@@ -66,8 +66,10 @@ vi.mock('../components/Feedback/FeedbackModal', () => ({
   FeedbackModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Feedback modal</div> : null),
 }));
 
+const themeState = vi.hoisted(() => ({ theme: 'light' as 'light' | 'dark' }));
+
 vi.mock('../hooks/useTheme', () => ({
-  useTheme: () => ['light', vi.fn()],
+  useTheme: () => [themeState.theme, vi.fn()],
 }));
 
 vi.mock('../hooks/useUserCredits', () => ({
@@ -79,6 +81,7 @@ vi.mock('../hooks/useUserCredits', () => ({
 describe('Header feedback action', () => {
   beforeEach(() => {
     authState.user = null;
+    themeState.theme = 'light';
     vi.stubGlobal('matchMedia', vi.fn(() => ({
       matches: false,
       addEventListener: vi.fn(),
@@ -92,7 +95,7 @@ describe('Header feedback action', () => {
     expect(screen.queryByRole('button', { name: /feedback/i })).not.toBeInTheDocument();
   });
 
-  it('shows Feedback for authenticated users', () => {
+  it('shows Feedback for authenticated users in the account menu', async () => {
     authState.user = {
       id: 'user-1',
       email: 'user@example.com',
@@ -102,7 +105,9 @@ describe('Header feedback action', () => {
 
     render(<Header />);
 
-    expect(screen.getByRole('button', { name: /feedback/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /account menu/i }));
+
+    expect(await screen.findByRole('menuitem', { name: /feedback/i })).toBeInTheDocument();
   });
 
   it('renders the authenticated account menu outside the clipped header when opened', async () => {
@@ -119,5 +124,38 @@ describe('Header feedback action', () => {
 
     expect(await screen.findByRole('menu')).toBeInTheDocument();
     expect(screen.getAllByText('Language').length).toBeGreaterThan(0);
+  });
+
+  it('mobile nav (dark mode): Feedback sits with Settings, secondary tools stay reachable', async () => {
+    themeState.theme = 'dark';
+    authState.user = {
+      id: 'user-1',
+      email: 'user@example.com',
+      app_metadata: {},
+      user_metadata: {},
+    };
+
+    render(<Header />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open navigation menu/i }));
+
+    const nav = await screen.findByRole('dialog');
+
+    // Feedback is no longer in the prominent Credits block, but is reachable
+    // alongside Settings in the Auth section.
+    const navQueries = within(nav);
+    const feedbackButton = await navQueries.findByRole('button', { name: /feedback/i });
+    const settingsButton = navQueries.getByRole('button', { name: /settings/i });
+    expect(feedbackButton).toBeInTheDocument();
+    expect(settingsButton).toBeInTheDocument();
+
+    // Secondary tools (credits, plans, invite) remain reachable.
+    expect(navQueries.getAllByText(/credits/i).length).toBeGreaterThan(0);
+    expect(navQueries.getByText(/view plans/i)).toBeInTheDocument();
+    expect(navQueries.getByText(/invite friends/i)).toBeInTheDocument();
+
+    // Feedback still opens the existing modal.
+    fireEvent.click(feedbackButton);
+    expect(await screen.findByText('Feedback modal')).toBeInTheDocument();
   });
 });
