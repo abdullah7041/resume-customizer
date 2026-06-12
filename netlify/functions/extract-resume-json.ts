@@ -1,6 +1,6 @@
 import { parseResumeOnly } from "../lib/gemini-client.js";
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
-import { withRateLimit } from "../lib/rate-limiter.js";
+import { withRateLimit, checkGuestPreviewRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 
@@ -9,6 +9,8 @@ initSentry();
 const MIN_READABLE_TEXT_LENGTH = 100;
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_TEXT_CHARS = 50_000;
+const GUEST_MAX_FILE_BYTES = 2 * 1024 * 1024;
+const GUEST_MAX_TEXT_CHARS = 20_000;
 
 const UNREADABLE_FILE_RESPONSE = {
   statusCode: 422,
@@ -24,8 +26,21 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
+  let body: any;
+  try {
+    body = JSON.parse(event.body);
+  } catch {
+    return {
+      statusCode: 400,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid JSON" }),
+    };
+  }
+
+  const guestPreview = body?.guestPreview === true;
   const authHeader = event.headers?.authorization || event.headers?.Authorization;
-  if (!authHeader) {
+
+  if (!authHeader && !guestPreview) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
@@ -33,23 +48,31 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     };
   }
 
-  const supabase = getSupabaseClient();
-  if (!supabase) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Server configuration error. Please contact support." }),
-    };
-  }
+  if (authHeader) {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Server configuration error. Please contact support." }),
+      };
+    }
 
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Invalid or expired authentication token" }),
-    };
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return {
+        statusCode: 401,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Invalid or expired authentication token" }),
+      };
+    }
+  } else {
+    // Unauthenticated guest preview — stricter rate limit, no Supabase access.
+    const guestRateLimit = await checkGuestPreviewRateLimit(event as any);
+    if (!guestRateLimit.allowed) {
+      return guestRateLimit.response!;
+    }
   }
 
   // Check for API key before proceeding
@@ -64,7 +87,6 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
 
   try {
     console.log(`[extract-resume-json] Received request. Method: ${event.httpMethod}`);
-    const body = JSON.parse(event.body);
     const { data, kind, name, mime } = body;
     console.log(`[extract-resume-json] Payload kind: ${kind}, Data length: ${data ? data.length : 'N/A'}`);
 
@@ -92,6 +114,13 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       // This ensures we always have the full text regardless of Gemini's response
       try {
         const buffer = Buffer.from(data, "base64");
+        if (guestPreview && buffer.byteLength > GUEST_MAX_FILE_BYTES) {
+          return {
+            statusCode: 413,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ error: "Preview files are limited to 2MB. Please sign in to process larger files." }),
+          };
+        }
         if (buffer.byteLength > MAX_FILE_BYTES) {
           return {
             statusCode: 413,
@@ -129,6 +158,27 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
           statusCode: 413,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ error: "Resume text is too large. Please shorten it and try again." }),
+        };
+      }
+
+      if (
+        guestPreview
+        && body.sourceFileSizeBytes !== undefined
+        && Number.isFinite(Number(body.sourceFileSizeBytes))
+        && Number(body.sourceFileSizeBytes) > GUEST_MAX_FILE_BYTES
+      ) {
+        return {
+          statusCode: 413,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ error: "Preview files are limited to 2MB. Please sign in to process larger files." }),
+        };
+      }
+
+      if (guestPreview && body.value.length > GUEST_MAX_TEXT_CHARS) {
+        return {
+          statusCode: 413,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ error: "Preview text is limited to 20,000 characters. Please sign in to process longer resumes." }),
         };
       }
 

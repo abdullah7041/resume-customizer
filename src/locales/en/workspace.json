@@ -22,12 +22,9 @@
     "signInDescription": "Connect your account to securely upload resumes, run match analysis, and save optimization drafts.",
     "signInViaGoogle": "Sign in via Google",
     "guest": {
-      "notice": "Preview the workflow here. Sign in to process resumes, run AI, save progress, or export to your account.",
+      "notice": "You're previewing Watheq. Sign in to save progress and use pipeline features.",
       "protectedActionTitle": "Sign in required",
       "protectedActionDesc": "Sign in to run AI analysis and save your progress.",
-      "resumeProcessingAuthTitle": "Sign in required",
-      "resumeProcessingAuthDesc": "Please sign in to securely process your resume.",
-      "createOrSignInCta": "Create or sign in with Google",
       "signInCta": "Sign in to save progress",
       "backToLanding": "Back to landing"
     },

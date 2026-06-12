@@ -145,6 +145,23 @@ describe('parseResume', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('rejects oversized guest preview files before extraction or network calls', async () => {
+    const file = new File(['a'], 'large.pdf', { type: 'application/pdf' });
+    Object.defineProperty(file, 'size', {
+      value: 2 * 1024 * 1024 + 1,
+      configurable: true,
+    });
+
+    await expect(parseResume(file, { guestPreview: true })).rejects.toMatchObject({
+      status: 413,
+      code: 'file/guest-too-large',
+      message: 'Preview files are limited to 2MB. Please sign in to process larger files.',
+    });
+
+    expect(mockResumeText.extractPlainTextFromArrayBuffer).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('maps extract-resume-json 401 responses to AUTH_REQUIRED', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: false,
@@ -235,7 +252,55 @@ describe('parseResume', () => {
     expect(payload).toEqual({
       kind: 'text',
       value: readableText,
+      sourceInputKind: 'file',
+      sourceWasFile: true,
+      sourceFileSizeBytes: file.size,
+      guestPreview: false,
     });
+  });
+
+  it('sends readable guest preview file text with source file metadata', async () => {
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+    const readableText = [
+      'Product Manager Riyadh Saudi Arabia',
+      'Led digital transformation programs across finance and operations',
+      'Managed stakeholder communication and delivery timelines',
+    ].join('\n');
+    mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue(readableText);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          document: {
+            plainText: readableText,
+            bullets: [],
+            sections: [],
+          },
+        }),
+    });
+
+    const file = new File(['%PDF-readable'], 'resume.pdf', { type: 'application/pdf' });
+
+    await expect(parseResume(file, { guestPreview: true })).resolves.toEqual({
+      plainText: readableText,
+      bullets: [],
+      sections: [],
+    });
+
+    const payload = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(payload).toEqual({
+      kind: 'text',
+      value: readableText,
+      sourceInputKind: 'file',
+      sourceWasFile: true,
+      sourceFileSizeBytes: file.size,
+      guestPreview: true,
+    });
+    expect(global.fetch.mock.calls[0][1].headers).not.toHaveProperty('Authorization');
   });
 });
 
@@ -374,6 +439,4 @@ describe('optimizeResume', () => {
     expect(result.source).toBe('gemini');
   });
 });
-
-
 

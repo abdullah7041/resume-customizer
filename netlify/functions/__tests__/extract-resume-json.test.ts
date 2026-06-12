@@ -28,7 +28,10 @@ const mockResumeText = {
 };
 
 const mockRateLimiter = {
-    withRateLimit: (_name: string, handler: Function) => handler
+    withRateLimit: (_name: string, handler: Function) => handler,
+    checkGuestPreviewRateLimit: vi.fn(
+        (): Promise<{ allowed: boolean; response?: HandlerResponse }> => Promise.resolve({ allowed: true })
+    )
 };
 
 const mockSupabaseClient = {
@@ -257,5 +260,170 @@ describe('extract-resume-json function', () => {
         expect(JSON.parse(result.body).error).toContain('Could not read the uploaded file');
         // parseResumeOnly must NOT be called with garbage
         expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
+    });
+
+    describe('guest preview parse path', () => {
+        it('rejects malformed JSON body with 400', async () => {
+            const event = {
+                httpMethod: 'POST',
+                body: '{not json',
+                headers: {}
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as any, mockContext) as HandlerResponse;
+            expect(result.statusCode).toBe(400);
+            expect(JSON.parse(result.body).error).toContain('Invalid JSON');
+        });
+
+        it('rejects unauthenticated request without guestPreview with 401', async () => {
+            const event = {
+                httpMethod: 'POST',
+                body: JSON.stringify({ kind: 'text', value: 'John Doe Software Engineer Python Django REST APIs cloud infrastructure' }),
+                headers: {}
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as any, mockContext) as HandlerResponse;
+            expect(result.statusCode).toBe(401);
+            expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
+        });
+
+        it('allows unauthenticated request with guestPreview: true', async () => {
+            const text = "John Doe\nSoftware Engineer\nExperience working with Python Django REST APIs cloud infrastructure";
+            const mockAnalysis = {
+                basics: { name: "John Doe", label: "Software Engineer" },
+                meta: { raw_text: text }
+            };
+            mockGeminiClient.parseResumeOnly.mockResolvedValue(mockAnalysis);
+
+            const event = {
+                httpMethod: 'POST',
+                body: JSON.stringify({ kind: 'text', value: text, guestPreview: true }),
+                headers: {}
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as any, mockContext) as HandlerResponse;
+            expect(result.statusCode).toBe(200);
+            expect(mockSupabaseClient.auth.getUser).not.toHaveBeenCalled();
+            const body = JSON.parse(result.body);
+            expect(body.document.basics.name).toBe("John Doe");
+        });
+
+        it('allows guest preview pasted text under 20k characters', async () => {
+            const text = "Jane Doe\nBusiness Analyst\nExperience improving finance operations dashboards and stakeholder reporting";
+            mockGeminiClient.parseResumeOnly.mockResolvedValue({
+                basics: { name: "Jane Doe", label: "Business Analyst" },
+                meta: { raw_text: text }
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                body: JSON.stringify({ kind: 'text', value: text, guestPreview: true }),
+                headers: {}
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as any, mockContext) as HandlerResponse;
+            expect(result.statusCode).toBe(200);
+            expect(mockSupabaseClient.auth.getUser).not.toHaveBeenCalled();
+            expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false);
+        });
+
+        it('applies stricter size limits to guest preview text payloads', async () => {
+            // Over the 20k guest limit, under the 50k authenticated limit
+            const guestTooLong = 'a '.repeat(11_000); // ~22,000 chars
+
+            const guestEvent = {
+                httpMethod: 'POST',
+                body: JSON.stringify({ kind: 'text', value: guestTooLong, guestPreview: true }),
+                headers: {}
+            } as Partial<HandlerEvent>;
+
+            const guestResult = await handler(guestEvent as any, mockContext) as HandlerResponse;
+            expect(guestResult.statusCode).toBe(413);
+            expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
+
+            // Same payload size, authenticated — not subject to the guest limit
+            const realisticPrefix = 'John Doe Software Engineer Python Django REST APIs cloud infrastructure delivery teams. '.repeat(5);
+            const realisticText = `${realisticPrefix}${guestTooLong}`;
+            mockGeminiClient.parseResumeOnly.mockResolvedValue({
+                basics: { name: "John Doe" },
+                meta: { raw_text: realisticText }
+            });
+
+            const authEvent = {
+                httpMethod: 'POST',
+                body: JSON.stringify({ kind: 'text', value: realisticText }),
+                headers: { Authorization: 'Bearer test-token' }
+            } as Partial<HandlerEvent>;
+
+            const authResult = await handler(authEvent as any, mockContext) as HandlerResponse;
+            expect(authResult.statusCode).toBe(200);
+            expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalled();
+        });
+
+        it('rejects guest preview text payloads sourced from files over 2MB', async () => {
+            const text = "John Doe\nSoftware Engineer\nExperience working with Python Django REST APIs cloud infrastructure";
+            const event = {
+                httpMethod: 'POST',
+                body: JSON.stringify({
+                    kind: 'text',
+                    value: text,
+                    guestPreview: true,
+                    sourceInputKind: 'file',
+                    sourceWasFile: true,
+                    sourceFileSizeBytes: 2 * 1024 * 1024 + 1,
+                }),
+                headers: {}
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as any, mockContext) as HandlerResponse;
+            expect(result.statusCode).toBe(413);
+            expect(JSON.parse(result.body).error).toContain('Preview files are limited to 2MB');
+            expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
+        });
+
+        it('fails closed when anonymous rate limiting is unavailable in production', async () => {
+            mockRateLimiter.checkGuestPreviewRateLimit.mockResolvedValueOnce({
+                allowed: false,
+                response: {
+                    statusCode: 503,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ error: 'Preview is temporarily unavailable. Please sign in to continue, or try again shortly.' }),
+                },
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                body: JSON.stringify({ kind: 'text', value: 'John Doe Software Engineer Python Django REST APIs cloud infrastructure', guestPreview: true }),
+                headers: {}
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as any, mockContext) as HandlerResponse;
+            expect(result.statusCode).toBe(503);
+            expect(JSON.parse(result.body).error).toContain('Preview is temporarily unavailable');
+            expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
+        });
+
+        it('authenticated parse path is unchanged', async () => {
+            const text = "John Doe\nSoftware Engineer\nExperience working with Python Django REST APIs cloud infrastructure";
+            const mockAnalysis = {
+                basics: { name: "John Doe", label: "Software Engineer" },
+                meta: { raw_text: text }
+            };
+            mockGeminiClient.parseResumeOnly.mockResolvedValue(mockAnalysis);
+
+            const event = {
+                httpMethod: 'POST',
+                body: JSON.stringify({ kind: 'text', value: text }),
+                headers: { Authorization: 'Bearer test-token' }
+            } as Partial<HandlerEvent>;
+
+            const result = await handler(event as any, mockContext) as HandlerResponse;
+            expect(result.statusCode).toBe(200);
+
+            const body = JSON.parse(result.body);
+            expect(body.document.basics.name).toBe("John Doe");
+            expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false);
+            expect(mockRateLimiter.checkGuestPreviewRateLimit).not.toHaveBeenCalled();
+        });
     });
 });

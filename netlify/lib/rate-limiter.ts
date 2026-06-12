@@ -303,6 +303,9 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // Generation endpoints using "Lite" model (already fast, keep at 10)
   "predict-questions": { maxRequests: 10 },  // Uses 'lite' model
 
+  // Unauthenticated guest preview parse — stricter than the authenticated limit above
+  "extract-resume-json-guest": { maxRequests: 5 },
+
   // Feedback system - INCREASED from 5 to 10
 
   // Batch processing - INCREASED from 5 to 8
@@ -451,6 +454,68 @@ async function checkRateLimit(
     // If rate limiting fails, log error but allow request through
     console.error("[rate-limiter] Rate limit check failed:", summarizeErrorForLog(err));
     return { allowed: true };
+  }
+}
+
+const PREVIEW_UNAVAILABLE_RESPONSE: HandlerResponse = {
+  statusCode: 503,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    error: "Preview is temporarily unavailable. Please sign in to continue, or try again shortly.",
+  }),
+};
+
+/**
+ * Check rate limit for the unauthenticated guest-preview parse path.
+ *
+ * Unlike `checkRateLimit`, this fails CLOSED outside development when Upstash
+ * isn't configured — anonymous requests must never bypass rate limiting in
+ * production, so we'd rather show a calm "preview unavailable" message than
+ * allow unlimited unauthenticated calls.
+ */
+export async function checkGuestPreviewRateLimit(
+  event: HandlerEvent
+): Promise<{ allowed: boolean; response?: HandlerResponse }> {
+  if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {
+    return { allowed: true };
+  }
+
+  const config = ENDPOINT_RATE_LIMITS["extract-resume-json-guest"];
+  const limiter = getRateLimiter(config);
+
+  if (!limiter) {
+    console.warn("[rate-limiter] Upstash not configured — failing closed for guest preview");
+    return { allowed: false, response: PREVIEW_UNAVAILABLE_RESPONSE };
+  }
+
+  try {
+    const clientId = getClientIdentifier(event);
+    const result = await limiter.limit(`extract-resume-json-guest:${clientId}`);
+
+    if (!result.success) {
+      console.log(`[rate-limiter] Guest preview rate limit exceeded for ${clientId}`);
+      return {
+        allowed: false,
+        response: {
+          statusCode: 429,
+          headers: {
+            ...RATE_LIMIT_HEADERS,
+            "Retry-After": "60",
+            "X-RateLimit-Limit": String(config.maxRequests),
+            "X-RateLimit-Remaining": "0",
+          },
+          body: JSON.stringify({
+            error: "Too many preview requests. Please sign in to continue, or try again in a minute.",
+            retryAfter: 60,
+          }),
+        },
+      };
+    }
+
+    return { allowed: true };
+  } catch (err) {
+    console.error("[rate-limiter] Guest preview rate limit check failed:", summarizeErrorForLog(err));
+    return { allowed: false, response: PREVIEW_UNAVAILABLE_RESPONSE };
   }
 }
 

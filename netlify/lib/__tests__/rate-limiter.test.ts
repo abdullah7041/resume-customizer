@@ -141,3 +141,57 @@ describe('rate-limiter endpoint configs', () => {
     expect(handler).toHaveBeenCalledTimes(30);
   });
 });
+
+describe('checkGuestPreviewRateLimit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    limitCounts.clear();
+    constructedLimiters.length = 0;
+  });
+
+  it('allows requests in development regardless of Upstash config', async () => {
+    process.env.NODE_ENV = 'development';
+    delete process.env.NETLIFY_DEV;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    const { checkGuestPreviewRateLimit } = await loadRateLimiter();
+    const result = await checkGuestPreviewRateLimit(buildEvent());
+    expect(result.allowed).toBe(true);
+  });
+
+  it('allows requests under the limit in production with Upstash configured', async () => {
+    setProductionUpstashEnv();
+
+    const { checkGuestPreviewRateLimit } = await loadRateLimiter();
+    for (let i = 1; i <= 5; i += 1) {
+      const result = await checkGuestPreviewRateLimit(buildEvent());
+      expect(result.allowed).toBe(true);
+    }
+  });
+
+  it('rejects requests over the limit in production with 429', async () => {
+    setProductionUpstashEnv();
+
+    const { checkGuestPreviewRateLimit } = await loadRateLimiter();
+    for (let i = 1; i <= 5; i += 1) {
+      await checkGuestPreviewRateLimit(buildEvent());
+    }
+
+    const blocked = await checkGuestPreviewRateLimit(buildEvent());
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.response?.statusCode).toBe(429);
+  });
+
+  it('fails closed with 503 in production when Upstash is not configured', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.NETLIFY_DEV;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    const { checkGuestPreviewRateLimit } = await loadRateLimiter();
+    const result = await checkGuestPreviewRateLimit(buildEvent());
+    expect(result.allowed).toBe(false);
+    expect(result.response?.statusCode).toBe(503);
+  });
+});

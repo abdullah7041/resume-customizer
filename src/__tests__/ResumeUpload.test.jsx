@@ -1,11 +1,15 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 
+const i18nMock = vi.hoisted(() => ({
+  language: "en",
+}));
+
 // Mock i18n to return translation keys as-is for testing
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key) => {
-      const translations = {
+      const baseTranslations = {
         "upload.title": "Upload or paste your resume",
         "upload.card.prepareButton": "Prepare Resume",
         "upload.card.clearButton": "Clear",
@@ -39,6 +43,17 @@ vi.mock("react-i18next", () => ({
         "upload.errors.readFailed": "We couldn't read that text file.",
         "upload.errors.readFailedHint": "Paste the contents manually instead.",
         "trust.noInvention": "Watheq does not invent employers, degrees, certifications, or metrics.",
+        "toasts.signInRequired": "Sign in required",
+        "toasts.signInRequiredDesc": "Please sign in to securely process your resume.",
+      };
+      const translations = {
+        ...baseTranslations,
+        ...(i18nMock.language === "ar"
+          ? {
+            "toasts.signInRequired": "تسجيل الدخول مطلوب",
+            "toasts.signInRequiredDesc": "سجّل دخولك لمعالجة سيرتك الذاتية بأمان.",
+          }
+          : {}),
       };
       return translations[key] || key;
     },
@@ -67,6 +82,7 @@ import { uploadResumeFile } from "../services/supabase.js";
 describe("ResumeUpload", () => {
   beforeEach(() => {
     uploadResumeFile.mockReset();
+    i18nMock.language = "en";
   });
 
   const setViewportWidth = (width) => {
@@ -137,23 +153,11 @@ describe("ResumeUpload", () => {
     );
   });
 
-  it("blocks signed-out file selection before parsing", async () => {
+  it("guest can select a file and prepare it without a sign-in wall", async () => {
     const onToast = vi.fn();
-    const onParseResume = vi.fn();
-    const onAuthAction = vi.fn();
+    const onParseResume = vi.fn().mockResolvedValue({});
 
-    render(
-      <ResumeUpload
-        onParseResume={onParseResume}
-        onToast={onToast}
-        onClear={vi.fn()}
-        requiresSignIn
-        authRequiredTitle="Sign in required"
-        authRequiredMessage="Please sign in to securely process your resume."
-        authActionLabel="Create or sign in with Google"
-        onAuthAction={onAuthAction}
-      />
-    );
+    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
 
     const fileInput = screen
       .getAllByLabelText(/upload resume file/i)
@@ -168,16 +172,44 @@ describe("ResumeUpload", () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
     });
 
-    expect(onParseResume).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: /prepare selected file/i })).not.toBeInTheDocument();
-    expect(onToast).toHaveBeenCalledWith({
-      type: "warning",
-      title: "Sign in required",
-      description: "Please sign in to securely process your resume.",
+    const submitButton = screen.getByRole("button", { name: /prepare selected file/i });
+
+    await act(async () => {
+      fireEvent.click(submitButton);
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /create or sign in with google/i }));
-    expect(onAuthAction).toHaveBeenCalledTimes(1);
+    expect(onParseResume).toHaveBeenCalledWith(
+      expect.objectContaining({ file }),
+      expect.any(AbortSignal)
+    );
+    expect(onToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Sign in required" })
+    );
+    expect(screen.queryByRole("button", { name: /create or sign in with google/i })).not.toBeInTheDocument();
+  });
+
+  it("guest can paste text and prepare it without a sign-in wall", async () => {
+    const onToast = vi.fn();
+    const onParseResume = vi.fn().mockResolvedValue({});
+
+    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
+
+    const pasteInput = screen.getByLabelText(/paste your resume text/i);
+    await act(async () => {
+      fireEvent.change(pasteInput, { target: { value: "Experienced analyst" } });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /prepare pasted text/i }));
+    });
+
+    expect(onParseResume).toHaveBeenCalledWith(
+      expect.objectContaining({ plainText: "Experienced analyst" }),
+      expect.any(AbortSignal)
+    );
+    expect(onToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Sign in required" })
+    );
   });
 
   it("shows auth-required UX instead of parse-failed copy for auth errors", async () => {
@@ -192,8 +224,6 @@ describe("ResumeUpload", () => {
         onParseResume={onParseResume}
         onToast={onToast}
         onClear={vi.fn()}
-        authRequiredTitle="Sign in required"
-        authRequiredMessage="Please sign in to securely process your resume."
       />
     );
 
@@ -216,6 +246,40 @@ describe("ResumeUpload", () => {
       expect.objectContaining({ title: "Parse failed" })
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Please sign in to securely process your resume.");
+  });
+
+  it("uses localized Arabic copy for auth-required parse errors", async () => {
+    i18nMock.language = "ar";
+    const onToast = vi.fn();
+    const authError = new Error("Please sign in to securely process your resume.");
+    authError.status = 401;
+    authError.type = "AUTH_REQUIRED";
+    const onParseResume = vi.fn().mockRejectedValue(authError);
+
+    render(
+      <ResumeUpload
+        onParseResume={onParseResume}
+        onToast={onToast}
+        onClear={vi.fn()}
+      />
+    );
+
+    const pasteInput = screen.getByLabelText(/paste your resume text/i);
+    await act(async () => {
+      fireEvent.change(pasteInput, { target: { value: "Experienced analyst" } });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /prepare pasted text/i }));
+    });
+
+    expect(onToast).toHaveBeenCalledWith({
+      type: "warning",
+      title: "تسجيل الدخول مطلوب",
+      description: "سجّل دخولك لمعالجة سيرتك الذاتية بأمان.",
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("سجّل دخولك لمعالجة سيرتك الذاتية بأمان.");
+    expect(screen.queryByText("Please sign in to securely process your resume.")).not.toBeInTheDocument();
   });
 
   it("rejects files over 5MB with a warning toast", async () => {
@@ -291,14 +355,16 @@ describe("ResumeUpload", () => {
     setViewportWidth(width);
     render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
 
-    const selectFileButton = screen.getByRole("button", { name: /select file/i });
-    expect(selectFileButton.parentElement).toHaveClass("sm:hidden");
-    expect(selectFileButton).toHaveClass("w-full", "min-h-[48px]");
+    const dropzone = screen.getByRole("button", { name: /upload resume file/i });
+    expect(dropzone).toBeInTheDocument();
 
     const prepareButton = screen.getByRole("button", { name: /prepare resume/i });
     const actionBar = prepareButton.closest("div");
     expect(actionBar).toHaveClass("flex-col-reverse", "sm:flex-row");
-    expect(prepareButton).toHaveClass("w-full", "sm:w-auto");
+    expect(prepareButton).toHaveClass("w-full", "sm:w-auto", "min-h-[48px]");
+
+    const clearButton = screen.getByRole("button", { name: /clear/i });
+    expect(clearButton).toHaveClass("w-full", "sm:w-auto", "min-h-[48px]");
   });
 
   it("rejects image uploads instead of sending them to parsing", async () => {

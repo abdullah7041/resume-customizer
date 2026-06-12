@@ -298,7 +298,7 @@ describe("MainContent resume parsing", () => {
 
     render(<MainContent />);
 
-    expect(await screen.findByText(/Preview the workflow here\. Sign in to process resumes/i)).toBeInTheDocument();
+    expect(await screen.findByText(/You're previewing Watheq\. Sign in to save progress/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign in to save progress/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /back to landing/i }));
@@ -307,34 +307,20 @@ describe("MainContent resume parsing", () => {
     expect(await screen.findByTestId("landing-page-mock")).toBeInTheDocument();
   });
 
-  it("passes sign-in-required upload props in guest workspace", async () => {
+  it("allows guest upload without any sign-in props or prompts", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");
 
     render(<MainContent />);
 
     expect(await screen.findByTestId("resume-upload-mock")).toBeInTheDocument();
-    expect(resumeUploadMockProps.current).toMatchObject({
-      requiresSignIn: true,
-      authRequiredTitle: "Sign in required",
-      authRequiredMessage: "Please sign in to securely process your resume.",
-      authActionLabel: "Create or sign in with Google",
-    });
+    expect(resumeUploadMockProps.current).not.toHaveProperty("requiresSignIn");
+    expect(resumeUploadMockProps.current).not.toHaveProperty("onAuthRequired");
+    expect(resumeUploadMockProps.current).not.toHaveProperty("authActionLabel");
+    expect(resumeUploadMockProps.current).not.toHaveProperty("onAuthAction");
+    expect(typeof resumeUploadMockProps.current.onParseResume).toBe("function");
 
-    act(() => {
-      resumeUploadMockProps.current.onAuthRequired();
-    });
-
-    expect(await screen.findByText(/Sign in required Please sign in to securely process your resume/i)).toBeInTheDocument();
-
-    act(() => {
-      resumeUploadMockProps.current.onAuthAction();
-    });
-
-    expect(authMockState.signInWithGoogle).toHaveBeenCalledWith({
-      intent: "signup",
-      source: "upload_auth_required",
-    });
+    expect(authMockState.signInWithGoogle).not.toHaveBeenCalled();
   });
 
   it("gates guest match analysis before backend calls", async () => {

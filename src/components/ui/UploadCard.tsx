@@ -87,10 +87,6 @@ export default function UploadCard({
   onCancel,
   isSaudiNational,
   onSaudiNationalChange,
-  requiresSignIn = false,
-  onAuthRequired,
-  authActionLabel,
-  onAuthAction,
 }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
@@ -109,14 +105,7 @@ export default function UploadCard({
     error: t("upload.card.status.error"),
   };
 
-  const gateAuthRequired = () => {
-    if (!requiresSignIn) return false;
-    onAuthRequired?.();
-    return true;
-  };
-
   const handleFile = async (file) => {
-    if (gateAuthRequired()) return;
     if (!file) return;
 
     const size = typeof file.size === "number" ? file.size : 0;
@@ -167,7 +156,6 @@ export default function UploadCard({
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-    if (gateAuthRequired()) return;
     const file = event.dataTransfer.files?.[0];
     if (file) {
       void handleFile(file);
@@ -176,7 +164,6 @@ export default function UploadCard({
 
   const handleDragOver = (event) => {
     event.preventDefault();
-    if (requiresSignIn) return;
     setIsDragging(true);
   };
 
@@ -186,12 +173,6 @@ export default function UploadCard({
   };
 
   const handleFileChange = (event) => {
-    if (gateAuthRequired()) {
-      if (event.target) {
-        event.target.value = "";
-      }
-      return;
-    }
     const file = event.target.files?.[0];
     if (file) {
       void handleFile(file);
@@ -227,13 +208,11 @@ export default function UploadCard({
         aria-label={uploadFileLabel}
         title={uploadFileLabel}
         onClick={() => {
-          if (gateAuthRequired()) return;
           inputRef.current?.click();
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            if (gateAuthRequired()) return;
             inputRef.current?.click();
           }
         }}
@@ -296,7 +275,6 @@ export default function UploadCard({
           id="resume-paste-text"
           value={pastedText}
           onChange={(event) => {
-            if (gateAuthRequired()) return;
             onTextChange?.(sanitizeTextInput(event.target.value));
           }}
           disabled={status === "uploading" || status === "parsing"}
@@ -319,21 +297,6 @@ export default function UploadCard({
         title={uploadFileLabel}
         onChange={handleFileChange}
       />
-
-      {/* Mobile: Prominent upload buttons */}
-      <div className="flex flex-col sm:hidden gap-2 w-full mt-4">
-        <button
-          type="button"
-          onClick={() => {
-            if (gateAuthRequired()) return;
-            inputRef.current?.click();
-          }}
-          className="flex items-center justify-center gap-2 w-full min-h-[48px] rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-sm shadow-[0_10px_22px_-16px_rgba(16,185,129,0.55)] transition-all duration-300 active:scale-[0.98]"
-        >
-          <UploadCloud className="h-5 w-5" />
-          <span>{t("upload.card.selectFile") || "Select File"}</span>
-        </button>
-      </div>
 
       {isSaved && fileName && (
         <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-600/28 bg-emerald-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(16,185,129,0.4)] animate-in fade-in slide-in-from-bottom-2 duration-500 dark:border-emerald-300/24 dark:bg-emerald-400/12 dark:text-emerald-50">
@@ -410,21 +373,10 @@ export default function UploadCard({
 
       {
         error && (
-          <div className="mt-4 space-y-3 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
+          <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
             <p className="text-sm font-medium text-red-700 dark:text-red-200" role="alert">
               {error}
             </p>
-            {requiresSignIn && onAuthAction && (
-              <GlassButton
-                type="button"
-                variant="primary"
-                size="sm"
-                onClick={onAuthAction}
-                className="mx-auto min-h-[40px]"
-              >
-                {authActionLabel || t("workspace.guest.createOrSignInCta", "Create or sign in with Google")}
-              </GlassButton>
-            )}
           </div>
         )
       }
@@ -466,7 +418,7 @@ export default function UploadCard({
           variant="ghost"
           onClick={onFileClear}
           disabled={!fileName && !pastedText}
-          className="w-full sm:w-auto text-gray-700 hover:text-red-700 hover:bg-red-500/8 dark:text-emerald-100/78 dark:hover:text-red-200 dark:hover:bg-red-500/10"
+          className="w-full sm:w-auto min-h-[48px] text-gray-700 hover:text-red-700 hover:bg-red-500/8 dark:text-emerald-100/78 dark:hover:text-red-200 dark:hover:bg-red-500/10"
         >
           <XCircle className="w-4 h-4 me-2" />
           {t("upload.card.clearButton")}
@@ -477,7 +429,7 @@ export default function UploadCard({
           <GlassButton
             variant="ghost"
             onClick={onCancel}
-            className="w-full sm:w-auto text-red-300 hover:text-red-200 hover:bg-red-500/10"
+            className="w-full sm:w-auto min-h-[48px] text-red-300 hover:text-red-200 hover:bg-red-500/10"
           >
             <XCircle className="w-4 h-4 me-2" />
             {t('common.cancel', 'Cancel')}
@@ -489,7 +441,7 @@ export default function UploadCard({
           disabled={disabled || status === "uploading" || status === "parsing"}
           variant="primary"
           size="lg"
-          className="w-full sm:w-auto min-w-[200px] shadow-[0_10px_22px_-16px_rgba(16,185,129,0.5)] hover:shadow-[0_12px_28px_-18px_rgba(16,185,129,0.55)]"
+          className="w-full sm:w-auto min-w-[200px] min-h-[48px] shadow-[0_10px_22px_-16px_rgba(16,185,129,0.5)] hover:shadow-[0_12px_28px_-18px_rgba(16,185,129,0.55)]"
         >
           {(status === "uploading" || status === "parsing") ? (
             <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t('upload.card.processingButton', 'Processing...')}</>

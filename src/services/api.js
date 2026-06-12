@@ -14,6 +14,8 @@ const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 export const AUTH_REQUIRED = 'AUTH_REQUIRED';
 export const AUTH_REQUIRED_RESUME_MESSAGE = 'Please sign in to securely process your resume.';
+const GUEST_MAX_FILE_BYTES = 2 * 1024 * 1024;
+const GUEST_FILE_TOO_LARGE_MESSAGE = 'Preview files are limited to 2MB. Please sign in to process larger files.';
 
 export const createAuthRequiredError = (message = AUTH_REQUIRED_RESUME_MESSAGE) => {
   const error = new Error(message);
@@ -246,6 +248,19 @@ export const parseResume = async (resumeInput, options = {}) => {
     try {
       let payload;
       if (resumeInput instanceof File) {
+        if (options.guestPreview && resumeInput.size > GUEST_MAX_FILE_BYTES) {
+          const error = new Error(GUEST_FILE_TOO_LARGE_MESSAGE);
+          error.status = 413;
+          error.code = 'file/guest-too-large';
+          throw error;
+        }
+
+        const sourceFileMetadata = {
+          sourceInputKind: 'file',
+          sourceWasFile: true,
+          sourceFileSizeBytes: resumeInput.size,
+        };
+
         // CLIENT-SIDE TEXT EXTRACTION: Extract text from PDF/DOCX in the browser
         // This saves 5-8s of serverless execution time by avoiding server-side PDF parsing
         let clientExtractedText = '';
@@ -278,7 +293,7 @@ export const parseResume = async (resumeInput, options = {}) => {
           if (isReadableText(clientExtractedText)) {
             // Client extraction succeeded — send plain text (no base64 file transfer)
             console.log('[API] Using client-extracted text (saving server-side PDF parsing time)');
-            payload = { kind: "text", value: clientExtractedText };
+            payload = { kind: "text", value: clientExtractedText, ...sourceFileMetadata };
           } else {
             // Text looks like binary garbage (CID-font PDF, image-based, etc.).
             // Send the file so the server can classify the failure consistently.
@@ -294,6 +309,7 @@ export const parseResume = async (resumeInput, options = {}) => {
               data: base64,
               name: resumeInput.name,
               mime: resumeInput.type,
+              ...sourceFileMetadata,
             };
           }
         } else {
@@ -311,16 +327,22 @@ export const parseResume = async (resumeInput, options = {}) => {
             data: base64,
             name: resumeInput.name,
             mime: resumeInput.type,
+            ...sourceFileMetadata,
           };
         }
       } else {
         payload = { kind: "text", value: resumeInput };
       }
 
-      const headers = await getAuthHeaders({
-        requireAuth: true,
-        authRequiredMessage: AUTH_REQUIRED_RESUME_MESSAGE,
-      });
+      const guestPreview = !!options.guestPreview;
+      payload.guestPreview = guestPreview;
+
+      const headers = guestPreview
+        ? await getAuthHeaders({ requireAuth: false })
+        : await getAuthHeaders({
+          requireAuth: true,
+          authRequiredMessage: AUTH_REQUIRED_RESUME_MESSAGE,
+        });
 
       const response = await fetch(PARSE_ENDPOINT, {
         method: "POST",
@@ -354,6 +376,11 @@ export const parseResume = async (resumeInput, options = {}) => {
 
       if (isAuthRequiredError(error)) {
         console.warn('[API] Resume parsing requires sign-in:', summarizeErrorForConsole(error));
+        throw error;
+      }
+
+      if (error.status === 413) {
+        console.warn('[API] Resume parsing payload rejected:', summarizeErrorForConsole(error));
         throw error;
       }
 
@@ -774,7 +801,5 @@ export const extractJobMetadata = async (jobText, language = 'en') => {
 
 // Legacy exports to prevent breaking imports if any remain
 export const analyzeResume = analyzeResumeWithAI;
-
-
 
 

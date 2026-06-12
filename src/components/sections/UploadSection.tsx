@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import UploadCard from '../ui/UploadCard';
 import { isAuthRequiredError } from '../../services/api.js';
 import { AppError } from '../../services/supabase.js';
@@ -32,12 +33,6 @@ interface UploadSectionProps {
     resumeDocument: ResumeDocument | null;
     onToast: (toast: Toast) => void;
     onClear: () => void;
-    requiresSignIn?: boolean;
-    authRequiredTitle?: string;
-    authRequiredMessage?: string;
-    onAuthRequired?: () => void;
-    authActionLabel?: string;
-    onAuthAction?: () => void;
 }
 
 export default function UploadSection({
@@ -45,13 +40,8 @@ export default function UploadSection({
     resumeDocument,
     onToast,
     onClear,
-    requiresSignIn = false,
-    authRequiredTitle = 'Sign in required',
-    authRequiredMessage = 'Please sign in to securely process your resume.',
-    onAuthRequired,
-    authActionLabel,
-    onAuthAction,
 }: UploadSectionProps) {
+    const { t } = useTranslation();
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'success' | 'error'>('idle');
     const [progress, setProgress] = useState(0);
@@ -59,34 +49,12 @@ export default function UploadSection({
     const [pastedText, setPastedText] = useState('');
     const [warnings, setWarnings] = useState<ParsingWarning[]>([]);
 
-    const previousAuthMessageRef = useRef(authRequiredMessage);
-
-    useEffect(() => {
-        const previousAuthMessage = previousAuthMessageRef.current;
-        previousAuthMessageRef.current = authRequiredMessage;
-        setError((current) => current === previousAuthMessage ? authRequiredMessage : current);
-    }, [authRequiredMessage]);
-
     // Ref for tracking active parse request to support cancellation
     const parseRequestActive = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
 
     // Get store actions
     const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload, isSaudiNational, setSaudiNational } = useResumeStore();
-
-    const handleAuthRequired = useCallback(() => {
-        setStatus('idle');
-        setProgress(0);
-        setError(authRequiredMessage);
-        onAuthRequired?.();
-        if (!onAuthRequired) {
-            onToast({
-                type: 'warning',
-                title: authRequiredTitle,
-                description: authRequiredMessage,
-            });
-        }
-    }, [authRequiredMessage, authRequiredTitle, onAuthRequired, onToast]);
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
@@ -144,11 +112,6 @@ export default function UploadSection({
     }, [status, onToast]);
 
     const handleSubmit = useCallback(async () => {
-        if (requiresSignIn) {
-            handleAuthRequired();
-            return;
-        }
-
         if (!file && !pastedText) {
             onToast({
                 type: 'warning',
@@ -247,7 +210,19 @@ export default function UploadSection({
             if (!parseRequestActive.current) return;
 
             if (isAuthRequiredError(err)) {
-                handleAuthRequired();
+                const authRequiredTitle = t('toasts.signInRequired', 'Sign in required');
+                const authRequiredMessage = t(
+                    'toasts.signInRequiredDesc',
+                    'Please sign in to securely process your resume.'
+                );
+                setStatus('error');
+                setProgress(0);
+                setError(authRequiredMessage);
+                onToast({
+                    type: 'warning',
+                    title: authRequiredTitle,
+                    description: authRequiredMessage,
+                });
                 return;
             }
 
@@ -265,7 +240,7 @@ export default function UploadSection({
                 description: message,
             });
         }
-    }, [file, handleAuthRequired, onParseResume, onToast, pastedText, requiresSignIn, resetForNewUpload, setOriginalResume, setParsedResumeText]);
+    }, [file, onParseResume, onToast, pastedText, resetForNewUpload, setOriginalResume, setParsedResumeText, t]);
 
     const fileName = file?.name || resumeDocument?.fileName || '';
     const disabled = !file && !pastedText && !resumeDocument?.plainText;
@@ -291,10 +266,6 @@ export default function UploadSection({
                 onCancel={handleCancel}
                 isSaudiNational={isSaudiNational}
                 onSaudiNationalChange={setSaudiNational}
-                requiresSignIn={requiresSignIn}
-                onAuthRequired={handleAuthRequired}
-                authActionLabel={authActionLabel}
-                onAuthAction={onAuthAction}
             />
 
 

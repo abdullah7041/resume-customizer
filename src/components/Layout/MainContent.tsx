@@ -335,19 +335,6 @@ export default function MainContent() {
     "workspace.guest.protectedActionDesc",
     "Sign in to run AI analysis and save your progress."
   );
-  const resumeProcessingAuthTitle = t(
-    "workspace.guest.resumeProcessingAuthTitle",
-    "Sign in required"
-  );
-  const resumeProcessingAuthMessage = t(
-    "workspace.guest.resumeProcessingAuthDesc",
-    "Please sign in to securely process your resume."
-  );
-  const resumeProcessingAuthActionLabel = t(
-    "workspace.guest.createOrSignInCta",
-    "Create or sign in with Google"
-  );
-
   const requireSignInForGuestAction = useCallback(() => {
     pushToast({
       type: "warning",
@@ -356,23 +343,8 @@ export default function MainContent() {
     });
   }, [guestProtectedActionDescription, guestProtectedActionTitle, pushToast]);
 
-  const requireSignInForResumeProcessing = useCallback(() => {
-    pushToast(
-      {
-        type: "warning",
-        title: resumeProcessingAuthTitle,
-        description: resumeProcessingAuthMessage,
-      },
-      { id: TOAST_IDS.upload }
-    );
-  }, [pushToast, resumeProcessingAuthMessage, resumeProcessingAuthTitle]);
-
   const handleGuestSignIn = useCallback(() => {
     void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
-  }, [signInWithGoogle]);
-
-  const handleUploadAuthAction = useCallback(() => {
-    void signInWithGoogle({ intent: "signup", source: "upload_auth_required" });
   }, [signInWithGoogle]);
 
   useEffect(() => {
@@ -708,6 +680,7 @@ export default function MainContent() {
         setFlowProgress(48);
         const parsed = await parseResume(parseInput, {
           signal,
+          guestPreview: isGuestMode,
           // Notify the user when the browser cannot extract enough selectable text.
           onOcrFallback: () => {
             pushToast(
@@ -757,7 +730,14 @@ export default function MainContent() {
       } catch (error) {
         setFlowProgress(0);
         if (isAuthRequiredError(error)) {
-          requireSignInForResumeProcessing();
+          pushToast(
+            {
+              type: "warning",
+              title: t("toasts.signInRequired"),
+              description: t("toasts.signInRequiredDesc"),
+            },
+            { id: TOAST_IDS.upload }
+          );
           throw error;
         }
 
@@ -774,7 +754,7 @@ export default function MainContent() {
         throw error;
       }
     },
-    [normalizeResumePayload, pushToast, requireSignInForResumeProcessing, resetPipelineContext, t]
+    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, t]
   );
 
   const handleAnalyzeMatchAI = useCallback(
@@ -1470,7 +1450,7 @@ export default function MainContent() {
 
   const guestNotice = t(
     "workspace.guest.notice",
-    "Preview the workflow here. Sign in to process resumes, run AI, save progress, or export to your account."
+    "You're previewing Watheq. Sign in to save progress and use pipeline features."
   );
 
   const renderGuestProtectedPanel = (title: string) => (
@@ -1599,12 +1579,6 @@ export default function MainContent() {
               resumeDocument={resumeData}
               onToast={handleUploadToast}
               onClear={handleClearResume}
-              requiresSignIn={isGuestMode}
-              authRequiredTitle={resumeProcessingAuthTitle}
-              authRequiredMessage={resumeProcessingAuthMessage}
-              onAuthRequired={requireSignInForResumeProcessing}
-              authActionLabel={resumeProcessingAuthActionLabel}
-              onAuthAction={handleUploadAuthAction}
             />
           )}
           {activeTab === "match" && (
