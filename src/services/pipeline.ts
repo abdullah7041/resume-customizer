@@ -81,7 +81,32 @@ export async function createJobApplication(
     // Deduplication check
     const duplicate = await findRecentDuplicate(user.id, input.company_name, input.job_title);
     if (duplicate) {
-      return { data: duplicate, error: null, isDuplicate: true };
+      const status = input.status || duplicate.status;
+      const timestampUpdates = buildTimestampFields(duplicate, status);
+      const mergedMetadata = {
+        ...(duplicate.metadata || {}),
+        ...(input.metadata || {}),
+      };
+
+      const { data, error } = await supabase
+        .from(TABLE)
+        .update({
+          ...input,
+          status,
+          metadata: mergedMetadata,
+          ...timestampUpdates,
+        })
+        .eq('id', duplicate.id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('[PipelineService] createJobApplication duplicate update error:', summarizeError(error));
+        return { data: null, error: error.message, isDuplicate: true };
+      }
+
+      return { data: data as JobApplication, error: null, isDuplicate: true };
     }
 
     const { data, error } = await supabase

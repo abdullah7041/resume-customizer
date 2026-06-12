@@ -26,8 +26,9 @@ const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").t
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m => ({ default: m.PipelineSection })));
 
-import { GlassTabs, type Tab } from "../ui/GlassTabs";
+import type { Tab } from "../ui/GlassTabs";
 import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflowNav";
+import { WorkflowStepper, type WorkflowStep, type WorkflowStepStatus } from "../ui/WorkflowStepper";
 import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
 import { GlassCard } from "../ui/GlassCard";
@@ -208,9 +209,9 @@ export default function MainContent() {
   const mobilePrimarySteps = useMemo<MobileWorkflowItem[]>(() => {
     const mobileLabels = {
       resume: t("workspace.mobileWorkflow.steps.resume", "Resume"),
-      match: t("workspace.mobileWorkflow.steps.match", "Match"),
+      match: t("workspace.mobileWorkflow.steps.jobAdMatch", "Job Ad + Match"),
       optimize: t("workspace.mobileWorkflow.steps.optimize", "Optimize"),
-      templates: t("workspace.mobileWorkflow.steps.export", "Export"),
+      templates: t("workspace.mobileWorkflow.steps.exportPipeline", "Export / Pipeline"),
       "more-tools": t("workspace.mobileWorkflow.moreTools", "More tools"),
     };
 
@@ -508,6 +509,58 @@ export default function MainContent() {
       handleTabChange(tabs[index + 1].value);
     }
   }, [activeNavValue, handleTabChange, tabs]);
+
+  const workflowSteps = useMemo<WorkflowStep[]>(() => {
+    const hasJobAd = jobDescription.trim().length > 0;
+    const hasMatch = Boolean(matchAnalysis);
+    const hasOptimization = Boolean(optimizationData) || optimizations.length > 0;
+    const isExportStep = activeTab === "templates" || activeTab === "pipeline";
+
+    const gatedStatus = (status: WorkflowStepStatus): WorkflowStepStatus =>
+      hasResume ? status : "locked";
+
+    return [
+      {
+        id: "resume",
+        label: t("workspace.stepper.resume", "Resume"),
+        hint: t("workspace.stepper.resumeHint", "Upload or paste"),
+        status: activeTab === "resume" ? "active" : hasResume ? "completed" : "active",
+        targetTab: "resume",
+      },
+      {
+        id: "jobAd",
+        label: t("workspace.stepper.jobAd", "Job Ad"),
+        hint: t("workspace.stepper.jobAdHint", "Add description"),
+        status: gatedStatus(activeTab === "match" && !hasJobAd ? "active" : hasJobAd ? "completed" : "upcoming"),
+        targetTab: "match",
+        lockedReason: resumeGateReason,
+      },
+      {
+        id: "match",
+        label: t("workspace.stepper.match", "Match"),
+        hint: t("workspace.stepper.matchHint", "Analyze fit"),
+        status: gatedStatus(activeTab === "match" && hasJobAd ? "active" : hasMatch ? "completed" : "upcoming"),
+        targetTab: "match",
+        lockedReason: resumeGateReason,
+      },
+      {
+        id: "optimize",
+        label: t("workspace.stepper.optimize", "Optimize"),
+        hint: t("workspace.stepper.optimizeHint", "Improve resume"),
+        status: gatedStatus(activeTab === "optimize" ? "active" : hasOptimization ? "completed" : "upcoming"),
+        targetTab: "optimize",
+        lockedReason: resumeGateReason,
+      },
+      {
+        id: "export",
+        label: t("workspace.stepper.export", "Export / Pipeline"),
+        hint: t("workspace.stepper.exportHint", "Save and track"),
+        status: gatedStatus(isExportStep ? "active" : "upcoming"),
+        targetTab: "templates",
+        lockedReason: resumeGateReason,
+      },
+    ];
+  }, [activeTab, hasResume, jobDescription, matchAnalysis, optimizationData, optimizations.length, resumeGateReason, t]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1513,13 +1566,28 @@ export default function MainContent() {
               />
             </div>
             <div className="hidden sm:block">
-              <GlassTabs
-                data-tour="features"
-                tabs={tabs}
-                activeValue={activeNavValue}
-                onTabChange={handleTabChange}
-                rightAction={renderClearAllAction(false)}
-              />
+              <div className="flex items-start gap-3">
+                <WorkflowStepper
+                  steps={workflowSteps}
+                  onStepClick={handleTabChange}
+                  className="flex-1"
+                />
+                <div className="flex shrink-0 items-center gap-2">
+                  <GlassButton
+                    type="button"
+                    variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={() => handleTabChange("more-tools")}
+                    disabled={!hasResume}
+                    title={!hasResume ? resumeGateReason : undefined}
+                    className="whitespace-nowrap"
+                  >
+                    <MoreHorizontal className="h-4 w-4 me-1.5" />
+                    {t("tabs.moreTools", "More tools")}
+                  </GlassButton>
+                  {renderClearAllAction(false)}
+                </div>
+              </div>
             </div>
           </div>
         </div>

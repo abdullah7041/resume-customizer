@@ -46,9 +46,11 @@
       "steps": {
         "resume": "السيرة الذاتية",
         "jobAd": "إعلان الوظيفة",
+        "jobAdMatch": "إعلان الوظيفة + المطابقة",
         "match": "المطابقة",
         "optimize": "التحسين",
-        "export": "التصدير"
+        "export": "التصدير",
+        "exportPipeline": "التصدير / المسار"
       }
     },
     "moreTools": {

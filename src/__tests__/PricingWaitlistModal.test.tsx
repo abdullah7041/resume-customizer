@@ -26,6 +26,8 @@ vi.mock('react-i18next', () => ({
 }));
 
 import { PricingWaitlistModal } from '../components/Credits/PricingWaitlistModal';
+import { PricingSection } from '../components/sections/PricingSection';
+import { analytics } from '../services/analytics';
 
 const renderModal = () =>
   render(
@@ -41,6 +43,7 @@ const renderModal = () =>
 describe('PricingWaitlistModal', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.clearAllMocks();
     insertMock.mockReset();
     insertMock.mockResolvedValue({ error: null });
     global.fetch = vi.fn().mockResolvedValue({ ok: true }) as unknown as typeof fetch;
@@ -96,7 +99,20 @@ describe('PricingWaitlistModal', () => {
     expect(payload.plan_type).toBe('pro');
     expect(payload.metadata.source).toBe('pricing_page');
     expect(payload.metadata.pricing_intent).toBe('not_provided');
+    expect(analytics.trackPricingIntent).toHaveBeenCalledWith({
+      source: 'pricing_page',
+      planHint: 'pro_waitlist',
+    });
     expect(await screen.findByText("You're on the list")).toBeInTheDocument();
+  });
+
+  it('opens the pricing waitlist without counting modal open as pricing intent', () => {
+    render(<PricingSection />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Join pricing waitlist' }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(analytics.trackPricingIntent).not.toHaveBeenCalled();
   });
 
   it('handles a duplicate email gracefully', async () => {

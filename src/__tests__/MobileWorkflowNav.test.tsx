@@ -66,9 +66,9 @@ vi.mock('react-i18next', () => ({
 
 const primarySteps: MobileWorkflowItem[] = [
   { value: 'resume', label: 'Resume', icon: FileText },
-  { value: 'match', label: 'Job Ad', icon: Target },
+  { value: 'match', label: 'Job Ad + Match', icon: Target },
   { value: 'optimize', label: 'Optimize', icon: Sparkles },
-  { value: 'templates', label: 'Export', icon: LayoutTemplate },
+  { value: 'templates', label: 'Export / Pipeline', icon: LayoutTemplate },
 ];
 
 const renderNav = (
@@ -112,17 +112,17 @@ describe('MobileWorkflowNav', () => {
     fireEvent.click(screen.getByText('All steps and tools'));
 
     const resumeStep = screen.getByRole('button', { name: /Resume Current/i });
-    const jobAdStep = screen.getByRole('button', { name: /Job Ad Locked/i });
+    const jobAdStep = screen.getByRole('button', { name: /Job Ad \+ Match Locked/i });
     expect(resumeStep).toHaveAttribute('aria-current', 'step');
     expect(jobAdStep).toBeDisabled();
     expect(jobAdStep).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('makes Job Ad the next mobile action after resume upload', () => {
+  it('makes Job Ad + Match the next mobile action after resume upload', () => {
     language = 'en';
     const { onStepChange } = renderNav();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Next: Job Ad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next: Job Ad + Match' }));
 
     expect(onStepChange).toHaveBeenCalledWith('match');
   });
@@ -131,9 +131,9 @@ describe('MobileWorkflowNav', () => {
     language = 'ar';
     const arabicSteps: MobileWorkflowItem[] = [
       { value: 'resume', label: 'السيرة الذاتية', icon: FileText },
-      { value: 'match', label: 'إعلان الوظيفة', icon: Target },
+      { value: 'match', label: 'إعلان الوظيفة + المطابقة', icon: Target },
       { value: 'optimize', label: 'التحسين', icon: Sparkles },
-      { value: 'templates', label: 'التصدير', icon: LayoutTemplate },
+      { value: 'templates', label: 'التصدير / المسار', icon: LayoutTemplate },
     ];
 
     renderNav({
@@ -144,7 +144,7 @@ describe('MobileWorkflowNav', () => {
     const nav = screen.getByRole('navigation', { name: 'تنقل خطوات العمل' });
     expect(nav).toHaveAttribute('dir', 'rtl');
     expect(within(nav).getAllByText('السيرة الذاتية').length).toBeGreaterThan(0);
-    expect(within(nav).getAllByText('التالي: إعلان الوظيفة').length).toBeGreaterThan(0);
+    expect(within(nav).getAllByText('التالي: إعلان الوظيفة + المطابقة').length).toBeGreaterThan(0);
     expect(within(nav).queryByText(/workspace\.mobileWorkflow|Job Ad|Resume|Next/)).not.toBeInTheDocument();
   });
 });

@@ -24,7 +24,7 @@ This document defines the beta validation funnel, success metrics, and launch/no
 | `landing_viewed` | Landing page mount | `language` |
 | `get_started_clicked` | Any primary CTA | `source: hero/walkthrough/final_cta` |
 | `signin_started` | Google sign-in OAuth initiated | `source: header_desktop/header_mobile/landing_get_started` |
-| `signup_started` | Google sign-up OAuth initiated | `source: header_desktop/header_mobile/landing_get_started` |
+| `signup_started` | Google sign-up OAuth initiated | `source: upload_auth_required` |
 | `job_description_submitted` | User clicks Analyze Match | `language` |
 | `match_analysis_started` | Match API request sent | `language` |
 | `match_analysis_success` | Match API success | `score_bucket` |
@@ -42,7 +42,7 @@ This document defines the beta validation funnel, success metrics, and launch/no
 
 ## 1.1 Event Ownership and Open Reporting Gaps
 
-- Sign-in/sign-up intent wiring is complete in `src/hooks/useAuth.tsx`; current shipped entry points call it from desktop header sign-in, mobile header sign-in, and landing get-started. Do not re-open this as an app-code gap unless a new auth entry point is added without `intent`/`source`.
+- Sign-in/sign-up intent wiring is complete in `src/hooks/useAuth.tsx`; current shipped sign-in entry points call it from desktop header sign-in, mobile header sign-in, and landing get-started, while the current sign-up intent is emitted from the upload auth-required path. Do not re-open this as an app-code gap unless a new auth entry point is added without `intent`/`source`.
 - Export analytics is owned by the actual export handlers in `TemplatesSection.tsx`; do not add export tracking to non-export components.
 - Avoid duplicate emissions: when a Phase 4 success/failure event covers a user action, do not emit an equivalent legacy event for the same action unless the dashboard explicitly requires both.
 - Launch readiness still requires real Mixpanel/dashboard review and production event volume against the thresholds below; code instrumentation alone does not satisfy the launch criteria.

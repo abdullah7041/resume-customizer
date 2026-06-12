@@ -1,7 +1,7 @@
 {
   "pricing": {
     "title": "Pricing",
-    "subtitle": "Simple, transparent pricing for everyone",
+    "subtitle": "Free access is live. Paid plans are waitlist-only while launch pricing is finalized.",
     "workspaceCta": "Need more credits? View plans",
     "forever": "/forever",
     "getStarted": "Get Started Free",
@@ -47,7 +47,7 @@
       },
       "pro": {
         "name": "Pro",
-        "description": "For serious job seekers",
+        "description": "Waitlist-only while launch pricing is finalized",
         "features": [
           "More optimization credits",
           "Save and track more jobs",

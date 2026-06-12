@@ -6,7 +6,6 @@ import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
 import { cn } from '../../lib/utils/cn';
 import { PricingWaitlistModal } from '../Credits/PricingWaitlistModal';
-import { analytics } from '../../services/analytics';
 
 interface PlanConfig {
     key: 'free' | 'pro';
@@ -29,7 +28,6 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
     const [showWaitlistModal, setShowWaitlistModal] = useState(false);
 
     const openWaitlist = () => {
-        analytics.trackPricingIntent({ source: 'pricing_page', planHint: 'pro' });
         setShowWaitlistModal(true);
     };
 

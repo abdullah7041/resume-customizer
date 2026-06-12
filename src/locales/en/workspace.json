@@ -46,9 +46,11 @@
       "steps": {
         "resume": "Resume",
         "jobAd": "Job Ad",
+        "jobAdMatch": "Job Ad + Match",
         "match": "Match",
         "optimize": "Optimize",
-        "export": "Export"
+        "export": "Export",
+        "exportPipeline": "Export / Pipeline"
       }
     },
     "moreTools": {

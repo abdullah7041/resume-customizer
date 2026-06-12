@@ -24,7 +24,7 @@
 ## Current Session Summary
 
 - Latest shipped commit reconciled: `2e3bdc9` (`Add pipeline, i18n, and AI usage updates`) adds the validation/launch plan, AI usage SQL handoff, pipeline surfaces, i18n split bundles, auth-entry analytics wiring, and centralized AI usage telemetry.
-- Launch analytics state after `2e3bdc9`: `src/services/analytics.ts` has metadata-only `signin_started` / `signup_started` helpers, and `src/hooks/useAuth.tsx` emits them from the Google OAuth boundary. Current call sites include desktop header sign-in, mobile header sign-in, and landing get-started.
+- Launch analytics state after `2e3bdc9`: `src/services/analytics.ts` has metadata-only `signin_started` / `signup_started` helpers, and `src/hooks/useAuth.tsx` emits them from the Google OAuth boundary. Current sign-in call sites include desktop header sign-in, mobile header sign-in, and landing get-started; current sign-up intent is emitted from the upload auth-required path.
 - AI usage telemetry state after the 2026-06-04 follow-up: `netlify/lib/openrouter-client.js` records provider/model/token/latency/success/error metadata through `netlify/lib/ai-usage-logger.js`, approximate cost comes from `netlify/lib/model-registry.js`, and telemetry insert attempts are awaited before AI calls resolve so short-lived Netlify invocations do not drop the write.
 - Current open loops are validation/operation loops, not already-fixed app-code gaps: deploy the telemetry durability fix, confirm production analytics volume/dashboard reporting, and observe at least one post-deploy production AI request writing to `public.ai_usage_events`. The manual Supabase client-role grant hardening tracked in `docs/SUPABASE_SCHEMA_DRIFT_20260522.md` was re-checked live on 2026-06-02 and is resolved.
 - P0-1 Supabase server-client hardening status: implemented in the current dirty tree. `netlify/lib/supabase-client.ts` now requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for privileged server work, with focused tests present under `netlify/lib/__tests__/supabase-client.test.ts`.
@@ -155,7 +155,7 @@
   - Netlify production environment/dashboard, if available.
   - Mixpanel dashboard, if available.
 - Acceptance criteria:
-  - Trigger or observe one production sign-in and sign-up intent, then confirm `signin_started` / `signup_started` in Mixpanel with expected `source` values.
+  - Trigger or observe one production sign-in and sign-up intent, then confirm `signin_started` / `signup_started` in Mixpanel with expected shipped `source` values (`header_desktop`, `header_mobile`, or `landing_get_started` for sign-in; `upload_auth_required` for sign-up).
   - Deploy the telemetry durability fix, then trigger or observe one production AI request and confirm a corresponding server-side `public.ai_usage_events` row.
   - If a post-deploy production AI request occurs but no row appears, inspect Netlify env/logs for `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and non-fatal `[AI Usage]` failures before changing more app code.
 - Focused verification commands:

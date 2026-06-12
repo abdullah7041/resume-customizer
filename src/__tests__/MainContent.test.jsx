@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MainContent from "../components/Layout/MainContent";
 
@@ -419,15 +419,17 @@ describe("MainContent resume parsing", () => {
 
     render(<MainContent />);
 
-    expect(screen.getByRole("tab", { name: /resume/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /match/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /optimize/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /tabs\.templates/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /export available/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /more tools/i })).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: /tabs\.interview/i })).not.toBeInTheDocument();
+    const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
+    expect(workflow).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /resume upload or paste/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /job ad add description/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /match analyze fit/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /optimize improve resume/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /export \/ pipeline save and track/i })).toBeInTheDocument();
+    expect(within(workflow).queryByRole("button", { name: /tabs\.interview/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /more tools/i }).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("tab", { name: /more tools/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /more tools/i })[0]);
 
     expect((await screen.findAllByText("Open tool")).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/tabs\.interview/i).length).toBeGreaterThan(0);

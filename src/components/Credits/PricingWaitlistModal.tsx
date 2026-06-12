@@ -93,7 +93,7 @@ export function PricingWaitlistModal({
     } else if (showPricingIntentSurvey && pricingIntent === 'monthly_29_sar') {
       analytics.trackPricingIntentMonthly29Sar(analyticsSource);
     }
-    analytics.trackPricingIntent({ source: analyticsSource, planHint: 'pro' });
+    analytics.trackPricingIntent({ source: analyticsSource, planHint: 'pro_waitlist' });
 
     setIsSubmitting(true);
     setSubmitError(null);
