@@ -5,7 +5,7 @@
     "subtitle": "Powerful AI tools designed specifically for the Saudi job market",
     "parsing": {
       "title": "Smart Resume Parsing",
-      "description": "Upload PDF or DOCX files and our AI extracts your information instantly with advanced OCR technology.",
+      "description": "Upload a text-based PDF or DOCX and our AI extracts your information instantly.",
       "benefit1": "Automatic section detection",
       "benefit2": "Supports Arabic and English",
       "benefit3": "Preserves formatting accuracy"

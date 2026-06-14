@@ -1,4 +1,5 @@
 import { parseResumeOnly } from "../lib/gemini-client.js";
+import { detectSectionSignals, findMissingSections, mergeWithEvidence } from "../lib/parse-quality.js";
 import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
 import { withRateLimit, checkGuestPreviewRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
@@ -92,6 +93,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
 
     let analysis;
     let extractedPlainText = "";
+    let previewTruncated = false;
 
     // Mirrors the frontend check in api.js: reject CID-font / scanned-PDF binary garbage.
     // CID fonts missing a ToUnicode CMap produce raw glyph indices that land in the
@@ -118,7 +120,10 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
           return {
             statusCode: 413,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ error: "Preview files are limited to 2MB. Please sign in to process larger files." }),
+            body: JSON.stringify({
+              error: "Preview files are limited to 2MB. Please sign in to process larger files.",
+              code: "guest/file-too-large",
+            }),
           };
         }
         if (buffer.byteLength > MAX_FILE_BYTES) {
@@ -149,6 +154,15 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         return UNREADABLE_FILE_RESPONSE;
       }
 
+      // Guest preview extracted-text cap. The text branch already rejects >20k, but a
+      // <=2MB text-based PDF can extract beyond the guest cap. Truncate for the preview
+      // and flag it explicitly (no silent loss → no misleading missing-section warnings).
+      if (guestPreview && extractedPlainText.length > GUEST_MAX_TEXT_CHARS) {
+        console.warn(`[extract-resume-json] Guest preview extracted text ${extractedPlainText.length} chars exceeds ${GUEST_MAX_TEXT_CHARS}; truncating for preview.`);
+        extractedPlainText = extractedPlainText.slice(0, GUEST_MAX_TEXT_CHARS);
+        previewTruncated = true;
+      }
+
       console.log("[extract-resume-json] Using pre-extracted text for parsing...");
       analysis = await parseResumeOnly(extractedPlainText, false);
       console.log("[extract-resume-json] parseResumeOnly returned success.");
@@ -170,7 +184,10 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         return {
           statusCode: 413,
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ error: "Preview files are limited to 2MB. Please sign in to process larger files." }),
+          body: JSON.stringify({
+            error: "Preview files are limited to 2MB. Please sign in to process larger files.",
+            code: "guest/file-too-large",
+          }),
         };
       }
 
@@ -178,7 +195,10 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         return {
           statusCode: 413,
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ error: "Preview text is limited to 20,000 characters. Please sign in to process longer resumes." }),
+          body: JSON.stringify({
+            error: "Preview text is limited to 20,000 characters. Please sign in to process longer resumes.",
+            code: "guest/text-too-large",
+          }),
         };
       }
 
@@ -201,6 +221,28 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     } else {
       console.warn("[extract-resume-json] Invalid input keys:", Object.keys(body || {}));
       return { statusCode: 400, body: JSON.stringify({ error: "Invalid input" }) };
+    }
+
+    // ---- Parse-quality gate -------------------------------------------------
+    // Compare raw-text section signals against the structured output. If the
+    // parser dropped a section that the raw text clearly contains, retry ONCE
+    // with a focused prompt and merge ONLY evidence-backed values. Whatever is
+    // still missing is recorded in meta.parseQuality so the UI can distinguish
+    // parser loss from genuinely-absent content (no misleading warnings).
+    const rawForSignals = extractedPlainText || (kind === "text" ? body.value : "") || "";
+    const signals = detectSectionSignals(rawForSignals);
+    let incompleteSections = findMissingSections(signals, analysis);
+    let retried = false;
+    if (incompleteSections.length > 0) {
+      console.warn(`[extract-resume-json] Parse-quality gate: sections present in text but missing in output: ${incompleteSections.join(", ")}. Retrying once with focus.`);
+      try {
+        const retryAnalysis = await parseResumeOnly(rawForSignals, false, { focusSections: incompleteSections });
+        analysis = mergeWithEvidence(analysis, retryAnalysis, signals);
+        retried = true;
+      } catch (retryError) {
+        console.warn("[extract-resume-json] Focused parse retry failed:", summarizeErrorForLog(retryError));
+      }
+      incompleteSections = findMissingSections(signals, analysis);
     }
 
 
@@ -296,6 +338,13 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     console.log(`[extract-resume-json] Final plainText length: ${bestPlainText.length} chars`);
     console.log(`[extract-resume-json] Source: ${textSource}`);
 
+    // Parse-quality metadata: lets the frontend suppress misleading "No X found"
+    // warnings when the section was lost in parsing or cut by the guest preview cap.
+    const parseQuality: { incompleteSections?: string[]; retried?: boolean; previewTruncated?: boolean } = {};
+    if (incompleteSections.length > 0) parseQuality.incompleteSections = incompleteSections;
+    if (retried) parseQuality.retried = true;
+    if (previewTruncated) parseQuality.previewTruncated = true;
+
     // Preserve the FULL JSON Resume structure from Gemini parsing
     // The analysis object already contains: basics, work, education, skills, projects, certificates, etc.
     const document = {
@@ -324,7 +373,10 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       bullets: [],
 
       // Metadata
-      meta: analysis.meta || {}
+      meta: {
+        ...(analysis.meta || {}),
+        ...(Object.keys(parseQuality).length > 0 ? { parseQuality } : {}),
+      }
     };
 
     return {

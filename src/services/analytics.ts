@@ -228,6 +228,32 @@ class Analytics {
         this.track('signup_started', { source });
     }
 
+    trackGuestPreviewStarted(source: 'landing_preview') {
+        this.track('guest_preview_started', { source });
+    }
+
+    trackGuestPreviewLimitHit(data: {
+        source: 'client_file_size' | 'server_file_size' | 'server_text_length' | 'server_rate_limit' | 'preview_unavailable' | 'protected_action' | 'unknown';
+        status?: number | null;
+        limit?: number | null;
+        used?: number | null;
+        remaining?: number | null;
+        retryAfter?: number | null;
+    }) {
+        this.track('guest_preview_limit_hit', {
+            source: data.source,
+            status: data.status ?? null,
+            limit: data.limit ?? null,
+            used: data.used ?? null,
+            remaining: data.remaining ?? null,
+            retry_after_seconds: data.retryAfter ?? null,
+        });
+    }
+
+    trackGuestPreviewSigninStarted(source: 'guest_banner' | 'guest_protected_action') {
+        this.track('guest_preview_signin_started', { source });
+    }
+
     trackJobDescriptionSubmitted() {
         this.track('job_description_submitted');
     }

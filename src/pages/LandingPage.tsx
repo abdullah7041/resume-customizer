@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type SyntheticEvent } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,7 @@ import { FeatureHighlightSection } from "../components/sections/FeatureHighlight
 import { Vision2030Mockup } from "../components/sections/landing/Vision2030Mockup";
 import { ClarificationMockup } from "../components/sections/landing/ClarificationMockup";
 import { InterviewPrepMockup } from "../components/sections/landing/InterviewPrepMockup";
-import { getSkylineUrls } from "../lib/assets";
+import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "../lib/assets";
 
 import { analytics } from "../services/analytics";
 
@@ -33,6 +33,20 @@ interface LandingPageProps {
 function translatedList(t: ReturnType<typeof useTranslation>["t"], key: string) {
   const value = t(key, { returnObjects: true });
   return Array.isArray(value) ? (value as string[]) : [];
+}
+
+// Safety net only: if the bundled hero asset genuinely fails to load, swap to the
+// inline SVG fallback. We strip the <picture> <source> elements so the fallback
+// src actually wins, and log in dev so a broken asset is never silently masked.
+function handleSkylineError(event: SyntheticEvent<HTMLImageElement>) {
+  const img = event.currentTarget;
+  if (img.dataset.fallbackApplied === "true") return;
+  img.dataset.fallbackApplied = "true";
+  img.closest("picture")?.querySelectorAll("source").forEach((source) => source.remove());
+  img.src = SKYLINE_FALLBACK_URL;
+  if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
+    console.warn("[LandingPage] Hero skyline asset failed to load; applied SVG fallback.");
+  }
 }
 
 function ProofMetric({ value, label }: { value: string; label: string }) {
@@ -76,6 +90,7 @@ function HeroProductStage() {
             className="h-full w-full rounded-b-[1.5rem] object-cover object-[54%_42%]"
             decoding="async"
             fetchPriority="high"
+            onError={handleSkylineError}
           />
         </picture>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(245,244,240,0.84)_46%,rgba(240,239,235,0.58)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(16,185,129,0.08)_52%,rgba(236,72,153,0.05)_100%)]" />
@@ -394,6 +409,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             className="h-full w-full object-cover object-[54%_42%]"
             decoding="async"
             fetchPriority="high"
+            onError={handleSkylineError}
           />
         </picture>
         <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(245,244,240,0.78)_52%,rgba(255,255,255,0.98)_100%)] dark:bg-[linear-gradient(180deg,rgba(6,19,15,0.76)_0%,rgba(6,19,15,0.84)_55%,rgba(6,19,15,1)_100%)]" />

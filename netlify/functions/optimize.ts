@@ -9,6 +9,7 @@ import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
+import { MODELS } from "../lib/model-registry.js";
 
 initSentry();
 
@@ -384,6 +385,8 @@ const baseHandler: Handler = async (event) => {
         hasOptimization: !!optimization,
         hadBulletImprovements: bulletImprovements?.length > 0,
         hasJobDescription: Boolean(jobText && jobText.trim().length > 0),
+        model: MODELS.flash,
+        latencyMs: Date.now() - startTime,
       }
     };
 

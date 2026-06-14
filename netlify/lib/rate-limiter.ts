@@ -462,6 +462,7 @@ const PREVIEW_UNAVAILABLE_RESPONSE: HandlerResponse = {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     error: "Preview is temporarily unavailable. Please sign in to continue, or try again shortly.",
+    code: "guest/preview-unavailable",
   }),
 };
 
@@ -506,6 +507,7 @@ export async function checkGuestPreviewRateLimit(
           },
           body: JSON.stringify({
             error: "Too many preview requests. Please sign in to continue, or try again in a minute.",
+            code: "guest/rate-limited",
             retryAfter: 60,
           }),
         },

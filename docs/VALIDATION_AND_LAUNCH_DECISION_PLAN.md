@@ -25,6 +25,9 @@ This document defines the beta validation funnel, success metrics, and launch/no
 | `get_started_clicked` | Any primary CTA | `source: hero/walkthrough/final_cta` |
 | `signin_started` | Google sign-in OAuth initiated | `source: header_desktop/header_mobile/landing_get_started` |
 | `signup_started` | Google sign-up OAuth initiated | `source: upload_auth_required` |
+| `guest_preview_started` | Signed-out user enters the preview workspace | `source: landing_preview` |
+| `guest_preview_limit_hit` | Guest preview user reaches a preview boundary or quota | `source: client_file_size/server_file_size/server_text_length/server_rate_limit/preview_unavailable/protected_action/unknown`, `status`, `limit`, `used`, `remaining`, `retry_after_seconds` |
+| `guest_preview_signin_started` | Guest preview user starts Google sign-in from the preview workspace | `source: guest_banner/guest_protected_action` |
 | `job_description_submitted` | User clicks Analyze Match | `language` |
 | `match_analysis_started` | Match API request sent | `language` |
 | `match_analysis_success` | Match API success | `score_bucket` |
@@ -43,11 +46,13 @@ This document defines the beta validation funnel, success metrics, and launch/no
 ## 1.1 Event Ownership and Open Reporting Gaps
 
 - Sign-in/sign-up intent wiring is complete in `src/hooks/useAuth.tsx`; current shipped sign-in entry points call it from desktop header sign-in, mobile header sign-in, and landing get-started, while the current sign-up intent is emitted from the upload auth-required path. Do not re-open this as an app-code gap unless a new auth entry point is added without `intent`/`source`.
+- Guest preview telemetry is owned by `MainContent.tsx`, `src/services/api.js`, and `extract-resume-json`: entry emits `guest_preview_started`, preview boundaries emit `guest_preview_limit_hit`, and Google sign-in from the preview workspace emits `guest_preview_signin_started`. These events must stay metadata-only: no resume text, job description, file name, AI output, or raw error/stack values.
 - Export analytics is owned by the actual export handlers in `TemplatesSection.tsx`; do not add export tracking to non-export components.
 - Avoid duplicate emissions: when a Phase 4 success/failure event covers a user action, do not emit an equivalent legacy event for the same action unless the dashboard explicitly requires both.
 - Launch readiness still requires real Mixpanel/dashboard review and production event volume against the thresholds below; code instrumentation alone does not satisfy the launch criteria.
 - 2026-06-02 Supabase live-state review found no auth logs in the prior 24 hours, no auth users after 2026-04-07, no `ai_usage_events` rows or inserts, no `job_applications` rows, and no adjacent persisted app activity after 2026-05-09. `signin_started` / `signup_started` visibility remains intentionally unconfirmed until Mixpanel or production traffic is reviewed.
 - 2026-06-04 telemetry follow-up fixed a plausible serverless race where AI usage logging returned before the Supabase insert settled. Payment readiness still requires one post-deploy production AI request with a confirmed `ai_usage_events` row.
+- 2026-06-14 guest preview telemetry follow-up added metadata-only funnel events for entering signed-out preview mode, hitting preview limits/quota, and converting to sign-in from guest mode. Launch readiness still requires Mixpanel/dashboard confirmation of these new events after production traffic.
 
 ---
 

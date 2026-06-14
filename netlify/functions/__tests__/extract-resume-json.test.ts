@@ -339,6 +339,7 @@ describe('extract-resume-json function', () => {
 
             const guestResult = await handler(guestEvent as any, mockContext) as HandlerResponse;
             expect(guestResult.statusCode).toBe(413);
+            expect(JSON.parse(guestResult.body).code).toBe('guest/text-too-large');
             expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
 
             // Same payload size, authenticated — not subject to the guest limit

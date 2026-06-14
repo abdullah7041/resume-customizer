@@ -22,6 +22,7 @@ import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkRateLimitForRequest } from "../lib/rate-limiter.js";
 import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
+import { MODELS } from "../lib/model-registry.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
 // in esbuild production bundles. Now uses the shared static import instead.
@@ -307,6 +308,8 @@ export default async function handler(request: Request): Promise<Response> {
             hadBulletImprovements: (optimization?.bullet_improvements?.length || 0) > 0,
             hasJobDescription: Boolean(jobText?.trim()),
             streamed: true,
+            model: MODELS.flash,
+            latencyMs: Date.now() - startTime,
           },
         };
 

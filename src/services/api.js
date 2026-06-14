@@ -86,6 +86,31 @@ const normalizeStrategicRealityCheck = (value) => {
   };
 };
 
+const getResponseRequestId = (response) =>
+  response.headers?.get?.('x-nf-request-id') ||
+  response.headers?.get?.('x-request-id') ||
+  response.headers?.get?.('cf-ray') ||
+  null;
+
+const attachResponseDebug = (target, response, data = {}) => {
+  if (!target || typeof target !== 'object') return target;
+
+  const requestId = data.requestId || data.debug?.requestId || getResponseRequestId(response);
+  target.debug = {
+    ...(data.debug && typeof data.debug === 'object' ? data.debug : {}),
+    ...(requestId ? { requestId } : {}),
+  };
+  return target;
+};
+
+const attachErrorDebug = (error, response, data = {}) => {
+  attachResponseDebug(error, response, data);
+  error.statusCode = response.status;
+  error.errorCode = data.code || error.code || error.type || null;
+  error.errorDetail = data.troubleshooting || data.message || data.error || null;
+  return error;
+};
+
 // Helper to get auth headers
 export const getAuthHeaders = async (options = {}) => {
   const { requireAuth = false, authRequiredMessage } = options;
@@ -182,14 +207,15 @@ const handleResponse = async (response) => {
     const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
     const error = new Error(data.error || `Too many requests. Please wait ${retryAfter} seconds.`);
     error.type = 'RATE_LIMITED';
+    error.code = data.code || 'rate/limited';
     error.retryAfter = retryAfter;
     error.status = 429;
-    throw error;
+    throw attachErrorDebug(error, response, data);
   }
 
   // Handle authentication errors
   if (response.status === 401) {
-    throw createAuthRequiredError(data.error || AUTH_REQUIRED_RESUME_MESSAGE);
+    throw attachErrorDebug(createAuthRequiredError(data.error || AUTH_REQUIRED_RESUME_MESSAGE), response, data);
   }
 
   // Handle Bad Gateway errors (502) - often caused by timeouts
@@ -198,7 +224,7 @@ const handleResponse = async (response) => {
     error.status = 502;
     error.type = 'BAD_GATEWAY';
     error.retryable = true;
-    throw error;
+    throw attachErrorDebug(error, response, data);
   }
 
   // Handle Gateway Timeout errors (504)
@@ -207,13 +233,16 @@ const handleResponse = async (response) => {
     error.status = 504;
     error.type = 'GATEWAY_TIMEOUT';
     error.retryable = true;
-    throw error;
+    throw attachErrorDebug(error, response, data);
   }
 
   if (!response.ok) {
     // Preserve quota metadata from error response
     const error = new Error(data.error || "Request failed");
     error.status = response.status;
+    if (data.code) {
+      error.code = data.code;
+    }
 
     if (data.quotaExceeded) {
       error.quotaExceeded = true;
@@ -222,10 +251,10 @@ const handleResponse = async (response) => {
       error.remaining = data.remaining;
       error.action = data.action;
     }
-    throw error;
+    throw attachErrorDebug(error, response, data);
   }
 
-  return data;
+  return attachResponseDebug(data, response, data);
 };
 
 // Helper to convert file to base64
@@ -618,6 +647,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     error.status = response.status;
     if (data.creditsRequired) error.creditsRequired = data.creditsRequired;
     if (data.creditsAvailable != null) error.creditsAvailable = data.creditsAvailable;
+    attachErrorDebug(error, response, data);
     recordFailure('openrouter-ai');
     throw error;
   }
@@ -663,16 +693,23 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
               onStatus?.(parsed.phase, parsed);
               break;
             case 'result':
-              result = parsed;
+              result = attachResponseDebug(parsed, response, parsed);
               recordSuccess('openrouter-ai');
               break;
             case 'error': {
               const error = new Error(parsed.error);
               error.retryable = parsed.retryable;
+              attachErrorDebug(error, response, parsed);
               recordFailure('openrouter-ai');
               throw error;
             }
             case 'done':
+              if (result && typeof parsed.durationMs === 'number') {
+                result.debug = {
+                  ...(result.debug || {}),
+                  latencyMs: parsed.durationMs,
+                };
+              }
               console.log(`[optimize-stream] Complete in ${parsed.durationMs}ms`);
               break;
           }
@@ -801,5 +838,3 @@ export const extractJobMetadata = async (jobText, language = 'en') => {
 
 // Legacy exports to prevent breaking imports if any remain
 export const analyzeResume = analyzeResumeWithAI;
-
-
