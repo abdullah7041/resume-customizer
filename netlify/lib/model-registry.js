@@ -64,6 +64,13 @@ const FEATURE_CONFIGS = {
     reasoningBudget: 512,
     timeoutMs: 65000,
   },
+  resume_truth_check: {
+    modelType: 'flash',
+    maxTokens: 6144,
+    temperature: 0,
+    reasoningBudget: 512,
+    timeoutMs: 65000,
+  },
   job_metadata_extraction: {
     modelType: 'lite',
     maxTokens: 1024,

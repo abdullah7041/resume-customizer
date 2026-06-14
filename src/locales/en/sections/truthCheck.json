@@ -1,0 +1,58 @@
+{
+  "sections": {
+    "truthCheck": {
+      "title": "Resume Truth Check",
+      "subtitle": "Find claims that need clearer evidence before you rely on them.",
+      "truthNote": "Watheq does not change your resume here. It only points out what may need proof, clarification, or verification.",
+      "run": "Run Truth Check",
+      "running": "Checking claims...",
+      "freeNote": "Free for now.",
+      "empty": {
+        "title": "Upload a resume first",
+        "description": "Truth Check reviews claims only after resume text is available."
+      },
+      "filters": {
+        "severity": "Severity",
+        "type": "Risk type"
+      },
+      "severity": {
+        "all": "All severities",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
+      "riskTypes": {
+        "all": "All risk types",
+        "unsupported": "Unsupported",
+        "inflated": "Inflated",
+        "vague": "Vague",
+        "unverifiable": "Unverifiable",
+        "inconsistent": "Inconsistent"
+      },
+      "evidenceStatus": {
+        "supported": "Supported",
+        "needs_evidence": "Needs evidence",
+        "unclear": "Unclear",
+        "contradicted": "Contradicted"
+      },
+      "results": {
+        "emptyTitle": "Ready to review claims",
+        "emptyDescription": "Run Truth Check to see unsupported, inflated, vague, unverifiable, or inconsistent claims.",
+        "loadingTitle": "Reviewing visible evidence",
+        "loadingDescription": "The AI is checking claims against your resume text only.",
+        "overallRisk": "Overall claim risk",
+        "noClaims": "No claims match the current filters.",
+        "visibleEvidence": "Visible evidence",
+        "limits": "What Watheq cannot verify"
+      },
+      "toasts": {
+        "running": "Running Truth Check",
+        "runningDesc": "Checking claims against your resume evidence.",
+        "complete": "Truth Check ready",
+        "completeDesc": "Review the claims that may need clearer evidence.",
+        "failed": "Truth Check failed",
+        "failedDesc": "Please try again in a moment."
+      }
+    }
+  }
+}

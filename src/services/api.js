@@ -11,6 +11,7 @@ const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
 const OPTIMIZE_STREAM_ENDPOINT = `/api/optimize-stream`;
 const CLARIFY_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-clarifications`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
+const TRUTH_CHECK_ENDPOINT = `${FUNCTION_BASE_PATH}/resume-truth-check`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 export const AUTH_REQUIRED = 'AUTH_REQUIRED';
 export const AUTH_REQUIRED_RESUME_MESSAGE = 'Please sign in to securely process your resume.';
@@ -783,6 +784,68 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
       throw error;
     }
   }, 3, 2000); // 3 retries, 2s base delay
+};
+
+export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en' }) => {
+  const text = resumeText?.plainText || resumeText;
+  if (!text?.trim()) {
+    throw new Error("Resume text is required");
+  }
+
+  if (isCircuitOpen('openrouter-ai')) {
+    throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
+  }
+
+  return retryWithBackoff(async () => {
+    try {
+      const headers = await getAuthHeaders({ requireAuth: true });
+
+      const response = await fetch(TRUTH_CHECK_ENDPOINT, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ resumeText: text, language }),
+      });
+
+      const data = await handleResponse(response);
+      recordSuccess('openrouter-ai');
+      return {
+        overallRisk: ['low', 'medium', 'high'].includes(data.overallRisk) ? data.overallRisk : 'medium',
+        summary: typeof data.summary === 'string' ? data.summary : '',
+        claims: Array.isArray(data.claims) ? data.claims : [],
+        limits: {
+          cannotVerify: Array.isArray(data.limits?.cannotVerify) ? data.limits.cannotVerify : [],
+        },
+        debug: data.debug,
+      };
+    } catch (error) {
+      console.error("Resume Truth Check failed:", summarizeErrorForConsole(error));
+      error.status = error.status || 500;
+
+      if (error.status !== 401) {
+        Sentry.captureException(error, {
+          tags: { api_function: 'analyzeResumeTruthCheck' },
+          contexts: {
+            request: {
+              has_resume: !!text,
+              error_type: error.type || 'unknown'
+            }
+          }
+        });
+      }
+
+      if (isAuthRequiredError(error)) {
+        throw error;
+      }
+
+      if (error.status === 502 || error.status === 504) {
+        recordFailure('openrouter-ai');
+        throw new Error('AI service is experiencing high load. We automatically retried but the request still timed out. Please try again in a moment.');
+      }
+
+      recordFailure('openrouter-ai');
+      throw error;
+    }
+  }, 3, 2000);
 };
 
 

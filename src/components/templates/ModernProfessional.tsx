@@ -1,6 +1,7 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
+import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -41,40 +42,6 @@ export function ModernProfessional({
 
   const { basics, work = [], education = [], skills = [], projects = [], languages = [], certificates = [] } = resume;
 
-  const normalizeUrl = (url?: string): string | null => {
-    if (!url) return null;
-    let clean = url.trim();
-    if (!clean) return null;
-    
-    // Auto-fix internal spaces by returning null if there are spaces without dot, or encoding if dot present
-    if (clean.includes(' ') && !clean.includes('.')) return null;
-    if (clean.includes(' ')) {
-      clean = encodeURI(clean);
-    }
-    
-    if (clean.startsWith('http')) return clean;
-    if (clean.includes('.')) return `https://${clean}`;
-    return null;
-  };
-  const resolveProfileUrl = (profile?: { url?: string; username?: string; network?: string }): string | null => {
-    if (!profile) return null;
-    const fromUrl = normalizeUrl(profile.url);
-    if (fromUrl) return fromUrl;
-    
-    // Fallback: If no URL was provided, try to build one from the username or text
-    const id = (profile.url || profile.username)?.trim();
-    
-    // Don't construct URLs blindly if the text contains spaces
-    if (id && !id.includes(' ') && !id.toLowerCase().includes(profile.network?.toLowerCase() || 'none')) {
-      const net = profile.network?.toLowerCase();
-      if (net === 'linkedin') return `https://linkedin.com/in/${id}`;
-      if (net === 'github') return `https://github.com/${id}`;
-    }
-
-    const fromUsername = normalizeUrl(profile.username);
-    if (fromUsername) return fromUsername;
-    return null;
-  };
   const linkedInProfile = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin');
   const linkedInUrl = resolveProfileUrl(linkedInProfile);
   const linkedInLabel = (linkedInProfile?.url || linkedInProfile?.username) && !linkedInUrl ? (linkedInProfile?.url || linkedInProfile?.username) : undefined;

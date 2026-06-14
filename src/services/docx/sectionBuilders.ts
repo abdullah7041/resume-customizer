@@ -8,6 +8,7 @@ import type { DocxTemplateConfig, SectionKey } from './templateStyles';
 import type { ResumeSchema } from '../../types/resume';
 import { splitTextWithKeywords, shouldApplyBolding } from '../../lib/utils/keywordBolder';
 import type { ResumeDirection } from '../../lib/utils/resumeDirection';
+import { normalizeUrl, resolveProfileUrl } from '../../lib/utils/profileUrl';
 
 // ── Types for the dynamically-imported docx module ──────
 export interface DocxModule {
@@ -70,17 +71,6 @@ function border(style: 'solid' | 'dashed' | 'none', size: number, color: string,
 /** Body font shorthand */
 function bf(cfg: DocxTemplateConfig) {
     return { font: cfg.fontFamily, size: cfg.baseFontSize, color: cfg.bodyColor };
-}
-
-function normalizeUrl(url?: string): string | null {
-    if (!url) return null;
-    let clean = url.trim();
-    if (!clean) return null;
-    if (clean.includes(' ') && !clean.includes('.')) return null;
-    if (clean.includes(' ')) clean = encodeURI(clean);
-    if (clean.startsWith('http')) return clean;
-    if (clean.includes('.')) return `https://${clean}`;
-    return null;
 }
 
 /**
@@ -254,23 +244,6 @@ export function buildHeader(
             })
         );
     }
-
-    const resolveProfileUrl = (profile?: { url?: string; username?: string; network?: string }): string | null => {
-        if (!profile) return null;
-        const fromUrl = normalizeUrl(profile.url);
-        if (fromUrl) return fromUrl;
-
-        const id = (profile.url || profile.username)?.trim();
-        if (id && !id.includes(' ') && !id.toLowerCase().includes(profile.network?.toLowerCase() || 'none')) {
-            const net = profile.network?.toLowerCase();
-            if (net === 'linkedin') return `https://linkedin.com/in/${id}`;
-            if (net === 'github') return `https://github.com/${id}`;
-        }
-
-        const fromUsername = normalizeUrl(profile.username);
-        if (fromUsername) return fromUsername;
-        return null;
-    };
 
     const linkedIn = basics.profiles?.find((p) => p.network?.toLowerCase() === 'linkedin');
     const linkedInLink = linkedIn ? resolveProfileUrl(linkedIn) : null;

@@ -1,7 +1,7 @@
 /**
  * Bug: Resume links are broken/unclickable.
  *
- * The fix uses:
+ * The fix uses shared helpers from `src/lib/utils/profileUrl.ts`:
  * 1. normalizeUrl: passes http URLs through, prepends https:// for domain-like strings (containing '.'), null for text labels
  * 2. resolveProfileUrl: tries url field → username field (only if it contains a dot, i.e. looks like a real URL)
  *
@@ -15,6 +15,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { normalizeUrl, resolveProfileUrl } from "../lib/utils/profileUrl";
 
 const TEMPLATE_DIR = resolve(__dirname, "..", "components", "templates");
 const TEMPLATE_FILES = [
@@ -29,34 +30,24 @@ describe("Bug: links must use normalizeUrl + resolveProfileUrl", () => {
     const src = readFileSync(resolve(TEMPLATE_DIR, file), "utf-8");
 
     describe(file, () => {
-      it("uses normalizeUrl for URL validation", () => {
+      it("imports the shared profileUrl helpers", () => {
+        expect(src).toMatch(/from ['"]@\/lib\/utils\/profileUrl['"]/);
         expect(src).toContain("normalizeUrl");
-        expect(src).not.toMatch(/const isValidUrl/);
-      });
-
-      it("uses resolveProfileUrl to handle multiple data shapes", () => {
         expect(src).toContain("resolveProfileUrl");
-      });
-
-      it("normalizeUrl handles domain-like URLs via includes('.')", () => {
-        expect(src).toMatch(/includes.*'\.'|indexOf.*'\.'|\.includes\('\.'\)/);
-      });
-
-      it("constructs URLs intelligently based on valid identifiers", () => {
-        // We now safely construct URLs if the id doesn't have spaces and isn't just the network name
-        expect(src).toMatch(/`https:\/\/linkedin\.com\/in\/\$\{/);
+        expect(src).not.toMatch(/const isValidUrl/);
       });
     });
   }
 });
 
-describe("Bug: DOCX export uses resolveProfileUrl", () => {
+describe("Bug: DOCX export uses the shared profileUrl helpers", () => {
   const docxSrc = readFileSync(
     resolve(__dirname, "..", "services", "docx", "sectionBuilders.ts"),
     "utf-8"
   );
 
-  it("uses normalizeUrl + resolveProfileUrl", () => {
+  it("imports normalizeUrl + resolveProfileUrl", () => {
+    expect(docxSrc).toMatch(/from ['"]\.\.\/\.\.\/lib\/utils\/profileUrl['"]/);
     expect(docxSrc).toContain("normalizeUrl");
     expect(docxSrc).toContain("resolveProfileUrl");
     expect(docxSrc).not.toMatch(/function isValidUrl/);
@@ -65,8 +56,59 @@ describe("Bug: DOCX export uses resolveProfileUrl", () => {
   it("uses ExternalHyperlink for clickable links", () => {
     expect(docxSrc).toContain("ExternalHyperlink");
   });
+});
 
-  it("constructs URLs intelligently based on valid identifiers", () => {
-    expect(docxSrc).toMatch(/`https:\/\/linkedin\.com\/in\/\$\{/);
+describe("profileUrl helpers (shared by templates + DOCX export)", () => {
+  describe("normalizeUrl", () => {
+    it("passes through a full http(s) URL", () => {
+      expect(normalizeUrl("https://linkedin.com/in/user")).toBe("https://linkedin.com/in/user");
+    });
+
+    it("prepends https:// to domain-like strings", () => {
+      expect(normalizeUrl("linkedin.com/in/user")).toBe("https://linkedin.com/in/user");
+    });
+
+    it("returns null for plain text labels without a dot", () => {
+      expect(normalizeUrl("LinkedIn Account")).toBeNull();
+    });
+
+    it("returns null for empty/undefined input", () => {
+      expect(normalizeUrl(undefined)).toBeNull();
+      expect(normalizeUrl("")).toBeNull();
+    });
+  });
+
+  describe("resolveProfileUrl", () => {
+    it("resolves a direct URL", () => {
+      expect(resolveProfileUrl({ url: "https://linkedin.com/in/user", network: "linkedin" })).toBe(
+        "https://linkedin.com/in/user"
+      );
+    });
+
+    it("constructs a LinkedIn URL from a bare username", () => {
+      expect(resolveProfileUrl({ username: "jane-doe", network: "linkedin" })).toBe(
+        "https://linkedin.com/in/jane-doe"
+      );
+    });
+
+    it("constructs a GitHub URL from a bare username", () => {
+      expect(resolveProfileUrl({ username: "janedoe", network: "github" })).toBe(
+        "https://github.com/janedoe"
+      );
+    });
+
+    it("returns null when neither url nor username has a dot and matches the network name", () => {
+      expect(resolveProfileUrl({ url: "LinkedIn", username: "LinkedIn", network: "linkedin" })).toBeNull();
+    });
+
+    it("prepends https:// when the username itself looks like a domain", () => {
+      expect(resolveProfileUrl({ username: "linkedin.com/in/user", network: "linkedin" })).toBe(
+        "https://linkedin.com/in/user"
+      );
+    });
+
+    it("returns null for an undefined profile", () => {
+      expect(resolveProfileUrl(undefined)).toBeNull();
+    });
   });
 });

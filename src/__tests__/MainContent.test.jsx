@@ -7,6 +7,7 @@ const {
   analyzeResumeMock,
   optimizeResumeMock,
   optimizeResumeStreamMock,
+  analyzeResumeTruthCheckMock,
   generateClarificationsMock,
   extractJobMetadataMock,
   analyticsMock,
@@ -15,6 +16,7 @@ const {
   analyzeResumeMock: vi.fn(),
   optimizeResumeMock: vi.fn(),
   optimizeResumeStreamMock: vi.fn(),
+  analyzeResumeTruthCheckMock: vi.fn(),
   // Non-fatal: always returns empty clarifications in tests so the optimize flow proceeds directly
   generateClarificationsMock: vi.fn().mockResolvedValue({ clarifications: [] }),
   extractJobMetadataMock: vi.fn(() => Promise.resolve(null)),
@@ -22,6 +24,7 @@ const {
     trackGuestPreviewStarted: vi.fn(),
     trackGuestPreviewLimitHit: vi.fn(),
     trackGuestPreviewSigninStarted: vi.fn(),
+    trackResumeTruthCheck: vi.fn(),
     trackJobMetadataExtracted: vi.fn(),
     trackJobMetadataExtractionFailed: vi.fn(),
     trackPipelineExportAttached: vi.fn(),
@@ -104,6 +107,23 @@ vi.mock("../components/sections/OptimizeSection", () => {
   };
 });
 
+vi.mock("../components/sections/TruthCheckSection", () => {
+  const React = require("react");
+  return {
+    __esModule: true,
+    TruthCheckSection: (props) =>
+      React.createElement(
+        "div",
+        { "data-testid": "truth-check-mock" },
+        props.result
+          ? React.createElement("span", null, `Truth risk: ${props.result.overallRisk}`)
+          : null,
+        React.createElement("button", { onClick: () => props.onAnalyze?.() }, "Run truth check"),
+        props.isGuestMode ? React.createElement("span", null, "guest gated") : null
+      ),
+  };
+});
+
 vi.mock("../components/ui/Tabs.tsx", () => {
   const React = require("react");
   return {
@@ -168,6 +188,7 @@ vi.mock("../services/api.js", () => ({
   analyzeResumeWithAI: analyzeResumeMock,
   optimizeResume: optimizeResumeMock,
   optimizeResumeStream: optimizeResumeStreamMock,
+  analyzeResumeTruthCheck: analyzeResumeTruthCheckMock,
   generateClarifications: generateClarificationsMock,
   extractJobMetadata: extractJobMetadataMock,
   AI_DEFAULT_TEMPERATURE: 0.32,
@@ -202,6 +223,7 @@ describe("MainContent resume parsing", () => {
     analyzeResumeMock.mockReset();
     optimizeResumeMock.mockReset();
     optimizeResumeStreamMock.mockReset();
+    analyzeResumeTruthCheckMock.mockReset();
     extractJobMetadataMock.mockReset();
     extractJobMetadataMock.mockResolvedValue(null);
     generateClarificationsMock.mockReset();
@@ -430,6 +452,91 @@ describe("MainContent resume parsing", () => {
     expect(extractJobMetadataMock).toHaveBeenCalledWith("Target job description", undefined);
   });
 
+  it("shows Truth Check as a primary workflow step after resume upload and before match", async () => {
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+
+    render(<MainContent />);
+
+    const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
+    const truthCheckStep = within(workflow).getByRole("button", { name: /truth check verify claims/i });
+    const matchStep = within(workflow).getByRole("button", { name: /match analyze fit/i });
+
+    expect(truthCheckStep).toBeInTheDocument();
+    expect(matchStep).toBeInTheDocument();
+    expect(Array.from(workflow.querySelectorAll("button")).indexOf(truthCheckStep))
+      .toBeLessThan(Array.from(workflow.querySelectorAll("button")).indexOf(matchStep));
+  });
+
+  it("runs free authenticated Truth Check and caches the result without credit copy", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "truth-check");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    analyzeResumeTruthCheckMock.mockResolvedValueOnce({
+      overallRisk: "medium",
+      summary: "Some claims need evidence.",
+      claims: [{
+        claimText: "Owned transformation",
+        section: "summary",
+        severity: "medium",
+        riskTypes: ["unsupported"],
+        evidenceStatus: "needs_evidence",
+        visibleEvidence: ["Owned transformation"],
+        whyItMatters: "Broad scope needs proof.",
+        userAction: "Add proof only if true.",
+      }],
+      limits: { cannotVerify: [] },
+      debug: { requestId: "truth-debug-1", model: "google/gemini-2.5-flash", latencyMs: 555 },
+    });
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run truth check/i }));
+
+    expect(await screen.findByText(/Truth risk: medium/i)).toBeInTheDocument();
+    expect(analyzeResumeTruthCheckMock).toHaveBeenCalledWith({
+      resumeText: "Parsed resume",
+      language: undefined,
+    });
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      "watheq:resumeTruthCheck",
+      expect.stringContaining("Owned transformation")
+    );
+    expect(screen.queryByText(/credits/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Request ID: truth-debug-1/i)).toBeInTheDocument();
+  });
+
+  it("gates guest Truth Check before backend calls", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:guestMode", "true");
+    localStorage.setItem("watheq:lastActiveTab", "truth-check");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run truth check/i }));
+
+    expect(analyzeResumeTruthCheckMock).not.toHaveBeenCalled();
+    expect(analyticsMock.trackGuestPreviewLimitHit).toHaveBeenCalledWith({
+      source: "protected_action",
+      status: 401,
+    });
+    expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
+  });
+
+  it("clears cached Truth Check when a new resume is uploaded", async () => {
+    localStorage.setItem("watheq:resumeTruthCheck", JSON.stringify({
+      resumeHash: "old",
+      result: { overallRisk: "high", summary: "Old", claims: [], limits: { cannotVerify: [] } },
+    }));
+
+    render(<MainContent />);
+
+    await act(async () => {
+      await resumeUploadMockProps.current.onParseResume({ kind: "text", value: "New resume" });
+    });
+
+    expect(localStorage.removeItem).toHaveBeenCalledWith("watheq:resumeTruthCheck");
+  });
+
   it("populates the dev AI debug panel from match metadata", async () => {
     localStorage.setItem("watheq:lastActiveTab", "match");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
@@ -533,4 +640,3 @@ describe("MainContent resume parsing", () => {
     expect(screen.getAllByText(/Pipeline/i).length).toBeGreaterThan(0);
   });
 });
-

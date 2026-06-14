@@ -248,6 +248,11 @@ export const Vision2030RequestSchema = z.object({
     jobDescription: z.string().max(MAX_JOB_LENGTH, "Job description too large").optional(),
 });
 
+export const TruthCheckRequestSchema = z.object({
+    resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
+    language: z.enum(["en", "ar"]).optional().default("en"),
+});
+
 // ============================================
 // Type Exports (inferred from schemas)
 // ============================================
@@ -263,6 +268,7 @@ export type ParseResumeRequest = z.infer<typeof ParseResumeRequestSchema>;
 export type MatchRequest = z.infer<typeof MatchRequestSchema>;
 export type OptimizeRequest = z.infer<typeof OptimizeRequestSchema>;
 export type ClarificationRequest = z.infer<typeof ClarificationRequestSchema>;
+export type TruthCheckRequest = z.infer<typeof TruthCheckRequestSchema>;
 
 // Gap Analysis Types
 export type GapAnalysisItem = z.infer<typeof GapAnalysisItemSchema>;

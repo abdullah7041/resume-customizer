@@ -1,9 +1,10 @@
 import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, LogIn, MoreHorizontal } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
+  analyzeResumeTruthCheck,
   optimizeResume,
   optimizeResumeStream,
   generateClarifications,
@@ -19,6 +20,7 @@ import TemplateGallery from "../sections/TemplatesSection";
 
 // Lazy-loaded tab sections — each gets its own chunk
 const MatchSection = lazy(() => import("../sections/MatchSection").then(m => ({ default: m.MatchSection })));
+const TruthCheckSection = lazy(() => import("../sections/TruthCheckSection").then(m => ({ default: m.TruthCheckSection })));
 const OptimizeSection = lazy(() => import("../sections/OptimizeSection").then(m => ({ default: m.OptimizeSection })));
 const InterviewSection = lazy(() => import("../sections/InterviewSection").then(m => ({ default: m.InterviewSection })));
 const BulkAnalysisSection = lazy(() => import("../sections/BulkAnalysisSection").then(m => ({ default: m.BulkAnalysisSection })));
@@ -39,6 +41,7 @@ import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supa
 import { attachExportToJobApplication, updateJobApplication } from "../../services/pipeline";
 import { analytics } from "../../services/analytics";
 import type { ExtractedJobMetadata } from "../../types/pipeline";
+import type { ResumeTruthCheckResult } from "../../types/truth-check";
 import ViewTextModal from "../ui/ViewTextModal";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
@@ -91,6 +94,7 @@ class LazyErrorBoundary extends Component<
 
 const getTabsConfig = (t) => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
+  { value: "truth-check", label: t("tabs.truthCheck", "Truth Check"), icon: ShieldCheck },
   { value: "match", label: t("tabs.match"), icon: Target },
   { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
 
@@ -102,7 +106,7 @@ const getTabsConfig = (t) => [
   { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true },
   { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase },
 ];
-const PRIMARY_TAB_VALUES = ["resume", "match", "optimize", "templates", "more-tools"];
+const PRIMARY_TAB_VALUES = ["resume", "truth-check", "match", "optimize", "templates", "more-tools"];
 const PRE_UPLOAD_TAB_VALUES = new Set(PRIMARY_TAB_VALUES);
 const MOBILE_PRIMARY_TAB_VALUES = PRIMARY_TAB_VALUES;
 const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030", "pipeline"];
@@ -112,6 +116,7 @@ const containerClass = "app-shell w-full";
 
 const TOAST_IDS = {
   upload: "toast:upload",
+  truthCheck: "toast:truth-check",
   match: "toast:match",
   optimize: "toast:optimize",
 };
@@ -119,6 +124,7 @@ const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
+const TRUTH_CHECK_STORAGE_KEY = "watheq:resumeTruthCheck";
 
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -130,6 +136,27 @@ const getId = () => {
 const scheduleTimeout = (callback, delay) => {
   const host = typeof window !== "undefined" ? window : globalThis;
   return host.setTimeout(callback, delay);
+};
+
+const getResumeFingerprint = (text: string) => `${text.length}:${text.slice(0, 120)}`;
+
+const loadCachedTruthCheck = (resumeText: string): ResumeTruthCheckResult | null => {
+  if (typeof window === "undefined" || !resumeText) return null;
+  try {
+    const stored = window.localStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as {
+      resumeHash?: string;
+      result?: ResumeTruthCheckResult;
+    };
+    return parsed?.resumeHash === getResumeFingerprint(resumeText) && parsed.result
+      ? parsed.result
+      : null;
+  } catch (error) {
+    console.warn("[MainContent] Failed to load cached Truth Check:", error);
+    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    return null;
+  }
 };
 
 const getGuestPreviewLimitTelemetry = (error: unknown) => {
@@ -315,6 +342,7 @@ export default function MainContent() {
   const mobilePrimarySteps = useMemo<MobileWorkflowItem[]>(() => {
     const mobileLabels = {
       resume: t("workspace.mobileWorkflow.steps.resume", "Resume"),
+      "truth-check": t("workspace.mobileWorkflow.steps.truthCheck", "Truth Check"),
       match: t("workspace.mobileWorkflow.steps.jobAdMatch", "Job Ad + Match"),
       optimize: t("workspace.mobileWorkflow.steps.optimize", "Optimize"),
       templates: t("workspace.mobileWorkflow.steps.exportPipeline", "Export / Pipeline"),
@@ -344,10 +372,14 @@ export default function MainContent() {
     return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
   });
   const [matchAnalysis, setMatchAnalysis] = useState(null);
+  const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
+    loadCachedTruthCheck(typeof resumeData?.plainText === "string" ? resumeData.plainText : "")
+  );
   const [optimizations, setOptimizations] = useState([]);
   const [optimizationData, setOptimizationData] = useState(null);
   const [optimizationKeywords, setOptimizationKeywords] = useState({ add: [], remove: [], neutral: [] });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isTruthChecking, setIsTruthChecking] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -598,6 +630,7 @@ export default function MainContent() {
 
   const workflowSteps = useMemo<WorkflowStep[]>(() => {
     const hasJobAd = jobDescription.trim().length > 0;
+    const hasTruthCheck = Boolean(truthCheckResult);
     const hasMatch = Boolean(matchAnalysis);
     const hasOptimization = Boolean(optimizationData) || optimizations.length > 0;
     const isExportStep = activeTab === "templates" || activeTab === "pipeline";
@@ -612,6 +645,14 @@ export default function MainContent() {
         hint: t("workspace.stepper.resumeHint", "Upload or paste"),
         status: activeTab === "resume" ? "active" : hasResume ? "completed" : "active",
         targetTab: "resume",
+      },
+      {
+        id: "truth-check",
+        label: t("workspace.stepper.truthCheck", "Truth Check"),
+        hint: t("workspace.stepper.truthCheckHint", "Verify claims"),
+        status: gatedStatus(activeTab === "truth-check" ? "active" : hasTruthCheck ? "completed" : "upcoming"),
+        targetTab: "truth-check",
+        lockedReason: resumeGateReason,
       },
       {
         id: "jobAd",
@@ -646,7 +687,7 @@ export default function MainContent() {
         lockedReason: resumeGateReason,
       },
     ];
-  }, [activeTab, hasResume, jobDescription, matchAnalysis, optimizationData, optimizations.length, resumeGateReason, t]);
+  }, [activeTab, hasResume, jobDescription, matchAnalysis, optimizationData, optimizations.length, resumeGateReason, t, truthCheckResult]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -667,11 +708,13 @@ export default function MainContent() {
     // Clear all stored data
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(JOB_STORAGE_KEY);
+    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
 
     // Reset local state
     setResumeData("");
     setJobDescription("");
     setMatchAnalysis(null);
+    setTruthCheckResult(null);
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
@@ -693,9 +736,11 @@ export default function MainContent() {
   const handleClearResume = useCallback(() => {
     if (typeof window === "undefined") return;
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
+    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     setResumeData("");
     // Also clear dependent data
     setMatchAnalysis(null);
+    setTruthCheckResult(null);
     setJobDescription("");
     setOptimizations([]);
     setOptimizationData(null);
@@ -824,6 +869,10 @@ export default function MainContent() {
             : parsed;
         setResumeData(enriched);
         setMatchAnalysis(null);
+        setTruthCheckResult(null);
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+        }
         setJobDescription("");
         setOptimizations([]);
         setOptimizationData(null);
@@ -999,6 +1048,85 @@ export default function MainContent() {
     },
     [guestProtectedActionDescription, i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resetPipelineContext, resumeData, t]
   );
+
+  const handleAnalyzeTruthCheck = useCallback(async () => {
+    if (isGuestMode) {
+      requireSignInForGuestAction();
+      return null;
+    }
+
+    const { parsedResumeText } = useResumeStore.getState();
+    const resumeTextToAnalyze: string = parsedResumeText || resumeData?.plainText || "";
+    if (!resumeTextToAnalyze.trim()) {
+      pushToast({
+        type: "warning",
+        title: t("toasts.resumeRequired"),
+        description: t("toasts.resumeRequiredDesc"),
+      });
+      return null;
+    }
+
+    const resumeHash = getResumeFingerprint(resumeTextToAnalyze);
+    const cached = loadCachedTruthCheck(resumeTextToAnalyze);
+    if (cached) {
+      setTruthCheckResult(cached);
+      return cached;
+    }
+
+    try {
+      setIsTruthChecking(true);
+      pushToast(
+        {
+          type: "info",
+          title: t("sections.truthCheck.toasts.running", "Running Truth Check"),
+          description: t("sections.truthCheck.toasts.runningDesc", "Checking claims against your resume evidence."),
+        },
+        { id: TOAST_IDS.truthCheck }
+      );
+
+      const result = await analyzeResumeTruthCheck({
+        resumeText: resumeTextToAnalyze,
+        language: i18n.language,
+      }) as ResumeTruthCheckResult;
+
+      setAiDebug(buildAiDebugSnapshot(result, "success"));
+      setTruthCheckResult(result);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
+          resumeHash,
+          result,
+          timestamp: new Date().toISOString(),
+        }));
+      }
+      analytics.trackResumeTruthCheck({
+        overallRisk: result.overallRisk,
+        claimCount: result.claims.length,
+        highSeverityCount: result.claims.filter((claim) => claim.severity === "high").length,
+      });
+      pushToast(
+        {
+          type: "success",
+          title: t("sections.truthCheck.toasts.complete", "Truth Check ready"),
+          description: t("sections.truthCheck.toasts.completeDesc", "Review the claims that may need clearer evidence."),
+        },
+        { id: TOAST_IDS.truthCheck }
+      );
+      return result;
+    } catch (error) {
+      setAiDebug(buildAiDebugSnapshot(error, "error"));
+      pushToast(
+        {
+          type: "danger",
+          title: t("sections.truthCheck.toasts.failed", "Truth Check failed"),
+          description: error instanceof Error ? error.message : t("sections.truthCheck.toasts.failedDesc", "Please try again in a moment."),
+        },
+        { id: TOAST_IDS.truthCheck }
+      );
+      throw error;
+    } finally {
+      setIsTruthChecking(false);
+    }
+  }, [i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resumeData?.plainText, t]);
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
@@ -1719,6 +1847,22 @@ export default function MainContent() {
                   jobDescription={jobDescription}
                   extractedMetadata={extractedMetadata}
                   onJobSaved={handleJobSavedToPipeline}
+                  isGuestMode={isGuestMode}
+                  onRequireSignIn={requireSignInForGuestAction}
+                  protectedActionMessage={guestProtectedActionDescription}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
+          )}
+          {activeTab === "truth-check" && (
+            <LazyErrorBoundary label="Truth Check section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <TruthCheckSection
+                  resumeText={resumeData?.plainText || ""}
+                  result={truthCheckResult}
+                  isAnalyzing={isTruthChecking}
+                  onAnalyze={handleAnalyzeTruthCheck}
+                  onToast={pushToast}
                   isGuestMode={isGuestMode}
                   onRequireSignIn={requireSignInForGuestAction}
                   protectedActionMessage={guestProtectedActionDescription}

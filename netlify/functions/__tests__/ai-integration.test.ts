@@ -5,6 +5,7 @@ import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/fun
 const mockGeminiClient = {
     processResume: vi.fn(),
     processMatchOnly: vi.fn(),
+    analyzeResumeTruthCheck: vi.fn(),
     generateCoverLetter: vi.fn(),
     predictInterviewQuestions: vi.fn()
 };
@@ -335,6 +336,95 @@ describe('AI Integration Functions', () => {
 
             const body = JSON.parse(result.body);
             expect(body.coverLetter).toBe("Dear Hiring Manager...");
+        });
+    });
+
+    describe('resume-truth-check function', () => {
+        let truthCheckHandler: any;
+
+        beforeEach(async () => {
+            const mod = await import('../resume-truth-check.js');
+            truthCheckHandler = mod.handler;
+        });
+
+        it('requires authentication', async () => {
+            const event = {
+                httpMethod: 'POST',
+                headers: {},
+                body: JSON.stringify({ resumeText: 'resume' })
+            } as Partial<HandlerEvent>;
+
+            const result = await truthCheckHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(401);
+            expect(mockGeminiClient.analyzeResumeTruthCheck).not.toHaveBeenCalled();
+        });
+
+        it('validates input schema', async () => {
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: '' })
+            } as Partial<HandlerEvent>;
+
+            const result = await truthCheckHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(400);
+            expect(mockGeminiClient.analyzeResumeTruthCheck).not.toHaveBeenCalled();
+        });
+
+        it('returns structured truth check results without consuming credits', async () => {
+            mockGeminiClient.analyzeResumeTruthCheck.mockResolvedValue({
+                overallRisk: 'medium',
+                summary: 'Some claims need clearer evidence.',
+                claims: [{
+                    claimText: 'Owned national transformation',
+                    section: 'summary',
+                    severity: 'medium',
+                    riskTypes: ['unsupported'],
+                    evidenceStatus: 'needs_evidence',
+                    visibleEvidence: ['Owned national transformation'],
+                    whyItMatters: 'The scope is broad.',
+                    userAction: 'Add scope only if true.',
+                }],
+                limits: { cannotVerify: ['External employer records'] },
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'Owned national transformation', language: 'en' })
+            } as Partial<HandlerEvent>;
+
+            const result = await truthCheckHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const body = JSON.parse(result.body);
+
+            expect(result.statusCode).toBe(200);
+            expect(body.overallRisk).toBe('medium');
+            expect(body.claims[0].claimText).toContain('Owned national transformation');
+            expect(body.creditsRemaining).toBeUndefined();
+            expect(mockGeminiClient.analyzeResumeTruthCheck).toHaveBeenCalledWith('Owned national transformation', 'en');
+            expect(mockCreditManager.checkCredits).not.toHaveBeenCalledWith('user@example.com', 'resume_truth_check', expect.anything());
+            expect(mockCreditManager.consumeCredits).not.toHaveBeenCalledWith('user@example.com', 'resume_truth_check');
+        });
+
+        it('returns a retryable timeout response', async () => {
+            const timeoutError = new Error('AI request timed out.');
+            timeoutError.name = 'TimeoutError';
+            (timeoutError as any).status = 504;
+            mockGeminiClient.analyzeResumeTruthCheck.mockRejectedValue(timeoutError);
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'resume' })
+            } as Partial<HandlerEvent>;
+
+            const result = await truthCheckHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const body = JSON.parse(result.body);
+
+            expect(result.statusCode).toBe(504);
+            expect(result.headers?.['Retry-After']).toBe('30');
+            expect(body.retryable).toBe(true);
+            expect(mockSentry.captureError).not.toHaveBeenCalled();
         });
     });
 

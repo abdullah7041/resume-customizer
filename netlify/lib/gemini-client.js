@@ -218,6 +218,28 @@ export async function processMatchOnly(resumeText, jobDescription, language = 'e
   }
 }
 
+export async function analyzeResumeTruthCheck(resumeText, language = 'en', options = {}) {
+  const MAX_RESUME = 15000;
+  const trimmedResume = (typeof resumeText === 'string' && resumeText.length > MAX_RESUME)
+    ? resumeText.substring(0, MAX_RESUME)
+    : resumeText;
+
+  console.log(`[Gemini] Resume Truth Check with ${MODELS.flash} (resume: ${trimmedResume.length} chars)`);
+
+  try {
+    return await executeAiContract('resume_truth_check', {
+      resumeText: trimmedResume,
+      language,
+    }, {
+      ...options,
+      featureName: options.featureName || 'resume_truth_check',
+    });
+  } catch (error) {
+    console.error('[OpenRouter] Error in analyzeResumeTruthCheck:', summarizeErrorForLog(error));
+    throw error;
+  }
+}
+
 export async function predictInterviewQuestions(resumeText, jobDescription, questionType = 'mixed', vulnerabilities = [], language = 'en', options = {}) {
   console.log(`[Gemini] Predicting interview questions (${questionType}) with ${MODELS.lite}, vulnerabilities: ${vulnerabilities.length}`);
 
