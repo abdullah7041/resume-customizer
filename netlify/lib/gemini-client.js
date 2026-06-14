@@ -1,4 +1,4 @@
-import { executeAiContract } from './ai-contracts/index.js';
+import { executeAiContract, MAX_PARSE_INPUT_CHARS } from './ai-contracts/index.js';
 import { MODELS } from './model-registry.js';
 import { summarizeErrorForLog } from './sentry.js';
 import {
@@ -75,7 +75,7 @@ export async function parseResumeOnly(inputData, isPdf = true, options = {}) {
     throw new Error('PDF inline data not supported with OpenRouter. Please convert PDF to text first using OCR.');
   }
 
-  const MAX_INPUT_CHARS = 10000;
+  const MAX_INPUT_CHARS = MAX_PARSE_INPUT_CHARS;
   const trimmedInput = (typeof inputData === 'string' && inputData.length > MAX_INPUT_CHARS)
     ? inputData.substring(0, MAX_INPUT_CHARS)
     : inputData;
@@ -84,10 +84,15 @@ export async function parseResumeOnly(inputData, isPdf = true, options = {}) {
     console.warn(`[OpenRouter] Input too long (${inputData.length} chars), truncating to ${MAX_INPUT_CHARS} chars`);
   }
 
+  // Evidence-driven focused retry: extract-resume-json passes focusSections when the
+  // first parse pass dropped sections that the raw text clearly contains.
+  const focusSections = Array.isArray(options.focusSections) ? options.focusSections : [];
+
   try {
-    console.log(`[OpenRouter] Parsing resume with ${MODELS.lite}. Input type: Text, length: ${trimmedInput.length} chars`);
+    console.log(`[OpenRouter] Parsing resume with ${MODELS.lite}. Input type: Text, length: ${trimmedInput.length} chars${focusSections.length ? `, focus: ${focusSections.join(',')}` : ''}`);
     const parsed = await executeAiContract('parse_resume', {
       inputData: trimmedInput,
+      focusSections,
     }, {
       ...options,
       featureName: options.featureName || 'parse_resume',

@@ -9,6 +9,7 @@ const {
   optimizeResumeStreamMock,
   generateClarificationsMock,
   extractJobMetadataMock,
+  analyticsMock,
 } = vi.hoisted(() => ({
   parseResumeMock: vi.fn(),
   analyzeResumeMock: vi.fn(),
@@ -17,6 +18,14 @@ const {
   // Non-fatal: always returns empty clarifications in tests so the optimize flow proceeds directly
   generateClarificationsMock: vi.fn().mockResolvedValue({ clarifications: [] }),
   extractJobMetadataMock: vi.fn(() => Promise.resolve(null)),
+  analyticsMock: {
+    trackGuestPreviewStarted: vi.fn(),
+    trackGuestPreviewLimitHit: vi.fn(),
+    trackGuestPreviewSigninStarted: vi.fn(),
+    trackJobMetadataExtracted: vi.fn(),
+    trackJobMetadataExtractionFailed: vi.fn(),
+    trackPipelineExportAttached: vi.fn(),
+  },
 }));
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
@@ -162,6 +171,12 @@ vi.mock("../services/api.js", () => ({
   generateClarifications: generateClarificationsMock,
   extractJobMetadata: extractJobMetadataMock,
   AI_DEFAULT_TEMPERATURE: 0.32,
+  isAuthRequiredError: (error) =>
+    error?.type === "AUTH_REQUIRED" || error?.code === "auth/required" || error?.status === 401,
+}));
+
+vi.mock("../services/analytics", () => ({
+  analytics: analyticsMock,
 }));
 
 vi.mock("../hooks/useUserCredits", () => ({
@@ -191,6 +206,7 @@ describe("MainContent resume parsing", () => {
     extractJobMetadataMock.mockResolvedValue(null);
     generateClarificationsMock.mockReset();
     generateClarificationsMock.mockResolvedValue({ clarifications: [] });
+    Object.values(analyticsMock).forEach((mock) => mock.mockClear());
     parseResumeMock.mockResolvedValue({
       plainText: "Parsed resume",
       bullets: [],
@@ -289,6 +305,7 @@ describe("MainContent resume parsing", () => {
 
     expect(authMockState.signInWithGoogle).not.toHaveBeenCalled();
     expect(localStorage.getItem("watheq:guestMode")).toBe("true");
+    expect(analyticsMock.trackGuestPreviewStarted).toHaveBeenCalledWith("landing_preview");
     expect(await screen.findByTestId("resume-upload-mock")).toBeInTheDocument();
   });
 
@@ -323,6 +340,42 @@ describe("MainContent resume parsing", () => {
     expect(authMockState.signInWithGoogle).not.toHaveBeenCalled();
   });
 
+  it("tracks guest sign-in conversion from the preview workspace", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:guestMode", "true");
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /sign in to save progress/i }));
+
+    expect(analyticsMock.trackGuestPreviewSigninStarted).toHaveBeenCalledWith("guest_banner");
+    expect(authMockState.signInWithGoogle).toHaveBeenCalledWith({
+      intent: "signin",
+      source: "landing_get_started",
+    });
+  });
+
+  it("tracks guest preview parse limits without resume metadata", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:guestMode", "true");
+    const error = new Error("Preview files are limited to 2MB. Please sign in to process larger files.");
+    error.status = 413;
+    error.code = "file/guest-too-large";
+    parseResumeMock.mockRejectedValueOnce(error);
+
+    render(<MainContent />);
+    await screen.findByTestId("resume-upload-mock");
+
+    await expect(resumeUploadMockProps.current.onParseResume("My resume")).rejects.toThrow(
+      "Preview files are limited"
+    );
+
+    expect(analyticsMock.trackGuestPreviewLimitHit).toHaveBeenCalledWith({
+      source: "client_file_size",
+      status: 413,
+    });
+  });
+
   it("gates guest match analysis before backend calls", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");
@@ -334,6 +387,10 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
     expect(analyzeResumeMock).not.toHaveBeenCalled();
+    expect(analyticsMock.trackGuestPreviewLimitHit).toHaveBeenCalledWith({
+      source: "protected_action",
+      status: 401,
+    });
     expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
   });
 
@@ -371,6 +428,57 @@ describe("MainContent resume parsing", () => {
     expect(await screen.findByText(/Reality tier: critical/i)).toBeInTheDocument();
     expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined);
     expect(extractJobMetadataMock).toHaveBeenCalledWith("Target job description", undefined);
+  });
+
+  it("populates the dev AI debug panel from match metadata", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "match");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    analyzeResumeMock.mockResolvedValueOnce({
+      score: 72,
+      missingKeywords: [],
+      topHits: [],
+      suggestions: [],
+      debug: {
+        requestId: "match-debug-1",
+        model: "google/gemini-2.5-flash",
+        latencyMs: 1234,
+      },
+    });
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
+
+    expect(await screen.findByText("AI Debug")).toBeInTheDocument();
+    expect(screen.getByText("success")).toBeInTheDocument();
+    expect(screen.getByText("google/gemini-2.5-flash")).toBeInTheDocument();
+    expect(screen.getByText("1234 ms")).toBeInTheDocument();
+    expect(screen.getByText(/Request ID: match-debug-1/i)).toBeInTheDocument();
+  });
+
+  it("populates the dev AI debug panel from optimize metadata", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+      debug: {
+        requestId: "optimize-debug-1",
+        model: "google/gemini-2.5-flash",
+        latencyMs: 2222,
+      },
+    });
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    expect(await screen.findByText("AI Debug")).toBeInTheDocument();
+    expect(screen.getByText("google/gemini-2.5-flash")).toBeInTheDocument();
+    expect(screen.getByText("2222 ms")).toBeInTheDocument();
+    expect(screen.getByText(/Request ID: optimize-debug-1/i)).toBeInTheDocument();
   });
 
   it("gates guest optimization and clarifications before backend calls", async () => {
@@ -425,7 +533,4 @@ describe("MainContent resume parsing", () => {
     expect(screen.getAllByText(/Pipeline/i).length).toBeGreaterThan(0);
   });
 });
-
-
-
 

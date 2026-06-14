@@ -8,6 +8,7 @@ import { getClientIP } from "../lib/ip-utils.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { normalizeScore } from "../lib/score-utils.js";
 import { buildStrategicRealityCheckSummary } from "../lib/strategic-reality-check.js";
+import { MODELS } from "../lib/model-registry.js";
 
 initSentry();
 
@@ -93,7 +94,9 @@ const baseHandler: Handler = async (event) => {
     const { resumeText, jobText, language } = parseResult.data;
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
+    const aiStartTime = Date.now();
     const match = await processMatchOnly(resumeText, jobText, language);
+    const latencyMs = Date.now() - aiStartTime;
     const normalizedScore = normalizeScore(match.score, 'match score');
 
     // Map to frontend expected format
@@ -118,7 +121,11 @@ const baseHandler: Handler = async (event) => {
       strategicRealityCheck: match.strategicRealityCheck || null,
       interviewPrep: null,
       gapAnalysis: [],
-      keywordStrategy: null
+      keywordStrategy: null,
+      debug: {
+        model: MODELS.flash,
+        latencyMs,
+      },
     };
 
     // Consume credits AFTER successful match (BEFORE database writes to minimize latency)

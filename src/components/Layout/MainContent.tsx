@@ -9,6 +9,7 @@ import {
   generateClarifications,
   extractJobMetadata,
   isAuthRequiredError,
+  AI_DEFAULT_TEMPERATURE,
 } from "../../services/api.js";
 import { ClarificationModal, type ClarificationQuestion } from "../modals/ClarificationModal";
 import { useAuth } from "../../hooks/useAuth";
@@ -131,6 +132,111 @@ const scheduleTimeout = (callback, delay) => {
   return host.setTimeout(callback, delay);
 };
 
+const getGuestPreviewLimitTelemetry = (error: unknown) => {
+  const candidate = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const status = typeof candidate.status === "number" ? candidate.status : null;
+  const code = typeof candidate.code === "string" ? candidate.code : "";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (code === "file/guest-too-large") {
+    return { source: "client_file_size" as const, status };
+  }
+
+  if (code === "guest/file-too-large") {
+    return { source: "server_file_size" as const, status };
+  }
+
+  if (code === "guest/text-too-large") {
+    return { source: "server_text_length" as const, status };
+  }
+
+  if (code === "guest/preview-unavailable") {
+    return { source: "preview_unavailable" as const, status };
+  }
+
+  if (status === 429) {
+    return {
+      source: "server_rate_limit" as const,
+      status,
+      retryAfter: typeof candidate.retryAfter === "number" ? candidate.retryAfter : null,
+    };
+  }
+
+  if (status === 503) {
+    return { source: "preview_unavailable" as const, status };
+  }
+
+  if (status === 413) {
+    return {
+      source: message.includes("text") || message.includes("20,000")
+        ? "server_text_length" as const
+        : "server_file_size" as const,
+      status,
+    };
+  }
+
+  if (candidate.quotaExceeded === true) {
+    return {
+      source: "unknown" as const,
+      status,
+      limit: typeof candidate.limit === "number" ? candidate.limit : null,
+      used: typeof candidate.used === "number" ? candidate.used : null,
+      remaining: typeof candidate.remaining === "number" ? candidate.remaining : null,
+    };
+  }
+
+  return null;
+};
+
+type AiDebugSnapshot = {
+  status: "success" | "error";
+  requestId?: string | null;
+  model?: string | null;
+  temperature?: number;
+  tokens?: number | null;
+  maxOutputTokens?: number | null;
+  latencyMs?: number | null;
+  statusCode?: number | null;
+  errorCode?: string | null;
+  errorDetail?: string | null;
+};
+
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? value as Record<string, unknown> : {};
+
+const toNumber = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const toStringValue = (value: unknown): string | null =>
+  typeof value === "string" && value.trim().length > 0 ? value : null;
+
+const buildAiDebugSnapshot = (
+  source: unknown,
+  status: AiDebugSnapshot["status"]
+): AiDebugSnapshot => {
+  const record = toRecord(source);
+  const debug = toRecord(record.debug);
+
+  return {
+    status,
+    requestId: toStringValue(debug.requestId) ?? toStringValue(record.requestId),
+    model: toStringValue(debug.model) ?? toStringValue(record.model),
+    temperature: AI_DEFAULT_TEMPERATURE,
+    tokens: toNumber(debug.tokens ?? record.tokens),
+    maxOutputTokens: toNumber(debug.maxOutputTokens ?? record.maxOutputTokens),
+    latencyMs: toNumber(debug.latencyMs ?? record.latencyMs),
+    statusCode: status === "success"
+      ? toNumber(record.statusCode) ?? 200
+      : toNumber(record.statusCode ?? record.status),
+    errorCode: status === "error"
+      ? toStringValue(record.errorCode ?? record.code ?? record.type)
+      : null,
+    errorDetail: status === "error"
+      ? toStringValue(record.errorDetail ?? record.message)
+      : null,
+  };
+};
+
 export default function MainContent() {
   const { t, i18n } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
@@ -245,7 +351,7 @@ export default function MainContent() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
-  const [aiDebug, _setAiDebug] = useState(null);
+  const [aiDebug, setAiDebug] = useState<AiDebugSnapshot | null>(null);
   const [activeJobApplicationId, setActiveJobApplicationId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<{ filePath: string; fileName: string } | null>(null);
   const [exportedJobApplicationId, setExportedJobApplicationId] = useState<string | null>(null);
@@ -256,7 +362,7 @@ export default function MainContent() {
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
   const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[] } | null>(null);
   const toastTimers = useRef(new Map());
-  const isDev = import.meta.env.MODE === "development";
+  const isDev = import.meta.env.DEV;
 
   useEffect(() => {
     if (!user || !guestMode || typeof window === "undefined") return;
@@ -269,6 +375,7 @@ export default function MainContent() {
       window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
       window.localStorage.setItem("watheq:landingSeen", "true");
     }
+    analytics.trackGuestPreviewStarted("landing_preview");
     setGuestMode(true);
     setActiveTab("resume");
   }, []);
@@ -336,6 +443,10 @@ export default function MainContent() {
     "Sign in to run AI analysis and save your progress."
   );
   const requireSignInForGuestAction = useCallback(() => {
+    analytics.trackGuestPreviewLimitHit({
+      source: "protected_action",
+      status: 401,
+    });
     pushToast({
       type: "warning",
       title: guestProtectedActionTitle,
@@ -343,9 +454,12 @@ export default function MainContent() {
     });
   }, [guestProtectedActionDescription, guestProtectedActionTitle, pushToast]);
 
-  const handleGuestSignIn = useCallback(() => {
+  const handleGuestSignIn = useCallback((source: "guest_banner" | "guest_protected_action" = "guest_banner") => {
+    if (isGuestMode) {
+      analytics.trackGuestPreviewSigninStarted(source);
+    }
     void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
-  }, [signInWithGoogle]);
+  }, [isGuestMode, signInWithGoogle]);
 
   useEffect(() => {
     const host = typeof window !== "undefined" ? window : globalThis;
@@ -729,6 +843,12 @@ export default function MainContent() {
         return enriched;
       } catch (error) {
         setFlowProgress(0);
+        if (isGuestMode) {
+          const telemetry = getGuestPreviewLimitTelemetry(error);
+          if (telemetry) {
+            analytics.trackGuestPreviewLimitHit(telemetry);
+          }
+        }
         if (isAuthRequiredError(error)) {
           pushToast(
             {
@@ -810,6 +930,7 @@ export default function MainContent() {
         const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
 
         const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language);
+        setAiDebug(buildAiDebugSnapshot(result, "success"));
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
 
@@ -860,6 +981,7 @@ export default function MainContent() {
         scheduleTimeout(() => setFlowProgress(0), 800);
         return result;
       } catch (error) {
+        setAiDebug(buildAiDebugSnapshot(error, "error"));
         setFlowProgress(0);
         emitHRSuperSaudEvent('error.generic');
         pushToast(
@@ -950,6 +1072,7 @@ export default function MainContent() {
             }
           );
         }
+        setAiDebug(buildAiDebugSnapshot(result, "success"));
 
         // Build full cards array including projects and certifications
         const allCards = [...(result.cards ?? [])];
@@ -1058,6 +1181,7 @@ export default function MainContent() {
         scheduleTimeout(() => setFlowProgress(0), 900);
         return result;
       } catch (error: any) {
+        setAiDebug(buildAiDebugSnapshot(error, "error"));
         setFlowProgress(0);
         emitHRSuperSaudEvent('error.generic');
 
@@ -1462,7 +1586,7 @@ export default function MainContent() {
           {guestProtectedActionDescription}
         </p>
       </div>
-      <GlassButton variant="primary" onClick={handleGuestSignIn}>
+      <GlassButton variant="primary" onClick={() => handleGuestSignIn("guest_protected_action")}>
         <LogIn className="h-4 w-4 me-2" />
         {t("workspace.guest.signInCta", "Sign in to save progress")}
       </GlassButton>
@@ -1520,7 +1644,7 @@ export default function MainContent() {
                 {guestNotice}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
-                <GlassButton variant="primary" size="sm" onClick={handleGuestSignIn}>
+                <GlassButton variant="primary" size="sm" onClick={() => handleGuestSignIn("guest_banner")}>
                   <LogIn className="h-4 w-4 me-2" />
                   {t("workspace.guest.signInCta", "Sign in to save progress")}
                 </GlassButton>
@@ -1744,7 +1868,7 @@ export default function MainContent() {
         <Suspense fallback={<SectionSkeleton />}>
           <LandingPage
             onGetStarted={enterGuestMode}
-            onSignIn={handleGuestSignIn}
+            onSignIn={() => handleGuestSignIn()}
           />
         </Suspense>
       </div>
@@ -1886,6 +2010,11 @@ export default function MainContent() {
                   <dd className="mt-1 font-medium text-ink-700 dark:text-surface-50">{aiDebug.errorCode ?? "–"}</dd>
                 </div>
               </dl>
+              {aiDebug.errorDetail && (
+                <p className="mt-3 break-words text-[10px] text-ink-500/80 dark:text-surface-50/60">
+                  Error: {aiDebug.errorDetail}
+                </p>
+              )}
               {aiDebug.requestId && (
                 <p className="mt-3 break-words text-[10px] text-ink-400/80 dark:text-surface-50/50">
                   Request ID: {aiDebug.requestId}

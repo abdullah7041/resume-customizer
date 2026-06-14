@@ -160,12 +160,24 @@ export interface Reference {
 }
 
 /**
+ * Parse-quality signals from the extraction pipeline.
+ * Lets the UI distinguish parser loss / preview truncation from genuinely-absent
+ * content so it never shows misleading "No X found" warnings.
+ */
+export interface ParseQuality {
+    incompleteSections?: string[]; // sections present in raw text but dropped by the parser
+    retried?: boolean; // a focused re-parse was attempted
+    previewTruncated?: boolean; // guest preview text was capped before parsing
+}
+
+/**
  * Schema metadata
  */
 export interface Meta {
     canonical?: string; // URL to latest version
     version?: string;
     lastModified?: string; // ISO 8601 date
+    parseQuality?: ParseQuality;
 }
 
 /**

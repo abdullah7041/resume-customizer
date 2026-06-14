@@ -228,7 +228,18 @@ export default function UploadSection({
 
             setStatus('error');
             setProgress(0);
-            const message = err instanceof Error ? err.message : 'Failed to parse resume';
+
+            // 422 = no selectable text (scanned/image-only or unsupported font encoding).
+            // Surface a clear, localized instruction instead of the raw server string —
+            // we do NOT support OCR, so the user must paste text or use a text-based file.
+            const errStatus = (err as Error & { status?: number })?.status;
+            const isUnreadable = errStatus === 422;
+            const message = isUnreadable
+                ? t('upload.errors.unreadable', "We couldn't read selectable text from that file.")
+                : (err instanceof Error ? err.message : 'Failed to parse resume');
+            const description = isUnreadable
+                ? t('upload.errors.unreadableHint', "Upload a text-based PDF/DOCX or paste your resume text. Scanned or image-only files aren't supported yet.")
+                : message;
             setError(message);
 
             // Track failed upload
@@ -236,8 +247,10 @@ export default function UploadSection({
 
             onToast({
                 type: 'danger',
-                title: 'Parse failed',
-                description: message,
+                title: isUnreadable
+                    ? t('upload.errors.unreadable', "We couldn't read selectable text from that file.")
+                    : 'Parse failed',
+                description,
             });
         }
     }, [file, onParseResume, onToast, pastedText, resetForNewUpload, setOriginalResume, setParsedResumeText, t]);

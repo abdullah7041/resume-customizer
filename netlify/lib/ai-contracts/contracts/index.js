@@ -9,6 +9,11 @@ import {
   containsBannedRealityCheckClaim,
 } from '../../strategic-reality-check.js';
 
+// Max chars of resume text fed to the parser. Must match (or exceed) the upload
+// endpoint caps (extract-resume-json.ts: 50k auth / 20k guest) so full resumes —
+// including Education/Certifications past the old 10k cut — reach the AI.
+export const MAX_PARSE_INPUT_CHARS = 50000;
+
 const scorePartSchema = z.object({
   score: z.number(),
   max: z.number(),
@@ -587,10 +592,17 @@ function withRagBlock(context) {
   return optionalTaggedBlock('retrieved_context', ragContext);
 }
 
-function buildParseResumeMessages(input, context) {
-  const resumeText = truncateText(input.inputData, 10000);
+export function buildParseResumeMessages(input, context = {}) {
+  const resumeText = truncateText(input.inputData, MAX_PARSE_INPUT_CHARS);
+  // Evidence-driven focused retry: when the first pass dropped sections that the
+  // raw text clearly contains, the caller passes focusSections so the parser is
+  // told explicitly to extract them. Facts-only rule still applies (no invention).
+  const focusSections = Array.isArray(input.focusSections) ? input.focusSections.filter(Boolean) : [];
+  const focusInstruction = focusSections.length
+    ? ` The resume text DOES contain these sections — you previously missed them, so extract every one of them in full from the text: ${focusSections.join(', ')}. Do not invent values that are not present.`
+    : '';
   const system = `You are a resume parser. Extract structured data from resume text into JSON Resume format. Preserve facts only; do not invent missing information.`;
-  const user = `Extract resume data into JSON Resume format. Include basics, work, education, skills, projects, certificates, languages, and meta fields.${withRagBlock(context.retrievedContext)}
+  const user = `Extract resume data into JSON Resume format. Include basics, work, education, skills, projects, certificates, languages, and meta fields.${focusInstruction}${withRagBlock(context.retrievedContext)}
 
 ${taggedBlock('resume_text', resumeText)}`;
   return buildMessages(system, user);
@@ -740,7 +752,7 @@ export const aiContracts = {
     outputSchema: looseResumeOutput,
     schemaName: 'parse_resume',
     featureName: 'parse_resume',
-    maxTokens: 3072,
+    maxTokens: 4096,
     timeoutMs: 50000,
     temperature: 0,
     reasoningBudget: null,

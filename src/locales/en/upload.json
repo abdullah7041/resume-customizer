@@ -51,7 +51,9 @@
       "tooLarge": "File must be 5MB or smaller.",
       "tooLargeHint": "Compress the resume and try again.",
       "readFailed": "We couldn't read that text file.",
-      "readFailedHint": "Paste the contents manually instead."
+      "readFailedHint": "Paste the contents manually instead.",
+      "unreadable": "We couldn't read selectable text from that file.",
+      "unreadableHint": "Upload a text-based PDF/DOCX or paste your resume text. Scanned or image-only files aren't supported yet."
     },
     "stage": {
       "uploading": "Uploading...",

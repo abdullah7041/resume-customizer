@@ -173,105 +173,55 @@ describe("publicAssetUrl", () => {
   });
 });
 
-describe("getSkylineUrl", () => {
+describe("getSkylineUrls (local public asset)", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 
-  it("uses the versioned skyline asset URL", async () => {
-    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
-    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon-456");
+  it("resolves the bundled desktop asset, versioned, with no Supabase/env dependency", async () => {
     vi.stubEnv("VITE_BUILD_ID", "build-xyz");
     const { getSkylineUrl } = await loadModule();
-    expect(getSkylineUrl()).toBe(
-      "https://project.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?apikey=anon-456&v=build-xyz",
-    );
+    const url = getSkylineUrl();
+    expect(url).toContain("hero/kafdh-hero-desktop-1920x1080.avif");
+    expect(url).toContain("?v=build-xyz");
+    expect(url).not.toMatch(/^data:/);
+    expect(url).not.toContain("supabase");
   });
 
-  it("uses separate desktop and mobile skyline asset URLs", async () => {
-    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
-    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon-456");
-    vi.stubEnv("VITE_BUILD_ID", "build-xyz");
+  it("provides distinct desktop and mobile local paths", async () => {
     const { getSkylineUrls } = await loadModule();
-    expect(getSkylineUrls()).toEqual({
-      desktop:
-        "https://project.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?apikey=anon-456&v=build-xyz",
-      mobile:
-        "https://project.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-mobile-1080x1920.avif?apikey=anon-456&v=build-xyz",
-    });
+    const { desktop, mobile } = getSkylineUrls();
+    expect(desktop).toContain("hero/kafdh-hero-desktop-1920x1080.avif");
+    expect(mobile).toContain("hero/kafdh-hero-mobile-1080x1920.avif");
   });
 
-  it("falls back to a Saudi gradient when env config is missing", async () => {
+  // Regression: the production bug was the hero silently falling back to the faint
+  // inline SVG whenever Supabase/asset env was absent at build time. With a bundled
+  // asset, missing env MUST NOT degrade the hero.
+  it("does NOT fall back to the SVG when Supabase/asset env is absent (auth + env independent)", async () => {
     vi.stubEnv("VITE_SUPABASE_URL", "");
-    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
     vi.stubEnv("VITE_ASSETS_BASE_URL", "");
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { getSkylineUrl, __internal } = await loadModule();
-    __internal.resetCache();
-    const skyline = getSkylineUrl();
-    expect(skyline).toMatch(/^data:image\/svg\+xml,/);
-    expect(skyline.length).toBeGreaterThan(120);
-    warnSpy.mockRestore();
-  });
-
-  it("builds one clean URL for the desktop skyline asset with no double slashes", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
-    const { getSkylineUrl, __internal } = await loadModule();
-    __internal.resetCache();
-    const skyline = getSkylineUrl();
-    expect(skyline).toContain(
-      "/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif",
-    );
-    expect(skyline).not.toContain("//storage");
-    expect(skyline).not.toContain("/kafdh-hero-desktop-1920x1080.avif/kafdh-hero-desktop-1920x1080.avif");
-    expect(skyline).not.toContain("kafdh-hero-desktop-1920x1080.avifkafdh-hero-desktop-1920x1080.avif");
-  });
-
-  it("rejects full object env and ensures DEV warning", async () => {
-    vi.stubEnv(
-      "VITE_ASSETS_BASE_URL",
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets",
-    );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { getSkylineUrl, __internal } = await loadModule();
-    __internal.resetCache();
-    const skyline = getSkylineUrl();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("VITE_ASSETS_BASE_URL should be host-only"),
-    );
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("https://cwcjeujextkwpmzdfzdz.supabase.co"),
-    );
-    expect(skyline).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?v=__dev__",
-    );
-    warnSpy.mockRestore();
-  });
-
-  it("returns gradient fallback when base is empty", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "");
-    vi.stubEnv("VITE_SUPABASE_URL", "");
-    const { getSkylineUrl, __internal } = await loadModule();
-    __internal.resetCache();
-    const skyline = getSkylineUrl();
-    expect(skyline).toMatch(/^data:image\/svg\+xml,/);
-    expect(skyline).toContain("linearGradient");
-  });
-
-  it("memoizes the skyline URL across multiple calls", async () => {
-    vi.stubEnv("VITE_ASSETS_BASE_URL", "https://cwcjeujextkwpmzdfzdz.supabase.co");
     vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
+    const { getSkylineUrl, __internal } = await loadModule();
+    __internal.resetCache();
+    const url = getSkylineUrl();
+    expect(url).not.toMatch(/^data:image\/svg/);
+    expect(url).toContain("hero/kafdh-hero-desktop-1920x1080.avif");
+  });
+
+  it("exposes an inline SVG fallback for <img onError> only", async () => {
+    const { SKYLINE_FALLBACK_URL } = await loadModule();
+    expect(SKYLINE_FALLBACK_URL).toMatch(/^data:image\/svg\+xml,/);
+    expect(SKYLINE_FALLBACK_URL).toContain("linearGradient");
+  });
+
+  it("memoizes the skyline URLs across calls", async () => {
     vi.stubEnv("VITE_BUILD_ID", "build-456");
     const { getSkylineUrl, __internal } = await loadModule();
     __internal.resetCache();
-    const first = getSkylineUrl();
-    const second = getSkylineUrl();
-    expect(first).toBe(second);
-    expect(first).toBe(
-      "https://cwcjeujextkwpmzdfzdz.supabase.co/storage/v1/object/public/ui-assets/kafdh-hero-desktop-1920x1080.avif?v=build-456",
-    );
+    expect(getSkylineUrl()).toBe(getSkylineUrl());
   });
 });
 

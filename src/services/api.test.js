@@ -178,6 +178,27 @@ describe('parseResume', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('preserves guest preview limit codes for telemetry', async () => {
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 413,
+      headers: new Headers(),
+      json: async () => ({
+        error: 'Preview text is limited to 20,000 characters. Please sign in to process longer resumes.',
+        code: 'guest/text-too-large',
+      }),
+    });
+
+    await expect(parseResume('Sample resume', { guestPreview: true })).rejects.toMatchObject({
+      status: 413,
+      code: 'guest/text-too-large',
+    });
+  });
+
   it('sends low-text PDFs as files with auth headers and surfaces 422 without OCR claims', async () => {
     const onOcrFallback = vi.fn();
     mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue('too short');
@@ -322,6 +343,7 @@ describe('analyzeResume', () => {
   it('calls ai-match endpoint', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
+      headers: new Headers({ 'x-nf-request-id': 'match-request-1' }),
       json: () =>
         Promise.resolve({
           score: 82,
@@ -332,6 +354,10 @@ describe('analyzeResume', () => {
           recommendations: [],
           overallAssessment: 'Good',
           explanation: { reason: 'Good', tips: [] },
+          debug: {
+            model: 'google/gemini-2.5-flash',
+            latencyMs: 1234,
+          },
           strategicRealityCheck: {
             riskTier: 'critical',
             recommendation: 'add_evidence_first',
@@ -361,6 +387,11 @@ describe('analyzeResume', () => {
       body: JSON.stringify({ resumeText: 'resume text', jobText: 'job text', language: 'en' })
     }));
     expect(result.score).toBe(82);
+    expect(result.debug).toEqual(expect.objectContaining({
+      requestId: 'match-request-1',
+      model: 'google/gemini-2.5-flash',
+      latencyMs: 1234,
+    }));
     expect(result.strategicRealityCheck).toEqual(expect.objectContaining({
       riskTier: 'critical',
       recommendation: 'add_evidence_first',
@@ -413,11 +444,16 @@ describe('optimizeResume', () => {
   it('calls optimize endpoint', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
+      headers: new Headers({ 'x-request-id': 'optimize-request-1' }),
       json: () =>
         Promise.resolve({
           cards: [],
           keywords: { add: [], neutral: [], remove: [] },
           source: 'gemini',
+          debug: {
+            model: 'google/gemini-2.5-flash',
+            latencyMs: 4567,
+          },
         }),
     });
 
@@ -437,6 +473,36 @@ describe('optimizeResume', () => {
       })
     );
     expect(result.source).toBe('gemini');
+    expect(result.debug).toEqual(expect.objectContaining({
+      requestId: 'optimize-request-1',
+      model: 'google/gemini-2.5-flash',
+      latencyMs: 4567,
+    }));
+  });
+
+  it('preserves safe optimize error metadata for debug panels', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      headers: new Headers({ 'x-nf-request-id': 'timeout-request-1' }),
+      json: async () => ({
+        error: 'Optimization timed out.',
+        code: 'ai/timeout',
+        troubleshooting: 'AI service timeout.',
+      }),
+    });
+
+    await expect(optimizeResume({
+      resumeText: 'resume',
+      jobDesc: 'job',
+    })).rejects.toMatchObject({
+      status: 400,
+      statusCode: 400,
+      errorCode: 'ai/timeout',
+      errorDetail: 'AI service timeout.',
+      debug: {
+        requestId: 'timeout-request-1',
+      },
+    });
   });
 });
-
