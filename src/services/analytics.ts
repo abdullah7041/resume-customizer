@@ -282,6 +282,18 @@ class Analytics {
         });
     }
 
+    trackResumeTruthCheck(data: {
+        overallRisk?: string;
+        claimCount?: number;
+        highSeverityCount?: number;
+    }) {
+        this.track('resume_truth_check_result', {
+            overall_risk: data.overallRisk || 'unknown',
+            claim_count: data.claimCount ?? 0,
+            high_severity_count: data.highSeverityCount ?? 0,
+        });
+    }
+
     trackMatchAnalysisFailed(errorCategory: string) {
         this.track('match_analysis_failed', { error_category: errorCategory });
     }

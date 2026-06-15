@@ -8,6 +8,8 @@
     "stepper": {
       "resume": "Resume",
       "resumeHint": "Upload or paste",
+      "truthCheck": "Truth Check",
+      "truthCheckHint": "Verify claims",
       "jobAd": "Job Ad",
       "jobAdHint": "Add description",
       "match": "Match",
@@ -42,6 +44,7 @@
       "lockedHelper": "Upload a resume first to unlock the next steps.",
       "steps": {
         "resume": "Resume",
+        "truthCheck": "Truth Check",
         "jobAd": "Job Ad",
         "jobAdMatch": "Job Ad + Match",
         "match": "Match",

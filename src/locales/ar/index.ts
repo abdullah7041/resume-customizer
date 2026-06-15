@@ -42,6 +42,7 @@ import sections_interview from './sections/interview.json';
 import sections_bulk from './sections/bulk.json';
 import sections_bulkAnalysis from './sections/bulkAnalysis.json';
 import sections_coverLetter from './sections/coverLetter.json';
+import sections_truthCheck from './sections/truthCheck.json';
 import rateLimit from './rateLimit.json';
 import showcase from './showcase.json';
 import beta from './beta.json';
@@ -98,6 +99,7 @@ const sources = [
     sections_bulk,
     sections_bulkAnalysis,
     sections_coverLetter,
+    sections_truthCheck,
     rateLimit,
     showcase,
     beta,

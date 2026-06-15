@@ -293,6 +293,7 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
 
   // AI endpoints using "Flash" model - INCREASED from 10 to 15
   "ai-match": { maxRequests: 15 },        // Flash model for matching
+  "resume-truth-check": { maxRequests: 15 }, // Free authenticated Flash model claim review
   "generate-cover-letter": { maxRequests: 10 },  // Flash model - INCREASED from 5 to 10
 
   // AI endpoints using "Flash" model - INCREASED from 5 to 10
@@ -305,6 +306,9 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
 
   // Unauthenticated guest preview parse — stricter than the authenticated limit above
   "extract-resume-json-guest": { maxRequests: 5 },
+
+  // Unauthenticated waitlist confirmation email — strict to prevent mail-bombing
+  "waitlist-confirm": { maxRequests: 5 },
 
   // Feedback system - INCREASED from 5 to 10
 
