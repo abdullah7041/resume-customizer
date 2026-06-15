@@ -9,10 +9,17 @@
  */
 
 import { Handler } from "@netlify/functions";
+import { z } from "zod";
 import { sendWaitlistConfirmation } from "../lib/email-service.js";
 import { redactForLog, summarizeErrorForLog } from "../lib/sentry.js";
+import { withRateLimit } from "../lib/rate-limiter.js";
 
-export const handler: Handler = async (event) => {
+const WaitlistConfirmRequestSchema = z.object({
+  email: z.string().email(),
+  language: z.enum(["en", "ar"]).optional(),
+});
+
+const baseHandler: Handler = async (event) => {
   // Only accept POST requests
   if (event.httpMethod !== "POST") {
     return {
@@ -22,29 +29,36 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const { email, language } = JSON.parse(event.body || '{}');
-
-    if (!email) {
+    let parsedBody: unknown;
+    try {
+      parsedBody = JSON.parse(event.body || '{}');
+    } catch {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Email is required" }),
+        body: JSON.stringify({ error: "Invalid JSON body" }),
       };
     }
+
+    const parsed = WaitlistConfirmRequestSchema.safeParse(parsedBody);
+    if (!parsed.success) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Invalid request: email is required and must be a valid email address" }),
+      };
+    }
+
+    const { email, language } = parsed.data;
 
     // Validate environment variables
     if (!process.env.RESEND_API_KEY) {
       console.error("[waitlist-confirm] RESEND_API_KEY not configured");
       return {
         statusCode: 500,
-        body: JSON.stringify({
-          error: "Email service not configured",
-          details: "RESEND_API_KEY environment variable is missing"
-        }),
+        body: JSON.stringify({ error: "Email service not configured" }),
       };
     }
 
     console.log(`[waitlist-confirm] Sending confirmation to ${redactForLog(email)} (language: ${language || 'en'})`);
-    console.log(`[waitlist-confirm] Using sender: ${process.env.RESEND_SENDER_EMAIL || 'noreply@watheqai.app'}`);
 
     const result = await sendWaitlistConfirmation(email, language || 'en');
 
@@ -64,10 +78,7 @@ export const handler: Handler = async (event) => {
         statusCode: 500,
         body: JSON.stringify({
           success: false,
-          error: result.error || 'Failed to send confirmation email',
-          hint: result.error?.includes('domain')
-            ? 'Check that your domain is verified in Resend dashboard'
-            : 'Check RESEND_API_KEY and RESEND_SENDER_EMAIL environment variables'
+          error: 'Failed to send confirmation email',
         }),
       };
     }
@@ -75,11 +86,9 @@ export const handler: Handler = async (event) => {
     console.error("[waitlist-confirm] Unexpected error:", summarizeErrorForLog(error));
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
-      }),
+      body: JSON.stringify({ error: "Internal server error" }),
     };
   }
 };
+
+export const handler = withRateLimit("waitlist-confirm", baseHandler);

@@ -74,12 +74,17 @@
       "Bash(rtk npm *)",
       "Bash(rtk lint *)",
       "Bash(rtk vitest *)",
-      "Bash(rtk git *)"
+      "Bash(rtk git *)",
+      "Bash(rtk read *)",
+      "Bash(rtk ls *)"
     ]
   },
   "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [
     "supabase",
     "context7"
-  ]
+  ],
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
 }
