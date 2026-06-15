@@ -76,7 +76,8 @@
       "Bash(rtk vitest *)",
       "Bash(rtk git *)",
       "Bash(rtk read *)",
-      "Bash(rtk ls *)"
+      "Bash(rtk ls *)",
+      "Bash(git merge *)"
     ]
   },
   "enableAllProjectMcpServers": false,
