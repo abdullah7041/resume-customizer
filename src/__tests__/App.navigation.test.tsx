@@ -118,19 +118,13 @@ vi.mock('../hooks/useOnboardingTour', () => ({
     steps: [],
     stepIndex: 0,
     handleEvent: vi.fn(),
+    startTour: vi.fn(),
+    resetTour: vi.fn(),
   }),
-}));
-
-vi.mock('../components/Tour/TourTooltip', () => ({
-  TourTooltip: () => null,
 }));
 
 vi.mock('../lib/utils/storage-migration', () => ({
   migrateStorageKeys: vi.fn(),
-}));
-
-vi.mock('react-joyride', () => ({
-  Joyride: () => null,
 }));
 
 const setPath = (path: string) => {

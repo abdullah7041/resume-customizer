@@ -24,7 +24,9 @@ const mockGeminiClient = {
 
 const mockResumeText = {
     extractPlainTextFromArrayBuffer: vi.fn(),
-    inferMimeType: vi.fn()
+    inferMimeType: vi.fn(),
+    normalizeResumeText: vi.fn((t: string) => (typeof t === 'string' ? t : '')),
+    classifyExtraction: vi.fn(() => 'readable')
 };
 
 const mockRateLimiter = {

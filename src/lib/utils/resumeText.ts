@@ -82,8 +82,12 @@ const loadPdfjs = async () => {
 };
 
 /**
- * Collect PDF page text while preserving line structure.
- * Uses Y-coordinate changes to detect line breaks for better structure preservation.
+ * Collect PDF page text while preserving reading order.
+ * Groups items into lines by Y-coordinate, then sorts each line's items by their
+ * X-coordinate (transform[4]) so out-of-stream-order glyph runs reconstruct
+ * left-to-right reading order. PDF.js already applies bidi to item.str, so RTL
+ * scripts (Arabic) are already visually ordered within each item.
+ * Transform matrix: [scaleX, skewX, skewY, scaleY, translateX(x), translateY(y)].
  * @param {Array} contentItems - Array of PDF.js text content items
  * @returns {string} - Extracted text with preserved line structure
  */
@@ -91,37 +95,89 @@ const collectPdfPageText = (contentItems) => {
   if (!contentItems || contentItems.length === 0) return "";
 
   const lines = [];
-  let currentLine = [];
+  let currentLine = []; // array of { str, x }
   let lastY = null;
   const Y_THRESHOLD = 5; // Pixels threshold to detect new line
+
+  const flushLine = () => {
+    if (currentLine.length === 0) return;
+    const ordered = currentLine
+      .slice()
+      .sort((a, b) => a.x - b.x)
+      .map((entry) => entry.str)
+      .join("")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (ordered.length > 0) lines.push(ordered);
+    currentLine = [];
+  };
 
   for (const item of contentItems) {
     if (typeof item?.str !== "string" || !item.str) continue;
 
-    // Get Y coordinate from transform matrix [scaleX, skewX, skewY, scaleY, translateX, translateY]
+    const currentX = typeof item.transform?.[4] === "number" ? item.transform[4] : 0;
     const currentY = item.transform?.[5];
 
-    // If Y coordinate changed significantly, it's a new line
+    // If Y coordinate changed significantly, it's a new line.
     if (lastY !== null && currentY !== undefined && Math.abs(currentY - lastY) > Y_THRESHOLD) {
-      if (currentLine.length > 0) {
-        lines.push(currentLine.join("").replace(/\s+/g, " ").trim());
-        currentLine = [];
-      }
+      flushLine();
     }
 
-    currentLine.push(item.str);
+    currentLine.push({ str: item.str, x: currentX });
     if (currentY !== undefined) {
       lastY = currentY;
     }
   }
 
-  // Don't forget the last line
-  if (currentLine.length > 0) {
-    lines.push(currentLine.join("").replace(/\s+/g, " ").trim());
-  }
+  flushLine();
 
-  // Filter out empty lines and join with newlines
-  return lines.filter(line => line.length > 0).join("\n");
+  return lines.filter((line) => line.length > 0).join("\n");
+};
+
+const MIN_READABLE_TEXT_LENGTH = 100;
+
+/**
+ * Normalize extracted resume text generically (no resume-specific rules):
+ * collapse repeated bullet glyphs and whitespace runs, strip page-break noise
+ * (Page N / N of M / N/M), and collapse excess blank lines. Safe for both
+ * Latin and Arabic content — only touches symbol/whitespace artifacts.
+ */
+export const normalizeResumeText = (text) => {
+  if (typeof text !== "string" || !text) return "";
+  const cleaned = [];
+  for (const raw of text.replace(/\r\n?/g, "\n").split("\n")) {
+    const line = raw
+      .replace(/[•·▪◦‣∙]{2,}/g, "•") // collapse repeated bullet glyph runs
+      .replace(/[ \t]{2,}/g, " ") // collapse runs of spaces/tabs
+      .replace(/\s+$/g, ""); // trailing whitespace
+    // Drop page-break noise: "Page 1", "Page 1 of 3", "1 / 3". Never bare years.
+    if (/^\s*(page\s+\d+(\s+of\s+\d+)?|\d{1,3}\s*\/\s*\d{1,3})\s*$/i.test(line)) {
+      continue;
+    }
+    cleaned.push(line);
+  }
+  return cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+};
+
+/**
+ * Classify extraction quality into one of four stable states so callers can
+ * return precise errors instead of generic failures.
+ *  - 'empty'     : no selectable text at all.
+ *  - 'too-short' : some text but below the minimum needed to parse.
+ *  - 'cid-glyph' : enough characters but fails word-level readability (CID-font /
+ *                  scanned-glyph garbage — isolated "letters" between symbols).
+ *  - 'readable'  : usable resume text.
+ */
+export const classifyExtraction = (text) => {
+  if (typeof text !== "string" || text.trim().length === 0) return "empty";
+  const trimmed = text.trim();
+  if (trimmed.length < MIN_READABLE_TEXT_LENGTH) return "too-short";
+  const sample = trimmed.substring(0, 500);
+  const words = sample
+    .split(/[\s,;:.!?(){}\[\]|/\\]+/) // eslint-disable-line no-useless-escape
+    .filter((w) => /^[\p{L}]{2,}$/u.test(w));
+  const readable = words.length >= 5 && words.length / sample.length > 0.02;
+  return readable ? "readable" : "cid-glyph";
 };
 
 const arrayBufferToLatin1 = (arrayBuffer) => {
@@ -224,6 +280,7 @@ const extractPdfPlainText = async (arrayBuffer) => {
         disableWorker: true,
         cMapUrl: "https://unpkg.com/pdfjs-dist@5.4.394/cmaps/",
         cMapPacked: true,
+        standardFontDataUrl: "https://unpkg.com/pdfjs-dist@5.4.394/standard_fonts/",
       }).promise;
       const lines = [];
 
@@ -479,14 +536,14 @@ export const extractPlainTextFromArrayBuffer = async (input: ArrayBuffer | Array
   const inferredMime = inferMimeType({ mimeType, fileName });
 
   if (inferredMime === PDF_MIME) {
-    return extractPdfPlainText(arrayBuffer);
+    return normalizeResumeText(await extractPdfPlainText(arrayBuffer));
   }
 
   if (inferredMime === DOCX_MIME) {
-    return extractDocxPlainText(arrayBuffer);
+    return normalizeResumeText(await extractDocxPlainText(arrayBuffer));
   }
 
-  return decodeUtf8(arrayBuffer);
+  return normalizeResumeText(decodeUtf8(arrayBuffer));
 };
 
 export const isPdfMimeType = (value) => inferMimeType({ mimeType: value }) === PDF_MIME;
@@ -496,6 +553,9 @@ export const __internal = {
   decodeHexString,
   extractPdfTextFallback,
   arrayBufferToLatin1,
+  collectPdfPageText,
+  normalizeResumeText,
+  classifyExtraction,
 };
 
 

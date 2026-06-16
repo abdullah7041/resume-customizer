@@ -76,8 +76,8 @@ export function MobileWorkflowNav({
           'flex w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-start transition',
           isActive
             ? 'border-[color:var(--glass-border-strong)] bg-[color:var(--surface-glass-elevated)] text-gray-950 shadow-sm dark:border-emerald-300/45 dark:bg-emerald-300/12 dark:text-white'
-            : 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-700 hover:border-[color:var(--glass-border-strong)] hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50/85 dark:hover:border-emerald-300/40 dark:hover:bg-emerald-300/10',
-          isDisabled && 'cursor-not-allowed border-[color:var(--glass-border)] bg-transparent text-gray-500 opacity-75 hover:border-[color:var(--glass-border)] hover:bg-transparent dark:border-white/10 dark:bg-transparent dark:text-white/40 dark:hover:bg-transparent'
+            : 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-800 hover:border-[color:var(--glass-border-strong)] hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50/85 dark:hover:border-emerald-300/40 dark:hover:bg-emerald-300/10',
+          isDisabled && 'cursor-not-allowed border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-600 opacity-90 hover:border-[color:var(--glass-border)] hover:bg-[color:var(--surface-control)] dark:border-white/10 dark:bg-transparent dark:text-white/40 dark:hover:bg-transparent'
         )}
       >
         <span
@@ -86,7 +86,7 @@ export function MobileWorkflowNav({
             isActive
               ? 'border-emerald-500 bg-emerald-500 text-white'
               : isDisabled
-                ? 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-white/45'
+                ? 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-white/45'
                 : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:border-emerald-300/25 dark:bg-emerald-300/10 dark:text-emerald-100'
           )}
           aria-hidden="true"
@@ -95,7 +95,7 @@ export function MobileWorkflowNav({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block break-words text-sm font-bold leading-snug">{step.label}</span>
-          <span className="block text-xs font-medium text-gray-500 dark:text-emerald-50/62">{statusText}</span>
+          <span className="block text-xs font-medium text-gray-600 dark:text-emerald-50/62">{statusText}</span>
         </span>
       </button>
     );

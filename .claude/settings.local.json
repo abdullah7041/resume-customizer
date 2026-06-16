@@ -77,7 +77,8 @@
       "Bash(rtk git *)",
       "Bash(rtk read *)",
       "Bash(rtk ls *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(git ls-tree *)"
     ]
   },
   "enableAllProjectMcpServers": false,

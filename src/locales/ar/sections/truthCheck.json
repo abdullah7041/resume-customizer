@@ -7,6 +7,8 @@
       "run": "تشغيل فحص المصداقية",
       "running": "جار فحص الادعاءات...",
       "freeNote": "مجاني حالياً.",
+      "statusComplete": "اكتمل الفحص",
+      "noChangesNote": "لم يتم تعديل سيرتك الذاتية.",
       "empty": {
         "title": "ارفع السيرة الذاتية أولاً",
         "description": "يفحص واثق الادعاءات بعد توفر نص السيرة الذاتية."
@@ -14,6 +16,32 @@
       "filters": {
         "severity": "درجة الأهمية",
         "type": "نوع المخاطرة"
+      },
+      "summary": {
+        "title": "ملخص الفحص",
+        "claimsToReview": "ادعاءات تحتاج مراجعة",
+        "needsEvidence": "نقاط تحتاج دليل أوضح",
+        "needsVerification": "تواريخ أو تفاصيل تحتاج تحقق",
+        "sectionsScanned": "أقسام تم فحصها"
+      },
+      "priorities": {
+        "title": "أهم النقاط للمراجعة",
+        "reviewCta": "مراجعة التفاصيل"
+      },
+      "details": {
+        "title": "تفاصيل الفحص"
+      },
+      "cta": {
+        "continue": "الانتقال للخطوة التالية",
+        "showAll": "عرض كل التفاصيل"
+      },
+      "groups": {
+        "experience": "الخبرات",
+        "projects": "المشاريع",
+        "skills": "المهارات",
+        "certificates": "الشهادات",
+        "dates": "التواريخ والتسلسل الزمني",
+        "other": "أخرى"
       },
       "severity": {
         "all": "كل الدرجات",
@@ -31,9 +59,9 @@
       },
       "evidenceStatus": {
         "supported": "مدعوم",
-        "needs_evidence": "يحتاج إلى دليل",
-        "unclear": "غير واضح",
-        "contradicted": "متعارض"
+        "needs_evidence": "يحتاج دليل أوضح",
+        "unclear": "يحتاج توضيح",
+        "contradicted": "يحتاج تحقق"
       },
       "results": {
         "emptyTitle": "جاهز لمراجعة الادعاءات",
@@ -43,7 +71,8 @@
         "overallRisk": "مستوى مخاطرة الادعاءات",
         "noClaims": "لا توجد ادعاءات تطابق عوامل التصفية الحالية.",
         "visibleEvidence": "الدليل الظاهر",
-        "limits": "ما لا يستطيع واثق التحقق منه"
+        "limits": "ما لا يستطيع واثق التحقق منه",
+        "emptyResult": "لم نجد ادعاءات واضحة تحتاج إلى مراجعة الآن."
       },
       "toasts": {
         "running": "جار تشغيل فحص المصداقية",

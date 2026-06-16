@@ -57,4 +57,43 @@ describe("getParsingWarnings — parse-quality gating", () => {
     expect(result).not.toContain("missing_contact");
     expect(result).toContain("incomplete_contact");
   });
+
+  it("emits a gentle contact_suggestion (not missing_contact) when a profile link exists", () => {
+    const resume = makeResume({
+      basics: {
+        name: "Test",
+        email: "",
+        phone: "",
+        summary: "A sufficiently long professional summary line goes here.",
+        url: "https://linkedin.com/in/test",
+      } as ResumeSchema["basics"],
+    });
+    const result = codes(resume);
+    expect(result).toContain("contact_suggestion");
+    expect(result).not.toContain("missing_contact");
+  });
+
+  it("surfaces incomplete_languages only when parser-loss/recovery is flagged", () => {
+    const recovered = makeResume({
+      languages: [],
+      meta: { parseQuality: { fallbackSections: ["languages"] } },
+    });
+    expect(codes(recovered)).toContain("incomplete_languages");
+
+    const absent = makeResume({ languages: [] });
+    expect(codes(absent)).not.toContain("incomplete_languages");
+  });
+
+  it("suppresses hard missing-section warnings when sections were recovered from raw text", () => {
+    // fallbackSections records deterministic raw-text recovery. Even if a recovered
+    // section ends up empty in an edge case, no hard "No X found" warning should fire.
+    const resume = makeResume({
+      meta: { parseQuality: { fallbackSections: ["education", "certificates"] } },
+    });
+    const result = codes(resume);
+    expect(result).not.toContain("no_education");
+    expect(result).not.toContain("no_certs");
+    expect(result).toContain("incomplete_education");
+    expect(result).toContain("incomplete_certs");
+  });
 });

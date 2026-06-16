@@ -59,7 +59,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                   step.status === 'upcoming' &&
                     'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] hover:bg-[color:var(--surface-control-hover)] dark:bg-white/5 dark:hover:bg-white/10',
                   isLocked &&
-                    'cursor-not-allowed border-[color:var(--glass-border)] bg-transparent opacity-60'
+                    'cursor-not-allowed border-[color:var(--glass-border)] bg-[color:var(--surface-control)] opacity-80 dark:bg-transparent dark:opacity-60'
                 )}
               >
                 {/* Step marker */}
@@ -70,7 +70,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                     isCompleted && 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
                     step.status === 'upcoming' &&
                       'bg-gray-200/70 text-gray-600 dark:bg-white/10 dark:text-gray-300',
-                    isLocked && 'bg-gray-200/60 text-gray-400 dark:bg-white/5 dark:text-gray-500'
+                    isLocked && 'bg-gray-200/60 text-gray-500 dark:bg-white/5 dark:text-gray-500'
                   )}
                   aria-hidden="true"
                 >

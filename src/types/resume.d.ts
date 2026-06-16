@@ -168,6 +168,8 @@ export interface ParseQuality {
     incompleteSections?: string[]; // sections present in raw text but dropped by the parser
     retried?: boolean; // a focused re-parse was attempted
     previewTruncated?: boolean; // guest preview text was capped before parsing
+    fallbackSections?: string[]; // sections/contact fields recovered via deterministic raw-text slicing
+    extractionSource?: string; // how sections were sourced: 'ai' | 'ai+recovery' | 'recovery'
 }
 
 /**

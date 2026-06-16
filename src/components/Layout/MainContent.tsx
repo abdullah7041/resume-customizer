@@ -1866,6 +1866,7 @@ export default function MainContent() {
                   isGuestMode={isGuestMode}
                   onRequireSignIn={requireSignInForGuestAction}
                   protectedActionMessage={guestProtectedActionDescription}
+                  onContinue={() => handleTabChange("match")}
                 />
               </Suspense>
             </LazyErrorBoundary>

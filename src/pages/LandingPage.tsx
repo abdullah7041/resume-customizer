@@ -78,7 +78,7 @@ function HeroProductStage() {
   return (
     <div className="relative mx-auto w-full max-w-5xl">
       <div className="landing-proof-panel relative overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] px-4 py-5 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#082b23] dark:shadow-black/30 dark:ring-white/10 sm:px-8 sm:py-8 lg:px-12">
-        <picture className="pointer-events-none absolute inset-x-4 top-0 h-48 opacity-20 sm:inset-x-8 sm:h-64">
+        <picture className="pointer-events-none absolute inset-x-4 top-0 h-48 opacity-40 sm:inset-x-8 sm:h-64">
           <source
             media="(max-width: 767px)"
             srcSet={skylineUrls.mobile}
@@ -397,7 +397,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
   return (
     <main className="landing-page landing-walkthrough-performance relative isolate flex min-h-screen flex-col bg-white text-slate-950 dark:bg-[#031713] dark:text-white">
       <section className="relative overflow-hidden px-5 pb-12 pt-16 sm:px-8 lg:pb-16 lg:pt-24">
-        <picture className="pointer-events-none absolute inset-0 z-0 block opacity-[0.28] dark:opacity-[0.34]">
+        <picture className="pointer-events-none absolute inset-0 z-0 block opacity-[0.65] dark:opacity-[0.5]">
           <source
             media="(max-width: 767px)"
             srcSet={skylineUrls.mobile}
@@ -412,7 +412,8 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
             onError={handleSkylineError}
           />
         </picture>
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(245,244,240,0.78)_52%,rgba(255,255,255,0.98)_100%)] dark:bg-[linear-gradient(180deg,rgba(6,19,15,0.76)_0%,rgba(6,19,15,0.84)_55%,rgba(6,19,15,1)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(245,244,240,0.18)_0%,rgba(245,244,240,0.35)_42%,rgba(245,244,240,0.55)_75%,rgba(230,225,210,0.78)_100%)] dark:bg-[linear-gradient(180deg,rgba(6,19,15,0.55)_0%,rgba(6,19,15,0.68)_45%,rgba(6,19,15,0.82)_78%,rgba(6,19,15,0.95)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_28%,rgba(11,16,38,0.32)_0%,rgba(11,16,38,0)_55%)] dark:bg-[radial-gradient(circle_at_50%_28%,rgba(0,8,7,0.4)_0%,rgba(0,8,7,0)_55%)]" />
 
         <div className="relative z-10 mx-auto w-full max-w-7xl">
           <div className="mx-auto max-w-4xl text-center">

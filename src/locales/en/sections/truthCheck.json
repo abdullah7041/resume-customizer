@@ -7,6 +7,8 @@
       "run": "Run Truth Check",
       "running": "Checking claims...",
       "freeNote": "Free for now.",
+      "statusComplete": "Scan complete",
+      "noChangesNote": "Your resume has not been changed.",
       "empty": {
         "title": "Upload a resume first",
         "description": "Truth Check reviews claims only after resume text is available."
@@ -14,6 +16,32 @@
       "filters": {
         "severity": "Severity",
         "type": "Risk type"
+      },
+      "summary": {
+        "title": "Scan summary",
+        "claimsToReview": "Claims to review",
+        "needsEvidence": "Points needing clearer evidence",
+        "needsVerification": "Dates or details to verify",
+        "sectionsScanned": "Sections scanned"
+      },
+      "priorities": {
+        "title": "Top items to review",
+        "reviewCta": "Review details"
+      },
+      "details": {
+        "title": "Scan details"
+      },
+      "cta": {
+        "continue": "Continue to the next step",
+        "showAll": "View all details"
+      },
+      "groups": {
+        "experience": "Experience",
+        "projects": "Projects",
+        "skills": "Skills",
+        "certificates": "Certificates",
+        "dates": "Dates & timeline",
+        "other": "Other"
       },
       "severity": {
         "all": "All severities",
@@ -43,7 +71,8 @@
         "overallRisk": "Overall claim risk",
         "noClaims": "No claims match the current filters.",
         "visibleEvidence": "Visible evidence",
-        "limits": "What Watheq cannot verify"
+        "limits": "What Watheq cannot verify",
+        "emptyResult": "No clear claims need review right now."
       },
       "toasts": {
         "running": "Running Truth Check",

@@ -60,6 +60,32 @@
       "parsing": "Parsing...",
       "analyzing": "AI Analyzing...",
       "complete": "Complete!"
+    },
+    "warnings": {
+      "title": "Resume Parsing Alerts",
+      "sections": {
+        "contact": "Contact",
+        "summary": "Summary",
+        "experience": "Experience",
+        "education": "Education",
+        "certifications": "Certifications",
+        "languages": "Languages",
+        "preview": "Preview"
+      },
+      "preview_truncated": "Preview may be incomplete. Sign in to process the full resume.",
+      "missing_contact": "No email or phone number detected. Please check your contact details.",
+      "incomplete_contact": "We may have missed your contact details. Please review or add them.",
+      "contact_suggestion": "We found a profile link but no email or phone. Adding them helps recruiters reach you.",
+      "short_summary": "Professional summary is missing or very short. A strong summary helps ATS matching.",
+      "no_experience": "No work experience found. If you have experience, please ensure it is clearly listed.",
+      "missing_work_location": "Some job entries are missing location (City, Country). This is often required for local jobs.",
+      "no_education": "No education details found.",
+      "incomplete_education": "We may have missed your education — please review or add it.",
+      "no_certs": "No certifications found. Adding relevant certs can boost your match score.",
+      "incomplete_certs": "We may have missed your certifications — please review or add them.",
+      "possible_missing_certs": "Your summary mentions certifications, but none were parsed into the Certificates section.",
+      "incomplete_languages": "We may have missed your languages — please review or add them.",
+      "unreadable_file": "We couldn't read selectable text from that file. Upload a text-based PDF/DOCX or paste your resume text."
     }
   }
 }

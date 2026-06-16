@@ -1,6 +1,6 @@
 import { parseResumeOnly } from "../lib/gemini-client.js";
-import { detectSectionSignals, findMissingSections, mergeWithEvidence } from "../lib/parse-quality.js";
-import { extractPlainTextFromArrayBuffer, inferMimeType } from "../lib/resumeText.js";
+import { detectSectionSignals, findMissingSections, mergeWithEvidence, recoverSectionsFromRawText } from "../lib/parse-quality.js";
+import { extractPlainTextFromArrayBuffer, inferMimeType, normalizeResumeText } from "../lib/resumeText.js";
 import { withRateLimit, checkGuestPreviewRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
@@ -18,6 +18,7 @@ const UNREADABLE_FILE_RESPONSE = {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     error: "Could not extract readable text from the uploaded file. Please upload a text-based PDF/DOCX/TXT file or paste your resume text directly.",
+    code: "resume/unreadable-file",
     details: "The uploaded file did not contain enough selectable text. Scanned or image-only resumes are not currently supported by this parser."
   }),
 };
@@ -211,6 +212,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             error: "Could not read the uploaded file. It may use an unsupported font encoding. Please try a different PDF or paste your resume text directly.",
+            code: "resume/unreadable-file",
             details: "Text payload failed readability check (CID-font garbage suspected)."
           }),
         };
@@ -229,7 +231,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     // with a focused prompt and merge ONLY evidence-backed values. Whatever is
     // still missing is recorded in meta.parseQuality so the UI can distinguish
     // parser loss from genuinely-absent content (no misleading warnings).
-    const rawForSignals = extractedPlainText || (kind === "text" ? body.value : "") || "";
+    const rawForSignals = normalizeResumeText(extractedPlainText || (kind === "text" ? body.value : "") || "");
     const signals = detectSectionSignals(rawForSignals);
     let incompleteSections = findMissingSections(signals, analysis);
     let retried = false;
@@ -242,6 +244,18 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
       } catch (retryError) {
         console.warn("[extract-resume-json] Focused parse retry failed:", summarizeErrorForLog(retryError));
       }
+      incompleteSections = findMissingSections(signals, analysis);
+    }
+
+    // ---- Deterministic, evidence-only recovery -----------------------------
+    // Anything still missing after the focused retry may be recoverable directly
+    // from the raw text (e.g. an EDUCATION heading whose body the AI parser
+    // dropped entirely). This uses ONLY visible raw text — no fabrication.
+    let fallbackSections: string[] = [];
+    if (incompleteSections.length > 0) {
+      const recovery = recoverSectionsFromRawText(analysis, signals, rawForSignals);
+      analysis = recovery.analysis;
+      fallbackSections = recovery.fallbackSections;
       incompleteSections = findMissingSections(signals, analysis);
     }
 
@@ -330,6 +344,7 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           error: "Could not extract text from the uploaded file. Please try a different PDF or paste your resume text directly.",
+          code: "resume/unreadable-file",
           details: "Both PDF parsing and AI extraction failed to extract meaningful content."
         }),
       };
@@ -340,10 +355,14 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
 
     // Parse-quality metadata: lets the frontend suppress misleading "No X found"
     // warnings when the section was lost in parsing or cut by the guest preview cap.
-    const parseQuality: { incompleteSections?: string[]; retried?: boolean; previewTruncated?: boolean } = {};
+    const parseQuality: { incompleteSections?: string[]; retried?: boolean; previewTruncated?: boolean; fallbackSections?: string[]; extractionSource?: string } = {};
     if (incompleteSections.length > 0) parseQuality.incompleteSections = incompleteSections;
     if (retried) parseQuality.retried = true;
     if (previewTruncated) parseQuality.previewTruncated = true;
+    if (fallbackSections.length > 0) parseQuality.fallbackSections = fallbackSections;
+    // How the final structured sections were sourced: AI parser alone, or AI plus
+    // deterministic raw-text recovery that filled sections the parser dropped.
+    parseQuality.extractionSource = fallbackSections.length > 0 ? "ai+recovery" : "ai";
 
     // Preserve the FULL JSON Resume structure from Gemini parsing
     // The analysis object already contains: basics, work, education, skills, projects, certificates, etc.

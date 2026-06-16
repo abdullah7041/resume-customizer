@@ -1,6 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-// react-joyride v3 uses named exports (no default export)
-const Joyride = lazy(() => import("react-joyride").then((m) => ({ default: m.Joyride })));
+import { useEffect, useState } from "react";
 import { MotionConfig } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
@@ -14,7 +12,6 @@ import { migrateStorageKeys } from "./lib/utils/storage-migration";
 import { PricingWaitlistModal } from "./components/Credits/PricingWaitlistModal";
 import { useUserCredits } from "./hooks/useUserCredits";
 import { useOnboardingTour } from "./hooks/useOnboardingTour";
-import { TourTooltip } from "./components/Tour/TourTooltip";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { TermsOfService } from "./pages/TermsOfService";
 import { AdminFeedbackPage } from "./pages/AdminFeedbackPage";
@@ -51,8 +48,8 @@ export default function App() {
   // Credit system integration
   const { credits, showUpgrade, setShowUpgrade, upgradeDismissedKey } = useUserCredits();
 
-  // Onboarding tour
-  const { run, steps, stepIndex, handleEvent } = useOnboardingTour();
+  // Onboarding tour (Joyride removed — run is permanently false)
+  const { run } = useOnboardingTour();
 
   return (
     <MotionConfig reducedMotion="user">
@@ -87,33 +84,6 @@ export default function App() {
             {currentPath !== "/privacy" && currentPath !== "/terms" && currentPath !== "/admin/feedback" && (
               <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
             )}
-
-            {/* Onboarding Tour — react-joyride v3 API */}
-            <Suspense fallback={null}>
-              <Joyride
-                steps={steps}
-                run={run}
-                stepIndex={stepIndex}
-                continuous
-                scrollToFirstStep
-                onEvent={handleEvent}
-                tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
-                locale={{
-                  back: 'Back',
-                  close: 'Close',
-                  last: 'Finish',
-                  next: 'Next',
-                  skip: 'Skip Tour',
-                }}
-                options={{
-                  showProgress: true,
-                  buttons: ['back', 'close', 'primary', 'skip'],
-                  scrollOffset: 20,
-                  zIndex: 10000,
-                  overlayColor: 'rgba(0, 0, 0, 0.65)',
-                }}
-              />
-            </Suspense>
           </div>
         </HRSuperSaudProvider>
       </DirectionProvider>

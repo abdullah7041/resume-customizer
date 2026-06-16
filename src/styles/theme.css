@@ -48,7 +48,7 @@
     0 10px 24px -22px rgba(18, 112, 92, 0.08);
   --shadow-lift:
     0 0 0 1px rgba(13, 148, 136, 0.14),
-    0 26px 52px -28px rgba(30, 185, 153, 0.22),
+    0 26px 52px -28px rgba(30, 185, 153, 0.14),
     0 18px 42px -30px rgba(11, 132, 111, 0.14);
   --shadow-hover: 0 10px 24px -16px rgba(52, 211, 153, 0.16), 0 8px 18px -14px rgba(14, 164, 114, 0.1);
   --shadow-glow: 0 0 0 1px rgba(13, 84, 72, 0.08), 0 18px 42px -32px rgba(52, 211, 153, 0.18);
@@ -118,10 +118,10 @@
   --duration-breathe: 340ms;
   --transition-snappy: cubic-bezier(0.18, 0.85, 0.32, 1);
 
-  /* Gradients - Light Mode */
-  --gradient-primary-value: linear-gradient(135deg, rgba(7, 89, 81, 0.95) 0%, rgba(15, 118, 110, 0.9) 38%, rgba(34, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
-  --gradient-primary-soft: linear-gradient(135deg, rgba(13, 148, 136, 0.82) 0%, rgba(45, 197, 159, 0.74) 45%, rgba(162, 255, 217, 0.65) 100%);
-  --gradient-emerald: linear-gradient(135deg, rgba(14, 164, 114, 0.95) 0%, rgba(52, 211, 153, 0.9) 100%);
+  /* Gradients - Light Mode (deep Saudi emerald, de-neoned) */
+  --gradient-primary-value: linear-gradient(135deg, rgba(4, 122, 68, 0.95) 0%, rgba(0, 108, 53, 0.9) 38%, rgba(5, 80, 40, 0.85) 72%, rgba(0, 90, 43, 0.8) 100%);
+  --gradient-primary-soft: linear-gradient(135deg, rgba(4, 122, 68, 0.82) 0%, rgba(11, 93, 68, 0.74) 45%, rgba(5, 80, 40, 0.65) 100%);
+  --gradient-emerald: linear-gradient(135deg, rgba(4, 122, 68, 0.95) 0%, rgba(0, 80, 40, 0.9) 100%);
   --gradient-muted-value: linear-gradient(120deg, rgba(245, 244, 240, 0.9) 0%, rgba(240, 239, 235, 0.76) 52%, rgba(235, 234, 230, 0.62) 100%);
   --gradient-card-value: linear-gradient(150deg, rgba(255, 255, 255, 0.96) 0%, rgba(252, 252, 250, 0.92) 48%, rgba(248, 248, 246, 0.86) 100%);
   --gradient-halo: radial-gradient(circle at 18% 0%, rgba(15, 118, 110, 0.1) 0%, rgba(15, 118, 110, 0) 60%);
@@ -140,7 +140,10 @@
   /* Buttons - Light Mode */
   --button-primary-gradient: var(--gradient-primary-value);
   --button-primary-border: transparent;
-  --button-primary-overlay: linear-gradient(130deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0) 100%);
+  /* Canonical near-flat deep Saudi-emerald fill shared by btn-metal + reference card */
+  --button-primary-fill: #006C35;
+  --button-primary-fill-hover: #00592b;
+  --button-primary-overlay: linear-gradient(130deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.03) 48%, rgba(255, 255, 255, 0) 100%);
   --button-primary-shadow: 0 12px 24px -10px rgba(14, 148, 118, 0.3), 0 8px 16px -8px rgba(3, 47, 45, 0.2);
   --button-primary-shadow-strong: 0 16px 32px -12px rgba(52, 211, 153, 0.4), 0 12px 24px -10px rgba(3, 47, 44, 0.3);
   --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 65%, var(--secondary));
@@ -150,8 +153,8 @@
 
 :root.dark,
 .dark {
-  --bg: radial-gradient(circle at 24% -12%, rgba(16, 185, 129, 0.35) 0%, rgba(3, 23, 19, 0.96) 45%),
-    linear-gradient(160deg, #031713 0%, #041c17 48%, #052a22 100%);
+  --bg: radial-gradient(circle at 24% -12%, rgba(16, 185, 129, 0.2) 0%, rgba(3, 23, 19, 0.96) 45%),
+    linear-gradient(160deg, #021310 0%, #03150f 48%, #042018 100%);
   --surface: rgba(7, 36, 31, 0.96);
   --surface-strong: rgba(8, 43, 35, 0.98);
   --surface-glass-rgb: 11 51 42;
@@ -194,7 +197,7 @@
     0 12px 28px -24px rgba(0, 10, 8, 0.64);
   --shadow-lift:
     0 0 0 1px rgba(94, 234, 212, 0.14),
-    0 20px 42px -30px rgba(16, 185, 129, 0.22);
+    0 20px 42px -30px rgba(16, 185, 129, 0.14);
   --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 16px 34px -30px rgba(52, 211, 153, 0.2);
   --shadow-ring: 0 0 0 1px rgba(16, 185, 129, 0.5);
 
@@ -229,14 +232,17 @@
 
   --button-primary-shadow: 0 20px 58px -22px rgba(14, 148, 118, 0.55), 0 16px 48px -22px rgba(3, 47, 45, 0.6);
   --button-primary-shadow-strong: 0 26px 62px -20px rgba(52, 211, 153, 0.55), 0 20px 56px -20px rgba(3, 47, 44, 0.6);
-  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 65%, rgba(255, 255, 255, 0) 100%);
+  --button-primary-overlay: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 65%, rgba(255, 255, 255, 0) 100%);
   --button-primary-focus: color-mix(in oklab, var(--accent-magenta) 70%, var(--secondary));
+  /* Canonical near-flat deep Saudi-emerald fill (dark) */
+  --button-primary-fill: #00592b;
+  --button-primary-fill-hover: #00703a;
 
-  --gradient-primary-value: linear-gradient(135deg, rgba(6, 95, 70, 0.95) 0%, rgba(16, 185, 129, 0.9) 38%, rgba(52, 211, 153, 0.85) 72%, rgba(162, 255, 217, 0.8) 100%);
-  --gradient-primary-soft: linear-gradient(135deg, rgba(6, 95, 70, 0.82) 0%, rgba(16, 185, 129, 0.76) 46%, rgba(52, 211, 153, 0.66) 100%);
+  --gradient-primary-value: linear-gradient(135deg, rgba(6, 95, 70, 0.95) 0%, rgba(0, 108, 53, 0.9) 38%, rgba(5, 80, 40, 0.85) 72%, rgba(0, 54, 27, 0.8) 100%);
+  --gradient-primary-soft: linear-gradient(135deg, rgba(6, 95, 70, 0.82) 0%, rgba(0, 108, 53, 0.76) 46%, rgba(5, 80, 40, 0.66) 100%);
   --gradient-muted-value: linear-gradient(120deg, rgba(6, 35, 29, 0.6) 0%, rgba(8, 43, 35, 0.5) 52%, rgba(16, 185, 129, 0.35) 100%);
   --gradient-card-value: linear-gradient(150deg, rgba(6, 35, 29, 0.55) 0%, rgba(4, 28, 23, 0.7) 48%, rgba(11, 51, 42, 0.5) 100%);
-  --gradient-emerald: linear-gradient(135deg, rgba(14, 164, 114, 0.95) 0%, rgba(52, 211, 153, 0.9) 100%);
+  --gradient-emerald: linear-gradient(135deg, rgba(4, 122, 68, 0.95) 0%, rgba(0, 80, 40, 0.9) 100%);
 
   --hero-overlay-sheen: radial-gradient(circle at 24% 8%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
 }

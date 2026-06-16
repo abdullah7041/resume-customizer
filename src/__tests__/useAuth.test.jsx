@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { StrictMode } from "react";
+import { render, renderHook, act, waitFor } from "@testing-library/react";
+import { StrictMode, useEffect } from "react";
 
 const { authState, mockSignIn, mockSignOut, mockOnAuth, mockGetSession } = vi.hoisted(() => {
   const authState = { callback: undefined };
@@ -197,6 +197,35 @@ describe('useAuth', () => {
 
     await waitFor(() => expect(result.current.user?.id).toBe("user-strict"));
     expect(mockGetSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not remount the authenticated subtree when auth state changes from anonymous to signed in', async () => {
+    const mountProbe = vi.fn();
+
+    function Probe() {
+      useAuth();
+      useEffect(() => {
+        mountProbe();
+      }, []);
+      return <div>probe</div>;
+    }
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    );
+
+    expect(mountProbe).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      authState.callback("SIGNED_IN", {
+        user: { id: "user-a", email: "user@example.com" },
+        access_token: "token-a",
+      });
+    });
+
+    expect(mountProbe).toHaveBeenCalledTimes(1);
   });
 });
 
