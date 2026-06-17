@@ -343,7 +343,7 @@ export default function MainContent() {
     const mobileLabels = {
       resume: t("workspace.mobileWorkflow.steps.resume", "Resume"),
       "truth-check": t("workspace.mobileWorkflow.steps.truthCheck", "Truth Check"),
-      match: t("workspace.mobileWorkflow.steps.jobAdMatch", "Job Ad + Match"),
+      match: t("workspace.mobileWorkflow.steps.match", "Match"),
       optimize: t("workspace.mobileWorkflow.steps.optimize", "Optimize"),
       templates: t("workspace.mobileWorkflow.steps.exportPipeline", "Export / Pipeline"),
       "more-tools": t("workspace.mobileWorkflow.moreTools", "More tools"),
@@ -655,18 +655,14 @@ export default function MainContent() {
         lockedReason: resumeGateReason,
       },
       {
-        id: "jobAd",
-        label: t("workspace.stepper.jobAd", "Job Ad"),
-        hint: t("workspace.stepper.jobAdHint", "Add description"),
-        status: gatedStatus(activeTab === "match" && !hasJobAd ? "active" : hasJobAd ? "completed" : "upcoming"),
-        targetTab: "match",
-        lockedReason: resumeGateReason,
-      },
-      {
         id: "match",
         label: t("workspace.stepper.match", "Match"),
-        hint: t("workspace.stepper.matchHint", "Analyze fit"),
-        status: gatedStatus(activeTab === "match" && hasJobAd ? "active" : hasMatch ? "completed" : "upcoming"),
+        hint: hasMatch
+          ? t("workspace.stepper.matchHintReady", "Match ready")
+          : hasJobAd
+            ? t("workspace.stepper.matchHint", "Analyze fit")
+            : t("workspace.stepper.matchHintNoJobAd", "Add job ad"),
+        status: gatedStatus(activeTab === "match" ? "active" : hasMatch ? "completed" : "upcoming"),
         targetTab: "match",
         lockedReason: resumeGateReason,
       },
@@ -1691,7 +1687,7 @@ export default function MainContent() {
       <button
         type="button"
         onClick={handleClearAllData}
-        className="flex-shrink-0 group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 hover:bg-danger-500/10 hover:text-danger-600 transition-all duration-200 dark:text-surface-50/70 dark:hover:bg-danger-400/10 dark:hover:text-danger-300"
+        className="btn-danger-glass flex-shrink-0 group flex items-center gap-1.5 px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200"
         title={t("workspace.clearAll")}
         aria-label={t("workspace.clearAll")}
       >

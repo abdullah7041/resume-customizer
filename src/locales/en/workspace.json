@@ -14,6 +14,8 @@
       "jobAdHint": "Add description",
       "match": "Match",
       "matchHint": "Analyze fit",
+      "matchHintNoJobAd": "Add job ad",
+      "matchHintReady": "Match ready",
       "optimize": "Optimize",
       "optimizeHint": "Improve resume",
       "export": "Export / Pipeline",

@@ -675,7 +675,16 @@ export function buildParseResumeMessages(input, context = {}) {
     ? ` The resume text DOES contain these sections — you previously missed them, so extract every one of them in full from the text: ${focusSections.join(', ')}. Do not invent values that are not present.`
     : '';
   const system = `You are a resume parser. Extract structured data from resume text into JSON Resume format. Preserve facts only; do not invent missing information.`;
-  const user = `Extract resume data into JSON Resume format. Include basics, work, education, skills, projects, certificates, languages, and meta fields.${focusInstruction}${withRagBlock(context.retrievedContext)}
+  const user = `Extract resume data into JSON Resume format. Include basics, work, education, skills, projects, certificates, languages, and meta fields.
+
+For EACH work entry you MUST extract:
+- position: the job title exactly as written
+- name: the employer/company name exactly as written — never omit this field
+- location: if present in the text for that entry
+- startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry
+- highlights: an array containing EVERY bullet point and achievement line under that entry — do not summarize, merge, skip, or omit any bullet; each bullet is a separate array item
+
+Do not invent any values not present in the text.${focusInstruction}${withRagBlock(context.retrievedContext)}
 
 ${taggedBlock('resume_text', resumeText)}`;
   return buildMessages(system, user);

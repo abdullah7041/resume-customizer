@@ -26,19 +26,29 @@ export default function Footer() {
 
   if (isWorkspaceFooter) {
     return (
-      <footer className="relative border-t border-[color:var(--glass-border)] bg-[color:var(--bg)] py-4 text-xs text-[color:var(--ink-muted)] dark:border-white/10 dark:bg-[#031713]/80">
-        <div className="app-shell mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 px-5 sm:flex-row sm:px-8">
-          <p>
-            © {new Date().getFullYear()} {t("common.appName")}
+      <footer className="relative border-t border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] py-3 text-xs text-[color:var(--ink-muted)] [backdrop-filter:blur(14px)] [-webkit-backdrop-filter:blur(14px)] dark:border-white/10 dark:bg-[#031713]/[0.80]">
+        <div className="app-shell mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-5 sm:flex-row sm:px-8">
+          <p className="text-center sm:text-start">
+            © {new Date().getFullYear()} {t("common.appName")} ·{" "}
+            <a
+              href="https://www.linkedin.com/in/3binahmed/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200"
+            >
+              {t("footer.workspace.byLine", "Built by Abdullah Bin Ahmed")}
+            </a>
+            {" · "}{t("footer.workspace.version", "Version beta")}
+            {" · "}{t("footer.workspace.feedback", "Feedback helps shape Watheq")}
           </p>
           <nav aria-label={t("footer.linksLabel", "Legal links")} className="flex flex-wrap items-center justify-center gap-4">
-            <a href="/privacy" className="font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
+            <a href="/privacy" className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
               {t("footer.links.privacy")}
             </a>
-            <a href="/terms" className="font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
+            <a href="/terms" className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
               {t("footer.links.terms")}
             </a>
-            <a href="mailto:support@watheqai.app" className="font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
+            <a href="mailto:support@watheqai.app" className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
               {t("footer.links.contact")}
             </a>
           </nav>
@@ -50,7 +60,7 @@ export default function Footer() {
   return (
     <footer className="relative border-t border-[color:var(--glass-border)] bg-[color:var(--bg)] py-10 text-[color:var(--ink-muted)] dark:border-white/10 dark:bg-[#031713]/80">
       <div className="app-shell mx-auto w-full max-w-7xl px-5 sm:px-8">
-        <div className="grid gap-8 rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] p-5 shadow-sm backdrop-blur-xl sm:grid-cols-2 sm:p-6 lg:grid-cols-3 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="grid gap-8 rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] p-5 shadow-sm [backdrop-filter:blur(14px)] [-webkit-backdrop-filter:blur(14px)] sm:grid-cols-2 sm:p-6 lg:grid-cols-3 dark:border-white/10 dark:bg-white/[0.03]">
           {/* Brand */}
           <div className="space-y-4">
             <div className="text-lg font-black text-[color:var(--ink)]">

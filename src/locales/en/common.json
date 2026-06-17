@@ -1,6 +1,9 @@
 {
   "common": {
     "appName": "Watheq",
+    "appNameEnglish": "WATHEQ",
+    "appNameArabic": "واثق",
+    "appSubtitle": "Resume tools for the Saudi job market",
     "appTagline": "Confident Resumes for Saudi Careers",
     "upload": "Upload Resume",
     "analyze": "Analyze",

@@ -23,12 +23,16 @@ const ACCOUNT_MENU_GAP = 12;
 const ACCOUNT_MENU_MARGIN = 16;
 const ACCOUNT_MENU_MIN_HEIGHT = 240;
 
+interface HeaderProps {
+  showDecorativeSkyline?: boolean;
+}
+
 const getPrefersReducedMotion = () => {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 };
 
-export default function Header() {
+export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { user, signInWithGoogle, signOut } = useAuth();
   const skylineUrls = useMemo(() => getSkylineUrls(), []);
@@ -54,8 +58,8 @@ export default function Header() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const { credits } = useUserCredits();
-  const showFixedSkyline = Boolean(user);
   const isSignedOutHeader = !user;
+  const showFixedSkyline = showDecorativeSkyline;
 
   const [theme, toggleTheme] = useTheme();
   const textDirection = i18n.dir();
@@ -304,14 +308,7 @@ export default function Header() {
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col">
         {/* Top navigation bar */}
-        <nav className={cn(
-          "border-b",
-          isSignedOutHeader
-            ? "border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] backdrop-blur-xl dark:border-white/10 dark:bg-[#031713]/90"
-            : showFixedSkyline
-              ? "border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] shadow-sm shadow-black/5 backdrop-blur-xl dark:border-white/12 dark:bg-[#041c17]/92"
-              : "border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] backdrop-blur-md"
-        )}>
+        <nav className="border-b border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] shadow-sm shadow-black/5 [backdrop-filter:blur(24px)] [-webkit-backdrop-filter:blur(24px)] dark:border-white/[0.12] dark:bg-[#041c17]/[0.94]">
           <div className={`${containerClass} flex items-center justify-between gap-4 py-3.5 sm:py-4`}>
             {/* Logo section */}
             <div className="flex items-center gap-4 group">
@@ -328,46 +325,16 @@ export default function Header() {
                 />
               </div>
 
-              {/* Brand text */}
+              {/* Brand text — bilingual, bidi-safe, shown in both states */}
               <div className="flex flex-col">
-                <p className={cn(
-                  "text-base sm:text-lg font-extrabold tracking-[0.2em] uppercase",
-                  isSignedOutHeader
-                    ? "text-slate-950 dark:text-white"
-                    : showFixedSkyline
-                    ? "text-slate-950 dark:text-white dark:drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)]"
-                    : "text-slate-950"
-                )}>
-                  {t("common.appName")}
+                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] uppercase text-[#1a3a2a] dark:text-white dark:drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)]">
+                  <span dir="ltr">{t("common.appNameEnglish", "WATHEQ")}</span>
+                  <span aria-hidden="true"> | </span>
+                  <span dir="rtl">{t("common.appNameArabic", "واثق")}</span>
                 </p>
-                <div className={cn("items-center gap-2 mt-0.5", isSignedOutHeader ? "hidden sm:flex" : "hidden")}>
-                  <p className={cn(
-                    "text-sm sm:text-base font-bold tracking-wider",
-                    isSignedOutHeader
-                      ? "text-slate-500 dark:text-white/55"
-                      : showFixedSkyline
-                      ? "text-white dark:text-emerald-200/80 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none"
-                      : "text-slate-500"
-                  )}>
-                    {t("common.byAuthor")}
-                  </p>
-                  <a
-                    href="https://www.linkedin.com/in/3binahmed/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      "inline-flex items-center justify-center transition-all duration-300 hover:scale-110 hover:text-[#0A66C2] dark:hover:text-[#0A66C2]",
-                      isSignedOutHeader
-                        ? "text-slate-500 dark:text-white/55"
-                        : showFixedSkyline
-                        ? "text-white dark:text-emerald-200/80 drop-shadow-[0_0_8px_rgba(0,0,0,0.8)] dark:drop-shadow-none"
-                        : "text-slate-500"
-                    )}
-                    aria-label="Visit LinkedIn profile"
-                  >
-                    <Linkedin className="h-6 w-6" />
-                  </a>
-                </div>
+                <p className="mt-0.5 text-xs font-medium text-emerald-800/80 dark:text-emerald-200/70">
+                  {t("common.appSubtitle", "Resume tools for the Saudi job market")}
+                </p>
               </div>
             </div>
 

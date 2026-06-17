@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../App';
 
+const headerProps = vi.hoisted(() => ({
+  calls: [] as Array<{ showDecorativeSkyline?: boolean }>,
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => {
@@ -65,7 +69,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('../components/Layout/Header', () => ({
-  default: () => <header>Header</header>,
+  default: (props: { showDecorativeSkyline?: boolean }) => {
+    headerProps.calls.push(props);
+    return <header>Header</header>;
+  },
 }));
 
 vi.mock('../components/Layout/MainContent', () => ({
@@ -134,6 +141,7 @@ const setPath = (path: string) => {
 describe('App compliance navigation', () => {
   beforeEach(() => {
     setPath('/');
+    headerProps.calls.length = 0;
   });
 
   it('renders workspace for the default app path', () => {
@@ -149,6 +157,7 @@ describe('App compliance navigation', () => {
 
     expect(screen.getByRole('heading', { name: /privacy policy/i })).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
 
   it('renders the terms of service at /terms', () => {
@@ -157,6 +166,7 @@ describe('App compliance navigation', () => {
 
     expect(screen.getByRole('heading', { name: /terms of service/i })).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
 
   it('renders the admin feedback dashboard at /admin/feedback', () => {
@@ -165,5 +175,6 @@ describe('App compliance navigation', () => {
 
     expect(screen.getByText('Admin feedback dashboard')).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
 });

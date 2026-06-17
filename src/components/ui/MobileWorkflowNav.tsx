@@ -75,8 +75,8 @@ export function MobileWorkflowNav({
         className={cn(
           'flex w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-start transition',
           isActive
-            ? 'border-[color:var(--glass-border-strong)] bg-[color:var(--surface-glass-elevated)] text-gray-950 shadow-sm dark:border-emerald-300/45 dark:bg-emerald-300/12 dark:text-white'
-            : 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-800 hover:border-[color:var(--glass-border-strong)] hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50/85 dark:hover:border-emerald-300/40 dark:hover:bg-emerald-300/10',
+            ? 'border-emerald-800/[0.70] bg-emerald-700/[0.90] text-white shadow-md shadow-emerald-900/[0.20]'
+            : 'border-[color:var(--glass-border)] bg-white/60 text-gray-800 hover:border-[color:var(--glass-border-strong)] hover:bg-white/80 dark:border-white/10 dark:bg-white/[0.04] dark:text-emerald-50/85 dark:hover:border-emerald-300/40 dark:hover:bg-emerald-300/10',
           isDisabled && 'cursor-not-allowed border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-600 opacity-90 hover:border-[color:var(--glass-border)] hover:bg-[color:var(--surface-control)] dark:border-white/10 dark:bg-transparent dark:text-white/40 dark:hover:bg-transparent'
         )}
       >
@@ -84,7 +84,7 @@ export function MobileWorkflowNav({
           className={cn(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
             isActive
-              ? 'border-emerald-500 bg-emerald-500 text-white'
+              ? 'border-white/25 bg-white/[0.18] text-white shadow-sm'
               : isDisabled
                 ? 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-white/45'
                 : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:border-emerald-300/25 dark:bg-emerald-300/10 dark:text-emerald-100'
@@ -94,8 +94,8 @@ export function MobileWorkflowNav({
           {isDisabled ? <LockKeyhole className="h-4 w-4" /> : isPrimary && index < activePrimaryIndex ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block break-words text-sm font-bold leading-snug">{step.label}</span>
-          <span className="block text-xs font-medium text-gray-600 dark:text-emerald-50/62">{statusText}</span>
+          <span className={cn('block break-words text-sm font-bold leading-snug', isActive && 'text-white')}>{step.label}</span>
+          <span className={cn('block text-xs font-medium', isActive ? 'text-white/80' : 'text-gray-600 dark:text-emerald-50/62')}>{statusText}</span>
         </span>
       </button>
     );
@@ -105,7 +105,7 @@ export function MobileWorkflowNav({
     <nav
       aria-label={t('workspace.mobileWorkflow.ariaLabel', 'Workflow navigation')}
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] p-3 shadow-sm backdrop-blur-xl dark:border-white/15 dark:bg-black/50"
+      className="rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass)] p-3 shadow-sm [backdrop-filter:blur(14px)] [-webkit-backdrop-filter:blur(14px)] dark:border-white/[0.15] dark:bg-black/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils/cn';
 import { Loader2 } from 'lucide-react';
 
 interface GlassButtonProps extends Omit<HTMLMotionProps<"button">, 'ref'> {
-  variant?: 'primary' | 'prominent' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'prominent' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;

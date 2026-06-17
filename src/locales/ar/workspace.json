@@ -14,6 +14,8 @@
       "jobAdHint": "أضف الوصف",
       "match": "المطابقة",
       "matchHint": "حلّل التوافق",
+      "matchHintNoJobAd": "أضف إعلان الوظيفة",
+      "matchHintReady": "المطابقة جاهزة",
       "optimize": "التحسين",
       "optimizeHint": "حسّن سيرتك",
       "export": "التصدير / المسار",

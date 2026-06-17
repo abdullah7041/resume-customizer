@@ -2,14 +2,29 @@ import { describe, expect, it } from "vitest";
 import {
   buildDeterministicBaseline,
   detectSectionSignals,
+  findMissingSections,
+  mergeWithEvidence,
   parseLanguageLines,
   recoverSectionsFromRawText,
   segmentSections,
   sliceSection,
 } from "../../netlify/lib/parse-quality.js";
 
-// The netlify lib is plain JS, so the recovery result analysis is loosely typed.
-// Describe just the shape this test inspects.
+// The netlify lib is plain JS, so recovery/merge results are loosely typed.
+// Describe just the shapes these tests inspect.
+interface WorkEntry {
+  position?: string;
+  name?: string;
+  highlights?: string[];
+  startDate?: string;
+  endDate?: string;
+}
+
+interface MergedAnalysis {
+  work?: WorkEntry[];
+  [key: string]: unknown;
+}
+
 interface RecoveredAnalysis {
   basics?: {
     email?: string;
@@ -28,6 +43,9 @@ interface RecoveryResult {
 
 const recover = (analysis: unknown, signals: unknown, raw: string): RecoveryResult =>
   recoverSectionsFromRawText(analysis, signals, raw) as RecoveryResult;
+
+const merge = (firstPass: unknown, retryPass: unknown, signals: unknown): MergedAnalysis =>
+  mergeWithEvidence(firstPass, retryPass, signals) as MergedAnalysis;
 
 describe("recoverSectionsFromRawText — deterministic, evidence-only recovery", () => {
   it("recovers email and phone from raw text when the parser omitted them", () => {
@@ -237,6 +255,163 @@ describe("recoverSectionsFromRawText — languages", () => {
     };
     expect(fallbackSections).toContain("languages");
     expect(recovered.languages?.map((l) => l.language)).toEqual(expect.arrayContaining(["Arabic", "English"]));
+  });
+});
+
+describe("detectSectionSignals — experience signal", () => {
+  it("emits experience:true when an experience heading is present", () => {
+    const raw = "CHRONOLOGICAL EXPERIENCE\nSenior Analyst at Al Ghalia";
+    const signals = detectSectionSignals(raw);
+    expect(signals.experience).toBe(true);
+  });
+
+  it("emits experience:false when no experience heading present", () => {
+    const raw = "EDUCATION\nBSc CS";
+    const signals = detectSectionSignals(raw);
+    expect(signals.experience).toBe(false);
+  });
+});
+
+describe("findMissingSections — work completeness", () => {
+  const RAW = [
+    "CHRONOLOGICAL EXPERIENCE",
+    "Senior Data Analyst",
+    "Al Ghalia (Saudi Arabia)",
+    "Mar 2020 – Present",
+    "• Delivered 15+ Power BI dashboards.",
+  ].join("\n");
+
+  it("flags experience when work array is empty", () => {
+    const signals = detectSectionSignals(RAW);
+    const missing = findMissingSections(signals, { work: [] });
+    expect(missing).toContain("experience");
+  });
+
+  it("flags experience when work entries lack company name", () => {
+    const signals = detectSectionSignals(RAW);
+    const missing = findMissingSections(signals, {
+      work: [{ position: "Senior Data Analyst", name: "", highlights: ["• Delivered 15+ dashboards."] }],
+    });
+    expect(missing).toContain("experience");
+  });
+
+  it("flags experience when work entries have no highlights", () => {
+    const signals = detectSectionSignals(RAW);
+    const missing = findMissingSections(signals, {
+      work: [{ position: "Senior Data Analyst", name: "Al Ghalia", highlights: [] }],
+    });
+    expect(missing).toContain("experience");
+  });
+
+  it("does NOT flag experience when work entries are complete", () => {
+    const signals = detectSectionSignals(RAW);
+    const missing = findMissingSections(signals, {
+      work: [{ position: "Senior Data Analyst", name: "Al Ghalia", highlights: ["Delivered 15+ dashboards."] }],
+    });
+    expect(missing).not.toContain("experience");
+  });
+
+  it("does NOT flag experience when no experience heading in raw text", () => {
+    const rawNoExp = "EDUCATION\nBSc CS";
+    const signals = detectSectionSignals(rawNoExp);
+    const missing = findMissingSections(signals, { work: [] });
+    expect(missing).not.toContain("experience");
+  });
+});
+
+describe("mergeWithEvidence — work merge", () => {
+  const RAW = [
+    "CHRONOLOGICAL EXPERIENCE",
+    "Senior Data Analyst",
+    "Al Ghalia",
+    "Mar 2020 – Present",
+    "• Delivered 15+ Power BI dashboards.",
+    "Lead Product Engineer",
+    "Watheq",
+    "Jan 2026 – Present",
+    "• Managed PostgreSQL databases.",
+  ].join("\n");
+
+  it("fills missing company name from retry when present in raw text", () => {
+    const signals = detectSectionSignals(RAW);
+    const firstPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "", highlights: [], startDate: "Mar 2020", endDate: "Present" },
+      ],
+    };
+    const retryPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "Al Ghalia", highlights: ["Delivered 15+ Power BI dashboards."], startDate: "Mar 2020", endDate: "Present" },
+      ],
+    };
+    const merged = merge(firstPass, retryPass, signals);
+    expect(merged.work?.[0].name).toBe("Al Ghalia");
+    expect(merged.work?.[0].highlights).toHaveLength(1);
+  });
+
+  it("rejects a fabricated company name not in raw text", () => {
+    const signals = detectSectionSignals(RAW);
+    const firstPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "", highlights: [], startDate: "Mar 2020", endDate: "Present" },
+      ],
+    };
+    const retryPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "INVENTED CORP XYZ", highlights: ["Real bullet from text."], startDate: "Mar 2020", endDate: "Present" },
+      ],
+    };
+    const merged = merge(firstPass, retryPass, signals);
+    expect(merged.work?.[0].name).toBe("");
+  });
+
+  it("does NOT overwrite an already-populated company name", () => {
+    const signals = detectSectionSignals(RAW);
+    const firstPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "Al Ghalia", highlights: ["Original highlight."], startDate: "Mar 2020", endDate: "Present" },
+      ],
+    };
+    const retryPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "Different Name", highlights: ["Different highlight."], startDate: "Mar 2020", endDate: "Present" },
+      ],
+    };
+    const merged = merge(firstPass, retryPass, signals);
+    expect(merged.work?.[0].name).toBe("Al Ghalia");
+    expect(merged.work?.[0].highlights?.[0]).toBe("Original highlight.");
+  });
+
+  it("rejects retry-only dates that are not present in raw text", () => {
+    const signals = detectSectionSignals(RAW);
+    const firstPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "", highlights: [] },
+      ],
+    };
+    const retryPass = {
+      work: [
+        { position: "Senior Data Analyst", name: "Al Ghalia", highlights: ["Delivered 15+ Power BI dashboards."], startDate: "Jan 1999", endDate: "Dec 2099" },
+      ],
+    };
+    const merged = merge(firstPass, retryPass, signals);
+    expect(merged.work?.[0].startDate).toBeUndefined();
+    expect(merged.work?.[0].endDate).toBeUndefined();
+  });
+
+  it("does not append retry-only work fields without raw-text evidence for each copied field", () => {
+    const signals = detectSectionSignals(RAW);
+    const firstPass = { work: [] };
+    const retryPass = {
+      work: [
+        { position: "Lead Product Engineer", name: "Watheq", highlights: ["Invented a new market."], startDate: "Jan 1999", endDate: "Dec 2099" },
+      ],
+    };
+    const merged = merge(firstPass, retryPass, signals);
+    expect(merged.work?.[0]).toEqual({
+      position: "Lead Product Engineer",
+      name: "Watheq",
+    });
   });
 });
 

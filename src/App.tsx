@@ -50,6 +50,7 @@ export default function App() {
 
   // Onboarding tour (Joyride removed — run is permanently false)
   const { run } = useOnboardingTour();
+  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/admin/feedback";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -58,7 +59,7 @@ export default function App() {
           <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-[color:var(--bg)] dark:bg-gradient-to-b dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
             <OfflineIndicator />
             <EnvironmentBadge />
-            <Header />
+            <Header showDecorativeSkyline={!isStaticPage} />
 
             {currentPath === "/privacy" ? (
               <PrivacyPolicy />
@@ -81,7 +82,7 @@ export default function App() {
               source="credits"
             />
 
-            {currentPath !== "/privacy" && currentPath !== "/terms" && currentPath !== "/admin/feedback" && (
+            {!isStaticPage && (
               <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
             )}
           </div>

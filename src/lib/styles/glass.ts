@@ -26,6 +26,7 @@ export const glass = {
     prominent: 'btn-metal shadow-md shadow-emerald-900/10',
     secondary: 'btn-spring bg-[color:var(--surface-control)] dark:bg-gray-900/80 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-black/70 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white shadow-sm',
     ghost: 'btn-spring hover:bg-black/5 dark:hover:bg-white/8 text-gray-700 dark:text-gray-200 hover:text-gray-950 dark:hover:text-white disabled:border disabled:border-gray-300/60 disabled:bg-gray-100/70 disabled:text-gray-500 disabled:dark:border-white/10 disabled:dark:bg-white/5 disabled:dark:text-gray-400',
+    danger: 'btn-danger-glass',
   },
 
   // Tabs

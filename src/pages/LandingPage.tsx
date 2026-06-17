@@ -456,11 +456,10 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
               <button
                 type="button"
                 onClick={handleHeroCta}
-                className="group relative inline-flex min-h-[52px] items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#0b1026] to-[#2b8994] px-8 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transform-none dark:from-emerald-600 dark:to-emerald-400 dark:text-slate-950 dark:shadow-emerald-500/10 dark:hover:shadow-emerald-400/20"
+                className="btn-metal group relative inline-flex min-h-[52px] items-center justify-center gap-2 overflow-hidden rounded-full px-8 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-900/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transform-none"
               >
                 <span className="relative z-10">{t("landing.hero.cta")}</span>
                 <ArrowRight className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#2b8994] to-[#0b1026] opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:from-emerald-400 dark:to-emerald-600" />
               </button>
               <a
                 href="#see-it-in-action"

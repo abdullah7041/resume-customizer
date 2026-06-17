@@ -89,6 +89,7 @@ export function detectSectionSignals(rawText) {
   return {
     text,
     lower: text.toLowerCase(),
+    experience: HEADING_PATTERNS.experience.test(text),
     education: HEADING_PATTERNS.education.test(text),
     certificates: HEADING_PATTERNS.certificates.test(text),
     projects: HEADING_PATTERNS.projects.test(text),
@@ -100,12 +101,22 @@ export function detectSectionSignals(rawText) {
 }
 
 /**
+ * True when a work array is missing OR any entry lacks a company name or has no
+ * highlights — both are observable drops, not genuinely absent data.
+ */
+const isWorkIncomplete = (work) => {
+  if (!Array.isArray(work) || work.length === 0) return true;
+  return work.some((entry) => !entry.name || !Array.isArray(entry.highlights) || entry.highlights.length === 0);
+};
+
+/**
  * Sections/contact fields present in the raw text but missing/empty in the
  * structured parser output. Returned values are the focus labels passed back
  * into the parser for a focused retry.
  */
 export function findMissingSections(signals, analysis = {}) {
   const missing = [];
+  if (signals.experience && isWorkIncomplete(analysis.work)) missing.push("experience");
   if (signals.education && isEmptyArray(analysis.education)) missing.push("education");
   if (signals.certificates && isEmptyArray(analysis.certificates)) missing.push("certificates");
   if (signals.projects && isEmptyArray(analysis.projects)) missing.push("projects");
@@ -121,6 +132,31 @@ export function findMissingSections(signals, analysis = {}) {
 const rawHas = (signals, value) => {
   if (!value) return false;
   return signals.lower.includes(String(value).toLowerCase());
+};
+
+const evidencedText = (signals, value) => (
+  typeof value === "string" && value.trim().length > 0 && rawHas(signals, value.trim())
+);
+
+const evidencedHighlights = (signals, highlights) => {
+  if (!Array.isArray(highlights)) return [];
+  return highlights.filter(
+    (h) => typeof h === "string" && h.trim().length > 0 && rawHas(signals, h.trim().substring(0, 30)),
+  );
+};
+
+const buildEvidenceBackedWorkEntry = (signals, entry) => {
+  const recovered = {};
+  if (evidencedText(signals, entry.position)) recovered.position = entry.position;
+  if (evidencedText(signals, entry.name)) recovered.name = entry.name;
+  if (evidencedText(signals, entry.location)) recovered.location = entry.location;
+  if (evidencedText(signals, entry.startDate)) recovered.startDate = entry.startDate;
+  if (evidencedText(signals, entry.endDate)) recovered.endDate = entry.endDate;
+
+  const highlights = evidencedHighlights(signals, entry.highlights);
+  if (highlights.length > 0) recovered.highlights = highlights;
+
+  return recovered;
 };
 
 const entityInRaw = (signals, entry) => {
@@ -149,6 +185,9 @@ const entityInRaw = (signals, entry) => {
  *  - email/phone: accepted only if present in raw text (phone normalized).
  *  - education/certificates/projects/skills: accepted only if the raw text shows
  *    the section heading OR a key entity from a retry entry.
+ *  - work: per-entry merge — fills missing company name and/or highlights on a
+ *    matched first-pass entry (matched by position title); appends new entries
+ *    only when evidence-backed. Never overwrites populated fields; never fabricates.
  */
 export function mergeWithEvidence(firstPass = {}, retry = {}, signals) {
   const merged = { ...firstPass };
@@ -181,6 +220,49 @@ export function mergeWithEvidence(firstPass = {}, retry = {}, signals) {
 
     const hasEvidence = signals[section] || retryArr.some((entry) => entityInRaw(signals, entry));
     if (hasEvidence) merged[section] = retryArr;
+  }
+
+  // Evidence-gated work merge: fill missing company name / highlights per entry.
+  // Matches retry entries to first-pass entries by position title (case-insensitive).
+  // Only fills empty fields — never overwrites populated ones, never fabricates.
+  const firstWork = Array.isArray(firstPass.work) ? firstPass.work.map((e) => ({ ...e })) : [];
+  const retryWork = Array.isArray(retry.work) ? retry.work : [];
+
+  if (retryWork.length > 0 && isWorkIncomplete(firstWork)) {
+    const mergedWork = firstWork.length > 0 ? firstWork : [];
+
+    for (const retryEntry of retryWork) {
+      if (!retryEntry || typeof retryEntry !== "object") continue;
+
+      // Only accept retry entries whose position or company appears in raw text.
+      const isEvidenceBacked = rawHas(signals, retryEntry.position) || rawHas(signals, retryEntry.name);
+      if (!isEvidenceBacked) continue;
+
+      const positionKey = String(retryEntry.position || "").toLowerCase().trim();
+      const existing = mergedWork.find(
+        (e) => String(e.position || "").toLowerCase().trim() === positionKey,
+      );
+
+      if (existing) {
+        // Fill company name if first-pass dropped it and retry value is in raw text.
+        if (!existing.name && retryEntry.name && rawHas(signals, retryEntry.name)) {
+          existing.name = retryEntry.name;
+        }
+        // Fill highlights if first-pass dropped them; filter each bullet to raw-text evidence.
+        if ((!Array.isArray(existing.highlights) || existing.highlights.length === 0)) {
+          const highlights = evidencedHighlights(signals, retryEntry.highlights);
+          if (highlights.length > 0) existing.highlights = highlights;
+        }
+        // Fill dates only when the exact retry value is visible in the raw text.
+        if (!existing.startDate && evidencedText(signals, retryEntry.startDate)) existing.startDate = retryEntry.startDate;
+        if (!existing.endDate && evidencedText(signals, retryEntry.endDate)) existing.endDate = retryEntry.endDate;
+      } else if (signals.experience) {
+        const recoveredEntry = buildEvidenceBackedWorkEntry(signals, retryEntry);
+        if (Object.keys(recoveredEntry).length > 0) mergedWork.push(recoveredEntry);
+      }
+    }
+
+    if (mergedWork.length > 0) merged.work = mergedWork;
   }
 
   return merged;

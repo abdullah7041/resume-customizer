@@ -459,7 +459,8 @@ describe("MainContent resume parsing", () => {
 
     const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
     const truthCheckStep = within(workflow).getByRole("button", { name: /truth check verify claims/i });
-    const matchStep = within(workflow).getByRole("button", { name: /match analyze fit/i });
+    // Match hint shows "Add job ad" when no job ad is present (collapsed Job Ad + Match step)
+    const matchStep = within(workflow).getByRole("button", { name: /match add job ad/i });
 
     expect(truthCheckStep).toBeInTheDocument();
     expect(matchStep).toBeInTheDocument();
@@ -623,8 +624,8 @@ describe("MainContent resume parsing", () => {
     const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
     expect(workflow).toBeInTheDocument();
     expect(within(workflow).getByRole("button", { name: /resume upload or paste/i })).toBeInTheDocument();
-    expect(within(workflow).getByRole("button", { name: /job ad add description/i })).toBeInTheDocument();
-    expect(within(workflow).getByRole("button", { name: /match analyze fit/i })).toBeInTheDocument();
+    // Job Ad is removed from stepper; Match now shows "Add job ad" hint when no job description
+    expect(within(workflow).getByRole("button", { name: /match add job ad/i })).toBeInTheDocument();
     expect(within(workflow).getByRole("button", { name: /optimize improve resume/i })).toBeInTheDocument();
     expect(within(workflow).getByRole("button", { name: /export \/ pipeline save and track/i })).toBeInTheDocument();
     expect(within(workflow).queryByRole("button", { name: /tabs\.interview/i })).not.toBeInTheDocument();

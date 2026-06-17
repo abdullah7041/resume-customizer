@@ -1,6 +1,9 @@
 {
   "common": {
     "appName": "واثق",
+    "appNameEnglish": "WATHEQ",
+    "appNameArabic": "واثق",
+    "appSubtitle": "أدوات السيرة الذاتية لسوق العمل السعودي",
     "appTagline": "سيرة ذاتية واثقة لمستقبل مهني ناجح",
     "upload": "ارفع السيرة الذاتية",
     "analyze": "حلّل السيرة",

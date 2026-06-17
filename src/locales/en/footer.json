@@ -1,5 +1,10 @@
 {
   "footer": {
+    "workspace": {
+      "byLine": "Built by Abdullah Bin Ahmed",
+      "version": "Version beta",
+      "feedback": "Feedback helps shape Watheq"
+    },
     "tagline": "AI-Powered Resume Optimization for Saudi Arabia",
     "linksLabel": "Legal links",
     "links": {
