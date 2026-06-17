@@ -47,6 +47,7 @@ import ViewTextModal from "../ui/ViewTextModal";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
 import { emitHRSuperSaudEvent, useHRSuperSaud } from "../../features/hr-super-saud";
+import { useUserCredits } from "../../hooks/useUserCredits";
 
 /** Lightweight skeleton shown while lazy sections load */
 function SectionSkeleton() {
@@ -267,6 +268,7 @@ const buildAiDebugSnapshot = (
 export default function MainContent() {
   const { t, i18n } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
+  const { refetch: refetchCredits } = useUserCredits();
   const [guestMode, setGuestMode] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
@@ -1182,8 +1184,17 @@ export default function MainContent() {
             }
           );
         } catch (streamError: any) {
-          // Fallback to legacy non-streaming endpoint
-          console.warn('[optimize] SSE stream failed, falling back to legacy:', streamError.message);
+          if (streamError.isBillingStateUnknown) {
+            // Stream opened (2xx) then failed — credits may have been consumed on the server.
+            // Do NOT fall back to legacy: that would trigger a second paid optimization request.
+            // Force-refresh credit balance so the UI reflects what actually happened.
+            refetchCredits().catch(() => { /* non-blocking */ });
+            throw new Error(t('credits.connectionInterrupted',
+              'The connection was interrupted while optimization was running. Your credits may have already been used. Please refresh your balance before trying again.'));
+          }
+          // Server explicitly rejected before processing (non-2xx, SSE error event) —
+          // billing state is known-safe, fall back to legacy endpoint.
+          console.warn('[optimize] SSE rejected before processing, falling back to legacy:', streamError.message);
           result = await optimizeResume(
             {
               resumeText: resumeData.plainText,
@@ -1336,7 +1347,7 @@ export default function MainContent() {
         setIsOptimizing(false);
       }
     },
-    [i18n.language, isGuestMode, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, requireSignInForGuestAction, resumeData, t]
+    [i18n.language, isGuestMode, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, requireSignInForGuestAction, resumeData, t]
   );
 
   // Gate function: runs clarification step first, then delegates to handleOptimizeActual

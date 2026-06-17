@@ -641,7 +641,8 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications }),
   });
 
-  // Non-streaming error responses (4xx, 5xx with JSON body)
+  // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before
+  // processing started, so billing state is known-safe: no credits consumed.
   if (!response.ok) {
     const data = await response.json().catch(() => ({ error: response.statusText }));
     const error = new Error(data.error || 'Optimization failed');
@@ -651,6 +652,17 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     attachErrorDebug(error, response, data);
     recordFailure('openrouter-ai');
     throw error;
+  }
+
+  // Cache hit: server returned JSON (Content-Type: application/json) instead of SSE.
+  // This happens when the result is cached — no credits are consumed.
+  const contentType = response.headers.get('Content-Type') || '';
+  if (contentType.includes('application/json')) {
+    const data = await response.json().catch(() => null);
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      recordSuccess('openrouter-ai');
+      return attachResponseDebug(data, response, data);
+    }
   }
 
   // Parse SSE stream
@@ -698,8 +710,11 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
               recordSuccess('openrouter-ai');
               break;
             case 'error': {
+              // Server explicitly signals failure before processing (before credits consumed).
+              // Billing state is known-safe — safe to fall back to legacy.
               const error = new Error(parsed.error);
               error.retryable = parsed.retryable;
+              error.isBillingStateUnknown = false;
               attachErrorDebug(error, response, parsed);
               recordFailure('openrouter-ai');
               throw error;
@@ -716,16 +731,33 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
           }
         } catch (parseErr) {
           if (parseErr.retryable !== undefined) throw parseErr; // Re-throw SSE errors
-      console.warn('[optimize-stream] Failed to parse SSE event:', eventType, summarizeErrorForConsole(parseErr));
+          console.warn('[optimize-stream] Failed to parse SSE event:', eventType, summarizeErrorForConsole(parseErr));
         }
       }
     }
+  } catch (streamErr) {
+    if (streamErr.isBillingStateUnknown === false) {
+      throw streamErr;
+    }
+    if (result) {
+      // Stream broke after result was received — credits already consumed on server.
+      // Return what we have rather than losing it.
+      console.warn('[optimize-stream] Stream closed after result received:', streamErr.message);
+      return result;
+    }
+    // Stream broke before result — billing state is unknown (credits may have been consumed).
+    // Caller must NOT automatically retry with another paid request.
+    streamErr.isBillingStateUnknown = true;
+    throw streamErr;
   } finally {
     reader.releaseLock();
   }
 
   if (!result) {
-    throw new Error('SSE stream ended without a result event');
+    // Stream ended gracefully without a result event — billing state unknown.
+    const err = new Error('SSE stream ended without a result event');
+    err.isBillingStateUnknown = true;
+    throw err;
   }
 
   return result;

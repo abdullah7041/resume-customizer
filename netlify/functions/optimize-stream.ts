@@ -119,21 +119,7 @@ export default async function handler(request: Request): Promise<Response> {
   const ipAddress = getClientIPFromRequest(request);
   const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
 
-  // --- Credit check (synchronous, before stream) ---
-  const creditCheck = await checkCredits(userEmail, "optimize", { ipAddress, emailVerified });
-  if (!creditCheck.hasCredits) {
-    return new Response(
-      JSON.stringify({
-        error: "Insufficient credits",
-        creditsRequired: creditCheck.required,
-        creditsAvailable: creditCheck.available,
-        creditsNeeded: creditCheck.required - creditCheck.available,
-      }),
-      { status: 403, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  // --- Parse & validate body (synchronous, before stream) ---
+  // --- Parse & validate body ---
   let rawBody: any;
   try {
     rawBody = await request.json();
@@ -167,9 +153,18 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   // -----------------------------------------------------------------------
-  // P0 FIX: Redis cache check — return plain JSON on HIT, skip SSE entirely
+  // Cache check BEFORE credit check — enables idempotent retries.
+  // If a previous request was processed but the stream failed to deliver the
+  // result, the result is cached. The retry hits cache here and returns without
+  // consuming additional credits, even if the user's balance is now 0.
+  //
+  // TODO: Add explicit operationId support so the client can pass a UUID per
+  // attempt. The server would store {operationId → result} independently of
+  // content hash. This covers edge cases where the content hash collides or
+  // the TTL has expired before the user can retry.
   // -----------------------------------------------------------------------
   const cacheKey = buildCacheKey('optimize', {
+    userId: user.id || userEmail,
     resumeText: resumeText.trim(),
     jobText: jobText.trim(),
     language: language || 'en',
@@ -179,7 +174,7 @@ export default async function handler(request: Request): Promise<Response> {
 
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
   if (cachedResponse) {
-    console.log('[optimize-stream] Cache HIT — returning cached JSON, skipping SSE stream.');
+    console.log('[optimize-stream] Cache HIT — returning cached JSON (no credit deduction).');
     return new Response(JSON.stringify(cachedResponse), {
       status: 200,
       headers: {
@@ -190,7 +185,21 @@ export default async function handler(request: Request): Promise<Response> {
       },
     });
   }
-  console.log('[optimize-stream] Cache MISS — starting SSE stream.');
+  console.log('[optimize-stream] Cache MISS — running credit check and SSE stream.');
+
+  // --- Credit check (after cache check so cached retries bypass this) ---
+  const creditCheck = await checkCredits(userEmail, "optimize", { ipAddress, emailVerified });
+  if (!creditCheck.hasCredits) {
+    return new Response(
+      JSON.stringify({
+        error: "Insufficient credits",
+        creditsRequired: creditCheck.required,
+        creditsAvailable: creditCheck.available,
+        creditsNeeded: creditCheck.required - creditCheck.available,
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
   // -----------------------------------------------------------------------
 
   // --- Stream the optimization ---

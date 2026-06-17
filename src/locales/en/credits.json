@@ -8,6 +8,7 @@
     "resetsSoon": "Resets soon",
     "refresh": "Refresh credits",
     "transactionTotal": "{{total}} total",
+    "connectionInterrupted": "The connection was interrupted while optimization was running. Your credits may have already been used. Please refresh your balance before trying again.",
     "confirm": {
       "title": "Confirm Action",
       "message": "This will use {{cost}} credits.",

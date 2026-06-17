@@ -126,7 +126,19 @@ describe('optimize-stream function', () => {
       'optimize-stream'
     );
     expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('test-token');
-    expect(mockCreditManager.checkCredits).toHaveBeenCalled();
+    // Cache hit returns before credit check — correct behaviour: no double-charge on retries.
+    expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+  });
+
+  it('scopes no-charge cache hits to the authenticated user', async () => {
+    await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+
+    expect(mockRedisCache.buildCacheKey).toHaveBeenCalledWith(
+      'optimize',
+      expect.objectContaining({
+        userId: 'user-123',
+      })
+    );
   });
 
   it('stores cache misses with a short optimization TTL', async () => {
