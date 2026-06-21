@@ -135,6 +135,38 @@ class Analytics {
         this.track(`optimization_${action}`, data);
     }
 
+    trackClarificationOutcome(data: {
+        outcome: 'answered' | 'skipped';
+        questionCount: number;
+        answeredCount: number;
+        hardStopCount: number;
+    }) {
+        const questionCount = Math.max(0, data.questionCount);
+        const hardStopSelectionRate = questionCount > 0
+            ? Math.min(1, Math.max(0, data.hardStopCount / questionCount))
+            : 0;
+        this.track('clarification_outcome', {
+            outcome: data.outcome,
+            question_count: questionCount,
+            answered_count: Math.max(0, data.answeredCount),
+            hard_stop_count: Math.max(0, data.hardStopCount),
+            hard_stop_selection_rate: hardStopSelectionRate,
+        });
+    }
+
+    trackClarificationScoreDelta(data: {
+        outcome: 'answered' | 'skipped';
+        beforeScore: number;
+        afterScore: number;
+    }) {
+        this.track('clarification_score_delta', {
+            outcome: data.outcome,
+            score_delta: Math.round(data.afterScore - data.beforeScore),
+            before_score_bucket: getScoreBucket(data.beforeScore),
+            after_score_bucket: getScoreBucket(data.afterScore),
+        });
+    }
+
     /**
      * Track match analysis run.
      */
