@@ -14,7 +14,10 @@ import {
 } from "../../services/api.js";
 import { type ClarificationQuestion } from "../modals/ClarificationModal";
 import {
+  filterClarificationQuestionsByHardStops,
   formatClarificationAnswers,
+  loadPersistentHardStops,
+  persistHardStops,
   shouldRequestClarifications,
   type ClarificationAnswers,
   type WorkEntry,
@@ -419,7 +422,12 @@ export default function MainContent() {
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
-  const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[]; freePreview?: boolean } | null>(null);
+  const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{
+    mode: string;
+    workHistory?: WorkEntry[];
+    persistentHardStops?: string[];
+    freePreview?: boolean;
+  } | null>(null);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.DEV;
 
@@ -1414,11 +1422,17 @@ export default function MainContent() {
 
       try {
         const workHistory = buildWorkHistory();
+        const persistentHardStops = loadPersistentHardStops();
 
         // E1: only skip the clarification endpoint when deterministic evidence
         // says this is a known strong match with no career vulnerabilities.
         if (!shouldRequestClarifications(matchAnalysis?.score, workHistory)) {
-          return await handleOptimizeActual({ mode, workHistory, freePreview: options?.freePreview });
+          return await handleOptimizeActual({
+            mode,
+            workHistory,
+            userHardStops: persistentHardStops,
+            freePreview: options?.freePreview,
+          });
         }
 
         // ---- Clarification Step (free, non-fatal) ----
@@ -1438,10 +1452,20 @@ export default function MainContent() {
           language: i18n.language,
         });
 
-        if (clarifyResult.clarifications?.length > 0) {
+        const unansweredQuestions = filterClarificationQuestionsByHardStops(
+          clarifyResult.clarifications ?? [],
+          persistentHardStops,
+        );
+
+        if (unansweredQuestions.length > 0) {
           // Pause the flow — show the modal and wait for user answers
-          setClarificationQuestions(clarifyResult.clarifications);
-          setPendingOptimizeArgs({ mode, workHistory, freePreview: options?.freePreview });
+          setClarificationQuestions(unansweredQuestions);
+          setPendingOptimizeArgs({
+            mode,
+            workHistory,
+            persistentHardStops,
+            freePreview: options?.freePreview,
+          });
           setIsInterrogating(true);
           setIsOptimizing(false);
           setFlowProgress(0);
@@ -1449,11 +1473,23 @@ export default function MainContent() {
         }
 
         // No questions → fall through to the actual optimize call
-        return await handleOptimizeActual({ mode, workHistory, userClarifications: undefined, freePreview: options?.freePreview });
+        return await handleOptimizeActual({
+          mode,
+          workHistory,
+          userClarifications: undefined,
+          userHardStops: persistentHardStops,
+          freePreview: options?.freePreview,
+        });
       } catch (outerError) {
         // If clarification itself throws (shouldn't — it's non-fatal), proceed anyway
         console.warn('[handleOptimize] Clarification error, proceeding without:', outerError);
-        return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined, freePreview: options?.freePreview });
+        return await handleOptimizeActual({
+          mode,
+          workHistory: buildWorkHistory(),
+          userClarifications: undefined,
+          userHardStops: loadPersistentHardStops(),
+          freePreview: options?.freePreview,
+        });
       }
     },
     [handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
@@ -1463,23 +1499,41 @@ export default function MainContent() {
 
   const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers) => {
     setIsInterrogating(false);
-    const { userClarifications, userHardStops } = formatClarificationAnswers(
+    const { userClarifications, userHardStops, persistentHardStops: newPersistentHardStops } = formatClarificationAnswers(
       clarificationQuestions,
       answers,
       t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
     );
-    const { mode, workHistory, freePreview } = pendingOptimizeArgs || {};
+    const {
+      mode,
+      workHistory,
+      persistentHardStops = [],
+      freePreview,
+    } = pendingOptimizeArgs || {};
+    const allHardStops = persistHardStops([...persistentHardStops, ...(newPersistentHardStops ?? [])]);
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications, userHardStops, freePreview });
+    await handleOptimizeActual({
+      mode,
+      workHistory,
+      userClarifications,
+      userHardStops: allHardStops,
+      freePreview,
+    });
   }, [clarificationQuestions, handleOptimizeActual, pendingOptimizeArgs, t]);
 
   const handleClarificationSkip = useCallback(async () => {
     setIsInterrogating(false);
-    const { mode, workHistory, freePreview } = pendingOptimizeArgs || {};
+    const { mode, workHistory, persistentHardStops, freePreview } = pendingOptimizeArgs || {};
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications: undefined, freePreview });
+    await handleOptimizeActual({
+      mode,
+      workHistory,
+      userClarifications: undefined,
+      userHardStops: persistentHardStops,
+      freePreview,
+    });
   }, [handleOptimizeActual, pendingOptimizeArgs]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */

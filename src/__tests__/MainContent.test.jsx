@@ -636,10 +636,48 @@ describe("MainContent resume parsing", () => {
     expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userClarifications: undefined,
-        userHardStops: ["I don't have Excel experience"],
+        userHardStops: ["Excel"],
       }),
       expect.any(Function),
     );
+    expect(JSON.parse(localStorage.getItem("watheq:hardStops"))).toEqual(["Excel"]);
+  });
+
+  it("reuses persistent hard stops and hides matching clarification questions", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Excel is required");
+    localStorage.setItem("watheq:hardStops", JSON.stringify(["Excel"]));
+    generateClarificationsMock.mockResolvedValueOnce({
+      clarifications: [{
+        id: "excelExperience",
+        theme: "excel",
+        rationale: "The role requires Excel evidence.",
+        question: "Which Excel work can you verify?",
+        type: "single",
+        options: [
+          { value: "dashboards", label: "Built Excel dashboards" },
+          { value: "no_excel", label: "I don't have Excel experience", isHardStop: true },
+        ],
+        allowOther: true,
+      }],
+    });
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    expect(screen.queryByRole("button", { name: "I don't have Excel experience" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
+        expect.objectContaining({ userHardStops: ["Excel"] }),
+        expect.any(Function),
+      );
+    });
   });
 
   it("skips clarification generation for a strong match with no deterministic vulnerabilities", async () => {
