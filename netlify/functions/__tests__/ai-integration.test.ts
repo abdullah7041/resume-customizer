@@ -421,7 +421,11 @@ describe('AI Integration Functions', () => {
             const event = {
                 httpMethod: 'POST',
                 headers: { 'Authorization': 'Bearer test-token' },
-                body: JSON.stringify({ resumeText: 'Owned national transformation', language: 'en' })
+                body: JSON.stringify({
+                    resumeText: 'Owned national transformation',
+                    language: 'en',
+                    userHardStops: ['Excel'],
+                })
             } as Partial<HandlerEvent>;
 
             const result = await truthCheckHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
@@ -431,7 +435,11 @@ describe('AI Integration Functions', () => {
             expect(body.overallRisk).toBe('medium');
             expect(body.claims[0].claimText).toContain('Owned national transformation');
             expect(body.creditsRemaining).toBeUndefined();
-            expect(mockGeminiClient.analyzeResumeTruthCheck).toHaveBeenCalledWith('Owned national transformation', 'en');
+            expect(mockGeminiClient.analyzeResumeTruthCheck).toHaveBeenCalledWith(
+                'Owned national transformation',
+                'en',
+                { userHardStops: ['Excel'] },
+            );
             expect(mockCreditManager.checkCredits).not.toHaveBeenCalledWith('user@example.com', 'resume_truth_check', expect.anything());
             expect(mockCreditManager.consumeCredits).not.toHaveBeenCalledWith('user@example.com', 'resume_truth_check');
         });

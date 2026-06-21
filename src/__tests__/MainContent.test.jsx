@@ -486,6 +486,7 @@ describe("MainContent resume parsing", () => {
   it("runs free authenticated Truth Check and caches the result without credit copy", async () => {
     localStorage.setItem("watheq:lastActiveTab", "truth-check");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:hardStops", JSON.stringify(["Excel"]));
     analyzeResumeTruthCheckMock.mockResolvedValueOnce({
       overallRisk: "medium",
       summary: "Some claims need evidence.",
@@ -511,6 +512,7 @@ describe("MainContent resume parsing", () => {
     expect(analyzeResumeTruthCheckMock).toHaveBeenCalledWith({
       resumeText: "Parsed resume",
       language: undefined,
+      userHardStops: ["Excel"],
     });
     expect(localStorage.setItem).toHaveBeenCalledWith(
       "watheq:resumeTruthCheck",
