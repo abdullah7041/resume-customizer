@@ -1,0 +1,24 @@
+{
+  "name": "bilingual-software-engineer",
+  "lang": "ar-en",
+  "layout": "single-column",
+  "synthetic": true,
+  "note": "SYNTHETIC scaffold — replace with a real bilingual CV. Tests mixed RTL/LTR on the same line and bilingual section headers (SUMMARY / الملخص). Dates are Latin here, so date asserts apply.",
+  "text": "KHALID AL-DOSSARI | خالد الدوسري\nSoftware Engineer | مهندس برمجيات\nJeddah, Saudi Arabia | جدة، المملكة العربية السعودية\nkhalid.dossari@email.com | +966 56 222 3333\ngithub.com/khalidd | linkedin.com/in/khaliddossari\nSUMMARY / الملخص\nFull-stack engineer with 7 years building scalable web applications across fintech and ride-hailing. مهندس برمجيات متكامل بخبرة سبع سنوات.\nEXPERIENCE / الخبرة\nSenior Software Engineer\nSTC — Riyadh\nApr 2019 – Present\n• Built microservices handling 2M daily requests with 99.9% uptime.\n• Mentored 5 junior engineers and led the migration to TypeScript.\nSoftware Engineer\nCareem — Dubai\nJul 2016 – Mar 2019\n• Developed the driver matching service in Node.js used in 14 cities.\nEDUCATION / التعليم\nBSc Computer Science, KFUPM, 2016\nSKILLS / المهارات\nJavaScript, TypeScript, Node.js, React, AWS, Docker\nLANGUAGES / اللغات\nArabic (Native), English (Fluent)",
+  "expected": {
+    "basics": {
+      "name": "Khalid Al-Dossari",
+      "labelContains": ["Software Engineer"],
+      "location": { "city": "Jeddah", "country": "Saudi Arabia" },
+      "summaryContains": ["Full-stack", "scalable"],
+      "profiles": ["github", "linkedin"]
+    },
+    "work": [
+      { "name": "STC", "position": "Senior Software Engineer", "startDate": "Apr 2019", "endDate": "Present", "minHighlights": 2 },
+      { "name": "Careem", "position": "Software Engineer", "startDate": "Jul 2016", "endDate": "Mar 2019", "minHighlights": 1 }
+    ],
+    "education": [{ "institution": "KFUPM" }],
+    "skillsKeywords": ["JavaScript", "TypeScript", "Node.js", "React", "AWS", "Docker"],
+    "languages": ["Arabic", "English"]
+  }
+}

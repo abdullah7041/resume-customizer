@@ -1,0 +1,24 @@
+{
+  "name": "arabic-data-analyst",
+  "lang": "ar",
+  "layout": "single-column",
+  "synthetic": true,
+  "note": "SYNTHETIC scaffold — replace with a real Arabic CV. Tests RTL + Arabic field extraction. Date asserts are omitted because the scorer's date match is Latin-numeral only (Arabic-Indic ٢٠٢٠ won't match) — extending dateMatch is a handoff task.",
+  "text": "محمد العتيبي\nمحلل بيانات أول\nالدمام، المملكة العربية السعودية\nmohammed.otaibi@email.com | +966 55 987 6543\nlinkedin.com/in/mohammedotaibi\nالملخص\nمحلل بيانات لديه خمس سنوات من الخبرة في بناء لوحات المعلومات وتحليل بيانات قطاع التجزئة ودعم اتخاذ القرار.\nالخبرة العملية\nمحلل بيانات أول\nشركة الغانم — الرياض\nمارس ٢٠٢٠ – حتى الآن\n• قاد تطوير ١٥ لوحة معلومات تفاعلية لدعم اتخاذ القرار.\n• أتمت عمليات تنظيف البيانات مما قلل الأخطاء بنسبة ٤٠٪.\nمحلل بيانات\nنون — عن بعد\nيناير ٢٠١٨ – فبراير ٢٠٢٠\n• صمم تقارير المبيعات الأسبوعية لفريق الإدارة.\nالتعليم\nبكالوريوس نظم المعلومات، جامعة الملك فهد للبترول والمعادن، ٢٠١٧\nالمهارات\nSQL، Power BI، Python، تحليل البيانات\nاللغات\nالعربية (اللغة الأم)، الإنجليزية (متقدم)",
+  "expected": {
+    "basics": {
+      "name": "محمد العتيبي",
+      "labelContains": ["محلل بيانات"],
+      "location": { "city": "الدمام", "country": "السعودية" },
+      "summaryContains": ["محلل بيانات", "التجزئة"],
+      "profiles": ["linkedin"]
+    },
+    "work": [
+      { "name": "الغانم", "position": "محلل بيانات أول", "minHighlights": 2 },
+      { "name": "نون", "position": "محلل بيانات", "minHighlights": 1 }
+    ],
+    "education": [{ "institution": "جامعة الملك فهد" }],
+    "skillsKeywords": ["SQL", "Power BI", "Python"],
+    "languages": ["العربية", "الإنجليزية"]
+  }
+}

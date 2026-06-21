@@ -1,0 +1,24 @@
+{
+  "name": "two-column-designer",
+  "lang": "en",
+  "layout": "two-column",
+  "synthetic": true,
+  "note": "SYNTHETIC scaffold — replace text+expected with a real two-column CV when you have one. Text is column-ordered (sidebar first, then main), the way the extractor emits a two-column page. Tests sidebar skills/contact split from main experience.",
+  "text": "SARAH AL-MUTAIRI\nProduct Designer\nRiyadh, Saudi Arabia\nsarah.design@email.com | +966 50 123 4567\nlinkedin.com/in/sarahalmutairi | behance.net/sarahm\nSKILLS\nFigma, Sketch, Adobe XD, Prototyping, User Research, Design Systems, HTML, CSS\nLANGUAGES\nArabic (Native), English (Fluent)\nSUMMARY\nProduct designer with 6 years designing mobile and web products for fintech and e-commerce, focused on conversion and design systems.\nEXPERIENCE\nSenior Product Designer\nJahez — Riyadh\nFeb 2021 – Present\n• Led the redesign of the checkout flow, lifting conversion by 18%.\n• Built and maintained the company design system used by 4 product teams.\n• Ran weekly usability sessions that cut support tickets by 25%.\nProduct Designer\nNoon — Remote\nJun 2018 – Jan 2021\n• Designed the seller onboarding flow adopted by 12,000 merchants.\n• Shipped a component library that halved design handoff time.\nEDUCATION\nBachelor of Design, King Saud University, 2018",
+  "expected": {
+    "basics": {
+      "name": "Sarah Al-Mutairi",
+      "labelContains": ["Product Designer"],
+      "location": { "city": "Riyadh", "country": "Saudi Arabia" },
+      "summaryContains": ["product designer", "fintech", "design systems"],
+      "profiles": ["linkedin", "behance"]
+    },
+    "work": [
+      { "name": "Jahez", "position": "Senior Product Designer", "startDate": "Feb 2021", "endDate": "Present", "minHighlights": 3 },
+      { "name": "Noon", "position": "Product Designer", "startDate": "Jun 2018", "endDate": "Jan 2021", "minHighlights": 2 }
+    ],
+    "education": [{ "institution": "King Saud University" }],
+    "skillsKeywords": ["Figma", "Sketch", "Adobe XD", "Prototyping", "Design Systems", "User Research"],
+    "languages": ["Arabic", "English"]
+  }
+}
