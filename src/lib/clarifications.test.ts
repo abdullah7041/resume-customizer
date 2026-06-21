@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  filterClarificationQuestionsByHardStops,
   formatClarificationAnswers,
+  loadPersistentHardStops,
   normalizeClarificationQuestion,
+  persistHardStops,
   shouldRequestClarifications,
   type ClarificationAnswers,
   type ClarificationQuestion,
@@ -45,6 +48,7 @@ describe('clarification helpers', () => {
     expect(formatClarificationAnswers([excelQuestion], answers)).toEqual({
       userClarifications: undefined,
       userHardStops: ["I don't have Excel experience"],
+      persistentHardStops: ['Excel'],
     });
   });
 
@@ -67,6 +71,7 @@ describe('clarification helpers', () => {
     expect(formatClarificationAnswers([question], answers)).toEqual({
       userClarifications: undefined,
       userHardStops: ["I don't have Salesforce experience"],
+      persistentHardStops: ['salesforce'],
     });
   });
 
@@ -89,6 +94,7 @@ describe('clarification helpers', () => {
     expect(formatClarificationAnswers([question], answers)).toEqual({
       userClarifications: undefined,
       userHardStops: ['Excel: ليست لدي خبرة بهذا'],
+      persistentHardStops: ['Excel'],
     });
   });
 
@@ -106,6 +112,7 @@ describe('clarification helpers', () => {
     }], answers, "I don't have this experience")).toEqual({
       userClarifications: undefined,
       userHardStops: ["Excel: I don't have this experience"],
+      persistentHardStops: ['Excel'],
     });
   });
 
@@ -133,5 +140,35 @@ describe('clarification helpers', () => {
       startDate: '2025-01',
       endDate: '2025-06',
     }])).toBe(true);
+  });
+
+  it('persists a normalized, case-insensitive union of hard stops', () => {
+    const values = new Map<string, string>([
+      ['watheq:hardStops', JSON.stringify([' Excel ', 'Power BI'])],
+    ]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    };
+
+    expect(persistHardStops(['excel', 'Tableau', ''], storage)).toEqual([
+      'Excel',
+      'Power BI',
+      'Tableau',
+    ]);
+    expect(loadPersistentHardStops(storage)).toEqual(['Excel', 'Power BI', 'Tableau']);
+  });
+
+  it('filters future questions whose themes are already persistent hard stops', () => {
+    const powerBiQuestion: ClarificationQuestion = {
+      ...excelQuestion,
+      id: 'powerBiExperience',
+      theme: 'Power BI',
+    };
+
+    expect(filterClarificationQuestionsByHardStops(
+      [excelQuestion, powerBiQuestion],
+      [' excel '],
+    )).toEqual([powerBiQuestion]);
   });
 });
