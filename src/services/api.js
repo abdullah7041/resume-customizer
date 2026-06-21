@@ -920,7 +920,7 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en' }) => {
+export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en', userHardStops }) => {
   const text = resumeText?.plainText || resumeText;
   if (!text?.trim()) {
     throw new Error("Resume text is required");
@@ -937,7 +937,7 @@ export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en' }) =
       const response = await fetch(TRUTH_CHECK_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText: text, language }),
+        body: JSON.stringify({ resumeText: text, language, userHardStops }),
       });
 
       const data = await handleResponse(response);

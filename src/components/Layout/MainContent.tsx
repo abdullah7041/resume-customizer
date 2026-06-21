@@ -150,17 +150,25 @@ const scheduleTimeout = (callback, delay) => {
 };
 
 const getResumeFingerprint = (text: string) => `${text.length}:${text.slice(0, 120)}`;
+const getHardStopsFingerprint = (hardStops: string[]) => hardStops
+  .map(value => value.trim().toLocaleLowerCase())
+  .filter(Boolean)
+  .sort()
+  .join('|');
 
-const loadCachedTruthCheck = (resumeText: string): ResumeTruthCheckResult | null => {
+const loadCachedTruthCheck = (resumeText: string, hardStops: string[] = []): ResumeTruthCheckResult | null => {
   if (typeof window === "undefined" || !resumeText) return null;
   try {
     const stored = window.localStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as {
       resumeHash?: string;
+      hardStopsHash?: string;
       result?: ResumeTruthCheckResult;
     };
-    return parsed?.resumeHash === getResumeFingerprint(resumeText) && parsed.result
+    return parsed?.resumeHash === getResumeFingerprint(resumeText)
+      && (parsed.hardStopsHash ?? '') === getHardStopsFingerprint(hardStops)
+      && parsed.result
       ? parsed.result
       : null;
   } catch (error) {
@@ -385,7 +393,10 @@ export default function MainContent() {
   });
   const [matchAnalysis, setMatchAnalysis] = useState(null);
   const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
-    loadCachedTruthCheck(typeof resumeData?.plainText === "string" ? resumeData.plainText : "")
+    loadCachedTruthCheck(
+      typeof resumeData?.plainText === "string" ? resumeData.plainText : "",
+      loadPersistentHardStops(),
+    )
   );
   const [optimizations, setOptimizations] = useState([]);
   const [optimizationData, setOptimizationData] = useState(null);
@@ -1075,7 +1086,9 @@ export default function MainContent() {
     }
 
     const resumeHash = getResumeFingerprint(resumeTextToAnalyze);
-    const cached = loadCachedTruthCheck(resumeTextToAnalyze);
+    const userHardStops = loadPersistentHardStops();
+    const hardStopsHash = getHardStopsFingerprint(userHardStops);
+    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops);
     if (cached) {
       setTruthCheckResult(cached);
       return cached;
@@ -1095,6 +1108,7 @@ export default function MainContent() {
       const result = await analyzeResumeTruthCheck({
         resumeText: resumeTextToAnalyze,
         language: i18n.language,
+        userHardStops,
       }) as ResumeTruthCheckResult;
 
       setAiDebug(buildAiDebugSnapshot(result, "success"));
@@ -1102,6 +1116,7 @@ export default function MainContent() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
           resumeHash,
+          hardStopsHash,
           result,
           timestamp: new Date().toISOString(),
         }));

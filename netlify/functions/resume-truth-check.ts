@@ -63,11 +63,11 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  const { resumeText, language } = parseResult.data;
+  const { resumeText, language, userHardStops } = parseResult.data;
   const startTime = Date.now();
 
   try {
-    const result = await analyzeResumeTruthCheck(resumeText, language);
+    const result = await analyzeResumeTruthCheck(resumeText, language, { userHardStops });
     const latencyMs = Date.now() - startTime;
 
     return {

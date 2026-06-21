@@ -163,6 +163,20 @@ describe('AI contract layer', () => {
     expect(messages[1].content).toContain('</resume_text>');
   });
 
+  it('treats persistent hard stops as explicit Truth Check constraints', () => {
+    const contract = getAiContract('resume_truth_check');
+    const messages = contract.buildMessages({
+      resumeText: 'Advanced Excel reporting',
+      language: 'en',
+      userHardStops: ['Excel'],
+    }, { retrievedContext: { documents: [] } });
+
+    expect(messages[0].content).toContain('explicitly denied');
+    expect(messages[1].content).toContain('<user_hard_stops>');
+    expect(messages[1].content).toContain('Excel');
+    expect(messages[1].content).toContain('</user_hard_stops>');
+  });
+
   it('validates the Resume Truth Check contract', async () => {
     callOpenRouterMock.mockResolvedValue(JSON.stringify({
       overallRisk: 'medium',
