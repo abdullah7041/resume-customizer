@@ -12,8 +12,8 @@
 // eval/fixtures/<name>.actual.json exists, that cached parser output is scored
 // instead — so you can re-score without spending tokens.
 
-import { readdirSync, readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,7 +21,10 @@ const ROOT = join(__dirname, "..");
 const FIXTURE_DIR = join(ROOT, "eval", "fixtures");
 const THRESHOLD = Number(process.env.EVAL_THRESHOLD ?? "0.8");
 
-const { scoreResume } = await import(join(ROOT, "eval", "score.mjs"));
+// Dynamic import() needs a file:// URL, not a bare absolute path — required on Windows.
+const importPath = (...segments) => import(pathToFileURL(join(...segments)).href);
+
+const { scoreResume } = await importPath(ROOT, "eval", "score.mjs");
 
 // Minimal .env loader (no dependency) so the key can live in .env like the app.
 const loadDotEnv = () => {
@@ -49,19 +52,38 @@ const parseJsonLoose = (content) => {
   }
 };
 
+const MAX_RETRY = 2;
+const isTransient = (err) =>
+  /timed out|timeout|aborted/i.test(err?.message || "") || [429, 500, 502, 503, 504].includes(err?.status);
+
 const runParser = async (text) => {
-  const { aiContracts } = await import(join(ROOT, "netlify", "lib", "ai-contracts", "contracts", "index.js"));
-  const { callOpenRouter } = await import(join(ROOT, "netlify", "lib", "openrouter-client.js"));
+  const { aiContracts } = await importPath(ROOT, "netlify", "lib", "ai-contracts", "contracts", "index.js");
+  const { callOpenRouter } = await importPath(ROOT, "netlify", "lib", "openrouter-client.js");
   const contract = aiContracts.parse_resume;
   const messages = contract.buildMessages({ inputData: text });
-  const content = await callOpenRouter(contract.modelType, messages, contract.jsonSchema, {
-    maxTokens: contract.maxTokens,
-    timeoutMs: contract.timeoutMs,
-    temperature: contract.temperature,
-    reasoningBudget: contract.reasoningBudget,
-    featureName: contract.featureName,
-  });
-  return parseJsonLoose(content);
+  // Production retries transient failures client-side; mirror that so a load blip
+  // (timeout/5xx) doesn't zero a fixture. Parse errors are NOT retried — at temp 0
+  // they are deterministic, so a retry would just burn tokens for the same result.
+  for (let attempt = 0; ; attempt++) {
+    let content;
+    try {
+      content = await callOpenRouter(contract.modelType, messages, contract.jsonSchema, {
+        maxTokens: contract.maxTokens,
+        timeoutMs: contract.timeoutMs,
+        temperature: contract.temperature,
+        reasoningBudget: contract.reasoningBudget,
+        featureName: contract.featureName,
+      });
+    } catch (err) {
+      if (isTransient(err) && attempt < MAX_RETRY) {
+        console.log(`${C.dim}  transient (${err.message?.slice(0, 40)}…) — retry ${attempt + 1}/${MAX_RETRY}${C.reset}`);
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+    return parseJsonLoose(content);
+  }
 };
 
 const printCard = (fixtureName, result) => {
@@ -123,8 +145,11 @@ const main = async () => {
     const cachePath = join(FIXTURE_DIR, file.replace(/\.json$/, ".actual.json"));
     let actual;
     try {
-      if (hasKey) actual = await runParser(fixture.text);
-      else if (existsSync(cachePath)) actual = JSON.parse(readFileSync(cachePath, "utf8"));
+      if (hasKey) {
+        actual = await runParser(fixture.text);
+        // Cache the live output so the set can be re-scored offline without tokens.
+        writeFileSync(cachePath, JSON.stringify(actual, null, 2) + "\n");
+      } else if (existsSync(cachePath)) actual = JSON.parse(readFileSync(cachePath, "utf8"));
       else {
         console.log(`\n${C.dim}skip ${fixture.name} (no key, no cache)${C.reset}`);
         continue;

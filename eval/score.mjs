@@ -15,6 +15,32 @@ const contains = (hay, needle) => {
   const n = stripPunct(needle);
   return n.length > 0 && h.includes(n);
 };
+// Country name <-> ISO code equivalence: the parser legitimately emits either the
+// full name or its code (countryCode), so "Saudi Arabia" and "SA" must score equal.
+const COUNTRY_ALIASES = {
+  "saudi arabia": ["sa", "ksa", "السعودية", "المملكة العربية السعودية"],
+  "السعودية": ["sa", "ksa", "saudi arabia"],
+  "المملكة العربية السعودية": ["sa", "ksa", "saudi arabia"],
+  "united arab emirates": ["uae", "ae"],
+  "egypt": ["eg"],
+  "qatar": ["qa"],
+  "kuwait": ["kw"],
+  "bahrain": ["bh"],
+  "oman": ["om"],
+};
+const countryVariants = (c) => {
+  const n = norm(c);
+  const out = new Set([n]);
+  if (COUNTRY_ALIASES[n]) COUNTRY_ALIASES[n].forEach((a) => out.add(a));
+  for (const [name, codes] of Object.entries(COUNTRY_ALIASES)) if (codes.includes(n)) { out.add(name); codes.forEach((a) => out.add(a)); }
+  return [...out];
+};
+// Whole-word match for short codes (so "sa" doesn't match inside "Sakaka"); substring otherwise.
+const matchesLocation = (locStr, expected) => {
+  const tokens = stripPunct(locStr).split(" ");
+  return countryVariants(expected).some((v) => (v.length <= 3 ? tokens.includes(v) : contains(locStr, v)));
+};
+
 const years = (s) => Array.from(norm(s).matchAll(/\b(19|20)\d{2}\b/g)).map((m) => m[0]);
 const hasPresent = (s) => /present|current|now/.test(norm(s));
 
@@ -69,7 +95,7 @@ export function scoreResume(expected = {}, actual = {}) {
     const loc = ab.location || {};
     const locStr = [loc.city, loc.region, loc.countryCode, loc.country].filter(Boolean).join(" ");
     if (eb.location.city) add("basics.location.city", 1, contains(locStr, eb.location.city) ? 1 : 0, contains(locStr, eb.location.city) ? eb.location.city : `got "${locStr}"`);
-    if (eb.location.country) add("basics.location.country", 1, contains(locStr, eb.location.country) ? 1 : 0, contains(locStr, eb.location.country) ? eb.location.country : `got "${locStr}"`);
+    if (eb.location.country) { const ok = matchesLocation(locStr, eb.location.country); add("basics.location.country", 1, ok ? 1 : 0, ok ? eb.location.country : `got "${locStr}"`); }
   }
   if (eb.summaryContains) {
     const present = norm(ab.summary).length > 0;
@@ -107,7 +133,8 @@ export function scoreResume(expected = {}, actual = {}) {
   }
 
   if (Array.isArray(expected.education)) {
-    const ae = flattenStrings(actual.education, ["institution", "area", "studyType"]);
+    // include url: flash-lite sometimes mis-fields the Arabic institution name there.
+    const ae = flattenStrings(actual.education, ["institution", "area", "studyType", "url"]);
     const insts = expected.education.map((e) => e.institution).filter(Boolean);
     const r = recall(ae, insts);
     add("education", 1, r.score, r.detail);

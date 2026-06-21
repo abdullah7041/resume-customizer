@@ -23,7 +23,7 @@
     "test:watch": "vitest",
     "benchmark:ai": "node scripts/benchmark-ai-models.mjs",
     "eval:optimize": "node scripts/optimize-quality-eval.mjs",
-    "eval:parse": "node scripts/parse-eval.mjs",
+    "eval:parse": "tsx scripts/parse-eval.mjs",
     "i18n:validate": "node scripts/i18n-validate.mjs",
     "i18n:missing": "node scripts/i18n-missing.mjs",
     "i18n:translation-prompt": "node scripts/i18n-translation-prompt.mjs",
@@ -108,5 +108,11 @@
     "mailparser": "^3.9.1",
     "tar": "^7.5.9",
     "minimatch": "^10.2.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "bash -c 'tsc --noEmit'"
+    ]
   }
 }

@@ -59,6 +59,7 @@ const resumeJsonSchema = {
             countryCode: { type: 'string' },
             region: { type: 'string' },
           },
+          required: ['city', 'countryCode'],
         },
         profiles: {
           type: 'array',
@@ -72,6 +73,7 @@ const resumeJsonSchema = {
           },
         },
       },
+      required: ['name', 'label', 'location', 'summary'],
     },
     work: {
       type: 'array',
@@ -83,9 +85,9 @@ const resumeJsonSchema = {
           location: { type: 'string' },
           startDate: { type: 'string' },
           endDate: { type: 'string' },
-          summary: { type: 'string' },
           highlights: stringArray,
         },
+        required: ['name', 'position', 'startDate', 'endDate', 'highlights'],
       },
     },
     education: {
@@ -159,8 +161,11 @@ const resumeJsonSchema = {
     meta: { type: 'object' },
   },
   // Section containers must always be present so strict structured output cannot
-  // legally stop after basics/work. Item fields remain optional: absent resume
-  // evidence is represented by an empty array, never fabricated placeholder data.
+  // legally stop after basics/work. Most item fields stay optional (absent evidence
+  // → empty, never fabricated), but the always-present core identity/work fields are
+  // required because gemini-2.5-flash-lite (reasoning disabled) otherwise drops
+  // label/location/summary and dumps bullets into a single summary string instead of
+  // the highlights[] array. Forcing them is what makes a real resume parse completely.
   required: ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages', 'meta'],
 };
 
@@ -748,7 +753,8 @@ For basics you MUST extract:
 - name, and label (the professional headline on the line directly under the name)
 - email and phone if present
 - location: parse the candidate's location from the header/contact line. That line is often pipe- or bullet-delimited (e.g. "Dammam, Saudi Arabia | LinkedIn: ... | Portfolio: ..."); the location is the segment that names a place, not a URL or a label. Map "City, Country" to location.city (e.g. "Dammam") and location.countryCode (the country, e.g. "Saudi Arabia" or its code); use location.region for a state/province if present
-- url and profiles: extract EVERY link from the contact line (LinkedIn, GitHub, Portfolio, website, etc.) into basics.profiles[] with network and url; do not drop any. Put a personal site/portfolio in basics.url
+- profiles: extract EVERY link from the contact line (LinkedIn, GitHub, Portfolio, website, etc.) into basics.profiles[] with network and url; do not drop any. Copy each URL exactly as written and ONLY ONCE — never repeat or concatenate path segments
+- url: if a standalone personal website or portfolio URL is present, copy it once into basics.url (it may also appear as a Portfolio profile); otherwise leave basics.url empty
 - summary: the professional summary or profile paragraph. It may sit under a non-standard heading such as Summary, Profile, About, Objective, Professional Summary, Core Identity, Value Proposition, or "Core Identity & Value Proposition" — map that paragraph to basics.summary
 
 For EACH work entry you MUST extract:
