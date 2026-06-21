@@ -88,13 +88,80 @@ const resumeJsonSchema = {
         },
       },
     },
-    education: { type: 'array', items: { type: 'object' } },
-    skills: { type: 'array', items: { type: 'object' } },
-    projects: { type: 'array', items: { type: 'object' } },
-    certificates: { type: 'array', items: { type: 'object' } },
-    languages: { type: 'array', items: { type: 'object' } },
+    education: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          institution: { type: 'string' },
+          url: { type: 'string' },
+          area: { type: 'string' },
+          studyType: { type: 'string' },
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+          score: { type: 'string' },
+          courses: stringArray,
+          highlights: stringArray,
+        },
+      },
+    },
+    skills: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          level: { type: 'string' },
+          keywords: stringArray,
+        },
+      },
+    },
+    projects: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          highlights: stringArray,
+          keywords: stringArray,
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+          url: { type: 'string' },
+          roles: stringArray,
+          entity: { type: 'string' },
+          type: { type: 'string' },
+        },
+      },
+    },
+    certificates: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          date: { type: 'string' },
+          issuer: { type: 'string' },
+          url: { type: 'string' },
+        },
+      },
+    },
+    languages: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          language: { type: 'string' },
+          fluency: { type: 'string' },
+        },
+      },
+    },
     meta: { type: 'object' },
   },
+  // Section containers must always be present so strict structured output cannot
+  // legally stop after basics/work. Item fields remain optional: absent resume
+  // evidence is represented by an empty array, never fabricated placeholder data.
+  required: ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages', 'meta'],
 };
 
 const looseResumeOutput = z.object({
@@ -677,12 +744,24 @@ export function buildParseResumeMessages(input, context = {}) {
   const system = `You are a resume parser. Extract structured data from resume text into JSON Resume format. Preserve facts only; do not invent missing information.`;
   const user = `Extract resume data into JSON Resume format. Include basics, work, education, skills, projects, certificates, languages, and meta fields.
 
+For basics you MUST extract:
+- name, and label (the professional headline on the line directly under the name)
+- email and phone if present
+- location: parse the candidate's location from the header/contact line. That line is often pipe- or bullet-delimited (e.g. "Dammam, Saudi Arabia | LinkedIn: ... | Portfolio: ..."); the location is the segment that names a place, not a URL or a label. Map "City, Country" to location.city (e.g. "Dammam") and location.countryCode (the country, e.g. "Saudi Arabia" or its code); use location.region for a state/province if present
+- url and profiles: extract EVERY link from the contact line (LinkedIn, GitHub, Portfolio, website, etc.) into basics.profiles[] with network and url; do not drop any. Put a personal site/portfolio in basics.url
+- summary: the professional summary or profile paragraph. It may sit under a non-standard heading such as Summary, Profile, About, Objective, Professional Summary, Core Identity, Value Proposition, or "Core Identity & Value Proposition" — map that paragraph to basics.summary
+
 For EACH work entry you MUST extract:
 - position: the job title exactly as written
-- name: the employer/company name exactly as written — never omit this field
+- name: the employer/company name exactly as written — never omit this field; the employer often appears on the line immediately after the job title
 - location: if present in the text for that entry
-- startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry
+- startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry; a date range on a nearby line belongs to the adjacent entry
 - highlights: an array containing EVERY bullet point and achievement line under that entry — do not summarize, merge, skip, or omit any bullet; each bullet is a separate array item
+
+Additional parsing rules:
+- The line directly under the candidate's name is a professional headline — put it in basics.label, not as a work entry
+- Skills may be grouped as "Category: item, item, item" — extract every item as a keyword in skills[].keywords; preserve compound names like "Power Query (M Language)" and "PostgreSQL (Supabase)" intact
+- For education entries, the institution may appear on the line before or after the degree — always capture it as institution
 
 Do not invent any values not present in the text.${focusInstruction}${withRagBlock(context.retrievedContext)}
 
@@ -850,10 +929,21 @@ export const aiContracts = {
     outputSchema: looseResumeOutput,
     schemaName: 'parse_resume',
     featureName: 'parse_resume',
-    maxTokens: 4096,
-    timeoutMs: 50000,
+    // 4096 truncated legitimate rich-resume JSON, while 16384 allowed pathological
+    // whitespace output to consume the full 30s Netlify window. Valid 2-page
+    // parses stay well below 8192 (observed: ~1.6k completion tokens, ~6s total).
+    // timeoutMs is bounded so a single slow/truncated attempt leaves headroom for
+    // deterministic recovery + response within the 30s function limit (there is
+    // no second AI attempt on truncation — see openrouter-client fallback note).
+    maxTokens: 8192,
+    timeoutMs: 20000,
     temperature: 0,
-    reasoningBudget: null,
+    // reasoningBudget 0 = thinking DISABLED. Parsing is mechanical extraction
+    // under a strict JSON schema, so chain-of-thought adds no quality. With
+    // gemini-2.5-flash-lite's default thinking ON, reasoning consumed the 8192
+    // output budget (→ truncation) and pushed latency to ~26s; OFF, the real
+    // JSON (~2-3k tokens) fits with headroom and latency returns to ~6s.
+    reasoningBudget: 0,
     buildMessages: buildParseResumeMessages,
   },
   parse_arabic_resume: {
