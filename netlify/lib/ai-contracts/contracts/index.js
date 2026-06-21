@@ -825,8 +825,33 @@ function buildOptimizeMessages(input, context) {
     ? optionalTaggedBlock('career_vulnerabilities', vulnerabilities)
     : '';
   const clarificationsBlock = optionalTaggedBlock('user_clarifications', input.userClarifications);
-  const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications. Every improved bullet must use an action, task, and quantified result; inferred metrics must include "(verify)".`;
-  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric.${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${clarificationsBlock}
+  const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications. Every improved bullet must use an action, task, and quantified result; inferred metrics must include "(verify)".
+
+Write like a top-tier human reviewer, not a template. Each rewrite must:
+- Lead with a strong, specific action verb; never reuse the same verb twice in one role.
+- Name the concrete technology, scope, or domain from the resume (e.g. "React dashboard", "Node.js API"), not vague nouns like "solutions", "systems", or "various tasks".
+- Keep the candidate's real metric when one exists; only append "(verify)" to a metric you inferred.
+- Ban filler and cliche: "results-driven", "responsible for", "leveraged", "spearheaded", "passionate", "team player", "synergy", "best-in-class".
+- Read tighter than the original. If a rewrite is not more specific AND more concise, keep the original.
+
+GROUNDING — non-negotiable. Every company, job title, date, tool, technology, scope, and number in a rewrite MUST appear in, or be directly entailed by, the <resume_text>. You may NOT introduce a specific metric, percentage, dollar figure, employer, client, certification, or skill that is not in the resume. If a quantified result would strengthen a bullet but no real number exists in the resume, write the qualitative impact and append "(verify)" to the single inferred figure — never invent the figure as fact. In each item's "rationale", quote the exact phrase from the resume that supports the rewrite (e.g. rationale: "...supported by resume: 'Reduced API latency by 40%'"). If you cannot find a supporting phrase, do not make the claim.
+
+FINAL SELF-AUDIT before returning: re-read every improved bullet and the summary_rewrite. For each, verify every proper noun, date, tool, scope, and number traces to the resume. Remove or generalize anything unsupported; mark any inferred metric with "(verify)". Truthfulness outranks impressiveness — a plainer true bullet beats a stronger false one.`;
+  const goodExample = `Example of the bar to clear:
+- original: "Responsible for improving the API and making it faster for users."
+- improved: "Cut customer-facing API latency 40% by adding Redis caching and rewriting N+1 queries, across endpoints serving 1M+ requests/day."
+- issue: "Vague verb, no scope, no metric."
+- rationale: "Names the exact technique and system; keeps the real metric — supported by resume: 'Reduced API latency by 40%'."`;
+  const badExample = `Counter-example you must NOT produce (fabrication):
+- original: "Helped the team ship features."
+- BAD improved: "Drove $2.3M in revenue and led a team of 12 engineers across 4 countries."  ← INVENTED: no $2.3M, no team of 12, no countries in the resume.
+- CORRECT improved: "Shipped product features on tight deadlines in collaboration with the product team (scope/impact (verify))."
+- rationale: "Keeps only what the resume supports: 'Collaborated with product team to deliver features on tight deadlines'."`;
+  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric.
+
+${goodExample}
+
+${badExample}${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${clarificationsBlock}
 
 ${taggedBlock('job_description', jobDescription)}
 
