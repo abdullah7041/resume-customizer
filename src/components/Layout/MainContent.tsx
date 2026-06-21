@@ -247,6 +247,8 @@ type AiDebugSnapshot = {
   errorDetail?: string | null;
 };
 
+type ClarificationOutcome = 'answered' | 'skipped';
+
 const toRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? value as Record<string, unknown> : {};
 
@@ -255,6 +257,17 @@ const toNumber = (value: unknown): number | null =>
 
 const toStringValue = (value: unknown): string | null =>
   typeof value === "string" && value.trim().length > 0 ? value : null;
+
+const getOptimizationScorePair = (result: unknown): { beforeScore: number; afterScore: number } | null => {
+  const matchScoring = toRecord(toRecord(result).matchScoring);
+  const beforeScore = toNumber(matchScoring.beforeScore);
+  const explicitAfterScore = toNumber(matchScoring.afterScore);
+  const improvement = toNumber(matchScoring.estimatedImprovement) ?? toNumber(matchScoring.improvement);
+  const afterScore = explicitAfterScore ?? (beforeScore !== null && improvement !== null
+    ? beforeScore + improvement
+    : null);
+  return beforeScore !== null && afterScore !== null ? { beforeScore, afterScore } : null;
+};
 
 const buildAiDebugSnapshot = (
   source: unknown,
@@ -1153,7 +1166,7 @@ export default function MainContent() {
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
-    async ({ mode, workHistory, userClarifications, userHardStops }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[] }) => {
+    async ({ mode, workHistory, userClarifications, userHardStops, clarificationOutcome }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; clarificationOutcome?: ClarificationOutcome }) => {
       if (isGuestMode) {
         requireSignInForGuestAction();
         return null;
@@ -1235,6 +1248,13 @@ export default function MainContent() {
           );
         }
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        const clarificationScores = getOptimizationScorePair(result);
+        if (clarificationOutcome && clarificationScores) {
+          analytics.trackClarificationScoreDelta({
+            outcome: clarificationOutcome,
+            ...clarificationScores,
+          });
+        }
 
         // Build full cards array including projects and certifications
         const allCards = [...(result.cards ?? [])];
@@ -1479,18 +1499,42 @@ export default function MainContent() {
     );
     const { mode, workHistory, persistentHardStops = [] } = pendingOptimizeArgs || {};
     const allHardStops = persistHardStops([...persistentHardStops, ...(newPersistentHardStops ?? [])]);
+    analytics.trackClarificationOutcome({
+      outcome: 'answered',
+      questionCount: clarificationQuestions.length,
+      answeredCount: Object.keys(answers).length,
+      hardStopCount: userHardStops?.length ?? 0,
+    });
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications, userHardStops: allHardStops });
+    await handleOptimizeActual({
+      mode,
+      workHistory,
+      userClarifications,
+      userHardStops: allHardStops,
+      clarificationOutcome: 'answered',
+    });
   }, [clarificationQuestions, handleOptimizeActual, pendingOptimizeArgs, t]);
 
   const handleClarificationSkip = useCallback(async () => {
     setIsInterrogating(false);
     const { mode, workHistory, persistentHardStops } = pendingOptimizeArgs || {};
+    analytics.trackClarificationOutcome({
+      outcome: 'skipped',
+      questionCount: clarificationQuestions.length,
+      answeredCount: 0,
+      hardStopCount: 0,
+    });
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications: undefined, userHardStops: persistentHardStops });
-  }, [handleOptimizeActual, pendingOptimizeArgs]);
+    await handleOptimizeActual({
+      mode,
+      workHistory,
+      userClarifications: undefined,
+      userHardStops: persistentHardStops,
+      clarificationOutcome: 'skipped',
+    });
+  }, [clarificationQuestions.length, handleOptimizeActual, pendingOptimizeArgs]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {

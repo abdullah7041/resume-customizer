@@ -25,6 +25,8 @@ const {
     trackGuestPreviewLimitHit: vi.fn(),
     trackGuestPreviewSigninStarted: vi.fn(),
     trackResumeTruthCheck: vi.fn(),
+    trackClarificationOutcome: vi.fn(),
+    trackClarificationScoreDelta: vi.fn(),
     trackJobMetadataExtracted: vi.fn(),
     trackJobMetadataExtractionFailed: vi.fn(),
     trackPipelineExportAttached: vi.fn(),
@@ -613,6 +615,7 @@ describe("MainContent resume parsing", () => {
       cards: [],
       keywords: { add: [], neutral: [], remove: [] },
       source: "gemini",
+      matchScoring: { beforeScore: 40, afterScore: 68 },
     });
 
     render(<MainContent />);
@@ -628,6 +631,63 @@ describe("MainContent resume parsing", () => {
       expect.any(Function),
     );
     expect(JSON.parse(localStorage.getItem("watheq:hardStops"))).toEqual(["Excel"]);
+    expect(analyticsMock.trackClarificationOutcome).toHaveBeenCalledWith({
+      outcome: "answered",
+      questionCount: 1,
+      answeredCount: 1,
+      hardStopCount: 1,
+    });
+    await waitFor(() => {
+      expect(analyticsMock.trackClarificationScoreDelta).toHaveBeenCalledWith({
+        outcome: "answered",
+        beforeScore: 40,
+        afterScore: 68,
+      });
+    });
+  });
+
+  it("tracks skipped clarification outcomes and their optimization score delta", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Excel is required");
+    generateClarificationsMock.mockResolvedValueOnce({
+      clarifications: [{
+        id: "excelExperience",
+        theme: "Excel",
+        rationale: "The role requires Excel evidence.",
+        question: "Which Excel work can you verify?",
+        type: "single",
+        options: [
+          { value: "dashboards", label: "Built Excel dashboards" },
+          { value: "no_excel", label: "I don't have Excel experience", isHardStop: true },
+        ],
+        allowOther: true,
+      }],
+    });
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+      matchScoring: { beforeScore: 40, estimatedImprovement: 12 },
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /skip for now/i }));
+
+    await waitFor(() => {
+      expect(analyticsMock.trackClarificationOutcome).toHaveBeenCalledWith({
+        outcome: "skipped",
+        questionCount: 1,
+        answeredCount: 0,
+        hardStopCount: 0,
+      });
+      expect(analyticsMock.trackClarificationScoreDelta).toHaveBeenCalledWith({
+        outcome: "skipped",
+        beforeScore: 40,
+        afterScore: 52,
+      });
+    });
   });
 
   it("reuses persistent hard stops and hides matching clarification questions", async () => {
