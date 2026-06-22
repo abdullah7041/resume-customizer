@@ -43,6 +43,7 @@ import { analytics } from "../../services/analytics";
 import type { ExtractedJobMetadata } from "../../types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
 import ViewTextModal from "../ui/ViewTextModal";
+import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
@@ -1832,6 +1833,8 @@ export default function MainContent() {
         </div>
 
         <div className="workspace-panel relative min-h-[420px] p-4 transition-shadow duration-300 sm:min-h-[480px] sm:p-5 lg:p-6">
+          {/* Parse-quality warning — shown on all tabs so the user always sees it */}
+          {activeTab !== "resume" && <ParsingWarningsBanner />}
           {activeTab === "resume" && (
             <UploadSection
               onParseResume={handleParseResume}

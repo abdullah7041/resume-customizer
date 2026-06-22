@@ -95,9 +95,10 @@ export const useResumeStore = create<ResumeState>()(
       displayOptions: {
         fontSize: 1, // Legacy 100% scale
         baseFontSize: 10.5,   // pt
-        headingSize: 14,      // pt
+        headingSize: 13,      // pt
+        nameSize: 20,         // pt
         fontFamily: 'Georgia, serif',
-        sectionSpacing: 12,   // px
+        sectionSpacing: 8,    // px
         paragraphSpacing: 6,  // px
         lineHeight: 1.55,
         marginTop: 0.5,       // inches

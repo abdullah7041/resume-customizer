@@ -1,14 +1,15 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
 import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
     baseFontSize: 10.5,
-    headingSize: 14,
+    headingSize: 13,
+    nameSize: 20,
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
-    sectionSpacing: 12,
+    sectionSpacing: 8,
     paragraphSpacing: 6,
     lineHeight: 1.5,
     marginTop: 0.5,
@@ -57,6 +58,9 @@ export function TechnicalEngineer({
         }
         return scaledFontSize(pt, fontScale);
     };
+    const nameFontSize = displayOptions
+        ? `${opts.nameSize ?? 20}pt`
+        : scaledFontSize(opts.nameSize ?? 20, fontScale);
 
     // Dynamic margins based on displayOptions
 
@@ -67,7 +71,7 @@ export function TechnicalEngineer({
         fontWeight: '700' as const,
         textTransform: 'uppercase' as const,
         letterSpacing: '0.05em',
-        borderBottom: '1px dashed #e5e7eb',
+        borderBottom: '0.5px dashed #e5e7eb',
         paddingBottom: '4px',
         marginBottom: `${opts.paragraphSpacing}px`,
         breakAfter: 'avoid' as const,
@@ -92,11 +96,11 @@ export function TechnicalEngineer({
             dir={contentDirection}
         >
             {/* Header */}
-            <header className="mb-5 pb-4" style={{ borderBottom: '2px dashed #d1d5db' }}>
+            <header className="mb-5 pb-4" style={{ borderBottom: '1px dashed #d1d5db' }}>
                 <h1
                     className="text-gray-900 mb-1"
                     style={{
-                        fontSize: fs(24),
+                        fontSize: nameFontSize,
                         fontWeight: '700',
                         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
@@ -242,7 +246,7 @@ export function TechnicalEngineer({
                                     <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {job.highlights.map((h, j) => (
                                             <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
-                                                {h}
+                                                {cleanHighlight(h)}
                                             </li>
                                         ))}
                                     </ul>
@@ -284,7 +288,7 @@ export function TechnicalEngineer({
                                     <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {project.highlights.map((h, j) => (
                                             <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
-                                                {h}
+                                                {cleanHighlight(h)}
                                             </li>
                                         ))}
                                     </ul>
@@ -340,9 +344,9 @@ export function TechnicalEngineer({
                                         </span>
                                     </div>
                                 </div>
-                                {edu.highlights && edu.highlights.length > 0 && (
+                                {filterEducationHighlights(edu.highlights).length > 0 && (
                                     <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
-                                        {edu.highlights.map((h, j) => (
+                                        {filterEducationHighlights(edu.highlights).map((h, j) => (
                                             <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                                                 {h}
                                             </li>

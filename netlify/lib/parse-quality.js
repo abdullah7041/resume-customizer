@@ -116,7 +116,12 @@ const isWorkIncomplete = (work) => {
  */
 export function findMissingSections(signals, analysis = {}) {
   const missing = [];
-  if (signals.experience && isWorkIncomplete(analysis.work)) missing.push("experience");
+  // Experience is "missing" ONLY when no work entry survived. Partial entries
+  // (a dropped company name or empty highlights) are a quality nuance, not an
+  // absent section — flagging them mislabels a present section and (previously)
+  // triggered a doomed AI retry. Deterministic work recovery enriches partials
+  // separately and records them under fallbackSections, not incompleteSections.
+  if (signals.experience && isEmptyArray(analysis.work)) missing.push("experience");
   if (signals.education && isEmptyArray(analysis.education)) missing.push("education");
   if (signals.certificates && isEmptyArray(analysis.certificates)) missing.push("certificates");
   if (signals.projects && isEmptyArray(analysis.projects)) missing.push("projects");
@@ -322,20 +327,139 @@ export function sliceSection(rawText, sectionKey) {
 
 /**
  * Split a sliced "skills" block into individual keyword tokens. Splits on
- * commas, bullets, pipes, and semicolons — common delimiters in skills lists.
+ * commas, bullets, pipes, semicolons, tabs, and runs of 2+ spaces (chip/badge
+ * layouts emitted by pdf.js). A single space is NOT a delimiter, so compound
+ * skills survive intact: "Power BI", "Power Query (M Language)",
+ * "PostgreSQL (Supabase)", "Sentry/Telegram Webhooks", "CI/CD (Netlify)".
  */
 function splitSkillTokens(lines) {
   return lines
     .join("\n")
-    .split(/[\r\n,;|•·]+/)
+    .split(/[\r\n,;|•·]+|\t+| {2,}/)
     .map((token) => token.trim())
     .filter((token) => token.length > 0);
 }
 
+// Date token used to recognize work-entry header lines and to slice a date
+// range out of them (e.g. "Mar 2021 - Present", "2017 - 2018", "Jan 2019").
+const MONTH = "(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?";
+const DATE_TOKEN_RE = new RegExp(`(?:${MONTH}\\s*)?(?:19|20)\\d{2}|\\bpresent\\b`, "i");
+const DATE_RANGE_RE = new RegExp(
+  `((?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)\\s*(?:[-–—]|to)\\s*((?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)`,
+  "i",
+);
+const DATE_ONLY_RE = new RegExp(
+  `^\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)(?:\\s*(?:[-–—]|to)\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present))?\\s*$`,
+  "i",
+);
+// A work-entry header carries a date or an explicit "<role> at <company>" /
+// "<role> — <company>" / "<role> | <company>" separator. Continuation/bullet
+// lines (achievements) carry neither, so they attach to the open entry instead.
+const COMPANY_SEP_RE = /\s+at\s+|\s[–—|]\s/i;
+
+/**
+ * Group the lines of an EXPERIENCE section into evidence-only work entries.
+ * Header lines start a new entry; following non-header lines become highlights.
+ * Never fabricates — position/name/dates are sliced from literal header text,
+ * and a bullet's leading marker is the only thing stripped.
+ */
+export function parseWorkBlocks(lines) {
+  const rows = (Array.isArray(lines) ? lines : [])
+    .map((line) => String(line || "").trim())
+    .filter((line) => line.length > 0);
+
+  const entries = [];
+  let current = null;
+
+  // A year appearing inside an achievement is not enough to start a new job.
+  // Accept an inline header only when it has a full date range or an explicit
+  // role/company separator; standalone date lines are attached below.
+  const isHeader = (line) => DATE_RANGE_RE.test(line) || COMPANY_SEP_RE.test(line);
+
+  for (let index = 0; index < rows.length; index++) {
+    const line = rows[index];
+    const nextLine = rows[index + 1] || "";
+
+    // A date-only line immediately after a role/company belongs to the current
+    // entry; it must not become a second date-only work item.
+    const dateRange = line.match(DATE_RANGE_RE);
+    const singleDate = dateRange ? null : line.match(DATE_TOKEN_RE);
+    const withoutDate = dateRange
+      ? (line.slice(0, dateRange.index) + line.slice(dateRange.index + dateRange[0].length)).trim()
+      : singleDate
+        ? (line.slice(0, singleDate.index) + line.slice(singleDate.index + singleDate[0].length)).trim()
+        : line;
+    if (current && !withoutDate && !current.startDate && (dateRange || singleDate)) {
+      current.startDate = (dateRange?.[1] || singleDate?.[0] || "").trim();
+      if (dateRange) current.endDate = dateRange[2].trim();
+      continue;
+    }
+
+    // Common stacked header: role, company, date range. Only treat the middle
+    // line as company when the following line is date-only, avoiding a generic
+    // achievement line being mislabeled as an employer.
+    if (
+      current
+      && current.position
+      && !current.name
+      && !current.startDate
+      && (!current.highlights || current.highlights.length === 0)
+      && !isHeader(line)
+      && DATE_ONLY_RE.test(nextLine)
+    ) {
+      current.name = line;
+      continue;
+    }
+
+    if (isHeader(line) || !current) {
+      let rest = line;
+      const entry = {};
+
+      const range = rest.match(DATE_RANGE_RE);
+      if (range) {
+        entry.startDate = range[1].trim();
+        entry.endDate = range[2].trim();
+        rest = (rest.slice(0, range.index) + rest.slice(range.index + range[0].length)).trim();
+      } else {
+        const single = rest.match(DATE_TOKEN_RE);
+        if (single) {
+          entry.startDate = single[0].trim();
+          rest = (rest.slice(0, single.index) + rest.slice(single.index + single[0].length)).trim();
+        }
+      }
+
+      const sep = rest.match(COMPANY_SEP_RE);
+      if (sep) {
+        entry.position = rest.slice(0, sep.index).trim();
+        entry.name = rest.slice(sep.index + sep[0].length).replace(/[\s,–—|-]+$/, "").trim();
+      } else if (rest) {
+        entry.position = rest.replace(/[\s,–—|-]+$/, "").trim();
+      }
+
+      entry.highlights = [];
+      if (entry.position || entry.name || entry.startDate || entry.endDate) {
+        entries.push(entry);
+        current = entry;
+      }
+      continue;
+    }
+
+    // Continuation line → highlight on the open entry (strip a leading bullet).
+    const bullet = line.replace(/^[\s•·*\-–—]+/, "").trim();
+    if (bullet) current.highlights.push(bullet);
+  }
+
+  return entries.map((entry) => {
+    if (Array.isArray(entry.highlights) && entry.highlights.length === 0) delete entry.highlights;
+    return entry;
+  });
+}
+
 /**
  * Determine whether a line is a standalone section heading (optionally a
- * COMBINED heading like "Education, Certifications & Languages"). Returns the
- * list of section keys it introduces, or [] if the line carries real content.
+ * COMBINED heading like "Education, Certifications & Languages", or a DECORATED
+ * heading like "TECHNICAL TOOLCHAIN & ANALYTICS"). Returns the list of section
+ * keys it introduces, or [] if the line carries real content.
  */
 function headingSectionsOf(line) {
   const trimmed = String(line || "").trim();
@@ -359,6 +483,21 @@ function headingSectionsOf(line) {
     .replace(/\s+/g, " ")
     .trim();
   if (residual.length <= 2) return [...matched];
+
+  // Also accept decorated ALL-CAPS or Title-Case heading lines that contain a
+  // section keyword alongside extra descriptive words, e.g.:
+  //   "TECHNICAL TOOLCHAIN & ANALYTICS"  →  skills
+  //   "PROFESSIONAL SUMMARY"             →  summary
+  // Guard against body sentences and list items:
+  //   - sentence-ending period/! → definitely content
+  //   - any word starting with lowercase → body text (e.g. "years of experience")
+  //   - long lines (> 45 chars) → likely a sentence or role description
+  const hasSentencePeriod = /[.!?]$/.test(trimmed);
+  const hasLowercaseStart = trimmed.split(/\s+/).some((w) => /^[a-z]/.test(w));
+  if (!hasSentencePeriod && !hasLowercaseStart && trimmed.length <= 45) {
+    return [...matched];
+  }
+
   return [];
 }
 
@@ -383,10 +522,17 @@ export function segmentSections(rawText) {
     const line = rawLine.trim();
     if (!line) continue;
 
+    // Strip leading list markers for heading/prefix RECOGNITION only. Many resumes
+    // bullet their inline section lines ("• Languages: Arabic, English"); the
+    // ^-anchored PREFIX_LABELS would otherwise miss them and dump everything into
+    // the previously-open (combined-heading primary) section. Plain body content is
+    // still stored verbatim so parseWorkBlocks/splitSkillTokens keep their bullets.
+    const deBulleted = line.replace(/^[\s•·*\-–—]+/, "").trim();
+
     // Inline prefix takes priority: opens (or re-opens) a single section.
     let prefixed = false;
     for (const { key, re } of PREFIX_LABELS) {
-      const m = line.match(re);
+      const m = deBulleted.match(re);
       if (m) {
         current = key;
         ensure(key);
@@ -399,14 +545,14 @@ export function segmentSections(rawText) {
     if (prefixed) continue;
 
     // Standalone / combined heading line.
-    const hs = headingSectionsOf(line);
+    const hs = headingSectionsOf(deBulleted);
     if (hs.length > 0) {
       for (const k of hs) ensure(k);
       current = hs[0];
       continue;
     }
 
-    if (NON_RECOVERY_HEADING_PATTERNS.some((pattern) => pattern.test(line))) {
+    if (NON_RECOVERY_HEADING_PATTERNS.some((pattern) => pattern.test(deBulleted))) {
       current = null;
       continue;
     }
@@ -431,7 +577,11 @@ export function parseLanguageLines(lines) {
 
   const out = [];
   const seen = new Set();
-  for (const token of tokens) {
+  for (const rawToken of tokens) {
+    // Drop trailing sentence punctuation ("English (Professional)." → "English (Professional)")
+    // so the end-anchored matcher still captures the parenthesized fluency.
+    const token = rawToken.replace(/[.;]+$/, "").trim();
+    if (!token) continue;
     const m = token.match(/^([\p{L}][\p{L} ]*?)\s*(?:[([\-–—:]\s*([\p{L} ]+?)\)?\s*)?$/u);
     if (!m) continue;
     const language = m[1].trim();
@@ -443,6 +593,88 @@ export function parseLanguageLines(lines) {
     out.push(fluency ? { language, fluency } : { language });
   }
   return out;
+}
+
+/**
+ * Split a comma-separated certificates line into individual certificate names,
+ * ignoring commas inside parentheses (issuers/notes commonly contain them, e.g.
+ * "Intro to Management Consulting (Emory University & PwC), Google Data Analytics...").
+ * Evidence-only — returns trimmed substrings of the input, inventing nothing.
+ */
+function splitCertLine(line) {
+  const text = String(line || "");
+  const out = [];
+  let depth = 0;
+  let buf = "";
+  for (const ch of text) {
+    if (ch === "(" || ch === "[") depth++;
+    else if (ch === ")" || ch === "]") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) {
+      const t = buf.trim().replace(/[.;]+$/, "").trim();
+      if (t) out.push(t);
+      buf = "";
+    } else {
+      buf += ch;
+    }
+  }
+  const last = buf.trim().replace(/[.;]+$/, "").trim();
+  if (last) out.push(last);
+  return out.length > 0 ? out : [text.trim()].filter(Boolean);
+}
+
+/**
+ * Recover the title/headline line (basics.label) that sits directly under the
+ * candidate name, e.g. "Senior Business Intelligence Analyst & Data Architect".
+ * Evidence-only: returns the FIRST non-empty line after the name line, accepted
+ * only when it looks like a title (short, no contact tokens / pipe separators, not
+ * a section heading or inline label). Returns "" when absent — never invents.
+ */
+function extractCandidateLabel(rawText, name) {
+  if (!name) return "";
+  const lines = String(rawText || "").split(/\r?\n/).map((l) => l.trim());
+  const nameLower = String(name).toLowerCase();
+  const idx = lines.findIndex((l) => l.toLowerCase() === nameLower);
+  if (idx === -1) return "";
+  for (let i = idx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;                                           // skip blanks to the first real line
+    if (line.length < 2 || line.length > 60) return "";            // titles are short
+    if (line.includes("@") || line.includes("|")) return "";       // email / contact line
+    if (/https?:\/\/|www\.|linkedin\.com/i.test(line)) return "";  // URL / profile
+    if (/^\+?\d[\d ()-]{6,}$/.test(line)) return "";               // phone-only line
+    if (headingSectionsOf(line).length > 0) return "";             // section heading
+    if (NON_RECOVERY_HEADING_PATTERNS.some((re) => re.test(line))) return "";
+    if (PREFIX_LABELS.some(({ re }) => re.test(line))) return "";  // "Label: value" line
+    if (!/[\p{L}]/u.test(line)) return "";                         // must contain a letter
+    return line;
+  }
+  return "";
+}
+
+/**
+ * Conservatively pick the candidate's name from raw text. Evidence-only: returns
+ * the first non-empty line that is NOT a contact line (email/phone/URL), NOT a
+ * section heading or inline label, carries no digits, and looks name-like (≤ 6
+ * mostly-alphabetic words). Returns "" when no such line exists — never invents.
+ * Needed because the frontend BasicsSchema requires basics.name (z.string().min(1)),
+ * so a deterministic fallback without a name fails store validation.
+ */
+function extractCandidateName(rawText) {
+  for (const raw of String(rawText || "").split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.length < 2 || line.length > 50) continue;
+    if (line.includes("@")) continue;                              // email
+    if (/\d/.test(line)) continue;                                 // phone / date / address
+    if (/https?:\/\/|www\.|linkedin\.com/i.test(line)) continue;   // URL / profile
+    if (headingSectionsOf(line).length > 0) continue;              // section heading
+    if (NON_RECOVERY_HEADING_PATTERNS.some((re) => re.test(line))) continue;
+    if (PREFIX_LABELS.some(({ re }) => re.test(line))) continue;   // "Label: value" line
+    const words = line.split(/\s+/);
+    if (words.length > 6) continue;                                // names are short
+    if (!words.every((w) => /^[\p{L}][\p{L}'.-]*$/u.test(w))) continue;
+    return line;
+  }
+  return "";
 }
 
 /**
@@ -458,6 +690,12 @@ export function buildDeterministicBaseline(rawText, signals) {
 
   // ---- basics / contact ----
   const basics = {};
+  const name = extractCandidateName(text);
+  if (name) {
+    basics.name = name;
+    const label = extractCandidateLabel(text, name);
+    if (label) basics.label = label;
+  }
   if (sig.emails?.length > 0) basics.email = sig.emails[0];
   if (sig.phones?.length > 0) basics.phone = sig.phones[0];
   const linkedinMatch = text.match(LINKEDIN_RE);
@@ -472,13 +710,19 @@ export function buildDeterministicBaseline(rawText, signals) {
   if (Object.keys(basics).length > 0) baseline.basics = basics;
 
   // ---- sections (conservative shapes; no fabrication) ----
+  if (sections.experience?.length > 0) {
+    const work = parseWorkBlocks(sections.experience);
+    if (work.length > 0) baseline.work = work;
+  }
   if (sections.education?.length > 0) {
     baseline.education = [
       { institution: "", area: "", studyType: "", startDate: "", endDate: "", highlights: sections.education },
     ];
   }
   if (sections.certificates?.length > 0) {
-    baseline.certificates = sections.certificates.map((line) => ({ name: line, issuer: "", date: "" }));
+    baseline.certificates = sections.certificates
+      .flatMap((line) => splitCertLine(line))
+      .map((name) => ({ name, issuer: "", date: "" }));
   }
   if (sections.projects?.length > 0) {
     baseline.projects = sections.projects.map((line) => ({ name: line, description: "", highlights: [] }));
@@ -519,6 +763,16 @@ export function recoverSectionsFromRawText(analysis = {}, signals, rawText) {
   const basics = { ...(recovered.basics || {}) };
   let basicsChanged = false;
 
+  if (!basics.name && baseline.basics?.name) {
+    basics.name = baseline.basics.name;
+    basicsChanged = true;
+    fallbackSections.push("name");
+  }
+  if (!basics.label && baseline.basics?.label) {
+    basics.label = baseline.basics.label;
+    basicsChanged = true;
+    fallbackSections.push("label");
+  }
   if (!basics.email && baseline.basics?.email) {
     basics.email = baseline.basics.email;
     basicsChanged = true;
@@ -550,6 +804,37 @@ export function recoverSectionsFromRawText(analysis = {}, signals, rawText) {
     if (Array.isArray(entries) && entries.length > 0) {
       recovered[section] = entries;
       fallbackSections.push(section);
+    }
+  }
+
+  // ---- Work / experience -------------------------------------------------
+  // Fill work when the AI returned none, OR append evidence-backed blocks the
+  // AI dropped when the raw text clearly contains more entries. Existing
+  // populated entries are never overwritten; blocks already represented
+  // (company/position substring match) are never duplicated.
+  const baselineWork = Array.isArray(baseline.work) ? baseline.work : [];
+  if (sig.experience && baselineWork.length > 0) {
+    const existingWork = Array.isArray(recovered.work) ? recovered.work.map((e) => ({ ...e })) : [];
+    const norm = (value) => String(value || "").toLowerCase().trim();
+    const overlaps = (a, b) => a.length > 0 && b.length > 0 && (a.includes(b) || b.includes(a));
+    // Compare by position when both sides have one (multiple roles at the same
+    // company are distinct); fall back to company only when a position is absent.
+    const isRepresented = (block) => existingWork.some((entry) => {
+      const ep = norm(entry.position);
+      const bp = norm(block.position);
+      if (ep && bp) return overlaps(ep, bp);
+      return overlaps(norm(entry.name), norm(block.name));
+    });
+
+    if (existingWork.length === 0) {
+      recovered.work = baselineWork;
+      fallbackSections.push("experience");
+    } else {
+      const additions = baselineWork.filter((block) => !isRepresented(block));
+      if (additions.length > 0) {
+        recovered.work = [...existingWork, ...additions];
+        fallbackSections.push("experience");
+      }
     }
   }
 

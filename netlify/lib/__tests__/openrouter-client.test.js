@@ -32,6 +32,11 @@ const importClient = async ({ openRouterKey = 'openrouter-key', geminiKey = 'gem
   return import('../openrouter-client.js');
 };
 
+const getParseResumeSchema = async () => {
+  const { aiContracts } = await import('../ai-contracts/contracts/index.js');
+  return aiContracts.parse_resume.jsonSchema;
+};
+
 describe('openrouter-client fallback and timeout behavior', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -128,6 +133,59 @@ describe('openrouter-client fallback and timeout behavior', () => {
     }));
   });
 
+  it('sends explicit parse_resume section properties through OpenRouter structured output', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"basics":{}}' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+    await callOpenRouter('lite', MESSAGES, await getParseResumeSchema(), {
+      timeoutMs: 1000,
+      featureName: 'parse_resume',
+      schemaName: 'parse_resume',
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const providerSchema = requestBody.response_format.json_schema.schema;
+    const properties = providerSchema.properties;
+    expect(providerSchema.required).toEqual(expect.arrayContaining([
+      'education', 'skills', 'projects', 'certificates', 'languages',
+    ]));
+    expect(properties.education.items.properties).toHaveProperty('institution');
+    expect(properties.skills.items.properties).toHaveProperty('keywords');
+    expect(properties.projects.items.properties).toHaveProperty('description');
+    expect(properties.certificates.items.properties).toHaveProperty('issuer');
+    expect(properties.languages.items.properties).toHaveProperty('fluency');
+  });
+
+  it('sends explicit parse_resume section properties through direct Gemini structured output', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      candidates: [{ content: { parts: [{ text: '{"basics":{}}' }] } }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient({ openRouterKey: '' });
+    await callOpenRouter('lite', MESSAGES, await getParseResumeSchema(), {
+      timeoutMs: 1000,
+      featureName: 'parse_resume',
+      schemaName: 'parse_resume',
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const providerSchema = requestBody.generationConfig.responseSchema;
+    const properties = providerSchema.properties;
+    expect(providerSchema.required).toEqual(expect.arrayContaining([
+      'education', 'skills', 'projects', 'certificates', 'languages',
+    ]));
+    expect(properties.education.items.properties).toHaveProperty('institution');
+    expect(properties.skills.items.properties).toHaveProperty('keywords');
+    expect(properties.projects.items.properties).toHaveProperty('description');
+    expect(properties.certificates.items.properties).toHaveProperty('issuer');
+    expect(properties.languages.items.properties).toHaveProperty('fluency');
+  });
+
   it('records direct Gemini failures with the Gemini provider label', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(500, {
       error: { message: 'Gemini unavailable' },
@@ -178,6 +236,127 @@ describe('openrouter-client fallback and timeout behavior', () => {
       success: false,
       error_code: 'Error',
     }));
+  });
+
+  it('throws fast on parse_resume truncation WITHOUT a second (Gemini) generation', async () => {
+    // Re-parsing the full resume on Gemini after a truncation stacked two
+    // multi-second generations and overran the 30s function limit in production.
+    // Truncation is not a provider outage, so it must throw immediately and let
+    // the caller recover deterministically — never trigger the Gemini fallback.
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"basics":{"name":"Abdullah' }, finish_reason: 'length' }],
+      usage: { prompt_tokens: 1282, completion_tokens: 8192, total_tokens: 9474 },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+
+    await expect(callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'parse_resume',
+    })).rejects.toThrow(/truncated/i);
+
+    // Exactly ONE provider call — no Gemini re-parse.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(mocks.recordAiUsageEvent).not.toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'gemini',
+    }));
+    expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'openrouter',
+      success: false,
+      error_code: 'TruncationError',
+    }));
+  });
+
+  it('fails loud when direct Gemini truncates at maxOutputTokens', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      candidates: [{ content: { parts: [{ text: '{"basics":{"name":"Abdullah' }] }, finishReason: 'MAX_TOKENS' }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient({ openRouterKey: '' });
+
+    await expect(callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'parse_resume',
+    })).rejects.toThrow(/truncated/i);
+
+    expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'gemini',
+      success: false,
+      error_code: 'TruncationError',
+    }));
+  });
+
+  it('disables reasoning on the OpenRouter request when reasoningBudget is 0', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"ok":1}' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+    await callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'parse_resume',
+      reasoningBudget: 0,
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(requestBody.reasoning).toEqual({ enabled: false });
+  });
+
+  it('disables thinking on the direct Gemini request when reasoningBudget is 0', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      candidates: [{ content: { parts: [{ text: '{"ok":1}' }] } }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient({ openRouterKey: '' });
+    await callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'parse_resume',
+      reasoningBudget: 0,
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(requestBody.generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 });
+  });
+
+  it('caps reasoning with max_tokens/exclude when reasoningBudget is a positive number', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"ok":1}' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+    await callOpenRouter('flash', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'ai_match',
+      reasoningBudget: 512,
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(requestBody.reasoning).toEqual({ max_tokens: 512, exclude: true });
+  });
+
+  it('omits the reasoning field entirely when reasoningBudget is null', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"ok":1}' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+    await callOpenRouter('flash', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'ai_match',
+      reasoningBudget: null,
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(requestBody.reasoning).toBeUndefined();
   });
 
   it('uses options.modelId when explicitly provided', async () => {

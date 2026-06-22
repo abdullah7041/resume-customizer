@@ -77,55 +77,62 @@ const loadPdfjs = async () => {
 
 /**
  * Collect PDF page text while preserving reading order.
- * Groups items into lines by Y-coordinate, then sorts each line's items by their
- * X-coordinate (transform[4]) so out-of-stream-order glyph runs reconstruct
- * left-to-right reading order. PDF.js already applies bidi to item.str, so RTL
- * scripts (Arabic) are already visually ordered within each item.
+ * Sorts ALL items by Y coordinate first (top of page = higher Y in PDF space),
+ * then groups into rows by Y proximity, then sorts each row's items by X.
+ * This repairs PDFs that emit glyph runs column-by-column (e.g. bullet column
+ * then text column), which the old consecutive-Y approach failed to recombine.
+ * PDF.js already applies bidi to item.str, so RTL scripts (Arabic) are already
+ * visually ordered within each item — we preserve that by not reversing.
  * Transform matrix: [scaleX, skewX, skewY, scaleY, translateX(x), translateY(y)].
- * @param {Array} contentItems - Array of PDF.js text content items
- * @returns {string} - Extracted text with preserved line structure
  */
 const collectPdfPageText = (contentItems) => {
   if (!contentItems || contentItems.length === 0) return "";
 
-  const lines = [];
-  let currentLine = []; // array of { str, x }
-  let lastY = null;
-  const Y_THRESHOLD = 5; // Pixels threshold to detect new line
-
-  const flushLine = () => {
-    if (currentLine.length === 0) return;
-    const ordered = currentLine
-      .slice()
-      .sort((a, b) => a.x - b.x)
-      .map((entry) => entry.str)
-      .join("")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (ordered.length > 0) lines.push(ordered);
-    currentLine = [];
-  };
-
+  // Collect valid items and capture width for gap detection.
+  const items = [];
   for (const item of contentItems) {
     if (typeof item?.str !== "string" || !item.str) continue;
-
-    const currentX = typeof item.transform?.[4] === "number" ? item.transform[4] : 0;
-    const currentY = item.transform?.[5];
-
-    // If Y coordinate changed significantly, it's a new line.
-    if (lastY !== null && currentY !== undefined && Math.abs(currentY - lastY) > Y_THRESHOLD) {
-      flushLine();
-    }
-
-    currentLine.push({ str: item.str, x: currentX });
-    if (currentY !== undefined) {
-      lastY = currentY;
-    }
+    const x = typeof item.transform?.[4] === "number" ? item.transform[4] : 0;
+    const y = typeof item.transform?.[5] === "number" ? item.transform[5] : 0;
+    const width = typeof item.width === "number" && item.width >= 0 ? item.width : 0;
+    items.push({ str: item.str, x, y, width });
   }
 
-  flushLine();
+  if (items.length === 0) return "";
 
-  return lines.filter((line) => line.length > 0).join("\n");
+  // Sort top→bottom (descending Y, since PDF Y=0 is page bottom), then left→right.
+  items.sort((a, b) => b.y - a.y || a.x - b.x);
+
+  const Y_THRESHOLD = 5;
+  const lines = [];
+  let rowItems = [];
+  let rowY = items[0].y;
+
+  const flushRow = () => {
+    if (rowItems.length === 0) return;
+    rowItems.sort((a, b) => a.x - b.x);
+    let text = "";
+    let prevEnd = -Infinity;
+    for (const { str, x, width } of rowItems) {
+      if (prevEnd > -Infinity && x > prevEnd + 2) text += " ";
+      text += str;
+      prevEnd = Math.max(prevEnd, x + width);
+    }
+    const trimmed = text.replace(/\s+/g, " ").trim();
+    if (trimmed.length > 0) lines.push(trimmed);
+    rowItems = [];
+  };
+
+  for (const it of items) {
+    if (Math.abs(it.y - rowY) > Y_THRESHOLD) {
+      flushRow();
+      rowY = it.y;
+    }
+    rowItems.push(it);
+  }
+  flushRow();
+
+  return lines.join("\n");
 };
 
 const MIN_READABLE_TEXT_LENGTH = 100;

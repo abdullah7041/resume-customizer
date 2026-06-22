@@ -1,6 +1,7 @@
 import { parseResumeOnly } from "../lib/gemini-client.js";
-import { detectSectionSignals, findMissingSections, mergeWithEvidence, recoverSectionsFromRawText } from "../lib/parse-quality.js";
+import { buildDeterministicBaseline, detectSectionSignals, findMissingSections, recoverSectionsFromRawText } from "../lib/parse-quality.js";
 import { extractPlainTextFromArrayBuffer, inferMimeType, normalizeResumeText } from "../lib/resumeText.js";
+import { extractScannedPdfText } from "../lib/ocr-extract.js";
 import { withRateLimit, checkGuestPreviewRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
@@ -12,6 +13,17 @@ const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_TEXT_CHARS = 50_000;
 const GUEST_MAX_FILE_BYTES = 2 * 1024 * 1024;
 const GUEST_MAX_TEXT_CHARS = 20_000;
+const OCR_MAX_TIMEOUT_MS = 12_000;
+const OCR_PARSE_MAX_TIMEOUT_MS = 12_000;
+const FUNCTION_SAFETY_MS = 2_500;
+const OCR_PARSE_RESERVE_MS = OCR_PARSE_MAX_TIMEOUT_MS + FUNCTION_SAFETY_MS;
+
+// Normalize an AI-parse failure into a short, stable code recorded in
+// meta.parseQuality.aiFailureCode (never log/store resume text).
+const normalizeAiFailureCode = (error: unknown): string => {
+  const err = error as { name?: string; code?: string; status?: number } | undefined;
+  return err?.code || err?.name || (err?.status ? `HTTP_${err.status}` : "unknown");
+};
 
 const UNREADABLE_FILE_RESPONSE = {
   statusCode: 422,
@@ -23,7 +35,10 @@ const UNREADABLE_FILE_RESPONSE = {
   }),
 };
 
-const baseHandler = async (event: { httpMethod: string; body: string; headers: any; }) => {
+const baseHandler = async (
+  event: { httpMethod: string; body: string; headers: any; },
+  context?: { getRemainingTimeInMillis?: () => number },
+) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -95,6 +110,9 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
     let analysis;
     let extractedPlainText = "";
     let previewTruncated = false;
+    let ocrMeta: { ocrFallback: true; pagesProcessed: number } | null = null;
+    let aiParseFailed = false;
+    let aiFailureCode: string | undefined;
 
     // Mirrors the frontend check in api.js: reject CID-font / scanned-PDF binary garbage.
     // CID fonts missing a ToUnicode CMap produce raw glyph indices that land in the
@@ -150,9 +168,39 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         console.warn("[extract-resume-json] Pre-extraction failed:", summarizeErrorForLog(extractError));
       }
 
+      // Scanned / image-only PDF: no selectable text layer to read. Signed-in
+      // users get an OCR fallback that transcribes EVERY page via the vision
+      // model; guests keep the existing rejection (no anonymous OCR/vision cost).
       if (extractedPlainText.length < MIN_READABLE_TEXT_LENGTH) {
-        console.warn("[extract-resume-json] File payload did not contain enough readable selectable text.");
-        return UNREADABLE_FILE_RESPONSE;
+        const isPdf = inferMimeType({ mimeType: mime, fileName: name }) === "application/pdf";
+        if (!guestPreview && isPdf && process.env.OPENROUTER_API_KEY) {
+          try {
+            console.log("[extract-resume-json] No selectable text found; attempting OCR fallback.");
+            const remainingMs = context?.getRemainingTimeInMillis?.() ?? 30_000;
+            const ocrTimeoutMs = Math.min(
+              OCR_MAX_TIMEOUT_MS,
+              Math.max(1_000, remainingMs - OCR_PARSE_RESERVE_MS),
+            );
+            const ocr = await extractScannedPdfText(
+              { base64Data: data, mime, fileName: name },
+              { timeoutMs: ocrTimeoutMs },
+            );
+            if (ocr.text.length >= MIN_READABLE_TEXT_LENGTH && isReadableText(ocr.text)) {
+              extractedPlainText = ocr.text;
+              ocrMeta = { ocrFallback: true, pagesProcessed: ocr.pagesProcessed };
+              console.log(`[extract-resume-json] OCR produced ${extractedPlainText.length} chars across ${ocr.pagesProcessed} page(s).`);
+            } else {
+              console.warn(`[extract-resume-json] OCR fallback produced insufficient text (${ocr.text.length} chars).`);
+            }
+          } catch (ocrError) {
+            console.warn("[extract-resume-json] OCR fallback failed:", summarizeErrorForLog(ocrError));
+          }
+        }
+
+        if (extractedPlainText.length < MIN_READABLE_TEXT_LENGTH) {
+          console.warn("[extract-resume-json] File payload did not contain enough readable selectable text.");
+          return UNREADABLE_FILE_RESPONSE;
+        }
       }
 
       // Guest preview extracted-text cap. The text branch already rejects >20k, but a
@@ -163,10 +211,6 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
         extractedPlainText = extractedPlainText.slice(0, GUEST_MAX_TEXT_CHARS);
         previewTruncated = true;
       }
-
-      console.log("[extract-resume-json] Using pre-extracted text for parsing...");
-      analysis = await parseResumeOnly(extractedPlainText, false);
-      console.log("[extract-resume-json] parseResumeOnly returned success.");
     } else if (kind === "text" && body.value) {
       if (typeof body.value !== "string" || body.value.length > MAX_TEXT_CHARS) {
         return {
@@ -217,46 +261,65 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
           }),
         };
       }
-      console.log("[extract-resume-json] Calling parseResumeOnly with text...");
       extractedPlainText = body.value;
-      analysis = await parseResumeOnly(body.value, false);
     } else {
       console.warn("[extract-resume-json] Invalid input keys:", Object.keys(body || {}));
       return { statusCode: 400, body: JSON.stringify({ error: "Invalid input" }) };
     }
 
-    // ---- Parse-quality gate -------------------------------------------------
-    // Compare raw-text section signals against the structured output. If the
-    // parser dropped a section that the raw text clearly contains, retry ONCE
-    // with a focused prompt and merge ONLY evidence-backed values. Whatever is
-    // still missing is recorded in meta.parseQuality so the UI can distinguish
-    // parser loss from genuinely-absent content (no misleading warnings).
-    const rawForSignals = normalizeResumeText(extractedPlainText || (kind === "text" ? body.value : "") || "");
+    // Canonical raw text + section signals — computed BEFORE the AI call so the
+    // deterministic baseline is available even when the AI parser fails.
+    const rawForSignals = normalizeResumeText(extractedPlainText || "");
     const signals = detectSectionSignals(rawForSignals);
-    let incompleteSections = findMissingSections(signals, analysis);
-    let retried = false;
-    if (incompleteSections.length > 0) {
-      console.warn(`[extract-resume-json] Parse-quality gate: sections present in text but missing in output: ${incompleteSections.join(", ")}. Retrying once with focus.`);
-      try {
-        const retryAnalysis = await parseResumeOnly(rawForSignals, false, { focusSections: incompleteSections });
-        analysis = mergeWithEvidence(analysis, retryAnalysis, signals);
-        retried = true;
-      } catch (retryError) {
-        console.warn("[extract-resume-json] Focused parse retry failed:", summarizeErrorForLog(retryError));
-      }
-      incompleteSections = findMissingSections(signals, analysis);
+
+    // ---- AI structured parse (the ONLY part allowed to fall back) ----------
+    // Readable text already exists here, so an AI parser/fallback failure must
+    // NEVER 500: we build the deterministic skeleton from the raw text and let
+    // the recovery pass below enrich it. Non-AI bugs (recovery, assembly) are
+    // intentionally OUTSIDE this try so they surface normally.
+    try {
+      console.log("[extract-resume-json] Parsing extracted text...");
+      const parseOptions = ocrMeta
+        ? {
+            timeoutMs: Math.min(
+              OCR_PARSE_MAX_TIMEOUT_MS,
+              Math.max(1_000, (context?.getRemainingTimeInMillis?.() ?? 30_000) - FUNCTION_SAFETY_MS),
+            ),
+          }
+        : undefined;
+      analysis = parseOptions
+        ? await parseResumeOnly(extractedPlainText, false, parseOptions)
+        : await parseResumeOnly(extractedPlainText, false);
+      console.log("[extract-resume-json] parseResumeOnly returned success.");
+    } catch (parseError) {
+      aiParseFailed = true;
+      aiFailureCode = normalizeAiFailureCode(parseError);
+      console.warn(`[extract-resume-json] AI parse failed (${aiFailureCode}); building deterministic baseline from raw text:`, summarizeErrorForLog(parseError));
+      analysis = buildDeterministicBaseline(rawForSignals, signals);
     }
 
-    // ---- Deterministic, evidence-only recovery -----------------------------
-    // Anything still missing after the focused retry may be recoverable directly
-    // from the raw text (e.g. an EDUCATION heading whose body the AI parser
-    // dropped entirely). This uses ONLY visible raw text — no fabrication.
-    let fallbackSections: string[] = [];
-    if (incompleteSections.length > 0) {
-      const recovery = recoverSectionsFromRawText(analysis, signals, rawForSignals);
-      analysis = recovery.analysis;
-      fallbackSections = recovery.fallbackSections;
-      incompleteSections = findMissingSections(signals, analysis);
+    // ---- Parse-quality gate + deterministic, evidence-only recovery --------
+    // Compare raw-text section signals against the structured output and recover
+    // anything the parser dropped DIRECTLY from the raw text (no AI retry, no
+    // fabrication). Recovery always runs: it is cheap, fills only gaps, and is
+    // the path that also enriches dropped work entries.
+    const recovery = recoverSectionsFromRawText(analysis, signals, rawForSignals);
+    analysis = recovery.analysis;
+    let fallbackSections: string[] = recovery.fallbackSections;
+    let incompleteSections = findMissingSections(signals, analysis);
+
+    // On AI failure every populated section came from deterministic recovery, so
+    // report them all as fallbackSections (recovery only reports the gaps it
+    // filled relative to its own baseline input).
+    if (aiParseFailed) {
+      const determ = new Set<string>(fallbackSections);
+      for (const s of ["education", "certificates", "projects", "skills", "languages"]) {
+        if (Array.isArray(analysis[s]) && analysis[s].length > 0) determ.add(s);
+      }
+      if (Array.isArray(analysis.work) && analysis.work.length > 0) determ.add("experience");
+      if (analysis.basics?.email) determ.add("email");
+      if (analysis.basics?.phone) determ.add("phone");
+      fallbackSections = [...determ];
     }
 
 
@@ -355,14 +418,36 @@ const baseHandler = async (event: { httpMethod: string; body: string; headers: a
 
     // Parse-quality metadata: lets the frontend suppress misleading "No X found"
     // warnings when the section was lost in parsing or cut by the guest preview cap.
-    const parseQuality: { incompleteSections?: string[]; retried?: boolean; previewTruncated?: boolean; fallbackSections?: string[]; extractionSource?: string } = {};
+    const parseQuality: { incompleteSections?: string[]; previewTruncated?: boolean; fallbackSections?: string[]; extractionSource?: string; ocrFallback?: boolean; pagesProcessed?: number; aiParseFailed?: boolean; aiFailureCode?: string; confidence?: string } = {};
     if (incompleteSections.length > 0) parseQuality.incompleteSections = incompleteSections;
-    if (retried) parseQuality.retried = true;
     if (previewTruncated) parseQuality.previewTruncated = true;
     if (fallbackSections.length > 0) parseQuality.fallbackSections = fallbackSections;
-    // How the final structured sections were sourced: AI parser alone, or AI plus
-    // deterministic raw-text recovery that filled sections the parser dropped.
-    parseQuality.extractionSource = fallbackSections.length > 0 ? "ai+recovery" : "ai";
+
+    // How the final structured sections were sourced:
+    //   base    = the actual text source: OCR, server-side file extraction,
+    //             client-side file extraction, or direct/pasted text.
+    //   suffix  = "+deterministic" when the AI parser failed and the whole
+    //             skeleton was built from raw text; "+recovery" when the AI
+    //             parse succeeded but deterministic recovery filled dropped
+    //             sections; "" when the AI parse needed no recovery.
+    const extractionBase = ocrMeta
+      ? "ocr"
+      : kind === "file"
+        ? "server"
+        : body.sourceWasFile === true
+          ? "client"
+          : "text";
+    const extractionSuffix = aiParseFailed ? "+deterministic" : (fallbackSections.length > 0 ? "+recovery" : "");
+    parseQuality.extractionSource = `${extractionBase}${extractionSuffix}`;
+    if (ocrMeta) {
+      parseQuality.ocrFallback = true;
+      parseQuality.pagesProcessed = ocrMeta.pagesProcessed;
+    }
+    if (aiParseFailed) {
+      parseQuality.aiParseFailed = true;
+      parseQuality.aiFailureCode = aiFailureCode;
+      parseQuality.confidence = "low";
+    }
 
     // Preserve the FULL JSON Resume structure from Gemini parsing
     // The analysis object already contains: basics, work, education, skills, projects, certificates, etc.

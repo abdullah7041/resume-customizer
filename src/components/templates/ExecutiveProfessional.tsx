@@ -1,6 +1,6 @@
-import React from 'react';
+import type { CSSProperties } from 'react';
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
 import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
@@ -8,8 +8,9 @@ import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
 const DEFAULT_OPTIONS = {
   baseFontSize: 10,
   headingSize: 12,
+  nameSize: 20,
   fontFamily: "'Calibri', 'Arial', sans-serif",
-  sectionSpacing: 10,
+  sectionSpacing: 8,
   paragraphSpacing: 4,
   lineHeight: 1.45,
   marginTop: 0.5,
@@ -64,16 +65,22 @@ export function ExecutiveProfessional({
     }
     return scaledFontSize(pt, fontScale);
   };
+  const nameFontSize = displayOptions
+    ? `${opts.nameSize ?? 20}pt`
+    : scaledFontSize(opts.nameSize ?? 20, fontScale);
+  const headingFontSize = displayOptions
+    ? `${opts.headingSize}pt`
+    : scaledFontSize(opts.headingSize, fontScale);
 
   const sectionStyle = { marginBottom: `${opts.sectionSpacing}px` };
-  const headingStyle: React.CSSProperties = {
-    fontSize: fs(12),
+  const headingStyle: CSSProperties = {
+    fontSize: headingFontSize,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
     color: ACCENT_COLOR,
     textAlign: 'center',
-    borderBottom: `2px solid ${ACCENT_COLOR}`,
+    borderBottom: `1px solid ${ACCENT_COLOR}`,
     paddingBottom: '3px',
     marginBottom: `${opts.paragraphSpacing + 2}px`,
     pageBreakAfter: 'avoid',
@@ -101,7 +108,7 @@ export function ExecutiveProfessional({
       <header style={{ textAlign: 'center', marginBottom: `${opts.sectionSpacing + 2}px`, pageBreakInside: 'avoid' }}>
         <h1
           style={{
-            fontSize: fs(24),
+            fontSize: nameFontSize,
             fontWeight: '800',
             letterSpacing: '0.05em',
             color: '#1a5276',
@@ -203,7 +210,7 @@ export function ExecutiveProfessional({
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (
                       <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
-                        {h}
+                        {cleanHighlight(h)}
                       </li>
                     ))}
                   </ul>
@@ -235,7 +242,7 @@ export function ExecutiveProfessional({
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {project.highlights.map((h, j) => (
                       <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px', orphans: 2, widows: 2 }}>
-                        {h}
+                        {cleanHighlight(h)}
                       </li>
                     ))}
                   </ul>
@@ -271,15 +278,23 @@ export function ExecutiveProfessional({
         </section>
       )}
 
-      {/* Qualifications (Education) - Bullet format matching Hussain's design */}
+      {/* Qualifications (Education) - entries as divs to avoid double-bullet */}
       {education.length > 0 && (
         <section style={sectionStyle}>
           <h2 style={headingStyle}>
             {getSectionLabel('education')}
           </h2>
-          <ul style={{ paddingLeft: '16px', margin: 0, listStyleType: 'disc' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             {education.map((edu, i) => (
-              <li key={i} style={{ fontSize: fs(10), color: '#333', marginBottom: '3px', pageBreakInside: 'avoid' }}>
+              <div
+                key={i}
+                style={{
+                  fontSize: fs(10),
+                  color: '#333',
+                  pageBreakInside: filterEducationHighlights(edu.highlights).length > 4 ? 'auto' : 'avoid',
+                  breakInside: filterEducationHighlights(edu.highlights).length > 4 ? 'auto' : 'avoid',
+                }}
+              >
                 <strong>{safeString(edu.studyType)}{edu.area && ` in ${edu.area}`}</strong>
                 {edu.institution && (
                   <span style={{ color: '#555' }}> | {edu.institution}</span>
@@ -290,18 +305,18 @@ export function ExecutiveProfessional({
                 {edu.score && (
                   <span style={{ color: '#555', display: 'block', paddingLeft: '4px', fontSize: fs(9.5) }}>GPA: {edu.score}</span>
                 )}
-                {edu.highlights && edu.highlights.length > 0 && (
+                {filterEducationHighlights(edu.highlights).length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
-                    {edu.highlights.map((h, j) => (
+                    {filterEducationHighlights(edu.highlights).map((h, j) => (
                       <li key={j} style={{ fontSize: fs(9.5), color: '#444' }}>
                         {h}
                       </li>
                     ))}
                   </ul>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 

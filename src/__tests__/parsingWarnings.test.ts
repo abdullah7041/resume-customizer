@@ -33,7 +33,7 @@ describe("getParsingWarnings — parse-quality gating", () => {
 
   it("downgrades a parser-lost section to an info 'incomplete' warning", () => {
     const resume = makeResume({
-      meta: { parseQuality: { incompleteSections: ["education"], retried: true } },
+      meta: { parseQuality: { incompleteSections: ["education"] } },
     });
     const result = codes(resume);
     expect(result).not.toContain("no_education");
@@ -95,5 +95,17 @@ describe("getParsingWarnings — parse-quality gating", () => {
     expect(result).not.toContain("no_certs");
     expect(result).toContain("incomplete_education");
     expect(result).toContain("incomplete_certs");
+  });
+
+  it("emits exactly one low_confidence_parse warning and suppresses all per-section warnings when confidence is 'low'", () => {
+    // When AI parse failed and deterministic fallback rebuilt the resume, we emit
+    // a single human-readable notice and suppress the per-section noisy warnings.
+    const resume = makeResume({
+      education: [],
+      certificates: [],
+      meta: { parseQuality: { confidence: 'low', aiParseFailed: true } },
+    });
+    const result = codes(resume);
+    expect(result).toEqual(['low_confidence_parse']);
   });
 });

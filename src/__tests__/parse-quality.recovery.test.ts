@@ -287,20 +287,23 @@ describe("findMissingSections — work completeness", () => {
     expect(missing).toContain("experience");
   });
 
-  it("flags experience when work entries lack company name", () => {
+  it("does NOT flag experience when a work entry lacks a company name (partial, not missing)", () => {
+    // work.length >= 1 means the EXPERIENCE section is present. A dropped company
+    // name is a quality nuance handled by deterministic enrichment + fallbackSections,
+    // never reported as a missing section.
     const signals = detectSectionSignals(RAW);
     const missing = findMissingSections(signals, {
       work: [{ position: "Senior Data Analyst", name: "", highlights: ["• Delivered 15+ dashboards."] }],
     });
-    expect(missing).toContain("experience");
+    expect(missing).not.toContain("experience");
   });
 
-  it("flags experience when work entries have no highlights", () => {
+  it("does NOT flag experience when a work entry has no highlights (partial, not missing)", () => {
     const signals = detectSectionSignals(RAW);
     const missing = findMissingSections(signals, {
       work: [{ position: "Senior Data Analyst", name: "Al Ghalia", highlights: [] }],
     });
-    expect(missing).toContain("experience");
+    expect(missing).not.toContain("experience");
   });
 
   it("does NOT flag experience when work entries are complete", () => {

@@ -36,6 +36,15 @@ export function getParsingWarnings(resume: Resume): ParsingWarning[] {
     // or cut by the guest preview cap (previewTruncated), we MUST NOT emit hard
     // "No X found" warnings — that data exists. We surface a softer message.
     const parseQuality = resume.meta?.parseQuality;
+
+    // When the AI parse failed entirely and we rebuilt from raw text (confidence:'low'),
+    // emit a single human-readable notice and suppress all per-section warnings — the
+    // deterministic path recovered the data; per-section noisy warnings are misleading.
+    if (parseQuality?.confidence === 'low') {
+        warnings.push(warn('low_confidence_parse', 'parse', 'warning'));
+        return warnings;
+    }
+
     const incomplete = new Set(parseQuality?.incompleteSections ?? []);
     const recovered = new Set(parseQuality?.fallbackSections ?? []);
     const previewTruncated = parseQuality?.previewTruncated === true;

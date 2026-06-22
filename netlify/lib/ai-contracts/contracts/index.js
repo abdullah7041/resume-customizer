@@ -88,13 +88,73 @@ const resumeJsonSchema = {
         },
       },
     },
-    education: { type: 'array', items: { type: 'object' } },
-    skills: { type: 'array', items: { type: 'object' } },
-    projects: { type: 'array', items: { type: 'object' } },
-    certificates: { type: 'array', items: { type: 'object' } },
-    languages: { type: 'array', items: { type: 'object' } },
+    education: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          institution: { type: 'string' },
+          area: { type: 'string' },
+          studyType: { type: 'string' },
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+          score: { type: 'string' },
+          courses: stringArray,
+          highlights: stringArray,
+        },
+      },
+    },
+    skills: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          level: { type: 'string' },
+          keywords: stringArray,
+        },
+      },
+    },
+    projects: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          url: { type: 'string' },
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+          highlights: stringArray,
+          keywords: stringArray,
+        },
+      },
+    },
+    certificates: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          issuer: { type: 'string' },
+          date: { type: 'string' },
+          url: { type: 'string' },
+        },
+      },
+    },
+    languages: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          language: { type: 'string' },
+          fluency: { type: 'string' },
+        },
+      },
+    },
     meta: { type: 'object' },
   },
+  required: ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages', 'meta'],
 };
 
 const looseResumeOutput = z.object({
@@ -683,6 +743,12 @@ For EACH work entry you MUST extract:
 - location: if present in the text for that entry
 - startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry
 - highlights: an array containing EVERY bullet point and achievement line under that entry — do not summarize, merge, skip, or omit any bullet; each bullet is a separate array item
+
+Additional extraction rules:
+- Put the professional title or headline directly beneath the candidate's name in basics.label. Do not create a work entry from that header title.
+- Skills may be grouped as "Category: item, item". Preserve the category in skills[].name and put every listed item in skills[].keywords.
+- For every education entry, capture the institution whenever it is visibly present, including when it appears on a separate line from the degree.
+- Return every top-level section container even when no evidence is present; use an empty array rather than omitting a section.
 
 Do not invent any values not present in the text.${focusInstruction}${withRagBlock(context.retrievedContext)}
 

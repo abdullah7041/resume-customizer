@@ -20,9 +20,10 @@ const FONT_OPTIONS = [
 // Default values for reset
 const DEFAULTS = {
     baseFontSize: 10.5,
-    headingSize: 14,
+    headingSize: 13,
+    nameSize: 20,
     fontFamily: 'Georgia, serif',
-    sectionSpacing: 12,
+    sectionSpacing: 8,
     paragraphSpacing: 6,
     lineHeight: 1.55,
     marginTop: 0.5,
@@ -35,6 +36,7 @@ const DEFAULTS = {
 const COMPACT_FIT = {
     baseFontSize: 10,
     headingSize: 12.5,
+    nameSize: 18,
     fontFamily: 'Arial, Helvetica, sans-serif', // Clean, compact font
     sectionSpacing: 8,
     paragraphSpacing: 4,
@@ -194,6 +196,16 @@ export function FormattingPanel() {
                                 step={0.5}
                                 unit="pt"
                                 onChange={(v) => setDisplayOptions({ baseFontSize: v })}
+                            />
+
+                            <SliderControl
+                                label={t('templates.formatting.nameSize', 'Name Size')}
+                                value={displayOptions.nameSize ?? 20}
+                                min={16}
+                                max={28}
+                                step={0.5}
+                                unit="pt"
+                                onChange={(v) => setDisplayOptions({ nameSize: v })}
                             />
 
                             <SliderControl
