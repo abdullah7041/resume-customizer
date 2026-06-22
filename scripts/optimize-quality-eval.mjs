@@ -200,8 +200,9 @@ function buildOptimizeMessagesV4Evidence(input, context = emptyCtx) {
   const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications.
 
 EVIDENCE PROTOCOL — mandatory and machine-checked:
-- For EVERY bullet_improvement, set "source_span" to a VERBATIM substring copied exactly from <resume_text> that supports the rewrite. Copy it character-for-character; do not paraphrase the span.
+- For EVERY bullet_improvement, set "source_span" to a VERBATIM substring copied exactly from <resume_text> that supports the rewrite. Copy it character-for-character; do not paraphrase the span. Keep each source_span to the SHORTEST exact phrase that supports the claim — at most ~120 characters (about 15 words). Never copy whole sentences or paragraphs; a short verbatim fragment is enough.
 - The "improved" bullet may only assert facts, tools, scope, employers, and numbers that appear in its source_span (or elsewhere in the resume). If a number would strengthen the bullet but is not in the resume, write the qualitative result and append "(verify)" to the single inferred figure — never state an invented figure as fact.
+- When the resume ALREADY states a concrete metric, scope, technology, or number, KEEP it verbatim in the rewrite and put it in the source_span — do not generalize it away, soften it, or drop it. Grounding means preserving real specifics, not removing them; "(verify)" is only for figures you infer, never a replacement for a real one.
 - If no verbatim span in the resume supports a rewrite, do not produce that bullet.
 - Still write tightly and specifically: strong action verb, concrete tech/scope, no cliche ("results-driven", "responsible for", "leveraged", "spearheaded", "synergy", "best-in-class").
 
@@ -235,10 +236,10 @@ function buildVariants() {
     { name: 'baseline',    modelId: BASELINE_MODEL, temperature: 0, buildMessages: optimizeContract.buildMessages,    note: 'current production prompt @ temp 0' },
     { name: 'prompt_v2',   modelId: BASELINE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV2,           note: 'specificity prompt (consistency/noise-floor check)' },
     { name: 'v3_truthful', modelId: BASELINE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV3Truthful,   note: 'v2 + grounding + negative example + self-audit' },
-    { name: 'v4_evidence', modelId: BASELINE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV4Evidence,   jsonSchema: evidenceJsonSchema, note: 'structural: required source_span + deterministic grounding check' },
+    { name: 'v4_evidence', modelId: BASELINE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV4Evidence,   jsonSchema: evidenceJsonSchema, maxTokens: 24576, note: 'structural: required source_span + deterministic grounding check' },
   ];
   if (CANDIDATE_MODEL) {
-    variants.push({ name: 'v4_modelup', modelId: CANDIDATE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV4Evidence, jsonSchema: evidenceJsonSchema, note: `evidence prompt on ${CANDIDATE_MODEL}` });
+    variants.push({ name: 'v4_modelup', modelId: CANDIDATE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV4Evidence, jsonSchema: evidenceJsonSchema, maxTokens: 24576, note: `evidence prompt on ${CANDIDATE_MODEL}` });
   }
   return variants;
 }
@@ -334,7 +335,7 @@ async function runVariant(fixture, variant) {
     const text = await callOpenRouter(optimizeContract.modelType, messages, variant.jsonSchema || optimizeContract.jsonSchema, {
       modelId: variant.modelId,
       temperature: variant.temperature,
-      maxTokens: optimizeContract.maxTokens,
+      maxTokens: variant.maxTokens || optimizeContract.maxTokens,
       timeoutMs: optimizeContract.timeoutMs,
       reasoningBudget: optimizeContract.reasoningBudget,
       featureName: `benchmark.optimize.${variant.name}`,
