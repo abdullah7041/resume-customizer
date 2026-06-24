@@ -106,6 +106,18 @@
         }
       },
       "optimizedResumeWarning": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.",
+      "refine": {
+        "button": "Refine",
+        "title": "Refine this bullet",
+        "hint": "Describe the change (e.g. \"more leadership focus\", \"the real number is 20%\"). Watheq rewrites only from your resume — it will not invent facts.",
+        "placeholder": "e.g. emphasize measurable impact",
+        "submit": "Refine",
+        "refining": "Refining...",
+        "rationaleLabel": "Why this change",
+        "issueLabel": "Not applied",
+        "noResume": "Resume text is unavailable to ground the refinement.",
+        "failed": "Failed to refine bullet. Please try again."
+      },
       "diff": {
         "title": "View Changes",
         "appliedCount_one": "{{count}} optimization applied",

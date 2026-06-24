@@ -2,6 +2,8 @@
 // JSON Resume Schema - Industry Standard (https://jsonresume.org/schema)
 // Single source of truth for all resume data types in the application
 
+import type { AiSuggestionEntry } from './analysis';
+
 /**
  * Location information for basics section
  */
@@ -190,6 +192,7 @@ export interface Meta {
     version?: string;
     lastModified?: string; // ISO 8601 date
     parseQuality?: ParseQuality;
+    ai_suggestions?: AiSuggestionEntry[]; // provenance log of AI-modified data (e.g. refined bullets)
 }
 
 /**
