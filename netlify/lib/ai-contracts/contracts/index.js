@@ -772,10 +772,11 @@ For EACH work entry you MUST extract:
 - startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry; a date range on a nearby line belongs to the adjacent entry
 - highlights: an array containing EVERY bullet point and achievement line under that entry — do not summarize, merge, skip, or omit any bullet; each bullet is a separate array item
 
-Additional parsing rules:
-- The line directly under the candidate's name is a professional headline — put it in basics.label, not as a work entry
-- Skills may be grouped as "Category: item, item, item" — extract every item as a keyword in skills[].keywords; preserve compound names like "Power Query (M Language)" and "PostgreSQL (Supabase)" intact
-- For education entries, the institution may appear on the line before or after the degree — always capture it as institution
+Additional extraction rules:
+- The line directly under the candidate's name is a professional headline. Put it in basics.label, not as a work entry.
+- Skills may be grouped as "Category: item, item, item". Preserve the category in skills[].name and extract every item as a keyword in skills[].keywords; preserve compound names like "Power Query (M Language)" and "PostgreSQL (Supabase)" intact.
+- For education entries, the institution may appear on the line before or after the degree. Always capture it as institution whenever it is visibly present.
+- Return every top-level section container even when no evidence is present; use an empty array rather than omitting a section.
 
 Do not invent any values not present in the text.${focusInstruction}${withRagBlock(context.retrievedContext)}
 

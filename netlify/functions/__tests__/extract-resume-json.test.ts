@@ -200,8 +200,9 @@ describe('extract-resume-json function', () => {
         expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
     });
 
-    it('handles Gemini API errors', async () => {
-        // Use realistic text to pass the server-side isReadableText guard
+    it('recovers deterministically (200, never 500) when the AI parser fails after readable text was extracted', async () => {
+        // Once readable text exists, an AI failure must NOT 500 — we build a
+        // deterministic skeleton from the raw text and flag it as degraded.
         const realisticText = 'John Doe Software Engineer Python Django REST APIs cloud infrastructure five years';
         mockGeminiClient.parseResumeOnly.mockRejectedValue(new Error('rate limit exceeded'));
 
@@ -212,8 +213,12 @@ describe('extract-resume-json function', () => {
         } as Partial<HandlerEvent>;
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
-        expect(result.statusCode).toBe(500);
-        expect(JSON.parse(result.body).error).toContain('AI service is currently busy');
+        expect(result.statusCode).toBe(200);
+        const doc = JSON.parse(result.body).document;
+        expect(doc.plainText).toBe(realisticText);
+        expect(doc.meta.parseQuality.aiParseFailed).toBe(true);
+        expect(doc.meta.parseQuality.confidence).toBe('low');
+        expect(doc.meta.parseQuality.extractionSource).toBe('text+deterministic');
     });
 
     it('rejects CID-font garbage from kind:file upload (word-level check)', async () => {

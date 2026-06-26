@@ -6,9 +6,7 @@ import { AppError } from '../../services/supabase.js';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
 import type { ResumeSchema } from '../../types/resume';
-import { getParsingWarnings, ParsingWarning } from '../../lib/validation/parsingWarnings';
-import { AlertTriangle } from 'lucide-react';
-import { cn } from '../../lib/utils/cn';
+import { ParsingWarningsBanner } from '../ui/ParsingWarningsBanner';
 
 interface Toast {
     type: 'success' | 'warning' | 'danger' | 'info';
@@ -47,8 +45,6 @@ export default function UploadSection({
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [pastedText, setPastedText] = useState('');
-    const [warnings, setWarnings] = useState<ParsingWarning[]>([]);
-
     // Ref for tracking active parse request to support cancellation
     const parseRequestActive = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -61,7 +57,6 @@ export default function UploadSection({
         setPastedText('');
         setError(null);
         setStatus('idle');
-        setWarnings([]);
     }, []);
 
     const handleFileClear = useCallback(() => {
@@ -70,7 +65,6 @@ export default function UploadSection({
         setError(null);
         setStatus('idle');
         setProgress(0);
-        setWarnings([]);
         // Clear store data as well
         clearAll();
         onClear();
@@ -81,7 +75,6 @@ export default function UploadSection({
         setFile(null);
         setError(null);
         setStatus('idle');
-        setWarnings([]);
     }, []);
 
     const handleValidationError = useCallback((err: AppError) => {
@@ -136,7 +129,6 @@ export default function UploadSection({
 
             // CRITICAL: Reset previous resume data before processing new upload
             resetForNewUpload();
-            setWarnings([]);
 
             setStatus('uploading');
             setProgress(30);
@@ -172,12 +164,6 @@ export default function UploadSection({
                 if (parsedResume && typeof parsedResume === 'object' && 'basics' in parsedResume) {
                     const resumeData = parsedResume as ResumeSchema;
                     setOriginalResume(resumeData);
-
-                    // Generate warnings
-                    const newWarnings = getParsingWarnings(resumeData);
-                    if (newWarnings.length > 0) {
-                        setWarnings(newWarnings);
-                    }
                 }
 
                 if (rawText && typeof rawText === 'string') {
@@ -283,37 +269,8 @@ export default function UploadSection({
 
 
 
-            {/* Validation Warnings */}
-            {warnings.length > 0 && status === 'success' && (
-                <div className="w-full max-w-5xl mx-auto animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div className="glass-card p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
-                        <div className="flex items-start gap-3">
-                            <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                            <div className="space-y-2 w-full">
-                                <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                                    {t('upload.warnings.title')}
-                                </h4>
-                                <div className="space-y-2">
-                                    {warnings.map((warning, index) => (
-                                        <div
-                                            key={index}
-                                            className={cn(
-                                                "text-xs p-2 rounded-lg border",
-                                                warning.level === 'warning'
-                                                    ? "bg-amber-500/10 border-amber-500/20 text-amber-900 dark:text-amber-100"
-                                                    : "bg-blue-500/10 border-blue-500/20 text-blue-900 dark:text-blue-100"
-                                            )}
-                                        >
-                                            <span className="font-semibold mr-1">[{t(`upload.warnings.sections.${warning.sectionId}`)}]</span>
-                                            {t(warning.messageKey)}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Validation Warnings — rendered from store via shared banner component */}
+            <ParsingWarningsBanner />
         </div>
     );
 }

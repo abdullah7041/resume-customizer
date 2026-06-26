@@ -70,8 +70,10 @@
         "education": "Education",
         "certifications": "Certifications",
         "languages": "Languages",
-        "preview": "Preview"
+        "preview": "Preview",
+        "parse": "Parsing"
       },
+      "low_confidence_parse": "Our parser had trouble reading this file, so we rebuilt it from the raw text. Please review each section for accuracy.",
       "preview_truncated": "Preview may be incomplete. Sign in to process the full resume.",
       "missing_contact": "No email or phone number detected. Please check your contact details.",
       "incomplete_contact": "We may have missed your contact details. Please review or add them.",

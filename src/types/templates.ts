@@ -177,6 +177,7 @@ export interface DisplayOptions {
   // Font formatting
   baseFontSize: number;   // pt (9-12)
   headingSize: number;    // pt (12-18)
+  nameSize?: number;      // pt (16-28), defaults to 20
   fontFamily: string;     // CSS font-family
   // Document formatting
   sectionSpacing: number; // px (4-20)

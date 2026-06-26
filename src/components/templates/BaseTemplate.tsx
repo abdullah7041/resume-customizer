@@ -149,11 +149,36 @@ export function formatContactLine(basics: ResumeSchema['basics']): string {
 }
 
 /**
+ * Strip a leading bullet/list marker from a highlight string and trim.
+ * Defensive guard against leaked `• ` prefixes from deterministic parse fallback.
+ */
+export function cleanHighlight(s: string): string {
+  return s.replace(/^\s*(?:[•·*\-–—]\s+)+/, '').trim();
+}
+
+/**
+ * Filter education highlights: strip leading bullets AND drop entries that are
+ * really certificate/course/language section headings leaked into education.
+ * Never invents content — only strips/filters.
+ */
+export function filterEducationHighlights(arr: string[] | undefined): string[] {
+  if (!arr) return [];
+  return arr
+    .map(cleanHighlight)
+    .filter(
+      (h) =>
+        h.length > 0 &&
+        !/^(certificates?|certifications?|courses?|languages?)\s*[:-]/i.test(h)
+    );
+}
+
+/**
  * ATS-optimized resume renderer
  * Pure semantic HTML, no styling dependencies
  */
 export function ATSResume({ resume }: { resume: ResumeSchema }) {
   const { basics, work = [], education = [], skills = [], projects = [] } = resume;
+
 
   return (
     <div style={ATS_STYLES.container}>
@@ -186,7 +211,7 @@ export function ATSResume({ resume }: { resume: ResumeSchema }) {
                 <ul style={ATS_STYLES.bulletList}>
                   {job.highlights.map((h, j) => (
                     <li key={j} style={ATS_STYLES.bulletItem}>
-                      {h}
+                      {cleanHighlight(h)}
                     </li>
                   ))}
                 </ul>
@@ -208,7 +233,7 @@ export function ATSResume({ resume }: { resume: ResumeSchema }) {
                 <ul style={ATS_STYLES.bulletList}>
                   {project.highlights.map((h, j) => (
                     <li key={j} style={ATS_STYLES.bulletItem}>
-                      {h}
+                      {cleanHighlight(h)}
                     </li>
                   ))}
                 </ul>

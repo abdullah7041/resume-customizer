@@ -165,11 +165,21 @@ export interface Reference {
  * content so it never shows misleading "No X found" warnings.
  */
 export interface ParseQuality {
-    incompleteSections?: string[]; // sections present in raw text but dropped by the parser
-    retried?: boolean; // a focused re-parse was attempted
+    incompleteSections?: string[]; // sections present in raw text but dropped by the parser AND not recoverable
     previewTruncated?: boolean; // guest preview text was capped before parsing
     fallbackSections?: string[]; // sections/contact fields recovered via deterministic raw-text slicing
-    extractionSource?: string; // how sections were sourced: 'ai' | 'ai+recovery' | 'recovery'
+    // How the final sections were sourced. Base is direct text, client/server file
+    // extraction, or OCR; "+recovery" = AI parsed but deterministic recovery
+    // filled dropped sections; "+deterministic" = the AI parse failed and the whole
+    // skeleton was built from raw text.
+    extractionSource?: 'text' | 'client' | 'server' | 'ocr'
+        | 'text+recovery' | 'client+recovery' | 'server+recovery' | 'ocr+recovery'
+        | 'text+deterministic' | 'client+deterministic' | 'server+deterministic' | 'ocr+deterministic';
+    ocrFallback?: boolean; // scanned/image PDF transcribed via the vision OCR fallback
+    pagesProcessed?: number; // OCR pages transcribed
+    aiParseFailed?: boolean; // AI parser + provider fallback failed; result is a deterministic skeleton
+    aiFailureCode?: string; // normalized AI failure code (no resume text)
+    confidence?: 'low'; // set to 'low' when the structured result is a deterministic fallback
 }
 
 /**

@@ -135,8 +135,8 @@ describe('extract-resume-json — deterministic section recovery', () => {
       expect.arrayContaining(['Arabic', 'English']),
     );
 
-    // Recovery metadata records source + recovered sections.
-    expect(doc.meta.parseQuality.extractionSource).toBe('ai+recovery');
+    // AI succeeded but dropped sections → deterministic recovery filled them.
+    expect(doc.meta.parseQuality.extractionSource).toBe('text+recovery');
     expect(doc.meta.parseQuality.fallbackSections).toEqual(
       expect.arrayContaining(['education', 'certificates', 'projects', 'languages']),
     );
@@ -145,6 +145,39 @@ describe('extract-resume-json — deterministic section recovery', () => {
     expect(incomplete).not.toEqual(
       expect.arrayContaining(['education', 'certificates', 'projects', 'languages']),
     );
+
+    // The fragile focused AI retry is gone — exactly ONE parse call, recovery is
+    // deterministic.
+    expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledTimes(1);
+    expect(doc.meta.parseQuality.aiParseFailed).toBeUndefined();
+  });
+
+  it('does not spend a second full-resume call on partial experience alone', async () => {
+    mockGeminiClient.parseResumeOnly.mockResolvedValue({
+      basics: { name: 'Abdullah Bin Ahmed', email: 'abdullah@example.com', phone: '+966 50 123 4567' },
+      work: [{ position: 'Lead IT', name: 'Watheq', highlights: [] }],
+      education: [{ institution: 'King Fahd University' }],
+      certificates: [{ name: 'AWS Certified Solutions Architect' }],
+      projects: [{ name: 'Enterprise Resume Optimization Platform' }],
+      skills: [{ name: 'Skills', keywords: ['Cloud'] }],
+      languages: [{ language: 'Arabic', fluency: 'Native' }],
+      meta: { raw_text: RAW_RESUME },
+    });
+
+    const event = {
+      httpMethod: 'POST',
+      body: JSON.stringify({ kind: 'text', value: RAW_RESUME }),
+      headers: { Authorization: 'Bearer test-token' },
+    } as Partial<HandlerEvent>;
+
+    const result = (await handler(event as any, mockContext)) as HandlerResponse;
+    expect(result.statusCode).toBe(200);
+    expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledTimes(1);
+
+    const doc = JSON.parse(result.body).document;
+    // work.length >= 1 ⇒ experience is a present (partial) section, NOT "missing".
+    expect(doc.meta.parseQuality?.incompleteSections ?? []).not.toContain('experience');
+    expect(doc.meta.parseQuality?.retried).toBeUndefined();
   });
 
   it('returns 422 resume/unreadable-file for CID-glyph / unreadable text (never 500)', async () => {
@@ -161,5 +194,166 @@ describe('extract-resume-json — deterministic section recovery', () => {
     expect(JSON.parse(result.body).code).toBe('resume/unreadable-file');
     // AI parser must NOT be invoked on unreadable input.
     expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
+  });
+});
+
+// A >3000-char fixture whose extracted-text shape mirrors real pdf.js output for
+// the attached 2-page resume: a space/chip-separated SKILLS row (NOT comma-
+// separated), three "<role> at <company>  <dates>" experience blocks with bullet
+// achievements, and page-2 PROJECTS / EDUCATION / CERTIFICATIONS / LANGUAGES.
+const PAGE2_SKILLS_LINE =
+  'SQL    Power BI    PostgreSQL (Supabase)    React 19    TypeScript    Power Query (M Language)    Technical Support Documentation    Sentry/Telegram Webhooks    CI/CD (Netlify)';
+
+function buildFullResume(): string {
+  const filler =
+    'Delivered measurable enterprise outcomes across cloud workflows, asset support systems, and cross-functional teams while maintaining strict data quality and reliability standards. Partnered with operations stakeholders to streamline reporting pipelines, reduce manual reconciliation, and accelerate incident response across multiple business-critical applications and integrations.';
+  return [
+    'ABDULLAH BIN AHMED',
+    'abdullah@example.com | +966 50 123 4567 | Dammam, Saudi Arabia',
+    'linkedin.com/in/abdullah-ahmed',
+    '',
+    'SUMMARY',
+    `Saudi enterprise IT analyst bridging digital transformation and industrial operations. ${filler} ${filler}`,
+    '',
+    'EXPERIENCE',
+    'Lead Technical Support & Integrations Engineer at CB&I    Mar 2021 - Present',
+    filler,
+    'Automated recurring asset reports, cutting manual effort by 40%.',
+    'IT Operations & Asset Support Analyst at CB&I    Jan 2019 - Feb 2021',
+    filler,
+    'Maintained asset data pipelines and technical support documentation.',
+    'Asset Data Support Specialist at Saudi Aramco    2017 - 2018',
+    filler,
+    'Supported enterprise reporting and data quality initiatives.',
+    '',
+    'SKILLS',
+    PAGE2_SKILLS_LINE,
+    '',
+    'PROJECTS',
+    'Automated Application Support Bot',
+    'Built a Telegram bot that triages incoming support tickets and routes them automatically. ' + filler,
+    '',
+    'EDUCATION',
+    'Saudi Petroleum Services Polytechnic',
+    'Diploma in Information Technology    2016',
+    '',
+    'CERTIFICATIONS',
+    'AI Fluency & Prompt Engineering Frameworks (Anthropic/Claude)',
+    'AWS Certified Cloud Practitioner',
+    '',
+    'LANGUAGES',
+    'Arabic: Native',
+    'English: Professional',
+  ].join('\n');
+}
+
+const flattenSkillKeywords = (skills: Array<{ keywords?: string[] }>) =>
+  (Array.isArray(skills) ? skills : []).flatMap((s) => s.keywords ?? []);
+
+describe('extract-resume-json — full 2-page parse (Test D)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.OPENROUTER_API_KEY = 'test-key';
+    mockSupabaseClientModule.getSupabaseClient.mockReturnValue(mockSupabaseClient);
+    mockSupabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'user-1', email: 'user@example.com' } },
+      error: null,
+    });
+  });
+
+  const fullResumeEvent = () =>
+    ({
+      httpMethod: 'POST',
+      body: JSON.stringify({ kind: 'text', value: buildFullResume() }),
+      headers: { Authorization: 'Bearer test-token' },
+    }) as Partial<HandlerEvent>;
+
+  it('recovers skills the AI dropped while keeping every other section (the logged bug)', async () => {
+    // Reproduces the log: Work/Education/Projects/Certs present, but Skills: 0.
+    mockGeminiClient.parseResumeOnly.mockResolvedValue({
+      basics: { name: 'Abdullah Bin Ahmed', email: 'abdullah@example.com', phone: '+966 50 123 4567' },
+      work: [
+        { position: 'Lead Technical Support & Integrations Engineer', name: 'CB&I', highlights: ['Automated recurring asset reports, cutting manual effort by 40%.'] },
+        { position: 'IT Operations & Asset Support Analyst', name: 'CB&I', highlights: ['Maintained asset data pipelines and technical support documentation.'] },
+        { position: 'Asset Data Support Specialist', name: 'Saudi Aramco', highlights: ['Supported enterprise reporting and data quality initiatives.'] },
+      ],
+      education: [{ institution: 'Saudi Petroleum Services Polytechnic', area: 'Information Technology', studyType: 'Diploma' }],
+      projects: [{ name: 'Automated Application Support Bot', description: '', highlights: [] }],
+      certificates: [{ name: 'AI Fluency & Prompt Engineering Frameworks', issuer: 'Anthropic/Claude', date: '' }],
+      skills: [], // <-- the bug: skills dropped despite a visible SKILLS section
+      languages: [{ language: 'Arabic', fluency: 'Native' }, { language: 'English', fluency: 'Professional' }],
+      meta: { raw_text: buildFullResume() },
+    });
+
+    const result = (await handler(fullResumeEvent() as any, mockContext)) as HandlerResponse;
+    expect(result.statusCode).toBe(200);
+    const doc = JSON.parse(result.body).document;
+
+    expect(doc.plainText.length).toBeGreaterThan(3000);
+    expect(doc.work.length).toBeGreaterThanOrEqual(3);
+    expect(doc.projects.map((p: { name: string }) => p.name)).toContain('Automated Application Support Bot');
+    expect(doc.education.map((e: { institution: string }) => e.institution)).toContain('Saudi Petroleum Services Polytechnic');
+    expect(doc.certificates.map((c: { name: string }) => c.name)).toContain('AI Fluency & Prompt Engineering Frameworks');
+    expect(doc.languages.map((l: { language: string }) => l.language)).toEqual(expect.arrayContaining(['Arabic', 'English']));
+
+    const skillKeywords = flattenSkillKeywords(doc.skills);
+    expect(skillKeywords).toEqual(
+      expect.arrayContaining(['SQL', 'Power BI', 'PostgreSQL (Supabase)', 'React 19', 'TypeScript', 'Power Query (M Language)']),
+    );
+    expect(doc.meta.parseQuality.fallbackSections).toContain('skills');
+    expect(doc.meta.parseQuality.extractionSource).toBe('text+recovery');
+  });
+
+  it('returns a deterministic 200 (never 500) when the AI parser and fallback both fail', async () => {
+    mockGeminiClient.parseResumeOnly.mockRejectedValue(
+      Object.assign(new Error('AI request timed out after 25000ms'), { name: 'TimeoutError', status: 504 }),
+    );
+
+    const result = (await handler(fullResumeEvent() as any, mockContext)) as HandlerResponse;
+    expect(result.statusCode).toBe(200);
+    const doc = JSON.parse(result.body).document;
+
+    // Deterministic skeleton built from raw text — all sections present.
+    expect(doc.plainText.length).toBeGreaterThan(3000);
+    expect(doc.work.length).toBeGreaterThanOrEqual(3);
+    expect(doc.projects.map((p: { name: string }) => p.name).join(' ')).toContain('Automated Application Support Bot');
+    expect(JSON.stringify(doc.education)).toContain('Saudi Petroleum Services Polytechnic');
+    expect(flattenSkillKeywords(doc.skills)).toEqual(
+      expect.arrayContaining(['SQL', 'Power BI', 'PostgreSQL (Supabase)', 'Power Query (M Language)']),
+    );
+    expect(doc.languages.map((l: { language: string }) => l.language)).toEqual(expect.arrayContaining(['Arabic', 'English']));
+
+    expect(doc.meta.parseQuality.aiParseFailed).toBe(true);
+    expect(doc.meta.parseQuality.confidence).toBe('low');
+    expect(doc.meta.parseQuality.extractionSource).toBe('text+deterministic');
+    expect(doc.meta.parseQuality.aiFailureCode).toBeTruthy();
+
+    // The deterministic fallback document MUST carry a non-empty basics.name —
+    // the frontend BasicsSchema requires it (name: z.string().min(1)), so an
+    // unnamed fallback would fail store validation and render an empty header.
+    expect(typeof doc.basics.name).toBe('string');
+    expect(doc.basics.name.length).toBeGreaterThan(0);
+    expect(doc.basics.name).toContain('ABDULLAH');
+  });
+
+  it('recovers dropped work entries deterministically and does not mislabel experience as missing', async () => {
+    mockGeminiClient.parseResumeOnly.mockResolvedValue({
+      basics: { name: 'Abdullah Bin Ahmed', email: 'abdullah@example.com', phone: '+966 50 123 4567' },
+      work: [], // AI dropped every work entry despite 3 visible blocks
+      education: [{ institution: 'Saudi Petroleum Services Polytechnic' }],
+      projects: [{ name: 'Automated Application Support Bot' }],
+      certificates: [{ name: 'AI Fluency & Prompt Engineering Frameworks' }],
+      skills: [{ name: 'Skills', keywords: ['SQL'] }],
+      languages: [{ language: 'Arabic' }, { language: 'English' }],
+      meta: { raw_text: buildFullResume() },
+    });
+
+    const result = (await handler(fullResumeEvent() as any, mockContext)) as HandlerResponse;
+    expect(result.statusCode).toBe(200);
+    const doc = JSON.parse(result.body).document;
+
+    expect(doc.work.length).toBeGreaterThanOrEqual(3);
+    expect(doc.meta.parseQuality.fallbackSections).toContain('experience');
+    expect(doc.meta.parseQuality?.incompleteSections ?? []).not.toContain('experience');
   });
 });

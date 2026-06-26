@@ -1,14 +1,15 @@
 import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang } from './BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
 import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
   baseFontSize: 10.5,
-  headingSize: 14,
+  headingSize: 13,
+  nameSize: 20,
   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  sectionSpacing: 12,
+  sectionSpacing: 8,
   paragraphSpacing: 6,
   lineHeight: 1.55,
   marginTop: 0.5,
@@ -57,6 +58,9 @@ export function ModernProfessional({
     }
     return scaledFontSize(pt, fontScale);
   };
+  const nameFontSize = displayOptions
+    ? `${opts.nameSize ?? 20}pt`
+    : scaledFontSize(opts.nameSize ?? 20, fontScale);
 
   // Dynamic margins based on displayOptions
 
@@ -89,11 +93,11 @@ export function ModernProfessional({
       dir={contentDirection}
     >
       {/* Header - Large name, subtle headline */}
-      <header className="mb-7 pb-5" style={{ borderBottom: '2px solid #111827' }}>
+      <header className="mb-7 pb-5" style={{ borderBottom: '1px solid #d1d5db' }}>
         <h1
           className="text-gray-900 mb-1"
           style={{
-            fontSize: fs(24),
+            fontSize: nameFontSize,
             fontWeight: '800',
             letterSpacing: '-0.02em',
           }}
@@ -182,7 +186,7 @@ export function ModernProfessional({
             style={{
               ...headingStyle,
               marginBottom: `${opts.paragraphSpacing}px`,
-              borderBottom: '1px solid #e5e5e5',
+              borderBottom: '0.5px solid #e5e7eb',
               paddingBottom: '8px'
             }}
           >
@@ -209,7 +213,7 @@ export function ModernProfessional({
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (
                       <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
-                        {h}
+                        {cleanHighlight(h)}
                       </li>
                     ))}
                   </ul>
@@ -228,7 +232,7 @@ export function ModernProfessional({
             style={{
               ...headingStyle,
               marginBottom: `${opts.paragraphSpacing}px`,
-              borderBottom: '1px solid #e5e5e5',
+              borderBottom: '0.5px solid #e5e7eb',
               paddingBottom: '8px'
             }}
           >
@@ -249,7 +253,7 @@ export function ModernProfessional({
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {project.highlights.map((h, j) => (
                       <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
-                        {h}
+                        {cleanHighlight(h)}
                       </li>
                     ))}
                   </ul>
@@ -298,9 +302,9 @@ export function ModernProfessional({
                     </span>
                   </div>
                 </div>
-                {edu.highlights && edu.highlights.length > 0 && (
+                {filterEducationHighlights(edu.highlights).length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
-                    {edu.highlights.map((h, j) => (
+                    {filterEducationHighlights(edu.highlights).map((h, j) => (
                       <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {h}
                       </li>
