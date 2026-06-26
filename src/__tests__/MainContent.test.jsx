@@ -589,6 +589,72 @@ describe("MainContent resume parsing", () => {
     expect(screen.getByText(/Request ID: optimize-debug-1/i)).toBeInTheDocument();
   });
 
+  it("passes structured hard-stop answers to optimization without positive clarification text", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Excel is required");
+    generateClarificationsMock.mockResolvedValueOnce({
+      clarifications: [{
+        id: "excelExperience",
+        theme: "Excel",
+        rationale: "The role requires Excel evidence.",
+        question: "Which Excel work can you verify?",
+        type: "single",
+        options: [
+          { value: "dashboards", label: "Built Excel dashboards" },
+          { value: "no_excel", label: "I don't have Excel experience", isHardStop: true },
+        ],
+        allowOther: true,
+      }],
+    });
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "I don't have Excel experience" }));
+    fireEvent.click(screen.getByRole("button", { name: /submit answers/i }));
+
+    expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userClarifications: undefined,
+        userHardStops: ["I don't have Excel experience"],
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it("skips clarification generation for a strong match with no deterministic vulnerabilities", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "match");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    analyzeResumeMock.mockResolvedValueOnce({
+      score: 85,
+      missingKeywords: [],
+      topHits: [],
+      suggestions: [],
+    });
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
+    expect(analyzeResumeMock).toHaveBeenCalled();
+
+    const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
+    fireEvent.click(within(workflow).getByRole("button", { name: /optimize improve resume/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    expect(generateClarificationsMock).not.toHaveBeenCalled();
+    expect(optimizeResumeStreamMock).toHaveBeenCalled();
+  });
+
   it("gates guest optimization and clarifications before backend calls", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");

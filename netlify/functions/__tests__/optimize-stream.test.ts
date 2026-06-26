@@ -49,7 +49,7 @@ vi.mock('../../lib/rate-limiter.js', () => mockRateLimiter);
 
 const { default: handler } = await import('../optimize-stream.js');
 
-const buildRequest = (headers: Record<string, string> = {}) =>
+const buildRequest = (headers: Record<string, string> = {}, body: Record<string, unknown> = {}) =>
   new Request('http://localhost/api/optimize-stream', {
     method: 'POST',
     headers: {
@@ -59,6 +59,7 @@ const buildRequest = (headers: Record<string, string> = {}) =>
     body: JSON.stringify({
       resumeText: 'Resume text with enough detail',
       jobText: 'Job description with enough detail',
+      ...body,
     }),
   });
 
@@ -191,12 +192,44 @@ describe('optimize-stream function', () => {
       'en',
       [],
       undefined,
+      undefined,
       { featureName: 'optimize_stream' }
     );
-    const options = mockGeminiClient.optimizeResume.mock.calls[0][5];
+    const options = mockGeminiClient.optimizeResume.mock.calls[0][6];
     expect(options).not.toHaveProperty('resumeText');
     expect(options).not.toHaveProperty('jobText');
     expect(options).not.toHaveProperty('messages');
+  });
+
+  it('includes user hard stops in the cache key and optimize contract options', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: [],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({ success: true, creditsRemaining: 5 });
+
+    const response = await handler(buildRequest(
+      { Authorization: 'Bearer test-token' },
+      { userHardStops: ['Excel'] },
+    ));
+    await response.text();
+
+    expect(mockRedisCache.buildCacheKey).toHaveBeenCalledWith(
+      'optimize',
+      expect.objectContaining({ userHardStops: ['Excel'] }),
+    );
+    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      'en',
+      [],
+      undefined,
+      ['Excel'],
+      { featureName: 'optimize_stream' },
+    );
   });
 
   it('does not cache a fake zero score when the AI omits score data', async () => {

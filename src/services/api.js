@@ -534,7 +534,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -545,7 +545,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops }),
       });
 
       const data = await handleResponse(response);
@@ -595,7 +595,16 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
  * @param {string} params.resumeText
  * @param {string} params.jobDesc
  * @param {string} [params.language='en']
- * @returns {Promise<{ clarifications: Array<{id,theme,rationale,question}> }>}
+ * @returns {Promise<{ clarifications: Array<{
+ *   id: string,
+ *   theme: string,
+ *   rationale: string,
+ *   question: string,
+ *   type: 'single'|'multi',
+ *   options: Array<{value: string, label: string, isHardStop?: boolean}>,
+ *   allowOther: boolean,
+ *   defaultValue?: string
+ * }> }>}
  */
 export const generateClarifications = async ({ resumeText, jobDesc, language = 'en' }) => {
   try {
@@ -627,7 +636,7 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications }, onStatus) => {
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops }, onStatus) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -638,7 +647,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications }),
+    body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops }),
   });
 
   // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before

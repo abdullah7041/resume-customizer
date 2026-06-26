@@ -4,8 +4,11 @@
     "question": "question",
     "questions": "questions",
     "duration": "~1 min",
-    "placeholder": "Type your answer here… (or leave blank to skip this question)",
-    "validationHint": "Please provide a meaningful answer (or leave blank to skip this question)",
+    "otherOption": "Other",
+    "otherInputLabel": "Other answer",
+    "otherPlaceholder": "Add a short, verifiable answer…",
+    "hardStopFallback": "I don't have this / I never do this",
+    "validationHint": "Please provide a meaningful answer or choose another option",
     "nudge": "Answering these questions helps the AI generate more targeted improvements",
     "skipBtn": "Skip for now",
     "submitBtn": "Submit Answers"

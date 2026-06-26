@@ -12,7 +12,7 @@ vi.mock('../openrouter-client.js', () => ({
   },
 }));
 
-const { processMatchOnly } = await import('../gemini-client.js');
+const { optimizeResume, processMatchOnly } = await import('../gemini-client.js');
 
 describe('processMatchOnly score handling', () => {
   beforeEach(() => {
@@ -92,5 +92,28 @@ describe('processMatchOnly score handling', () => {
     expect(result.strategicRealityCheck.confidence).toBe('low');
     expect(result.strategicRealityCheck.unclearRisks[0].topic).toBe('Reality Check needs clearer evidence');
     expect(callOpenRouterMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('optimizeResume hard stops', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('threads user hard stops into the optimize contract prompt', async () => {
+    callOpenRouterMock.mockResolvedValue('{}');
+
+    await expect(optimizeResume(
+      'Resume text',
+      'Excel job description',
+      'en',
+      [],
+      '',
+      ['Excel'],
+    )).rejects.toThrow();
+
+    const messages = callOpenRouterMock.mock.calls[0][1];
+    expect(messages[1].content).toContain('<user_hard_stops>');
+    expect(messages[1].content).toContain('Excel');
   });
 });
