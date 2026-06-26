@@ -100,14 +100,11 @@ export interface RefineBulletResponse {
 }
 
 /**
- * Provenance record for an AI-modified piece of resume data, stored on
- * resume `meta.ai_suggestions` to preserve schema integrity.
+ * Metadata-only provenance record for an AI-modified piece of resume data.
+ * Do not store raw user instructions, resume text, job text, or AI output here.
  */
 export interface AiSuggestionEntry {
   type: 'refine_bullet';
   sectionId: string;
-  instruction: string;
-  issue?: string;
-  rationale?: string;
   timestamp: string;
 }

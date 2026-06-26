@@ -216,8 +216,8 @@ export const useResumeStore = create<ResumeState>()(
       // Single-bullet correction loop. Replaces only `optimized` (+ rationale/issue)
       // for one card and keeps `original`/`applied` intact, so getActiveResume's
       // content-based merge picks up the refined text automatically — even when the
-      // bullet is already applied. Records provenance on meta.ai_suggestions to
-      // preserve schema integrity for AI-modified data.
+      // bullet is already applied. Records only metadata on meta.ai_suggestions
+      // to preserve schema integrity without persisting raw instructions or AI text.
       refineOptimization: (sectionId, refinement) => {
         set((state) => {
           const optimizations = state.optimizations.map((o) =>
@@ -236,9 +236,6 @@ export const useResumeStore = create<ResumeState>()(
             const entry: AiSuggestionEntry = {
               type: 'refine_bullet',
               sectionId,
-              instruction: refinement.instruction,
-              issue: refinement.issue,
-              rationale: refinement.rationale,
               timestamp: new Date().toISOString(),
             };
             const existingMeta = originalResume.meta ?? {};
