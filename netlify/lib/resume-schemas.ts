@@ -216,6 +216,8 @@ export const OptimizeRequestSchema = z.object({
     language: z.enum(["en", "ar"]).optional().default("en"),
     // Optional structured Q&A from the clarification modal — injected into AI prompt context
     userClarifications: z.string().max(5000).optional(),
+    // Explicit user-confirmed exclusions that override keyword weaving.
+    userHardStops: z.array(z.string().trim().min(1).max(300)).max(20).optional(),
 });
 
 // New: Clarification pre-optimization endpoint schema

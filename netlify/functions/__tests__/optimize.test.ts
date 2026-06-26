@@ -57,6 +57,7 @@ vi.mock('../../lib/credit-manager', () => ({
 }));
 
 import { optimizeResume } from '../../lib/gemini-client.js';
+import { buildCacheKey } from '../../lib/redis-cache.js';
 
 // Import handler after mocks
 const { handler } = await import('../optimize.js');
@@ -149,6 +150,34 @@ describe('optimize function', () => {
             expect(result.statusCode).toBe(500);
             expect(JSON.parse(result.body).error).toBe('Failed to optimize resume');
         });
+    });
+
+    it('threads user hard stops through the cache key and legacy optimize contract', async () => {
+        vi.mocked(optimizeResume).mockResolvedValue({ match_score: 55 });
+        const event = {
+            httpMethod: 'POST',
+            headers: TEST_HEADERS,
+            body: JSON.stringify({
+                resumeText: 'test resume',
+                jobText: 'Excel job',
+                userHardStops: ['Excel'],
+            }),
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+        expect(result.statusCode).toBe(200);
+        expect(buildCacheKey).toHaveBeenCalledWith('optimize', expect.objectContaining({
+            userHardStops: ['Excel'],
+        }));
+        expect(optimizeResume).toHaveBeenCalledWith(
+            'test resume',
+            'Excel job',
+            'en',
+            [],
+            undefined,
+            ['Excel'],
+        );
     });
 
     describe('card generation', () => {

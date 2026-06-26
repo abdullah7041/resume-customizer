@@ -1,6 +1,7 @@
 import { executeAiContract, MAX_PARSE_INPUT_CHARS } from './ai-contracts/index.js';
 import { MODELS } from './model-registry.js';
 import { summarizeErrorForLog } from './sentry.js';
+import { suppressHardStopClaims } from './hard-stop-suppression.js';
 import {
   buildFallbackStrategicRealityCheck,
   postProcessStrategicRealityCheck,
@@ -115,7 +116,7 @@ export async function parseResumeOnly(inputData, isPdf = true, options = {}) {
   }
 }
 
-export async function optimizeResume(resumeText, jobDescription, language = 'en', vulnerabilities = [], userClarifications = '', options = {}) {
+export async function optimizeResume(resumeText, jobDescription, language = 'en', vulnerabilities = [], userClarifications = '', userHardStops = [], options = {}) {
   const contractId = options.featureName === 'optimize_stream' ? 'optimize_stream' : 'optimize';
   const MAX_RESUME_CHARS = 15000;
   const MAX_JD_CHARS = 5000;
@@ -141,12 +142,13 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
       language,
       vulnerabilities,
       userClarifications,
+      userHardStops,
     }, {
       ...options,
       featureName: options.featureName || 'optimize_resume',
     });
     console.log('[OpenRouter] Optimize contract validated');
-    return result;
+    return suppressHardStopClaims(result, userHardStops);
   } catch (error) {
     console.error('[OpenRouter] Error in optimizeResume:', summarizeErrorForLog(error));
     throw error;

@@ -5,8 +5,9 @@
  * from the user to enrich the AI optimization context.
  *
  * Features:
- * - 1–3 question cards (theme, rationale, question, textarea)
- * - Client-side gibberish guard: ≥3 real words required per answer
+ * - 1–3 question cards with single- or multi-select options
+ * - Exclusive hard-stop choices plus an optional Other free-text field
+ * - Client-side gibberish guard for Other text only
  * - Skip button with recommendation nudge
  * - Re-generate trigger support (controlled by parent)
  * - Bilingual: renders in whatever language the questions came from
@@ -14,29 +15,32 @@
  */
 
 import { createPortal } from 'react-dom';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Sparkles, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
 import { GlassButton } from '../ui/GlassButton';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
+import {
+  OTHER_OPTION_VALUE,
+  isValidOtherAnswer,
+  normalizeClarificationQuestion,
+  type ClarificationAnswers,
+  type ClarificationOption,
+  type ClarificationQuestion,
+} from '@/lib/clarifications';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface ClarificationQuestion {
-  id: string;
-  theme: string;
-  rationale: string;
-  question: string;
-}
+export type { ClarificationQuestion } from '@/lib/clarifications';
 
 interface ClarificationModalProps {
   questions: ClarificationQuestion[];
   isOpen: boolean;
   isRegenerating?: boolean;
-  onSubmit: (answers: Record<string, string>) => void;
+  onSubmit: (answers: ClarificationAnswers) => void;
   onSkip: () => void;
   onRegenerate?: () => void;
 }
@@ -49,12 +53,8 @@ interface ClarificationModalProps {
  * Returns true only if the answer contains ≥3 real words (2+ letters each).
  * Accepts answers in any language/script via the Unicode property escape.
  */
-function isValidAnswer(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed.length < 6) return false;
-  // Match sequences of ≥2 alphabetic chars across any script
-  const words = trimmed.match(/\p{L}{2,}/gu) || [];
-  return words.length >= 3;
+function emptyAnswer() {
+  return { selectedValues: [], otherText: '' };
 }
 
 // ---------------------------------------------------------------------------
@@ -70,9 +70,16 @@ export function ClarificationModal({
   onRegenerate,
 }: ClarificationModalProps) {
   const { t } = useTranslation();
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const normalizedQuestions = useMemo(
+    () => questions.map(question => normalizeClarificationQuestion(
+      question,
+      t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
+    )),
+    [questions, t],
+  );
+  const [answers, setAnswers] = useState<ClarificationAnswers>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const firstRef = useRef<HTMLTextAreaElement>(null);
+  const firstRef = useRef<HTMLButtonElement>(null);
 
   // Inject slideUp keyframe once on mount (avoids global CSS dependency)
   useEffect(() => {
@@ -88,13 +95,18 @@ export function ClarificationModal({
   // Reset state when questions change
   useEffect(() => {
     if (isOpen) {
-      setAnswers({});
+      setAnswers(Object.fromEntries(normalizedQuestions.map(question => [
+        question.id,
+        question.defaultValue && question.options.some(option => option.value === question.defaultValue)
+          ? { selectedValues: [question.defaultValue], otherText: '' }
+          : emptyAnswer(),
+      ])));
       setTouched({});
       // Focus first textarea after animation settles
       const t = setTimeout(() => firstRef.current?.focus(), 80);
       return () => clearTimeout(t);
     }
-  }, [isOpen, questions]);
+  }, [isOpen, normalizedQuestions]);
 
   // Keyboard handler: Escape skips the modal
   useEffect(() => {
@@ -106,8 +118,39 @@ export function ClarificationModal({
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, onSkip]);
 
-  const handleChange = useCallback((id: string, value: string) => {
-    setAnswers(prev => ({ ...prev, [id]: value }));
+  const handleOptionToggle = useCallback((question: ClarificationQuestion, option: ClarificationOption) => {
+    setAnswers(previous => {
+      const current = previous[question.id] ?? emptyAnswer();
+      const isSelected = current.selectedValues.includes(option.value);
+      const hardStopValues = question.options.filter(item => item.isHardStop).map(item => item.value);
+      let selectedValues: string[];
+
+      if (option.isHardStop) {
+        selectedValues = isSelected ? [] : [option.value];
+      } else if (question.type === 'single') {
+        selectedValues = isSelected ? [] : [option.value];
+      } else {
+        const withoutHardStops = current.selectedValues.filter(value => !hardStopValues.includes(value));
+        selectedValues = isSelected
+          ? withoutHardStops.filter(value => value !== option.value)
+          : [...withoutHardStops, option.value];
+      }
+
+      return {
+        ...previous,
+        [question.id]: {
+          selectedValues,
+          otherText: selectedValues.includes(OTHER_OPTION_VALUE) ? current.otherText : '',
+        },
+      };
+    });
+  }, []);
+
+  const handleOtherChange = useCallback((id: string, value: string) => {
+    setAnswers(previous => ({
+      ...previous,
+      [id]: { ...(previous[id] ?? emptyAnswer()), otherText: value },
+    }));
   }, []);
 
   const handleBlur = useCallback((id: string) => {
@@ -115,19 +158,27 @@ export function ClarificationModal({
   }, []);
 
   const handleSubmit = useCallback(() => {
-    // Only include valid, non-empty answers
-    const validAnswers: Record<string, string> = {};
-    for (const q of questions) {
-      const ans = answers[q.id]?.trim() || '';
-      if (ans && isValidAnswer(ans)) {
-        validAnswers[q.id] = ans;
-      }
-    }
+    const validAnswers = Object.fromEntries(normalizedQuestions.flatMap(question => {
+      const answer = answers[question.id] ?? emptyAnswer();
+      const selectedValues = answer.selectedValues.filter(value => (
+        value !== OTHER_OPTION_VALUE || isValidOtherAnswer(answer.otherText)
+      ));
+      if (selectedValues.length === 0) return [];
+      return [[question.id, {
+        selectedValues,
+        otherText: selectedValues.includes(OTHER_OPTION_VALUE) ? answer.otherText.trim() : '',
+      }]];
+    }));
     onSubmit(validAnswers);
-  }, [answers, questions, onSubmit]);
+  }, [answers, normalizedQuestions, onSubmit]);
 
   // At least one valid answer required to enable submit
-  const hasAnyValidAnswer = questions.some(q => isValidAnswer(answers[q.id] || ''));
+  const hasAnyValidAnswer = normalizedQuestions.some(question => {
+    const answer = answers[question.id] ?? emptyAnswer();
+    return answer.selectedValues.some(value => (
+      value !== OTHER_OPTION_VALUE || isValidOtherAnswer(answer.otherText)
+    ));
+  });
 
   if (!isOpen || questions.length === 0) return null;
 
@@ -202,10 +253,10 @@ export function ClarificationModal({
 
         {/* ---- Question cards ---- */}
         <div className="p-6 space-y-5">
-          {questions.map((q, idx) => {
-            const answer = answers[q.id] || '';
-            const isTouched = touched[q.id];
-            const isInvalid = isTouched && answer.trim().length > 0 && !isValidAnswer(answer);
+          {normalizedQuestions.map((q, idx) => {
+            const answer = answers[q.id] ?? emptyAnswer();
+            const otherSelected = answer.selectedValues.includes(OTHER_OPTION_VALUE);
+            const isInvalid = touched[q.id] && otherSelected && answer.otherText.trim().length > 0 && !isValidOtherAnswer(answer.otherText);
 
             return (
               <div
@@ -236,32 +287,50 @@ export function ClarificationModal({
                   {q.question}
                 </p>
 
-                {/* Textarea */}
-                <div className="relative">
-                  <textarea
-                    ref={idx === 0 ? firstRef : undefined}
-                    id={`clarify-answer-${q.id}`}
-                    value={answer}
-                    onChange={e => handleChange(q.id, e.target.value)}
-                    onBlur={() => handleBlur(q.id)}
-                    placeholder={t('clarificationModal.placeholder', 'Type your answer here… (or leave blank to skip this question)')}
-                    rows={3}
-                    className={cn(
-                      'w-full rounded-lg px-3 py-2.5 text-sm resize-none',
-                      'bg-gray-100/50 dark:bg-white/5',
-                      'border transition-colors duration-200',
-                      'text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500',
-                      'focus:outline-none focus:ring-2',
-                      isInvalid
-                        ? 'border-red-500/40 focus:ring-red-500/30'
-                        : 'border-gray-300 dark:border-white/10 focus:ring-emerald-500/40 focus:border-emerald-500/40'
-                    )}
-                  />
+                <div className="space-y-2" role="group" aria-label={q.question}>
+                  {[...q.options.filter(option => !option.isHardStop), ...(q.allowOther ? [{ value: OTHER_OPTION_VALUE, label: t('clarificationModal.otherOption', 'Other') }] : []), ...q.options.filter(option => option.isHardStop)].map((option, optionIndex) => {
+                    const selected = answer.selectedValues.includes(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        ref={idx === 0 && optionIndex === 0 ? firstRef : undefined}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => handleOptionToggle(q, option)}
+                        className={cn(
+                          'w-full rounded-lg border px-3 py-2.5 text-start text-sm transition-colors',
+                          'focus:outline-none focus:ring-2 focus:ring-emerald-500/40',
+                          selected
+                            ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100'
+                            : 'border-gray-300 bg-gray-100/40 text-gray-800 hover:border-emerald-500/30 dark:border-white/10 dark:bg-white/5 dark:text-gray-200',
+                          option.isHardStop && 'mt-3 border-amber-500/30 text-amber-800 dark:text-amber-200',
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+
+                  {otherSelected && (
+                    <input
+                      id={`clarify-other-${q.id}`}
+                      value={answer.otherText}
+                      onChange={event => handleOtherChange(q.id, event.target.value)}
+                      onBlur={() => handleBlur(q.id)}
+                      aria-label={t('clarificationModal.otherInputLabel', 'Other answer')}
+                      placeholder={t('clarificationModal.otherPlaceholder', 'Add a short, verifiable answer…')}
+                      className={cn(
+                        'w-full rounded-lg border bg-gray-100/50 px-3 py-2.5 text-sm text-gray-900 dark:bg-white/5 dark:text-white',
+                        'focus:outline-none focus:ring-2',
+                        isInvalid ? 'border-red-500/40 focus:ring-red-500/30' : 'border-gray-300 dark:border-white/10 focus:ring-emerald-500/40',
+                      )}
+                    />
+                  )}
                   {/* Validation hint */}
                   {isInvalid && (
                     <p className="flex items-center gap-1 mt-1.5 text-xs text-red-400">
                       <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                      {t('clarificationModal.validationHint', 'Please provide a meaningful answer (or leave blank to skip this question)')}
+                      {t('clarificationModal.validationHint', 'Please provide a meaningful answer or choose another option')}
                     </p>
                   )}
                 </div>

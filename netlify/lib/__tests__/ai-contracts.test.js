@@ -225,6 +225,54 @@ describe('AI contract layer', () => {
     });
   });
 
+  it('validates selectable clarification questions and uses the expanded token budget', async () => {
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      clarifications: [{
+        id: 'excelExperience',
+        theme: 'Excel',
+        rationale: 'The job requires Excel evidence.',
+        question: 'Which Excel work can you verify?',
+        type: 'multi',
+        options: [
+          { value: 'dashboards', label: 'Built Excel dashboards' },
+          { value: 'no_excel', label: "I don't have Excel experience", isHardStop: true },
+        ],
+        allowOther: true,
+      }],
+    }));
+
+    const result = await executeAiContract('clarification_questions', {
+      resumeText: 'Analyst resume',
+      jobText: 'Excel analyst job',
+      language: 'en',
+    });
+
+    expect(result.clarifications[0]).toMatchObject({ type: 'multi', allowOther: true });
+    expect(callOpenRouterMock).toHaveBeenCalledWith(
+      'flash',
+      expect.any(Array),
+      expect.objectContaining({
+        properties: expect.objectContaining({ clarifications: expect.any(Object) }),
+      }),
+      expect.objectContaining({ maxTokens: 3072, reasoningBudget: 512 }),
+    );
+  });
+
+  it('places hard stops in a tagged block with an override instruction', () => {
+    const contract = getAiContract('optimize');
+    const messages = contract.buildMessages({
+      resumeText: 'Analyst resume',
+      jobDescription: 'Requires Excel',
+      language: 'en',
+      userHardStops: ["Excel: I don't have Excel experience"],
+    }, { retrievedContext: { documents: [] } });
+
+    expect(messages[1].content).toContain('<user_hard_stops>');
+    expect(messages[1].content).toContain("Excel: I don't have Excel experience");
+    expect(`${messages[0].content}\n${messages[1].content}`).toContain('overrides any keyword-weaving rule');
+    expect(`${messages[0].content}\n${messages[1].content}`).toContain('Remove them from missing_keywords');
+  });
+
   it('validates the combined match and critical Reality Check contract', async () => {
     callOpenRouterMock.mockResolvedValue(JSON.stringify({
       score: 45,

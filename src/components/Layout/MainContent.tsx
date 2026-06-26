@@ -13,6 +13,12 @@ import {
   AI_DEFAULT_TEMPERATURE,
 } from "../../services/api.js";
 import { ClarificationModal, type ClarificationQuestion } from "../modals/ClarificationModal";
+import {
+  formatClarificationAnswers,
+  shouldRequestClarifications,
+  type ClarificationAnswers,
+  type WorkEntry,
+} from "@/lib/clarifications";
 import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import TemplateGallery from "../sections/TemplatesSection";
@@ -1129,7 +1135,7 @@ export default function MainContent() {
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
-    async ({ mode, workHistory, userClarifications }: { mode: string; workHistory?: any[]; userClarifications?: string }) => {
+    async ({ mode, workHistory, userClarifications, userHardStops }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[] }) => {
       if (isGuestMode) {
         requireSignInForGuestAction();
         return null;
@@ -1168,6 +1174,7 @@ export default function MainContent() {
               language: i18n.language,
               workHistory,
               userClarifications,
+              userHardStops,
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
@@ -1205,6 +1212,7 @@ export default function MainContent() {
               language: i18n.language,
               workHistory,
               userClarifications,
+              userHardStops,
             }
           );
         }
@@ -1372,7 +1380,7 @@ export default function MainContent() {
       if (isOptimizing || isInterrogating) return null;
 
       /** Helper: build typed work-history from Zustand store */
-      const buildWorkHistory = () => {
+      const buildWorkHistory = (): WorkEntry[] | undefined => {
         const storeWork = useResumeStore.getState().originalResume?.work;
         return storeWork
           ?.map(w => ({
@@ -1386,6 +1394,12 @@ export default function MainContent() {
 
       try {
         const workHistory = buildWorkHistory();
+
+        // E1: only skip the clarification endpoint when deterministic evidence
+        // says this is a known strong match with no career vulnerabilities.
+        if (!shouldRequestClarifications(matchAnalysis?.score, workHistory)) {
+          return await handleOptimizeActual({ mode, workHistory });
+        }
 
         // ---- Clarification Step (free, non-fatal) ----
         // Show a lightweight toast while we call the gap-analysis endpoint
@@ -1422,27 +1436,23 @@ export default function MainContent() {
         return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined });
       }
     },
-    [handleOptimizeActual, i18n.language, isGuestMode, isInterrogating, isOptimizing, jobDescription, pushToast, requireSignInForGuestAction, resumeData, t]
+    [handleOptimizeActual, i18n.language, isGuestMode, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, requireSignInForGuestAction, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
 
-  /** Format user answers as structured natural language for the AI prompt */
-  const formatClarifications = useCallback((answers: Record<string, string>): string => {
-    return clarificationQuestions
-      .filter(q => answers[q.id]?.trim())
-      .map(q => `[${q.theme}]\nQ: ${q.question}\nA: ${answers[q.id].trim()}`)
-      .join('\n\n');
-  }, [clarificationQuestions]);
-
-  const handleClarificationSubmit = useCallback(async (answers: Record<string, string>) => {
+  const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers) => {
     setIsInterrogating(false);
-    const userClarifications = formatClarifications(answers);
+    const { userClarifications, userHardStops } = formatClarificationAnswers(
+      clarificationQuestions,
+      answers,
+      t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
+    );
     const { mode, workHistory } = pendingOptimizeArgs || {};
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications: userClarifications || undefined });
-  }, [formatClarifications, handleOptimizeActual, pendingOptimizeArgs]);
+    await handleOptimizeActual({ mode, workHistory, userClarifications, userHardStops });
+  }, [clarificationQuestions, handleOptimizeActual, pendingOptimizeArgs, t]);
 
   const handleClarificationSkip = useCallback(async () => {
     setIsInterrogating(false);

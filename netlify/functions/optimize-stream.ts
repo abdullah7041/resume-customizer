@@ -138,7 +138,7 @@ export default async function handler(request: Request): Promise<Response> {
     );
   }
 
-  const { resumeText, jobText, workHistory, language, userClarifications } = parseResult.data;
+  const { resumeText, jobText, workHistory, language, userClarifications, userHardStops } = parseResult.data;
 
   // --- Vulnerability detection (needed for both cache key and AI call) ---
   const vulnerabilities = workHistory?.length
@@ -170,6 +170,7 @@ export default async function handler(request: Request): Promise<Response> {
     language: language || 'en',
     vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
     userClarifications: userClarifications || '',
+    userHardStops: userHardStops || [],
   });
 
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
@@ -226,7 +227,7 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 3: AI Processing (this is the long step)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "ai_processing" })));
 
-        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, {
+        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, userHardStops, {
           featureName: "optimize_stream",
         });
 
