@@ -266,6 +266,38 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
     expect(leadCount).toBe(1);
   });
 
+  it("recovers a missing role when two employers use the same job title", () => {
+    const sameTitleRaw = [
+      "Jane Doe",
+      "EXPERIENCE",
+      "Data Analyst at First Co  Jan 2020 - Jan 2022",
+      "Built executive dashboards.",
+      "Data Analyst at Second Co  Feb 2022 - Present",
+      "Improved monthly reporting.",
+    ].join("\n");
+    const firstPass = {
+      work: [
+        {
+          position: "Data Analyst",
+          name: "First Co",
+          startDate: "Jan 2020",
+          endDate: "Jan 2022",
+          highlights: ["Built executive dashboards."],
+        },
+      ],
+    };
+
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(
+      firstPass,
+      detectSectionSignals(sameTitleRaw),
+      sameTitleRaw,
+    );
+
+    expect(analysis.work).toHaveLength(2);
+    expect(analysis.work.map((entry) => entry.name)).toEqual(["First Co", "Second Co"]);
+    expect(fallbackSections).toContain("experience");
+  });
+
   it("does not touch work or flag experience when the AI already has every block", () => {
     const firstPass = {
       work: [

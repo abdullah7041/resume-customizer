@@ -822,7 +822,19 @@ export function recoverSectionsFromRawText(analysis = {}, signals, rawText) {
     const isRepresented = (block) => existingWork.some((entry) => {
       const ep = norm(entry.position);
       const bp = norm(block.position);
-      if (ep && bp) return overlaps(ep, bp);
+      if (ep && bp) {
+        if (!overlaps(ep, bp)) return false;
+
+        const en = norm(entry.name);
+        const bn = norm(block.name);
+        if (en && bn && !overlaps(en, bn)) return false;
+
+        const es = norm(entry.startDate);
+        const bs = norm(block.startDate);
+        if (es && bs && !overlaps(es, bs)) return false;
+
+        return true;
+      }
       return overlaps(norm(entry.name), norm(block.name));
     });
 
