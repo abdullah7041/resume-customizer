@@ -1,22 +1,7 @@
 # Coding Standards
 
-## Stack
-
-- Package manager: npm (`package-lock.json` is present).
-- App framework: React 19 with Vite 8 and Tailwind CSS v4.
-- State: Zustand with localStorage persistence.
-- Backend: Netlify Functions, Supabase, OpenRouter.
-- Tests: Vitest with `happy-dom` and Testing Library.
-
-## Commands
-
-- Dev: `npm run dev`
-- Netlify dev: `npm run dev:netlify`
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Type check: `npm run type:check`
-- Test: `npm run test`
-- Full quality gate: `npm run quality:parallel`
+> Stack and commands live in `CLAUDE.md` (single source of truth). This file holds repo rules
+> and architecture checks only. Package manager is npm; tests are Vitest + happy-dom.
 
 ## Repo Rules
 
