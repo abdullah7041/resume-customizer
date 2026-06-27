@@ -1,0 +1,72 @@
+{
+  "basics": {
+    "name": "محمد العتيبي",
+    "label": "محلل بيانات أول",
+    "location": {
+      "city": "الدمام",
+      "countryCode": "SA"
+    },
+    "summary": "محلل بيانات لديه خمس سنوات من الخبرة في بناء لوحات المعلومات وتحليل بيانات قطاع التجزئة ودعم اتخاذ القرار.",
+    "email": "mohammed.otaibi@email.com",
+    "phone": "+966 55 987 6543",
+    "profiles": [
+      {
+        "network": "linkedin",
+        "url": "linkedin.com/in/mohammedotaibi"
+      }
+    ],
+    "url": ""
+  },
+  "work": [
+    {
+      "name": "شركة الغانم",
+      "position": "محلل بيانات أول",
+      "startDate": "مارس ٢٠٢٠",
+      "endDate": "حتى الآن",
+      "highlights": [
+        "قاد تطوير ١٥ لوحة معلومات تفاعلية لدعم اتخاذ القرار.",
+        "أتمت عمليات تنظيف البيانات مما قلل الأخطاء بنسبة ٤٠٪."
+      ],
+      "location": "الرياض"
+    },
+    {
+      "name": "نون",
+      "position": "محلل بيانات",
+      "startDate": "يناير ٢٠١٨",
+      "endDate": "فبراير ٢٠٢٠",
+      "highlights": [
+        "صمم تقارير المبيعات الأسبوعية لفريق الإدارة."
+      ],
+      "location": "عن بعد"
+    }
+  ],
+  "education": [
+    {
+      "area": "نظم المعلومات",
+      "institution": "جامعة الملك فهد للبترول والمعادن",
+      "studyType": "بكالوريوس",
+      "url": "٢٠١٧"
+    }
+  ],
+  "skills": [
+    {
+      "keywords": [
+        "SQL",
+        "Power BI",
+        "Python",
+        "تحليل البيانات"
+      ]
+    }
+  ],
+  "projects": [],
+  "certificates": [],
+  "languages": [
+    {
+      "language": "العربية (اللغة الأم)"
+    },
+    {
+      "language": "الإنجليزية (متقدم)"
+    }
+  ],
+  "meta": {}
+}

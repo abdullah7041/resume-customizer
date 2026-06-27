@@ -1,0 +1,78 @@
+{
+  "basics": {
+    "name": "KHALID AL-DOSSARI | خالد الدوسري",
+    "label": "Software Engineer | مهندس برمجيات",
+    "location": {
+      "city": "Jeddah",
+      "countryCode": "SA"
+    },
+    "summary": "Full-stack engineer with 7 years building scalable web applications across fintech and ride-hailing. مهندس برمجيات متكامل بخبرة سبع سنوات.",
+    "email": "khalid.dossari@email.com",
+    "phone": "+966 56 222 3333",
+    "profiles": [
+      {
+        "network": "github",
+        "url": "https://github.com/khalidd"
+      },
+      {
+        "network": "linkedin",
+        "url": "https://linkedin.com/in/khaliddossari"
+      }
+    ],
+    "url": ""
+  },
+  "work": [
+    {
+      "name": "STC",
+      "position": "Senior Software Engineer",
+      "startDate": "Apr 2019",
+      "endDate": "Present",
+      "highlights": [
+        "Built microservices handling 2M daily requests with 99.9% uptime.",
+        "Mentored 5 junior engineers and led the migration to TypeScript."
+      ],
+      "location": "Riyadh"
+    },
+    {
+      "name": "Careem",
+      "position": "Software Engineer",
+      "startDate": "Jul 2016",
+      "endDate": "Mar 2019",
+      "highlights": [
+        "Developed the driver matching service in Node.js used in 14 cities."
+      ],
+      "location": "Dubai"
+    }
+  ],
+  "education": [
+    {
+      "area": "Computer Science",
+      "institution": "KFUPM",
+      "studyType": "BSc",
+      "url": "https://www.kfupm.edu.sa/en/cs/Pages/default.aspx"
+    }
+  ],
+  "skills": [
+    {
+      "keywords": [
+        "JavaScript",
+        "TypeScript",
+        "Node.js",
+        "React",
+        "AWS",
+        "Docker"
+      ]
+    }
+  ],
+  "projects": [],
+  "certificates": [],
+  "languages": [
+    {
+      "language": "Arabic (Native)"
+    },
+    {
+      "language": "English (Fluent)"
+    }
+  ],
+  "meta": {}
+}

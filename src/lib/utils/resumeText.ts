@@ -81,57 +81,320 @@ const loadPdfjs = async () => {
   return pdfjsLibPromise;
 };
 
+interface PdfTextItem {
+  str: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface LineInfo {
+  text: string;
+  y: number;
+  fontSize: number;
+  fillRight: number; // right edge of contiguous text, ignoring a right-aligned tail
+  rightEdge: number; // absolute right edge of the line
+  hasBullet: boolean;
+}
+
+const Y_ROW_THRESHOLD = 5;
+
+// Soft-wrap merge tuning. A wrapped continuation line has no bullet, sits one
+// line-height below a line that filled to the right margin, and is rejoined to it.
+const WRAP_GAP_FACTOR = 1.8; // continuation gap vs font size (paragraph gaps are larger)
+const FULL_LINE_MARGIN = 60; // how close to the right edge counts as "filled"
+const FILL_GAP = 40; // a horizontal gap this large marks a right-aligned tail (e.g. a date)
+const BULLET_LINE = /^[•·▪◦‣∙]/u;
+
+// Column-detection tuning. Conservative on purpose: a false column split scrambles
+// a common single-column layout (right-aligned dates), so we only split when there
+// are two clearly independent text columns.
+const MIN_ITEMS_FOR_COLUMNS = 12; // too few items → treat as single column
+const MIN_COLUMN_ITEMS = 5; // each column must carry real content
+const MIN_COLUMN_ITEM_RATIO = 0.3; // reject lopsided splits (e.g. a thin date column)
+const MIN_VERTICAL_COVERAGE = 0.45; // each column must span ~half the content height
+const MIN_VERTICAL_OVERLAP = 0.4; // columns must coexist vertically
+const GUTTER_MIN_FRACTION = 0.05; // gutter width vs page width
+const GUTTER_MIN_ABSOLUTE = 15; // gutter width floor in PDF units
+const LOW_COVERAGE_FRACTION = 0.1; // a gutter is a low-coverage vertical strip
+const ROW_PAIRING_REJECT = 0.6; // if most right items share a row with a left item,
+//                                  it's right-aligned content, not a real column
+
 /**
- * Collect PDF page text while preserving reading order.
- * Groups items into lines by Y-coordinate, then sorts each line's items by their
- * X-coordinate (transform[4]) so out-of-stream-order glyph runs reconstruct
- * left-to-right reading order. PDF.js already applies bidi to item.str, so RTL
- * scripts (Arabic) are already visually ordered within each item.
+ * Band items into physical rows: sort top→bottom (descending Y, since PDF Y=0 is
+ * page bottom) then left→right, group by Y proximity, and join each row by X with
+ * gap-based spacing. PDF.js already applies bidi to item.str, so RTL scripts
+ * (Arabic) are visually ordered within each item — we preserve that by not reversing.
+ */
+const buildLinesFromItems = (items: PdfTextItem[]): LineInfo[] => {
+  if (items.length === 0) return [];
+
+  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
+  const lines: LineInfo[] = [];
+  let rowItems: PdfTextItem[] = [];
+  let rowY = sorted[0].y;
+
+  const flushRow = () => {
+    if (rowItems.length === 0) return;
+    rowItems.sort((a, b) => a.x - b.x);
+    let text = "";
+    let prevEnd = -Infinity;
+    let fillRight = -Infinity;
+    let rightEdge = -Infinity;
+    let fontSize = 0;
+    let sawBigGap = false;
+    for (const { str, x, width, height } of rowItems) {
+      if (prevEnd > -Infinity && x > prevEnd + 2) {
+        text += " ";
+        // A wide gap means a right-aligned tail (date); freeze the contiguous edge.
+        if (!sawBigGap && x - prevEnd > FILL_GAP) {
+          fillRight = prevEnd;
+          sawBigGap = true;
+        }
+      }
+      text += str;
+      const end = x + width;
+      prevEnd = Math.max(prevEnd, end);
+      if (end > rightEdge) rightEdge = end;
+      if (!sawBigGap) fillRight = prevEnd;
+      if (height > fontSize) fontSize = height;
+    }
+    const trimmed = text.replace(/\s+/g, " ").trim();
+    if (trimmed.length > 0) {
+      lines.push({
+        text: trimmed,
+        y: rowY,
+        fontSize,
+        fillRight: fillRight === -Infinity ? rightEdge : fillRight,
+        rightEdge: rightEdge === -Infinity ? 0 : rightEdge,
+        hasBullet: BULLET_LINE.test(trimmed),
+      });
+    }
+    rowItems = [];
+  };
+
+  for (const it of sorted) {
+    if (Math.abs(it.y - rowY) > Y_ROW_THRESHOLD) {
+      flushRow();
+      rowY = it.y;
+    }
+    rowItems.push(it);
+  }
+  flushRow();
+
+  return lines;
+};
+
+/**
+ * Rejoin soft-wrapped continuation lines. A continuation has no bullet of its own,
+ * follows a line that filled to the right margin, and sits within one line-height.
+ * This stops a single wrapped bullet from becoming several bullets downstream
+ * (and stops words like "Power BI" splitting across the wrap). Hyphenated wraps
+ * ("Data-" + "Driven") join without a space; everything else joins with one.
+ */
+const mergeWrappedLines = (lines: LineInfo[]): LineInfo[] => {
+  if (lines.length < 2) return lines;
+
+  let maxRight = 0;
+  for (const line of lines) if (line.rightEdge > maxRight) maxRight = line.rightEdge;
+  const fullThreshold = maxRight - FULL_LINE_MARGIN;
+
+  const merged: LineInfo[] = [];
+  for (const line of lines) {
+    const prev = merged[merged.length - 1];
+    const gap = prev ? prev.y - line.y : 0;
+    const isWrap =
+      prev &&
+      !line.hasBullet &&
+      prev.fillRight >= fullThreshold &&
+      gap > 0 &&
+      line.fontSize > 0 &&
+      gap <= WRAP_GAP_FACTOR * line.fontSize;
+
+    if (isWrap) {
+      const joiner = /[\p{L}]-$/u.test(prev.text) ? "" : " ";
+      prev.text = `${prev.text}${joiner}${line.text}`;
+      prev.y = line.y;
+      prev.fontSize = line.fontSize;
+      prev.fillRight = line.fillRight;
+      prev.rightEdge = line.rightEdge;
+      continue;
+    }
+    merged.push({ ...line });
+  }
+
+  return merged;
+};
+
+const renderLines = (lines: LineInfo[]): string => lines.map((line) => line.text).join("\n");
+
+/**
+ * Find a vertical gutter that splits the page into two columns. Builds a coverage
+ * histogram across X (counting how many items cross each vertical strip), then looks
+ * for the widest internal low-coverage valley with dense text on both sides. Returns
+ * the split X position, or null when the page is single-column. A full-width header
+ * crossing the gutter adds only a little coverage, so the valley still shows.
+ */
+const detectColumnSplit = (items: PdfTextItem[]): number | null => {
+  if (items.length < MIN_ITEMS_FOR_COLUMNS) return null;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  for (const it of items) {
+    if (it.x < minX) minX = it.x;
+    const right = it.x + it.width;
+    if (right > maxX) maxX = right;
+  }
+  const pageWidth = maxX - minX;
+  if (!(pageWidth > 0)) return null;
+
+  const binCount = Math.max(1, Math.round(pageWidth));
+  const coverage = new Array<number>(binCount).fill(0);
+  for (const it of items) {
+    const start = Math.max(0, Math.floor(it.x - minX));
+    const end = Math.min(binCount, Math.ceil(it.x - minX + Math.max(it.width, 1)));
+    for (let bin = start; bin < end; bin += 1) coverage[bin] += 1;
+  }
+
+  let peak = 0;
+  for (const count of coverage) if (count > peak) peak = count;
+  if (peak === 0) return null;
+  const lowThreshold = peak * LOW_COVERAGE_FRACTION;
+
+  // Bounds of the dense region, so leading/trailing margins aren't treated as a gutter.
+  let firstDense = -1;
+  let lastDense = -1;
+  for (let bin = 0; bin < binCount; bin += 1) {
+    if (coverage[bin] > lowThreshold) {
+      if (firstDense === -1) firstDense = bin;
+      lastDense = bin;
+    }
+  }
+  if (firstDense === -1 || lastDense <= firstDense) return null;
+
+  // Longest low-coverage run strictly inside the dense region.
+  let bestStart = -1;
+  let bestLen = 0;
+  let runStart = -1;
+  for (let bin = firstDense + 1; bin < lastDense; bin += 1) {
+    if (coverage[bin] <= lowThreshold) {
+      if (runStart === -1) runStart = bin;
+    } else if (runStart !== -1) {
+      const len = bin - runStart;
+      if (len > bestLen) {
+        bestLen = len;
+        bestStart = runStart;
+      }
+      runStart = -1;
+    }
+  }
+  if (runStart !== -1) {
+    const len = lastDense - runStart;
+    if (len > bestLen) {
+      bestLen = len;
+      bestStart = runStart;
+    }
+  }
+
+  const minGutter = Math.max(GUTTER_MIN_ABSOLUTE, pageWidth * GUTTER_MIN_FRACTION);
+  if (bestStart === -1 || bestLen < minGutter) return null;
+
+  const splitOffset = bestStart + bestLen / 2;
+  const splitFraction = splitOffset / pageWidth;
+  if (splitFraction < 0.2 || splitFraction > 0.8) return null;
+
+  return minX + splitOffset;
+};
+
+const verticalRange = (items: PdfTextItem[]): [number, number] => {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const it of items) {
+    if (it.y < min) min = it.y;
+    if (it.y > max) max = it.y;
+  }
+  return [min, max];
+};
+
+/**
+ * Confirm a proposed split is two real columns and not right-aligned content in a
+ * single column. Rejects when either side is thin, the sides don't overlap
+ * vertically, or most right-side items share a row with a left-side item (the
+ * signature of right-aligned dates that must stay on the title's line).
+ */
+const isValidColumnSplit = (left: PdfTextItem[], right: PdfTextItem[]): boolean => {
+  if (left.length < MIN_COLUMN_ITEMS || right.length < MIN_COLUMN_ITEMS) return false;
+
+  const ratio = Math.min(left.length, right.length) / Math.max(left.length, right.length);
+  if (ratio < MIN_COLUMN_ITEM_RATIO) return false;
+
+  const [lMin, lMax] = verticalRange(left);
+  const [rMin, rMax] = verticalRange(right);
+  const contentHeight = Math.max(lMax, rMax) - Math.min(lMin, rMin);
+  if (!(contentHeight > 0)) return false;
+
+  const lHeight = lMax - lMin;
+  const rHeight = rMax - rMin;
+  if (lHeight / contentHeight < MIN_VERTICAL_COVERAGE) return false;
+  if (rHeight / contentHeight < MIN_VERTICAL_COVERAGE) return false;
+
+  const overlap = Math.min(lMax, rMax) - Math.max(lMin, rMin);
+  const minHeight = Math.min(lHeight, rHeight);
+  if (minHeight <= 0 || overlap / minHeight < MIN_VERTICAL_OVERLAP) return false;
+
+  let paired = 0;
+  for (const r of right) {
+    if (left.some((l) => Math.abs(l.y - r.y) <= Y_ROW_THRESHOLD)) paired += 1;
+  }
+  if (paired / right.length > ROW_PAIRING_REJECT) return false;
+
+  return true;
+};
+
+/**
+ * Collect PDF page text while preserving reading order. Single-column pages band
+ * straight into rows. Two-column pages (skills sidebars, timeline layouts) are read
+ * one full column at a time so left- and right-column lines aren't merged into one.
  * Transform matrix: [scaleX, skewX, skewY, scaleY, translateX(x), translateY(y)].
- * @param {Array} contentItems - Array of PDF.js text content items
- * @returns {string} - Extracted text with preserved line structure
  */
 const collectPdfPageText = (contentItems) => {
   if (!contentItems || contentItems.length === 0) return "";
 
-  const lines = [];
-  let currentLine = []; // array of { str, x }
-  let lastY = null;
-  const Y_THRESHOLD = 5; // Pixels threshold to detect new line
-
-  const flushLine = () => {
-    if (currentLine.length === 0) return;
-    const ordered = currentLine
-      .slice()
-      .sort((a, b) => a.x - b.x)
-      .map((entry) => entry.str)
-      .join("")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (ordered.length > 0) lines.push(ordered);
-    currentLine = [];
-  };
-
+  const items: PdfTextItem[] = [];
   for (const item of contentItems) {
     if (typeof item?.str !== "string" || !item.str) continue;
+    const transform = Array.isArray(item.transform) ? item.transform : [];
+    const x = typeof transform[4] === "number" ? transform[4] : 0;
+    const y = typeof transform[5] === "number" ? transform[5] : 0;
+    const skewY = typeof transform[1] === "number" ? transform[1] : 0;
+    const scaleY = typeof transform[3] === "number" ? transform[3] : 0;
+    const height = Math.hypot(skewY, scaleY);
+    const width = typeof item.width === "number" && item.width >= 0 ? item.width : 0;
+    items.push({ str: item.str, x, y, width, height });
+  }
 
-    const currentX = typeof item.transform?.[4] === "number" ? item.transform[4] : 0;
-    const currentY = item.transform?.[5];
+  if (items.length === 0) return "";
 
-    // If Y coordinate changed significantly, it's a new line.
-    if (lastY !== null && currentY !== undefined && Math.abs(currentY - lastY) > Y_THRESHOLD) {
-      flushLine();
+  const split = detectColumnSplit(items);
+  if (split !== null) {
+    const left: PdfTextItem[] = [];
+    const right: PdfTextItem[] = [];
+    for (const it of items) {
+      const spansGutter = it.x < split && it.x + it.width > split;
+      const center = it.x + it.width / 2;
+      // Full-width items (headers) go to the left column so they read above both.
+      if (spansGutter || center < split) left.push(it);
+      else right.push(it);
     }
-
-    currentLine.push({ str: item.str, x: currentX });
-    if (currentY !== undefined) {
-      lastY = currentY;
+    if (isValidColumnSplit(left, right)) {
+      const leftText = renderLines(mergeWrappedLines(buildLinesFromItems(left)));
+      const rightText = renderLines(mergeWrappedLines(buildLinesFromItems(right)));
+      return [leftText, rightText].filter(Boolean).join("\n");
     }
   }
 
-  flushLine();
-
-  return lines.filter((line) => line.length > 0).join("\n");
+  return renderLines(mergeWrappedLines(buildLinesFromItems(items)));
 };
 
 const MIN_READABLE_TEXT_LENGTH = 100;

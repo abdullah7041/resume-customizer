@@ -1,0 +1,82 @@
+{
+  "basics": {
+    "name": "SARAH AL-MUTAIRI",
+    "label": "Product Designer",
+    "location": {
+      "city": "Riyadh",
+      "countryCode": "SA"
+    },
+    "summary": "Product designer with 6 years designing mobile and web products for fintech and e-commerce, focused on conversion and design systems.",
+    "email": "sarah.design@email.com",
+    "phone": "+966 50 123 4567",
+    "profiles": [
+      {
+        "network": "linkedin",
+        "url": "https://linkedin.com/in/sarahalmutairi"
+      },
+      {
+        "network": "behance",
+        "url": "https://behance.net/sarahm"
+      }
+    ],
+    "url": ""
+  },
+  "work": [
+    {
+      "name": "Jahez",
+      "position": "Senior Product Designer",
+      "startDate": "Feb 2021",
+      "endDate": "Present",
+      "highlights": [
+        "Led the redesign of the checkout flow, lifting conversion by 18%.",
+        "Built and maintained the company design system used by 4 product teams.",
+        "Ran weekly usability sessions that cut support tickets by 25%."
+      ],
+      "location": "Riyadh"
+    },
+    {
+      "name": "Noon",
+      "position": "Product Designer",
+      "startDate": "Jun 2018",
+      "endDate": "Jan 2021",
+      "highlights": [
+        "Designed the seller onboarding flow adopted by 12,000 merchants.",
+        "Shipped a component library that halved design handoff time."
+      ],
+      "location": "Remote"
+    }
+  ],
+  "education": [
+    {
+      "area": "Design",
+      "institution": "King Saud University",
+      "studyType": "Bachelor of Design",
+      "url": ""
+    }
+  ],
+  "skills": [
+    {
+      "keywords": [
+        "Figma",
+        "Sketch",
+        "Adobe XD",
+        "Prototyping",
+        "User Research",
+        "Design Systems",
+        "HTML",
+        "CSS"
+      ]
+    }
+  ],
+  "projects": [],
+  "certificates": [],
+  "languages": [
+    {
+      "language": "Arabic (Native)"
+    },
+    {
+      "language": "English (Fluent)"
+    }
+  ],
+  "meta": {}
+}

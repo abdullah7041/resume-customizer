@@ -387,7 +387,7 @@ describe('AI contract layer', () => {
       language: 'en',
     };
 
-    it('reuses the exact optimize truthfulness system rule', () => {
+    it('reuses optimize truthfulness while keeping source_span scoped to full optimize', () => {
       const optimizeMessages = getAiContract('optimize').buildMessages({
         resumeText: 'Resume', jobDescription: 'Job', language: 'en',
       }, { retrievedContext: { documents: [] } });
@@ -395,8 +395,13 @@ describe('AI contract layer', () => {
         retrievedContext: { documents: [] },
       });
 
-      // Both contracts must carry byte-identical anti-fabrication wording.
-      expect(refineMessages[0].content).toBe(optimizeMessages[0].content);
+      // Both contracts carry the same anti-fabrication core.
+      expect(refineMessages[0].content).toContain('Do not add facts, skills, credentials, employers, dates, or metrics');
+      expect(optimizeMessages[0].content).toContain('Do not add facts, skills, credentials, employers, dates, or metrics');
+      expect(refineMessages[0].content).toContain('Every improved bullet must use an action, task, and quantified result');
+      expect(optimizeMessages[0].content).toContain('EVIDENCE PROTOCOL');
+      expect(optimizeMessages[1].content).toContain('source_span');
+      expect(refineMessages[0].content).not.toContain('source_span');
     });
 
     it('grounds on resume text and instructs an unchanged return for unsupported additions', () => {

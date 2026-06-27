@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+const readMigrationSql = (fileName: string) =>
+  readFileSync(join(process.cwd(), 'supabase/migrations', fileName), 'utf8')
+    .replace(/\r\n?/g, '\n')
+    .toLowerCase();
+
 describe('Supabase RLS migration hardening', () => {
   it('restores UUID ownership for legacy email-keyed account tables', () => {
-    const migrationSql = readFileSync(
-      join(process.cwd(), 'supabase/migrations/20260602105031_restore_uuid_rls_for_legacy_account_tables.sql'),
-      'utf8'
-    ).toLowerCase();
+    const migrationSql = readMigrationSql('20260602105031_restore_uuid_rls_for_legacy_account_tables.sql');
 
     for (const tableName of [
       'user_credits',
@@ -28,10 +30,7 @@ describe('Supabase RLS migration hardening', () => {
   });
 
   it('replaces email-claim ownership policies with auth.uid policies', () => {
-    const migrationSql = readFileSync(
-      join(process.cwd(), 'supabase/migrations/20260602105031_restore_uuid_rls_for_legacy_account_tables.sql'),
-      'utf8'
-    ).toLowerCase();
+    const migrationSql = readMigrationSql('20260602105031_restore_uuid_rls_for_legacy_account_tables.sql');
 
     expect(migrationSql).not.toContain("auth.jwt()->>'email'");
     expect(migrationSql).not.toContain("auth.jwt() ->> 'email'");
@@ -52,10 +51,7 @@ describe('Supabase RLS migration hardening', () => {
   });
 
   it('repairs pipeline statuses and removes direct strategic reality browser access', () => {
-    const migrationSql = readFileSync(
-      join(process.cwd(), 'supabase/migrations/20260608180535_repair_pipeline_database_integrity.sql'),
-      'utf8'
-    ).toLowerCase();
+    const migrationSql = readMigrationSql('20260608180535_repair_pipeline_database_integrity.sql');
 
     expect(migrationSql).toContain("where status = 'interview'");
     expect(migrationSql).toContain("set\n        status = 'applied'");
@@ -70,10 +66,7 @@ describe('Supabase RLS migration hardening', () => {
   });
 
   it('keeps legacy account tables service-role-only until explicit archival drop', () => {
-    const migrationSql = readFileSync(
-      join(process.cwd(), 'supabase/migrations/20260608180535_repair_pipeline_database_integrity.sql'),
-      'utf8'
-    ).toLowerCase();
+    const migrationSql = readMigrationSql('20260608180535_repair_pipeline_database_integrity.sql');
 
     for (const tableName of ['resumes', 'job_matches', 'feedback']) {
       expect(migrationSql).toContain(`revoke all on public.${tableName} from public, anon, authenticated`);
