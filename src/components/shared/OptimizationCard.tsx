@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Clipboard, ClipboardCheck, FileText, Sparkles, Target, ChevronDown } from "lucide-react";
 import { GlassButton } from "../ui/GlassButton";
@@ -9,6 +9,9 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
+  const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
+  const evidenceId = useId();
+  const evidence = typeof card?.evidence === "string" ? card.evidence.trim() : "";
 
   const handleCopy = async (e) => {
     e.stopPropagation();
@@ -129,6 +132,29 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
                 </div>
               </div>
             </div>
+
+            {evidence && (
+              <div className="mt-1 space-y-1">
+                <button
+                  type="button"
+                  aria-expanded={isEvidenceOpen}
+                  aria-controls={evidenceId}
+                  onClick={() => setIsEvidenceOpen((value) => !value)}
+                  className="inline-flex items-center rounded border border-[color:var(--glass-border)] bg-transparent px-2 py-0.5 text-xs text-ink-soft/70 transition-colors hover:border-emerald-500/25 hover:text-ink-soft focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40"
+                >
+                  {t('optimization.evidenceLabel', 'Grounded in your resume')}
+                </button>
+                {isEvidenceOpen && (
+                  <p
+                    id={evidenceId}
+                    role="note"
+                    className="rounded bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-2 py-1.5 text-xs leading-relaxed text-ink-soft/80"
+                  >
+                    {evidence}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
