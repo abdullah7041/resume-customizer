@@ -7,6 +7,10 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import OptimizeSection from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 
+const mockRefineBullet = vi.hoisted(() => vi.fn());
+const mockAnalyticsTrack = vi.hoisted(() => vi.fn());
+const mockTrackOptimization = vi.hoisted(() => vi.fn());
+
 // Mock dependencies
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -27,9 +31,12 @@ const mockApplyOptimization = vi.fn();
 const mockRevertOptimization = vi.fn();
 const mockApplyAllOptimizations = vi.fn();
 const mockRevertAllOptimizations = vi.fn();
+const mockRefineOptimization = vi.fn();
 const mockSetKeywordSuggestions = vi.fn();
 const mockSetOptimizationMetrics = vi.fn();
 const mockResetOptimizationMetrics = vi.fn();
+const mockGetCachedAnalysis = vi.fn(() => null);
+const mockSetCachedAnalysis = vi.fn();
 
 // Create a mock store state that can be modified per test
 let mockStoreState = {
@@ -41,6 +48,7 @@ let mockStoreState = {
     setOptimizations: mockSetOptimizations,
     applyOptimization: mockApplyOptimization,
     revertOptimization: mockRevertOptimization,
+    refineOptimization: mockRefineOptimization,
     applyAllOptimizations: mockApplyAllOptimizations,
     revertAllOptimizations: mockRevertAllOptimizations,
     setKeywordSuggestions: mockSetKeywordSuggestions,
@@ -56,6 +64,9 @@ let mockStoreState = {
     },
     setOptimizationMetrics: mockSetOptimizationMetrics,
     resetOptimizationMetrics: mockResetOptimizationMetrics,
+    getCachedAnalysis: mockGetCachedAnalysis,
+    setCachedAnalysis: mockSetCachedAnalysis,
+    baselineMatchScore: null,
 };
 
 vi.mock('../lib/stores/resumeStore', () => {
@@ -71,9 +82,13 @@ vi.mock('../lib/stores/resumeStore', () => {
 
 vi.mock('../services/analytics', () => ({
     analytics: {
-        track: vi.fn(),
-        trackOptimization: vi.fn(),
+        track: mockAnalyticsTrack,
+        trackOptimization: mockTrackOptimization,
     },
+}));
+
+vi.mock('../services/api', () => ({
+    refineBullet: mockRefineBullet,
 }));
 
 vi.mock('../hooks/useRateLimit', () => ({
@@ -172,6 +187,7 @@ beforeEach(() => {
         setOptimizations: mockSetOptimizations,
         applyOptimization: mockApplyOptimization,
         revertOptimization: mockRevertOptimization,
+        refineOptimization: mockRefineOptimization,
         applyAllOptimizations: mockApplyAllOptimizations,
         revertAllOptimizations: mockRevertAllOptimizations,
         setKeywordSuggestions: mockSetKeywordSuggestions,
@@ -187,7 +203,20 @@ beforeEach(() => {
         },
         setOptimizationMetrics: mockSetOptimizationMetrics,
         resetOptimizationMetrics: mockResetOptimizationMetrics,
+        getCachedAnalysis: mockGetCachedAnalysis,
+        setCachedAnalysis: mockSetCachedAnalysis,
+        baselineMatchScore: null,
     };
+
+    Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        value: {
+            getItem: vi.fn((key) => (key === 'watheq:lastJobDescription' ? 'Backend engineer role' : null)),
+            setItem: vi.fn(),
+            removeItem: vi.fn(),
+            clear: vi.fn(),
+        },
+    });
 });
 
 afterEach(() => {
@@ -555,6 +584,44 @@ describe('OptimizeSection', () => {
 
             expect(mockRevertAllOptimizations).toHaveBeenCalled();
         });
+
+        it('refines a card through the API without applying it directly', async () => {
+            mockStoreState.originalResume = { basics: { name: 'Test User' } };
+            mockStoreState.parsedResumeText = 'Built web applications for internal teams.';
+            mockStoreState.optimizations = [sampleOptimization];
+            mockRefineBullet.mockResolvedValueOnce({
+                improved: 'Built internal web applications that improved team workflows.',
+                issue: '',
+                rationale: 'Preserved the existing web application evidence and tightened the impact wording.',
+            });
+
+            renderWithProviders(<OptimizeSection />);
+
+            fireEvent.click(screen.getByRole('button', { name: 'Expand All' }));
+            fireEvent.click(screen.getByRole('button', { name: 'Refine' }));
+            const input = screen.getByPlaceholderText('e.g. emphasize measurable impact');
+            fireEvent.change(input, { target: { value: 'Use active voice' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mockRefineBullet).toHaveBeenCalledWith({
+                    original: sampleOptimization.original,
+                    currentImproved: sampleOptimization.optimized,
+                    userInstruction: 'Use active voice',
+                    jobContext: 'Backend engineer role',
+                    resumeText: 'Built web applications for internal teams.',
+                    language: 'en',
+                });
+            });
+            expect(mockRefineOptimization).toHaveBeenCalledWith('summary-0', {
+                improved: 'Built internal web applications that improved team workflows.',
+                issue: '',
+                rationale: 'Preserved the existing web application evidence and tightened the impact wording.',
+                instruction: 'Use active voice',
+            });
+            expect(mockApplyOptimization).not.toHaveBeenCalled();
+            expect(mockAnalyticsTrack).toHaveBeenCalledWith('bullet_refined', { section_type: 'summary' });
+        });
     });
 
     describe('Export Flow Clarity', () => {
@@ -875,6 +942,7 @@ describe('Optimization Card Types', () => {
             setOptimizations: mockSetOptimizations,
             applyOptimization: mockApplyOptimization,
             revertOptimization: mockRevertOptimization,
+            refineOptimization: mockRefineOptimization,
             applyAllOptimizations: mockApplyAllOptimizations,
             revertAllOptimizations: mockRevertAllOptimizations,
             setKeywordSuggestions: mockSetKeywordSuggestions,
@@ -890,6 +958,9 @@ describe('Optimization Card Types', () => {
             },
             setOptimizationMetrics: mockSetOptimizationMetrics,
             resetOptimizationMetrics: mockResetOptimizationMetrics,
+            getCachedAnalysis: mockGetCachedAnalysis,
+            setCachedAnalysis: mockSetCachedAnalysis,
+            baselineMatchScore: null,
         };
     });
 

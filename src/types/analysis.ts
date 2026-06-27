@@ -74,3 +74,37 @@ export interface InterviewQuestion {
  * Model types for Gemini API
  */
 export type GeminiModelType = 'flash' | 'lite';
+
+/**
+ * Request payload for the single-bullet correction loop (refine-bullet).
+ * resumeText is the only grounding source — never fabricate beyond it.
+ */
+export interface RefineBulletRequest {
+  original: string;
+  currentImproved: string;
+  userInstruction: string;
+  jobContext?: string;
+  resumeText: string;
+  language?: 'en' | 'ar';
+}
+
+/**
+ * One refined bullet. Same field shape as an optimize bullet_improvement so the
+ * UI maps it with no special-casing. When the instruction asked for unsupported
+ * content, `improved` equals the input bullet and `issue` explains the refusal.
+ */
+export interface RefineBulletResponse {
+  improved: string;
+  issue: string;
+  rationale: string;
+}
+
+/**
+ * Metadata-only provenance record for an AI-modified piece of resume data.
+ * Do not store raw user instructions, resume text, job text, or AI output here.
+ */
+export interface AiSuggestionEntry {
+  type: 'refine_bullet';
+  sectionId: string;
+  timestamp: string;
+}

@@ -39,6 +39,11 @@ export interface OptimizationResult {
   optimized: string | string[];
   applied: boolean;
   timestamp?: string;
+  // Set when the bullet was refined via the single-bullet correction loop.
+  // `issue` explains a refusal (e.g. instruction asked for unsupported content);
+  // `rationale` explains what changed so the user can judge the edit.
+  rationale?: string;
+  issue?: string;
 }
 
 /**
@@ -231,6 +236,7 @@ export interface ResumeState {
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;
+  refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string }) => void;
   setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;
   applyAllOptimizations: () => void;

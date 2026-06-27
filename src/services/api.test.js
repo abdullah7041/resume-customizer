@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AUTH_REQUIRED, analyzeResume, optimizeResume, parseResume } from './api.js';
+import { AUTH_REQUIRED, analyzeResume, optimizeResume, parseResume, refineBullet } from './api.js';
 import { supabase } from './supabase';
 
 const mockResumeText = vi.hoisted(() => ({
@@ -504,5 +504,71 @@ describe('optimizeResume', () => {
         requestId: 'timeout-request-1',
       },
     });
+  });
+});
+
+describe('refineBullet', () => {
+  it('calls refine-bullet with auth and preserves the structured response', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'x-request-id': 'refine-request-1' }),
+      json: () => Promise.resolve({
+        improved: 'Led a team of 4 engineers, shipping billing 2 weeks early.',
+        issue: '',
+        rationale: 'Tightened the wording while preserving the supported metric.',
+      }),
+    });
+
+    const result = await refineBullet({
+      original: 'Led a team',
+      currentImproved: 'Led a team of 4 engineers',
+      userInstruction: 'Make it more concise',
+      jobContext: 'Backend engineer role',
+      resumeText: 'Led a team of 4 engineers, shipping billing 2 weeks early.',
+      language: 'en',
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/.netlify/functions/refine-bullet',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-access-token',
+        }),
+        body: JSON.stringify({
+          original: 'Led a team',
+          currentImproved: 'Led a team of 4 engineers',
+          userInstruction: 'Make it more concise',
+          jobContext: 'Backend engineer role',
+          resumeText: 'Led a team of 4 engineers, shipping billing 2 weeks early.',
+          language: 'en',
+        }),
+      })
+    );
+    expect(result).toEqual({
+      improved: 'Led a team of 4 engineers, shipping billing 2 weeks early.',
+      issue: '',
+      rationale: 'Tightened the wording while preserving the supported metric.',
+    });
+  });
+
+  it('blocks signed-out refinement before refine-bullet', async () => {
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
+
+    await expect(refineBullet({
+      original: 'Led a team',
+      currentImproved: 'Led a team of 4 engineers',
+      userInstruction: 'Make it more concise',
+      resumeText: 'Led a team of 4 engineers.',
+    })).rejects.toMatchObject({
+      status: 401,
+      type: AUTH_REQUIRED,
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

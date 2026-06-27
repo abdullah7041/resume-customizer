@@ -20,6 +20,9 @@ import {
   Info,
   TrendingUp,
   Share2,
+  Wand2,
+  Send,
+  Lightbulb,
 } from 'lucide-react';
 
 const ShareScoreCard = lazy(() => import('../ui/ShareScoreCard'));
@@ -154,6 +157,7 @@ export function OptimizeSection({
     setOptimizations,
     applyOptimization,
     revertOptimization,
+    refineOptimization,
     applyAllOptimizations,
     revertAllOptimizations,
     keywordSuggestions,
@@ -180,6 +184,12 @@ export function OptimizeSection({
   const [showShareCard, setShowShareCard] = useState(false);
   const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
+  // Single-bullet correction loop: which card has its refine input open, the
+  // instruction text, which card is mid-request, and any per-refine error.
+  const [refiningCardId, setRefiningCardId] = useState<string | null>(null);
+  const [refineInstruction, setRefineInstruction] = useState('');
+  const [refineLoadingId, setRefineLoadingId] = useState<string | null>(null);
+  const [refineError, setRefineError] = useState<string | null>(null);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
 
   // Sync prop optimizations to store when they change
@@ -873,6 +883,49 @@ export function OptimizeSection({
     resetOptimizationMetrics();
     setVerifiedScore(null);
     setSessionId(null);
+  };
+
+  // Sections whose cards map to real, editable resume text (skills are
+  // recommendation-only and certifications are display-only, so they cannot be refined).
+  const REFINABLE_SECTIONS = ['summary', 'headline', 'experience', 'projects', 'education'];
+
+  const handleRefineBullet = async (opt: OptimizationResult) => {
+    const instruction = refineInstruction.trim();
+    if (!instruction) return;
+
+    const resumeForGrounding = resumeText || (originalResume ? JSON.stringify(originalResume) : '');
+    if (!resumeForGrounding) {
+      setRefineError(t('sections.optimize.refine.noResume', 'Resume text is unavailable to ground the refinement.'));
+      return;
+    }
+
+    setRefineLoadingId(opt.sectionId);
+    setRefineError(null);
+    try {
+      const { refineBullet } = await import('../../services/api');
+      const jobContext = typeof window !== 'undefined'
+        ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
+        : '';
+
+      const result = await refineBullet({
+        original: Array.isArray(opt.original) ? opt.original.join('\n') : opt.original,
+        currentImproved: Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized,
+        userInstruction: instruction,
+        jobContext,
+        resumeText: resumeForGrounding,
+        language: i18n.language,
+      });
+
+      refineOptimization(opt.sectionId, { ...result, instruction });
+      analytics.track('bullet_refined', { section_type: opt.sectionType });
+      setRefiningCardId(null);
+      setRefineInstruction('');
+    } catch (err) {
+      console.error('[RefineBullet] Refine failed:', err);
+      setRefineError(err instanceof Error ? err.message : t('sections.optimize.refine.failed', 'Failed to refine bullet. Please try again.'));
+    } finally {
+      setRefineLoadingId(null);
+    }
   };
 
   const toggleCard = (sectionId: string) => {
@@ -1656,6 +1709,26 @@ export function OptimizeSection({
                         </GlassButton>
                       )}
 
+                      {REFINABLE_SECTIONS.includes(opt.sectionType) && (
+                        <button
+                          onClick={() => {
+                            setRefineError(null);
+                            setRefineInstruction('');
+                            setRefiningCardId(refiningCardId === opt.sectionId ? null : opt.sectionId);
+                          }}
+                          className={cn(
+                            'inline-flex w-full sm:w-auto items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors border text-sm font-medium',
+                            refiningCardId === opt.sectionId
+                              ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
+                              : 'bg-[color:var(--surface-control)] dark:bg-white/5 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-[color:var(--glass-border)] dark:border-white/5'
+                          )}
+                          title={t('sections.optimize.refine.button', 'Refine')}
+                        >
+                          <Wand2 className="w-3.5 h-3.5" />
+                          {t('sections.optimize.refine.button', 'Refine')}
+                        </button>
+                      )}
+
                       {onCopy && (
                         <button
                           onClick={() => onCopy(Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized)}
@@ -1666,6 +1739,81 @@ export function OptimizeSection({
                         </button>
                       )}
                     </div>
+
+                    {/* Refine input — single-bullet correction loop */}
+                    {refiningCardId === opt.sectionId && (
+                      <div className="mt-4 p-4 rounded-xl bg-purple-500/5 border border-purple-500/15 animate-in slide-in-from-top-2 duration-200">
+                        <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-2">
+                          <Wand2 className="w-3.5 h-3.5" />
+                          {t('sections.optimize.refine.title', 'Refine this bullet')}
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          {t('sections.optimize.refine.hint', 'Describe the change (e.g. "more leadership focus", "the real number is 20%"). Watheq rewrites only from your resume — it will not invent facts.')}
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="text"
+                            value={refineInstruction}
+                            onChange={(e) => setRefineInstruction(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey && refineLoadingId !== opt.sectionId) {
+                                e.preventDefault();
+                                handleRefineBullet(opt);
+                              }
+                            }}
+                            disabled={refineLoadingId === opt.sectionId}
+                            placeholder={t('sections.optimize.refine.placeholder', 'e.g. emphasize measurable impact')}
+                            maxLength={500}
+                            className="flex-1 px-3 py-2 text-sm rounded-lg bg-[color:var(--surface-control)] dark:bg-black/20 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/40 disabled:opacity-60"
+                          />
+                          <GlassButton
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleRefineBullet(opt)}
+                            disabled={refineLoadingId === opt.sectionId || !refineInstruction.trim()}
+                            leftIcon={refineLoadingId === opt.sectionId
+                              ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              : <Send className="w-3.5 h-3.5" />}
+                            className="shrink-0"
+                          >
+                            {refineLoadingId === opt.sectionId
+                              ? t('sections.optimize.refine.refining', 'Refining...')
+                              : t('sections.optimize.refine.submit', 'Refine')}
+                          </GlassButton>
+                        </div>
+                        {refineError && (
+                          <p className="mt-2 text-xs font-medium text-red-500 dark:text-red-400">{refineError}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Refinement reasoning — surfaced so the user can judge the edit */}
+                    {(opt.rationale || opt.issue) && (
+                      <div className="mt-4 space-y-2">
+                        {opt.rationale && (
+                          <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                            <Lightbulb className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                {t('sections.optimize.refine.rationaleLabel', 'Why this change')}
+                              </p>
+                              <p className="text-sm text-gray-700 dark:text-gray-200 mt-0.5">{opt.rationale}</p>
+                            </div>
+                          </div>
+                        )}
+                        {opt.issue && (
+                          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
+                            <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                {t('sections.optimize.refine.issueLabel', 'Not applied')}
+                              </p>
+                              <p className="text-sm text-gray-700 dark:text-gray-200 mt-0.5">{opt.issue}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </GlassCard>
