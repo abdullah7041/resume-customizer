@@ -420,6 +420,9 @@ function buildOptimizationCards(optimization: any) {
   }
 
   // Experience bullets
+  // Optional `source_span` (verbatim grounding phrase) rides along on each
+  // bullet_improvement; the card type omits it, so it is safely ignored here and
+  // remains available on the raw optimization object for a future hover-proof UX.
   const bulletImprovements = optimization?.bullet_improvements || [];
   if (bulletImprovements.length > 0) {
     bulletImprovements.forEach(

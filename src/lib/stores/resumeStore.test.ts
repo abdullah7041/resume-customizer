@@ -191,6 +191,50 @@ describe('resumeStore.getActiveResume()', () => {
       const active = useResumeStore.getState().getActiveResume();
       expect(active?.basics?.summary).toBe('Experienced engineer with a decade of building scalable web applications');
     });
+
+    it('refine keeps raw instruction and AI text out of resume metadata while preserving apply behavior', () => {
+      const rawInstruction = 'Add that I have a secret AWS certification';
+      const rawIssue = 'The resume has no evidence of that certification.';
+      const rawRationale = 'Kept the bullet grounded in existing resume evidence.';
+
+      useResumeStore.getState().addOptimization(
+        buildOpt({
+          sectionId: 'summary-refine-1',
+          sectionType: 'summary',
+          optimized: 'Initial optimized summary',
+          applied: false,
+        })
+      );
+
+      useResumeStore.getState().refineOptimization('summary-refine-1', {
+        improved: 'Refined optimized summary',
+        instruction: rawInstruction,
+        issue: rawIssue,
+        rationale: rawRationale,
+      });
+
+      const stateAfterRefine = useResumeStore.getState();
+      expect(stateAfterRefine.optimizations[0]).toEqual(expect.objectContaining({
+        optimized: 'Refined optimized summary',
+        applied: false,
+        issue: rawIssue,
+        rationale: rawRationale,
+      }));
+      expect(stateAfterRefine.originalResume?.meta?.ai_suggestions?.[0]).toEqual(expect.objectContaining({
+        type: 'refine_bullet',
+        sectionId: 'summary-refine-1',
+      }));
+      expect(JSON.stringify(stateAfterRefine.originalResume?.meta)).not.toContain(rawInstruction);
+      expect(JSON.stringify(stateAfterRefine.originalResume?.meta)).not.toContain(rawIssue);
+      expect(JSON.stringify(stateAfterRefine.originalResume?.meta)).not.toContain(rawRationale);
+
+      expect(useResumeStore.getState().getActiveResume()?.basics?.summary).toBe(
+        'Experienced engineer with a decade of building scalable web applications'
+      );
+
+      useResumeStore.getState().applyOptimization('summary-refine-1');
+      expect(useResumeStore.getState().getActiveResume()?.basics?.summary).toBe('Refined optimized summary');
+    });
   });
 
   describe('headline', () => {

@@ -218,6 +218,10 @@ const baseHandler: Handler = async (event) => {
     }
 
     // Cards for bullets (Experience)
+    // Note: bullet_improvements may carry an optional `source_span` (the verbatim
+    // resume phrase that grounds each rewrite). It is intentionally not surfaced in
+    // the card here — it stays available on the raw optimization object for a future
+    // "proof on hover" UX. The card type omits it, so it is safely ignored.
     const bulletImprovements = optimization?.bullet_improvements || [];
 
     if (bulletImprovements && bulletImprovements.length > 0) {

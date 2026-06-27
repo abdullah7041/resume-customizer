@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ResumeSchema } from '../../types/resume';
+import type { AiSuggestionEntry } from '../../types/analysis';
 import type {
   ResumeState,
   OptimizationResult,
@@ -210,6 +211,45 @@ export const useResumeStore = create<ResumeState>()(
           ),
           hasDownloaded: false
         }));
+      },
+
+      // Single-bullet correction loop. Replaces only `optimized` (+ rationale/issue)
+      // for one card and keeps `original`/`applied` intact, so getActiveResume's
+      // content-based merge picks up the refined text automatically — even when the
+      // bullet is already applied. Records only metadata on meta.ai_suggestions
+      // to preserve schema integrity without persisting raw instructions or AI text.
+      refineOptimization: (sectionId, refinement) => {
+        set((state) => {
+          const optimizations = state.optimizations.map((o) =>
+            o.sectionId === sectionId
+              ? {
+                ...o,
+                optimized: refinement.improved,
+                rationale: refinement.rationale,
+                issue: refinement.issue,
+              }
+              : o
+          );
+
+          let originalResume = state.originalResume;
+          if (originalResume) {
+            const entry: AiSuggestionEntry = {
+              type: 'refine_bullet',
+              sectionId,
+              timestamp: new Date().toISOString(),
+            };
+            const existingMeta = originalResume.meta ?? {};
+            originalResume = {
+              ...originalResume,
+              meta: {
+                ...existingMeta,
+                ai_suggestions: [...(existingMeta.ai_suggestions ?? []), entry],
+              },
+            };
+          }
+
+          return { optimizations, originalResume, hasDownloaded: false };
+        });
       },
 
       applyAllOptimizations: () => {

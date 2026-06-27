@@ -8,6 +8,7 @@ const FUNCTION_BASE_PATH = "/.netlify/functions";
 const MATCH_ENDPOINT = `${FUNCTION_BASE_PATH}/ai-match`;
 const PARSE_ENDPOINT = `${FUNCTION_BASE_PATH}/extract-resume-json`;
 const OPTIMIZE_ENDPOINT = `${FUNCTION_BASE_PATH}/optimize`;
+const REFINE_BULLET_ENDPOINT = `${FUNCTION_BASE_PATH}/refine-bullet`;
 const OPTIMIZE_STREAM_ENDPOINT = `/api/optimize-stream`;
 const CLARIFY_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-clarifications`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
@@ -585,6 +586,68 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       throw error;
     }
   }, 3, 2000); // 3 retries, 2s base delay
+};
+
+/**
+ * Refine a single optimized bullet from a short user instruction.
+ * Grounds strictly on the resume text — never fabricates. If the instruction
+ * asks to add unsupported content, the server returns the bullet unchanged with
+ * an explanatory `issue`.
+ *
+ * @param {object} params
+ * @param {string} params.original - the original (pre-optimization) bullet
+ * @param {string} params.currentImproved - the current optimized bullet text
+ * @param {string} params.userInstruction - short correction instruction
+ * @param {string} [params.jobContext] - job description for keyword grounding
+ * @param {string} params.resumeText - the ONLY grounding source
+ * @param {string} [params.language='en']
+ * @returns {Promise<{ improved: string, issue: string, rationale: string }>}
+ */
+export const refineBullet = async ({ original, currentImproved, userInstruction, jobContext = '', resumeText, language = 'en' }) => {
+  if (isCircuitOpen('openrouter-ai')) {
+    throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
+  }
+  return retryWithBackoff(async () => {
+    try {
+      const headers = await getAuthHeaders({ requireAuth: true });
+
+      const response = await fetch(REFINE_BULLET_ENDPOINT, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ original, currentImproved, userInstruction, jobContext, resumeText, language }),
+      });
+
+      const data = await handleResponse(response);
+      recordSuccess('openrouter-ai');
+      return {
+        improved: typeof data.improved === 'string' ? data.improved : currentImproved,
+        issue: typeof data.issue === 'string' ? data.issue : '',
+        rationale: typeof data.rationale === 'string' ? data.rationale : '',
+      };
+    } catch (error) {
+      console.error('[RefineBullet] Refine failed:', summarizeErrorForConsole(error));
+      error.status = error.status || 500;
+
+      if (error.status !== 401) {
+        Sentry.captureException(error, {
+          tags: { api_function: 'refineBullet' },
+          contexts: { request: { error_type: error.type || 'unknown' } },
+        });
+      }
+
+      if (isAuthRequiredError(error)) {
+        throw error;
+      }
+
+      if (error.status === 502 || error.status === 504) {
+        recordFailure('openrouter-ai');
+        throw new Error('AI service is experiencing high load. We automatically retried but the request still timed out. Please try again in a moment.');
+      }
+
+      recordFailure('openrouter-ai');
+      throw error;
+    }
+  }, 2, 1500);
 };
 
 /**

@@ -40,6 +40,7 @@ describe('AI contract layer', () => {
       'optimize_stream',
       'parse_arabic_resume',
       'parse_resume',
+      'refine_bullet',
       'resume_truth_check',
       'vision2030_alignment',
     ].sort());
@@ -422,5 +423,77 @@ describe('AI contract layer', () => {
       jobDescription: 'React job',
       language: 'en',
     })).rejects.toBeInstanceOf(AiContractError);
+  });
+
+  describe('refine_bullet (single-bullet correction loop)', () => {
+    const REFINE_INPUT = {
+      original: 'Led a team',
+      currentImproved: 'Led a team of 4 engineers, shipping the billing service 2 weeks early',
+      userInstruction: 'Add that I am an AWS Certified Solutions Architect',
+      jobContext: 'Backend engineer role requiring AWS experience',
+      resumeText: 'WORK\nEngineer at Acme. Led a team of 4 engineers, shipping the billing service 2 weeks early.',
+      language: 'en',
+    };
+
+    it('reuses optimize truthfulness while keeping source_span scoped to full optimize', () => {
+      const optimizeMessages = getAiContract('optimize').buildMessages({
+        resumeText: 'Resume', jobDescription: 'Job', language: 'en',
+      }, { retrievedContext: { documents: [] } });
+      const refineMessages = getAiContract('refine_bullet').buildMessages(REFINE_INPUT, {
+        retrievedContext: { documents: [] },
+      });
+
+      // Both contracts carry the same anti-fabrication core.
+      expect(refineMessages[0].content).toContain('Do not add facts, skills, credentials, employers, dates, or metrics');
+      expect(optimizeMessages[0].content).toContain('Do not add facts, skills, credentials, employers, dates, or metrics');
+      expect(refineMessages[0].content).toContain('Every improved bullet must use an action, task, and quantified result');
+      expect(optimizeMessages[0].content).toContain('EVIDENCE PROTOCOL');
+      expect(optimizeMessages[1].content).toContain('source_span');
+      expect(refineMessages[0].content).not.toContain('source_span');
+    });
+
+    it('grounds on resume text and instructs an unchanged return for unsupported additions', () => {
+      const messages = getAiContract('refine_bullet').buildMessages(REFINE_INPUT, {
+        retrievedContext: { documents: [] },
+      });
+      const user = messages[1].content;
+
+      // Untrusted user data is tagged, not interpolated into instructions.
+      expect(user).toContain('<user_instruction>');
+      expect(user).toContain(REFINE_INPUT.userInstruction);
+      expect(user).toContain('<resume_text>');
+      expect(user).toContain(REFINE_INPUT.resumeText);
+      // The diligence guardrail: unsupported additions return the bullet unchanged + issue.
+      expect(user).toMatch(/return the current bullet verbatim in "improved"/i);
+      expect(user).toMatch(/STAR|action verb/i);
+    });
+
+    it('passes the no-fabrication response through unchanged with an explanatory issue', async () => {
+      // Model declines the unsupported credential: bullet unchanged, issue explains why.
+      callOpenRouterMock.mockResolvedValue(JSON.stringify({
+        improved: REFINE_INPUT.currentImproved,
+        issue: 'The resume contains no evidence of an AWS certification, so it was not added.',
+        rationale: 'Kept the bullet as-is because the requested credential is unsupported by the resume.',
+      }));
+
+      const result = await executeAiContract('refine_bullet', REFINE_INPUT);
+
+      expect(result.improved).toBe(REFINE_INPUT.currentImproved);
+      expect(result.issue.length).toBeGreaterThan(0);
+      expect(result.issue).toMatch(/AWS|certification|evidence/i);
+      expect(callOpenRouterMock).toHaveBeenCalledWith(
+        'flash',
+        expect.any(Array),
+        expect.objectContaining({ required: expect.arrayContaining(['improved', 'issue', 'rationale']) }),
+        expect.objectContaining({ featureName: 'refine_bullet', temperature: 0 }),
+      );
+    });
+
+    it('fails closed when the refine output violates the contract schema', async () => {
+      callOpenRouterMock.mockResolvedValue(JSON.stringify({ improved: 'x' }));
+
+      await expect(executeAiContract('refine_bullet', REFINE_INPUT))
+        .rejects.toBeInstanceOf(AiContractError);
+    });
   });
 });
