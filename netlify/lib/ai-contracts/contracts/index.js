@@ -59,6 +59,7 @@ const resumeJsonSchema = {
             countryCode: { type: 'string' },
             region: { type: 'string' },
           },
+          required: ['city', 'countryCode'],
         },
         profiles: {
           type: 'array',
@@ -72,6 +73,7 @@ const resumeJsonSchema = {
           },
         },
       },
+      required: ['name', 'label', 'location', 'summary'],
     },
     work: {
       type: 'array',
@@ -83,9 +85,9 @@ const resumeJsonSchema = {
           location: { type: 'string' },
           startDate: { type: 'string' },
           endDate: { type: 'string' },
-          summary: { type: 'string' },
           highlights: stringArray,
         },
+        required: ['name', 'position', 'startDate', 'endDate', 'highlights'],
       },
     },
     education: {
@@ -94,6 +96,7 @@ const resumeJsonSchema = {
         type: 'object',
         properties: {
           institution: { type: 'string' },
+          url: { type: 'string' },
           area: { type: 'string' },
           studyType: { type: 'string' },
           startDate: { type: 'string' },
@@ -122,11 +125,14 @@ const resumeJsonSchema = {
         properties: {
           name: { type: 'string' },
           description: { type: 'string' },
-          url: { type: 'string' },
-          startDate: { type: 'string' },
-          endDate: { type: 'string' },
           highlights: stringArray,
           keywords: stringArray,
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+          url: { type: 'string' },
+          roles: stringArray,
+          entity: { type: 'string' },
+          type: { type: 'string' },
         },
       },
     },
@@ -136,8 +142,8 @@ const resumeJsonSchema = {
         type: 'object',
         properties: {
           name: { type: 'string' },
-          issuer: { type: 'string' },
           date: { type: 'string' },
+          issuer: { type: 'string' },
           url: { type: 'string' },
         },
       },
@@ -154,6 +160,12 @@ const resumeJsonSchema = {
     },
     meta: { type: 'object' },
   },
+  // Section containers must always be present so strict structured output cannot
+  // legally stop after basics/work. Most item fields stay optional (absent evidence
+  // → empty, never fabricated), but the always-present core identity/work fields are
+  // required because gemini-2.5-flash-lite (reasoning disabled) otherwise drops
+  // label/location/summary and dumps bullets into a single summary string instead of
+  // the highlights[] array. Forcing them is what makes a real resume parse completely.
   required: ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages', 'meta'],
 };
 
@@ -200,8 +212,14 @@ const optimizeJsonSchema = {
           improved: { type: 'string' },
           issue: { type: 'string' },
           rationale: { type: 'string' },
+          // Verbatim resume substring that grounds the rewrite. REQUIRED in the
+          // structured-output JSON schema: forcing the field keeps the model's
+          // output bounded (without it, flash can run away into a giant unterminated
+          // string on thin resumes). The Zod outputSchema keeps it OPTIONAL so older
+          // cached results (no source_span) still validate.
+          source_span: { type: 'string' },
         },
-        required: ['original', 'improved', 'issue', 'rationale'],
+        required: ['original', 'improved', 'issue', 'rationale', 'source_span'],
       },
     },
     project_improvements: {
@@ -278,6 +296,8 @@ const optimizeOutput = z.object({
     improved: z.string(),
     issue: z.string(),
     rationale: z.string(),
+    // Optional so previously cached optimize results (no source_span) still validate.
+    source_span: z.string().optional(),
   })).default([]),
   project_improvements: z.array(z.object({
     project_name: z.string(),
@@ -737,17 +757,25 @@ export function buildParseResumeMessages(input, context = {}) {
   const system = `You are a resume parser. Extract structured data from resume text into JSON Resume format. Preserve facts only; do not invent missing information.`;
   const user = `Extract resume data into JSON Resume format. Include basics, work, education, skills, projects, certificates, languages, and meta fields.
 
+For basics you MUST extract:
+- name, and label (the professional headline on the line directly under the name)
+- email and phone if present
+- location: parse the candidate's location from the header/contact line. That line is often pipe- or bullet-delimited (e.g. "Dammam, Saudi Arabia | LinkedIn: ... | Portfolio: ..."); the location is the segment that names a place, not a URL or a label. Map "City, Country" to location.city (e.g. "Dammam") and location.countryCode (the country, e.g. "Saudi Arabia" or its code); use location.region for a state/province if present
+- profiles: extract EVERY link from the contact line (LinkedIn, GitHub, Portfolio, website, etc.) into basics.profiles[] with network and url; do not drop any. Copy each URL exactly as written and ONLY ONCE — never repeat or concatenate path segments
+- url: if a standalone personal website or portfolio URL is present, copy it once into basics.url (it may also appear as a Portfolio profile); otherwise leave basics.url empty
+- summary: the professional summary or profile paragraph. It may sit under a non-standard heading such as Summary, Profile, About, Objective, Professional Summary, Core Identity, Value Proposition, or "Core Identity & Value Proposition" — map that paragraph to basics.summary
+
 For EACH work entry you MUST extract:
 - position: the job title exactly as written
-- name: the employer/company name exactly as written — never omit this field
+- name: the employer/company name exactly as written — never omit this field; the employer often appears on the line immediately after the job title
 - location: if present in the text for that entry
-- startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry
+- startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry; a date range on a nearby line belongs to the adjacent entry
 - highlights: an array containing EVERY bullet point and achievement line under that entry — do not summarize, merge, skip, or omit any bullet; each bullet is a separate array item
 
 Additional extraction rules:
-- Put the professional title or headline directly beneath the candidate's name in basics.label. Do not create a work entry from that header title.
-- Skills may be grouped as "Category: item, item". Preserve the category in skills[].name and put every listed item in skills[].keywords.
-- For every education entry, capture the institution whenever it is visibly present, including when it appears on a separate line from the degree.
+- The line directly under the candidate's name is a professional headline. Put it in basics.label, not as a work entry.
+- Skills may be grouped as "Category: item, item, item". Preserve the category in skills[].name and extract every item as a keyword in skills[].keywords; preserve compound names like "Power Query (M Language)" and "PostgreSQL (Supabase)" intact.
+- For education entries, the institution may appear on the line before or after the degree. Always capture it as institution whenever it is visibly present.
 - Return every top-level section container even when no evidence is present; use an empty array rather than omitting a section.
 
 Do not invent any values not present in the text.${focusInstruction}${withRagBlock(context.retrievedContext)}
@@ -806,8 +834,25 @@ function buildOptimizeMessages(input, context) {
     ? optionalTaggedBlock('career_vulnerabilities', vulnerabilities)
     : '';
   const clarificationsBlock = optionalTaggedBlock('user_clarifications', input.userClarifications);
-  const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications. Every improved bullet must use an action, task, and quantified result; inferred metrics must include "(verify)".`;
-  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric.${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${clarificationsBlock}
+  const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications.
+
+EVIDENCE PROTOCOL — mandatory and machine-checked:
+- For EVERY bullet_improvement, set "source_span" to a VERBATIM substring copied exactly from <resume_text> that supports the rewrite. Copy it character-for-character; do not paraphrase the span. Keep each source_span to the SHORTEST exact phrase that supports the claim — at most ~120 characters (about 15 words). Never copy whole sentences or paragraphs; a short verbatim fragment is enough.
+- The "improved" bullet may only assert facts, tools, scope, employers, and numbers that appear in its source_span (or elsewhere in the resume). If a number would strengthen the bullet but is not in the resume, write the qualitative result and append "(verify)" to the single inferred figure — never state an invented figure as fact.
+- When the resume ALREADY states a concrete metric, scope, technology, or number, KEEP it verbatim in the rewrite and put it in the source_span — do not generalize it away, soften it, or drop it. Grounding means preserving real specifics, not removing them; "(verify)" is only for figures you infer, never a replacement for a real one.
+- If no verbatim span in the resume supports a rewrite, do not produce that bullet.
+- Still write tightly and specifically: strong action verb, concrete tech/scope, no cliche ("results-driven", "responsible for", "leveraged", "spearheaded", "synergy", "best-in-class").
+
+FINAL SELF-AUDIT: for each bullet, confirm source_span is an exact quote from the resume and that every proper noun/number in "improved" traces to it or to the resume. Truthfulness outranks impressiveness.`;
+  const example = `Example item:
+- original: "Responsible for improving the API and making it faster for users."
+- improved: "Cut customer-facing API latency 40% by adding Redis caching and rewriting N+1 queries."
+- source_span: "Reduced API latency by 40% through caching and query optimization"
+- issue: "Vague verb, no scope, no metric."
+- rationale: "Keeps the real 40% from the cited span; names the concrete technique."`;
+  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Each bullet_improvement MUST include a verbatim source_span. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric.
+
+${example}${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${clarificationsBlock}
 
 ${taggedBlock('job_description', jobDescription)}
 
@@ -916,10 +961,21 @@ export const aiContracts = {
     outputSchema: looseResumeOutput,
     schemaName: 'parse_resume',
     featureName: 'parse_resume',
-    maxTokens: 4096,
-    timeoutMs: 50000,
+    // 4096 truncated legitimate rich-resume JSON, while 16384 allowed pathological
+    // whitespace output to consume the full 30s Netlify window. Valid 2-page
+    // parses stay well below 8192 (observed: ~1.6k completion tokens, ~6s total).
+    // timeoutMs is bounded so a single slow/truncated attempt leaves headroom for
+    // deterministic recovery + response within the 30s function limit (there is
+    // no second AI attempt on truncation — see openrouter-client fallback note).
+    maxTokens: 8192,
+    timeoutMs: 20000,
     temperature: 0,
-    reasoningBudget: null,
+    // reasoningBudget 0 = thinking DISABLED. Parsing is mechanical extraction
+    // under a strict JSON schema, so chain-of-thought adds no quality. With
+    // gemini-2.5-flash-lite's default thinking ON, reasoning consumed the 8192
+    // output budget (→ truncation) and pushed latency to ~26s; OFF, the real
+    // JSON (~2-3k tokens) fits with headroom and latency returns to ~6s.
+    reasoningBudget: 0,
     buildMessages: buildParseResumeMessages,
   },
   parse_arabic_resume: {
@@ -981,7 +1037,11 @@ export const aiContracts = {
     outputSchema: optimizeOutput,
     schemaName: 'optimize_resume',
     featureName: 'optimize_resume',
-    maxTokens: 16384,
+    // 24576 (was 16384): the source_span evidence field adds per-bullet output; on
+    // thin resumes the response can hit the old cap mid-string. The ~120-char span
+    // cap in the prompt bounds growth; this gives headroom. Latency stays well under
+    // timeoutMs (worst observed ~46s).
+    maxTokens: 24576,
     timeoutMs: 100000,
     temperature: 0,
     reasoningBudget: 2048,
@@ -994,7 +1054,8 @@ export const aiContracts = {
     outputSchema: optimizeOutput,
     schemaName: 'optimize_resume',
     featureName: 'optimize_stream',
-    maxTokens: 16384,
+    // 24576 (was 16384): headroom for the source_span evidence field. See optimize.
+    maxTokens: 24576,
     timeoutMs: 100000,
     temperature: 0,
     reasoningBudget: 2048,
