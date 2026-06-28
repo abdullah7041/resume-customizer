@@ -218,6 +218,8 @@ export const OptimizeRequestSchema = z.object({
     userClarifications: z.string().max(5000).optional(),
     // Explicit user-confirmed exclusions that override keyword weaving.
     userHardStops: z.array(z.string().trim().min(1).max(300)).max(20).optional(),
+    // Recovery-only retry after an interrupted paid stream. Must never trigger AI or credit use.
+    cacheOnly: z.boolean().optional(),
 });
 
 // New: Clarification pre-optimization endpoint schema

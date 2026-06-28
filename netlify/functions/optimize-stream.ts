@@ -144,7 +144,7 @@ export default async function handler(request: Request): Promise<Response> {
     );
   }
 
-  const { resumeText, jobText, workHistory, language, userClarifications, userHardStops } = parseResult.data;
+  const { resumeText, jobText, workHistory, language, userClarifications, userHardStops, cacheOnly } = parseResult.data;
 
   // --- Vulnerability detection (needed for both cache key and AI call) ---
   const vulnerabilities = workHistory?.length
@@ -194,6 +194,23 @@ export default async function handler(request: Request): Promise<Response> {
   }
   if (cachedResponse) {
     console.warn('[optimize-stream] Cache HIT had no renderable cards — regenerating.');
+  }
+  if (cacheOnly) {
+    console.log('[optimize-stream] Cache-only recovery MISS — no credit deduction.');
+    return new Response(
+      JSON.stringify({
+        error: 'No cached optimization result is available yet.',
+        cacheOnlyMiss: true,
+      }),
+      {
+        status: 409,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      },
+    );
   }
   console.log('[optimize-stream] Cache MISS — running credit check and SSE stream.');
 

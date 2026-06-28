@@ -699,18 +699,19 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops }, onStatus) => {
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false }, onStatus) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
 
+  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops };
   const headers = await getAuthHeaders({ requireAuth: true });
   // Remove Content-Type for SSE request compatibility — the body is still JSON
   // but we need to accept text/event-stream response
   const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops }),
+    body: JSON.stringify(cacheOnly ? { ...requestPayload, cacheOnly: true } : requestPayload),
   });
 
   // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before
@@ -722,7 +723,9 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     if (data.creditsRequired) error.creditsRequired = data.creditsRequired;
     if (data.creditsAvailable != null) error.creditsAvailable = data.creditsAvailable;
     attachErrorDebug(error, response, data);
-    recordFailure('openrouter-ai');
+    if (!data.cacheOnlyMiss) {
+      recordFailure('openrouter-ai');
+    }
     throw error;
   }
 
@@ -819,6 +822,13 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     }
     // Stream broke before result — billing state is unknown (credits may have been consumed).
     // Caller must NOT automatically retry with another paid request.
+    if (!cacheOnly) {
+      try {
+        return await optimizeResumeStream({ ...requestPayload, jobDesc, cacheOnly: true }, onStatus);
+      } catch (recoveryErr) {
+        console.warn('[optimize-stream] Cache-only recovery after interrupted stream failed:', summarizeErrorForConsole(recoveryErr));
+      }
+    }
     streamErr.isBillingStateUnknown = true;
     throw streamErr;
   } finally {

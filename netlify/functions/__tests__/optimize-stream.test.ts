@@ -166,6 +166,23 @@ describe('optimize-stream function', () => {
     expect(mockGeminiClient.optimizeResume).toHaveBeenCalled();
   });
 
+  it('does not charge or regenerate when cache-only recovery misses', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+
+    const response = await handler(buildRequest(
+      { Authorization: 'Bearer test-token' },
+      { cacheOnly: true },
+    ));
+    const body = await response.json() as { error: string };
+
+    expect(response.status).toBe(409);
+    expect(body.error).toContain('cached optimization result');
+    expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+    expect(mockGeminiClient.optimizeResume).not.toHaveBeenCalled();
+    expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+    expect(mockRedisCache.setCached).not.toHaveBeenCalled();
+  });
+
   it('scopes no-charge cache hits to the authenticated user', async () => {
     await handler(buildRequest({ Authorization: 'Bearer test-token' }));
 
