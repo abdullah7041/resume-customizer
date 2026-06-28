@@ -70,6 +70,20 @@ describe('protected Netlify function gates', () => {
     expect(getSupabaseClientMock).not.toHaveBeenCalled();
   });
 
+  it('requires an admin secret for dev credit reset when the allow flag is enabled', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.ALLOW_DEV_RESET = 'true';
+    process.env.ADMIN_SECRET = 'strong-secret';
+
+    const response = await runHandler(
+      resetCreditsHandler,
+      buildEvent({ queryStringParameters: { email: 'private@example.com' } })
+    );
+
+    expect(response.statusCode).toBe(401);
+    expect(getSupabaseClientMock).not.toHaveBeenCalled();
+  });
+
   it('requires both the allow flag and admin secret before celebration credit mutation', async () => {
     process.env.NODE_ENV = 'production';
     process.env.ALLOW_CELEBRATION_BONUS = 'true';

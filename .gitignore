@@ -56,3 +56,4 @@ i18n-translation-prompt-ar.md
 .agents/*
 !.agents/skills/
 !.agents/skills/**
+.instruction-backups-*/

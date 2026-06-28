@@ -9,6 +9,18 @@ import { resolve } from 'path';
 
 const indexCss = readFileSync(resolve(__dirname, '../index.css'), 'utf-8');
 const glassTs = readFileSync(resolve(__dirname, '../lib/styles/glass.ts'), 'utf-8');
+const vision2030DemoTsx = readFileSync(resolve(__dirname, '../components/demo/Vision2030Demo.tsx'), 'utf-8');
+const vision2030ModalTsx = readFileSync(resolve(__dirname, '../components/ui/Vision2030Modal.tsx'), 'utf-8');
+const vision2030CalculationModalTsx = readFileSync(
+  resolve(__dirname, '../components/ui/Vision2030CalculationModal.tsx'),
+  'utf-8'
+);
+
+const vision2030Files = [
+  ['Vision2030Demo.tsx', vision2030DemoTsx],
+  ['Vision2030Modal.tsx', vision2030ModalTsx],
+  ['Vision2030CalculationModal.tsx', vision2030CalculationModalTsx],
+];
 
 describe('Light mode contrast', () => {
   describe('index.css utility classes have dark-mode overrides', () => {
@@ -64,6 +76,28 @@ describe('Light mode contrast', () => {
           // There's a bare bg-white/5 — the same line must also have dark:bg-white/5 or dark:*:bg-white/5
           expect(line).toMatch(/dark:[\w-:]*bg-white\/5/);
         }
+      }
+    });
+  });
+
+  describe('Vision 2030 high-visibility surfaces use flipping light-mode colors', () => {
+    it.each(vision2030Files)('%s avoids bare dark-only glass utilities', (_fileName, source) => {
+      const offenders = [
+        /(?<!dark:)\bbg-black\/40\b/,
+        /(?<!dark:)\bbg-\[#0a0a0a\]\/95\b/,
+        /(?<!dark:)\bbg-white\/5\b/,
+        /(?<!dark:)\bbg-white\/\[0\.04\]\b/,
+        /(?<!dark:)\bbg-white\/\[0\.02\]\b/,
+        /(?<!dark:)\bborder-white\/10\b/,
+        /(?<!dark:)\bborder-white\/5\b/,
+        /(?<!dark:)\bring-white\/5\b/,
+        /(?<!dark:)(?<!dark:group-)\bhover:text-white\b/,
+        /(?<!dark:)\btext-white\/50\b/,
+        /(?<!dark:)\btext-white\/60\b/,
+      ];
+
+      for (const offender of offenders) {
+        expect(source).not.toMatch(offender);
       }
     });
   });

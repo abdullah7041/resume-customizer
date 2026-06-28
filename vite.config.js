@@ -29,6 +29,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
+    // Pre-transform the app entry + heavy first-paint modules on server start
+    // so the initial page load doesn't pay a request waterfall (Vite 8).
+    warmup: {
+      clientFiles: ["./src/main.tsx", "./src/App.tsx"],
+    },
   },
 
   build: {
@@ -134,11 +139,20 @@ export default defineConfig({
       "puppeteer-core",          // Server-only
       "@sparticuz/chromium",     // Server-only (Lambda)
     ],
+    // Vite 8 / Rolldown: `define` lives under `transform`, not at the top level.
+    // The old `rolldownOptions.define` was rejected ("Invalid key: define") and
+    // silently dropped — this applies the global polyfill correctly.
     rolldownOptions: {
-      define: {
-        global: "globalThis",
+      transform: {
+        define: {
+          global: "globalThis",
+        },
       },
     },
+    // Release optimized deps as soon as the static-import crawl + explicit
+    // `include` list is bundled, instead of holding until full crawl end.
+    // Cuts cold-start time so the dev server binds + serves faster (Vite 8).
+    holdUntilCrawlEnd: false,
   },
 
   test: {

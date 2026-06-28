@@ -60,9 +60,9 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
             <div
                 className={cn(
                     "relative w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col",
-                    "bg-black/40 backdrop-blur-2xl",
+                    "bg-[color:var(--surface-glass)] dark:bg-black/40 backdrop-blur-2xl",
                     "rounded-2xl shadow-2xl shadow-emerald-900/40",
-                    "border border-white/10 ring-1 ring-white/5",
+                    "border border-[color:var(--glass-border)] dark:border-white/10 ring-1 ring-gray-900/5 dark:ring-white/5",
                     "animate-in fade-in zoom-in-95 duration-300 ease-out z-[101]"
                 )}
             >
@@ -71,7 +71,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                 <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-teal-600/10 rounded-full blur-[80px] -z-10 pointer-events-none" />
 
                 {/* Header */}
-                <div className="flex-none px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/5 backdrop-blur-xl sticky top-0 z-10">
+                <div className="flex-none px-6 py-5 border-b border-[color:var(--glass-border)] dark:border-white/5 flex items-center justify-between bg-[color:var(--surface-control)] dark:bg-white/5 backdrop-blur-xl sticky top-0 z-10">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex flex-col items-center justify-center shadow-lg shadow-emerald-500/20">
                             {/* Fallback Icon - Better Aligned */}
@@ -92,7 +92,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
 
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-all duration-200"
+                        className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-all duration-200"
                         aria-label="Close modal"
                     >
                         <X className="w-5 h-5" />
@@ -104,14 +104,14 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                     <div className="p-6 md:p-8 space-y-8">
 
                         {/* Hero / Description */}
-                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8 group hover:bg-white/[0.07] transition-colors">
+                        <div className="relative overflow-hidden rounded-2xl border border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-glass)] dark:bg-white/5 p-6 md:p-8 group hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/[0.07] transition-colors">
                             <div className="absolute top-0 right-0 p-4 opacity-10">
                                 <MapPin className="w-32 h-32 text-emerald-500" />
                             </div>
 
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-3">
                                 <Target className="w-5 h-5 text-emerald-400" />
-                                <span className="bg-gradient-to-r from-emerald-200 to-white bg-clip-text text-transparent">
+                                <span className="bg-gradient-to-r from-emerald-700 to-emerald-500 dark:from-emerald-200 dark:to-white bg-clip-text text-transparent">
                                     {t('vision2030.modal.whatIs', 'What is Vision 2030?')}
                                 </span>
                             </h3>
@@ -138,12 +138,12 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                                 {VISION_2030_SECTORS.map((sector) => (
                                     <div
                                         key={sector.id}
-                                        className="group relative flex flex-col items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-emerald-900/20 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 cursor-default"
+                                        className="group relative flex flex-col items-center gap-3 p-4 rounded-xl border border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-glass)] dark:bg-white/[0.02] hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 cursor-default"
                                     >
                                         <div
-                                            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-white/5 to-white/[0.01] border border-white/5 group-hover:border-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all"
+                                            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-50 to-white dark:from-white/5 dark:to-white/[0.01] border border-emerald-100 dark:border-white/5 group-hover:border-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all"
                                         >
-                                            <SectorIcon sectorId={sector.id} className="w-6 h-6 text-white/60 group-hover:text-emerald-400 transition-colors" />
+                                            <SectorIcon sectorId={sector.id} className="w-6 h-6 text-emerald-700 dark:text-white/60 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" />
                                         </div>
                                         <span className="text-sm font-medium text-center text-gray-600 dark:text-white/70 group-hover:text-gray-900 dark:group-hover:text-white leading-tight">
                                             {isArabic ? sector.nameAr : sector.nameEn}
@@ -155,7 +155,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
 
                         {/* Alignment Section */}
                         <div className="grid md:grid-cols-2 gap-6">
-                            <div className="p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-900/20 to-teal-900/10 backdrop-blur-sm">
+                            <div className="p-6 rounded-2xl border border-[color:var(--glass-border)] dark:border-white/10 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/10 backdrop-blur-sm">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                     <Sparkles className="w-5 h-5 text-yellow-400" />
                                     {t('vision2030.modal.alignment', 'How We Help You Align')}
@@ -173,7 +173,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                             </div>
 
                             {/* CTA / Learn More */}
-                            <div className="flex flex-col justify-center items-center text-center p-6 rounded-2xl border border-white/10 bg-white/[0.02] space-y-4">
+                            <div className="flex flex-col justify-center items-center text-center p-6 rounded-2xl border border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-glass)] dark:bg-white/[0.02] space-y-4">
                                 <div className="w-16 h-16 rounded-full bg-[#006C35]/20 flex items-center justify-center border border-[#006C35]/30 mb-2">
                                     {/* Removed Emoji as requested */}
                                     <Sparkles className="w-8 h-8 text-[#006C35]" />

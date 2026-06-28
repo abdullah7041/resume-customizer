@@ -51,7 +51,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
     return (
         <section className="relative overflow-hidden py-16 px-4">
             {/* Background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#006C35]/10 via-emerald-900/20 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/70 via-emerald-50/60 to-transparent dark:from-[#006C35]/10 dark:via-emerald-900/20 dark:to-transparent pointer-events-none" />
 
             <div className="max-w-6xl mx-auto relative z-10">
                 {/* Header Badge */}
@@ -74,7 +74,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                 {/* Stats Row */}
                 <div className="grid grid-cols-3 gap-4 mb-12 max-w-lg mx-auto">
                     {stats.map((stat, idx) => (
-                        <div key={idx} className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
+                        <div key={idx} className="text-center p-4 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10">
                             <stat.icon className="w-6 h-6 text-[#4ade80] mx-auto mb-2" />
                             <div className="text-2xl font-bold text-[#4ade80]">{stat.value}</div>
                             <div className="text-xs text-gray-500 dark:text-white/60">{stat.label}</div>
@@ -86,7 +86,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                 <div className="grid md:grid-cols-2 gap-8 items-center mb-12">
                     {/* Sample Score Display */}
                     <div className="relative">
-                        <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/20 p-6 backdrop-blur-xl">
+                        <div className="bg-[color:var(--surface-glass)] dark:bg-gradient-to-br dark:from-white/10 dark:to-white/5 rounded-2xl border border-[color:var(--glass-border)] dark:border-white/20 p-6 backdrop-blur-xl">
                             <div className="flex items-center gap-3 mb-6">
                                 <GlassCircle size="lg" variant="success">
                                     <Target className="w-6 h-6 text-emerald-400" />
@@ -159,7 +159,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                         {benefits.map((benefit, idx) => (
                             <div
                                 key={idx}
-                                className="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#006C35]/50 transition-colors"
+                                className="flex items-start gap-3 p-4 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 hover:border-[#006C35]/50 transition-colors"
                             >
                                 <div className="w-8 h-8 rounded-lg bg-[#006C35]/20 flex items-center justify-center flex-shrink-0">
                                     <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
@@ -186,7 +186,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                         {VISION_2030_SECTORS.map((sector) => (
                             <div
                                 key={sector.id}
-                                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#006C35]/50 hover:bg-[#006C35]/10 transition-all min-w-[100px]"
+                                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 hover:border-[#006C35]/50 hover:bg-[#006C35]/10 transition-all min-w-[100px]"
                             >
                                 <div className="w-10 h-10 rounded-lg bg-[#006C35]/20 flex items-center justify-center">
                                     <SectorIcon sectorId={sector.id} className="w-5 h-5 text-[#4ade80]" />
@@ -211,7 +211,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                     <button
                         type="button"
                         onClick={() => setModalOpen(true)}
-                        className="inline-flex items-center gap-2 px-6 py-3 text-[#4ade80] hover:text-white transition-colors font-medium"
+                        className="inline-flex items-center gap-2 px-6 py-3 text-emerald-700 dark:text-[#4ade80] hover:text-emerald-900 dark:hover:text-white transition-colors font-medium"
                     >
                         <Sparkles className="w-4 h-4" />
                         {isArabic ? 'اعرف المزيد عن رؤية 2030' : 'Learn More About Vision 2030'}

@@ -31,12 +31,12 @@ export function Vision2030CalculationModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-all duration-300">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/40 backdrop-blur-sm transition-all duration-300">
       <GlassCard
-        className="max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col p-0 border-white/10 shadow-2xl shadow-black/60 bg-[#0a0a0a]/95 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+        className="max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col p-0 border-[color:var(--glass-border)] dark:border-white/10 shadow-2xl shadow-emerald-900/10 dark:shadow-black/60 bg-[color:var(--surface-glass)] dark:bg-[#0a0a0a]/95 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300"
       >
         {/* Sticky Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl sticky top-0 z-20">
+        <div className="flex items-center justify-between p-5 border-b border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-control)] dark:bg-[#0a0a0a]/95 backdrop-blur-xl sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <Calculator className="w-5 h-5 text-emerald-400" />
@@ -52,7 +52,7 @@ export function Vision2030CalculationModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-2 rounded-full text-gray-500 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -62,7 +62,7 @@ export function Vision2030CalculationModal({
         <div className="overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar">
 
           {/* Hero / Overview */}
-          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900/10 to-teal-900/5 border border-white/5 p-6">
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/5 border border-[color:var(--glass-border)] dark:border-white/5 p-6">
             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
               <Target className="w-40 h-40" />
             </div>
@@ -83,7 +83,7 @@ export function Vision2030CalculationModal({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Step 1 */}
-              <div className="bg-white/[0.04] border border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors group">
+              <div className="bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors group">
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <Target className="w-4 h-4 text-blue-400" />
                 </div>
@@ -96,7 +96,7 @@ export function Vision2030CalculationModal({
               </div>
 
               {/* Step 2 */}
-              <div className="bg-white/[0.04] border border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors group">
+              <div className="bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors group">
                 <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                 </div>
@@ -109,7 +109,7 @@ export function Vision2030CalculationModal({
               </div>
 
               {/* Step 3 */}
-              <div className="bg-white/[0.04] border border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors group">
+              <div className="bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors group">
                 <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <PieChart className="w-4 h-4 text-amber-400" />
                 </div>
@@ -153,7 +153,7 @@ export function Vision2030CalculationModal({
                   desc: t('vision2030.calculation.privacyDesc', 'Analysis happens locally on your device.')
                 }
               ].map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 rounded-lg bg-white/[0.04] border border-white/5">
+                <div key={idx} className="flex gap-3 p-3 rounded-lg bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5">
                   <item.icon className="w-4 h-4 text-emerald-500/60 shrink-0" />
                   <div>
                     <div className="font-medium text-gray-900 dark:text-white text-xs">{item.title}</div>
@@ -165,7 +165,7 @@ export function Vision2030CalculationModal({
           </section>
 
           {/* Score Interpretation */}
-          <section className="bg-black/20 rounded-xl p-4 border border-white/5">
+          <section className="bg-[color:var(--surface-control)] dark:bg-black/20 rounded-xl p-4 border border-[color:var(--glass-border)] dark:border-white/5">
             <div className="grid grid-cols-3 gap-2 text-center divide-x divide-white/10 rtl:divide-x-reverse">
               <div className="px-2">
                 <div className="text-amber-400 font-bold text-base">60-69%</div>
@@ -185,7 +185,7 @@ export function Vision2030CalculationModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 bg-white/[0.04] flex justify-end">
+        <div className="p-4 border-t border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-control)] dark:bg-white/[0.04] flex justify-end">
           <button
             onClick={onClose}
             className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:-translate-y-0.5 transition-all text-xs"

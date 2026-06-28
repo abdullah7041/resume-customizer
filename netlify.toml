@@ -25,9 +25,11 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
-  # External modules to avoid bundling large dependencies
-  # External modules to avoid bundling large dependencies
-  # external_node_modules = ["@supabase/supabase-js", "pdfjs-dist", "axios", "@netlify/functions", "@sparticuz/chromium", "resend", "nanoid"] - REMOVED: Scoped to specific functions below
+  # Externalize the heavy shared deps so esbuild does not inline them into every
+  # function bundle. Cuts per-function esbuild memory drastically (was OOMing the
+  # bundler in `netlify dev` on low-RAM machines). Per-function external_node_modules
+  # below are CONCATENATED with this list, not overridden.
+  external_node_modules = ["@sentry/node", "@supabase/supabase-js"]
   # Included files for shared modules (now in netlify/lib/)
   # Included files for shared modules (now in netlify/lib/)
   # included_files = ["netlify/lib/**"] - REMOVED: esbuild handles this, and this causes massive duplication

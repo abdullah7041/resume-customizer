@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:fast": "vite",
+    "predev:netlify": "vite optimize",
     "dev:netlify": "netlify dev",
     "build": "node scripts/build.mjs",
     "build:vite": "vite build",
