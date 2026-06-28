@@ -705,6 +705,25 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   }
 
   const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops };
+  const recoverFromCacheOnly = async () => {
+    if (cacheOnly) return null;
+    try {
+      return await optimizeResumeStream({
+        resumeText,
+        jobDesc,
+        mode,
+        preview,
+        language,
+        workHistory,
+        userClarifications,
+        userHardStops,
+        cacheOnly: true,
+      }, onStatus);
+    } catch (recoveryErr) {
+      console.warn('[optimize-stream] Cache-only recovery after interrupted stream failed:', summarizeErrorForConsole(recoveryErr));
+      return null;
+    }
+  };
   const headers = await getAuthHeaders({ requireAuth: true });
   // Remove Content-Type for SSE request compatibility — the body is still JSON
   // but we need to accept text/event-stream response
@@ -822,12 +841,9 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     }
     // Stream broke before result — billing state is unknown (credits may have been consumed).
     // Caller must NOT automatically retry with another paid request.
-    if (!cacheOnly) {
-      try {
-        return await optimizeResumeStream({ ...requestPayload, jobDesc, cacheOnly: true }, onStatus);
-      } catch (recoveryErr) {
-        console.warn('[optimize-stream] Cache-only recovery after interrupted stream failed:', summarizeErrorForConsole(recoveryErr));
-      }
+    const recovered = await recoverFromCacheOnly();
+    if (recovered) {
+      return recovered;
     }
     streamErr.isBillingStateUnknown = true;
     throw streamErr;
@@ -837,6 +853,10 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
 
   if (!result) {
     // Stream ended gracefully without a result event — billing state unknown.
+    const recovered = await recoverFromCacheOnly();
+    if (recovered) {
+      return recovered;
+    }
     const err = new Error('SSE stream ended without a result event');
     err.isBillingStateUnknown = true;
     throw err;
