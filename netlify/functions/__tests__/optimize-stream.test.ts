@@ -49,7 +49,7 @@ vi.mock('../../lib/rate-limiter.js', () => mockRateLimiter);
 
 const { default: handler } = await import('../optimize-stream.js');
 
-const buildRequest = (headers: Record<string, string> = {}) =>
+const buildRequest = (headers: Record<string, string> = {}, body: Record<string, unknown> = {}) =>
   new Request('http://localhost/api/optimize-stream', {
     method: 'POST',
     headers: {
@@ -59,6 +59,7 @@ const buildRequest = (headers: Record<string, string> = {}) =>
     body: JSON.stringify({
       resumeText: 'Resume text with enough detail',
       jobText: 'Job description with enough detail',
+      ...body,
     }),
   });
 
@@ -82,7 +83,13 @@ describe('optimize-stream function', () => {
       available: 10,
     });
     mockRedisCache.getCached.mockResolvedValue({
-      cards: [],
+      cards: [{
+        section: 'General',
+        issue: 'Cached issue',
+        suggestion: 'Cached suggestion',
+        exampleBefore: 'Before',
+        exampleAfter: 'After',
+      }],
       source: 'cache',
     });
   });
@@ -128,6 +135,52 @@ describe('optimize-stream function', () => {
     expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('test-token');
     // Cache hit returns before credit check — correct behaviour: no double-charge on retries.
     expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+  });
+
+  it('does not return a cached empty card payload as a successful optimization', async () => {
+    mockRedisCache.getCached.mockResolvedValue({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: 'gemini',
+    });
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 5,
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/event-stream');
+    expect(response.headers.get('X-Cache')).not.toBe('HIT');
+    expect(streamText).toContain('event: result');
+    expect(streamText).toContain('React');
+    expect(mockCreditManager.checkCredits).toHaveBeenCalled();
+    expect(mockGeminiClient.optimizeResume).toHaveBeenCalled();
+  });
+
+  it('does not charge or regenerate when cache-only recovery misses', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+
+    const response = await handler(buildRequest(
+      { Authorization: 'Bearer test-token' },
+      { cacheOnly: true },
+    ));
+    const body = await response.json() as { error: string };
+
+    expect(response.status).toBe(409);
+    expect(body.error).toContain('cached optimization result');
+    expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+    expect(mockGeminiClient.optimizeResume).not.toHaveBeenCalled();
+    expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+    expect(mockRedisCache.setCached).not.toHaveBeenCalled();
   });
 
   it('scopes no-charge cache hits to the authenticated user', async () => {
@@ -191,12 +244,44 @@ describe('optimize-stream function', () => {
       'en',
       [],
       undefined,
+      undefined,
       { featureName: 'optimize_stream' }
     );
-    const options = mockGeminiClient.optimizeResume.mock.calls[0][5];
+    const options = mockGeminiClient.optimizeResume.mock.calls[0][6];
     expect(options).not.toHaveProperty('resumeText');
     expect(options).not.toHaveProperty('jobText');
     expect(options).not.toHaveProperty('messages');
+  });
+
+  it('includes user hard stops in the cache key and optimize contract options', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: [],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({ success: true, creditsRemaining: 5 });
+
+    const response = await handler(buildRequest(
+      { Authorization: 'Bearer test-token' },
+      { userHardStops: ['Excel'] },
+    ));
+    await response.text();
+
+    expect(mockRedisCache.buildCacheKey).toHaveBeenCalledWith(
+      'optimize',
+      expect.objectContaining({ userHardStops: ['Excel'] }),
+    );
+    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      'en',
+      [],
+      undefined,
+      ['Excel'],
+      { featureName: 'optimize_stream' },
+    );
   });
 
   it('does not cache a fake zero score when the AI omits score data', async () => {

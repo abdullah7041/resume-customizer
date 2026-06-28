@@ -535,7 +535,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -546,7 +546,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops }),
       });
 
       const data = await handleResponse(response);
@@ -658,7 +658,16 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
  * @param {string} params.resumeText
  * @param {string} params.jobDesc
  * @param {string} [params.language='en']
- * @returns {Promise<{ clarifications: Array<{id,theme,rationale,question}> }>}
+ * @returns {Promise<{ clarifications: Array<{
+ *   id: string,
+ *   theme: string,
+ *   rationale: string,
+ *   question: string,
+ *   type: 'single'|'multi',
+ *   options: Array<{value: string, label: string, isHardStop?: boolean}>,
+ *   allowOther: boolean,
+ *   defaultValue?: string
+ * }> }>}
  */
 export const generateClarifications = async ({ resumeText, jobDesc, language = 'en' }) => {
   try {
@@ -690,18 +699,38 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications }, onStatus) => {
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false }, onStatus) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
 
+  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops };
+  const recoverFromCacheOnly = async () => {
+    if (cacheOnly) return null;
+    try {
+      return await optimizeResumeStream({
+        resumeText,
+        jobDesc,
+        mode,
+        preview,
+        language,
+        workHistory,
+        userClarifications,
+        userHardStops,
+        cacheOnly: true,
+      }, onStatus);
+    } catch (recoveryErr) {
+      console.warn('[optimize-stream] Cache-only recovery after interrupted stream failed:', summarizeErrorForConsole(recoveryErr));
+      return null;
+    }
+  };
   const headers = await getAuthHeaders({ requireAuth: true });
   // Remove Content-Type for SSE request compatibility — the body is still JSON
   // but we need to accept text/event-stream response
   const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications }),
+    body: JSON.stringify(cacheOnly ? { ...requestPayload, cacheOnly: true } : requestPayload),
   });
 
   // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before
@@ -713,7 +742,9 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     if (data.creditsRequired) error.creditsRequired = data.creditsRequired;
     if (data.creditsAvailable != null) error.creditsAvailable = data.creditsAvailable;
     attachErrorDebug(error, response, data);
-    recordFailure('openrouter-ai');
+    if (!data.cacheOnlyMiss) {
+      recordFailure('openrouter-ai');
+    }
     throw error;
   }
 
@@ -810,6 +841,10 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     }
     // Stream broke before result — billing state is unknown (credits may have been consumed).
     // Caller must NOT automatically retry with another paid request.
+    const recovered = await recoverFromCacheOnly();
+    if (recovered) {
+      return recovered;
+    }
     streamErr.isBillingStateUnknown = true;
     throw streamErr;
   } finally {
@@ -818,6 +853,10 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
 
   if (!result) {
     // Stream ended gracefully without a result event — billing state unknown.
+    const recovered = await recoverFromCacheOnly();
+    if (recovered) {
+      return recovered;
+    }
     const err = new Error('SSE stream ended without a result event');
     err.isBillingStateUnknown = true;
     throw err;

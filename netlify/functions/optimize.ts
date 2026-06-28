@@ -15,6 +15,12 @@ initSentry();
 
 const OPTIMIZE_CACHE_TTL_SECONDS = 600;
 
+function hasRenderableCards(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const cards = (value as { cards?: unknown }).cards;
+  return Array.isArray(cards) && cards.length > 0;
+}
+
 const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
@@ -94,7 +100,7 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText, workHistory, language, userClarifications } = parseResult.data;
+    const { resumeText, jobText, workHistory, language, userClarifications, userHardStops } = parseResult.data;
 
     // Detect career vulnerabilities from structured work history
     const vulnerabilities = workHistory?.length
@@ -114,16 +120,20 @@ const baseHandler: Handler = async (event) => {
       language: language || 'en',
       vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
       userClarifications: userClarifications || '',
+      userHardStops: userHardStops || [],
     });
 
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-    if (cachedResponse) {
+    if (hasRenderableCards(cachedResponse)) {
       console.log('[optimize] Cache HIT — returning cached result, skipping Gemini call.');
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
         body: JSON.stringify(cachedResponse),
       };
+    }
+    if (cachedResponse) {
+      console.warn('[optimize] Cache HIT had no renderable cards — regenerating.');
     }
     console.log('[optimize] Cache MISS — calling Gemini.');
     // -----------------------------------------------------------------------
@@ -132,7 +142,14 @@ const baseHandler: Handler = async (event) => {
     const startTime = Date.now();
 
     // Use dedicated optimizeResume function for faster, focused optimization
-    const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications);
+    const optimization = await optimizeResume(
+      resumeText,
+      jobText,
+      language,
+      vulnerabilities,
+      userClarifications,
+      userHardStops,
+    );
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);
     console.log('[optimize] AI response summary:', {

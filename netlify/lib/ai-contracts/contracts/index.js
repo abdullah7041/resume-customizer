@@ -632,8 +632,25 @@ const clarificationJsonSchema = {
           theme: { type: 'string' },
           rationale: { type: 'string' },
           question: { type: 'string' },
+          type: { type: 'string', enum: ['single', 'multi'] },
+          options: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 5,
+            items: {
+              type: 'object',
+              properties: {
+                value: { type: 'string' },
+                label: { type: 'string' },
+                isHardStop: { type: 'boolean' },
+              },
+              required: ['value', 'label'],
+            },
+          },
+          allowOther: { type: 'boolean' },
+          defaultValue: { type: 'string' },
         },
-        required: ['id', 'theme', 'rationale', 'question'],
+        required: ['id', 'theme', 'rationale', 'question', 'type', 'options', 'allowOther'],
       },
     },
   },
@@ -646,6 +663,14 @@ const clarificationOutput = z.object({
     theme: z.string(),
     rationale: z.string(),
     question: z.string(),
+    type: z.enum(['single', 'multi']),
+    options: z.array(z.object({
+      value: z.string(),
+      label: z.string(),
+      isHardStop: z.boolean().optional(),
+    })).min(1).max(5),
+    allowOther: z.boolean(),
+    defaultValue: z.string().optional(),
   })).default([]),
 });
 
@@ -863,7 +888,14 @@ function buildOptimizeMessages(input, context) {
     ? optionalTaggedBlock('career_vulnerabilities', vulnerabilities)
     : '';
   const clarificationsBlock = optionalTaggedBlock('user_clarifications', input.userClarifications);
-  const system = OPTIMIZE_TRUTHFULNESS_SYSTEM;
+  const hardStops = Array.isArray(input.userHardStops)
+    ? input.userHardStops.filter(item => typeof item === 'string' && item.trim()).map(item => `- ${item.trim()}`).join('\n')
+    : '';
+  const hardStopsBlock = optionalTaggedBlock('user_hard_stops', hardStops);
+  const hardStopInstruction = hardStops
+    ? `\nThe user explicitly confirmed NO experience with the items in user_hard_stops. Do NOT add, imply, infer, or weave any of them into bullets, summary, headline, or skills. Remove them from missing_keywords suggestions. This overrides any keyword-weaving rule.`
+    : '';
+  const system = `${OPTIMIZE_TRUTHFULNESS_SYSTEM}${hardStopInstruction}`;
   const example = `Example item:
 - original: "Responsible for improving the API and making it faster for users."
 - improved: "Cut customer-facing API latency 40% by adding Redis caching and rewriting N+1 queries."
@@ -873,6 +905,7 @@ function buildOptimizeMessages(input, context) {
   const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Each bullet_improvement MUST include a verbatim source_span. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric.
 
 ${example}${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${clarificationsBlock}
+${hardStopsBlock}
 
 ${taggedBlock('job_description', jobDescription)}
 
@@ -946,11 +979,11 @@ ${taggedBlock('resume_text', input.resumeText)}`;
 }
 
 function buildClarificationMessages(input, context) {
-  const system = `You are an elite resume strategist performing precision gap analysis before optimization. Ask only for missing quantifiable metrics, tool equivalencies, or contextual evidence likely to improve optimization.`;
+  const system = `You are an elite resume strategist performing precision gap analysis before optimization. Ask only for missing quantifiable metrics, a tool or skill required by the job description but not evidenced by the resume, tool equivalencies, or contextual evidence likely to improve optimization.`;
   const languageInstruction = input.language === 'ar'
-    ? '\nWrite theme, rationale, and question in Arabic. Keep id in English camelCase.'
+    ? '\nTranslate theme, rationale, question, and every option label into Arabic. Keep id, option value, and English ATS keywords in English.'
     : '';
-  const user = `Return 0 to 3 critical clarification questions. Return an empty array if the background is fundamentally incompatible or already well quantified.${languageInstruction}${withRagBlock(context.retrievedContext)}
+  const user = `Return 0 to 3 critical clarification questions. Return an empty array if the background is fundamentally incompatible or already well quantified. Every question must set type to single or multi, include at most 4 real selectable options, set allowOther to true, and end with exactly one option marked isHardStop true (for example, "I don't have this experience"). For numeric questions, provide ranges such as "1–3", "4–10", and "10+"; Other captures exact values. You may set defaultValue only when one option is clearly the most likely common answer.${languageInstruction}${withRagBlock(context.retrievedContext)}
 
 ${taggedBlock('job_description', truncateText(input.jobText, 3000))}
 
@@ -1161,7 +1194,7 @@ export const aiContracts = {
     outputSchema: clarificationOutput,
     schemaName: 'clarification_questions',
     featureName: 'generate_clarifications',
-    maxTokens: 2048,
+    maxTokens: 3072,
     timeoutMs: 20000,
     temperature: 0,
     reasoningBudget: 512,

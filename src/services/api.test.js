@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AUTH_REQUIRED, analyzeResume, optimizeResume, parseResume, refineBullet } from './api.js';
+import { AUTH_REQUIRED, analyzeResume, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
 import { supabase } from './supabase';
 
 const mockResumeText = vi.hoisted(() => ({
@@ -478,6 +478,42 @@ describe('optimizeResume', () => {
       model: 'google/gemini-2.5-flash',
       latencyMs: 4567,
     }));
+  });
+
+  it('sends hard-stop suppressions through the legacy optimize request', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers(),
+      json: async () => ({ cards: [], keywords: { add: [], neutral: [], remove: [] } }),
+    });
+
+    await optimizeResume({
+      resumeText: 'resume',
+      jobDesc: 'job',
+      userHardStops: ['Excel'],
+    });
+
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
+      userHardStops: ['Excel'],
+    });
+  });
+
+  it('sends hard-stop suppressions through the streaming optimize request', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ cards: [], keywords: { add: [], neutral: [], remove: [] } }),
+    });
+
+    await optimizeResumeStream({
+      resumeText: 'resume',
+      jobDesc: 'job',
+      userHardStops: ['Excel'],
+    }, vi.fn());
+
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
+      userHardStops: ['Excel'],
+    });
   });
 
   it('preserves safe optimize error metadata for debug panels', async () => {

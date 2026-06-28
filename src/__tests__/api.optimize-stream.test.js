@@ -43,6 +43,19 @@ const sseResponse = (bodyText) =>
     }
   );
 
+const interruptedStreamResponse = () =>
+  new Response(
+    new ReadableStream({
+      pull(controller) {
+        controller.error(new Error('network interrupted'));
+      },
+    }),
+    {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    }
+  );
+
 describe('optimizeResumeStream billing-state errors', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,6 +82,76 @@ describe('optimizeResumeStream billing-state errors', () => {
       message: 'Failed to optimize resume',
       retryable: true,
       isBillingStateUnknown: false,
+    });
+  });
+
+  it('recovers an interrupted paid stream from the no-charge cache path', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(interruptedStreamResponse())
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          cards: [{
+            section: 'General',
+            issue: 'Cached issue',
+            suggestion: 'Cached suggestion',
+            exampleBefore: 'Before',
+            exampleAfter: 'After',
+          }],
+          source: 'gemini',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await optimizeResumeStream({
+      resumeText: 'Resume text with enough detail',
+      jobDesc: 'Job description with enough detail',
+      userHardStops: ['Power BI'],
+    });
+
+    expect(result.cards).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+      resumeText: 'Resume text with enough detail',
+      jobText: 'Job description with enough detail',
+      userHardStops: ['Power BI'],
+      cacheOnly: true,
+    });
+  });
+
+  it('recovers a gracefully ended stream with no result from the no-charge cache path', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(sseResponse('event: status\ndata: {"phase":"ai_processing"}\n\n'))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          cards: [{
+            section: 'General',
+            issue: 'Cached issue',
+            suggestion: 'Cached suggestion',
+            exampleBefore: 'Before',
+            exampleAfter: 'After',
+          }],
+          source: 'gemini',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await optimizeResumeStream({
+      resumeText: 'Resume text with enough detail',
+      jobDesc: 'Job description with enough detail',
+    });
+
+    expect(result.cards).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+      cacheOnly: true,
     });
   });
 });

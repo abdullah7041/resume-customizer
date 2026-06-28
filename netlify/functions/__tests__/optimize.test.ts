@@ -16,11 +16,13 @@ vi.mock('../../lib/sentry', () => ({
     summarizeErrorForLog: vi.fn((error: unknown) => error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) })
 }));
 
-vi.mock('../../lib/redis-cache', () => ({
+const mockRedisCache = vi.hoisted(() => ({
     buildCacheKey: vi.fn(() => 'mock-cache-key'),
     getCached: vi.fn().mockResolvedValue(null),
     setCached: vi.fn().mockResolvedValue(undefined)
 }));
+
+vi.mock('../../lib/redis-cache', () => mockRedisCache);
 
 vi.mock('../../lib/supabase-client', () => ({
     getSupabaseClient: vi.fn(() => ({
@@ -57,6 +59,7 @@ vi.mock('../../lib/credit-manager', () => ({
 }));
 
 import { optimizeResume } from '../../lib/gemini-client.js';
+import { buildCacheKey } from '../../lib/redis-cache.js';
 
 // Import handler after mocks
 const { handler } = await import('../optimize.js');
@@ -84,6 +87,8 @@ const createMockContext = (): HandlerContext => ({
 describe('optimize function', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockRedisCache.getCached.mockResolvedValue(null);
+        mockRedisCache.setCached.mockResolvedValue(undefined);
     });
 
     describe('HTTP method validation', () => {
@@ -149,6 +154,61 @@ describe('optimize function', () => {
             expect(result.statusCode).toBe(500);
             expect(JSON.parse(result.body).error).toBe('Failed to optimize resume');
         });
+    });
+
+    it('threads user hard stops through the cache key and legacy optimize contract', async () => {
+        vi.mocked(optimizeResume).mockResolvedValue({ match_score: 55 });
+        const event = {
+            httpMethod: 'POST',
+            headers: TEST_HEADERS,
+            body: JSON.stringify({
+                resumeText: 'test resume',
+                jobText: 'Excel job',
+                userHardStops: ['Excel'],
+            }),
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+        expect(result.statusCode).toBe(200);
+        expect(buildCacheKey).toHaveBeenCalledWith('optimize', expect.objectContaining({
+            userHardStops: ['Excel'],
+        }));
+        expect(optimizeResume).toHaveBeenCalledWith(
+            'test resume',
+            'Excel job',
+            'en',
+            [],
+            undefined,
+            ['Excel'],
+        );
+    });
+
+    it('does not return a cached empty card payload as a successful optimization', async () => {
+        mockRedisCache.getCached.mockResolvedValue({
+            cards: [],
+            keywords: { add: [], neutral: [], remove: [] },
+            source: 'gemini',
+        });
+        vi.mocked(optimizeResume).mockResolvedValue({
+            match_score: 60,
+            missing_keywords: ['React'],
+            keywords_to_keep: [],
+            keywords_to_avoid: [],
+        });
+        const event = {
+            httpMethod: 'POST',
+            headers: TEST_HEADERS,
+            body: JSON.stringify({ resumeText: 'test resume', jobText: 'React job' }),
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+        const body = JSON.parse(result.body);
+
+        expect(result.statusCode).toBe(200);
+        expect(body.cards.length).toBeGreaterThan(0);
+        expect(JSON.stringify(body)).toContain('React');
+        expect(optimizeResume).toHaveBeenCalled();
     });
 
     describe('card generation', () => {

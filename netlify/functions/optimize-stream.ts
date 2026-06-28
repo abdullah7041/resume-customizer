@@ -64,6 +64,12 @@ function getClientIPFromRequest(request: Request): string | null {
   return null;
 }
 
+function hasRenderableCards(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const cards = (value as { cards?: unknown }).cards;
+  return Array.isArray(cards) && cards.length > 0;
+}
+
 export default async function handler(request: Request): Promise<Response> {
   // --- CORS preflight ---
   if (request.method === "OPTIONS") {
@@ -138,7 +144,7 @@ export default async function handler(request: Request): Promise<Response> {
     );
   }
 
-  const { resumeText, jobText, workHistory, language, userClarifications } = parseResult.data;
+  const { resumeText, jobText, workHistory, language, userClarifications, userHardStops, cacheOnly } = parseResult.data;
 
   // --- Vulnerability detection (needed for both cache key and AI call) ---
   const vulnerabilities = workHistory?.length
@@ -170,10 +176,11 @@ export default async function handler(request: Request): Promise<Response> {
     language: language || 'en',
     vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
     userClarifications: userClarifications || '',
+    userHardStops: userHardStops || [],
   });
 
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-  if (cachedResponse) {
+  if (hasRenderableCards(cachedResponse)) {
     console.log('[optimize-stream] Cache HIT — returning cached JSON (no credit deduction).');
     return new Response(JSON.stringify(cachedResponse), {
       status: 200,
@@ -184,6 +191,26 @@ export default async function handler(request: Request): Promise<Response> {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
+  }
+  if (cachedResponse) {
+    console.warn('[optimize-stream] Cache HIT had no renderable cards — regenerating.');
+  }
+  if (cacheOnly) {
+    console.log('[optimize-stream] Cache-only recovery MISS — no credit deduction.');
+    return new Response(
+      JSON.stringify({
+        error: 'No cached optimization result is available yet.',
+        cacheOnlyMiss: true,
+      }),
+      {
+        status: 409,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      },
+    );
   }
   console.log('[optimize-stream] Cache MISS — running credit check and SSE stream.');
 
@@ -226,7 +253,7 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 3: AI Processing (this is the long step)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "ai_processing" })));
 
-        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, {
+        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, userHardStops, {
           featureName: "optimize_stream",
         });
 
