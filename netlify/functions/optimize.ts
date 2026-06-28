@@ -15,6 +15,12 @@ initSentry();
 
 const OPTIMIZE_CACHE_TTL_SECONDS = 600;
 
+function hasRenderableCards(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const cards = (value as { cards?: unknown }).cards;
+  return Array.isArray(cards) && cards.length > 0;
+}
+
 const baseHandler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
@@ -118,13 +124,16 @@ const baseHandler: Handler = async (event) => {
     });
 
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-    if (cachedResponse) {
+    if (hasRenderableCards(cachedResponse)) {
       console.log('[optimize] Cache HIT — returning cached result, skipping Gemini call.');
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
         body: JSON.stringify(cachedResponse),
       };
+    }
+    if (cachedResponse) {
+      console.warn('[optimize] Cache HIT had no renderable cards — regenerating.');
     }
     console.log('[optimize] Cache MISS — calling Gemini.');
     // -----------------------------------------------------------------------

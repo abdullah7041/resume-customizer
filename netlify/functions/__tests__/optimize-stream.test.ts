@@ -83,7 +83,13 @@ describe('optimize-stream function', () => {
       available: 10,
     });
     mockRedisCache.getCached.mockResolvedValue({
-      cards: [],
+      cards: [{
+        section: 'General',
+        issue: 'Cached issue',
+        suggestion: 'Cached suggestion',
+        exampleBefore: 'Before',
+        exampleAfter: 'After',
+      }],
       source: 'cache',
     });
   });
@@ -129,6 +135,35 @@ describe('optimize-stream function', () => {
     expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('test-token');
     // Cache hit returns before credit check — correct behaviour: no double-charge on retries.
     expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+  });
+
+  it('does not return a cached empty card payload as a successful optimization', async () => {
+    mockRedisCache.getCached.mockResolvedValue({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: 'gemini',
+    });
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 5,
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/event-stream');
+    expect(response.headers.get('X-Cache')).not.toBe('HIT');
+    expect(streamText).toContain('event: result');
+    expect(streamText).toContain('React');
+    expect(mockCreditManager.checkCredits).toHaveBeenCalled();
+    expect(mockGeminiClient.optimizeResume).toHaveBeenCalled();
   });
 
   it('scopes no-charge cache hits to the authenticated user', async () => {

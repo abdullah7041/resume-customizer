@@ -64,6 +64,12 @@ function getClientIPFromRequest(request: Request): string | null {
   return null;
 }
 
+function hasRenderableCards(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const cards = (value as { cards?: unknown }).cards;
+  return Array.isArray(cards) && cards.length > 0;
+}
+
 export default async function handler(request: Request): Promise<Response> {
   // --- CORS preflight ---
   if (request.method === "OPTIONS") {
@@ -174,7 +180,7 @@ export default async function handler(request: Request): Promise<Response> {
   });
 
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-  if (cachedResponse) {
+  if (hasRenderableCards(cachedResponse)) {
     console.log('[optimize-stream] Cache HIT — returning cached JSON (no credit deduction).');
     return new Response(JSON.stringify(cachedResponse), {
       status: 200,
@@ -185,6 +191,9 @@ export default async function handler(request: Request): Promise<Response> {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
+  }
+  if (cachedResponse) {
+    console.warn('[optimize-stream] Cache HIT had no renderable cards — regenerating.');
   }
   console.log('[optimize-stream] Cache MISS — running credit check and SSE stream.');
 
