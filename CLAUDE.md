@@ -40,7 +40,7 @@ After EVERY code change, run `npm run quality:parallel`. Use `npm run quality:fu
 - **Supabase PromiseLike**: Query builder returns PromiseLike (only `.then()`), NOT full Promise — wrap fire-and-forget with `Promise.resolve()` before `.catch()`
 - **DB migrations**: Output SQL for user to run in Supabase dashboard. NEVER apply directly.
 - **Netlify functions**: 30s timeout default, 1024MB memory for `generate-pdf` (Puppeteer). No localhost URLs.
-- **Vite chunking**: `@react-pdf` MUST stay in one chunk (`vendor-pdf`) — circular deps break if split. Same for `@sentry` (`vendor-sentry`). `react-i18next` MUST be in `vendor-react` chunk.
+- **Vite chunking** (`vite.config.js` `manualChunks`): `@sentry` MUST stay in one chunk (`vendor-sentry`) — circular deps break if split. `react-i18next` + `i18next` MUST be in the `vendor-core` chunk with React/react-dom (react-i18next calls `React.createContext` at import time). PDF libs are split by tool: `jspdf` → `vendor-jspdf`, `pdfjs-dist` → `vendor-pdfjs`. (There is no `@react-pdf`/`vendor-pdf` — that lib is not used.)
 - **OpenRouter**: All AI functions use `OPENROUTER_API_KEY` env var. Two tiers: `lite` (gemini-2.5-flash-lite) for parsing, `flash` (gemini-2.5-flash) for all analysis — with per-function `reasoningBudget` caps to control latency.
 - **AI Scoring Prompts**: Anti-inflation rules enforced in BOTH `processMatchOnly` and `optimizeResume`. 80+ = hireable today, 60-79 = competitive with gaps, <60 = significant gaps. NEVER score >90 without full evidence. Do NOT re-add "score 85+ for excellent match" anchors.
 - **Bullet Improvements**: STAR + Metric enforcement is MANDATORY. Every `improved` bullet must have [Action Verb] + [Task] + [Quantified Result]. Inferred metrics appended with `(verify)`. Missing JD keywords must be woven INTO rewritten bullets (not just listed separately).
@@ -59,7 +59,8 @@ IMPORTANT: Diagnose root cause BEFORE writing fix code. Trace full data flow: fr
 - **Types**: `src/types/templates.ts`, `src/types/analysis.ts`, `src/types/resume.d.ts`
 - **Validation**: `src/lib/validation/store-schemas.ts` (Zod), `netlify/lib/resume-schemas.ts`
 - **AI client**: `netlify/lib/openrouter-client.js` — `callOpenRouter('lite'|'flash', messages, schema?, options?)`
-- **Templates**: `src/components/templates/` — registry pattern, 4 templates, PDF via `@react-pdf/renderer`
+- **Templates**: `src/components/templates/` — registry pattern, 4 templates (DOM/React, not PDF primitives)
+- **PDF generation**: primary = server `netlify/functions/generate-pdf.ts` (Puppeteer `page.pdf()` → real selectable text PDF); fallback = `handleDownloadPdf` catch-block in `TemplatesSection.tsx` (html-to-image → jsPDF raster). Bulk compare export = jspdf + jspdf-autotable (text) in `BulkAnalysisSection.tsx`. `pdfjs-dist` is for **parsing uploads** (text extraction), not generation.
 - **Netlify functions**: `netlify/functions/` — parse-resume, extract-resume-json, ai-match, optimize, predict-questions, generate-cover-letter, generate-pdf, batch-api, user-data-api, referral-api
 
 ## References (read on demand, not every session)
