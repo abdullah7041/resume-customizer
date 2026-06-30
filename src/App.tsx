@@ -17,6 +17,8 @@ import { TermsOfService } from "./pages/TermsOfService";
 import { AdminFeedbackPage } from "./pages/AdminFeedbackPage";
 import { HRSuperSaudOverlay, HRSuperSaudProvider } from "./features/hr-super-saud";
 import { useResumeStore } from "./lib/stores/resumeStore";
+import OnboardingChat from "./components/onboarding/OnboardingChat";
+import { isOnboarded, markOnboarded } from "./lib/onboarding/onboardedFlag";
 
 const getCurrentPath = () => {
   if (typeof window === "undefined") return "/";
@@ -26,6 +28,12 @@ const getCurrentPath = () => {
 export default function App() {
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const hasResume = useResumeStore((state) => Boolean(state.originalResume || state.parsedResumeText));
+  const hasSearchIntent = useResumeStore((state) => Boolean(state.searchIntent));
+
+  // First-run onboarding gate (profile state, not device). The localStorage flag
+  // breaks the loop for a user who skips every slot (no resume + no intent).
+  const [onboardedFlag, setOnboardedFlag] = useState(isOnboarded);
+  const needsOnboarding = !hasResume && !hasSearchIntent && !onboardedFlag;
 
   // Run storage migration once on app initialization
   useEffect(() => {
@@ -67,6 +75,13 @@ export default function App() {
               <TermsOfService />
             ) : currentPath === "/admin/feedback" ? (
               <AdminFeedbackPage />
+            ) : needsOnboarding ? (
+              <OnboardingChat
+                onComplete={() => {
+                  markOnboarded();
+                  setOnboardedFlag(true);
+                }}
+              />
             ) : (
               <MainContent />
             )}
