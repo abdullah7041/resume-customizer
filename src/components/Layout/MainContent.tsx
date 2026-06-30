@@ -1175,6 +1175,7 @@ export default function MainContent() {
               workHistory,
               userClarifications,
               userHardStops,
+              searchIntent: useResumeStore.getState().searchIntent,
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
@@ -1213,6 +1214,7 @@ export default function MainContent() {
               workHistory,
               userClarifications,
               userHardStops,
+              searchIntent: useResumeStore.getState().searchIntent,
             }
           );
         }

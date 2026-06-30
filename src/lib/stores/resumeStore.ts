@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { ResumeSchema } from '../../types/resume';
+import type { PartialResumeSchema, ResumeSchema } from '../../types/resume';
 import type { AiSuggestionEntry } from '../../types/analysis';
+import type { SearchIntent } from '../../types/onboarding';
 import type {
   ResumeState,
   OptimizationResult,
@@ -14,9 +15,74 @@ import {
   validateResume,
   validateParsedText,
   validateOptimization,
+  validateSearchIntent,
 } from '../validation/store-schemas';
 import { deduplicateByName } from '../utils/resumeUtils';
 import { fuzzyTextMatch } from '../utils/textMatcher';
+
+/** Minimal valid resume skeleton — basics required fields as empty strings. */
+const emptyResume = (): ResumeSchema => ({
+  basics: { name: '', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] },
+  work: [],
+  education: [],
+  skills: [],
+  projects: [],
+});
+
+/**
+ * Fuzzy-merge an onboarding patch into a resume. basics fields prefer non-empty
+ * patch values; array sections are appended then de-duplicated by name (work,
+ * projects) so re-running a slot never creates duplicates. The single onboarding
+ * writer (patchProfile) is the only caller.
+ */
+const mergeProfilePatch = (base: ResumeSchema, patch: PartialResumeSchema): ResumeSchema => {
+  const merged: ResumeSchema = structuredClone(base);
+
+  if (patch.basics) {
+    merged.basics = { ...merged.basics };
+    for (const [key, value] of Object.entries(patch.basics)) {
+      if (value === undefined || value === null) continue;
+      if (typeof value === 'string' && value.trim() === '') continue;
+      // location is an object — shallow-merge so a partial location patch keeps existing fields.
+      if (key === 'location' && typeof value === 'object') {
+        merged.basics.location = { ...merged.basics.location, ...(value as object) };
+        continue;
+      }
+      (merged.basics as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+
+  if (patch.work?.length) {
+    merged.work = deduplicateByName([...(merged.work ?? []), ...patch.work]);
+  }
+  if (patch.projects?.length) {
+    merged.projects = deduplicateByName([...(merged.projects ?? []), ...patch.projects]);
+  }
+  if (patch.skills?.length) {
+    merged.skills = [...(merged.skills ?? []), ...patch.skills];
+  }
+  if (patch.education?.length) {
+    merged.education = [...(merged.education ?? []), ...patch.education];
+  }
+
+  return merged;
+};
+
+/**
+ * 0-100 profile completeness across resume + searchIntent. Pure so the selector and
+ * setSearchIntent share one definition. Foundation for the item-2 "add one more
+ * thing" nudge.
+ */
+const computeCompleteness = (resume: ResumeSchema | null, intent: SearchIntent | null): number => {
+  let score = 0;
+  if (resume?.basics?.name?.trim()) score += 20;
+  if (resume?.basics?.label?.trim()) score += 15;
+  if ((resume?.work?.length ?? 0) > 0 || (resume?.projects?.length ?? 0) > 0) score += 25;
+  if ((intent?.targetRoles?.length ?? 0) > 0) score += 20;
+  if (intent?.compRange) score += 10;
+  if (intent?.location) score += 10;
+  return Math.min(100, score);
+};
 
 // Cache validity duration: 30 minutes
 // Users re-analyzing the same resume+JD pair within this window hit cache instead of burning credits
@@ -91,6 +157,7 @@ export const useResumeStore = create<ResumeState>()(
       },
       baselineMatchScore: null, // Original resume's match score (before any optimizations)
       isSaudiNational: false, // Saudi nationality flag for Saudization ATS
+      searchIntent: null, // Onboarding job-search intent (target role / comp / location)
       showOptimized: false, // Start with original
       selectedTemplate: 'modern-professional',
       displayOptions: {
@@ -716,6 +783,63 @@ export const useResumeStore = create<ResumeState>()(
         set({ isSaudiNational: value, hasDownloaded: false });
       },
 
+      // ----- Onboarding -----
+      setSearchIntent: (intent: SearchIntent | null) => {
+        if (intent === null) {
+          set({ searchIntent: null });
+          return;
+        }
+
+        // Stamp meta with current completeness + timestamp so the slice is always
+        // self-describing for the item-2 nudge.
+        const stamped: SearchIntent = {
+          ...intent,
+          meta: {
+            ...intent.meta,
+            completeness: computeCompleteness(get().originalResume, intent),
+            updatedAt: new Date().toISOString(),
+          },
+        };
+
+        const validation = validateSearchIntent(stamped);
+        if (!validation.success) {
+          if (import.meta.env.DEV) console.warn('[ResumeStore] ⚠️ SearchIntent validation issues:', validation.error);
+        }
+
+        set({ searchIntent: stamped });
+      },
+
+      patchProfile: (patch: PartialResumeSchema) => {
+        set((state) => {
+          const base = state.originalResume ?? emptyResume();
+          const merged = mergeProfilePatch(base, patch);
+
+          // Record provenance without persisting raw text — preserves schema integrity.
+          const entry: AiSuggestionEntry = {
+            type: 'onboarding',
+            sectionId: 'onboarding',
+            timestamp: new Date().toISOString(),
+          };
+          merged.meta = {
+            ...merged.meta,
+            ai_suggestions: [...(merged.meta?.ai_suggestions ?? []), entry],
+          };
+
+          // Validate at the store boundary (mirrors setOriginalResume); store regardless.
+          const validation = validateResume(merged);
+          if (!validation.success) {
+            if (import.meta.env.DEV) console.warn('[ResumeStore] ⚠️ patchProfile validation issues:', validation.error);
+          }
+
+          return { originalResume: merged, hasDownloaded: false };
+        });
+      },
+
+      getProfileCompleteness: () => {
+        const state = get();
+        return computeCompleteness(state.originalResume, state.searchIntent);
+      },
+
       clearAll: () => {
         cacheKeyMemo.clear();
         set({
@@ -745,10 +869,13 @@ export const useResumeStore = create<ResumeState>()(
           },
           baselineMatchScore: null,
           showOptimized: false,
+          searchIntent: null, // Full reset clears job-search intent too
         });
       },
 
       resetForNewUpload: () => {
+        // NOTE: searchIntent is intentionally NOT reset here — target role / comp /
+        // location are profile-level intent that should survive a new resume upload.
         cacheKeyMemo.clear();
         set({
           originalResume: null,
@@ -799,6 +926,8 @@ export const useResumeStore = create<ResumeState>()(
         baselineMatchScore: state.baselineMatchScore,
         // Persist Saudi nationality flag
         isSaudiNational: state.isSaudiNational,
+        // Persist onboarding job-search intent (survives refresh; flushed to Supabase on sign-in)
+        searchIntent: state.searchIntent,
       }),
       // Custom merge to properly handle nested optimizationMetrics
       merge: (persistedState, currentState) => {
@@ -848,6 +977,13 @@ export const useOptimizations = () =>
 
 export const useKeywordSuggestions = () =>
   useResumeStore((state) => state.keywordSuggestions);
+
+export const useSearchIntent = () =>
+  useResumeStore((state) => state.searchIntent);
+
+// Re-derives on any change to resume data or searchIntent.
+export const useProfileCompleteness = () =>
+  useResumeStore((state) => state.getProfileCompleteness());
 
 // Re-export types for convenience
 export type { OptimizationResult, KeywordSuggestion };

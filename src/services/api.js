@@ -13,6 +13,7 @@ const OPTIMIZE_STREAM_ENDPOINT = `/api/optimize-stream`;
 const CLARIFY_ENDPOINT = `${FUNCTION_BASE_PATH}/generate-clarifications`;
 const VISION2030_ENDPOINT = `${FUNCTION_BASE_PATH}/vision2030-alignment`;
 const TRUTH_CHECK_ENDPOINT = `${FUNCTION_BASE_PATH}/resume-truth-check`;
+const ONBOARD_EXTRACT_ENDPOINT = `${FUNCTION_BASE_PATH}/onboard-extract`;
 export const AI_DEFAULT_TEMPERATURE = 0.4;
 export const AUTH_REQUIRED = 'AUTH_REQUIRED';
 export const AUTH_REQUIRED_RESUME_MESSAGE = 'Please sign in to securely process your resume.';
@@ -535,7 +536,41 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops }) => {
+/**
+ * Onboarding: parse one freeform answer into one structured slot value.
+ * Guest-friendly — no auth required (onboarding completes for guests; persistence
+ * is gated on sign-in elsewhere).
+ *
+ * @param {object} params
+ * @param {'cv_basics'|'role'|'comp'|'location'} params.slot
+ * @param {string} params.userText - the user's freeform answer
+ * @param {object} [params.currentIntent] - SearchIntent collected so far
+ * @param {AbortSignal} [params.signal]
+ * @returns {Promise<{ value: object, confidence: 'low'|'medium'|'high' }>}
+ */
+export const onboardExtract = async ({ slot, userText, currentIntent, signal } = {}) => {
+  const headers = await getAuthHeaders({ requireAuth: false });
+
+  const response = await fetch(ONBOARD_EXTRACT_ENDPOINT, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ slot, userText, currentIntent }),
+    signal,
+  }).catch((err) => {
+    if (err.name === 'AbortError') throw err;
+    if (err.message === 'Failed to fetch') {
+      const networkError = new Error('Could not connect to the server. Please try again.');
+      networkError.status = 503;
+      throw networkError;
+    }
+    throw err;
+  });
+
+  const data = await handleResponse(response);
+  return { value: data.value || {}, confidence: data.confidence || 'low' };
+};
+
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -546,7 +581,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent }),
       });
 
       const data = await handleResponse(response);
@@ -699,12 +734,12 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false }, onStatus) => {
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null, cacheOnly = false }, onStatus) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
 
-  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops };
+  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent };
   const recoverFromCacheOnly = async () => {
     if (cacheOnly) return null;
     try {
@@ -717,6 +752,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
         workHistory,
         userClarifications,
         userHardStops,
+        searchIntent,
         cacheOnly: true,
       }, onStatus);
     } catch (recoveryErr) {

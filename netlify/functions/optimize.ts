@@ -100,7 +100,7 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText, workHistory, language, userClarifications, userHardStops } = parseResult.data;
+    const { resumeText, jobText, workHistory, language, userClarifications, userHardStops, searchIntent } = parseResult.data;
 
     // Detect career vulnerabilities from structured work history
     const vulnerabilities = workHistory?.length
@@ -121,6 +121,7 @@ const baseHandler: Handler = async (event) => {
       vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
       userClarifications: userClarifications || '',
       userHardStops: userHardStops || [],
+      searchIntent: searchIntent || null,
     });
 
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
@@ -149,6 +150,7 @@ const baseHandler: Handler = async (event) => {
       vulnerabilities,
       userClarifications,
       userHardStops,
+      { searchIntent: searchIntent || null },
     );
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);

@@ -171,6 +171,35 @@ export const ResumeSchema = z.object({
 });
 
 // ============================================
+// Search Intent (onboarding) Schema
+// ============================================
+// Declared BEFORE OptimizeRequestSchema, which references it (TDZ — same trap as
+// WorkHistoryEntrySchema). Mirrors src/types/onboarding.ts SearchIntent.
+
+export const SearchIntentSchema = z.object({
+    targetRoles: z.array(z.string().trim().min(1).max(200)).max(10).default([]),
+    seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
+    compRange: z.object({
+        min: z.number().nonnegative(),
+        max: z.number().nonnegative(),
+        currency: z.string().trim().min(1).max(8),
+        period: z.enum(['month', 'year']),
+    }).optional(),
+    location: z.object({
+        city: z.string().trim().max(120).optional(),
+        country: z.string().trim().max(120).optional(),
+        workMode: z.enum(['remote', 'hybrid', 'onsite']),
+    }).optional(),
+    meta: z.object({
+        confidence: z.enum(['low', 'medium', 'high']),
+        completeness: z.number().min(0).max(100),
+        updatedAt: z.string(),
+    }),
+});
+
+export type SearchIntent = z.infer<typeof SearchIntentSchema>;
+
+// ============================================
 // API Request Validation Schemas
 // ============================================
 
@@ -220,6 +249,9 @@ export const OptimizeRequestSchema = z.object({
     userHardStops: z.array(z.string().trim().min(1).max(300)).max(20).optional(),
     // Recovery-only retry after an interrupted paid stream. Must never trigger AI or credit use.
     cacheOnly: z.boolean().optional(),
+    // Job-search intent from onboarding. Injected into the tailoring prompt so the
+    // stored profile changes per-job output (target role / comp / location).
+    searchIntent: SearchIntentSchema.optional(),
 });
 
 // New: Clarification pre-optimization endpoint schema
@@ -245,6 +277,15 @@ export const CoverLetterRequestSchema = z.object({
     tone: z.enum(['professional', 'enthusiastic', 'formal', 'creative']).optional(),
     language: z.enum(["en", "ar"]).optional().default("en"),
 });
+
+// Onboarding slot extraction: one freeform reply → one structured slot value.
+export const OnboardExtractRequestSchema = z.object({
+    slot: z.enum(['cv_basics', 'role', 'comp', 'location']),
+    userText: z.string().min(1, "Answer text is required").max(2000, "Answer too long"),
+    currentIntent: SearchIntentSchema.optional(),
+});
+
+export type OnboardExtractRequest = z.infer<typeof OnboardExtractRequestSchema>;
 
 export const Vision2030RequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
