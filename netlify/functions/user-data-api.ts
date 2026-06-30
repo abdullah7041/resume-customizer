@@ -11,6 +11,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as crypto from 'crypto';
 import { initSentry, captureError, redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
+import { SearchIntentSchema, formatZodError } from '../lib/resume-schemas.js';
 
 initSentry();
 
@@ -163,6 +164,54 @@ async function handleDelete(email: string, userId: string, confirmDelete: boolea
     return { message: 'Account deleted' };
 }
 
+/**
+ * Persist the onboarding search intent onto the user's resume row(s).
+ * Touches only the new `search_intent` jsonb column. If the user has no resume row
+ * yet (guest who just signed in before saving a resume), 0 rows update and the
+ * client retains the intent until a resume is saved — no insert needed.
+ */
+async function handleSaveSearchIntent(email: string, rawIntent: unknown) {
+    const parsed = SearchIntentSchema.safeParse(rawIntent);
+    if (!parsed.success) {
+        throw { statusCode: 400, message: `Invalid searchIntent: ${formatZodError(parsed.error)}` };
+    }
+
+    const supabase = getServiceClient();
+    const { error } = await supabase
+        .from('resumes')
+        .update({ search_intent: parsed.data })
+        .eq('email', email);
+
+    if (error) {
+        console.error('[user-data-api] Failed to save search_intent:', summarizeErrorForLog(error));
+        throw { statusCode: 500, message: 'Failed to save search intent' };
+    }
+
+    return { searchIntent: parsed.data };
+}
+
+/**
+ * Load the most recent persisted search intent for the user.
+ */
+async function handleGetSearchIntent(email: string) {
+    const supabase = getServiceClient();
+    const { data, error } = await supabase
+        .from('resumes')
+        .select('search_intent')
+        .eq('email', email)
+        .not('search_intent', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        console.error('[user-data-api] Failed to load search_intent:', summarizeErrorForLog(error));
+        throw { statusCode: 500, message: 'Failed to load search intent' };
+    }
+
+    return { searchIntent: data?.search_intent ?? null };
+}
+
 export const handler: Handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method not allowed' };
@@ -205,9 +254,29 @@ export const handler: Handler = async (event) => {
             };
         }
 
+        // ===================== Save Search Intent =====================
+        if (action === 'save_search_intent') {
+            const result = await handleSaveSearchIntent(userEmail, body.searchIntent);
+            return {
+                statusCode: 200,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ success: true, ...result }),
+            };
+        }
+
+        // ===================== Get Search Intent =====================
+        if (action === 'get_search_intent') {
+            const result = await handleGetSearchIntent(userEmail);
+            return {
+                statusCode: 200,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ success: true, ...result }),
+            };
+        }
+
         return {
             statusCode: 400,
-            body: JSON.stringify({ error: 'Invalid action. Use: export, delete' }),
+            body: JSON.stringify({ error: 'Invalid action. Use: export, delete, save_search_intent, get_search_intent' }),
         };
 
     } catch (error: unknown) {

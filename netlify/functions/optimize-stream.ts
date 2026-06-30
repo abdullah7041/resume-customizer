@@ -144,7 +144,7 @@ export default async function handler(request: Request): Promise<Response> {
     );
   }
 
-  const { resumeText, jobText, workHistory, language, userClarifications, userHardStops, cacheOnly } = parseResult.data;
+  const { resumeText, jobText, workHistory, language, userClarifications, userHardStops, cacheOnly, searchIntent } = parseResult.data;
 
   // --- Vulnerability detection (needed for both cache key and AI call) ---
   const vulnerabilities = workHistory?.length
@@ -177,6 +177,7 @@ export default async function handler(request: Request): Promise<Response> {
     vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
     userClarifications: userClarifications || '',
     userHardStops: userHardStops || [],
+    searchIntent: searchIntent || null,
   });
 
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
@@ -255,6 +256,7 @@ export default async function handler(request: Request): Promise<Response> {
 
         const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, userHardStops, {
           featureName: "optimize_stream",
+          searchIntent: searchIntent || null,
         });
 
         const aiDuration = Date.now() - startTime;
