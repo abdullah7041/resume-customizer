@@ -22,6 +22,8 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import TemplateGallery from "../sections/TemplatesSection";
+import OnboardingChat from "../onboarding/OnboardingChat";
+import { isIntentPrompted, markIntentPrompted } from "../../lib/onboarding/intentPromptFlag";
 // KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 
 // Lazy-loaded tab sections — each gets its own chunk
@@ -289,6 +291,15 @@ export default function MainContent() {
 
   const [activeTab, setActiveTab] = useState("resume");
   const [flowProgress, setFlowProgress] = useState(0);
+  // Path-A intent capture: after a successful parse, auto-show the inline role/comp/
+  // location prompt unless intent already exists or the user resolved the prompt.
+  const searchIntent = useResumeStore((state) => state.searchIntent);
+  const hasParsedResume = useResumeStore((state) => Boolean(state.originalResume));
+  const [intentPrompted, setIntentPrompted] = useState(isIntentPrompted);
+  const resolveIntentPrompt = useCallback(() => {
+    markIntentPrompted();
+    setIntentPrompted(true);
+  }, []);
   const [resumeData, setResumeData] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -1848,12 +1859,27 @@ export default function MainContent() {
           {/* Parse-quality warning — shown on all tabs so the user always sees it */}
           {activeTab !== "resume" && <ParsingWarningsBanner />}
           {activeTab === "resume" && (
-            <UploadSection
-              onParseResume={handleParseResume}
-              resumeDocument={resumeData}
-              onToast={handleUploadToast}
-              onClear={handleClearResume}
-            />
+            <>
+              <UploadSection
+                onParseResume={handleParseResume}
+                resumeDocument={resumeData}
+                onToast={handleUploadToast}
+                onClear={handleClearResume}
+              />
+              {/* Path-A inline intent capture — auto-shows after a successful parse,
+                  skippable, never blocks upload. Hidden once intent exists or the
+                  user resolves the prompt. */}
+              {hasParsedResume && !searchIntent && !intentPrompted && (
+                <div className="mt-4">
+                  <OnboardingChat
+                    path="has_cv"
+                    mode="inline"
+                    onComplete={resolveIntentPrompt}
+                    onDismiss={resolveIntentPrompt}
+                  />
+                </div>
+              )}
+            </>
           )}
           {activeTab === "match" && (
             <LazyErrorBoundary label="Match section">
