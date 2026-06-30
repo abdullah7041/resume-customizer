@@ -568,7 +568,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           const yOffsetMm = currentTopPx / pxPerMm;
           const yImgInPdf = imgYMm - yOffsetMm;
           
-          pdf.addImage(imgData, 'PNG', 0, yImgInPdf, pdfWidth, canvasTotalHeight / pxPerMm);
+          // 'FAST' applies FlateDecode to the bitmap; omitting it makes jsPDF embed
+          // raw DeviceRGB (~15MB for one A4 page). The constant alias lets every page
+          // reference one shared, compressed image XObject instead of re-embedding it.
+          pdf.addImage(imgData, 'PNG', 0, yImgInPdf, pdfWidth, canvasTotalHeight / pxPerMm, 'resume-canvas', 'FAST');
           
           // Mask elements spilling out ABOVE the safe chunk (on pages 2+)
           if (imgYMm > 0) {
