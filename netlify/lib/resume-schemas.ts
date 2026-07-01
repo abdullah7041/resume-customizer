@@ -229,6 +229,7 @@ export const MatchRequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
     jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
+    freePreview: z.boolean().optional(),
 });
 
 export const WorkHistoryEntrySchema = z.object({
@@ -252,6 +253,7 @@ export const OptimizeRequestSchema = z.object({
     // Job-search intent from onboarding. Injected into the tailoring prompt so the
     // stored profile changes per-job output (target role / comp / location).
     searchIntent: SearchIntentSchema.optional(),
+    freePreview: z.boolean().optional(),
 });
 
 // New: Clarification pre-optimization endpoint schema

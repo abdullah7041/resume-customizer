@@ -95,36 +95,6 @@ export default async function handler(request: Request): Promise<Response> {
     return rateLimit.response;
   }
 
-  // --- Auth ---
-  const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required. Please sign in." }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const supabase = getSupabaseClient();
-  if (!supabase) {
-    return new Response(
-      JSON.stringify({ error: "Server configuration error. Please contact support." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return new Response(
-      JSON.stringify({ error: "Invalid or expired authentication token" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const userEmail = user.email;
-  const ipAddress = getClientIPFromRequest(request);
-  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
-
   // --- Parse & validate body ---
   let rawBody: any;
   try {
@@ -135,6 +105,43 @@ export default async function handler(request: Request): Promise<Response> {
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
+  const freePreview = rawBody.freePreview === true;
+
+  // --- Auth ---
+  const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
+  let user: any = null;
+  let userEmail: string | undefined;
+
+  if (!freePreview && !authHeader) {
+    return new Response(
+      JSON.stringify({ error: "Authentication required. Please sign in." }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  if (authHeader) {
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return new Response(
+        JSON.stringify({ error: "Server configuration error. Please contact support." }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authUser) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired authentication token" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    user = authUser;
+    userEmail = authUser.email;
+  }
+
+  const ipAddress = getClientIPFromRequest(request);
+  const emailVerified = user?.email_confirmed_at !== null || (user as any)?.email_verified !== false;
 
   const parseResult = OptimizeRequestSchema.safeParse(rawBody);
   if (!parseResult.success) {
@@ -170,7 +177,7 @@ export default async function handler(request: Request): Promise<Response> {
   // the TTL has expired before the user can retry.
   // -----------------------------------------------------------------------
   const cacheKey = buildCacheKey('optimize', {
-    userId: user.id || userEmail,
+    userId: user?.id || userEmail || `free-preview:${ipAddress || 'unknown'}`,
     resumeText: resumeText.trim(),
     jobText: jobText.trim(),
     language: language || 'en',
@@ -216,7 +223,9 @@ export default async function handler(request: Request): Promise<Response> {
   console.log('[optimize-stream] Cache MISS — running credit check and SSE stream.');
 
   // --- Credit check (after cache check so cached retries bypass this) ---
-  const creditCheck = await checkCredits(userEmail, "optimize", { ipAddress, emailVerified });
+  const creditCheck = freePreview || !userEmail
+    ? { hasCredits: true, required: 0, available: 0 }
+    : await checkCredits(userEmail, "optimize", { ipAddress, emailVerified });
   if (!creditCheck.hasCredits) {
     return new Response(
       JSON.stringify({
@@ -287,7 +296,9 @@ export default async function handler(request: Request): Promise<Response> {
           .filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i);
 
         // Consume credits after successful optimization
-        const creditResult = await consumeCredits(userEmail, "optimize");
+        const creditResult = freePreview || !userEmail
+          ? { creditsRemaining: null }
+          : await consumeCredits(userEmail, "optimize");
 
         const resultPayload = {
           cards,
@@ -304,6 +315,7 @@ export default async function handler(request: Request): Promise<Response> {
             reasoning: null,
           },
           creditsRemaining: creditResult.creditsRemaining,
+          freePreview,
           gapAnalysis: (optimization?.gap_analysis || []).map((gap: any) => ({
             requirement: gap.requirement || "",
             currentState: gap.current_state || "",

@@ -90,7 +90,7 @@ vi.mock("../components/sections/MatchSection", () => {
           : null,
         React.createElement("button", {
           onClick: () => {
-            Promise.resolve(props.onAnalyzeMatchAI?.("Target job description")).catch(() => {});
+            Promise.resolve(props.onAnalyzeMatchAI?.("Target job description", { freePreview: true })).catch(() => {});
           },
         }, "Run match")
       ),
@@ -105,7 +105,7 @@ vi.mock("../components/sections/OptimizeSection", () => {
       React.createElement(
         "div",
         { "data-testid": "optimization-mock" },
-        React.createElement("button", { onClick: () => props.onOptimize?.("auto") }, "Run optimize")
+        React.createElement("button", { onClick: () => props.onOptimize?.("auto", { freePreview: true }) }, "Run optimize")
       ),
   };
 });
@@ -423,7 +423,7 @@ describe("MainContent resume parsing", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
-    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined);
+    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined, { freePreview: true });
     expect(analyticsMock.trackGuestPreviewLimitHit).not.toHaveBeenCalledWith({
       source: "protected_action",
       status: 401,
@@ -463,7 +463,7 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
     expect(await screen.findByText(/Reality tier: critical/i)).toBeInTheDocument();
-    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined);
+    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined, { freePreview: true });
     expect(extractJobMetadataMock).toHaveBeenCalledWith("Target job description", undefined);
   });
 
@@ -687,6 +687,7 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
 
     await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalled());
+    expect(optimizeResumeStreamMock.mock.calls[0][0]).toMatchObject({ freePreview: true });
     expect(optimizeResumeMock).not.toHaveBeenCalled();
     expect(screen.queryByText(/Sign in required Sign in to run AI analysis and save your progress/i)).not.toBeInTheDocument();
   });
