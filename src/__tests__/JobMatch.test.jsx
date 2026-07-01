@@ -180,7 +180,7 @@ describe('JobMatch', () => {
     expect(screen.getByText(/matches the requirements/i)).toBeInTheDocument();
   });
 
-  it('blocks guest match analysis before opening credit confirmation', () => {
+  it('allows guest match analysis to reach credit confirmation', () => {
     const onAnalyzeMatchAI = vi.fn();
     const onRequireSignIn = vi.fn();
 
@@ -201,10 +201,10 @@ describe('JobMatch', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /analyze match with ai/i }));
 
-    expect(onRequireSignIn).toHaveBeenCalledTimes(1);
+    expect(onRequireSignIn).not.toHaveBeenCalled();
     expect(onAnalyzeMatchAI).not.toHaveBeenCalled();
-    expect(screen.getByText('Sign in to run AI analysis and save your progress.')).toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sign in to run AI analysis and save your progress.')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
 

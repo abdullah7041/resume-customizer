@@ -407,22 +407,28 @@ describe("MainContent resume parsing", () => {
     });
   });
 
-  it("gates guest match analysis before backend calls", async () => {
+  it("allows guest match analysis for current onboarding plan testing", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");
     localStorage.setItem("watheq:lastActiveTab", "match");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    analyzeResumeMock.mockResolvedValueOnce({
+      score: 82,
+      missingKeywords: [],
+      topHits: [],
+      suggestions: [],
+    });
 
     render(<MainContent />);
 
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
-    expect(analyzeResumeMock).not.toHaveBeenCalled();
-    expect(analyticsMock.trackGuestPreviewLimitHit).toHaveBeenCalledWith({
+    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined);
+    expect(analyticsMock.trackGuestPreviewLimitHit).not.toHaveBeenCalledWith({
       source: "protected_action",
       status: 401,
     });
-    expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Sign in required Sign in to run AI analysis and save your progress/i)).not.toBeInTheDocument();
   });
 
   it("stores Reality Check results from match analysis without blocking job metadata extraction", async () => {
@@ -664,20 +670,25 @@ describe("MainContent resume parsing", () => {
     expect(optimizeResumeStreamMock).toHaveBeenCalled();
   });
 
-  it("gates guest optimization and clarifications before backend calls", async () => {
+  it("allows guest optimization and clarifications for current onboarding plan testing", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");
     localStorage.setItem("watheq:lastActiveTab", "optimize");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
 
     render(<MainContent />);
 
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
 
-    expect(generateClarificationsMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalled());
     expect(optimizeResumeMock).not.toHaveBeenCalled();
-    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Sign in required Sign in to run AI analysis and save your progress/i)).not.toBeInTheDocument();
   });
 
   it("does not render landing pricing or comparison blocks in the authenticated workspace", () => {

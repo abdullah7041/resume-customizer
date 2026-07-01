@@ -300,7 +300,7 @@ describe('OptimizeSection', () => {
             expect(button).not.toBeDisabled();
         });
 
-        it('blocks guest optimization before opening credit confirmation', () => {
+        it('allows guest optimization to reach credit confirmation', () => {
             mockStoreState.originalResume = { basics: { name: 'Test User' } };
             const onRequireSignIn = vi.fn();
 
@@ -314,9 +314,9 @@ describe('OptimizeSection', () => {
 
             fireEvent.click(screen.getByRole('button', { name: /optimize resume/i }));
 
-            expect(onRequireSignIn).toHaveBeenCalledTimes(1);
-            expect(screen.getByText('Sign in to run AI analysis and save your progress.')).toBeInTheDocument();
-            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            expect(onRequireSignIn).not.toHaveBeenCalled();
+            expect(screen.queryByText('Sign in to run AI analysis and save your progress.')).not.toBeInTheDocument();
+            expect(screen.getByRole('dialog')).toBeInTheDocument();
         });
     });
 

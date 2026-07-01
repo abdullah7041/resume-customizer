@@ -196,9 +196,6 @@ export function MatchSection({
   jobDescription = '',
   extractedMetadata,
   onJobSaved,
-  isGuestMode = false,
-  onRequireSignIn,
-  protectedActionMessage,
 }: MatchSectionProps) {
   const { t } = useTranslation();
   const { showOptimized } = useResumeStore();
@@ -306,16 +303,6 @@ export function MatchSection({
         title: t('sections.match.errors.jobNeeded', 'Job description needed'),
         description: message,
       });
-      return;
-    }
-
-    if (isGuestMode) {
-      const message = protectedActionMessage || t(
-        'workspace.guest.protectedActionDesc',
-        'Sign in to run AI analysis and save your progress.'
-      );
-      setError(message);
-      onRequireSignIn?.();
       return;
     }
 

@@ -951,11 +951,6 @@ export default function MainContent() {
 
   const handleAnalyzeMatchAI = useCallback(
     async (jobDescriptionInput) => {
-      if (isGuestMode) {
-        requireSignInForGuestAction();
-        throw new Error(guestProtectedActionDescription);
-      }
-
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -1069,7 +1064,7 @@ export default function MainContent() {
         setIsAnalyzing(false);
       }
     },
-    [guestProtectedActionDescription, i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resetPipelineContext, resumeData, t]
+    [i18n.language, pushToast, resetPipelineContext, resumeData, t]
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
@@ -1154,11 +1149,6 @@ export default function MainContent() {
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
     async ({ mode, workHistory, userClarifications, userHardStops }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[] }) => {
-      if (isGuestMode) {
-        requireSignInForGuestAction();
-        return null;
-      }
-
       if (!resumeData?.plainText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
@@ -1376,17 +1366,12 @@ export default function MainContent() {
         setIsOptimizing(false);
       }
     },
-    [i18n.language, isGuestMode, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, requireSignInForGuestAction, resumeData, t]
+    [i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, resumeData, t]
   );
 
   // Gate function: runs clarification step first, then delegates to handleOptimizeActual
   const handleOptimize = useCallback(
     async (mode) => {
-      if (isGuestMode) {
-        requireSignInForGuestAction();
-        return null;
-      }
-
       if (!resumeData?.plainText || !jobDescription) {
         pushToast({
           type: "warning",
@@ -1456,7 +1441,7 @@ export default function MainContent() {
         return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined });
       }
     },
-    [handleOptimizeActual, i18n.language, isGuestMode, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, requireSignInForGuestAction, resumeData, t]
+    [handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
@@ -1484,10 +1469,6 @@ export default function MainContent() {
 
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {
-    if (isGuestMode) {
-      requireSignInForGuestAction();
-      return;
-    }
     if (!resumeData?.plainText || !jobDescription) return;
     setIsRegenerating(true);
     try {
@@ -1505,7 +1486,7 @@ export default function MainContent() {
     } finally {
       setIsRegenerating(false);
     }
-  }, [i18n.language, isGuestMode, jobDescription, handleClarificationSkip, requireSignInForGuestAction, resumeData]);
+  }, [i18n.language, jobDescription, handleClarificationSkip, resumeData]);
 
   const handleMarkApplied = useCallback(async () => {
     if (isGuestMode) {
