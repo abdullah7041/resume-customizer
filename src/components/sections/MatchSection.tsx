@@ -773,6 +773,16 @@ export function MatchSection({
                 )}
               </div>
 
+              {jobDescription && (
+                <SaveJobToPipelineCard
+                  jobDescription={jobDescription}
+                  matchScore={score}
+                  extractedMetadata={extractedMetadata}
+                  onSaved={onJobSaved}
+                  onToast={onToast}
+                />
+              )}
+
               {/* Scrollable Content Area */}
               <div className="flex-1 overflow-y-auto glass-scrollbar space-y-5 pr-2 -mr-2 max-h-[500px]">
 
@@ -898,15 +908,6 @@ export function MatchSection({
                 {t('sections.match.emptyState', 'Paste a job description to see how well your resume matches the requirements.')}
               </p>
             </div>
-          )}
-          {hasResults && !isAnalyzing && jobDescription && (
-            <SaveJobToPipelineCard
-              jobDescription={jobDescription}
-              matchScore={score}
-              extractedMetadata={extractedMetadata}
-              onSaved={onJobSaved}
-              onToast={onToast}
-            />
           )}
         </GlassCard>
       </div>
