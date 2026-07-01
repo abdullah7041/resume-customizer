@@ -76,16 +76,18 @@ export default function App() {
             ) : currentPath === "/admin/feedback" ? (
               <AdminFeedbackPage />
             ) : needsOnboarding ? (
-              <OnboardingChat
-                onComplete={() => {
-                  markOnboarded();
-                  setOnboardedFlag(true);
-                }}
-              />
+              <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
+                <OnboardingChat
+                  onComplete={() => {
+                    markOnboarded();
+                    setOnboardedFlag(true);
+                  }}
+                />
+              </main>
             ) : (
               <MainContent />
             )}
-            <Footer />
+            {!needsOnboarding && <Footer />}
             <ConsentBanner />
 
             {/* Low-credits pricing-waitlist modal */}

@@ -245,7 +245,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
       className={
         inline
           ? 'flex flex-col gap-4 rounded-xl border border-emerald-500/30 bg-slate-800/40 p-4'
-          : 'mx-auto flex max-w-md flex-col gap-5 p-6'
+          : 'mx-auto flex w-full max-w-md flex-col gap-5 rounded-2xl border border-emerald-400/25 bg-[#061713]/95 p-6 text-slate-100 shadow-2xl shadow-black/45 backdrop-blur-xl sm:p-7'
       }
     >
       {/* Inline header: a one-line "why" + a dismiss affordance. */}
@@ -276,8 +276,8 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
       </div>
 
       <div className={inline ? 'text-start' : 'text-center'}>
-        <h2 className={inline ? 'text-lg font-bold text-slate-100' : 'text-xl font-bold text-slate-100'}>{copy?.title}</h2>
-        <p className="mt-1 text-sm text-slate-400">{copy?.hint}</p>
+        <h2 className={inline ? 'text-lg font-bold text-slate-100' : 'text-xl font-bold text-white'}>{copy?.title}</h2>
+        <p className={inline ? 'mt-1 text-sm text-slate-400' : 'mt-1 text-sm font-medium text-emerald-100/80'}>{copy?.hint}</p>
       </div>
 
       {/* Chips */}
@@ -319,7 +319,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         placeholder={copy?.placeholder}
         rows={3}
         disabled={busy}
-        className="w-full resize-none rounded-xl border border-slate-600 bg-slate-800 p-4 text-base text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-60"
+        className="w-full resize-none rounded-xl border border-slate-600 bg-slate-800 p-4 text-base text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-60 dark:bg-slate-800"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
