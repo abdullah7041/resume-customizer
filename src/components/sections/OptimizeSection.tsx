@@ -141,9 +141,6 @@ export function OptimizeSection({
   onMarkApplied,
   onAttachExport,
   hasExportedForActiveJob = false,
-  isGuestMode = false,
-  onRequireSignIn,
-  protectedActionMessage,
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
@@ -793,16 +790,6 @@ export function OptimizeSection({
 
   // Wrapper function that shows confirmation modal first
   const handleGenerate = () => {
-    if (isGuestMode) {
-      const message = protectedActionMessage || t(
-        'workspace.guest.protectedActionDesc',
-        'Sign in to run AI analysis and save your progress.'
-      );
-      setError(message);
-      onRequireSignIn?.();
-      return;
-    }
-
     // Wait for credits to load before showing modal
     if (creditsLoading) {
       return;
