@@ -306,6 +306,8 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
 
   // Unauthenticated guest preview parse — stricter than the authenticated limit above
   "extract-resume-json-guest": { maxRequests: 5 },
+  "ai-match-free-preview": { maxRequests: 1, windowMs: 24 * 60 * 60 * 1000 },
+  "optimize-free-preview": { maxRequests: 1, windowMs: 24 * 60 * 60 * 1000 },
 
   // Unauthenticated waitlist confirmation email — strict to prevent mail-bombing
   "waitlist-confirm": { maxRequests: 5 },
@@ -525,6 +527,54 @@ export async function checkGuestPreviewRateLimit(
   }
 }
 
+export async function checkFreePreviewRateLimit(
+  event: HandlerEvent,
+  endpoint: "ai-match-free-preview" | "optimize-free-preview",
+  userKey?: string | null
+): Promise<{ allowed: boolean; response?: HandlerResponse }> {
+  if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {
+    return { allowed: true };
+  }
+
+  const config = ENDPOINT_RATE_LIMITS[endpoint];
+  const limiter = getRateLimiter(config);
+
+  if (!limiter) {
+    console.warn(`[rate-limiter] Upstash not configured — failing closed for ${endpoint}`);
+    return { allowed: false, response: PREVIEW_UNAVAILABLE_RESPONSE };
+  }
+
+  try {
+    const clientId = userKey || getClientIdentifier(event);
+    const result = await limiter.limit(`${endpoint}:${clientId}`);
+
+    if (!result.success) {
+      return {
+        allowed: false,
+        response: {
+          statusCode: 429,
+          headers: {
+            ...RATE_LIMIT_HEADERS,
+            "Retry-After": "86400",
+            "X-RateLimit-Limit": String(config.maxRequests),
+            "X-RateLimit-Remaining": "0",
+          },
+          body: JSON.stringify({
+            error: "You've used your free preview for this feature. Please sign in to continue.",
+            code: "guest/free-preview-used",
+            retryAfter: 86400,
+          }),
+        },
+      };
+    }
+
+    return { allowed: true };
+  } catch (err) {
+    console.error(`[rate-limiter] ${endpoint} check failed:`, summarizeErrorForLog(err));
+    return { allowed: false, response: PREVIEW_UNAVAILABLE_RESPONSE };
+  }
+}
+
 /**
  * Check rate limit for a Netlify Functions v2 Request/Response handler.
  */
@@ -576,6 +626,68 @@ export async function checkRateLimitForRequest(
   } catch (err) {
     console.error("[rate-limiter] Rate limit check failed:", summarizeErrorForLog(err));
     return { allowed: true };
+  }
+}
+
+export async function checkFreePreviewRateLimitForRequest(
+  request: Request,
+  endpoint: "optimize-free-preview",
+  userKey?: string | null
+): Promise<{ allowed: boolean; response?: Response }> {
+  if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {
+    return { allowed: true };
+  }
+
+  const config = ENDPOINT_RATE_LIMITS[endpoint];
+  const limiter = getRateLimiter(config);
+
+  if (!limiter) {
+    console.warn(`[rate-limiter] Upstash not configured — failing closed for ${endpoint}`);
+    return {
+      allowed: false,
+      response: new Response(PREVIEW_UNAVAILABLE_RESPONSE.body, {
+        status: PREVIEW_UNAVAILABLE_RESPONSE.statusCode,
+        headers: PREVIEW_UNAVAILABLE_RESPONSE.headers as Record<string, string>,
+      }),
+    };
+  }
+
+  try {
+    const clientId = userKey || getClientIdentifierFromHeaders(request.headers);
+    const result = await limiter.limit(`${endpoint}:${clientId}`);
+
+    if (!result.success) {
+      return {
+        allowed: false,
+        response: new Response(
+          JSON.stringify({
+            error: "You've used your free preview for this feature. Please sign in to continue.",
+            code: "guest/free-preview-used",
+            retryAfter: 86400,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...RATE_LIMIT_HEADERS,
+              "Retry-After": "86400",
+              "X-RateLimit-Limit": String(config.maxRequests),
+              "X-RateLimit-Remaining": "0",
+            },
+          }
+        ),
+      };
+    }
+
+    return { allowed: true };
+  } catch (err) {
+    console.error(`[rate-limiter] ${endpoint} check failed:`, summarizeErrorForLog(err));
+    return {
+      allowed: false,
+      response: new Response(PREVIEW_UNAVAILABLE_RESPONSE.body, {
+        status: PREVIEW_UNAVAILABLE_RESPONSE.statusCode,
+        headers: PREVIEW_UNAVAILABLE_RESPONSE.headers as Record<string, string>,
+      }),
+    };
   }
 }
 

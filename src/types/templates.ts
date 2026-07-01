@@ -1,5 +1,6 @@
 // Template system types - extends JSON Resume schema
-import type { ResumeSchema } from './resume';
+import type { PartialResumeSchema, ResumeSchema } from './resume';
+import type { SearchIntent } from './onboarding';
 
 /**
  * Available template identifiers
@@ -224,6 +225,10 @@ export interface ResumeState {
   // Saudi nationality flag for Saudization ATS
   isSaudiNational: boolean;
 
+  // Onboarding: job-search intent (target role / comp / location). The one new
+  // canonical-profile slice — everything else onboarding produces lives on the resume.
+  searchIntent: SearchIntent | null;
+
   // View state
   showOptimized: boolean;
   selectedTemplate: TemplateId;
@@ -271,6 +276,18 @@ export interface ResumeState {
 
   // Saudi nationality
   setSaudiNational: (value: boolean) => void;
+
+  // Onboarding actions
+  /** Replace the job-search intent slice (stamps meta.updatedAt + completeness). */
+  setSearchIntent: (intent: SearchIntent | null) => void;
+  /**
+   * Single onboarding writer: fuzzy-merge a partial resume patch into originalResume,
+   * deduping array entries and recording provenance in meta.ai_suggestions. All
+   * onboarding resume writes go through here — never write originalResume directly.
+   */
+  patchProfile: (patch: PartialResumeSchema) => void;
+  /** 0-100 profile completeness across resume + searchIntent (item-2 foundation). */
+  getProfileCompleteness: () => number;
 }
 
 /**

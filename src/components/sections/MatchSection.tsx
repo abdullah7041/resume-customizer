@@ -170,7 +170,7 @@ interface Toast {
 }
 
 interface MatchSectionProps {
-  onAnalyzeMatchAI: (jobDescription: string) => Promise<MatchResult>;
+  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean }) => Promise<MatchResult>;
   matchAnalysis: MatchResult | null;
   isAnalyzing?: boolean;
   hasResume?: boolean;
@@ -185,6 +185,8 @@ interface MatchSectionProps {
   protectedActionMessage?: string;
 }
 
+const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchUsed';
+
 export function MatchSection({
   onAnalyzeMatchAI,
   matchAnalysis,
@@ -196,9 +198,6 @@ export function MatchSection({
   jobDescription = '',
   extractedMetadata,
   onJobSaved,
-  isGuestMode = false,
-  onRequireSignIn,
-  protectedActionMessage,
 }: MatchSectionProps) {
   const { t } = useTranslation();
   const { showOptimized } = useResumeStore();
@@ -242,7 +241,16 @@ export function MatchSection({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [whyOpen]);
 
-  const handleAnalyzeActual = async () => {
+  const hasFreePreviewRun = () =>
+    typeof window !== 'undefined' && window.localStorage.getItem(FREE_MATCH_STORAGE_KEY) !== 'true';
+
+  const markFreePreviewUsed = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(FREE_MATCH_STORAGE_KEY, 'true');
+    }
+  };
+
+  const handleAnalyzeActual = async (options?: { freePreview?: boolean }) => {
     const trimmedJob = jobText.trim();
     if (!trimmedJob) {
       const message = t('sections.match.errors.noJob', 'Paste the job description before analyzing.');
@@ -258,7 +266,8 @@ export function MatchSection({
     analytics.trackJobDescriptionSubmitted();
     analytics.trackMatchAnalysisStarted();
     try {
-      const result = await onAnalyzeMatchAI(trimmedJob);
+      const result = await onAnalyzeMatchAI(trimmedJob, options);
+      if (options?.freePreview) markFreePreviewUsed();
       // Track match analysis run
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
@@ -309,13 +318,8 @@ export function MatchSection({
       return;
     }
 
-    if (isGuestMode) {
-      const message = protectedActionMessage || t(
-        'workspace.guest.protectedActionDesc',
-        'Sign in to run AI analysis and save your progress.'
-      );
-      setError(message);
-      onRequireSignIn?.();
+    if (hasFreePreviewRun()) {
+      void handleAnalyzeActual({ freePreview: true });
       return;
     }
 
@@ -449,7 +453,9 @@ export function MatchSection({
             {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
               <>
                 {t('sections.match.analyze', 'Analyze Match with AI')}
-                <span className="ml-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>
+                {!hasFreePreviewRun() && (
+                  <span className="ml-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>
+                )}
               </>
             )}
           </GlassButton>
@@ -767,6 +773,16 @@ export function MatchSection({
                 )}
               </div>
 
+              {jobDescription && (
+                <SaveJobToPipelineCard
+                  jobDescription={jobDescription}
+                  matchScore={score}
+                  extractedMetadata={extractedMetadata}
+                  onSaved={onJobSaved}
+                  onToast={onToast}
+                />
+              )}
+
               {/* Scrollable Content Area */}
               <div className="flex-1 overflow-y-auto glass-scrollbar space-y-5 pr-2 -mr-2 max-h-[500px]">
 
@@ -892,15 +908,6 @@ export function MatchSection({
                 {t('sections.match.emptyState', 'Paste a job description to see how well your resume matches the requirements.')}
               </p>
             </div>
-          )}
-          {hasResults && !isAnalyzing && jobDescription && (
-            <SaveJobToPipelineCard
-              jobDescription={jobDescription}
-              matchScore={score}
-              extractedMetadata={extractedMetadata}
-              onSaved={onJobSaved}
-              onToast={onToast}
-            />
           )}
         </GlassCard>
       </div>

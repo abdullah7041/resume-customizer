@@ -1,8 +1,41 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../App';
+import { useResumeStore } from '../lib/stores/resumeStore';
+
+vi.mock('../components/onboarding/OnboardingChat', async () => {
+  const { useResumeStore } = await import('../lib/stores/resumeStore');
+  return {
+    default: ({ onComplete }: { onComplete?: () => void }) => (
+      <main>
+        <div>Onboarding</div>
+        <button
+          type="button"
+          onClick={() => {
+            useResumeStore.getState().patchProfile({
+              basics: {
+                name: 'Sara Al-Otaibi',
+                label: '',
+                email: '',
+                phone: '',
+                summary: '',
+                location: { city: '', countryCode: '', region: '' },
+                profiles: [],
+              },
+            });
+          }}
+        >
+          Answer name
+        </button>
+        <button type="button" onClick={() => onComplete?.()}>
+          Complete onboarding
+        </button>
+      </main>
+    ),
+  };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -71,6 +104,15 @@ vi.mock('../hooks/useUserCredits', () => ({
   }),
 }));
 
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: null,
+    loading: false,
+    signInWithGoogle: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+
 vi.mock('../hooks/useOnboardingTour', () => ({
   useOnboardingTour: () => ({
     run: false,
@@ -100,6 +142,8 @@ describe('App onboarding overlay — react-joyride removed', () => {
 
   beforeEach(() => {
     setPath('/');
+    // These assert the workspace (joyride-removal); skip the first-run gate.
+    window.localStorage.setItem('watheq:onboarded', 'true');
   });
 
   afterEach(() => {
@@ -137,6 +181,44 @@ describe('App onboarding overlay — react-joyride removed', () => {
     const uploadButton = screen.getByRole('button', { name: /upload resume/i });
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toBeEnabled();
+  });
+
+  it('shows the first-run onboarding gate when no resume, no intent, and not flagged', () => {
+    window.localStorage.removeItem('watheq:onboarded');
+    useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
+
+    render(<App />);
+
+    expect(screen.getByText('Onboarding')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /upload resume/i })).toBeNull();
+  });
+
+  it('does not leave first-run onboarding after only the starter name answer', async () => {
+    window.localStorage.removeItem('watheq:onboarded');
+    useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /answer name/i }));
+
+    expect(screen.getByText('Onboarding')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /upload resume/i })).toBeNull();
+  });
+
+  it('marks signed-out first-run completion as guest preview', async () => {
+    window.localStorage.removeItem('watheq:onboarded');
+    window.localStorage.removeItem('watheq:guestMode');
+    useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /complete onboarding/i }));
+
+    expect(window.localStorage.getItem('watheq:onboarded')).toBe('true');
+    expect(window.localStorage.getItem('watheq:guestMode')).toBe('true');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /upload resume/i })).toBeInTheDocument();
+    });
   });
 
   it('keeps workflow controls present and clickable after sign-in', () => {

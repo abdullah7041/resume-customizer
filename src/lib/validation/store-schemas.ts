@@ -119,6 +119,35 @@ export const ResumeZodSchema = z.object({
 }).passthrough(); // Allow additional properties like 'plainText', 'sections', etc.
 
 // ============================================
+// Search Intent (onboarding) Schema
+// ============================================
+// Mirrors src/types/onboarding.ts SearchIntent and the server-side
+// SearchIntentSchema in netlify/lib/resume-schemas.ts. Validated at the store
+// boundary before persisting under `watheq:searchIntent`.
+export const SearchIntentSchema = z.object({
+    targetRoles: z.array(z.string()).default([]),
+    seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
+    compRange: z.object({
+        min: z.number(),
+        max: z.number(),
+        currency: z.string(),
+        period: z.enum(['month', 'year']),
+    }).optional(),
+    location: z.object({
+        city: z.string().optional(),
+        country: z.string().optional(),
+        workMode: z.enum(['remote', 'hybrid', 'onsite']),
+    }).optional(),
+    meta: z.object({
+        confidence: z.enum(['low', 'medium', 'high']),
+        completeness: z.number().min(0).max(100),
+        updatedAt: z.string(),
+    }),
+});
+
+export type SearchIntentValidated = z.infer<typeof SearchIntentSchema>;
+
+// ============================================
 // Store-Specific Schemas
 // ============================================
 
@@ -243,6 +272,19 @@ export function validateOptimization(data: unknown): ValidationResult<Optimizati
     }
     const errorMessage = formatZodError(result.error);
     console.warn('[StoreValidation] Optimization validation failed:', errorMessage);
+    return { success: false, error: errorMessage, issues: result.error.issues };
+}
+
+/**
+ * Validate search intent at store boundary
+ */
+export function validateSearchIntent(data: unknown): ValidationResult<SearchIntentValidated> {
+    const result = SearchIntentSchema.safeParse(data);
+    if (result.success) {
+        return { success: true, data: result.data };
+    }
+    const errorMessage = formatZodError(result.error);
+    console.warn('[StoreValidation] SearchIntent validation failed:', errorMessage);
     return { success: false, error: errorMessage, issues: result.error.issues };
 }
 

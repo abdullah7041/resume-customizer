@@ -469,7 +469,7 @@ describe('optimizeResume', () => {
         headers: expect.objectContaining({
           'Content-Type': 'application/json'
         }),
-        body: JSON.stringify({ resumeText: 'resume', jobText: 'job', language: 'en' })
+        body: JSON.stringify({ resumeText: 'resume', jobText: 'job', language: 'en', searchIntent: null })
       })
     );
     expect(result.source).toBe('gemini');

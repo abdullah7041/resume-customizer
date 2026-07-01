@@ -78,7 +78,7 @@ interface OptimizeSectionProps {
   optimizations?: OptimizationCard[];
   keywords?: Keywords;
   isOptimizing?: boolean;
-  onOptimize?: (mode: any) => Promise<any>;
+  onOptimize?: (mode: any, options?: { freePreview?: boolean }) => Promise<any>;
   onCopy?: (value: any) => Promise<void>;
   previewUsed?: boolean;
   onUpgrade?: () => void;
@@ -100,6 +100,7 @@ interface OptimizeSectionProps {
 }
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
+const FREE_OPTIMIZE_STORAGE_KEY = 'watheq:freeOptimizeUsed';
 
 // Normalize optimization data to handle all API formats:
 // - Backend returns: exampleBefore/exampleAfter
@@ -141,9 +142,6 @@ export function OptimizeSection({
   onMarkApplied,
   onAttachExport,
   hasExportedForActiveJob = false,
-  isGuestMode = false,
-  onRequireSignIn,
-  protectedActionMessage,
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
@@ -416,11 +414,22 @@ export function OptimizeSection({
     };
   }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore, verifiedScore]);
 
+  const hasFreePreviewRun = () =>
+    typeof window !== 'undefined' && window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY) !== 'true';
+
+  const markFreePreviewUsed = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, 'true');
+    }
+  };
+
   // Generate optimizations from API
-  const handleGenerateActual = async () => {
+  const handleGenerateActual = async (options?: { freePreview?: boolean }) => {
     // If parent provided handler, use that
     if (propOnOptimize) {
-      return propOnOptimize('auto');
+      const result = await propOnOptimize('auto', options);
+      if (options?.freePreview) markFreePreviewUsed();
+      return result;
     }
 
     if (!resumeText && !originalResume) {
@@ -455,6 +464,7 @@ export function OptimizeSection({
             ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
             : '',
           language: i18n.language,
+          ...(options?.freePreview ? { freePreview: true } : {}),
         }),
       });
 
@@ -788,18 +798,14 @@ export function OptimizeSection({
       setIsGenerating(false);
       // Refresh credits after consumption
       setTimeout(() => refetchCredits(), 500);
+      if (options?.freePreview) markFreePreviewUsed();
     }
   };
 
   // Wrapper function that shows confirmation modal first
   const handleGenerate = () => {
-    if (isGuestMode) {
-      const message = protectedActionMessage || t(
-        'workspace.guest.protectedActionDesc',
-        'Sign in to run AI analysis and save your progress.'
-      );
-      setError(message);
-      onRequireSignIn?.();
+    if (hasFreePreviewRun()) {
+      void handleGenerateActual({ freePreview: true });
       return;
     }
 
@@ -1157,7 +1163,9 @@ export function OptimizeSection({
                     ? (
                       <>
                         {t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')}
-                        <span className="ml-2 text-xs opacity-75">(5 {t('common.credits', 'credits')})</span>
+                        {!hasFreePreviewRun() && (
+                          <span className="ml-2 text-xs opacity-75">(5 {t('common.credits', 'credits')})</span>
+                        )}
                       </>
                     )
                     : t('sections.optimize.runMatchFirst', 'Upload Resume First')

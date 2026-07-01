@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, createContext, useContext } from "react";
 import { resolveAuthRedirectUrl } from "../lib/auth/authRedirect";
 import { useResumeStore } from "@/lib/stores/resumeStore";
+import { flushSearchIntentOnSignIn } from "@/lib/onboarding/flushSearchIntent";
 import { analytics } from "../services/analytics";
 import { supabase } from "../services/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -185,6 +186,8 @@ export const AuthProvider = ({ children }) => {
       // Track referral for new signups
       if (currentUser && !previousUserId && _event === "SIGNED_IN") {
         trackReferralAfterSignup(currentUser.id, session?.access_token);
+        // Flush any guest-collected searchIntent to the server (idempotent).
+        flushSearchIntentOnSignIn(session?.access_token);
       }
 
       lastUserIdRef.current = currentUserId;

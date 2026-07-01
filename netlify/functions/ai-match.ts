@@ -1,6 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { processMatchOnly } from "../lib/gemini-client.js";
-import { withRateLimit } from "../lib/rate-limiter.js";
+import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
@@ -20,10 +20,21 @@ const baseHandler: Handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
+  let rawBody: Record<string, unknown>;
+  try {
+    rawBody = JSON.parse(event.body || "{}");
+  } catch {
+    rawBody = {};
+  }
+  const freePreview = rawBody.freePreview === true;
+
   // Extract auth token from header
   const authHeader = event.headers.authorization || event.headers.Authorization;
+  const client = getSupabaseClient();
+  let user: any = null;
+  let userEmail: string | undefined;
 
-  if (!authHeader) {
+  if (!freePreview && !authHeader) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
@@ -31,36 +42,45 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  // Verify token and get authenticated user
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-  const client = getSupabaseClient();
+  if (authHeader) {
+    if (!client) {
+      return {
+        statusCode: 503,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Service temporarily unavailable" })
+      };
+    }
 
-  if (!client) {
-    return {
-      statusCode: 503,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Service temporarily unavailable" })
-    };
+    // Verify token and get authenticated user
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const { data: { user: authUser }, error: authError } = await client.auth.getUser(token);
+
+    if (authError || !authUser) {
+      return {
+        statusCode: 401,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Invalid or expired authentication token" })
+      };
+    }
+    user = authUser;
+    userEmail = authUser.email;
   }
-
-  const { data: { user }, error: authError } = await client.auth.getUser(token);
-
-  if (authError || !user) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Invalid or expired authentication token" })
-    };
-  }
-
-  const userEmail = user.email;
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null;
+  const emailVerified = user?.email_confirmed_at !== null;
+
+  if (freePreview) {
+    const previewLimit = await checkFreePreviewRateLimit(event, "ai-match-free-preview", user?.id || userEmail);
+    if (!previewLimit.allowed && previewLimit.response) {
+      return previewLimit.response;
+    }
+  }
 
   // Check credits BEFORE processing (2 credits for ai_match)
-  const creditCheck = await checkCredits(userEmail, 'ai_match', { ipAddress, emailVerified });
+  const creditCheck = freePreview || !userEmail
+    ? { hasCredits: true, required: 0, available: 0 }
+    : await checkCredits(userEmail, 'ai_match', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -76,8 +96,6 @@ const baseHandler: Handler = async (event) => {
   }
 
   try {
-    const rawBody = JSON.parse(event.body || "{}");
-
     // Validate request using Zod schema
     const parseResult = MatchRequestSchema.safeParse(rawBody);
     if (!parseResult.success) {
@@ -129,11 +147,13 @@ const baseHandler: Handler = async (event) => {
     };
 
     // Consume credits AFTER successful match (BEFORE database writes to minimize latency)
-    const creditResult = await consumeCredits(userEmail, 'ai_match');
+    const creditResult = freePreview || !userEmail
+      ? { creditsRemaining: null }
+      : await consumeCredits(userEmail, 'ai_match');
 
     // Save privacy-safe summary metadata ASYNCHRONOUSLY (don't await - fire and forget)
     // This prevents database latency from eating into the 90s Netlify timeout.
-    if (userEmail && client) {
+    if (userEmail && user && client) {
       const realityCheckSummary = buildStrategicRealityCheckSummary({
         userId: user.id,
         matchScore: normalizedScore,
@@ -160,6 +180,7 @@ const baseHandler: Handler = async (event) => {
       body: JSON.stringify({
         ...response,
         creditsRemaining: creditResult.creditsRemaining,
+        freePreview,
       }),
     };
 

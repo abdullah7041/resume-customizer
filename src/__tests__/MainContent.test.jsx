@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MainContent from "../components/Layout/MainContent";
+import { useResumeStore } from "../lib/stores/resumeStore";
 
 const {
   parseResumeMock,
@@ -10,6 +11,7 @@ const {
   analyzeResumeTruthCheckMock,
   generateClarificationsMock,
   extractJobMetadataMock,
+  onboardExtractMock,
   analyticsMock,
 } = vi.hoisted(() => ({
   parseResumeMock: vi.fn(),
@@ -17,6 +19,7 @@ const {
   optimizeResumeMock: vi.fn(),
   optimizeResumeStreamMock: vi.fn(),
   analyzeResumeTruthCheckMock: vi.fn(),
+  onboardExtractMock: vi.fn(),
   // Non-fatal: always returns empty clarifications in tests so the optimize flow proceeds directly
   generateClarificationsMock: vi.fn().mockResolvedValue({ clarifications: [] }),
   extractJobMetadataMock: vi.fn(() => Promise.resolve(null)),
@@ -87,7 +90,7 @@ vi.mock("../components/sections/MatchSection", () => {
           : null,
         React.createElement("button", {
           onClick: () => {
-            Promise.resolve(props.onAnalyzeMatchAI?.("Target job description")).catch(() => {});
+            Promise.resolve(props.onAnalyzeMatchAI?.("Target job description", { freePreview: true })).catch(() => {});
           },
         }, "Run match")
       ),
@@ -102,7 +105,7 @@ vi.mock("../components/sections/OptimizeSection", () => {
       React.createElement(
         "div",
         { "data-testid": "optimization-mock" },
-        React.createElement("button", { onClick: () => props.onOptimize?.("auto") }, "Run optimize")
+        React.createElement("button", { onClick: () => props.onOptimize?.("auto", { freePreview: true }) }, "Run optimize")
       ),
   };
 });
@@ -191,6 +194,7 @@ vi.mock("../services/api.js", () => ({
   analyzeResumeTruthCheck: analyzeResumeTruthCheckMock,
   generateClarifications: generateClarificationsMock,
   extractJobMetadata: extractJobMetadataMock,
+  onboardExtract: onboardExtractMock,
   AI_DEFAULT_TEMPERATURE: 0.32,
   isAuthRequiredError: (error) =>
     error?.type === "AUTH_REQUIRED" || error?.code === "auth/required" || error?.status === 401,
@@ -228,6 +232,11 @@ describe("MainContent resume parsing", () => {
     extractJobMetadataMock.mockResolvedValue(null);
     generateClarificationsMock.mockReset();
     generateClarificationsMock.mockResolvedValue({ clarifications: [] });
+    onboardExtractMock.mockReset();
+    onboardExtractMock.mockResolvedValue({ value: {}, confidence: "low" });
+    // Path-A inline panel gates on the store — reset so it only appears where a test
+    // opts in by setting originalResume.
+    useResumeStore.setState({ originalResume: null, searchIntent: null });
     Object.values(analyticsMock).forEach((mock) => mock.mockClear());
     parseResumeMock.mockResolvedValue({
       plainText: "Parsed resume",
@@ -398,22 +407,28 @@ describe("MainContent resume parsing", () => {
     });
   });
 
-  it("gates guest match analysis before backend calls", async () => {
+  it("allows guest match analysis for current onboarding plan testing", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");
     localStorage.setItem("watheq:lastActiveTab", "match");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    analyzeResumeMock.mockResolvedValueOnce({
+      score: 82,
+      missingKeywords: [],
+      topHits: [],
+      suggestions: [],
+    });
 
     render(<MainContent />);
 
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
-    expect(analyzeResumeMock).not.toHaveBeenCalled();
-    expect(analyticsMock.trackGuestPreviewLimitHit).toHaveBeenCalledWith({
+    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined, { freePreview: true });
+    expect(analyticsMock.trackGuestPreviewLimitHit).not.toHaveBeenCalledWith({
       source: "protected_action",
       status: 401,
     });
-    expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Sign in required Sign in to run AI analysis and save your progress/i)).not.toBeInTheDocument();
   });
 
   it("stores Reality Check results from match analysis without blocking job metadata extraction", async () => {
@@ -448,7 +463,7 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
     expect(await screen.findByText(/Reality tier: critical/i)).toBeInTheDocument();
-    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined);
+    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined, { freePreview: true });
     expect(extractJobMetadataMock).toHaveBeenCalledWith("Target job description", undefined);
   });
 
@@ -655,20 +670,26 @@ describe("MainContent resume parsing", () => {
     expect(optimizeResumeStreamMock).toHaveBeenCalled();
   });
 
-  it("gates guest optimization and clarifications before backend calls", async () => {
+  it("allows guest optimization and clarifications for current onboarding plan testing", async () => {
     authMockState.user = null;
     localStorage.setItem("watheq:guestMode", "true");
     localStorage.setItem("watheq:lastActiveTab", "optimize");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
 
     render(<MainContent />);
 
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
 
-    expect(generateClarificationsMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalled());
+    expect(optimizeResumeStreamMock.mock.calls[0][0]).toMatchObject({ freePreview: true });
     expect(optimizeResumeMock).not.toHaveBeenCalled();
-    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/Sign in required Sign in to run AI analysis and save your progress/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Sign in required Sign in to run AI analysis and save your progress/i)).not.toBeInTheDocument();
   });
 
   it("does not render landing pricing or comparison blocks in the authenticated workspace", () => {
@@ -705,5 +726,51 @@ describe("MainContent resume parsing", () => {
     expect(screen.getAllByText(/Vision 2030/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/tabs\.bulk/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Pipeline/i).length).toBeGreaterThan(0);
+  });
+
+  it("keeps the Path-A intent panel mounted across role -> comp -> location, then unmounts on complete", async () => {
+    // Signed-in user, freshly parsed resume in the store, no intent yet, prompt unseen.
+    localStorage.setItem("watheq:lastActiveTab", "resume");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", basics: { name: "Sara Al-Otaibi" }, sections: [] }));
+    useResumeStore.setState({
+      originalResume: {
+        basics: { name: "Sara Al-Otaibi", label: "", email: "", phone: "", summary: "", location: { city: "", countryCode: "", region: "" }, profiles: [] },
+        work: [],
+        education: [],
+        skills: [],
+      },
+      searchIntent: null,
+    });
+    onboardExtractMock.mockResolvedValue({ value: { targetRoles: ["Frontend Engineer"] }, confidence: "high" });
+
+    render(<MainContent />);
+
+    // role slot is shown (cv_basics skipped inline)
+    expect(await screen.findByText("What role are you targeting?")).toBeInTheDocument();
+
+    // Answer role — this writes searchIntent. The panel must NOT unmount (the bug).
+    fireEvent.change(screen.getByPlaceholderText(/senior frontend engineer/i), {
+      target: { value: "Frontend Engineer" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^next$/i }));
+
+    // comp slot appears -> panel stayed mounted even though intent is now non-empty.
+    expect(await screen.findByText("What salary are you after?")).toBeInTheDocument();
+    expect(useResumeStore.getState().searchIntent?.targetRoles).toEqual(["Frontend Engineer"]);
+
+    // comp via chip -> location
+    fireEvent.click(screen.getByRole("button", { name: /10.15k SAR\/mo/i }));
+    expect(await screen.findByText("Where do you want to work?")).toBeInTheDocument();
+
+    // location via chip -> final slot resolved -> onComplete -> panel unmounts
+    fireEvent.click(screen.getByRole("button", { name: /^remote$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Where do you want to work?")).not.toBeInTheDocument();
+    });
+    expect(localStorage.getItem("watheq:intentPrompted")).toBe("true");
+    const intent = useResumeStore.getState().searchIntent;
+    expect(intent?.compRange).toBeTruthy();
+    expect(intent?.location?.workMode).toBe("remote");
   });
 });

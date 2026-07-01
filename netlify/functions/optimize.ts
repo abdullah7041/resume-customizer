@@ -1,6 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { optimizeResume } from "../lib/gemini-client.js";
-import { withRateLimit } from "../lib/rate-limiter.js";
+import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
@@ -26,10 +26,24 @@ const baseHandler: Handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
+  let rawBody: Record<string, unknown>;
+  try {
+    rawBody = JSON.parse(event.body || "{}");
+  } catch {
+    return {
+      statusCode: 400,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid JSON body" }),
+    };
+  }
+  const freePreview = rawBody.freePreview === true;
+
   // Extract auth token from header
   const authHeader = event.headers.authorization || event.headers.Authorization;
+  let user: any = null;
+  let userEmail: string | undefined;
 
-  if (!authHeader) {
+  if (!freePreview && !authHeader) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
@@ -39,40 +53,51 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  // Verify token and get authenticated user
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-  const supabase = getSupabaseClient();
+  if (authHeader) {
+    // Verify token and get authenticated user
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const supabase = getSupabaseClient();
 
-  if (!supabase) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Server configuration error. Please contact support."
-      })
-    };
+    if (!supabase) {
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Server configuration error. Please contact support."
+        })
+      };
+    }
+
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authUser) {
+      return {
+        statusCode: 401,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Invalid or expired authentication token"
+        })
+      };
+    }
+    user = authUser;
+    userEmail = authUser.email;
   }
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Invalid or expired authentication token"
-      })
-    };
-  }
-
-  const userEmail = user.email;
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
+  const emailVerified = user?.email_confirmed_at !== null || (user as any)?.email_verified !== false;
+
+  if (freePreview) {
+    const previewLimit = await checkFreePreviewRateLimit(event, "optimize-free-preview", user?.id || userEmail);
+    if (!previewLimit.allowed && previewLimit.response) {
+      return previewLimit.response;
+    }
+  }
 
   // Check credits BEFORE processing (5 credits for optimize)
-  const creditCheck = await checkCredits(userEmail, 'optimize', { ipAddress, emailVerified });
+  const creditCheck = freePreview || !userEmail
+    ? { hasCredits: true, required: 0, available: 0 }
+    : await checkCredits(userEmail, 'optimize', { ipAddress, emailVerified });
 
   if (!creditCheck.hasCredits) {
     return {
@@ -88,8 +113,6 @@ const baseHandler: Handler = async (event) => {
   }
 
   try {
-    const rawBody = JSON.parse(event.body || "{}");
-
     // Validate request using Zod schema
     const parseResult = OptimizeRequestSchema.safeParse(rawBody);
     if (!parseResult.success) {
@@ -100,7 +123,7 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText, workHistory, language, userClarifications, userHardStops } = parseResult.data;
+    const { resumeText, jobText, workHistory, language, userClarifications, userHardStops, searchIntent } = parseResult.data;
 
     // Detect career vulnerabilities from structured work history
     const vulnerabilities = workHistory?.length
@@ -121,6 +144,7 @@ const baseHandler: Handler = async (event) => {
       vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
       userClarifications: userClarifications || '',
       userHardStops: userHardStops || [],
+      searchIntent: searchIntent || null,
     });
 
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
@@ -149,6 +173,7 @@ const baseHandler: Handler = async (event) => {
       vulnerabilities,
       userClarifications,
       userHardStops,
+      { searchIntent: searchIntent || null },
     );
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);
@@ -337,7 +362,9 @@ const baseHandler: Handler = async (event) => {
     ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
 
     // Consume credits AFTER successful optimization
-    const creditResult = await consumeCredits(userEmail, 'optimize');
+    const creditResult = freePreview || !userEmail
+      ? { creditsRemaining: null }
+      : await consumeCredits(userEmail, 'optimize');
 
     const responsePayload = {
       cards: cards,
@@ -356,6 +383,7 @@ const baseHandler: Handler = async (event) => {
       },
       // Credit information
       creditsRemaining: creditResult.creditsRemaining,
+      freePreview,
       // Gap Analysis - from AI response
       gapAnalysis: (optimization?.gap_analysis || []).map((gap: any) => ({
         requirement: gap.requirement || '',

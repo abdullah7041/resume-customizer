@@ -104,7 +104,7 @@ export interface RefineBulletResponse {
  * Do not store raw user instructions, resume text, job text, or AI output here.
  */
 export interface AiSuggestionEntry {
-  type: 'refine_bullet';
+  type: 'refine_bullet' | 'onboarding';
   sectionId: string;
   timestamp: string;
 }
