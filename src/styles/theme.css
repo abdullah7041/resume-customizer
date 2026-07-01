@@ -1,14 +1,14 @@
 :root {
-  /* Atmosphere - Light Mode (Warm Grey Foundation) */
-  --bg: #f3f1eb;
-  --surface: #faf8f2;
-  --surface-strong: #fffdf8;
-  --surface-glass-rgb: 250 248 242;
-  --surface-glass: rgba(250, 248, 242, 0.84);
-  --surface-glass-strong: rgba(255, 253, 248, 0.94);
-  --surface-glass-elevated: rgba(255, 254, 250, 0.97);
-  --surface-control: rgba(255, 253, 248, 0.9);
-  --surface-control-hover: rgba(247, 244, 237, 0.96);
+  /* Atmosphere - Light Mode (cool neutral foundation) */
+  --bg: #f5faf8;
+  --surface: #fbfefd;
+  --surface-strong: #ffffff;
+  --surface-glass-rgb: 251 254 253;
+  --surface-glass: rgba(251, 254, 253, 0.86);
+  --surface-glass-strong: rgba(255, 255, 255, 0.95);
+  --surface-glass-elevated: rgba(255, 255, 255, 0.98);
+  --surface-control: rgba(255, 255, 255, 0.92);
+  --surface-control-hover: rgba(237, 248, 244, 0.96);
   --ink: #021715;
   --ink-muted: #435a56;
   --ink-soft: #61726e;
@@ -26,16 +26,16 @@
   /* Panels - Light Mode */
   --panel-bg: var(--surface-glass);
   --panel-bg-elevated: var(--surface-glass-elevated);
-  --panel-stroke: rgba(76, 68, 53, 0.13);
+  --panel-stroke: rgba(13, 84, 72, 0.12);
   --panel-highlight: rgba(52, 211, 153, 0.12);
 
   /* Workspace surfaces - Light Mode */
-  --workspace-bg: #f3f1eb;
-  --workspace-surface: rgba(250, 248, 242, 0.82);
-  --workspace-surface-raised: rgba(255, 254, 250, 0.96);
-  --workspace-border: rgba(76, 68, 53, 0.11);
+  --workspace-bg: #f5faf8;
+  --workspace-surface: rgba(251, 254, 253, 0.84);
+  --workspace-surface-raised: rgba(255, 255, 255, 0.96);
+  --workspace-border: rgba(13, 84, 72, 0.10);
   --workspace-border-strong: rgba(13, 84, 72, 0.17);
-  --workspace-shadow: 0 2px 8px rgba(39, 31, 18, 0.05), 0 18px 38px -24px rgba(39, 31, 18, 0.16);
+  --workspace-shadow: 0 2px 8px rgba(2, 23, 21, 0.04), 0 18px 38px -24px rgba(2, 23, 21, 0.14);
 
   /* Elevation + sheen - Light Mode */
   --shadow-card:
@@ -54,7 +54,7 @@
   --shadow-glow: 0 0 0 1px rgba(13, 84, 72, 0.08), 0 18px 42px -32px rgba(52, 211, 153, 0.18);
   --shadow-ring: 0 0 0 1px rgba(15, 118, 110, 0.28);
 
-  --glass-border: rgba(76, 68, 53, 0.15);
+  --glass-border: rgba(13, 84, 72, 0.14);
   --glass-border-strong: rgba(13, 84, 72, 0.24);
   --glass-border-hover: rgba(13, 148, 136, 0.38);
   --focus-ring: rgba(15, 118, 110, 0.36);
@@ -63,8 +63,8 @@
   --glass-gold-sheen: linear-gradient(115deg, rgba(244, 211, 125, 0.15) 0%, rgba(52, 211, 153, 0.05) 55%, rgba(244, 211, 125, 0.1) 100%);
 
   /* Color system */
-  --surface-50: #f3f1eb;
-  --surface-50-rgb: 243 241 235;
+  --surface-50: #f5faf8;
+  --surface-50-rgb: 245 250 248;
   --surface-900: #021715;
   --surface-900-rgb: 2 23 21;
 
@@ -122,7 +122,7 @@
   --gradient-primary-value: linear-gradient(135deg, rgba(4, 122, 68, 0.95) 0%, rgba(0, 108, 53, 0.9) 38%, rgba(5, 80, 40, 0.85) 72%, rgba(0, 90, 43, 0.8) 100%);
   --gradient-primary-soft: linear-gradient(135deg, rgba(4, 122, 68, 0.82) 0%, rgba(11, 93, 68, 0.74) 45%, rgba(5, 80, 40, 0.65) 100%);
   --gradient-emerald: linear-gradient(135deg, rgba(4, 122, 68, 0.95) 0%, rgba(0, 80, 40, 0.9) 100%);
-  --gradient-muted-value: linear-gradient(120deg, rgba(245, 244, 240, 0.9) 0%, rgba(240, 239, 235, 0.76) 52%, rgba(235, 234, 230, 0.62) 100%);
+  --gradient-muted-value: linear-gradient(120deg, rgba(245, 250, 248, 0.92) 0%, rgba(235, 248, 243, 0.78) 52%, rgba(224, 242, 236, 0.62) 100%);
   --gradient-card-value: linear-gradient(150deg, rgba(255, 255, 255, 0.96) 0%, rgba(252, 252, 250, 0.92) 48%, rgba(248, 248, 246, 0.86) 100%);
   --gradient-halo: radial-gradient(circle at 18% 0%, rgba(15, 118, 110, 0.1) 0%, rgba(15, 118, 110, 0) 60%);
 

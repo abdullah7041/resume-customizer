@@ -1172,12 +1172,12 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    /* Light mode: warm ivory/green overlay so text is readable on the warm background */
+    /* Light mode: cool mint/white overlay so text is readable without a brown cast */
     background:
       linear-gradient(180deg,
-        rgba(243, 241, 235, 0.86) 0%,
-        rgba(243, 241, 235, 0.64) 38%,
-        rgba(243, 241, 235, 0.42) 100%),
+        rgba(245, 250, 248, 0.88) 0%,
+        rgba(235, 248, 243, 0.66) 38%,
+        rgba(224, 242, 236, 0.42) 100%),
       radial-gradient(circle at 52% 34%, rgba(0, 108, 53, 0.08) 0%, transparent 48%);
   }
 
@@ -1196,9 +1196,9 @@
     .skyline-readability-overlay {
       background:
         linear-gradient(180deg,
-          rgba(243, 241, 235, 0.90) 0%,
-          rgba(243, 241, 235, 0.68) 42%,
-          rgba(243, 241, 235, 0.46) 100%),
+          rgba(245, 250, 248, 0.90) 0%,
+          rgba(235, 248, 243, 0.70) 42%,
+          rgba(224, 242, 236, 0.46) 100%),
         radial-gradient(circle at 50% 28%, rgba(0, 108, 53, 0.07) 0%, transparent 44%);
     }
 
