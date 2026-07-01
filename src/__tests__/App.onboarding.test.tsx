@@ -3,6 +3,11 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../App';
+import { useResumeStore } from '../lib/stores/resumeStore';
+
+vi.mock('../components/onboarding/OnboardingChat', () => ({
+  default: () => <main>Onboarding</main>,
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -100,6 +105,8 @@ describe('App onboarding overlay — react-joyride removed', () => {
 
   beforeEach(() => {
     setPath('/');
+    // These assert the workspace (joyride-removal); skip the first-run gate.
+    window.localStorage.setItem('watheq:onboarded', 'true');
   });
 
   afterEach(() => {
@@ -137,6 +144,16 @@ describe('App onboarding overlay — react-joyride removed', () => {
     const uploadButton = screen.getByRole('button', { name: /upload resume/i });
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toBeEnabled();
+  });
+
+  it('shows the first-run onboarding gate when no resume, no intent, and not flagged', () => {
+    window.localStorage.removeItem('watheq:onboarded');
+    useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
+
+    render(<App />);
+
+    expect(screen.getByText('Onboarding')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /upload resume/i })).toBeNull();
   });
 
   it('keeps workflow controls present and clickable after sign-in', () => {
