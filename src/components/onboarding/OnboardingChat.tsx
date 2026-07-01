@@ -264,6 +264,11 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           </button>
         </div>
       )}
+      {!inline && (
+        <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-center text-sm font-medium text-emerald-50">
+          This sets your target. Next you will upload or paste your resume, then paste a job ad to optimize.
+        </p>
+      )}
 
       {/* Progress dots */}
       <div className="flex items-center justify-center gap-2" aria-label={`Step ${answered + 1} of ${total}`}>
