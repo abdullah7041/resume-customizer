@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi, beforeEach, describe, it, expect } from 'vitest';
 import { MatchSection as JobMatch } from '../components/sections/MatchSection';
 
@@ -180,8 +180,8 @@ describe('JobMatch', () => {
     expect(screen.getByText(/matches the requirements/i)).toBeInTheDocument();
   });
 
-  it('allows guest match analysis to reach credit confirmation', () => {
-    const onAnalyzeMatchAI = vi.fn();
+  it('allows guest match analysis to run one free preview without credit confirmation', async () => {
+    const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 82 });
     const onRequireSignIn = vi.fn();
 
     render(
@@ -202,9 +202,14 @@ describe('JobMatch', () => {
     fireEvent.click(screen.getByRole('button', { name: /analyze match with ai/i }));
 
     expect(onRequireSignIn).not.toHaveBeenCalled();
-    expect(onAnalyzeMatchAI).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onAnalyzeMatchAI).toHaveBeenCalledWith(
+        'Senior product manager role with roadmap ownership and stakeholder leadership.',
+        { freePreview: true },
+      );
+    });
     expect(screen.queryByText('Sign in to run AI analysis and save your progress.')).not.toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
 

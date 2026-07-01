@@ -193,6 +193,15 @@ export function TruthCheckSection({
           )}
         </div>
 
+        {isGuestMode && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-900 dark:text-amber-100">
+            {t(
+              'sections.truthCheck.guestOnlySignIn',
+              'Truth Check is only available after you sign in.'
+            )}
+          </div>
+        )}
+
         {result && !isAnalyzing && (
           <p className="text-xs font-medium text-gray-500 dark:text-emerald-100/60">
             {t('sections.truthCheck.noChangesNote', 'Your resume has not been changed.')}

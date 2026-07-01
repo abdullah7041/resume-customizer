@@ -151,8 +151,8 @@ describe('optimize function', () => {
                 body: 'not json'
             } as Partial<HandlerEvent>;
             const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
-            expect(result.statusCode).toBe(500);
-            expect(JSON.parse(result.body).error).toBe('Failed to optimize resume');
+            expect(result.statusCode).toBe(400);
+            expect(JSON.parse(result.body).error).toBe('Invalid JSON body');
         });
     });
 

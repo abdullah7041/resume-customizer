@@ -300,13 +300,15 @@ describe('OptimizeSection', () => {
             expect(button).not.toBeDisabled();
         });
 
-        it('allows guest optimization to reach credit confirmation', () => {
+        it('allows guest optimization to run one free preview without credit confirmation', async () => {
             mockStoreState.originalResume = { basics: { name: 'Test User' } };
             const onRequireSignIn = vi.fn();
+            const onOptimize = vi.fn().mockResolvedValue({ cards: [] });
 
             renderWithProviders(
                 <OptimizeSection
                     isGuestMode
+                    onOptimize={onOptimize}
                     onRequireSignIn={onRequireSignIn}
                     protectedActionMessage="Sign in to run AI analysis and save your progress."
                 />
@@ -315,8 +317,11 @@ describe('OptimizeSection', () => {
             fireEvent.click(screen.getByRole('button', { name: /optimize resume/i }));
 
             expect(onRequireSignIn).not.toHaveBeenCalled();
+            await waitFor(() => {
+                expect(onOptimize).toHaveBeenCalledWith('auto', { freePreview: true });
+            });
             expect(screen.queryByText('Sign in to run AI analysis and save your progress.')).not.toBeInTheDocument();
-            expect(screen.getByRole('dialog')).toBeInTheDocument();
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         });
     });
 

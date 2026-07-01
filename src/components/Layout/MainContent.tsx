@@ -419,7 +419,7 @@ export default function MainContent() {
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
-  const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[] } | null>(null);
+  const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[]; freePreview?: boolean } | null>(null);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.DEV;
 
@@ -950,7 +950,7 @@ export default function MainContent() {
   );
 
   const handleAnalyzeMatchAI = useCallback(
-    async (jobDescriptionInput) => {
+    async (jobDescriptionInput, options?: { freePreview?: boolean }) => {
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -996,7 +996,7 @@ export default function MainContent() {
         const { parsedResumeText } = useResumeStore.getState();
         const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
 
-        const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language);
+        const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language, options);
         setAiDebug(buildAiDebugSnapshot(result, "success"));
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
@@ -1148,7 +1148,7 @@ export default function MainContent() {
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
-    async ({ mode, workHistory, userClarifications, userHardStops }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[] }) => {
+    async ({ mode, workHistory, userClarifications, userHardStops, freePreview }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean }) => {
       if (!resumeData?.plainText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
@@ -1184,6 +1184,7 @@ export default function MainContent() {
               userClarifications,
               userHardStops,
               searchIntent: useResumeStore.getState().searchIntent,
+              freePreview,
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
@@ -1223,6 +1224,7 @@ export default function MainContent() {
               userClarifications,
               userHardStops,
               searchIntent: useResumeStore.getState().searchIntent,
+              freePreview,
             }
           );
         }
@@ -1371,7 +1373,7 @@ export default function MainContent() {
 
   // Gate function: runs clarification step first, then delegates to handleOptimizeActual
   const handleOptimize = useCallback(
-    async (mode) => {
+    async (mode, options?: { freePreview?: boolean }) => {
       if (!resumeData?.plainText || !jobDescription) {
         pushToast({
           type: "warning",
@@ -1403,7 +1405,7 @@ export default function MainContent() {
         // E1: only skip the clarification endpoint when deterministic evidence
         // says this is a known strong match with no career vulnerabilities.
         if (!shouldRequestClarifications(matchAnalysis?.score, workHistory)) {
-          return await handleOptimizeActual({ mode, workHistory });
+          return await handleOptimizeActual({ mode, workHistory, freePreview: options?.freePreview });
         }
 
         // ---- Clarification Step (free, non-fatal) ----
@@ -1426,7 +1428,7 @@ export default function MainContent() {
         if (clarifyResult.clarifications?.length > 0) {
           // Pause the flow — show the modal and wait for user answers
           setClarificationQuestions(clarifyResult.clarifications);
-          setPendingOptimizeArgs({ mode, workHistory });
+          setPendingOptimizeArgs({ mode, workHistory, freePreview: options?.freePreview });
           setIsInterrogating(true);
           setIsOptimizing(false);
           setFlowProgress(0);
@@ -1434,11 +1436,11 @@ export default function MainContent() {
         }
 
         // No questions → fall through to the actual optimize call
-        return await handleOptimizeActual({ mode, workHistory, userClarifications: undefined });
+        return await handleOptimizeActual({ mode, workHistory, userClarifications: undefined, freePreview: options?.freePreview });
       } catch (outerError) {
         // If clarification itself throws (shouldn't — it's non-fatal), proceed anyway
         console.warn('[handleOptimize] Clarification error, proceeding without:', outerError);
-        return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined });
+        return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined, freePreview: options?.freePreview });
       }
     },
     [handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
@@ -1453,18 +1455,18 @@ export default function MainContent() {
       answers,
       t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
     );
-    const { mode, workHistory } = pendingOptimizeArgs || {};
+    const { mode, workHistory, freePreview } = pendingOptimizeArgs || {};
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications, userHardStops });
+    await handleOptimizeActual({ mode, workHistory, userClarifications, userHardStops, freePreview });
   }, [clarificationQuestions, handleOptimizeActual, pendingOptimizeArgs, t]);
 
   const handleClarificationSkip = useCallback(async () => {
     setIsInterrogating(false);
-    const { mode, workHistory } = pendingOptimizeArgs || {};
+    const { mode, workHistory, freePreview } = pendingOptimizeArgs || {};
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications: undefined });
+    await handleOptimizeActual({ mode, workHistory, userClarifications: undefined, freePreview });
   }, [handleOptimizeActual, pendingOptimizeArgs]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */

@@ -446,7 +446,7 @@ export const parseResume = async (resumeInput, options = {}) => {
   }, 3, 2000); // 3 retries, 2s base delay
 };
 
-export const analyzeResumeWithAI = async (resumeText, jobDescription, language = 'en') => {
+export const analyzeResumeWithAI = async (resumeText, jobDescription, language = 'en', options = {}) => {
   if (!resumeText?.plainText && typeof resumeText !== "string") {
     throw new Error("Resume text is required");
   }
@@ -466,12 +466,13 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
 
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders({ requireAuth: true });
+      const freePreview = !!options.freePreview;
+      const headers = await getAuthHeaders({ requireAuth: !freePreview });
 
       const response = await fetch(MATCH_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDescription, language }),
+        body: JSON.stringify({ resumeText, jobText: jobDescription, language, ...(freePreview ? { freePreview } : {}) }),
       });
 
       const data = await handleResponse(response);
@@ -570,18 +571,18 @@ export const onboardExtract = async ({ slot, userText, currentIntent, signal } =
   return { value: data.value || {}, confidence: data.confidence || 'low' };
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null, freePreview = false }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders({ requireAuth: true });
+      const headers = await getAuthHeaders({ requireAuth: !freePreview });
 
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent, ...(freePreview ? { freePreview } : {}) }),
       });
 
       const data = await handleResponse(response);
@@ -734,12 +735,12 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null, cacheOnly = false }, onStatus) => {
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null, cacheOnly = false, freePreview = false }, onStatus) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
 
-  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent };
+  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent, ...(freePreview ? { freePreview } : {}) };
   const recoverFromCacheOnly = async () => {
     if (cacheOnly) return null;
     try {
@@ -753,6 +754,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
         userClarifications,
         userHardStops,
         searchIntent,
+        freePreview,
         cacheOnly: true,
       }, onStatus);
     } catch (recoveryErr) {
@@ -760,7 +762,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
       return null;
     }
   };
-  const headers = await getAuthHeaders({ requireAuth: true });
+  const headers = await getAuthHeaders({ requireAuth: !freePreview });
   // Remove Content-Type for SSE request compatibility — the body is still JSON
   // but we need to accept text/event-stream response
   const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
