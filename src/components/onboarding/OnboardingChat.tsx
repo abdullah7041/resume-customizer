@@ -3,7 +3,7 @@
 // common answers, a Skip on every slot, progress dots, plain text input (the OS
 // keyboard mic supplies voice). Each answer calls onboard-extract, patches the store
 // through the single writer, and advances the pure state machine.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OnboardingPath, OnboardingSlot, SearchIntent, SlotConfidence } from '@/types/onboarding';
 import type { Basics } from '@/types/resume';
 import { advance, initialState, progress, terminalAction } from '@/lib/onboarding/flow';
@@ -13,8 +13,16 @@ import { useResumeStore } from '@/lib/stores/resumeStore';
 interface OnboardingChatProps {
   /** has_cv when a resume was already parsed; no_cv to build a starter CV from answers. */
   path?: OnboardingPath;
+  /**
+   * 'fullscreen' (default) = first-run gate screen, starts at cv_basics.
+   * 'inline' = compact post-upload panel; cv_basics is already known from parse, so it
+   * starts at the role slot and renders nothing once done (parent unmounts it).
+   */
+  mode?: 'fullscreen' | 'inline';
   /** Called once the machine reaches done. */
   onComplete?: () => void;
+  /** Inline only: user dismissed the whole panel ("Not now"). */
+  onDismiss?: () => void;
 }
 
 interface SlotCopy {
@@ -51,7 +59,8 @@ function emptyIntent(confidence: SlotConfidence): SearchIntent {
   return { targetRoles: [], meta: { confidence, completeness: 0, updatedAt: new Date().toISOString() } };
 }
 
-export default function OnboardingChat({ path: pathProp, onComplete }: OnboardingChatProps) {
+export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', onComplete, onDismiss }: OnboardingChatProps) {
+  const inline = mode === 'inline';
   const originalResume = useResumeStore((s) => s.originalResume);
   const storedIntent = useResumeStore((s) => s.searchIntent);
   const setSearchIntent = useResumeStore((s) => s.setSearchIntent);
@@ -62,12 +71,19 @@ export default function OnboardingChat({ path: pathProp, onComplete }: Onboardin
   const path: OnboardingPath = pathProp ?? (originalResume?.basics?.name ? 'has_cv' : 'no_cv');
   const baseConfidence: SlotConfidence = path === 'no_cv' ? 'low' : 'medium';
 
-  const [machine, setMachine] = useState(() => initialState(path));
+  // Inline (Path A) skips cv_basics — name/title already came from parse-resume — so
+  // pre-mark it answered and start at role.
+  const [machine, setMachine] = useState(() =>
+    inline ? advance(initialState(path), 'cv_basics') : initialState(path),
+  );
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Local working copy of the intent; mirrored into the store on every change.
-  const [intent, setIntent] = useState<SearchIntent>(() => storedIntent ?? emptyIntent(baseConfidence));
+  // Working copy of the intent, held in a ref (not state) so committing it writes to
+  // the store synchronously in the event handler. Doing the store write inside a
+  // setState updater silently dropped the final slot: on the last answer the panel
+  // unmounts in the same tick, so the updater's side effect never flushed.
+  const intentRef = useRef<SearchIntent>(storedIntent ?? emptyIntent(baseConfidence));
 
   const current = machine.current;
   const copy = current !== 'done' ? SLOT_COPY[path][current] : null;
@@ -90,11 +106,10 @@ export default function OnboardingChat({ path: pathProp, onComplete }: Onboardin
 
   const commitIntent = useCallback(
     (partial: Partial<SearchIntent>) => {
-      setIntent((prev) => {
-        const next: SearchIntent = { ...prev, ...partial, meta: { ...prev.meta, confidence: baseConfidence } };
-        setSearchIntent(next);
-        return next;
-      });
+      const prev = intentRef.current;
+      const next: SearchIntent = { ...prev, ...partial, meta: { ...prev.meta, confidence: baseConfidence } };
+      intentRef.current = next;
+      setSearchIntent(next);
     },
     [baseConfidence, setSearchIntent],
   );
@@ -158,7 +173,7 @@ export default function OnboardingChat({ path: pathProp, onComplete }: Onboardin
     setBusy(true);
     setError(null);
     try {
-      const { value } = await onboardExtract({ slot: current, userText, currentIntent: intent });
+      const { value } = await onboardExtract({ slot: current, userText, currentIntent: intentRef.current });
       applySlotValue(current, value);
       goNext(current);
     } catch (err) {
@@ -167,16 +182,16 @@ export default function OnboardingChat({ path: pathProp, onComplete }: Onboardin
     } finally {
       setBusy(false);
     }
-  }, [applySlotValue, current, goNext, intent, prefill, text]);
+  }, [applySlotValue, current, goNext, prefill, text]);
 
   // Chips set structured values directly — no AI round-trip needed.
   const pickWorkMode = useCallback(
     (workMode: 'remote' | 'hybrid' | 'onsite') => {
       if (current !== 'location') return;
-      commitIntent({ location: { ...(intent.location ?? {}), workMode } });
+      commitIntent({ location: { ...(intentRef.current.location ?? {}), workMode } });
       goNext('location');
     },
-    [commitIntent, current, goNext, intent.location],
+    [commitIntent, current, goNext],
   );
 
   const pickCompBand = useCallback(
@@ -194,6 +209,8 @@ export default function OnboardingChat({ path: pathProp, onComplete }: Onboardin
   }, [current, goNext]);
 
   if (current === 'done') {
+    // Inline: nothing to show — the parent unmounts the panel on complete.
+    if (inline) return null;
     const completeness = getProfileCompleteness();
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-4 p-6 text-center">
@@ -224,7 +241,30 @@ export default function OnboardingChat({ path: pathProp, onComplete }: Onboardin
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-5 p-6">
+    <div
+      className={
+        inline
+          ? 'flex flex-col gap-4 rounded-xl border border-emerald-500/30 bg-slate-800/40 p-4'
+          : 'mx-auto flex max-w-md flex-col gap-5 p-6'
+      }
+    >
+      {/* Inline header: a one-line "why" + a dismiss affordance. */}
+      {inline && (
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-medium text-emerald-300">
+            Tailor results to your goal — takes 20 seconds.
+          </p>
+          <button
+            type="button"
+            onClick={() => onDismiss?.()}
+            disabled={busy}
+            className="shrink-0 text-sm text-slate-400 underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            Not now
+          </button>
+        </div>
+      )}
+
       {/* Progress dots */}
       <div className="flex items-center justify-center gap-2" aria-label={`Step ${answered + 1} of ${total}`}>
         {Array.from({ length: total }).map((_, i) => (
@@ -235,8 +275,8 @@ export default function OnboardingChat({ path: pathProp, onComplete }: Onboardin
         ))}
       </div>
 
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-slate-100">{copy?.title}</h2>
+      <div className={inline ? 'text-start' : 'text-center'}>
+        <h2 className={inline ? 'text-lg font-bold text-slate-100' : 'text-xl font-bold text-slate-100'}>{copy?.title}</h2>
         <p className="mt-1 text-sm text-slate-400">{copy?.hint}</p>
       </div>
 
