@@ -292,10 +292,17 @@ export default function MainContent() {
   const [activeTab, setActiveTab] = useState("resume");
   const [flowProgress, setFlowProgress] = useState(0);
   // Path-A intent capture: after a successful parse, auto-show the inline role/comp/
-  // location prompt unless intent already exists or the user resolved the prompt.
-  const searchIntent = useResumeStore((state) => state.searchIntent);
+  // location prompt. The mount gate must NOT depend on searchIntent being empty —
+  // OnboardingChat writes searchIntent at the very first (role) slot, so gating on
+  // emptiness would unmount the panel mid-flow before comp/location. Gate on
+  // resume-parsed AND !intentPrompted; the child owns slot progression and the parent
+  // only unmounts when it fires onComplete/onDismiss (which sets intentPrompted).
+  // Seed intentPrompted true when an intent already exists so returning users with a
+  // saved intent are not re-prompted — read once at mount, never reactively.
   const hasParsedResume = useResumeStore((state) => Boolean(state.originalResume));
-  const [intentPrompted, setIntentPrompted] = useState(isIntentPrompted);
+  const [intentPrompted, setIntentPrompted] = useState(
+    () => isIntentPrompted() || Boolean(useResumeStore.getState().searchIntent),
+  );
   const resolveIntentPrompt = useCallback(() => {
     markIntentPrompted();
     setIntentPrompted(true);
@@ -1867,9 +1874,9 @@ export default function MainContent() {
                 onClear={handleClearResume}
               />
               {/* Path-A inline intent capture — auto-shows after a successful parse,
-                  skippable, never blocks upload. Hidden once intent exists or the
-                  user resolves the prompt. */}
-              {hasParsedResume && !searchIntent && !intentPrompted && (
+                  skippable, never blocks upload. Stays mounted across role -> comp ->
+                  location; only unmounts when the child resolves the prompt. */}
+              {hasParsedResume && !intentPrompted && (
                 <div className="mt-4">
                   <OnboardingChat
                     path="has_cv"

@@ -3,7 +3,7 @@
 // common answers, a Skip on every slot, progress dots, plain text input (the OS
 // keyboard mic supplies voice). Each answer calls onboard-extract, patches the store
 // through the single writer, and advances the pure state machine.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OnboardingPath, OnboardingSlot, SearchIntent, SlotConfidence } from '@/types/onboarding';
 import type { Basics } from '@/types/resume';
 import { advance, initialState, progress, terminalAction } from '@/lib/onboarding/flow';
@@ -79,8 +79,11 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Local working copy of the intent; mirrored into the store on every change.
-  const [intent, setIntent] = useState<SearchIntent>(() => storedIntent ?? emptyIntent(baseConfidence));
+  // Working copy of the intent, held in a ref (not state) so committing it writes to
+  // the store synchronously in the event handler. Doing the store write inside a
+  // setState updater silently dropped the final slot: on the last answer the panel
+  // unmounts in the same tick, so the updater's side effect never flushed.
+  const intentRef = useRef<SearchIntent>(storedIntent ?? emptyIntent(baseConfidence));
 
   const current = machine.current;
   const copy = current !== 'done' ? SLOT_COPY[path][current] : null;
@@ -103,11 +106,10 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
 
   const commitIntent = useCallback(
     (partial: Partial<SearchIntent>) => {
-      setIntent((prev) => {
-        const next: SearchIntent = { ...prev, ...partial, meta: { ...prev.meta, confidence: baseConfidence } };
-        setSearchIntent(next);
-        return next;
-      });
+      const prev = intentRef.current;
+      const next: SearchIntent = { ...prev, ...partial, meta: { ...prev.meta, confidence: baseConfidence } };
+      intentRef.current = next;
+      setSearchIntent(next);
     },
     [baseConfidence, setSearchIntent],
   );
@@ -171,7 +173,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
     setBusy(true);
     setError(null);
     try {
-      const { value } = await onboardExtract({ slot: current, userText, currentIntent: intent });
+      const { value } = await onboardExtract({ slot: current, userText, currentIntent: intentRef.current });
       applySlotValue(current, value);
       goNext(current);
     } catch (err) {
@@ -180,16 +182,16 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
     } finally {
       setBusy(false);
     }
-  }, [applySlotValue, current, goNext, intent, prefill, text]);
+  }, [applySlotValue, current, goNext, prefill, text]);
 
   // Chips set structured values directly — no AI round-trip needed.
   const pickWorkMode = useCallback(
     (workMode: 'remote' | 'hybrid' | 'onsite') => {
       if (current !== 'location') return;
-      commitIntent({ location: { ...(intent.location ?? {}), workMode } });
+      commitIntent({ location: { ...(intentRef.current.location ?? {}), workMode } });
       goNext('location');
     },
-    [commitIntent, current, goNext, intent.location],
+    [commitIntent, current, goNext],
   );
 
   const pickCompBand = useCallback(
