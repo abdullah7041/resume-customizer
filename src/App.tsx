@@ -19,6 +19,9 @@ import { HRSuperSaudOverlay, HRSuperSaudProvider } from "./features/hr-super-sau
 import { useResumeStore } from "./lib/stores/resumeStore";
 import OnboardingChat from "./components/onboarding/OnboardingChat";
 import { isOnboarded, markOnboarded } from "./lib/onboarding/onboardedFlag";
+import { useAuth } from "./hooks/useAuth";
+
+const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 
 const getCurrentPath = () => {
   if (typeof window === "undefined") return "/";
@@ -26,14 +29,24 @@ const getCurrentPath = () => {
 };
 
 export default function App() {
+  const { user } = useAuth();
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const hasResume = useResumeStore((state) => Boolean(state.originalResume || state.parsedResumeText));
-  const hasSearchIntent = useResumeStore((state) => Boolean(state.searchIntent));
 
   // First-run onboarding gate (profile state, not device). The localStorage flag
   // breaks the loop for a user who skips every slot (no resume + no intent).
   const [onboardedFlag, setOnboardedFlag] = useState(isOnboarded);
-  const needsOnboarding = !hasResume && !hasSearchIntent && !onboardedFlag;
+  const [onboardingGateActive, setOnboardingGateActive] = useState(
+    () => {
+      const resumeState = useResumeStore.getState();
+      return (
+        !isOnboarded() &&
+        !Boolean(resumeState.originalResume || resumeState.parsedResumeText) &&
+        !Boolean(resumeState.searchIntent)
+      );
+    }
+  );
+  const needsOnboarding = onboardingGateActive && !onboardedFlag;
 
   // Run storage migration once on app initialization
   useEffect(() => {
@@ -79,8 +92,12 @@ export default function App() {
               <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
                 <OnboardingChat
                   onComplete={() => {
+                    if (!user && typeof window !== "undefined") {
+                      window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
+                    }
                     markOnboarded();
                     setOnboardedFlag(true);
+                    setOnboardingGateActive(false);
                   }}
                 />
               </main>
