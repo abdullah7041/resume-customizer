@@ -1,6 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { optimizeResume } from "../lib/gemini-client.js";
-import { withRateLimit } from "../lib/rate-limiter.js";
+import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
@@ -86,6 +86,13 @@ const baseHandler: Handler = async (event) => {
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
   const emailVerified = user?.email_confirmed_at !== null || (user as any)?.email_verified !== false;
+
+  if (freePreview) {
+    const previewLimit = await checkFreePreviewRateLimit(event, "optimize-free-preview", user?.id || userEmail);
+    if (!previewLimit.allowed && previewLimit.response) {
+      return previewLimit.response;
+    }
+  }
 
   // Check credits BEFORE processing (5 credits for optimize)
   const creditCheck = freePreview || !userEmail

@@ -20,7 +20,7 @@ import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
-import { checkRateLimitForRequest } from "../lib/rate-limiter.js";
+import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
 import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
 import { MODELS } from "../lib/model-registry.js";
 
@@ -142,6 +142,13 @@ export default async function handler(request: Request): Promise<Response> {
 
   const ipAddress = getClientIPFromRequest(request);
   const emailVerified = user?.email_confirmed_at !== null || (user as any)?.email_verified !== false;
+
+  if (freePreview && rawBody.cacheOnly !== true) {
+    const previewLimit = await checkFreePreviewRateLimitForRequest(request, "optimize-free-preview", user?.id || userEmail);
+    if (!previewLimit.allowed && previewLimit.response) {
+      return previewLimit.response;
+    }
+  }
 
   const parseResult = OptimizeRequestSchema.safeParse(rawBody);
   if (!parseResult.success) {
