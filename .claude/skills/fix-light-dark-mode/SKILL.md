@@ -20,6 +20,23 @@ Watheq is **dark-first**. Light is the default (no class); `.dark` on `<html>` a
 
 Both flip automatically. **If an element uses one of these, you almost never edit the component — fix the variable in theme.css / index.css.** The bug is only in elements using *raw* Tailwind colors (below).
 
+### Preferred: semantic utility shorthands
+
+The design tokens are exposed as plain Tailwind utilities in `src/index.css` (`@theme inline`), so you get short class names that flip automatically — no `bg-[color:var(--...)]` boilerplate, no `dark:` pair:
+
+| Class | Token | Use for |
+|---|---|---|
+| `bg-surface` | `--surface` | card / panel background |
+| `bg-surface-strong` | `--surface-strong` | raised surface |
+| `bg-panel` | `--panel-bg` | section / container background |
+| `text-ink` | `--ink` | primary text / headings |
+| `text-ink-muted` | `--ink-muted` | secondary text |
+| `text-ink-soft` | `--ink-soft` | tertiary / meta text |
+| `text-ink-accent` | `--ink-accent` | emerald accent text (emerald-700 light / emerald-400 dark) |
+| `border-line` | `--panel-stroke` | borders / dividers |
+
+For subtle tracks / hovers that must show on both themes, use the ink token at low opacity: `bg-ink/10` (a black tint in light, a white tint in dark). Brand and status accents (`emerald`/`amber`/`red`) stay as normal utilities; those are theme-independent and may keep a `dark:` sibling.
+
 ## Diagnose (3 steps)
 
 1. **Reproduce in light.** Toggle the theme, or in DevTools remove the `dark` class from `<html>`. Find the element that stays dark / low-contrast.
@@ -38,37 +55,42 @@ These applied without a `dark:` partner are the offenders. Grep for them:
 
 Default to **tokens/helpers** — they are the design system's source of truth (`src/lib/styles/glass.ts`) and need no color guessing. Reach for hand-tuned `dark:` pairs only when no token fits.
 
-1. **Surface / panel / card** → use the helper. It auto-flips via CSS vars:
+1. **Surface / panel / card** → semantic utility (preferred) or the glass helper. Both auto-flip via CSS vars:
    ```tsx
+   className="bg-surface border border-line"     // preferred shorthand
+   // or the helper for full glassmorphism:
    import { glass } from '@/lib/styles/glass';
    className={glass.elevated}   // 'neu-card shadow-2xl'  (also: glass.card, glass.subtle, glass.input)
    ```
-   Or the raw token: `bg-[color:var(--surface-glass)] border-[color:var(--glass-border)]`.
 
-2. **Inline utility that must stay inline** → **light base + `dark:` for the dark value.** Base is the LIGHT color, never the dark one:
+2. **Inline utility that must stay inline** → replace the bare dark value with a semantic utility. One class, no `dark:` pair:
    ```diff
    - "bg-black/40 border border-white/10"
-   + "bg-[color:var(--surface-glass)] border border-[color:var(--glass-border)] dark:bg-black/40 dark:border-white/10"
+   + "bg-surface border border-line"
    ```
+   If no token fits, fall back to **light base + `dark:` for the dark value** (base is the LIGHT color, never the dark one).
 
-3. **Text / icon** → `text-[color:var(--ink)]` (or `text-gray-900 dark:text-white`); muted → `var(--ink-muted)`. Gradient text: replace the `to-white` stop with a light-readable color under `dark:` (`from-emerald-700 to-emerald-500 dark:from-emerald-200 dark:to-white`).
+3. **Text / icon** → `text-ink` (primary), `text-ink-muted` (secondary), `text-ink-soft` (meta). Gradient text: replace the `to-white` stop with a light-readable color under `dark:` (`from-emerald-700 to-emerald-500 dark:from-emerald-200 dark:to-white`).
 
 ### Token cheat sheet (no guessing hex/opacity)
 
 | Need | Use |
 |---|---|
-| Surface / card bg | `glass.card` · `bg-[color:var(--surface-glass)]` |
+| Surface / card bg | `bg-surface` · `bg-panel` (or `glass.card`) |
 | Control / input bg | `glass.input` · `bg-[color:var(--surface-control)]` |
-| Border | `border-[color:var(--glass-border)]` |
-| Primary text | `text-[color:var(--ink)]` |
-| Muted text | `text-[color:var(--ink-muted)]` |
+| Border / divider | `border-line` |
+| Primary text | `text-ink` |
+| Muted text | `text-ink-muted` |
+| Meta text | `text-ink-soft` |
+| Accent text | `text-ink-accent` |
+| Subtle track / hover | `bg-ink/10` · `bg-ink/5` |
 | Focus ring | `var(--focus-ring)` |
 | Badge / button | `glass.badge.*` · `glass.button.*` |
 
 ## Reference examples in repo
 
-- **Good (copy this):** `src/components/modals/ClarificationModal.tsx` — uses `glass.*` + token text.
-- **Bad (the classic break):** `src/components/ui/Vision2030Modal.tsx`, `Vision2030CalculationModal.tsx`, `Vision2030Summary.tsx`, `Vision2030/SectorBreakdown.tsx` — dark-only `bg-black/40`, `bg-gray-900`, `border-white/10`.
+- **Good (copy this):** `src/components/modals/ClarificationModal.tsx` — uses `glass.*` + token text. `src/components/analysis/Vision2030Score.tsx` and `src/components/compliance/UserDataRights.tsx` — migrated to the `bg-surface` / `text-ink` / `border-line` shorthands (were light-only before). `src/components/ui/UploadCard.tsx` — arbitrary hex (`dark:bg-[#082b23]/95`) replaced with `bg-surface`.
+- **Still to migrate:** `src/components/ui/Vision2030Modal.tsx`, `Vision2030Summary.tsx`, `Vision2030/SectorBreakdown.tsx` — dark-only `bg-white/[0.02]`, `border-white/5`.
 
 ## Verify (don't claim it's fixed without this)
 

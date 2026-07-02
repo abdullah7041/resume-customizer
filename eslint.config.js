@@ -40,4 +40,42 @@ export default [
     files: ["**/__tests__/**/*.{js,jsx,ts,tsx}", "**/*.test.{js,jsx,ts,tsx}"],
     languageOptions: { globals: vitest.environments.env.globals },
   },
+
+  // Theming guardrail: block *neutral* inline dark: colors and arbitrary hex.
+  // Use semantic token utilities instead (bg-surface, text-ink, text-ink-muted,
+  // border-line, bg-ink/10) - see .claude/skills/fix-light-dark-mode.
+  // Scoped to already-migrated files; widen this glob as more files move to tokens.
+  {
+    files: [
+      "src/components/analysis/Vision2030Score.tsx",
+      "src/components/compliance/UserDataRights.tsx",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "Literal[value=/dark:[a-z:-]*(bg|text|border|ring|from|via|to|divide|placeholder|shadow|outline|fill|stroke)-(white|black|gray|slate|zinc|neutral|stone)/]",
+          message:
+            "Neutral inline dark: color. Use a semantic token utility (bg-surface, text-ink, text-ink-muted, border-line, bg-ink/10) - see .claude/skills/fix-light-dark-mode.",
+        },
+        {
+          selector: "Literal[value=/dark:[a-z:-]*\\[#/]",
+          message:
+            "Arbitrary hex under dark:. Use a semantic token utility (bg-surface, text-ink, border-line) - see .claude/skills/fix-light-dark-mode.",
+        },
+        {
+          selector:
+            "TemplateElement[value.cooked=/dark:[a-z:-]*(bg|text|border|ring|from|via|to|divide|placeholder|shadow|outline|fill|stroke)-(white|black|gray|slate|zinc|neutral|stone)/]",
+          message:
+            "Neutral inline dark: color. Use a semantic token utility (bg-surface, text-ink, text-ink-muted, border-line, bg-ink/10) - see .claude/skills/fix-light-dark-mode.",
+        },
+        {
+          selector: "TemplateElement[value.cooked=/dark:[a-z:-]*\\[#/]",
+          message:
+            "Arbitrary hex under dark:. Use a semantic token utility (bg-surface, text-ink, border-line) - see .claude/skills/fix-light-dark-mode.",
+        },
+      ],
+    },
+  },
 ];

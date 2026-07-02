@@ -23,6 +23,20 @@
   --color-border: var(--shadcn-border);
   --color-input: var(--shadcn-input);
   --color-ring: var(--shadcn-ring);
+
+  /* Emerald design-system semantic tokens.
+     Backed by the paired light/.dark values in styles/theme.css, so
+     bg-surface / text-ink / border-line etc. flip automatically by theme.
+     Use these for structural surfaces, text, and borders instead of inline
+     neutral dark: utilities (bg-white, text-gray-*, dark:bg-[#...]). */
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-panel: var(--panel-bg);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-accent: var(--ink-accent);
+  --color-line: var(--panel-stroke);
 }
 
 @layer base {

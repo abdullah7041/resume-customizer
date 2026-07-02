@@ -3,7 +3,7 @@
 **Watheq** (واثق) — Saudi-themed AI Resume Optimizer.
 React 19 + Vite 8 + Tailwind CSS v4 + Zustand + Netlify Functions + Supabase + OpenRouter (Gemini 2.5).
 
-Shared agent context: `AGENTS.md`, `context/DEVELOPER_PROFILE.md`, and `context/CODING_STANDARDS.md`.
+Shared agent context: `AGENTS.md`. This file (`CLAUDE.md`) is the single source of truth for rules, commands, gotchas, and standards.
 
 ## Commands
 
@@ -11,7 +11,7 @@ Shared agent context: `AGENTS.md`, `context/DEVELOPER_PROFILE.md`, and `context/
 npm run dev                # Vite dev server (port 5173)
 npm run dev:netlify        # Netlify dev with functions (port 8888)
 npm run build              # Production build
-npm run quality:parallel   # Lint + TypeScript + Tests in parallel (ALWAYS run after changes)
+npm run quality:parallel   # Broad gate (lint+types+tests). Timeout-prone in-agent — see Quality. Prefer focused checks for small edits.
 npm run quality:full       # Fast quality gate + production build + i18n validation
 npm run lint:fix           # Auto-fix ESLint issues
 npm run type:check         # TypeScript check
@@ -29,10 +29,29 @@ npm run test               # Vitest unit tests
 - Skills are never auto-injected — recommendations only, user adds manually
 - AI-modified data tracked in `meta.ai_suggestions` to preserve schema integrity
 - Always use Context7 mcp when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+- Preserve the proprietary licensing language already present in the repo — never strip or alter license headers.
 
-## Quality — NON-NEGOTIABLE
+## Quality
 
-After EVERY code change, run `npm run quality:parallel`. Use `npm run quality:full` before launch, release, or handoff decisions that need build and i18n coverage. Fix all errors immediately — do not ask permission, do not mark task complete until zero errors. Auto-fix workflow: `npm run lint:fix` → `npm run quality:parallel`.
+Match the check to the change. Do not run the broad gate by reflex.
+
+- Docs / copy / instructions only → `git diff --check`. No test run.
+- Single component / UI edit → relevant Vitest file(s) + `npm run lint:fix` on touched files.
+- Shared runtime, Zod schemas, API contracts, stores, Netlify functions → focused tests + `npm run type:check`.
+- Handoff / branch repair / cross-cutting change → broad gate (below).
+- Launch / release needing build + i18n → `npm run quality:full`.
+
+Running the broad gate IN-AGENT: do NOT call `quality:parallel` as one shot — its all-or-nothing parallel bundle overruns the wall-clock cap and discards every partial result. Run the legs as separate sequential commands so each returns within budget and partial progress survives:
+
+```bash
+npm run lint
+npm run type:check
+npm run test                 # add `-- --changed` to scope to files touched since git HEAD
+```
+
+Use `npm run quality:parallel` only on the dev machine / CI (no tool wall-clock cap).
+
+Fix all errors immediately — do not ask permission, do not mark a task complete until zero errors. If a gate is genuinely inconclusive after ONE proper run, report it as inconclusive and list which focused checks passed. Never re-run a broad gate blindly — that is the token sink. Auto-fix: `npm run lint:fix` → focused verification → broad gate only when warranted.
 
 ## Critical Gotchas
 

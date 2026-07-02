@@ -8,9 +8,7 @@ Watheq is a proprietary Saudi-market AI resume optimizer. The app uses React 19,
 
 ## Read First
 
-- `CLAUDE.md` contains the current project rules, commands, gotchas, and key file locations. Preserve those rules unless a user explicitly changes them.
-- `context/DEVELOPER_PROFILE.md` describes the preferred collaboration style and product priorities.
-- `context/CODING_STANDARDS.md` contains compact implementation standards for this repo.
+- `CLAUDE.md` is the single source of truth — project rules, commands, gotchas, standards, and key file locations. Preserve those rules unless a user explicitly changes them.
 - `rtk init -g --codex` configures Codex to use `rtk` for compatible shell executables to reduce noisy output.
 
 ## Operating Rules
@@ -19,7 +17,8 @@ Watheq is a proprietary Saudi-market AI resume optimizer. The app uses React 19,
 - Do not change app code during repository bootstrap or instruction-maintenance tasks.
 - Before feature work, diagnose the data flow and identify impacted frontend, API, validation, and persistence boundaries.
 - Keep generated guidance concise. Link to focused context files instead of pasting large persona or process blocks into this file.
-- Prefer npm scripts already defined in `package.json`; use `npm run quality:parallel` as the fast gate after code changes when feasible, and `npm run quality:full` before launch, release, or handoff decisions that need build and i18n coverage.
+- Prefer npm scripts already defined in `package.json`. Match verification to the change, do not run the broad gate by reflex: docs/copy → `git diff --check`; single component → relevant Vitest file(s) + lint on touched files; shared runtime/schemas/contracts/stores/Netlify functions → focused tests + `npm run type:check`; handoff/cross-cutting → broad gate; launch/release needing build + i18n → `npm run quality:full`.
+- Running the broad gate in-agent: do NOT call `quality:parallel` as one shot — its all-or-nothing parallel bundle overruns the wall-clock cap and discards partial results. Run `npm run lint`, `npm run type:check`, `npm run test` as separate sequential commands (add `-- --changed` to scope tests to files touched since git HEAD). Reserve `npm run quality:parallel` for the dev machine / CI. Never re-run a timed-out broad gate blindly — report it inconclusive and list which focused checks passed.
 - Database migrations should be output for the user to run in Supabase, not applied directly by an agent.
 - Keep repo workflow guidance in this file rather than creating broad workflow skills.
 - Use focused skills in `.agents/skills/` only for scoped jobs such as feature architecture, AI resume pipeline changes, backend boundaries, or frontend UX work.

@@ -57,6 +57,9 @@
 [functions."generate-clarifications"]
   timeout = 30  # Lightweight pre-optimization gap analysis (20s AI timeout + 10s buffer)
 
+[functions."refine-bullet"]
+  timeout = 35  # Single-bullet refinement (25s AI timeout + 10s buffer)
+
 [functions."extract-resume-json"]
   external_node_modules = ["pdfjs-dist"]
   timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer for parsing

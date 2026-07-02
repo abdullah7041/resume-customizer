@@ -566,3 +566,81 @@ describe("combined heading + bulleted inline-prefix recovery (real CV)", () => {
     expect(missing).not.toContain("languages");
   });
 });
+
+// Regression: the "Abdullah BIN AHMED — BI Analyst" resume exposed three
+// deterministic-fallback bugs vs the source PDF:
+//   1. no summary (heading was "Core Identity & Value Proposition")
+//   2. the company/location line ("Al Ghalia (Saudi Arabia)") rendered as the
+//      first achievement bullet instead of the employer
+//   3. a "Title: description" project dumped the whole line into project.name,
+//      which templates render bold ("highlighted text")
+describe("deterministic fallback — BI Analyst regression", () => {
+  const RESUME = [
+    "ABDULLAH BIN AHMED",
+    "Senior Business Intelligence Analyst & Data Architect",
+    "Dammam, Saudi Arabia | LinkedIn: linkedin.com/in/3binahmed/ | Portfolio: abdullahfile.vercel.app",
+    "CORE IDENTITY & VALUE PROPOSITION",
+    "Data-driven Senior Business Intelligence Analyst with 5+ years of experience delivering enterprise BI solutions.",
+    "CHRONOLOGICAL EXPERIENCE",
+    "Senior Data Analyst & BI Specialist Mar 2020 – Present",
+    "Al Ghalia (Saudi Arabia)",
+    "Oversaw the delivery of BI solutions for a 50+ product inventory.",
+    "• Enabled data-driven decision-making by delivering 15+ interactive Power BI dashboards.",
+    "Construction Data Specialist Jun 2018 – Jun 2019",
+    "CB&I (Dammam, KSA)",
+    "Data compliance and workflow management in a high-stakes environment.",
+    "INDEPENDENT PROJECTS",
+    "• Automated Data Pipeline Bot: Built an automated n8n workflow utilizing the OpenAI API, reducing manual anomaly identification time by 90%.",
+    "EDUCATION, CERTIFICATIONS & LANGUAGES",
+    "• Languages: Arabic (Native), English (Professional).",
+  ].join("\n");
+
+  it("recovers a summary under a non-standard heading (Core Identity & Value Proposition)", () => {
+    const baseline = buildDeterministicBaseline(RESUME);
+    expect(baseline.basics?.summary || "").toContain("Data-driven Senior Business Intelligence Analyst");
+  });
+
+  it("maps the company/location line to name+location, not a highlight bullet", () => {
+    const baseline = buildDeterministicBaseline(RESUME);
+    const first = (baseline.work || [])[0];
+    expect(first?.name).toBe("Al Ghalia");
+    expect(first?.location).toBe("Saudi Arabia");
+    expect((first?.highlights || []).some((h) => /Al Ghalia/.test(h))).toBe(false);
+  });
+
+  it("does not treat a dash-prefixed achievement as the company name", () => {
+    const work = parseWorkBlocks([
+      "Senior Data Analyst Mar 2020 – Present",
+      "- Delivered BI dashboards",
+      "Al Ghalia (Saudi Arabia)",
+    ]);
+    expect(work[0]?.name).toBe("Al Ghalia");
+    expect(work[0]?.location).toBe("Saudi Arabia");
+    expect(work[0]?.highlights || []).toContain("Delivered BI dashboards");
+  });
+
+  it("keeps an '&' company name intact and parses a comma location", () => {
+    const baseline = buildDeterministicBaseline(RESUME);
+    const cbi = (baseline.work || []).find((w) => /Construction Data Specialist/.test(w.position || ""));
+    expect(cbi?.name).toBe("CB&I");
+    expect(cbi?.location).toBe("Dammam, KSA");
+  });
+
+  it("splits 'Title: description' projects so only the short title is the name", () => {
+    const baseline = buildDeterministicBaseline(RESUME);
+    const project = (baseline.projects || [])[0];
+    expect(project?.name).toBe("Automated Data Pipeline Bot");
+    expect(project?.description || "").toContain("n8n workflow");
+  });
+
+  it("does not lose summary when recovering into an AI result that dropped it", () => {
+    const signals = detectSectionSignals(RESUME);
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(
+      { basics: { name: "Abdullah Bin Ahmed" }, work: [] },
+      signals,
+      RESUME,
+    );
+    expect(analysis.basics?.summary || "").toContain("Data-driven");
+    expect(fallbackSections).toContain("summary");
+  });
+});

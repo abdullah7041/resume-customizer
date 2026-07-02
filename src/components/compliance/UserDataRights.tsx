@@ -48,17 +48,17 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">
+    <div className="bg-surface rounded-xl shadow-lg p-6 border border-line">
+      <h2 className="text-xl font-semibold text-ink mb-6">
         {t('dataRights.title')}
       </h2>
 
       {/* Export Data */}
-      <div className="border-b border-gray-100 pb-6 mb-6">
+      <div className="border-b border-line pb-6 mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-gray-900">{t('dataRights.export.title')}</h3>
-            <p className="text-sm text-gray-500 mt-1">{t('dataRights.export.description')}</p>
+            <h3 className="font-medium text-ink">{t('dataRights.export.title')}</h3>
+            <p className="text-sm text-ink-muted mt-1">{t('dataRights.export.description')}</p>
           </div>
           <button
             onClick={handleExport}
@@ -81,8 +81,8 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
       <div>
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-gray-900">{t('dataRights.delete.title')}</h3>
-            <p className="text-sm text-gray-500 mt-1">{t('dataRights.delete.description')}</p>
+            <h3 className="font-medium text-ink">{t('dataRights.delete.title')}</h3>
+            <p className="text-sm text-ink-muted mt-1">{t('dataRights.delete.description')}</p>
           </div>
           <button
             onClick={() => setShowDeleteConfirm(true)}
@@ -97,20 +97,20 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl p-6 max-w-md mx-4">
+          <div className="bg-surface rounded-2xl p-6 max-w-md mx-4 border border-line">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="w-8 h-8 text-red-500" />
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-ink">
                 {t('dataRights.delete.confirm.title')}
               </h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-ink-muted mb-6">
               {t('dataRights.delete.confirm.message')}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 px-4 py-2 bg-ink/5 text-ink rounded-lg hover:bg-ink/10 transition-colors"
               >
                 {t('common.cancel')}
               </button>

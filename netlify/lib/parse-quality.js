@@ -19,7 +19,7 @@ const LINKEDIN_RE = /(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/[A-Za-z
 const URL_RE = /https?:\/\/[^\s,)]+/gi;
 
 const HEADING_PATTERNS = {
-  summary: /\b(summary|profile|about|objective)\b/i,
+  summary: /\b(summary|profile|about|objective|core identity|value proposition)\b/i,
   education: /\b(education|academic background|qualifications?)\b/i,
   certificates: /\b(certifications?|certificates?|courses?|licen[sc]es?)\b/i,
   projects: /\b(independent projects|selected projects|projects?)\b/i,
@@ -52,7 +52,7 @@ const NON_RECOVERY_HEADING_PATTERNS = [
 // Heading keyword families used to recognize a standalone (possibly COMBINED)
 // heading line, e.g. "Education, Certifications & Languages".
 const HEADING_KEYWORDS = [
-  { key: "summary", re: /\b(summary|profile|about|objective)\b/i },
+  { key: "summary", re: /\b(summary|profile|about|objective|core identity|value proposition)\b/i },
   { key: "skills", re: /\b(technical skills|core competencies|competencies|technical proficienc\w*|technologies|toolchain|skills)\b/i },
   { key: "experience", re: /\b(work experience|professional experience|chronological experience|employment|experience)\b/i },
   { key: "projects", re: /\b(independent projects|selected projects|projects?)\b/i },
@@ -352,6 +352,8 @@ const DATE_ONLY_RE = new RegExp(
   `^\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)(?:\\s*(?:[-–—]|to)\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present))?\\s*$`,
   "i",
 );
+const BULLET_PREFIX_RE = /^[\s•·*\-–—]+/;
+const LOCATION_HINT_RE = /\b(saudi|arabia|ksa|riyadh|jeddah|dammam|khobar|makkah|mecca|medina|uae|dubai|abu dhabi|qatar|doha|bahrain|kuwait|oman|egypt|cairo|jordan|amman|remote)\b/i;
 // A work-entry header carries a date or an explicit "<role> at <company>" /
 // "<role> — <company>" / "<role> | <company>" separator. Continuation/bullet
 // lines (achievements) carry neither, so they attach to the open entry instead.
@@ -411,6 +413,54 @@ export function parseWorkBlocks(lines) {
       continue;
     }
 
+    // Explicit Company (Location) line can still appear after an unbulleted
+    // preamble/achievement. Keep it as employer metadata, not a highlight.
+    if (
+      current
+      && current.position
+      && !current.name
+      && !isHeader(line)
+      && !BULLET_PREFIX_RE.test(line)
+      && line.length <= 60
+      && !/[.!?]$/.test(line)
+    ) {
+      const loc = line.match(/\(([^)]+)\)\s*$/);
+      if (loc && LOCATION_HINT_RE.test(loc[1])) {
+        const companyName = line.slice(0, loc.index).replace(/[\s,–—|-]+$/, "").trim();
+        if (companyName) {
+          current.name = companyName;
+          current.location = loc[1].trim();
+          continue;
+        }
+      }
+    }
+
+    // Company / location line that sits under a "title + date range" header.
+    // The header set position + startDate but no company name, so the following
+    // short non-sentence line is the employer (often "Company (Location)").
+    // Map it to name/location instead of letting it fall through to a highlight
+    // bullet — otherwise "Al Ghalia (Saudi Arabia)" renders as the first bullet.
+    if (
+      current
+      && current.position
+      && !current.name
+      && (!current.highlights || current.highlights.length === 0)
+      && !isHeader(line)
+      && !BULLET_PREFIX_RE.test(line) // not an explicit achievement bullet
+      && line.length <= 60         // company/location lines are short
+      && !/[.!?]$/.test(line)      // achievements end in sentence punctuation
+    ) {
+      const loc = line.match(/\(([^)]+)\)\s*$/); // trailing "(Saudi Arabia)"
+      if (loc) {
+        const companyName = line.slice(0, loc.index).replace(/[\s,–—|-]+$/, "").trim();
+        current.name = companyName || line;
+        if (companyName) current.location = loc[1].trim();
+      } else {
+        current.name = line.replace(/[\s,–—|-]+$/, "").trim();
+      }
+      continue;
+    }
+
     if (isHeader(line) || !current) {
       let rest = line;
       const entry = {};
@@ -445,7 +495,7 @@ export function parseWorkBlocks(lines) {
     }
 
     // Continuation line → highlight on the open entry (strip a leading bullet).
-    const bullet = line.replace(/^[\s•·*\-–—]+/, "").trim();
+    const bullet = line.replace(BULLET_PREFIX_RE, "").trim();
     if (bullet) current.highlights.push(bullet);
   }
 
@@ -707,6 +757,13 @@ export function buildDeterministicBaseline(rawText, signals) {
     const urlMatches = text.match(URL_RE);
     if (urlMatches && urlMatches.length > 0) basics.url = urlMatches[0];
   }
+  // Summary/profile paragraph. Joins the segmented summary lines into one string.
+  // The heading may be non-standard (e.g. "Core Identity & Value Proposition") —
+  // segmentSections/HEADING_PATTERNS already map those to the summary key.
+  if (sections.summary?.length > 0) {
+    const summary = sections.summary.join(" ").replace(/\s+/g, " ").trim();
+    if (summary) basics.summary = summary;
+  }
   if (Object.keys(basics).length > 0) baseline.basics = basics;
 
   // ---- sections (conservative shapes; no fabrication) ----
@@ -725,7 +782,16 @@ export function buildDeterministicBaseline(rawText, signals) {
       .map((name) => ({ name, issuer: "", date: "" }));
   }
   if (sections.projects?.length > 0) {
-    baseline.projects = sections.projects.map((line) => ({ name: line, description: "", highlights: [] }));
+    // Split "Title: description" so only the short title lands in project.name
+    // (templates render name bold). Dumping the whole line into name bolded the
+    // entire project paragraph. No colon → keep the line as name (schema requires
+    // a non-empty name); nothing is invented.
+    baseline.projects = sections.projects.map((line) => {
+      const text = String(line).replace(/^[\s•·*\-–—]+/, "").trim();
+      const m = text.match(/^(.{2,60}?):\s+(.+)$/);
+      if (m) return { name: m[1].trim(), description: m[2].trim(), highlights: [] };
+      return { name: text, description: "", highlights: [] };
+    });
   }
   if (sections.skills?.length > 0) {
     const keywords = splitSkillTokens(sections.skills);
@@ -772,6 +838,11 @@ export function recoverSectionsFromRawText(analysis = {}, signals, rawText) {
     basics.label = baseline.basics.label;
     basicsChanged = true;
     fallbackSections.push("label");
+  }
+  if (!basics.summary && baseline.basics?.summary) {
+    basics.summary = baseline.basics.summary;
+    basicsChanged = true;
+    fallbackSections.push("summary");
   }
   if (!basics.email && baseline.basics?.email) {
     basics.email = baseline.basics.email;

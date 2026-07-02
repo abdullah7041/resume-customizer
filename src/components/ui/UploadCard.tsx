@@ -68,7 +68,7 @@ const sanitizeTextInput = (text) => {
 
 
 const chipClass =
-  "inline-flex items-center justify-center rounded-full border border-emerald-900/12 bg-white text-emerald-700 shadow-soft dark:border-emerald-200/16 dark:bg-black/36 dark:text-emerald-200";
+  "inline-flex items-center justify-center rounded-full border border-emerald-900/12 bg-surface text-emerald-700 shadow-soft dark:border-emerald-200/16 dark:text-emerald-200";
 
 
 export default function UploadCard({
@@ -190,7 +190,7 @@ export default function UploadCard({
   return (
     <GlassCard
       padding="lg"
-      className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden bg-white dark:bg-[#082b23]/95"
+      className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden bg-surface"
     >
       <header data-tour="upload-header" className="space-y-1.5 sm:space-y-2 text-center sm:text-left mb-6 sm:mb-8">
         <div className="flex items-center justify-between gap-2">

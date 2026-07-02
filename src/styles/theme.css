@@ -12,6 +12,7 @@
   --ink: #021715;
   --ink-muted: #435a56;
   --ink-soft: #61726e;
+  --ink-accent: #047857;
 
   /* Brand accents */
   --accent: #005a2b;
@@ -166,6 +167,7 @@
   --ink: #f1fcf7;
   --ink-muted: #c8ded7;
   --ink-soft: #a9c4bc;
+  --ink-accent: #34d399;
 
   --accent: #005a2b;
   --accent-royal: #004d25;

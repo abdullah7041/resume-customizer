@@ -154,11 +154,4 @@ export default defineConfig({
     // Cuts cold-start time so the dev server binds + serves faster (Vite 8).
     holdUntilCrawlEnd: false,
   },
-
-  test: {
-    environment: "happy-dom",
-    globals: true,
-    setupFiles: "./src/test/setup.ts",
-    css: true
-  },
 });
