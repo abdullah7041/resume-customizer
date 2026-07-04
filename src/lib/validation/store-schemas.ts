@@ -127,12 +127,6 @@ export const ResumeZodSchema = z.object({
 export const SearchIntentSchema = z.object({
     targetRoles: z.array(z.string()).default([]),
     seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
-    compRange: z.object({
-        min: z.number(),
-        max: z.number(),
-        currency: z.string(),
-        period: z.enum(['month', 'year']),
-    }).optional(),
     location: z.object({
         city: z.string().optional(),
         country: z.string().optional(),

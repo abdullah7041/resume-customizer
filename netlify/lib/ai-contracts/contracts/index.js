@@ -896,25 +896,7 @@ function buildOptimizeMessages(input, context) {
     ? `\nThe user explicitly confirmed NO experience with the items in user_hard_stops. Do NOT add, imply, infer, or weave any of them into bullets, summary, headline, or skills. Remove them from missing_keywords suggestions. This overrides any keyword-weaving rule.`
     : '';
 
-  // Onboarding job-search intent: bias tailoring toward the target role / level /
-  // location WITHOUT inventing experience. Does not alter the strict scoring rubric.
-  const searchIntent = input.searchIntent && typeof input.searchIntent === 'object' ? input.searchIntent : null;
-  const intentLines = [];
-  if (searchIntent) {
-    const roles = Array.isArray(searchIntent.targetRoles) ? searchIntent.targetRoles.filter(Boolean) : [];
-    if (roles.length) intentLines.push(`Target role(s): ${roles.join(', ')}`);
-    if (searchIntent.seniority) intentLines.push(`Target seniority: ${searchIntent.seniority}`);
-    const loc = searchIntent.location;
-    if (loc && (loc.city || loc.country || loc.workMode)) {
-      intentLines.push(`Preferred location: ${[loc.city, loc.country, loc.workMode].filter(Boolean).join(', ')}`);
-    }
-  }
-  const searchIntentBlock = intentLines.length ? optionalTaggedBlock('target_search_intent', intentLines.join('\n')) : '';
-  const searchIntentInstruction = intentLines.length
-    ? `\nThe user is targeting the role in target_search_intent. Frame the headline, summary, and bullet emphasis toward that role and seniority, surfacing the most relevant real experience first. Do NOT invent experience, titles, or skills the resume does not support, and do NOT change the strict scoring rubric.`
-    : '';
-
-  const system = `${OPTIMIZE_TRUTHFULNESS_SYSTEM}${hardStopInstruction}${searchIntentInstruction}`;
+  const system = `${OPTIMIZE_TRUTHFULNESS_SYSTEM}${hardStopInstruction}`;
   const example = `Example item:
 - original: "Responsible for improving the API and making it faster for users."
 - improved: "Cut customer-facing API latency 40% by adding Redis caching and rewriting N+1 queries."
@@ -925,7 +907,6 @@ function buildOptimizeMessages(input, context) {
 
 ${example}${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${clarificationsBlock}
 ${hardStopsBlock}
-${searchIntentBlock}
 
 ${taggedBlock('job_description', jobDescription)}
 

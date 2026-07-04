@@ -245,7 +245,7 @@ describe('optimize-stream function', () => {
       [],
       undefined,
       undefined,
-      { featureName: 'optimize_stream', searchIntent: null }
+      { featureName: 'optimize_stream' }
     );
     const options = mockGeminiClient.optimizeResume.mock.calls[0][6];
     expect(options).not.toHaveProperty('resumeText');
@@ -280,7 +280,7 @@ describe('optimize-stream function', () => {
       [],
       undefined,
       ['Excel'],
-      { featureName: 'optimize_stream', searchIntent: null },
+      { featureName: 'optimize_stream' },
     );
   });
 

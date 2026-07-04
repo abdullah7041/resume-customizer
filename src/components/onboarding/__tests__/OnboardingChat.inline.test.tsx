@@ -29,11 +29,8 @@ describe('OnboardingChat — inline (Path A) mode', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('advances role -> comp -> location with Skip without any AI call', () => {
+  it('advances role -> location with Skip without any AI call', () => {
     render(<OnboardingChat path="has_cv" mode="inline" />);
-
-    fireEvent.click(screen.getByRole('button', { name: /^skip$/i }));
-    expect(screen.getByText('What salary are you after?')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^skip$/i }));
     expect(screen.getByText('Where do you want to work?')).toBeInTheDocument();
@@ -43,8 +40,7 @@ describe('OnboardingChat — inline (Path A) mode', () => {
     const onComplete = vi.fn();
     render(<OnboardingChat path="has_cv" mode="inline" onComplete={onComplete} />);
 
-    // role -> comp -> location -> done
-    fireEvent.click(screen.getByRole('button', { name: /^skip$/i }));
+    // role -> location -> done
     fireEvent.click(screen.getByRole('button', { name: /^skip$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^skip$/i }));
 

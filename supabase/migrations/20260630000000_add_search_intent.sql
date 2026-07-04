@@ -1,6 +1,5 @@
--- Onboarding: persist job-search intent (target role / comp / location) on the
--- resume row. Read by the optimize endpoint so the stored profile changes per-job
--- tailoring output. See docs/onboarding-v1.md (item 1).
+-- Onboarding: persist job-search intent (target role / location) on the resume row.
+-- See docs/onboarding-v1.md (item 1).
 --
 -- DO NOT auto-apply. Run this in the Supabase dashboard SQL editor.
 

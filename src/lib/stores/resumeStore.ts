@@ -79,8 +79,7 @@ const computeCompleteness = (resume: ResumeSchema | null, intent: SearchIntent |
   if (resume?.basics?.label?.trim()) score += 15;
   if ((resume?.work?.length ?? 0) > 0 || (resume?.projects?.length ?? 0) > 0) score += 25;
   if ((intent?.targetRoles?.length ?? 0) > 0) score += 20;
-  if (intent?.compRange) score += 10;
-  if (intent?.location) score += 10;
+  if (intent?.location) score += 20;
   return Math.min(100, score);
 };
 
