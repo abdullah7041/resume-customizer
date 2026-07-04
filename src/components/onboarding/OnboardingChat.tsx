@@ -35,25 +35,16 @@ const SLOT_COPY: Record<OnboardingPath, Record<OnboardingSlot, SlotCopy>> = {
   has_cv: {
     cv_basics: { title: 'Is this you?', hint: 'Confirm or fix your name and title.', placeholder: 'Name — Job title' },
     role: { title: 'What role are you targeting?', hint: 'One target is enough.', placeholder: 'e.g. Senior Frontend Engineer' },
-    comp: { title: 'What salary are you after?', hint: 'A range is fine. Tap a band or type it.', placeholder: 'e.g. 15,000 SAR / month' },
     location: { title: 'Where do you want to work?', hint: 'City and how you want to work.', placeholder: 'e.g. Riyadh, hybrid' },
   },
   no_cv: {
     cv_basics: { title: "Let's start with you", hint: 'Your name and one or two things you have done.', placeholder: 'e.g. Sara Al-Otaibi — built a payments dashboard, led a 3-person team' },
     role: { title: 'What role are you targeting?', hint: 'One target is enough.', placeholder: 'e.g. Product Designer' },
-    comp: { title: 'What salary are you after?', hint: 'A range is fine. Tap a band or type it.', placeholder: 'e.g. 15,000 SAR / month' },
     location: { title: 'Where do you want to work?', hint: 'City and how you want to work.', placeholder: 'e.g. Jeddah, onsite' },
   },
 };
 
 const WORK_MODES: Array<'remote' | 'hybrid' | 'onsite'> = ['remote', 'hybrid', 'onsite'];
-const COMP_BANDS = [
-  { label: '5–10k', min: 5000, max: 10000 },
-  { label: '10–15k', min: 10000, max: 15000 },
-  { label: '15–20k', min: 15000, max: 20000 },
-  { label: '20–30k', min: 20000, max: 30000 },
-  { label: '30k+', min: 30000, max: 45000 },
-];
 
 function emptyIntent(confidence: SlotConfidence): SearchIntent {
   return { targetRoles: [], meta: { confidence, completeness: 0, updatedAt: new Date().toISOString() } };
@@ -154,10 +145,6 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         commitIntent({ targetRoles: roles, ...(seniority ? { seniority } : {}) });
         return;
       }
-      if (slot === 'comp' && value.compRange) {
-        commitIntent({ compRange: value.compRange as SearchIntent['compRange'] });
-        return;
-      }
       if (slot === 'location' && value.location) {
         commitIntent({ location: value.location as SearchIntent['location'] });
       }
@@ -190,15 +177,6 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
       if (current !== 'location') return;
       commitIntent({ location: { ...(intentRef.current.location ?? {}), workMode } });
       goNext('location');
-    },
-    [commitIntent, current, goNext],
-  );
-
-  const pickCompBand = useCallback(
-    (band: { min: number; max: number }) => {
-      if (current !== 'comp') return;
-      commitIntent({ compRange: { min: band.min, max: band.max, currency: 'SAR', period: 'month' } });
-      goNext('comp');
     },
     [commitIntent, current, goNext],
   );
@@ -301,22 +279,6 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           ))}
         </div>
       )}
-      {current === 'comp' && (
-        <div className="flex flex-wrap justify-center gap-2">
-          {COMP_BANDS.map((b) => (
-            <button
-              key={b.label}
-              type="button"
-              disabled={busy}
-              onClick={() => pickCompBand(b)}
-              className="rounded-full border border-emerald-500/40 px-4 py-2 text-sm text-emerald-300 active:scale-95 disabled:opacity-50"
-            >
-              {b.label} SAR/mo
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Plain text input — keyboard mic supplies voice */}
       <textarea
         value={text}

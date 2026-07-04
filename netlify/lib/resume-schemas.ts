@@ -179,12 +179,6 @@ export const ResumeSchema = z.object({
 export const SearchIntentSchema = z.object({
     targetRoles: z.array(z.string().trim().min(1).max(200)).max(10).default([]),
     seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
-    compRange: z.object({
-        min: z.number().nonnegative(),
-        max: z.number().nonnegative(),
-        currency: z.string().trim().min(1).max(8),
-        period: z.enum(['month', 'year']),
-    }).optional(),
     location: z.object({
         city: z.string().trim().max(120).optional(),
         country: z.string().trim().max(120).optional(),
@@ -250,9 +244,6 @@ export const OptimizeRequestSchema = z.object({
     userHardStops: z.array(z.string().trim().min(1).max(300)).max(20).optional(),
     // Recovery-only retry after an interrupted paid stream. Must never trigger AI or credit use.
     cacheOnly: z.boolean().optional(),
-    // Job-search intent from onboarding. Injected into the tailoring prompt so the
-    // stored profile changes per-job output (target role / comp / location).
-    searchIntent: SearchIntentSchema.optional(),
     freePreview: z.boolean().optional(),
 });
 
@@ -282,7 +273,7 @@ export const CoverLetterRequestSchema = z.object({
 
 // Onboarding slot extraction: one freeform reply → one structured slot value.
 export const OnboardExtractRequestSchema = z.object({
-    slot: z.enum(['cv_basics', 'role', 'comp', 'location']),
+    slot: z.enum(['cv_basics', 'role', 'location']),
     userText: z.string().min(1, "Answer text is required").max(2000, "Answer too long"),
     currentIntent: SearchIntentSchema.optional(),
 });

@@ -41,8 +41,8 @@ export default function App() {
       const resumeState = useResumeStore.getState();
       return (
         !isOnboarded() &&
-        !Boolean(resumeState.originalResume || resumeState.parsedResumeText) &&
-        !Boolean(resumeState.searchIntent)
+        !(resumeState.originalResume || resumeState.parsedResumeText) &&
+        !resumeState.searchIntent
       );
     }
   );

@@ -181,7 +181,6 @@ describe('optimize function', () => {
             [],
             undefined,
             ['Excel'],
-            { searchIntent: null },
         );
     });
 

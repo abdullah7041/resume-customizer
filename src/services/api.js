@@ -571,7 +571,7 @@ export const onboardExtract = async ({ slot, userText, currentIntent, signal } =
   return { value: data.value || {}, confidence: data.confidence || 'low' };
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null, freePreview = false }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, freePreview = false }) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -582,7 +582,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent, ...(freePreview ? { freePreview } : {}) }),
+        body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, ...(freePreview ? { freePreview } : {}) }),
       });
 
       const data = await handleResponse(response);
@@ -735,12 +735,12 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, searchIntent = null, cacheOnly = false, freePreview = false }, onStatus) => {
+export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false, freePreview = false }, onStatus) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
 
-  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, searchIntent, ...(freePreview ? { freePreview } : {}) };
+  const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, ...(freePreview ? { freePreview } : {}) };
   const recoverFromCacheOnly = async () => {
     if (cacheOnly) return null;
     try {
@@ -753,7 +753,6 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
         workHistory,
         userClarifications,
         userHardStops,
-        searchIntent,
         freePreview,
         cacheOnly: true,
       }, onStatus);

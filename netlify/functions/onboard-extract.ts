@@ -55,23 +55,6 @@ const SLOT_SCHEMAS: Record<string, object> = {
     },
     required: ['value', 'confidence'],
   },
-  comp: {
-    type: 'object',
-    properties: {
-      value: {
-        type: 'object',
-        properties: {
-          min: { type: 'number' },
-          max: { type: 'number' },
-          currency: { type: 'string' },
-          period: { type: 'string', enum: ['', 'month', 'year'] },
-        },
-        required: ['min', 'max', 'currency', 'period'],
-      },
-      confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
-    },
-    required: ['value', 'confidence'],
-  },
   location: {
     type: 'object',
     properties: {
@@ -95,8 +78,6 @@ const SLOT_INSTRUCTIONS: Record<string, string> = {
     'Extract the person\'s full name into "name", their current/target job title into "label", and up to two concrete things they have done into "achievements" (each a short phrase). Leave a field as an empty string / empty array if the answer does not contain it. Do not invent details.',
   role:
     'Extract the target job role(s) the person wants into "targetRoles" (usually one, at most a few). Infer "seniority" only if the role text clearly states it (e.g. "senior", "lead", "manager"); otherwise return an empty string. Do not invent a seniority.',
-  comp:
-    'Extract the desired salary into "min" and "max" as plain numbers (no separators). If a single figure is given, set both min and max to it. Extract "currency" as a 3-letter-ish code (default "SAR" if a bare number is given in a Saudi context). Set "period" to "month" or "year" based on the text, or empty string if unclear. Use 0 for an unknown bound.',
   location:
     'Extract the preferred work "city" and "country" (use the country code like "SA" when obvious). Set "workMode" to remote, hybrid, or onsite if stated, else empty string. Leave city/country empty if not stated.',
 };
@@ -132,24 +113,6 @@ function normalizeSlotValue(slot: string, raw: unknown): Record<string, unknown>
       out.seniority = v.seniority;
     }
     return out;
-  }
-
-  if (slot === 'comp') {
-    const min = typeof v.min === 'number' ? v.min : 0;
-    const max = typeof v.max === 'number' ? v.max : 0;
-    const period = v.period === 'month' || v.period === 'year' ? v.period : null;
-    // Only return a compRange if we got something usable.
-    if ((min > 0 || max > 0) && period) {
-      return {
-        compRange: {
-          min: min || max,
-          max: max || min,
-          currency: typeof v.currency === 'string' && v.currency.trim() ? v.currency.trim() : 'SAR',
-          period,
-        },
-      };
-    }
-    return {};
   }
 
   if (slot === 'location') {
