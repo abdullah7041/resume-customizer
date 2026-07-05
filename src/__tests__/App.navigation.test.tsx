@@ -159,29 +159,29 @@ describe('App compliance navigation', () => {
     expect(screen.getByRole('link', { name: /privacy policy/i })).toHaveAttribute('href', '/privacy');
   });
 
-  it('renders the privacy policy at /privacy', () => {
+  it('renders the privacy policy at /privacy', async () => {
     setPath('/privacy');
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: /privacy policy/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /privacy policy/i })).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
     expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
 
-  it('renders the terms of service at /terms', () => {
+  it('renders the terms of service at /terms', async () => {
     setPath('/terms');
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: /terms of service/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /terms of service/i })).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
     expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
 
-  it('renders the admin feedback dashboard at /admin/feedback', () => {
+  it('renders the admin feedback dashboard at /admin/feedback', async () => {
     setPath('/admin/feedback');
     render(<App />);
 
-    expect(screen.getByText('Admin feedback dashboard')).toBeInTheDocument();
+    expect(await screen.findByText('Admin feedback dashboard')).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
     expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
