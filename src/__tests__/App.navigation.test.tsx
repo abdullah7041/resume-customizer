@@ -75,6 +75,12 @@ vi.mock('../components/Layout/Header', () => ({
   },
 }));
 
+// App calls useAuth() at the top; without a provider it throws. Mirror the mock the
+// other App-rendering tests use (App.onboarding, MainContent).
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({ user: null, loading: false, signInWithGoogle: vi.fn() }),
+}));
+
 vi.mock('../components/Layout/MainContent', () => ({
   default: () => <main>Workspace</main>,
 }));
