@@ -16,6 +16,10 @@ dist
 dist-ssr
 build
 .tsbuildinfo
+
+# Bundle analyzer output (npm run build:analyze)
+stats.html
+stats.json
 .tsbuildinfo.*
 
 # Environment files

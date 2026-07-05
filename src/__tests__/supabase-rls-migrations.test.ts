@@ -74,4 +74,55 @@ describe('Supabase RLS migration hardening', () => {
       expect(migrationSql).toContain(`comment on table public.${tableName}`);
     }
   });
+
+  it('keeps internal metadata tables service-role-only without direct browser policies', () => {
+    const migrationSql = readMigrationSql('20260702000000_confirm_internal_table_service_role_boundaries.sql');
+
+    expect(migrationSql).toContain('alter table public.ai_usage_events enable row level security');
+    expect(migrationSql).toContain('alter table public.strategic_reality_checks enable row level security');
+
+    expect(migrationSql).toContain('revoke all on public.ai_usage_events from public, anon, authenticated, service_role');
+    expect(migrationSql).toContain('grant insert on public.ai_usage_events to service_role');
+    expect(migrationSql).toContain('revoke all on public.strategic_reality_checks from public, anon, authenticated, service_role');
+    expect(migrationSql).toContain('grant insert, select, delete on public.strategic_reality_checks to service_role');
+
+    expect(migrationSql).not.toContain('create policy');
+    expect(migrationSql).toContain('no anon/authenticated policies by design');
+  });
+
+  it('adds a covering index for the canonical UUID referral foreign key', () => {
+    const migrationSql = readMigrationSql('20260703000000_index_user_credits_referral_uuid.sql');
+
+    expect(migrationSql).toContain('create index if not exists idx_user_credits_referred_by_user_id');
+    expect(migrationSql).toContain('on public.user_credits(referred_by_user_id)');
+    expect(migrationSql).toContain('user_credits_referred_by_user_id_fkey');
+  });
+
+  it('optimizes only active feedback report RLS auth helpers behind initplans', () => {
+    const migrationSql = readMigrationSql('20260703000001_optimize_feedback_reports_rls_initplans.sql');
+
+    for (const policyName of [
+      'feedback_reports_insert_own',
+      'feedback_reports_admin_select',
+      'feedback_reports_admin_update',
+    ]) {
+      expect(migrationSql).toContain(`drop policy if exists ${policyName} on public.feedback_reports`);
+      expect(migrationSql).toContain(`create policy ${policyName}`);
+    }
+
+    expect(migrationSql).toContain('(select auth.uid()) = user_id');
+    expect(migrationSql).toContain("user_email = ((select auth.jwt()) ->> 'email')");
+    expect(migrationSql).toContain("(((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin')");
+
+    expect(migrationSql).not.toContain("select auth.jwt() ->> 'email'");
+    expect(migrationSql).not.toContain("select auth.jwt() -> 'app_metadata'");
+    expect(migrationSql).not.toContain('auth.jwt()->');
+    expect(migrationSql).not.toContain('current_setting(');
+    expect(migrationSql).not.toContain('grant ');
+    expect(migrationSql).not.toContain('revoke ');
+
+    expect(migrationSql).not.toContain('public.ai_usage_events');
+    expect(migrationSql).not.toContain('public.strategic_reality_checks');
+    expect(migrationSql).not.toContain('public.feedback ');
+  });
 });

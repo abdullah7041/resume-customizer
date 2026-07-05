@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SaveJobToPipelineCard } from '../components/sections/SaveJobToPipelineCard';
 import { createJobApplication } from '../services/pipeline';
 
+const requestValueMomentFeedbackPromptMock = vi.hoisted(() => vi.fn());
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key, fallback) => fallback,
@@ -25,6 +27,10 @@ vi.mock('../services/analytics', () => ({
 
 vi.mock('../services/pipeline', () => ({
   createJobApplication: vi.fn(),
+}));
+
+vi.mock('../components/Feedback/FeedbackPromptController', () => ({
+  requestValueMomentFeedbackPrompt: requestValueMomentFeedbackPromptMock,
 }));
 
 describe('SaveJobToPipelineCard', () => {
@@ -67,6 +73,7 @@ describe('SaveJobToPipelineCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(createJobApplication).toHaveBeenCalledTimes(1));
+    expect(requestValueMomentFeedbackPromptMock).toHaveBeenCalledWith('pipeline_save');
 
     expect(createJobApplication).toHaveBeenCalledWith({
       company_name: 'Watheq AI',

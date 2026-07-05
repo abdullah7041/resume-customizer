@@ -13,9 +13,12 @@ export default defineConfig({
     tailwindcss(),
     // Bundle analyzer - run with `npm run build:analyze`
     process.env.ANALYZE && visualizer({
-      open: true,
+      open: !process.env.ANALYZE_JSON,
       gzipSize: true,
       brotliSize: true,
+      // ANALYZE_JSON=true emits machine-readable stats.json (no browser) for scripted analysis.
+      template: process.env.ANALYZE_JSON ? "raw-data" : "treemap",
+      filename: process.env.ANALYZE_JSON ? "stats.json" : "stats.html",
     }),
   ].filter(Boolean),
 
@@ -66,6 +69,39 @@ export default defineConfig({
               id.includes("i18next")
             ) {
               return "vendor-core";
+            }
+
+            // ===== CLASS UTILITIES (eager, used by cn() everywhere) =====
+            // tailwind-merge alone is ~53KB. Used eagerly by cn(), so it can't be
+            // lazy — but splitting it out of the entry keeps index-*.js lean.
+            if (
+              id.includes("tailwind-merge") ||
+              id.includes("/clsx/") ||
+              id.includes("class-variance-authority")
+            ) {
+              return "vendor-utils";
+            }
+
+            // ===== FRAMER MOTION (eager at App root via MotionConfig) =====
+            // ~150KB. Splitting it out of the entry keeps index-*.js lean; it
+            // still loads on first paint but as its own parallel chunk.
+            if (id.includes("framer-motion") || id.includes("/motion-dom/") || id.includes("/motion-utils/")) {
+              return "vendor-framer";
+            }
+
+            // ===== DOCX EXPORT GRAPH (lazy: DOCX export + cover letter only) =====
+            // docx + jszip + hash.js + readable-stream polyfills (~400KB). Previously
+            // emitted as an anonymous `dist-*.js` chunk. Name it so it's identifiable.
+            if (
+              id.includes("/docx/") ||
+              id.includes("/jszip/") ||
+              id.includes("/hash.js/") ||
+              id.includes("/readable-stream/") ||
+              id.includes("/xml-js/") ||
+              id.includes("/xml/") ||
+              id.includes("/string_decoder/")
+            ) {
+              return "vendor-docx";
             }
 
             // ===== PDF PARSING (dynamically imported) =====

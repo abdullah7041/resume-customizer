@@ -35,6 +35,7 @@ import { useResumeStore } from '../../lib/stores/resumeStore';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 import type { ExtractedJobMetadata } from '../../types/pipeline';
+import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
 
 // === EXTRACTED FROM features/JobMatch.tsx ===
 // Semantic score states with calm, low-glow surfaces (Warm Saudi Premium):
@@ -271,6 +272,7 @@ export function MatchSection({
       // Track match analysis run
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
+        requestValueMomentFeedbackPrompt('match_success');
       }
       if (result?.strategicRealityCheck) {
         analytics.trackStrategicRealityCheck({

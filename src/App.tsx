@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { MotionConfig } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
@@ -9,17 +9,22 @@ import OfflineIndicator from "./components/ui/OfflineIndicator";
 import { DirectionProvider } from "./components/providers/DirectionProvider";
 import { ConsentBanner } from "./components/compliance/ConsentBanner";
 import { migrateStorageKeys } from "./lib/utils/storage-migration";
-import { PricingWaitlistModal } from "./components/Credits/PricingWaitlistModal";
 import { useUserCredits } from "./hooks/useUserCredits";
 import { useOnboardingTour } from "./hooks/useOnboardingTour";
-import { PrivacyPolicy } from "./pages/PrivacyPolicy";
-import { TermsOfService } from "./pages/TermsOfService";
-import { AdminFeedbackPage } from "./pages/AdminFeedbackPage";
 import { HRSuperSaudOverlay, HRSuperSaudProvider } from "./features/hr-super-saud";
 import { useResumeStore } from "./lib/stores/resumeStore";
 import OnboardingChat from "./components/onboarding/OnboardingChat";
 import { isOnboarded, markOnboarded } from "./lib/onboarding/onboardedFlag";
+
+// Route pages are path-gated, so lazy-load them out of the entry chunk instead
+// of eagerly bundling on every visit. OnboardingChat stays eager: it is the
+// first-run gate's initial paint, so a Suspense flash there would be visible.
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy").then((m) => ({ default: m.PrivacyPolicy })));
+const TermsOfService = lazy(() => import("./pages/TermsOfService").then((m) => ({ default: m.TermsOfService })));
+const AdminFeedbackPage = lazy(() => import("./pages/AdminFeedbackPage").then((m) => ({ default: m.AdminFeedbackPage })));
+const PricingWaitlistModal = lazy(() => import("./components/Credits/PricingWaitlistModal").then((m) => ({ default: m.PricingWaitlistModal })));
 import { useAuth } from "./hooks/useAuth";
+import { FeedbackPromptController } from "./components/Feedback/FeedbackPromptController";
 
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 
@@ -41,8 +46,8 @@ export default function App() {
       const resumeState = useResumeStore.getState();
       return (
         !isOnboarded() &&
-        !Boolean(resumeState.originalResume || resumeState.parsedResumeText) &&
-        !Boolean(resumeState.searchIntent)
+        !(resumeState.originalResume || resumeState.parsedResumeText) &&
+        !resumeState.searchIntent
       );
     }
   );
@@ -82,39 +87,46 @@ export default function App() {
             <EnvironmentBadge />
             <Header showDecorativeSkyline={!isStaticPage} />
 
-            {currentPath === "/privacy" ? (
-              <PrivacyPolicy />
-            ) : currentPath === "/terms" ? (
-              <TermsOfService />
-            ) : currentPath === "/admin/feedback" ? (
-              <AdminFeedbackPage />
-            ) : needsOnboarding ? (
-              <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
-                <OnboardingChat
-                  onComplete={() => {
-                    if (!user && typeof window !== "undefined") {
-                      window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
-                    }
-                    markOnboarded();
-                    setOnboardedFlag(true);
-                    setOnboardingGateActive(false);
-                  }}
-                />
-              </main>
-            ) : (
-              <MainContent />
-            )}
+            <Suspense fallback={null}>
+              {currentPath === "/privacy" ? (
+                <PrivacyPolicy />
+              ) : currentPath === "/terms" ? (
+                <TermsOfService />
+              ) : currentPath === "/admin/feedback" ? (
+                <AdminFeedbackPage />
+              ) : needsOnboarding ? (
+                <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
+                  <OnboardingChat
+                    onComplete={() => {
+                      if (!user && typeof window !== "undefined") {
+                        window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
+                      }
+                      markOnboarded();
+                      setOnboardedFlag(true);
+                      setOnboardingGateActive(false);
+                    }}
+                  />
+                </main>
+              ) : (
+                <MainContent />
+              )}
+            </Suspense>
             {!needsOnboarding && <Footer />}
             <ConsentBanner />
+            <FeedbackPromptController />
 
-            {/* Low-credits pricing-waitlist modal */}
-            <PricingWaitlistModal
-              isOpen={showUpgrade}
-              onClose={() => setShowUpgrade(false)}
-              creditsRemaining={credits?.remaining || 0}
-              dismissKey={upgradeDismissedKey || ''}
-              source="credits"
-            />
+            {/* Low-credits pricing-waitlist modal (lazy: only when shown) */}
+            {showUpgrade && (
+              <Suspense fallback={null}>
+                <PricingWaitlistModal
+                  isOpen={showUpgrade}
+                  onClose={() => setShowUpgrade(false)}
+                  creditsRemaining={credits?.remaining || 0}
+                  dismissKey={upgradeDismissedKey || ''}
+                  source="credits"
+                />
+              </Suspense>
+            )}
 
             {!isStaticPage && (
               <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />

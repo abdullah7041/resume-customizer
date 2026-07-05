@@ -12,7 +12,7 @@ import {
   isAuthRequiredError,
   AI_DEFAULT_TEMPERATURE,
 } from "../../services/api.js";
-import { ClarificationModal, type ClarificationQuestion } from "../modals/ClarificationModal";
+import { type ClarificationQuestion } from "../modals/ClarificationModal";
 import {
   formatClarificationAnswers,
   shouldRequestClarifications,
@@ -21,8 +21,6 @@ import {
 } from "@/lib/clarifications";
 import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
-import TemplateGallery from "../sections/TemplatesSection";
-import OnboardingChat from "../onboarding/OnboardingChat";
 import { isIntentPrompted, markIntentPrompted } from "../../lib/onboarding/intentPromptFlag";
 // KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 
@@ -36,6 +34,9 @@ const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").t
 const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m => ({ default: m.PipelineSection })));
+const TemplateGallery = lazy(() => import("../sections/TemplatesSection"));
+const OnboardingChat = lazy(() => import("../onboarding/OnboardingChat"));
+const ClarificationModal = lazy(() => import("../modals/ClarificationModal").then(m => ({ default: m.ClarificationModal })));
 
 import type { Tab } from "../ui/GlassTabs";
 import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflowNav";
@@ -44,8 +45,6 @@ import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
 import { GlassCard } from "../ui/GlassCard";
 import { ParallaxContainer } from "../ui/ParallaxSection";
-import { exportResumeToPdf } from "../../services/exportPdf.js";
-import { exportToSupabase, isSupabaseExportAvailable } from "../../services/supabaseExport.js";
 import { attachExportToJobApplication, updateJobApplication } from "../../services/pipeline";
 import { analytics } from "../../services/analytics";
 import type { ExtractedJobMetadata } from "../../types/pipeline";
@@ -1594,6 +1593,12 @@ export default function MainContent() {
           return;
         }
 
+        // Load export services on demand — keeps exportPdf + supabaseExport out of the entry chunk.
+        const [{ exportResumeToPdf }, { exportToSupabase, isSupabaseExportAvailable }] = await Promise.all([
+          import("../../services/exportPdf.js"),
+          import("../../services/supabaseExport.js"),
+        ]);
+
         // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
         const mergedResume = mergeResumeData(resumeData, {
           optimization: optimizationData,
@@ -1861,12 +1866,14 @@ export default function MainContent() {
                   location; only unmounts when the child resolves the prompt. */}
               {hasParsedResume && !intentPrompted && (
                 <div className="mt-4">
-                  <OnboardingChat
-                    path="has_cv"
-                    mode="inline"
-                    onComplete={resolveIntentPrompt}
-                    onDismiss={resolveIntentPrompt}
-                  />
+                  <Suspense fallback={<SectionSkeleton />}>
+                    <OnboardingChat
+                      path="has_cv"
+                      mode="inline"
+                      onComplete={resolveIntentPrompt}
+                      onDismiss={resolveIntentPrompt}
+                    />
+                  </Suspense>
                 </div>
               )}
             </>
@@ -1953,10 +1960,14 @@ export default function MainContent() {
           )}
 
           {activeTab === "templates" && (
-            <TemplateGallery
-              resumeData={resumeData}
-              optimizationData={optimizationData}
-            />
+            <LazyErrorBoundary label="Templates section">
+              <Suspense fallback={<SectionSkeleton />}>
+                <TemplateGallery
+                  resumeData={resumeData}
+                  optimizationData={optimizationData}
+                />
+              </Suspense>
+            </LazyErrorBoundary>
           )}
           {activeTab === "more-tools" && renderMoreToolsPanel()}
           {activeTab === "interview" && (
@@ -2070,15 +2081,19 @@ export default function MainContent() {
         text={resumeData?.plainText || ""}
       />
 
-      {/* Clarification Modal — pre-optimization gap interrogation */}
-      <ClarificationModal
-        questions={clarificationQuestions}
-        isOpen={isInterrogating}
-        isRegenerating={isRegenerating}
-        onSubmit={handleClarificationSubmit}
-        onSkip={handleClarificationSkip}
-        onRegenerate={handleRegenerate}
-      />
+      {/* Clarification Modal — pre-optimization gap interrogation (lazy: optimize flow only) */}
+      {isInterrogating && (
+        <Suspense fallback={null}>
+          <ClarificationModal
+            questions={clarificationQuestions}
+            isOpen={isInterrogating}
+            isRegenerating={isRegenerating}
+            onSubmit={handleClarificationSubmit}
+            onSkip={handleClarificationSkip}
+            onRegenerate={handleRegenerate}
+          />
+        </Suspense>
+      )}
 
       {/* Delete All Data Confirmation Modal */}
       {showDeleteConfirm && (

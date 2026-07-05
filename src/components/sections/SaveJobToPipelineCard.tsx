@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { analytics } from '../../services/analytics';
 import { createJobApplication } from '../../services/pipeline';
 import type { ExtractedJobMetadata, JobApplicationStatus } from '../../types/pipeline';
+import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
 
 interface SaveJobToPipelineCardProps {
   jobDescription: string;
@@ -103,6 +104,7 @@ export function SaveJobToPipelineCard({
       }
 
       analytics.trackPipelineJobSaved({ is_duplicate: isDuplicate || false });
+      requestValueMomentFeedbackPrompt('pipeline_save');
 
       if (isDuplicate) {
         onToast?.({

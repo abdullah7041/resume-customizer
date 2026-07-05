@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense, type CSSProperties, type MouseEvent } from "react";
 import { Linkedin, LogIn, LogOut, Sparkles, Menu, X, Gift, Sun, Moon, Settings, UserCircle, MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils/cn";
@@ -7,11 +7,13 @@ import { getSkylineUrls } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
-import { CreditUsageModal } from "../Credits/CreditUsageModal";
-import { PricingWaitlistModal } from "../Credits/PricingWaitlistModal";
-import { SettingsModal } from "../Settings/SettingsModal";
-import { FeedbackModal } from "../Feedback/FeedbackModal";
 import { useTheme } from "../../hooks/useTheme";
+
+// Header modals are state-gated overlays — lazy-load them so they stay out of the entry chunk.
+const CreditUsageModal = lazy(() => import("../Credits/CreditUsageModal").then((m) => ({ default: m.CreditUsageModal })));
+const PricingWaitlistModal = lazy(() => import("../Credits/PricingWaitlistModal").then((m) => ({ default: m.PricingWaitlistModal })));
+const SettingsModal = lazy(() => import("../Settings/SettingsModal").then((m) => ({ default: m.SettingsModal })));
+const FeedbackModal = lazy(() => import("../Feedback/FeedbackModal").then((m) => ({ default: m.FeedbackModal })));
 import { useUserCredits } from "../../hooks/useUserCredits";
 import { createPortal } from "react-dom";
 
@@ -701,32 +703,42 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
         document.body
       )}
 
-      {/* Credit Usage Modal */}
-      <CreditUsageModal
-        isOpen={showCreditModal}
-        onClose={() => setShowCreditModal(false)}
-        viewMode={creditModalMode}
-      />
+      <Suspense fallback={null}>
+        {/* Credit Usage Modal */}
+        {showCreditModal && (
+          <CreditUsageModal
+            isOpen={showCreditModal}
+            onClose={() => setShowCreditModal(false)}
+            viewMode={creditModalMode}
+          />
+        )}
 
-      {/* Quiet authenticated pricing-waitlist CTA */}
-      <PricingWaitlistModal
-        isOpen={showPlansModal}
-        onClose={() => setShowPlansModal(false)}
-        creditsRemaining={credits?.remaining ?? 0}
-        dismissKey="watheq:headerPricingWaitlist"
-        source="pricing"
-      />
+        {/* Quiet authenticated pricing-waitlist CTA */}
+        {showPlansModal && (
+          <PricingWaitlistModal
+            isOpen={showPlansModal}
+            onClose={() => setShowPlansModal(false)}
+            creditsRemaining={credits?.remaining ?? 0}
+            dismissKey="watheq:headerPricingWaitlist"
+            source="pricing"
+          />
+        )}
 
-      {/* Settings Modal */}
-      <SettingsModal 
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-      />
+        {/* Settings Modal */}
+        {showSettingsModal && (
+          <SettingsModal
+            isOpen={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+          />
+        )}
 
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
-      />
+        {showFeedbackModal && (
+          <FeedbackModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+          />
+        )}
+      </Suspense>
     </header>
   );
 }

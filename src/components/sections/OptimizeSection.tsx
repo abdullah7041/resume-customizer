@@ -5,6 +5,7 @@ import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
+import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
 import { useRateLimit } from '../../hooks/useRateLimit';
 import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
@@ -576,6 +577,7 @@ export function OptimizeSection({
         optimization_count: newOptimizations.length,
         time_ms: performance.now() - startTime,
       });
+      requestValueMomentFeedbackPrompt('optimize_success');
 
       // Also update keyword suggestions from API response
       if (data.keywords) {

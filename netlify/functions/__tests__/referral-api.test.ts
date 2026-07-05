@@ -58,7 +58,7 @@ describe('referral-api auth binding', () => {
       from: supabaseFromMock,
     });
     getUserMock.mockResolvedValue({
-      data: { user: { email: 'real-user@example.com' } },
+      data: { user: { id: 'real-user-id', email: 'real-user@example.com' } },
       error: null,
     });
   });
@@ -76,7 +76,7 @@ describe('referral-api auth binding', () => {
     expect(getReferralStatsMock).not.toHaveBeenCalled();
   });
 
-  it('uses authenticated email for stats instead of query email', async () => {
+  it('uses authenticated user id for stats instead of query email', async () => {
     getReferralStatsMock.mockResolvedValue({
       total: 2,
       completed: 1,
@@ -97,10 +97,10 @@ describe('referral-api auth binding', () => {
     ) as HandlerResponse;
 
     expect(response.statusCode).toBe(200);
-    expect(getReferralStatsMock).toHaveBeenCalledWith('real-user@example.com');
+    expect(getReferralStatsMock).toHaveBeenCalledWith('real-user-id');
   });
 
-  it('uses authenticated email as the referee when tracking referrals', async () => {
+  it('uses authenticated identity as the referee when tracking referrals', async () => {
     trackReferralMock.mockResolvedValue({ success: true });
 
     const response = await handler(
@@ -118,7 +118,7 @@ describe('referral-api auth binding', () => {
     ) as HandlerResponse;
 
     expect(response.statusCode).toBe(200);
-    expect(trackReferralMock).toHaveBeenCalledWith('REF12345', 'real-user@example.com');
+    expect(trackReferralMock).toHaveBeenCalledWith('REF12345', 'real-user@example.com', 'real-user-id');
   });
 
   it('uses authenticated email for referral link generation', async () => {

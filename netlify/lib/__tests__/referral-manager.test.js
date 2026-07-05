@@ -62,6 +62,14 @@ function mockConditionalReferralUpdate(result) {
   };
 }
 
+function mockUpdateEq(result) {
+  return {
+    update: vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue(result),
+    })),
+  };
+}
+
 describe('ReferralManager server config', () => {
   afterEach(() => {
     process.env = { ...originalEnv };
@@ -111,36 +119,50 @@ describe('ReferralManager tracking idempotency', () => {
   it('awards referral credits only after the relationship write returns a row', async () => {
     setServerEnv();
     addCreditsMock.mockResolvedValue({ success: true, creditsRemaining: 25 });
+    const updateMock = mockConditionalReferralUpdate({
+      data: { email: 'new-user@example.com' },
+      error: null,
+    });
     supabaseMock.from
       .mockReturnValueOnce(mockSelectSingle({
-        data: { email: 'referrer@example.com' },
+        data: { email: 'referrer@example.com', user_id: 'referrer-user-id' },
         error: null,
       }))
-      .mockReturnValueOnce(mockConditionalReferralUpdate({
-        data: { email: 'new-user@example.com' },
-        error: null,
-      }).table);
+      .mockReturnValueOnce(updateMock.table);
 
     const { trackReferral } = await importFreshReferralManager();
 
-    await expect(trackReferral('REF12345', 'new-user@example.com')).resolves.toEqual({
+    await expect(trackReferral('REF12345', 'new-user@example.com', 'new-user-id')).resolves.toEqual({
       success: true,
     });
+    expect(updateMock.spies.update).toHaveBeenCalledWith(expect.objectContaining({
+      referred_by_user_id: 'referrer-user-id',
+    }));
+    expect(updateMock.spies.eq).toHaveBeenCalledWith('user_id', 'new-user-id');
+    expect(updateMock.spies.is).toHaveBeenCalledWith('referred_by_user_id', null);
     expect(addCreditsMock).toHaveBeenCalledTimes(2);
     expect(addCreditsMock).toHaveBeenNthCalledWith(
       1,
       'referrer@example.com',
       5,
       'referral_reward',
-      expect.objectContaining({ referee_email: 'new-user@example.com' })
+      expect.objectContaining({
+        description: 'Referral bonus: new user signed up',
+        referee_user_id: 'new-user-id',
+      })
     );
     expect(addCreditsMock).toHaveBeenNthCalledWith(
       2,
       'new-user@example.com',
       5,
       'referral_reward',
-      expect.objectContaining({ referrer_email: 'referrer@example.com' })
+      expect.objectContaining({
+        description: 'Referral bonus: welcome reward',
+        referrer_user_id: 'referrer-user-id',
+      })
     );
+    expect(addCreditsMock.mock.calls[0][3]).not.toHaveProperty('referee_email');
+    expect(addCreditsMock.mock.calls[1][3]).not.toHaveProperty('referrer_email');
     expect(sendReferralRewardReferrerMock).toHaveBeenCalledWith(
       'referrer@example.com',
       'Watheq user',
@@ -163,22 +185,22 @@ describe('ReferralManager tracking idempotency', () => {
     });
     supabaseMock.from
       .mockReturnValueOnce(mockSelectSingle({
-        data: { email: 'referrer@example.com' },
+        data: { email: 'referrer@example.com', user_id: 'referrer-user-id' },
         error: null,
       }))
       .mockReturnValueOnce(updateMock.table)
       .mockReturnValueOnce(mockSelectSingle({
-        data: { referred_by_email: 'referrer@example.com' },
+        data: { referred_by_user_id: 'referrer-user-id' },
         error: null,
       }));
 
     const { trackReferral } = await importFreshReferralManager();
 
-    await expect(trackReferral('REF12345', 'new-user@example.com')).resolves.toEqual({
+    await expect(trackReferral('REF12345', 'new-user@example.com', 'new-user-id')).resolves.toEqual({
       success: false,
       error: 'Already referred by another user',
     });
-    expect(updateMock.spies.is).toHaveBeenCalledWith('referred_by_email', null);
+    expect(updateMock.spies.is).toHaveBeenCalledWith('referred_by_user_id', null);
     expect(addCreditsMock).not.toHaveBeenCalled();
     expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
     expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
@@ -188,7 +210,7 @@ describe('ReferralManager tracking idempotency', () => {
     setServerEnv();
     supabaseMock.from
       .mockReturnValueOnce(mockSelectSingle({
-        data: { email: 'referrer@example.com' },
+        data: { email: 'referrer@example.com', user_id: 'referrer-user-id' },
         error: null,
       }))
       .mockReturnValueOnce(mockConditionalReferralUpdate({
@@ -202,12 +224,43 @@ describe('ReferralManager tracking idempotency', () => {
 
     const { trackReferral } = await importFreshReferralManager();
 
-    await expect(trackReferral('REF12345', 'new-user@example.com')).resolves.toEqual({
+    await expect(trackReferral('REF12345', 'new-user@example.com', 'new-user-id')).resolves.toEqual({
       success: false,
       error: 'Referral record not found',
     });
     expect(addCreditsMock).not.toHaveBeenCalled();
     expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
     expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
+  });
+
+  it('completes existing UUID referrals by resolving the referrer email from user_id', async () => {
+    setServerEnv();
+    supabaseMock.rpc.mockResolvedValue({ error: null });
+    supabaseMock.from
+      .mockReturnValueOnce(mockSelectSingle({
+        data: { referred_by_user_id: 'referrer-user-id', referral_completed: false },
+        error: null,
+      }))
+      .mockReturnValueOnce(mockSelectSingle({
+        data: { email: 'referrer@example.com' },
+        error: null,
+      }))
+      .mockReturnValueOnce(mockUpdateEq({ error: null }));
+
+    const { completeReferral } = await importFreshReferralManager();
+
+    await expect(completeReferral('new-user@example.com')).resolves.toEqual({
+      completed: true,
+      referrerReward: 5,
+      refereeReward: 5,
+    });
+    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(1, 'add_credits', expect.objectContaining({
+      p_email: 'referrer@example.com',
+      p_transaction_type: 'referral_reward',
+    }));
+    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(2, 'add_credits', expect.objectContaining({
+      p_email: 'new-user@example.com',
+      p_transaction_type: 'referral_reward',
+    }));
   });
 });

@@ -53,7 +53,12 @@ function summarizeErrorForLog(error: unknown) {
     return redactForLog(error);
 }
 
-async function getAuthenticatedEmail(event: Parameters<Handler>[0]): Promise<string> {
+interface AuthenticatedReferralUser {
+    id: string;
+    email: string;
+}
+
+async function getAuthenticatedUser(event: Parameters<Handler>[0]): Promise<AuthenticatedReferralUser> {
     const authHeader = event.headers.authorization || event.headers.Authorization;
 
     if (!authHeader) {
@@ -69,11 +74,11 @@ async function getAuthenticatedEmail(event: Parameters<Handler>[0]): Promise<str
     const token = authHeader.replace(/^Bearer\s+/i, '');
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
-    if (error || !user?.email) {
+    if (error || !user?.id || !user?.email) {
         throw httpError(401, 'Invalid or expired authentication token');
     }
 
-    return user.email;
+    return { id: user.id, email: user.email };
 }
 
 /**
@@ -127,8 +132,8 @@ async function handleGetLink(email: string) {
 /**
  * Handle GET /get-stats - Get referral statistics
  */
-async function handleGetStats(email: string) {
-    const stats = await getReferralStats(email);
+async function handleGetStats(userId: string) {
+    const stats = await getReferralStats(userId);
 
     // Map new field names to legacy format for backward compatibility
     return {
@@ -139,10 +144,10 @@ async function handleGetStats(email: string) {
     };
 }
 
-async function handleGetSummary(email: string) {
+async function handleGetSummary(user: AuthenticatedReferralUser) {
     const [link, stats] = await Promise.all([
-        handleGetLink(email),
-        handleGetStats(email)
+        handleGetLink(user.email),
+        handleGetStats(user.id)
     ]);
 
     return { ...link, ...stats };
@@ -152,7 +157,7 @@ async function handleGetSummary(email: string) {
  * Handle POST /track - Track a new referral
  * Expects: { referral_code: string }
  */
-async function handleTrack(body: { referral_code: string }, refereeEmail: string) {
+async function handleTrack(body: { referral_code: string }, refereeEmail: string, refereeUserId: string) {
     const { referral_code } = body;
 
     // Validate required fields
@@ -160,7 +165,7 @@ async function handleTrack(body: { referral_code: string }, refereeEmail: string
         throw httpError(400, 'Missing required field: referral_code');
     }
 
-    const result = await trackReferral(referral_code, refereeEmail);
+    const result = await trackReferral(referral_code, refereeEmail, refereeUserId);
 
     if (!result.success) {
         throw httpError(400, result.error || 'Failed to track referral');
@@ -176,11 +181,11 @@ const handler: Handler = async (event) => {
         // ===================== GET Requests =====================
         if (method === 'GET') {
             const action = event.queryStringParameters?.action;
-            const email = await getAuthenticatedEmail(event);
+            const user = await getAuthenticatedUser(event);
 
             if (action === 'get-link') {
                 try {
-                    const result = await handleGetLink(email);
+                    const result = await handleGetLink(user.email);
                     return {
                         statusCode: 200,
                         body: JSON.stringify({ success: true, ...result }),
@@ -198,7 +203,7 @@ const handler: Handler = async (event) => {
             }
 
             if (action === 'get-stats') {
-                const stats = await handleGetStats(email);
+                const stats = await handleGetStats(user.id);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({ success: true, ...stats }),
@@ -206,7 +211,7 @@ const handler: Handler = async (event) => {
             }
 
             if (action === 'get-summary') {
-                const summary = await handleGetSummary(email);
+                const summary = await handleGetSummary(user);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({ success: true, ...summary }),
@@ -223,10 +228,10 @@ const handler: Handler = async (event) => {
         if (method === 'POST') {
             const body = JSON.parse(event.body || '{}');
             const action = body.action;
-            const email = await getAuthenticatedEmail(event);
+            const user = await getAuthenticatedUser(event);
 
             if (action === 'track') {
-                const result = await handleTrack(body, email);
+                const result = await handleTrack(body, user.email, user.id);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({ success: true, ...result }),

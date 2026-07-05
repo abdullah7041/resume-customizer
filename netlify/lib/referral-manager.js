@@ -56,27 +56,33 @@ function getSupabaseClient() {
  *
  * @param {string} referrerCode - The referral code (format: USR-XXXXX)
  * @param {string} refereeEmail - Email of the new user being referred
+ * @param {string} refereeUserId - Auth user ID of the new user being referred
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function trackReferral(referrerCode, refereeEmail) {
+export async function trackReferral(referrerCode, refereeEmail, refereeUserId) {
   try {
     const supabase = getSupabaseClient();
+
+    if (!refereeUserId) {
+      return { success: false, error: 'Missing referee user ID' };
+    }
 
     // Find referrer by code
     const { data: referrerData, error: referrerError } = await supabase
       .from('user_credits')
-      .select('email')
+      .select('email, user_id')
       .eq('referral_code', referrerCode)
       .single();
 
-    if (referrerError || !referrerData) {
+    if (referrerError || !referrerData?.user_id) {
       console.warn('[ReferralManager] Invalid referral code');
       return { success: false, error: 'Invalid referral code' };
     }
 
     const referrerEmail = referrerData.email;
+    const referrerUserId = referrerData.user_id;
 
-    if (referrerEmail === refereeEmail) {
+    if (referrerEmail === refereeEmail || referrerUserId === refereeUserId) {
       console.warn('[ReferralManager] Self-referral blocked');
       return { success: false, error: 'Cannot use your own referral code' };
     }
@@ -86,12 +92,12 @@ export async function trackReferral(referrerCode, refereeEmail) {
     const { data: trackedReferral, error: updateError } = await supabase
       .from('user_credits')
       .update({
-        referred_by_email: referrerEmail,
+        referred_by_user_id: referrerUserId,
         referral_completed: true,
         referral_completed_at: new Date().toISOString()
       })
-      .eq('email', refereeEmail)
-      .is('referred_by_email', null)
+      .eq('user_id', refereeUserId)
+      .is('referred_by_user_id', null)
       .select('email')
       .maybeSingle();
 
@@ -103,8 +109,8 @@ export async function trackReferral(referrerCode, refereeEmail) {
     if (!trackedReferral) {
       const { data: existingReferral, error: existingReferralError } = await supabase
         .from('user_credits')
-        .select('referred_by_email')
-        .eq('email', refereeEmail)
+        .select('referred_by_user_id')
+        .eq('user_id', refereeUserId)
         .single();
 
       if (existingReferralError || !existingReferral) {
@@ -112,7 +118,7 @@ export async function trackReferral(referrerCode, refereeEmail) {
         return { success: false, error: 'Referral record not found' };
       }
 
-      if (existingReferral.referred_by_email) {
+      if (existingReferral.referred_by_user_id) {
         console.warn('[ReferralManager] User already has a referrer');
         return { success: false, error: 'Already referred by another user' };
       }
@@ -126,8 +132,8 @@ export async function trackReferral(referrerCode, refereeEmail) {
     // Award credits to referrer using credit-manager (avoids RPC migration dependency)
     try {
       await addCredits(referrerEmail, REFERRER_REWARD, 'referral_reward', {
-        description: `Referral bonus: ${refereeEmail} signed up`,
-        referee_email: refereeEmail,
+        description: 'Referral bonus: new user signed up',
+        referee_user_id: refereeUserId,
       });
       console.log(`[ReferralManager] Awarded ${REFERRER_REWARD} credits to referrer ${redactForLog(referrerEmail)}`);
     } catch (referrerRewardError) {
@@ -137,8 +143,8 @@ export async function trackReferral(referrerCode, refereeEmail) {
     // Award credits to referee using credit-manager (avoids RPC migration dependency)
     try {
       await addCredits(refereeEmail, REFEREE_REWARD, 'referral_reward', {
-        description: `Referral bonus: welcome reward`,
-        referrer_email: referrerEmail,
+        description: 'Referral bonus: welcome reward',
+        referrer_user_id: referrerUserId,
       });
       console.log(`[ReferralManager] Awarded ${REFEREE_REWARD} credits to referee ${redactForLog(refereeEmail)}`);
     } catch (refereeRewardError) {
@@ -187,7 +193,7 @@ export async function completeReferral(refereeEmail) {
     // Check if referral exists and is incomplete
     const { data: refereeData, error: fetchError } = await supabase
       .from('user_credits')
-      .select('referred_by_email, referral_completed')
+      .select('referred_by_user_id, referral_completed')
       .eq('email', refereeEmail)
       .single();
 
@@ -196,12 +202,25 @@ export async function completeReferral(refereeEmail) {
       return { completed: false };
     }
 
-    const { referred_by_email: referrerEmail, referral_completed: alreadyCompleted } = refereeData;
+    const { referred_by_user_id: referrerUserId, referral_completed: alreadyCompleted } = refereeData;
 
     // Skip if no referrer or already completed
-    if (!referrerEmail || alreadyCompleted) {
+    if (!referrerUserId || alreadyCompleted) {
       return { completed: false };
     }
+
+    const { data: referrerData, error: referrerFetchError } = await supabase
+      .from('user_credits')
+      .select('email')
+      .eq('user_id', referrerUserId)
+      .single();
+
+    if (referrerFetchError || !referrerData?.email) {
+      console.error('[ReferralManager] Failed to resolve referrer:', summarizeErrorForLog(referrerFetchError));
+      return { completed: false, error: 'Failed to resolve referrer' };
+    }
+
+    const referrerEmail = referrerData.email;
 
     console.log(`[ReferralManager] Completing referral for referee ${redactForLog(refereeEmail)}`);
 
@@ -283,10 +302,10 @@ export async function completeReferral(refereeEmail) {
 /**
  * Get referral statistics for a user.
  *
- * @param {string} userEmail - Email of the user
+ * @param {string} userId - Auth user ID of the user
  * @returns {Promise<{total: number, completed: number, pending: number, creditsEarned: number}>}
  */
-export async function getReferralStats(userEmail) {
+export async function getReferralStats(userId) {
   try {
     const supabase = getSupabaseClient();
 
@@ -294,7 +313,7 @@ export async function getReferralStats(userEmail) {
     const { data, error } = await supabase
       .from('user_credits')
       .select('referral_completed')
-      .eq('referred_by_email', userEmail);
+      .eq('referred_by_user_id', userId);
 
     if (error) {
       console.error('[ReferralManager] Failed to fetch stats:', summarizeErrorForLog(error));

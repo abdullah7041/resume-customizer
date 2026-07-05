@@ -27,6 +27,7 @@ import { Download, Check, Sparkles, AlertCircle, Edit3, ZoomIn, ZoomOut, RotateC
 import { resumeTemplates, TEMPLATE_CATEGORIES } from "../../lib/data/resumeTemplates";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { analytics } from "../../services/analytics";
+import { requestValueMomentFeedbackPrompt } from "../Feedback/FeedbackPromptController";
 
 import TemplateRenderer from "../templates/TemplateRenderer";
 import { GlassButton } from "../ui/GlassButton";
@@ -440,6 +441,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       }
 
       analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
+      requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
 
     } catch (err) {
@@ -592,6 +594,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         pdf.save(finalFilename);
 
         analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
+        requestValueMomentFeedbackPrompt('export_success');
         useResumeStore.getState().setHasDownloaded(true);
 
       } catch (clientErr) {
@@ -630,6 +633,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       saveAs(blob, filename);
 
       analytics.trackExportSuccess(selectedTemplate.id, 'docx');
+      requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
       console.error('DOCX Download failed:', summarizeErrorForConsole(err));
