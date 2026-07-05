@@ -98,6 +98,7 @@ export async function trackReferral(referrerCode, refereeEmail, refereeUserId) {
       })
       .eq('user_id', refereeUserId)
       .is('referred_by_user_id', null)
+      .is('referred_by_email', null)
       .select('email')
       .maybeSingle();
 
@@ -109,7 +110,7 @@ export async function trackReferral(referrerCode, refereeEmail, refereeUserId) {
     if (!trackedReferral) {
       const { data: existingReferral, error: existingReferralError } = await supabase
         .from('user_credits')
-        .select('referred_by_user_id')
+        .select('referred_by_user_id, referred_by_email')
         .eq('user_id', refereeUserId)
         .single();
 
@@ -118,7 +119,7 @@ export async function trackReferral(referrerCode, refereeEmail, refereeUserId) {
         return { success: false, error: 'Referral record not found' };
       }
 
-      if (existingReferral.referred_by_user_id) {
+      if (existingReferral.referred_by_user_id || existingReferral.referred_by_email) {
         console.warn('[ReferralManager] User already has a referrer');
         return { success: false, error: 'Already referred by another user' };
       }

@@ -98,6 +98,17 @@ describe('Supabase RLS migration hardening', () => {
     expect(migrationSql).toContain('user_credits_referred_by_user_id_fkey');
   });
 
+  it('backfills UUID referral relationships from legacy referral emails', () => {
+    const migrationSql = readMigrationSql('20260703000002_backfill_legacy_referral_user_ids.sql');
+
+    expect(migrationSql).toContain('update public.user_credits referee');
+    expect(migrationSql).toContain('set referred_by_user_id = referrer.user_id');
+    expect(migrationSql).toContain('from public.user_credits referrer');
+    expect(migrationSql).toContain('lower(referee.referred_by_email::text) = lower(referrer.email::text)');
+    expect(migrationSql).toContain('where referee.referred_by_user_id is null');
+    expect(migrationSql).toContain('and referee.referred_by_email is not null');
+  });
+
   it('optimizes only active feedback report RLS auth helpers behind initplans', () => {
     const migrationSql = readMigrationSql('20260703000001_optimize_feedback_reports_rls_initplans.sql');
 

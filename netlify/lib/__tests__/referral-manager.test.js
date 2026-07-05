@@ -51,14 +51,16 @@ function mockSelectSingle(result) {
 
 function mockConditionalReferralUpdate(result) {
   const maybeSingle = vi.fn().mockResolvedValue(result);
-  const select = vi.fn(() => ({ maybeSingle }));
-  const is = vi.fn(() => ({ select }));
-  const eq = vi.fn(() => ({ is }));
+  const query = {
+    is: vi.fn(() => query),
+    select: vi.fn(() => ({ maybeSingle })),
+  };
+  const eq = vi.fn(() => query);
   const update = vi.fn(() => ({ eq }));
 
   return {
     table: { update },
-    spies: { update, eq, is, select, maybeSingle },
+    spies: { update, eq, is: query.is, select: query.select, maybeSingle },
   };
 }
 
@@ -201,6 +203,36 @@ describe('ReferralManager tracking idempotency', () => {
       error: 'Already referred by another user',
     });
     expect(updateMock.spies.is).toHaveBeenCalledWith('referred_by_user_id', null);
+    expect(addCreditsMock).not.toHaveBeenCalled();
+    expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
+    expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
+  });
+
+  it('does not award duplicate credits for legacy email-keyed referrals', async () => {
+    setServerEnv();
+    const updateMock = mockConditionalReferralUpdate({
+      data: null,
+      error: null,
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(mockSelectSingle({
+        data: { email: 'referrer@example.com', user_id: 'referrer-user-id' },
+        error: null,
+      }))
+      .mockReturnValueOnce(updateMock.table)
+      .mockReturnValueOnce(mockSelectSingle({
+        data: { referred_by_user_id: null, referred_by_email: 'legacy-referrer@example.com' },
+        error: null,
+      }));
+
+    const { trackReferral } = await importFreshReferralManager();
+
+    await expect(trackReferral('REF12345', 'new-user@example.com', 'new-user-id')).resolves.toEqual({
+      success: false,
+      error: 'Already referred by another user',
+    });
+    expect(updateMock.spies.is).toHaveBeenCalledWith('referred_by_user_id', null);
+    expect(updateMock.spies.is).toHaveBeenCalledWith('referred_by_email', null);
     expect(addCreditsMock).not.toHaveBeenCalled();
     expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
     expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
