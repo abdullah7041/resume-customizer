@@ -55,11 +55,14 @@ One fixture per failure mode, so a change that fixes one layout and breaks anoth
 shows up as a number:
 
 - single-column (done: `abdullah-bi-analyst`)
-- two-column / sidebar
-- right-aligned date column (single column that looks like two)
-- Arabic-only
-- bilingual Arabic/English
-- a scanned PDF (OCR path)
+- two-column / sidebar (done: `two-column-designer`)
+- two-column worst case, lines interleaved across columns (done: `interleaved-columns-accountant`)
+- right-aligned date column, dates detached from entries (done: `right-aligned-dates-engineer`)
+- decorative/Canva template: emoji headers, skill bars as unicode dots (done: `canva-decorative-marketer`)
+- Arabic-only (done: `arabic-data-analyst`)
+- Arabic with Hijri dates + Arabic-Indic digits + embedded English tools (done: `arabic-hijri-mixed-hr`)
+- bilingual Arabic/English (done: `bilingual-software-engineer`)
+- a scanned PDF (OCR path) — still missing
 
 ## What it does NOT cover
 

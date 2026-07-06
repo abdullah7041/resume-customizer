@@ -1,0 +1,94 @@
+{
+  "basics": {
+    "name": "NOURA ALQAHTANI",
+    "label": "Creative digital marketer with 4 years growing D2C brands through paid social, influencer campaigns, and CRO. Bilingual storyteller who turns data into campaigns.",
+    "email": "noura.q@email.com",
+    "phone": "+966 54 222 8899",
+    "location": {
+      "city": "Riyadh",
+      "countryCode": "SA"
+    },
+    "profiles": [
+      {
+        "network": "linkedin",
+        "url": "https://linkedin.com/in/nouraq"
+      }
+    ],
+    "summary": "Creative digital marketer with 4 years growing D2C brands through paid social, influencer campaigns, and CRO. Bilingual storyteller who turns data into campaigns."
+  },
+  "work": [
+    {
+      "name": "Floward",
+      "position": "Digital Marketing Specialist",
+      "location": "Riyadh",
+      "startDate": "2022-05",
+      "endDate": "Present",
+      "highlights": [
+        "Scaled Ramadan gifting campaigns to 3.2x ROAS across Meta and TikTok.",
+        "Grew Instagram following from 80K to 240K in 14 months with UGC strategy.",
+        "Launched influencer program with 45 creators, driving 18% of quarterly revenue."
+      ]
+    },
+    {
+      "name": "Almarai",
+      "position": "Marketing Coordinator",
+      "location": "Riyadh",
+      "startDate": "2020-07",
+      "endDate": "2022-04",
+      "highlights": [
+        "Coordinated 12 product launches across social and in-store activations.",
+        "Managed content calendar and community for 3 brand accounts."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Princess Nourah University",
+      "area": "Marketing",
+      "studyType": "Bachelor",
+      "startDate": "2016",
+      "endDate": "2020"
+    }
+  ],
+  "skills": [
+    {
+      "name": "Meta Ads",
+      "keywords": []
+    },
+    {
+      "name": "Google Ads",
+      "keywords": []
+    },
+    {
+      "name": "SEO",
+      "keywords": []
+    },
+    {
+      "name": "GA4",
+      "keywords": []
+    },
+    {
+      "name": "Content Strategy",
+      "keywords": []
+    },
+    {
+      "name": "Canva",
+      "keywords": []
+    }
+  ],
+  "projects": [],
+  "certificates": [],
+  "languages": [
+    {
+      "language": "Arabic",
+      "fluency": "Native"
+    },
+    {
+      "language": "English",
+      "fluency": "Fluent"
+    }
+  ],
+  "meta": {
+    "version": "3.0.0"
+  }
+}

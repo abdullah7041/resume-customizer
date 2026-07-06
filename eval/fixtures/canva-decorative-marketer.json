@@ -1,0 +1,56 @@
+{
+  "name": "canva-decorative-marketer",
+  "lang": "en",
+  "layout": "decorative",
+  "synthetic": true,
+  "note": "SYNTHETIC — simulates a Canva-template CV: emoji/icon glyphs in headers, skill-level bars extracted as unicode dots, contact info fragmented across lines, skills and 'about' before experience, decorative separators. Parser must ignore glyph noise and not turn skill bars into keywords.",
+  "text": "✦ NOURA ALQAHTANI ✦\n📍 Riyadh\n📧 noura.q@email.com\n📱 +966 54 222 8899\n🔗 linkedin.com/in/nouraq\n\n— ✦ —\n\n🎯 ABOUT ME\nCreative digital marketer with 4 years growing D2C brands through paid social, influencer campaigns, and CRO. Bilingual storyteller who turns data into campaigns.\n\n💡 SKILLS\nMeta Ads ●●●●●\nGoogle Ads ●●●●○\nSEO ●●●○○\nGA4 ●●●●○\nContent Strategy ●●●●●\nCanva ●●●●●\n\n— ✦ —\n\n💼 WORK EXPERIENCE\n✦ Digital Marketing Specialist | Floward | Riyadh\n🗓 May 2022 → Present\n▸ Scaled Ramadan gifting campaigns to 3.2x ROAS across Meta and TikTok.\n▸ Grew Instagram following from 80K to 240K in 14 months with UGC strategy.\n▸ Launched influencer program with 45 creators, driving 18% of quarterly revenue.\n✦ Marketing Coordinator | Almarai | Riyadh\n🗓 Jul 2020 → Apr 2022\n▸ Coordinated 12 product launches across social and in-store activations.\n▸ Managed content calendar and community for 3 brand accounts.\n\n— ✦ —\n\n🎓 EDUCATION\nBachelor of Marketing ✦ Princess Nourah University ✦ 2016 – 2020\n\n🌍 LANGUAGES\nArabic ●●●●● | English ●●●●○",
+  "expected": {
+    "basics": {
+      "name": "Noura Alqahtani",
+      "location": {
+        "city": "Riyadh",
+        "country": ""
+      },
+      "summaryContains": [
+        "marketer",
+        "paid social"
+      ],
+      "profiles": [
+        "linkedin"
+      ]
+    },
+    "work": [
+      {
+        "name": "Floward",
+        "position": "Digital Marketing Specialist",
+        "startDate": "May 2022",
+        "endDate": "Present",
+        "minHighlights": 3
+      },
+      {
+        "name": "Almarai",
+        "position": "Marketing Coordinator",
+        "startDate": "Jul 2020",
+        "endDate": "Apr 2022",
+        "minHighlights": 2
+      }
+    ],
+    "education": [
+      {
+        "institution": "Princess Nourah University"
+      }
+    ],
+    "skillsKeywords": [
+      "Meta Ads",
+      "Google Ads",
+      "SEO",
+      "GA4",
+      "Content Strategy"
+    ],
+    "languages": [
+      "Arabic",
+      "English"
+    ]
+  }
+}

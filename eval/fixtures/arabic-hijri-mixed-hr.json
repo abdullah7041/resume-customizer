@@ -1,0 +1,54 @@
+{
+  "name": "arabic-hijri-mixed-hr",
+  "lang": "ar",
+  "layout": "single-column",
+  "synthetic": true,
+  "note": "SYNTHETIC — Arabic CV with Hijri AND Gregorian dates, Arabic-Indic digits (٢٠٢١), English tech terms embedded in RTL text, and section headers in Arabic. Parser must normalize Arabic-Indic digits to standard years and keep English tool names as skills.",
+  "text": "عبدالرحمن الشهري\nأخصائي موارد بشرية\nالدمام، المملكة العربية السعودية\nabdulrahman.hr@email.com | ٩٦٦٥٣١١٢٢٣٣٤+\n\nالملخص المهني\nأخصائي موارد بشرية بخبرة ٦ سنوات في التوظيف وأنظمة العمل السعودية ومنصات قوى ومداد، مع تركيز على التوطين وتطوير سياسات الموارد البشرية.\n\nالخبرات العملية\nأخصائي موارد بشرية أول — شركة أرامكو السعودية، الظهران\nمن محرم ١٤٤٣هـ (أغسطس ٢٠٢١) حتى الآن\n• قُدت ملف التوطين ورفعت نسبة السعودة من ٦٢٪ إلى ٧٨٪ خلال سنتين.\n• طبّقت نظام SAP SuccessFactors لإدارة الأداء لـ ١٢٠٠ موظف.\n• خفّضت مدة التوظيف من ٤٥ يوماً إلى ٢٨ يوماً عبر أتمتة الفرز الأولي.\nمنسق موارد بشرية — مجموعة صافولا، جدة\n٢٠١٨ – ٢٠٢١\n• أدرت عمليات التوظيف لـ ٣ إدارات وأغلقت ٩٠+ وظيفة سنوياً.\n• جهّزت تقارير شهرية للقيادة باستخدام Excel وPower BI.\n\nالتعليم\nبكالوريوس إدارة أعمال — جامعة الملك فيصل، ٢٠١٤ – ٢٠١٨\n\nالمهارات\nقوى، مداد، SAP SuccessFactors، Excel، Power BI، أنظمة العمل السعودية، التوطين\n\nاللغات\nالعربية (اللغة الأم)، الإنجليزية (متقدم)",
+  "expected": {
+    "basics": {
+      "name": "عبدالرحمن الشهري",
+      "labelContains": [
+        "موارد بشرية"
+      ],
+      "location": {
+        "city": "الدمام",
+        "country": "السعودية"
+      },
+      "summaryContains": [
+        "موارد بشرية",
+        "التوطين"
+      ]
+    },
+    "work": [
+      {
+        "name": "أرامكو",
+        "position": "أخصائي موارد بشرية أول",
+        "startDate": "2021",
+        "endDate": "Present",
+        "minHighlights": 3
+      },
+      {
+        "name": "صافولا",
+        "position": "منسق موارد بشرية",
+        "startDate": "2018",
+        "endDate": "2021",
+        "minHighlights": 2
+      }
+    ],
+    "education": [
+      {
+        "institution": "جامعة الملك فيصل"
+      }
+    ],
+    "skillsKeywords": [
+      "SAP SuccessFactors",
+      "Excel",
+      "Power BI"
+    ],
+    "languages": [
+      "العربية",
+      "الإنجليزية"
+    ]
+  }
+}

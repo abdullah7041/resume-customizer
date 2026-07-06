@@ -2,28 +2,30 @@
   "basics": {
     "name": "SARAH AL-MUTAIRI",
     "label": "Product Designer",
-    "location": {
-      "city": "Riyadh",
-      "countryCode": "SA"
-    },
-    "summary": "Product designer with 6 years designing mobile and web products for fintech and e-commerce, focused on conversion and design systems.",
     "email": "sarah.design@email.com",
     "phone": "+966 50 123 4567",
+    "location": {
+      "city": "Riyadh",
+      "countryCode": "SA",
+      "region": null
+    },
     "profiles": [
       {
-        "network": "linkedin",
+        "network": "LinkedIn",
         "url": "https://linkedin.com/in/sarahalmutairi"
       },
       {
-        "network": "behance",
+        "network": "Behance",
         "url": "https://behance.net/sarahm"
       }
     ],
-    "url": ""
+    "url": null,
+    "summary": "Product designer with 6 years designing mobile and web products for fintech and e-commerce, focused on conversion and design systems."
   },
   "work": [
     {
       "name": "Jahez",
+      "location": "Riyadh",
       "position": "Senior Product Designer",
       "startDate": "Feb 2021",
       "endDate": "Present",
@@ -31,31 +33,33 @@
         "Led the redesign of the checkout flow, lifting conversion by 18%.",
         "Built and maintained the company design system used by 4 product teams.",
         "Ran weekly usability sessions that cut support tickets by 25%."
-      ],
-      "location": "Riyadh"
+      ]
     },
     {
       "name": "Noon",
+      "location": "Remote",
       "position": "Product Designer",
       "startDate": "Jun 2018",
       "endDate": "Jan 2021",
       "highlights": [
         "Designed the seller onboarding flow adopted by 12,000 merchants.",
         "Shipped a component library that halved design handoff time."
-      ],
-      "location": "Remote"
+      ]
     }
   ],
   "education": [
     {
-      "area": "Design",
       "institution": "King Saud University",
+      "area": "Design",
       "studyType": "Bachelor of Design",
-      "url": ""
+      "startDate": null,
+      "endDate": "2018",
+      "gpa": null
     }
   ],
   "skills": [
     {
+      "name": null,
       "keywords": [
         "Figma",
         "Sketch",
@@ -72,11 +76,19 @@
   "certificates": [],
   "languages": [
     {
-      "language": "Arabic (Native)"
+      "language": "Arabic",
+      "fluency": "Native",
+      "tag": null
     },
     {
-      "language": "English (Fluent)"
+      "language": "English",
+      "fluency": "Fluent",
+      "tag": null
     }
   ],
-  "meta": {}
+  "meta": {
+    "version": "3.0.0",
+    "canonical": null,
+    "lastModified": null
+  }
 }

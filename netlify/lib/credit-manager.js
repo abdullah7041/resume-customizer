@@ -6,6 +6,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { redactForLog, summarizeErrorForLog } from './sentry.js';
 
+// Free-tier allowance. Signup grant AND monthly cron reset MUST use this —
+// they drifted once (signup 20 vs cron reset 15). Single source of truth.
+export const FREE_TIER_CREDITS = 20;
+export const SUSPICIOUS_IP_CREDITS = 5;
+
 // Feature pricing (in credits)
 export const FEATURE_COSTS = {
   parse_resume: 0,        // FREE
@@ -57,7 +62,9 @@ async function checkIPAbuse(ipAddress) {
   }
 
   const accountsFromIP = count || 0;
-  if (accountsFromIP >= 3) {
+  // Threshold 10 (was 3): carrier CGNAT means many legit users share an IP —
+  // 3 penalized real signups on launch day. 10 still caps farm abuse at ~200 credits/IP/day (~$0.50 AI cost).
+  if (accountsFromIP >= 10) {
     console.warn(`[CreditManager] IP ${ipAddress} has ${accountsFromIP} accounts (suspicious)`);
     return true;
   }
@@ -121,10 +128,10 @@ export async function getUserCredits(email, options = {}) {
 
       // Check 2: IP abuse detection
       const isIPSuspicious = await checkIPAbuse(ipAddress);
-      const creditsToGive = isIPSuspicious ? 5 : 20; // Reduced credits for suspicious IPs
+      const creditsToGive = isIPSuspicious ? SUSPICIOUS_IP_CREDITS : FREE_TIER_CREDITS; // Reduced credits for suspicious IPs
 
       if (isIPSuspicious) {
-        console.warn(`[CreditManager] Suspicious IP detected for ${redactForLog(email)} - giving ${creditsToGive} credits instead of 20`);
+        console.warn(`[CreditManager] Suspicious IP detected for ${redactForLog(email)} - giving ${creditsToGive} credits instead of ${FREE_TIER_CREDITS}`);
       }
 
       const { data: newCredits, error: insertError } = await supabase

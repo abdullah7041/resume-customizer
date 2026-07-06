@@ -306,8 +306,12 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
 
   // Unauthenticated guest preview parse — stricter than the authenticated limit above
   "extract-resume-json-guest": { maxRequests: 5 },
-  "ai-match-free-preview": { maxRequests: 1, windowMs: 24 * 60 * 60 * 1000 },
-  "optimize-free-preview": { maxRequests: 1, windowMs: 24 * 60 * 60 * 1000 },
+  // Guest previews are keyed by IP. Saudi mobile carriers CGNAT many users
+  // behind one IP, so 1/day blocked everyone after the first visitor per carrier.
+  // Worst-case abuse cost at 30 matches/day/IP ≈ $0.27 — cheap vs losing launch traffic.
+  // Optimize preview stays tight: the signup wall lives at optimize.
+  "ai-match-free-preview": { maxRequests: 30, windowMs: 24 * 60 * 60 * 1000 },
+  "optimize-free-preview": { maxRequests: 3, windowMs: 24 * 60 * 60 * 1000 },
 
   // Unauthenticated waitlist confirmation email — strict to prevent mail-bombing
   "waitlist-confirm": { maxRequests: 5 },

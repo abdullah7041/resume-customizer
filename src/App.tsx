@@ -26,6 +26,9 @@ const PricingWaitlistModal = lazy(() => import("./components/Credits/PricingWait
 import { useAuth } from "./hooks/useAuth";
 import { FeedbackPromptController } from "./components/Feedback/FeedbackPromptController";
 
+// Launch flag: mascot hidden for launch (decision 2026-07-06). Flip to true to re-enable.
+const ENABLE_HR_MASCOT = false;
+
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 
 const getCurrentPath = () => {
@@ -128,7 +131,7 @@ export default function App() {
               </Suspense>
             )}
 
-            {!isStaticPage && (
+            {ENABLE_HR_MASCOT && !isStaticPage && (
               <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
             )}
           </div>

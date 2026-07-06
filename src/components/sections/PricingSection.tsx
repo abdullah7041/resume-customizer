@@ -91,16 +91,24 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                                         </div>
 
                                         {/* Price / Status line */}
-                                        <div className="flex items-baseline gap-1 py-2">
-                                            {plan.active ? (
-                                                <>
-                                                    <span className="text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">$0</span>
-                                                    <span className="text-gray-500 dark:text-emerald-100/50 font-medium text-lg ml-1">{t('pricing.forever')}</span>
-                                                </>
-                                            ) : (
-                                                <span className="text-lg font-semibold text-gray-600 dark:text-white/60">
-                                                    {t('pricing.waitlist.priceFinalizing', 'Pricing still being finalized')}
-                                                </span>
+                                        <div className="py-2">
+                                            <div className="flex items-baseline gap-1">
+                                                {plan.active ? (
+                                                    <>
+                                                        <span className="text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">$0</span>
+                                                        <span className="text-gray-500 dark:text-emerald-100/50 font-medium text-lg ml-1">{t('pricing.forever')}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">{t('pricing.plans.pro.price')}</span>
+                                                        <span className="text-gray-500 dark:text-emerald-100/50 font-medium text-lg ms-1">{t('pricing.plans.pro.period')}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            {plan.waitlist && (
+                                                <p className="mt-1 text-xs font-medium text-[#8a6d2f] dark:text-gold-400/80">
+                                                    {t('pricing.plans.pro.priceNote')}
+                                                </p>
                                             )}
                                         </div>
 

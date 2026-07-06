@@ -72,6 +72,7 @@ const runParser = async (text) => {
         timeoutMs: contract.timeoutMs,
         temperature: contract.temperature,
         reasoningBudget: contract.reasoningBudget,
+        responseFormat: contract.responseFormat,
         featureName: contract.featureName,
       });
     } catch (err) {

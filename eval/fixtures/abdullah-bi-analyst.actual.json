@@ -2,35 +2,44 @@
   "basics": {
     "name": "ABDULLAH BIN AHMED",
     "label": "Senior Business Intelligence Analyst & Data Architect",
+    "email": null,
+    "phone": null,
     "location": {
+      "address": null,
+      "postalCode": null,
       "city": "Dammam",
       "countryCode": "SA",
-      "region": "Saudi Arabia"
+      "region": null
     },
-    "summary": "Data-driven Senior Business Intelligence Analyst with 5+ years of experience overseeing the design, development, and delivery of enterprise BI solutions. Expert in architecting SQL databases, automating Power Query workflows, and deploying highly accessible Power BI dashboards that enable executive decision-making. Proven track record of managing cross-functional stakeholders, establishing data warehousing practices, and aligning technical data outputs directly with high-priority company objectives to eliminate operational waste.",
     "profiles": [
       {
         "network": "LinkedIn",
+        "username": null,
         "url": "linkedin.com/in/3binahmed/"
       },
       {
         "network": "GitHub",
+        "username": null,
         "url": "github.com/abdullah7041"
       },
       {
         "network": "Portfolio",
+        "username": null,
         "url": "abdullahfile.vercel.app"
       }
     ],
-    "url": "abdullahfile.vercel.app"
+    "url": "abdullahfile.vercel.app",
+    "summary": "Data-driven Senior Business Intelligence Analyst with 5+ years of experience overseeing the design, development, and delivery of enterprise BI solutions. Expert in architecting SQL databases, automating Power Query workflows, and deploying highly accessible Power BI dashboards that enable executive decision-making. Proven track record of managing cross-functional stakeholders, establishing data warehousing practices, and aligning technical data outputs directly with high-priority company objectives to eliminate operational waste."
   },
   "work": [
     {
       "name": "Al Ghalia (Saudi Arabia)",
       "position": "Senior Data Analyst & BI Specialist",
+      "location": null,
       "startDate": "Mar 2020",
       "endDate": "Present",
       "highlights": [
+        "Oversaw the delivery of BI solutions and operational reporting for a 50+ product inventory.",
         "Enabled data-driven decision-making across the organization by designing and delivering 15+ interactive Power BI dashboards, establishing a definitive single source of truth for executive stakeholders.",
         "Ensured operational data was highly accurate and accessible by architecting automated ETL and data cleaning workflows via Power Query (M Language), eliminating manual entry bottlenecks.",
         "Set priorities aligned with company objectives by analyzing product expiration trends via structured SQL-ready data formats, directly reducing inventory waste by 60% year-over-year."
@@ -39,9 +48,11 @@
     {
       "name": "Watheq (Remote)",
       "position": "Lead Product Engineer & Data Architect",
+      "location": null,
       "startDate": "Jan 2026",
       "endDate": "Present",
       "highlights": [
+        "Architected and scaled the database and reporting infrastructure for an AI-SaaS platform.",
         "Oversaw the design and delivery of robust backend data architectures by managing PostgreSQL (Supabase) databases, functioning as a lightweight data warehouse to ensure 100% data visibility for critical profiles.",
         "Managed stakeholder priorities and system uptime by orchestrating centralized incident reporting via GitHub Issues and Sentry/Telegram webhooks, reducing critical bug resolution time (MTTR) by 90%.",
         "Secured the accuracy of application analytics by executing strict Root Cause Analysis (RCA) and advanced SQL queries to patch dysfunctional database relations."
@@ -50,93 +61,122 @@
     {
       "name": "CB&I (Dammam, KSA)",
       "position": "Construction Data Specialist",
+      "location": "Dammam, KSA",
       "startDate": "Jun 2018",
       "endDate": "Jun 2019",
       "highlights": [
+        "Data compliance and workflow management in a high-stakes industrial environment.",
         "Ensured critical operational data was accurate and accessible for high-stakes compliance requirements by managing structured data integrity and achieving 100% audit readiness.",
         "Investigated field reporting workflows to identify bottlenecks, delivering reporting optimizations that reduced systemic downtime by 10%."
-      ],
-      "location": "Dammam, KSA"
+      ]
     }
   ],
   "education": [
     {
       "institution": "Saudi Petroleum Services Polytechnic",
+      "area": "Pipefitting Technology",
       "studyType": "Diploma",
-      "url": "Saudi Petroleum Services Polytechnic (GPA: 4.6/5, 2018). Pipefitting Technology"
+      "startDate": null,
+      "endDate": "2018",
+      "gpa": "4.6/5",
+      "courses": []
     }
   ],
   "skills": [
     {
+      "name": "Business Intelligence & Reporting",
+      "level": null,
       "keywords": [
         "Power BI",
         "Power Query (M Language)",
         "Executive Dashboards",
         "Data-Driven Decision Making"
-      ],
-      "name": "Business Intelligence & Reporting"
+      ]
     },
     {
+      "name": "Data Warehousing & Architecture",
+      "level": null,
       "keywords": [
         "SQL",
         "PostgreSQL (Supabase)",
         "Data Digitization",
         "ETL Pipeline Automation"
-      ],
-      "name": "Data Warehousing & Architecture"
+      ]
     },
     {
+      "name": "Operations & Stakeholder Management",
+      "level": null,
       "keywords": [
         "Cross-functional Requirements Gathering",
         "KPI Tracking",
         "A/B Testing",
         "RCA"
-      ],
-      "name": "Operations & Stakeholder Management"
+      ]
     },
     {
+      "name": "AI & Automation",
+      "level": null,
       "keywords": [
         "Node.js",
         "TypeScript",
         "n8n",
         "OpenAI API",
         "Telegram/Sentry Webhooks"
-      ],
-      "name": "AI & Automation"
+      ]
     }
   ],
   "projects": [
     {
       "name": "Automated Data Pipeline Bot",
-      "type": "Independent Project",
-      "url": "abdullahfile.vercel.app/projects/automated-data-pipeline-bot.html"
+      "description": "Built an automated n8n workflow utilizing the OpenAI API to categorize, process, and track backend data logs, reducing manual anomaly identification time by 90%.",
+      "highlights": [],
+      "startDate": null,
+      "endDate": null,
+      "url": null
     }
   ],
   "certificates": [
     {
       "name": "Intro to Management Consulting",
-      "url": "Emory University & PwC"
+      "date": null,
+      "issuer": "Emory University & PwC",
+      "url": null
     },
     {
       "name": "Leadership & Business Management",
-      "url": "McKinsey & Company Forward Program"
+      "date": null,
+      "issuer": "McKinsey & Company Forward Program",
+      "url": null
     },
     {
       "name": "Google Data Analytics Professional Certificate",
-      "url": "Capstone Phase"
+      "date": null,
+      "issuer": null,
+      "url": null
     },
     {
       "name": "AI Fluency & Prompt Engineering Frameworks",
-      "url": "Anthropic/Claude"
+      "date": null,
+      "issuer": "Anthropic/Claude",
+      "url": null
     }
   ],
   "languages": [
     {
-      "language": "Arabic"
+      "language": "Arabic",
+      "fluency": "Native"
     },
     {
-      "language": "English"
+      "language": "English",
+      "fluency": "Professional"
     }
   ],
-  "meta": {}
+  "meta": {
+    "version": "3.0.0",
+    "canonical": null,
+    "language": null,
+    "locale": null,
+    "contentLocale": null,
+    " 0": null
+  }
 }

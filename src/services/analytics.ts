@@ -176,10 +176,11 @@ class Analytics {
      * Track pricing-intent clicks (fake-door / waitlist).
      * Non-charging CTA only — Pro is not launched yet.
      */
-    trackPricingIntent({ source, planHint }: { source: string; planHint?: string }) {
+    trackPricingIntent({ source, planHint, shownPriceSar }: { source: string; planHint?: string; shownPriceSar?: number }) {
         this.track('pricing_intent_clicked', {
             source,
             plan_hint: planHint ?? 'pro',
+            shown_price_sar: shownPriceSar ?? null,
             pro_launched: false,
         });
     }
@@ -314,8 +315,8 @@ class Analytics {
         this.track('export_failed', { template_id: templateId, format, error_category: errorCategory });
     }
 
-    trackWaitlistJoined(source: string) {
-        this.track('waitlist_joined', { source });
+    trackWaitlistJoined(source: string, shownPriceSar?: number) {
+        this.track('waitlist_joined', { source, shown_price_sar: shownPriceSar ?? null });
     }
 
     trackPricingIntentPack9Sar(source: string) {

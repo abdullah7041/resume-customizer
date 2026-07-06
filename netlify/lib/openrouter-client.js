@@ -163,7 +163,15 @@ async function callOpenRouterDirect(modelType, model, messages, jsonSchema, opti
     };
   }
 
-  if (jsonSchema) {
+  if (options.responseFormat === 'json_object') {
+    // Opt out of provider grammar-constrained decoding. OpenRouter's json_schema
+    // structured output for google/gemini-2.5-flash-lite regressed to runaway
+    // generation (finish_reason "length") on some inputs — strict, non-strict,
+    // and fully-closed (additionalProperties:false everywhere) schemas all loop,
+    // while json_object returns clean, complete, schema-valid JSON. Callers that
+    // set this must enforce shape via their prompt + Zod outputSchema instead.
+    requestBody.response_format = { type: 'json_object' };
+  } else if (jsonSchema) {
     const convertedSchema = convertGoogleSchemaToOpenRouter(jsonSchema);
     requestBody.response_format = {
       type: 'json_schema',

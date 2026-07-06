@@ -21,6 +21,7 @@ function buildCallOptions(contract, options) {
     reasoningBudget: options.reasoningBudget ?? contract.reasoningBudget,
     schemaName: options.schemaName || contract.schemaName,
     featureName: options.featureName || contract.featureName,
+    responseFormat: options.responseFormat ?? contract.responseFormat,
     modelId: options.modelId,
   };
 }

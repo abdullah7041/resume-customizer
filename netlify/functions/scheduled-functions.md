@@ -16,7 +16,7 @@ This document describes how to configure scheduled functions in Netlify.
 **URL:** `https://watheq.app/.netlify/functions/cron-reset-credits`
 
 **Calls:**
-- `addCredits()` - Reset to 15 credits
+- Reset to `FREE_TIER_CREDITS` (20) from credit-manager
 - `sendCreditsRefreshedEmail()` - Notify users
 
 ---

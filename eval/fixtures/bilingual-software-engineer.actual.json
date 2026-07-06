@@ -2,58 +2,63 @@
   "basics": {
     "name": "KHALID AL-DOSSARI | خالد الدوسري",
     "label": "Software Engineer | مهندس برمجيات",
-    "location": {
-      "city": "Jeddah",
-      "countryCode": "SA"
-    },
-    "summary": "Full-stack engineer with 7 years building scalable web applications across fintech and ride-hailing. مهندس برمجيات متكامل بخبرة سبع سنوات.",
     "email": "khalid.dossari@email.com",
     "phone": "+966 56 222 3333",
+    "location": {
+      "city": "Jeddah",
+      "countryCode": "SA",
+      "region": null
+    },
     "profiles": [
       {
         "network": "github",
-        "url": "https://github.com/khalidd"
+        "url": "github.com/khalidd"
       },
       {
         "network": "linkedin",
-        "url": "https://linkedin.com/in/khaliddossari"
+        "url": "linkedin.com/in/khaliddossari"
       }
     ],
-    "url": ""
+    "url": null,
+    "summary": "Full-stack engineer with 7 years building scalable web applications across fintech and ride-hailing. مهندس برمجيات متكامل بخبرة سبع سنوات."
   },
   "work": [
     {
       "name": "STC",
       "position": "Senior Software Engineer",
+      "location": "Riyadh",
       "startDate": "Apr 2019",
       "endDate": "Present",
       "highlights": [
         "Built microservices handling 2M daily requests with 99.9% uptime.",
         "Mentored 5 junior engineers and led the migration to TypeScript."
-      ],
-      "location": "Riyadh"
+      ]
     },
     {
       "name": "Careem",
       "position": "Software Engineer",
+      "location": "Dubai",
       "startDate": "Jul 2016",
       "endDate": "Mar 2019",
       "highlights": [
         "Developed the driver matching service in Node.js used in 14 cities."
-      ],
-      "location": "Dubai"
+      ]
     }
   ],
   "education": [
     {
-      "area": "Computer Science",
       "institution": "KFUPM",
+      "area": "Computer Science",
       "studyType": "BSc",
-      "url": "https://www.kfupm.edu.sa/en/cs/Pages/default.aspx"
+      "startDate": null,
+      "endDate": "2016",
+      "gpa": null
     }
   ],
   "skills": [
     {
+      "name": null,
+      "level": null,
       "keywords": [
         "JavaScript",
         "TypeScript",
@@ -68,11 +73,19 @@
   "certificates": [],
   "languages": [
     {
-      "language": "Arabic (Native)"
+      "language": "Arabic",
+      "fluency": "Native",
+      "id": null
     },
     {
-      "language": "English (Fluent)"
+      "language": "English",
+      "fluency": "Fluent",
+      "id": null
     }
   ],
-  "meta": {}
+  "meta": {
+    "version": "3.0.0",
+    "canonical": null,
+    "language": "en"
+  }
 }

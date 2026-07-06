@@ -4,13 +4,14 @@
  *
  * Purpose:
  * - Find users whose credit reset date was >30 days ago
- * - Reset their credits to 15
+ * - Reset their credits to FREE_TIER_CREDITS (shared with signup grant in credit-manager)
  * - Send "Credits Refreshed" email notification
  * - Log transaction
  */
 
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import { FREE_TIER_CREDITS } from '../lib/credit-manager.js';
 import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
 import { sendCreditsRefreshedEmail } from '../lib/email-service.js';
 import { redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
@@ -98,8 +99,8 @@ const handler: Handler = async (event) => {
           continue;
         }
 
-        // Reset credits to 15
-        const newCredits = 15;
+        // Reset to the free-tier allowance — must always match the signup grant
+        const newCredits = FREE_TIER_CREDITS;
         const { error: updateError } = await supabase
           .from('user_credits')
           .update({

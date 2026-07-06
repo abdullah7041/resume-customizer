@@ -50,7 +50,11 @@ export async function streamFromOpenRouter(modelType, messages, jsonSchema = nul
     stream: true, // ← Enable SSE streaming
   };
 
-  if (options.reasoningBudget != null) {
+  // Mirrors openrouter-client.js: 0 must map to enabled:false, not max_tokens:0
+  // (max_tokens:0 is undefined behavior per OpenRouter docs — could re-enable thinking).
+  if (options.reasoningBudget === 0) {
+    requestBody.reasoning = { enabled: false };
+  } else if (options.reasoningBudget != null) {
     requestBody.reasoning = {
       max_tokens: options.reasoningBudget,
       exclude: true,

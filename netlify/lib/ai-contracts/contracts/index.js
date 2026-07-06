@@ -817,6 +817,8 @@ Additional extraction rules:
 - The line directly under the candidate's name is a professional headline. Put it in basics.label, not as a work entry.
 - Skills may be grouped as "Category: item, item, item". Preserve the category in skills[].name and extract every item as a keyword in skills[].keywords; preserve compound names like "Power Query (M Language)" and "PostgreSQL (Supabase)" intact.
 - For education entries, the institution may appear on the line before or after the degree. Always capture it as institution whenever it is visibly present.
+- Dates: normalize Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) to Western digits (0-9) in every startDate/endDate. When a date is written in Hijri with a Gregorian equivalent in parentheses (e.g. "محرم ١٤٤٣هـ (أغسطس ٢٠٢١)"), output the Gregorian value ("2021"), not the Hijri one. Map any open-ended end marker — "Present", "Current", "حتى الآن", "الآن" — to endDate "Present".
+- Languages may appear interleaved with skills, contact, or sidebar lines rather than in a clean block. Extract EVERY language and its fluency into languages[] (e.g. "Arabic (Native)", "English (Fluent)") even when the entries are scattered across the layout.
 - Return every top-level section container even when no evidence is present; use an empty array rather than omitting a section.
 
 Do not invent any values not present in the text.${focusInstruction}${withRagBlock(context.retrievedContext)}
@@ -1058,12 +1060,18 @@ export const aiContracts = {
     maxTokens: 8192,
     timeoutMs: 20000,
     temperature: 0,
-    // reasoningBudget 0 = thinking DISABLED. Parsing is mechanical extraction
-    // under a strict JSON schema, so chain-of-thought adds no quality. With
-    // gemini-2.5-flash-lite's default thinking ON, reasoning consumed the 8192
-    // output budget (→ truncation) and pushed latency to ~26s; OFF, the real
-    // JSON (~2-3k tokens) fits with headroom and latency returns to ~6s.
+    // reasoningBudget 0 = thinking DISABLED. Parsing is mechanical extraction,
+    // so chain-of-thought adds no quality. With gemini-2.5-flash-lite's default
+    // thinking ON, reasoning consumed the 8192 output budget (→ truncation) and
+    // pushed latency to ~26s; OFF, the real JSON (~2-3k tokens) fits with headroom.
     reasoningBudget: 0,
+    // json_object, NOT json_schema. OpenRouter's grammar-constrained structured
+    // output for gemini-2.5-flash-lite regressed to runaway generation (truncation
+    // at any maxTokens) on some layouts — right-aligned dates, decorative/Canva,
+    // two-column. json_object returns clean complete JSON; shape is enforced by the
+    // prompt's "you MUST extract" rules + the Zod outputSchema. The jsonSchema below
+    // is retained for documentation/Zod and re-activates if the provider is fixed.
+    responseFormat: 'json_object',
     buildMessages: buildParseResumeMessages,
   },
   parse_arabic_resume: {

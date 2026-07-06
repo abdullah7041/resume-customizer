@@ -1,0 +1,91 @@
+{
+  "basics": {
+    "name": "OMAR AL-HARBI",
+    "label": "Software Engineer",
+    "email": "omar.harbi@email.com",
+    "phone": "+966 55 987 1122",
+    "location": {
+      "city": "Jeddah",
+      "countryCode": "SA",
+      "region": null
+    },
+    "profiles": [
+      {
+        "network": "linkedin",
+        "username": "omaralharbi",
+        "url": "linkedin.com/in/omaralharbi"
+      }
+    ],
+    "url": null,
+    "summary": "Backend engineer with 5 years building payment and logistics APIs on Node.js and PostgreSQL, focused on reliability and observability."
+  },
+  "work": [
+    {
+      "name": "Tamara",
+      "position": "Senior Backend Engineer",
+      "location": "Riyadh",
+      "startDate": "Mar 2022",
+      "endDate": "Present",
+      "highlights": [
+        "Designed the settlement reconciliation service processing 2M+ transactions monthly.",
+        "Cut p95 checkout latency from 900ms to 320ms by removing N+1 queries and adding read replicas.",
+        "Led migration of 14 services from EC2 to ECS with zero-downtime cutover."
+      ]
+    },
+    {
+      "name": "Salla",
+      "position": "Backend Engineer",
+      "location": null,
+      "startDate": "Jan 2020",
+      "endDate": "Feb 2022",
+      "highlights": [
+        "Built webhook delivery system with retries and dead-letter queues handling 40M events/month.",
+        "Introduced OpenTelemetry tracing, reducing mean incident diagnosis time by 60%."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "King Abdulaziz University",
+      "area": "Computer Science",
+      "studyType": "B.Sc.",
+      "startDate": "2015",
+      "endDate": "2019",
+      "gpa": null
+    }
+  ],
+  "skills": [
+    {
+      "name": null,
+      "keywords": [
+        "Node.js",
+        "TypeScript",
+        "PostgreSQL",
+        "Redis",
+        "AWS",
+        "Docker",
+        "Kubernetes",
+        "OpenTelemetry"
+      ]
+    }
+  ],
+  "projects": [],
+  "certificates": [],
+  "languages": [
+    {
+      "language": "Arabic",
+      "fluency": "Native",
+      "tag": null
+    },
+    {
+      "language": "English",
+      "fluency": "Professional",
+      "tag": null
+    }
+  ],
+  "meta": {
+    "version": "3.0.0",
+    "canonical": null,
+    "language": "en"
+  }
+}

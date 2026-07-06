@@ -16,6 +16,7 @@ import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase';
 import { analytics } from '../../services/analytics';
+import { PRO_LAUNCH_PRICE_SAR } from '../../constants/pricing';
 
 type PricingIntent = 'pack_9_sar' | 'monthly_29_sar' | 'not_sure';
 
@@ -93,7 +94,7 @@ export function PricingWaitlistModal({
     } else if (showPricingIntentSurvey && pricingIntent === 'monthly_29_sar') {
       analytics.trackPricingIntentMonthly29Sar(analyticsSource);
     }
-    analytics.trackPricingIntent({ source: analyticsSource, planHint: 'pro_waitlist' });
+    analytics.trackPricingIntent({ source: analyticsSource, planHint: 'pro_waitlist', shownPriceSar: PRO_LAUNCH_PRICE_SAR });
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -131,7 +132,7 @@ export function PricingWaitlistModal({
         }
 
         setSubmitSuccess(true);
-        analytics.trackWaitlistJoined(analyticsSource);
+        analytics.trackWaitlistJoined(analyticsSource, PRO_LAUNCH_PRICE_SAR);
         localStorage.setItem(attemptKey, Date.now().toString());
       }
     } catch (err) {
@@ -173,6 +174,9 @@ export function PricingWaitlistModal({
               </h2>
               <p className="max-w-sm text-sm leading-relaxed text-gray-600 dark:text-emerald-100/75">
                 {t('pricing.waitlist.subtitle', 'Paid plans are not live yet. Join the list and help shape launch pricing.')}
+              </p>
+              <p className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--accent-gold)]/30 bg-[color:var(--accent-gold-soft)] px-3 py-1.5 text-sm font-semibold text-[#8a6d2f] dark:text-gold-400">
+                {t('pricing.waitlist.priceLine', 'Planned launch price: 29 SAR/month')}
               </p>
             </div>
             <button

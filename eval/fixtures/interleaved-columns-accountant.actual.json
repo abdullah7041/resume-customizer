@@ -1,0 +1,91 @@
+{
+  "basics": {
+    "name": "FAISAL AL-DOSSARI",
+    "label": "Senior Accountant",
+    "email": "faisal.acc@email.com",
+    "phone": "+966 50 776 3344",
+    "location": {
+      "city": "Riyadh",
+      "countryCode": "SA"
+    },
+    "profiles": [
+      {
+        "network": "linkedin",
+        "username": "faisaldossari",
+        "url": "linkedin.com/in/faisaldossari"
+      }
+    ],
+    "url": "",
+    "summary": ""
+  },
+  "work": [
+    {
+      "name": "Alinma Bank",
+      "position": "Senior Accountant",
+      "startDate": "2021",
+      "endDate": "Present",
+      "highlights": [
+        "Prepared monthly IFRS financial statements for a SAR 2.1B loan portfolio.",
+        "Automated reconciliation workbooks in Excel, saving 30 hours monthly.",
+        "Supported SOCPA and SAMA audit cycles with zero material findings."
+      ]
+    },
+    {
+      "name": "PwC Middle East",
+      "position": "Accountant",
+      "startDate": "2018",
+      "endDate": "2020",
+      "highlights": [
+        "Performed external audits for 9 clients in retail and construction.",
+        "Prepared VAT returns and zakat filings under KSA regulations."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "King Fahd University of Petroleum and Minerals",
+      "area": "Accounting",
+      "studyType": "B.Sc.",
+      "startDate": "2014",
+      "endDate": "2018"
+    },
+    {
+      "institution": "King Fahd University of Petroleum and Minerals",
+      "studyType": "SOCPA Associate",
+      "startDate": null,
+      "endDate": null
+    }
+  ],
+  "skills": [
+    {
+      "name": "Accounting Standards",
+      "keywords": [
+        "IFRS",
+        "Zakat & VAT"
+      ]
+    },
+    {
+      "name": "Software",
+      "keywords": [
+        "SAP FICO",
+        "Excel / Power Query"
+      ]
+    }
+  ],
+  "languages": [
+    {
+      "language": "English",
+      "fluency": "Fluent"
+    },
+    {
+      "language": "Arabic",
+      "fluency": "Native"
+    }
+  ],
+  "projects": [],
+  "certificates": [],
+  "meta": {
+    "version": "v1.0.0",
+    "canonical": ""
+  }
+}

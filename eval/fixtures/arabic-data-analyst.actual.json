@@ -2,54 +2,57 @@
   "basics": {
     "name": "محمد العتيبي",
     "label": "محلل بيانات أول",
-    "location": {
-      "city": "الدمام",
-      "countryCode": "SA"
-    },
-    "summary": "محلل بيانات لديه خمس سنوات من الخبرة في بناء لوحات المعلومات وتحليل بيانات قطاع التجزئة ودعم اتخاذ القرار.",
     "email": "mohammed.otaibi@email.com",
     "phone": "+966 55 987 6543",
+    "location": {
+      "city": "الدمام",
+      "countryCode": "SA",
+      "country": "المملكة العربية السعودية"
+    },
     "profiles": [
       {
         "network": "linkedin",
-        "url": "linkedin.com/in/mohammedotaibi"
+        "url": "https://linkedin.com/in/mohammedotaibi"
       }
     ],
-    "url": ""
+    "url": null,
+    "summary": "محلل بيانات لديه خمس سنوات من الخبرة في بناء لوحات المعلومات وتحليل بيانات قطاع التجزئة ودعم اتخاذ القرار."
   },
   "work": [
     {
-      "name": "شركة الغانم",
       "position": "محلل بيانات أول",
-      "startDate": "مارس ٢٠٢٠",
-      "endDate": "حتى الآن",
+      "name": "شركة الغانم",
+      "location": "الرياض",
+      "startDate": "03-2020",
+      "endDate": "Present",
       "highlights": [
         "قاد تطوير ١٥ لوحة معلومات تفاعلية لدعم اتخاذ القرار.",
         "أتمت عمليات تنظيف البيانات مما قلل الأخطاء بنسبة ٤٠٪."
-      ],
-      "location": "الرياض"
+      ]
     },
     {
-      "name": "نون",
       "position": "محلل بيانات",
-      "startDate": "يناير ٢٠١٨",
-      "endDate": "فبراير ٢٠٢٠",
+      "name": "نون",
+      "location": "عن بعد",
+      "startDate": "01-2018",
+      "endDate": "02-2020",
       "highlights": [
         "صمم تقارير المبيعات الأسبوعية لفريق الإدارة."
-      ],
-      "location": "عن بعد"
+      ]
     }
   ],
   "education": [
     {
-      "area": "نظم المعلومات",
       "institution": "جامعة الملك فهد للبترول والمعادن",
+      "area": "نظم المعلومات",
       "studyType": "بكالوريوس",
-      "url": "٢٠١٧"
+      "startDate": null,
+      "endDate": "2017"
     }
   ],
   "skills": [
     {
+      "name": "Technical Skills",
       "keywords": [
         "SQL",
         "Power BI",
@@ -62,11 +65,15 @@
   "certificates": [],
   "languages": [
     {
-      "language": "العربية (اللغة الأم)"
+      "language": "العربية",
+      "fluency": "اللغة الأم"
     },
     {
-      "language": "الإنجليزية (متقدم)"
+      "language": "الإنجليزية",
+      "fluency": "متقدم"
     }
   ],
-  "meta": {}
+  "meta": {
+    "version": "3.0.0"
+  }
 }

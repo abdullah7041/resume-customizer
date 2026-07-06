@@ -1,0 +1,83 @@
+{
+  "basics": {
+    "name": "عبدالرحمن الشهري",
+    "label": "أخصائي موارد بشرية",
+    "email": "abdulrahman.hr@email.com",
+    "phone": "+966531122334",
+    "location": {
+      "city": "الدمام",
+      "countryCode": "SA",
+      "region": null
+    },
+    "profiles": [],
+    "url": null,
+    "summary": "أخصائي موارد بشرية بخبرة ٦ سنوات في التوظيف وأنظمة العمل السعودية ومنصات قوى ومداد، مع تركيز على التوطين وتطوير سياسات الموارد البشرية."
+  },
+  "work": [
+    {
+      "name": "شركة أرامكو السعودية",
+      "position": "أخصائي موارد بشرية أول",
+      "location": "الظهران",
+      "startDate": "2021",
+      "endDate": "Present",
+      "highlights": [
+        "قُدت ملف التوطين ورفعت نسبة السعودة من ٦٢٪ إلى ٧٨٪ خلال سنتين.",
+        "طبّقت نظام SAP SuccessFactors لإدارة الأداء لـ ١٢٠٠ موظف.",
+        "خفّضت مدة التوظيف من ٤٥ يوماً إلى ٢٨ يوماً عبر أتمتة الفرز الأولي."
+      ]
+    },
+    {
+      "name": "مجموعة صافولا",
+      "position": "منسق موارد بشرية",
+      "location": "جدة",
+      "startDate": "2018",
+      "endDate": "2021",
+      "highlights": [
+        "أدرت عمليات التوظيف لـ ٣ إدارات وأغلقت ٩٠+ وظيفة سنوياً.",
+        "جهّزت تقارير شهرية للقيادة باستخدام Excel وPower BI."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "جامعة الملك فيصل",
+      "area": "إدارة أعمال",
+      "studyType": "بكالوريوس",
+      "startDate": "2014",
+      "endDate": "2018",
+      "gpa": null
+    }
+  ],
+  "skills": [
+    {
+      "name": null,
+      "keywords": [
+        "قوى",
+        "مداد",
+        "SAP SuccessFactors",
+        "Excel",
+        "Power BI",
+        "أنظمة العمل السعودية",
+        "التوطين"
+      ]
+    }
+  ],
+  "projects": [],
+  "certificates": [],
+  "languages": [
+    {
+      "language": "العربية",
+      "fluency": "اللغة الأم",
+      "tag": null
+    },
+    {
+      "language": "الإنجليزية",
+      "fluency": "متقدم",
+      "tag": null
+    }
+  ],
+  "meta": {
+    "version": "3.0.0",
+    "canonical": null
+  }
+}

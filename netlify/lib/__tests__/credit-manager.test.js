@@ -21,8 +21,14 @@ vi.mock('@supabase/supabase-js', () => ({
 process.env.SUPABASE_URL = 'https://test.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
 import {
   FEATURE_COSTS,
+  FREE_TIER_CREDITS,
+  SUSPICIOUS_IP_CREDITS,
   getUserCredits,
   checkCredits,
   consumeCredits,
@@ -45,6 +51,26 @@ describe('CreditManager', () => {
         cover_letter: 4,
         export_template: 0,
       });
+    });
+  });
+
+  describe('FREE_TIER_CREDITS drift guard', () => {
+    it('grants 20 on the free tier and 5 to suspicious IPs', () => {
+      expect(FREE_TIER_CREDITS).toBe(20);
+      expect(SUSPICIOUS_IP_CREDITS).toBe(5);
+    });
+
+    it('cron-reset-credits uses the shared constant, not a hardcoded amount', () => {
+      // Regression guard: signup grant (20) and monthly reset drifted apart once
+      // (cron hardcoded 15). The cron must import FREE_TIER_CREDITS.
+      const testDir = dirname(fileURLToPath(import.meta.url));
+      const cronSource = readFileSync(
+        join(testDir, '..', '..', 'functions', 'cron-reset-credits.ts'),
+        'utf8'
+      );
+      expect(cronSource).toContain('FREE_TIER_CREDITS');
+      expect(cronSource).toMatch(/const newCredits = FREE_TIER_CREDITS;/);
+      expect(cronSource).not.toMatch(/const newCredits = \d+;/);
     });
   });
 

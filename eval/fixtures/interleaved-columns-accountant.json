@@ -1,0 +1,53 @@
+{
+  "name": "interleaved-columns-accountant",
+  "lang": "en",
+  "layout": "interleaved-columns",
+  "synthetic": true,
+  "note": "SYNTHETIC — simulates the worst two-column failure: pdfjs reads across the page, so sidebar lines (skills/contact) alternate with main-column lines (experience). Parser must untangle which lines belong to which section. This is the hardest fixture; threshold failures here point at real-world Canva/Word template risk.",
+  "text": "FAISAL AL-DOSSARI\nCONTACT\nSenior Accountant\nRiyadh, Saudi Arabia\nEXPERIENCE\nfaisal.acc@email.com\nSenior Accountant — Alinma Bank\n+966 50 776 3344\nJan 2021 – Present\nlinkedin.com/in/faisaldossari\n• Prepared monthly IFRS financial statements for a SAR 2.1B loan portfolio.\nSKILLS\n• Automated reconciliation workbooks in Excel, saving 30 hours monthly.\nIFRS\n• Supported SOCPA and SAMA audit cycles with zero material findings.\nZakat & VAT\nAccountant — PwC Middle East\nSAP FICO\nSep 2018 – Dec 2020\nExcel / Power Query\n• Performed external audits for 9 clients in retail and construction.\nEnglish (Fluent)\n• Prepared VAT returns and zakat filings under KSA regulations.\nArabic (Native)\nEDUCATION\nSOCPA Associate\nB.Sc. Accounting — King Fahd University of Petroleum and Minerals, 2014 – 2018",
+  "expected": {
+    "basics": {
+      "name": "Faisal Al-Dossari",
+      "labelContains": [
+        "Accountant"
+      ],
+      "location": {
+        "city": "Riyadh",
+        "country": "Saudi Arabia"
+      },
+      "profiles": [
+        "linkedin"
+      ]
+    },
+    "work": [
+      {
+        "name": "Alinma Bank",
+        "position": "Senior Accountant",
+        "startDate": "Jan 2021",
+        "endDate": "Present",
+        "minHighlights": 2
+      },
+      {
+        "name": "PwC",
+        "position": "Accountant",
+        "startDate": "Sep 2018",
+        "endDate": "Dec 2020",
+        "minHighlights": 2
+      }
+    ],
+    "education": [
+      {
+        "institution": "King Fahd University"
+      }
+    ],
+    "skillsKeywords": [
+      "IFRS",
+      "SAP FICO",
+      "Excel"
+    ],
+    "languages": [
+      "Arabic",
+      "English"
+    ]
+  }
+}

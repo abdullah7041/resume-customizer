@@ -1,0 +1,60 @@
+{
+  "name": "right-aligned-dates-engineer",
+  "lang": "en",
+  "layout": "right-aligned-dates",
+  "synthetic": true,
+  "note": "SYNTHETIC — simulates a single-column CV with a right-aligned date column: pdfjs emits each date on its own line AFTER the role/company lines, so the parser must re-attach floating dates to the correct entry. Replace with a real extraction when available.",
+  "text": "OMAR AL-HARBI\nSoftware Engineer\nJeddah, Saudi Arabia | omar.harbi@email.com | +966 55 987 1122\nlinkedin.com/in/omaralharbi\n\nPROFESSIONAL SUMMARY\nBackend engineer with 5 years building payment and logistics APIs on Node.js and PostgreSQL, focused on reliability and observability.\n\nEXPERIENCE\nSenior Backend Engineer\nTamara — Riyadh\nMar 2022 – Present\n• Designed the settlement reconciliation service processing 2M+ transactions monthly.\n• Cut p95 checkout latency from 900ms to 320ms by removing N+1 queries and adding read replicas.\n• Led migration of 14 services from EC2 to ECS with zero-downtime cutover.\nBackend Engineer\nSalla\nJan 2020\nFeb 2022\n• Built webhook delivery system with retries and dead-letter queues handling 40M events/month.\n• Introduced OpenTelemetry tracing, reducing mean incident diagnosis time by 60%.\n\nEDUCATION\nB.Sc. Computer Science\nKing Abdulaziz University\n2015\n2019\n\nSKILLS\nNode.js, TypeScript, PostgreSQL, Redis, AWS, Docker, Kubernetes, OpenTelemetry\n\nLANGUAGES\nArabic (Native), English (Professional)",
+  "expected": {
+    "basics": {
+      "name": "Omar Al-Harbi",
+      "labelContains": [
+        "Engineer"
+      ],
+      "location": {
+        "city": "Jeddah",
+        "country": "Saudi Arabia"
+      },
+      "summaryContains": [
+        "backend",
+        "Node.js"
+      ],
+      "profiles": [
+        "linkedin"
+      ]
+    },
+    "work": [
+      {
+        "name": "Tamara",
+        "position": "Senior Backend Engineer",
+        "startDate": "Mar 2022",
+        "endDate": "Present",
+        "minHighlights": 3
+      },
+      {
+        "name": "Salla",
+        "position": "Backend Engineer",
+        "startDate": "Jan 2020",
+        "endDate": "Feb 2022",
+        "minHighlights": 2
+      }
+    ],
+    "education": [
+      {
+        "institution": "King Abdulaziz University"
+      }
+    ],
+    "skillsKeywords": [
+      "Node.js",
+      "TypeScript",
+      "PostgreSQL",
+      "Redis",
+      "AWS",
+      "Docker"
+    ],
+    "languages": [
+      "Arabic",
+      "English"
+    ]
+  }
+}
