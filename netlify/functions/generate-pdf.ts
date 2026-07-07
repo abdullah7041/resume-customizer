@@ -204,11 +204,28 @@ const baseHandler: Handler = async (event) => {
     // Render the final HTML string with embedded styles
     await page.setContent(`
       <!DOCTYPE html>
-      <html dir="${pageDirection}">
+      <html dir="${pageDirection}" class="light" data-theme="light">
         <head>
           <meta charset="UTF-8">
           <style>${styles || ''}</style>
           <style>
+            html,
+            body {
+              color-scheme: light !important;
+              background: #fff !important;
+            }
+
+            body {
+              margin: 0 !important;
+              color: #111827 !important;
+            }
+
+            [data-resume-preview],
+            [data-pdf-theme="light"] {
+              color-scheme: light !important;
+              background: #fff !important;
+            }
+
             /* Hide elements marked as non-printable (page break indicators, etc.) */
             [data-no-print] { display: none !important; }
             

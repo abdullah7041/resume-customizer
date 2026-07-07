@@ -34,9 +34,10 @@ export function ConsentBanner() {
     >
       <div
         className={cn(
-          'relative overflow-hidden rounded-2xl border border-white/10',
-          'bg-[#031713]/80 supports-[backdrop-filter]:bg-[#031713]/60', // Deep emerald-black background
-          'backdrop-blur-xl shadow-2xl shadow-black/50',
+          'relative overflow-hidden rounded-2xl border border-[color:var(--glass-border)] dark:border-white/10',
+          'bg-white/90 supports-[backdrop-filter]:bg-white/80 dark:bg-[#031713]/80 dark:supports-[backdrop-filter]:bg-[#031713]/60',
+          'text-gray-900 dark:text-white',
+          'backdrop-blur-xl shadow-2xl shadow-emerald-950/10 dark:shadow-black/50',
           'flex flex-col gap-4 p-5'
         )}
       >
@@ -76,8 +77,8 @@ export function ConsentBanner() {
             }}
             className={cn(
               'order-2 sm:order-1 px-4 py-2.5 rounded-xl text-sm font-medium',
-              'text-gray-400 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-colors duration-200',
-              'hover:bg-white/5 text-center'
+              'text-gray-600 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-colors duration-200',
+              'hover:bg-gray-100 dark:hover:bg-white/5 text-center'
             )}
           >
             {t('consent.reject', 'Decline')}
@@ -106,8 +107,8 @@ export function ConsentBanner() {
         </div>
 
         {/* Footer / Compliance Check */}
-        <div className="flex items-center justify-between pt-3 border-t border-white/5 relative z-10">
-          <div className="flex items-center gap-1.5 opacity-40 hover:opacity-100 transition-opacity duration-300">
+        <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-white/5 relative z-10">
+          <div className="flex items-center gap-1.5 text-gray-600 opacity-70 hover:opacity-100 transition-opacity duration-300 dark:text-white/70 dark:opacity-40">
             <Shield className="w-3 h-3" />
             <span className="text-[10px] font-medium uppercase tracking-wider">
               {t('consent.compliance', 'Secure & Private')}
@@ -115,7 +116,7 @@ export function ConsentBanner() {
           </div>
           <a
             href="/privacy"
-            className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80 transition-colors hover:text-emerald-200"
+            className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 transition-colors hover:text-emerald-900 dark:text-emerald-300/80 dark:hover:text-emerald-200"
           >
             {t('consent.privacyPolicy', 'Privacy Policy')}
           </a>

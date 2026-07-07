@@ -39,10 +39,10 @@ export function MirroredKeywordsCard({
                                 <Sparkles className="w-5 h-5 text-purple-400" />
                             </div>
                             <div>
-                                <h3 className="text-base font-semibold text-white">
+                                <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                                     {t('optimize.mirroredKeywords.title', 'Mirrored Keywords')}
                                 </h3>
-                                <p className="text-xs text-gray-400 mt-0.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                                     {t('optimize.mirroredKeywords.description', 'These phrases align perfectly with the job description')}
                                 </p>
                             </div>
@@ -57,8 +57,8 @@ export function MirroredKeywordsCard({
                                         group relative px-4 py-2 text-sm font-medium rounded-xl transition-all duration-300
                                         flex items-center gap-2.5 overflow-hidden
                                         ${copiedIndex === index
-                                            ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/50'
-                                            : 'bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20'
+                                            ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/50'
+                                            : 'bg-white/80 text-gray-700 hover:text-gray-950 hover:bg-white ring-1 ring-gray-200 hover:ring-gray-300 dark:bg-white/5 dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/10 dark:ring-white/10 dark:hover:ring-white/20'
                                         }
                                     `}
                                 >
@@ -69,7 +69,7 @@ export function MirroredKeywordsCard({
                                         <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 transition-opacity relative z-10" />
                                     )}
                                     {/* Subtle gradient background effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 dark:via-white/5" />
                                 </button>
                             ))}
                         </div>
@@ -78,8 +78,8 @@ export function MirroredKeywordsCard({
 
                 {/* Structural Changes */}
                 {structuralChanges && structuralChanges.length > 0 && (
-                    <div className="pt-4 border-t border-white/5">
-                        <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <div className="pt-4 border-t border-gray-200 dark:border-white/5">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                             {t('optimize.mirroredKeywords.structuralChanges', 'Structural Improvements')}
                         </h4>
@@ -90,7 +90,7 @@ export function MirroredKeywordsCard({
                                     className="flex items-start gap-3 text-sm group"
                                 >
                                     <span className="flex-shrink-0 mt-1.5 w-4 h-[1px] bg-blue-500/50 group-hover:bg-blue-400/80 transition-colors" />
-                                    <span className="text-gray-400 group-hover:text-gray-300 transition-colors leading-relaxed">
+                                    <span className="text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-300 transition-colors leading-relaxed">
                                         {change}
                                     </span>
                                 </li>

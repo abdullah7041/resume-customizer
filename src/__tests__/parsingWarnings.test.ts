@@ -108,4 +108,25 @@ describe("getParsingWarnings — parse-quality gating", () => {
     const result = codes(resume);
     expect(result).toEqual(['low_confidence_parse']);
   });
+
+  it("does not warn about missing work locations when location evidence was not lost by the parser", () => {
+    const resume = makeResume({
+      work: [
+        { name: "Acme", position: "Engineer", startDate: "2020", endDate: "Present", summary: "", highlights: [] },
+      ],
+    });
+
+    expect(codes(resume)).not.toContain("missing_work_location");
+  });
+
+  it("warns about missing work locations only when parse-quality metadata points to location extraction loss", () => {
+    const resume = makeResume({
+      work: [
+        { name: "Acme", position: "Engineer", startDate: "2020", endDate: "Present", summary: "", highlights: [] },
+      ],
+      meta: { parseQuality: { incompleteSections: ["work_location"] } },
+    });
+
+    expect(codes(resume)).toContain("missing_work_location");
+  });
 });

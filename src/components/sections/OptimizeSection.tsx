@@ -103,6 +103,13 @@ interface OptimizeSectionProps {
 const emptyKeywords = { add: [], remove: [], neutral: [] };
 const FREE_OPTIMIZE_STORAGE_KEY = 'watheq:freeOptimizeUsed';
 
+const finiteScore = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const score = Number(value);
+  if (!Number.isFinite(score)) return null;
+  return Math.max(0, Math.min(100, Math.round(score)));
+};
+
 // Normalize optimization data to handle all API formats:
 // - Backend returns: exampleBefore/exampleAfter
 // - Legacy format: before/after  
@@ -303,9 +310,10 @@ export function OptimizeSection({
         // CRITICAL: Get original (non-optimized) score for beforeScore
         // Cast to any to work around Zustand type inference limitation
         const cachedAnalysis = (getCachedAnalysis as any)(resumeText, jobDescription, false);
-        if (cachedAnalysis?.score) {
+        const cachedScore = finiteScore(cachedAnalysis?.score);
+        if (cachedScore !== null) {
           setOptimizationMetrics({
-            beforeScore: cachedAnalysis.score,
+            beforeScore: cachedScore,
             hasJobDescription: true,
           });
         }
@@ -361,16 +369,17 @@ export function OptimizeSection({
 
     // Priority: 1. Baseline score (true original), 2. Store metrics, 3. Current cache, 4. Resume meta, 5. Default fallback
     // Baseline score is the source of truth - it's stored on first analysis and never changes unless user uploads a new resume
-    const beforeScore = baselineMatchScore ??
-      optimizationMetrics.beforeScore ??
-      cachedAnalysis?.score ??
-      ((originalResume?.meta as Record<string, unknown> | undefined)?.match_score as number) ??
+    const beforeScore = finiteScore(baselineMatchScore) ??
+      finiteScore(optimizationMetrics.beforeScore) ??
+      finiteScore(cachedAnalysis?.score) ??
+      finiteScore((originalResume?.meta as Record<string, unknown> | undefined)?.match_score) ??
       DEFAULT_FALLBACK_SCORE;
 
     // Track if we're using placeholder/fallback values (Bug Fix: Make fake scores obvious)
-    const isPlaceholderScore = !cachedAnalysis?.score &&
-      !optimizationMetrics.beforeScore &&
-      !((originalResume?.meta as Record<string, unknown> | undefined)?.match_score);
+    const isPlaceholderScore = finiteScore(baselineMatchScore) === null &&
+      finiteScore(cachedAnalysis?.score) === null &&
+      finiteScore(optimizationMetrics.beforeScore) === null &&
+      finiteScore((originalResume?.meta as Record<string, unknown> | undefined)?.match_score) === null;
     // FIX: Use explicit null check, not truthy check, because improvement can be 0 (valid value)
     const isPlaceholderImprovement = optimizationMetrics.improvement === null || optimizationMetrics.improvement === undefined;
 
@@ -622,8 +631,9 @@ export function OptimizeSection({
         // Fallback: Use cached match analysis score if available
         const jobDesc = typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '';
         const cachedAnalysis = resumeText && jobDesc ? getCachedAnalysis(resumeText, jobDesc) : null;
-        if (cachedAnalysis?.score) {
-          metricsToUpdate.beforeScore = cachedAnalysis.score;
+        const cachedScore = finiteScore(cachedAnalysis?.score);
+        if (cachedScore !== null) {
+          metricsToUpdate.beforeScore = cachedScore;
           metricsToUpdate.hasJobDescription = true;
         }
         // Fix A: Set improvement to 0 so ScoreBreakdown doesn't show "—"
@@ -714,7 +724,7 @@ export function OptimizeSection({
 
         // Update the cache with the new match score if available
         // This ensures subsequent renders use the fresh score instead of stale cache
-        if (metricsToUpdate.beforeScore && resumeText && (metricsToUpdate.hasJobDescription)) {
+        if (finiteScore(metricsToUpdate.beforeScore) !== null && resumeText && (metricsToUpdate.hasJobDescription)) {
           const jobDesc = typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '';
           if (jobDesc) {
             useResumeStore.getState().setCachedAnalysis(resumeText, jobDesc, {
@@ -757,17 +767,18 @@ export function OptimizeSection({
             const optimizedText = formatResumeToText(optimizedResume);
             const result = await analyzeResumeWithAI(optimizedText, jobDescription);
 
-            if (result?.score) {
+            const verifiedResultScore = finiteScore(result?.score);
+            if (verifiedResultScore !== null) {
               const beforeScore = existingBaseline ?? metricsToUpdate.beforeScore ?? resultsSummaryData.beforeScore;
-              setVerifiedScore(result.score);
+              setVerifiedScore(verifiedResultScore);
               // Update metrics with genuine verified scores
               setOptimizationMetrics({
-                afterScore: result.score,
-                improvement: result.score - beforeScore,
+                afterScore: verifiedResultScore,
+                improvement: verifiedResultScore - beforeScore,
               });
               // Cache the verified score under the optimized key (forceIsOptimized: true)
               setCachedAnalysis(optimizedText, jobDescription, {
-                score: result.score,
+                score: verifiedResultScore,
                 matchedKeywords: result.topHits || [],
                 missingKeywords: result.missingKeywords || [],
               }, true);

@@ -31,7 +31,6 @@ import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { useResumeStore } from '../../lib/stores/resumeStore';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 import type { ExtractedJobMetadata } from '../../types/pipeline';
@@ -201,7 +200,6 @@ export function MatchSection({
   onJobSaved,
 }: MatchSectionProps) {
   const { t } = useTranslation();
-  const { showOptimized } = useResumeStore();
 
   // === STATE FROM features/JobMatch.tsx ===
   const [jobText, setJobText] = useState(() => {
@@ -669,15 +667,6 @@ export function MatchSection({
                           </div>
                         </div>
                       </section>
-                    )}
-
-                    {/* Optimized Resume Warning Banner */}
-                    {showOptimized && score !== null && (
-                      <div className="w-full p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                        <p className="text-sm text-emerald-700 dark:text-emerald-300 text-center">
-                          ✅ {t('sections.match.optimizedBanner', 'Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.', { score })}
-                        </p>
-                      </div>
                     )}
 
                     {/* Score Breakdown Button */}

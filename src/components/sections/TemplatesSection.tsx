@@ -119,6 +119,27 @@ const summarizeErrorForConsole = (error: unknown) => ({
   message: error instanceof Error ? error.message : String(error),
 });
 
+const forceLightThemeForPdf = (root: HTMLElement) => {
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>('[class]'))];
+  for (const element of elements) {
+    const classValue = element.getAttribute('class');
+    if (!classValue) continue;
+    const lightClasses = classValue
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((token) => token !== 'dark' && !token.startsWith('dark:') && !token.includes(':dark:'));
+    element.setAttribute('class', Array.from(new Set([...lightClasses, 'light'])).join(' '));
+  }
+
+  root.classList.remove('dark');
+  root.classList.add('light');
+  root.setAttribute('data-theme', 'light');
+  root.setAttribute('data-pdf-theme', 'light');
+  root.style.colorScheme = 'light';
+  root.style.backgroundColor = '#ffffff';
+  root.style.color = '#111827';
+};
+
 
 
 interface TemplateGalleryProps {
@@ -375,6 +396,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       // 4. Remove no-print elements
       clone.querySelectorAll('[data-no-print]').forEach(el => el.remove());
+      forceLightThemeForPdf(clone);
 
       // 5. Capture HTML + styles (STRIP off-screen positioning first!)
       clone.style.position = 'static';

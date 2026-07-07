@@ -54,7 +54,6 @@
         "goodStart": "Good Start",
         "needsWork": "Needs Work"
       },
-      "optimizedBanner": "Analyzing OPTIMIZED resume. If you export now and re-upload, expect score around {{score}}.",
       "scoreLabel": "Score",
       "realityCheck": {
         "ariaLabel": "Strategic Reality Check",

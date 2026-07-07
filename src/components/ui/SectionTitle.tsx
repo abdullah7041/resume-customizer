@@ -20,7 +20,7 @@ export default function SectionTitle({ eyebrow, title, description, icon, classN
       {(eyebrow || icon) && (
         <div className="flex items-center gap-3 rtl:flex-row-reverse mb-3">
           {eyebrow && (
-            <p className="inline-flex items-center gap-2 flex-row rtl:flex-row-reverse rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-400 flex-1">
+            <p className="inline-flex items-center gap-2 flex-row rtl:flex-row-reverse rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-1">
               <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-amber-400 to-emerald-500" aria-hidden="true" />
               {eyebrow}
             </p>
@@ -33,12 +33,12 @@ export default function SectionTitle({ eyebrow, title, description, icon, classN
         </div>
       )}
       {title && (
-        <h2 className="text-3xl font-semibold leading-tight tracking-tight text-white">
+        <h2 className="text-3xl font-semibold leading-tight tracking-tight text-gray-900 dark:text-white">
           {title}
         </h2>
       )}
       {description && (
-        <p className="text-sm leading-relaxed text-gray-400 mt-2">
+        <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400 mt-2">
           {description}
         </p>
       )}

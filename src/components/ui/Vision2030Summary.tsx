@@ -150,10 +150,10 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
     );
 
     return (
-        <GlassCard className={`p-0 overflow-hidden ${className} transition-all duration-300 border-white/10`}>
+        <GlassCard className={`p-0 overflow-hidden ${className} transition-all duration-300 border-[color:var(--glass-border)] dark:border-white/10`}>
             {/* Header - Always Visible */}
             <div
-                className={`p-5 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition-colors`}
+                className={`p-5 flex items-center justify-between cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-white/[0.02] transition-colors`}
                 onClick={() => toggleExpanded()}
             >
                 <div className="flex items-center gap-4 rtl:flex-row-reverse">
@@ -163,7 +163,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                             <Target className="w-6 h-6 text-emerald-400" />
                         </GlassCircle>
                         {analysis && (
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gray-900 border border-white/10 flex items-center justify-center z-20">
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center z-20 dark:bg-gray-900 dark:border-white/10">
                                 <span className={`text-[10px] font-bold ${analysis.overallScore >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
                                     {Math.round(analysis.overallScore / 10)}
                                 </span>
@@ -185,10 +185,10 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                 }}
                                 className="group/info relative"
                             >
-                                <Info className="w-4 h-4 text-white/40 hover:text-emerald-400 transition-colors" />
+                                <Info className="w-4 h-4 text-gray-500 hover:text-emerald-600 dark:text-white/40 dark:hover:text-emerald-400 transition-colors" />
                             </button>
                         </div>
-                        <p className="text-sm text-gray-400 dark:text-white/50 font-light">
+                        <p className="text-sm text-gray-600 dark:text-white/50 font-light">
                             {t('vision2030.subtitle', 'How your skills align with Saudi priorities')}
                         </p>
                     </div>
@@ -205,9 +205,9 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                         </div>
                     )}
                     <div
-                        className={`p-2 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 transition-all duration-300 ${expanded ? 'rotate-180 bg-white/10' : ''}`}
+                        className={`p-2 rounded-full border border-gray-200 bg-white/70 hover:bg-white transition-all duration-300 dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10 ${expanded ? 'rotate-180 bg-white dark:bg-white/10' : ''}`}
                     >
-                        <ChevronDown className="w-4 h-4 text-white/70" />
+                        <ChevronDown className="w-4 h-4 text-gray-600 dark:text-white/70" />
                     </div>
                 </div>
             </div>
@@ -216,20 +216,20 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
             <div className={`grid transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                 <div className="overflow-hidden">
                     <div className="px-5 pb-5 pt-0">
-                        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-5" />
+                        <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-5 dark:via-white/10" />
 
                         {/* Demo Mode Banner */}
                         {isDemo && <DemoBanner />}
 
                         {/* Score Bar */}
                         {analysis && (
-                            <div className="mb-6 bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                            <div className="mb-6 bg-white/70 p-4 rounded-xl border border-gray-200 dark:bg-white/[0.02] dark:border-white/5">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                         <div className={`p-1.5 rounded-lg bg-emerald-500/10`}>
                                             {renderEncouragementIcon(getEncouragementMessage(analysis.overallScore).icon)}
                                         </div>
-                                        <span className="text-sm font-medium text-emerald-200">
+                                        <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
                                             {getEncouragementMessage(analysis.overallScore).message}
                                         </span>
                                     </div>
@@ -237,7 +237,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                         {analysis.overallScore}/100
                                     </span>
                                 </div>
-                                <div className="w-full h-2.5 bg-gray-900/50 rounded-full overflow-hidden border border-white/5">
+                                <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden border border-gray-300 dark:bg-gray-900/50 dark:border-white/5">
                                     <div
                                         className="h-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.3)] transition-all duration-1000 ease-out relative"
                                         style={{ width: `${analysis.overallScore}%` }}
@@ -367,11 +367,11 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                         )}
 
                         {/* Actions */}
-                        <div className="flex items-center justify-between mt-6 pt-5 border-t border-white/5">
+                        <div className="flex items-center justify-between mt-6 pt-5 border-t border-gray-200 dark:border-white/5">
                             <button
                                 type="button"
                                 onClick={() => setModalOpen(true)}
-                                className="group inline-flex items-center gap-2 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-500/10"
+                                className="group inline-flex items-center gap-2 text-xs font-medium text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-500/10"
                             >
                                 <Info className="w-4 h-4" />
                                 <span className="border-b border-transparent group-hover:border-emerald-300 transition-colors">

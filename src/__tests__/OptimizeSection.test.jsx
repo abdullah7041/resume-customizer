@@ -8,6 +8,8 @@ import OptimizeSection from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 
 const mockRefineBullet = vi.hoisted(() => vi.fn());
+const mockAnalyzeResumeWithAI = vi.hoisted(() => vi.fn());
+const mockGetAuthHeaders = vi.hoisted(() => vi.fn(() => Promise.resolve({ Authorization: 'Bearer test-token' })));
 const mockAnalyticsTrack = vi.hoisted(() => vi.fn());
 const mockTrackOptimization = vi.hoisted(() => vi.fn());
 
@@ -66,6 +68,7 @@ let mockStoreState = {
     resetOptimizationMetrics: mockResetOptimizationMetrics,
     getCachedAnalysis: mockGetCachedAnalysis,
     setCachedAnalysis: mockSetCachedAnalysis,
+    getActiveResume: vi.fn(() => null),
     baselineMatchScore: null,
 };
 
@@ -89,6 +92,11 @@ vi.mock('../services/analytics', () => ({
 
 vi.mock('../services/api', () => ({
     refineBullet: mockRefineBullet,
+    analyzeResumeWithAI: mockAnalyzeResumeWithAI,
+}));
+
+vi.mock('../lib/auth/authHeaders', () => ({
+    getAuthHeaders: mockGetAuthHeaders,
 }));
 
 vi.mock('../hooks/useRateLimit', () => ({
@@ -205,6 +213,7 @@ beforeEach(() => {
         resetOptimizationMetrics: mockResetOptimizationMetrics,
         getCachedAnalysis: mockGetCachedAnalysis,
         setCachedAnalysis: mockSetCachedAnalysis,
+        getActiveResume: vi.fn(() => null),
         baselineMatchScore: null,
     };
 
@@ -965,8 +974,107 @@ describe('Optimization Card Types', () => {
             resetOptimizationMetrics: mockResetOptimizationMetrics,
             getCachedAnalysis: mockGetCachedAnalysis,
             setCachedAnalysis: mockSetCachedAnalysis,
+            getActiveResume: vi.fn(() => null),
             baselineMatchScore: null,
         };
+    });
+
+    describe('Auto-verified optimized score', () => {
+        it('renders a baseline score of 0 as a real current score', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.baselineMatchScore = 0;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                improvement: 5,
+                hasJobDescription: true,
+            };
+
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.getByText('0%')).toBeInTheDocument();
+            expect(screen.getByText('5%')).toBeInTheDocument();
+        });
+
+        it('does not treat missing score fields as a real zero score', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.baselineMatchScore = null;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: null,
+                improvement: 5,
+                hasJobDescription: true,
+            };
+            mockStoreState.originalResume = {
+                basics: { name: 'Test User' },
+                work: [],
+                education: [],
+                skills: [],
+                meta: { match_score: null },
+            };
+            mockGetCachedAnalysis.mockReturnValue(null);
+
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.queryByText('0%')).not.toBeInTheDocument();
+            expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+        });
+
+        it('stores a verified optimized score of 0 instead of dropping it as falsy', async () => {
+            mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
+            mockStoreState.parsedResumeText = 'Original resume text';
+            mockStoreState.getActiveResume = vi.fn(() => ({
+                basics: { name: 'Test User', summary: 'Optimized summary' },
+                work: [],
+                education: [],
+                skills: [],
+            }));
+            mockStoreState.baselineMatchScore = 45;
+            mockAnalyzeResumeWithAI.mockResolvedValue({
+                score: 0,
+                topHits: [],
+                missingKeywords: ['React'],
+            });
+            global.fetch.mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve({
+                    cards: [{
+                        section: 'Summary',
+                        exampleBefore: 'Original summary',
+                        exampleAfter: 'Optimized summary',
+                    }],
+                    matchScoring: {
+                        beforeScore: 45,
+                        estimatedImprovement: 10,
+                        afterScore: 55,
+                        jdKeywords: ['React'],
+                        matchedKeywords: [],
+                        reasoning: 'Initial projected score',
+                    },
+                    debug: { hasJobDescription: true },
+                }),
+            });
+
+            renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
+
+            await waitFor(() => {
+                expect(mockAnalyzeResumeWithAI).toHaveBeenCalled();
+            });
+            await waitFor(() => {
+                expect(mockSetOptimizationMetrics).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        afterScore: 0,
+                        improvement: -45,
+                    })
+                );
+            });
+            expect(mockSetCachedAnalysis).toHaveBeenCalledWith(
+                expect.any(String),
+                'Backend engineer role',
+                expect.objectContaining({ score: 0 }),
+                true
+            );
+        });
     });
 
     it('displays headline optimization correctly', () => {

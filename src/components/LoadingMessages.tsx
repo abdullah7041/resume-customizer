@@ -83,8 +83,8 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
   return (
     <div className={cn(
       "relative overflow-hidden",
-      "w-full max-w-sm bg-white/10 dark:bg-gray-900/40 backdrop-blur-xl",
-      "border border-white/20 dark:border-white/10 rounded-xl shadow-2xl",
+      "w-full max-w-sm bg-white/90 dark:bg-gray-900/40 backdrop-blur-xl",
+      "border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl",
       "p-5 flex flex-col gap-4",
       className
     )}>

@@ -51,6 +51,13 @@ export function getParsingWarnings(resume: Resume): ParsingWarning[] {
 
     const lossExplained = (section: string) =>
         previewTruncated || incomplete.has(section) || recovered.has(section);
+    const workLocationLossExplained = () =>
+        lossExplained('work_location') ||
+        lossExplained('work.location') ||
+        lossExplained('experience_location') ||
+        lossExplained('experience.location') ||
+        lossExplained('work') ||
+        lossExplained('experience');
 
     if (previewTruncated) {
         warnings.push(warn('preview_truncated', 'preview', 'info'));
@@ -78,7 +85,7 @@ export function getParsingWarnings(resume: Resume): ParsingWarning[] {
     // 3. Work experience
     if (!work || work.length === 0) {
         warnings.push(warn('no_experience', 'experience', 'warning'));
-    } else if (work.some(w => !w.location)) {
+    } else if (workLocationLossExplained() && work.some(w => !w.location)) {
         warnings.push(warn('missing_work_location', 'experience', 'info'));
     }
 

@@ -28,6 +28,7 @@ vi.mock('../lib/stores/resumeStore', () => {
         setSelectedTemplate: vi.fn(),
         displayOptions: { fontSize: 1, showPageBreaks: false },
         setDisplayOptions: vi.fn(),
+        setHasDownloaded: vi.fn(),
         contentLanguage: null,
         setContentLanguage: vi.fn(),
     };
@@ -302,6 +303,46 @@ describe('TemplatesSection', () => {
                     })
                 );
             });
+        });
+
+        it('sends a light-themed clone to server PDF generation even when the app root is dark', async () => {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+
+            renderWithProviders(<TemplateGallery resumeData={{
+                basics: { name: 'Test User', label: 'Engineer' },
+                work: [],
+                education: [],
+                skills: [],
+                projects: [],
+            }} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+            await waitFor(() => {
+                expect(globalThis.fetch).toHaveBeenCalledWith(
+                    '/.netlify/functions/generate-pdf',
+                    expect.objectContaining({ method: 'POST' })
+                );
+            });
+
+            const pdfCall = globalThis.fetch.mock.calls.find(([url]) => url === '/.netlify/functions/generate-pdf');
+            const body = JSON.parse(pdfCall[1].body);
+            expect(body.html).toContain('data-pdf-theme="light"');
+            expect(body.html).toContain('data-theme="light"');
+            expect(body.html).not.toMatch(/\bclass="[^"]*\bdark\b/);
+        });
+
+        it('server PDF renderer forces a light color scheme and white page background', async () => {
+            const { readFileSync } = await import('fs');
+            const { join } = await import('path');
+            const source = readFileSync(
+                join(__dirname, '../../netlify/functions/generate-pdf.ts'),
+                'utf-8'
+            );
+
+            expect(source).toMatch(/color-scheme:\s*light/);
+            expect(source).toMatch(/background:\s*#fff(?:fff)?\s*!important/);
         });
 
         it('passes RTL direction to DOCX export for mixed Arabic/English content', async () => {
