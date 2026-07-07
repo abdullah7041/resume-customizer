@@ -1,0 +1,166 @@
+{
+  "landing": {
+    "majlis": {
+      "brand": "Watheq",
+      "langBtn": "العربية",
+      "signIn": "Sign in",
+      "navCta": "Check my match",
+      "navProof": "The proof",
+      "navPricing": "Pricing",
+      "navFaq": "Questions",
+      "kickerMain": "Built for Saudi careers",
+      "kickerSub": "مصمم للوظائف السعودية",
+      "heroL1": "Every job reads differently.",
+      "heroL2": "So should your resume.",
+      "heroSub": "Upload your resume, paste the job ad. Watheq scores the real match, rewrites weak lines from your own evidence, and prepares you for the interview — in Arabic or English.",
+      "cta": "See your match score — free",
+      "heroLink": "Read a real example",
+      "heroNote": "Free to start · No invented experience, ever",
+      "matchReport": "Match report",
+      "example": "Example",
+      "beforeTailoring": "Before tailoring",
+      "afterTailoring": "After tailoring",
+      "matched": "matched",
+      "addedFromEvidence": "added from evidence",
+      "kpiReporting": "KPI reporting",
+      "stakeholderMgmt": "Stakeholder management",
+      "s1Title": "One weak line, rewritten honestly.",
+      "s1Sub": "The same truth, made clearer for the job ad. Switch between the two — and notice what Watheq refuses to invent.",
+      "beforeTab": "Before",
+      "afterTab": "Optimized",
+      "match": "match",
+      "exampleSmall": "example",
+      "targetSignal": "Target job signal",
+      "targetSignalBody": "The role asks for KPI reporting, Power BI, stakeholder management, and decision-support evidence.",
+      "changedTitle": "What changed — and what didn't",
+      "askedFirst": "Watheq asked first",
+      "askedQuote": "“Can you verify how many stakeholders used the dashboard, or which decision the reporting improved?”",
+      "s2Title": "One resume is not enough for every job.",
+      "s2Sub": "Every job ad has different priorities, keywords, and proof expectations. Recruiters and ATS systems look for role-specific relevance.",
+      "s3Title": "Three things no generic tool does.",
+      "f1Kicker": "Vision 2030 alignment",
+      "f1Title": "Position yourself for Vision 2030 opportunities.",
+      "f1Body": "Watheq maps your experience to Saudi growth sectors, localization priorities, and bilingual requirements already present in the job ad — sector mapping, bilingual keyword positioning, and Saudization-ready language where relevant.",
+      "visionSignal": "Vision 2030 signal",
+      "alignmentScore": "alignment score",
+      "f2Kicker": "Ask-before-optimization",
+      "f2Title": "Smart questions before smart suggestions.",
+      "f2Body": "When your resume needs stronger proof, Watheq asks for scope, metrics, or context before rewriting. No invented experience, no fake metrics — your answers feed directly into the rewrite.",
+      "quickQuestions": "Quick questions",
+      "qMeta": "3 questions · 1 minute",
+      "f3Kicker": "Interview preparation",
+      "f3Title": "Practice with questions from your own resume.",
+      "f3Body": "Role-specific interview questions, STAR prompts, and focus areas — generated from the same evidence in your tailored resume, so your answers match your application.",
+      "interviewPrep": "Interview prep",
+      "roleSpecific": "Role-specific",
+      "practiceNote": "Practice with the same claims used in your tailored resume.",
+      "s4Title": "Compare proof, not just templates.",
+      "colGeneric": "Generic builder",
+      "colScanner": "Keyword scanner",
+      "colManual": "Manual editing",
+      "others": "Others",
+      "s5Title": "Start free. Everything you need to apply.",
+      "free": "Free",
+      "liveNow": "Live now",
+      "freePrice": "0 SAR",
+      "forever": "/ forever",
+      "pro": "Pro",
+      "waitlist": "Waitlist",
+      "proPrice": "29 SAR",
+      "perMonth": "/ month · planned",
+      "proCta": "Join the pricing waitlist",
+      "pricingNote": "Paid plans are not live yet — the waitlist helps shape launch pricing.",
+      "s6Title": "Questions, answered.",
+      "s6Sub": "The honest version, including what Watheq can't do yet.",
+      "ctaTitle": "See where you stand before you hit apply.",
+      "ctaSub": "Your real match score takes about two minutes. Free, in Arabic or English.",
+      "footerTag": "Watheq · Built for Saudi careers",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "changedList": [
+        { "text": "Job-ad keywords surfaced: Power BI, KPI reporting." },
+        { "text": "Impact reframed as decision support, not generic reporting." },
+        { "text": "No numbers invented. Missing metrics became a question instead." }
+      ],
+      "whyCards": [
+        {
+          "k": "a.",
+          "title": "Every job ad has a different signal",
+          "body": "Job descriptions use specific skills, tools, and wording. Watheq starts with the job ad so your resume speaks to this role, not just any role."
+        },
+        {
+          "k": "b.",
+          "title": "Generic resumes hide your best proof",
+          "body": "Relevant achievements disappear when they're buried or framed for another role. Watheq surfaces the strongest real evidence for this application."
+        },
+        {
+          "k": "c.",
+          "title": "Tailoring should stay truthful",
+          "body": "Watheq improves positioning while preserving your real experience — asking clarifying questions before rewriting when proof is missing."
+        }
+      ],
+      "visionRows": [
+        { "text": "Digital transformation" },
+        { "text": "Saudization positioning" },
+        { "text": "Bilingual stakeholder work" }
+      ],
+      "clarifyQs": [
+        { "n": "1", "text": "What business decision did the reporting improve?" },
+        { "n": "2", "text": "How many stakeholders used the dashboard?" },
+        { "n": "3", "text": "Can you verify the time or cost saved?" }
+      ],
+      "interviewQs": [
+        { "text": "Tell me about a dashboard that changed a business decision." },
+        { "text": "How did you handle competing stakeholder priorities?" },
+        { "text": "Which Vision 2030 sector experience is most relevant here?" }
+      ],
+      "comparisonRows": [
+        { "feature": "Vision 2030 alignment", "watheq": "Yes", "c1": "No", "c2": "No", "c3": "Partial", "othersSummary": "No / No / Partial" },
+        { "feature": "Evidence protection", "watheq": "Yes", "c1": "Partial", "c2": "Partial", "c3": "Partial", "othersSummary": "Partial across the board" },
+        { "feature": "Asks before rewriting", "watheq": "Asks when proof is missing", "c1": "No structured questions", "c2": "Flags keywords only", "c3": "Depends on reviewer", "othersSummary": "No structured questions" },
+        { "feature": "Fit scoring before rewriting", "watheq": "Scores evidence first", "c1": "Template-first", "c2": "Keyword count", "c3": "Manual judgment", "othersSummary": "Keyword count / manual" },
+        { "feature": "ATS + job-ad alignment", "watheq": "Evidence-aware", "c1": "Template-focused", "c2": "Keyword signals only", "c3": "Depends on review", "othersSummary": "Keyword signals only" },
+        { "feature": "Interview preparation", "watheq": "Yes", "c1": "No", "c2": "No", "c3": "Partial", "othersSummary": "No / No / Partial" }
+      ],
+      "freeFeatures": [
+        { "text": "20 credits monthly — analysis, optimization, interview prep, cover letters" },
+        { "text": "Vision 2030 alignment scoring" },
+        { "text": "PDF exports and 5 professional templates" },
+        { "text": "Referral rewards — 5 credits per friend" }
+      ],
+      "proFeatures": [
+        { "text": "More optimization credits" },
+        { "text": "Save and track more jobs" },
+        { "text": "Priority improvements and early access" }
+      ],
+      "faqs": [
+        {
+          "q": "Is my resume data private?",
+          "a": "Your resume is processed securely — AI keys stay server-side and your files are never used to fill anyone else's resume. You can delete your data at any time from settings."
+        },
+        {
+          "q": "Does Watheq work in Arabic?",
+          "a": "Yes — fully. Watheq auto-detects Arabic or English resumes, analyzes both, and exports RTL-ready templates. The whole app works in either language."
+        },
+        {
+          "q": "What do I get on the free plan?",
+          "a": "20 credits every month: match analysis (2), full optimization (5), interview prep (3), cover letters (4), Vision 2030 alignment (2). PDF exports and 5 templates included; referrals earn 5 extra credits per friend."
+        },
+        {
+          "q": "Will my resume pass ATS screening?",
+          "a": "Watheq aligns your resume with the job ad's keywords and exports an ATS-friendly single-column format. No tool can honestly guarantee a pass rate — we improve your alignment and show you exactly what changed."
+        },
+        {
+          "q": "Can I upload a scanned PDF?",
+          "a": "Not yet — Watheq needs selectable text. Upload a text-based PDF or DOCX, or simply paste your resume text. Scanned image-only files aren't supported for now."
+        },
+        {
+          "q": "Will the AI invent experience I don't have?",
+          "a": "Never. When proof is missing, Watheq asks you a clarification question instead of guessing. Every suggestion stays grounded in what your resume already says."
+        }
+      ],
+      "bulletBefore": "Prepared weekly reports and dashboards for management.",
+      "bulletAfter": "Built weekly Power BI dashboards that helped leadership track KPI trends and prioritize stakeholder follow-ups across business units."
+    }
+  }
+}

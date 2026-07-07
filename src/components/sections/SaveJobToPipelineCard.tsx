@@ -17,6 +17,20 @@ interface SaveJobToPipelineCardProps {
   onToast?: (toast: { type: 'success' | 'warning' | 'danger' | 'info'; title: string; description?: string }) => void;
 }
 
+const UNKNOWN_COMPANY_VALUE = 'unknown company';
+
+const sanitizeMetadataField = (value?: string | null) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.toLowerCase() === 'null') return '';
+  return trimmed;
+};
+
+const sanitizeCompanyName = (value?: string | null) => {
+  const sanitized = sanitizeMetadataField(value);
+  return sanitized.toLowerCase() === UNKNOWN_COMPANY_VALUE ? '' : sanitized;
+};
+
 export function SaveJobToPipelineCard({
   jobDescription,
   matchScore,
@@ -27,13 +41,13 @@ export function SaveJobToPipelineCard({
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  const [companyName, setCompanyName] = useState(extractedMetadata?.companyName || '');
-  const [jobTitle, setJobTitle] = useState(extractedMetadata?.jobTitle || '');
+  const [companyName, setCompanyName] = useState(() => sanitizeCompanyName(extractedMetadata?.companyName));
+  const [jobTitle, setJobTitle] = useState(() => sanitizeMetadataField(extractedMetadata?.jobTitle));
   const [jobUrl, setJobUrl] = useState('');
-  const [location, setLocation] = useState(extractedMetadata?.location || '');
-  const [employmentType, setEmploymentType] = useState(extractedMetadata?.employmentType || '');
-  const [seniority, setSeniority] = useState(extractedMetadata?.seniority || '');
-  const [sector, setSector] = useState(extractedMetadata?.sector || '');
+  const [location, setLocation] = useState(() => sanitizeMetadataField(extractedMetadata?.location));
+  const [employmentType, setEmploymentType] = useState(() => sanitizeMetadataField(extractedMetadata?.employmentType));
+  const [seniority, setSeniority] = useState(() => sanitizeMetadataField(extractedMetadata?.seniority));
+  const [sector, setSector] = useState(() => sanitizeMetadataField(extractedMetadata?.sector));
   const [status, setStatus] = useState<JobApplicationStatus>('saved');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -41,23 +55,30 @@ export function SaveJobToPipelineCard({
   const needsConfirmation = extractedMetadata?.needsUserConfirmation ?? true;
 
   useEffect(() => {
-    if (extractedMetadata?.companyName && !companyName) {
-      setCompanyName(extractedMetadata.companyName);
+    const nextCompanyName = sanitizeCompanyName(extractedMetadata?.companyName);
+    const nextJobTitle = sanitizeMetadataField(extractedMetadata?.jobTitle);
+    const nextLocation = sanitizeMetadataField(extractedMetadata?.location);
+    const nextEmploymentType = sanitizeMetadataField(extractedMetadata?.employmentType);
+    const nextSeniority = sanitizeMetadataField(extractedMetadata?.seniority);
+    const nextSector = sanitizeMetadataField(extractedMetadata?.sector);
+
+    if (nextCompanyName && !companyName) {
+      setCompanyName(nextCompanyName);
     }
-    if (extractedMetadata?.jobTitle && !jobTitle) {
-      setJobTitle(extractedMetadata.jobTitle);
+    if (nextJobTitle && !jobTitle) {
+      setJobTitle(nextJobTitle);
     }
-    if (extractedMetadata?.location && !location) {
-      setLocation(extractedMetadata.location);
+    if (nextLocation && !location) {
+      setLocation(nextLocation);
     }
-    if (extractedMetadata?.employmentType && !employmentType) {
-      setEmploymentType(extractedMetadata.employmentType);
+    if (nextEmploymentType && !employmentType) {
+      setEmploymentType(nextEmploymentType);
     }
-    if (extractedMetadata?.seniority && !seniority) {
-      setSeniority(extractedMetadata.seniority);
+    if (nextSeniority && !seniority) {
+      setSeniority(nextSeniority);
     }
-    if (extractedMetadata?.sector && !sector) {
-      setSector(extractedMetadata.sector);
+    if (nextSector && !sector) {
+      setSector(nextSector);
     }
   }, [companyName, employmentType, extractedMetadata, jobTitle, location, sector, seniority]);
 
@@ -206,6 +227,7 @@ export function SaveJobToPipelineCard({
               aria-label={t('pipeline.location', 'Location')}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              placeholder={t('pipeline.notSpecified', 'Not specified')}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
             />
           </div>
@@ -218,6 +240,7 @@ export function SaveJobToPipelineCard({
               aria-label={t('pipeline.employmentType', 'Employment type')}
               value={employmentType}
               onChange={(e) => setEmploymentType(e.target.value)}
+              placeholder={t('pipeline.notSpecified', 'Not specified')}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
             />
           </div>
@@ -230,6 +253,7 @@ export function SaveJobToPipelineCard({
               aria-label={t('pipeline.seniority', 'Seniority')}
               value={seniority}
               onChange={(e) => setSeniority(e.target.value)}
+              placeholder={t('pipeline.notSpecified', 'Not specified')}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
             />
           </div>
@@ -242,6 +266,7 @@ export function SaveJobToPipelineCard({
               aria-label={t('pipeline.sector', 'Sector')}
               value={sector}
               onChange={(e) => setSector(e.target.value)}
+              placeholder={t('pipeline.notSpecified', 'Not specified')}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
             />
           </div>

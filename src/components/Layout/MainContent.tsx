@@ -133,6 +133,7 @@ const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
+const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
 const TRUTH_CHECK_STORAGE_KEY = "watheq:resumeTruthCheck";
 
 const getId = () => {
@@ -425,6 +426,7 @@ export default function MainContent() {
   useEffect(() => {
     if (!user || !guestMode || typeof window === "undefined") return;
     window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+    window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     setGuestMode(false);
   }, [guestMode, user]);
 
@@ -432,6 +434,7 @@ export default function MainContent() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
       window.localStorage.setItem("watheq:landingSeen", "true");
+      window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     }
     analytics.trackGuestPreviewStarted("landing_preview");
     setGuestMode(true);
@@ -441,6 +444,7 @@ export default function MainContent() {
   const exitGuestMode = useCallback(() => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+      window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     }
     setGuestMode(false);
     setActiveTab("resume");
@@ -630,6 +634,18 @@ export default function MainContent() {
       window.localStorage.setItem(TAB_STORAGE_KEY, value);
     }
   }, [pushToast, t, tabs]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleNavigateTab = (event: Event) => {
+      const detail = (event as CustomEvent<{ tab?: string }>).detail;
+      if (detail?.tab) {
+        handleTabChange(detail.tab);
+      }
+    };
+    window.addEventListener("watheq:navigate-tab", handleNavigateTab);
+    return () => window.removeEventListener("watheq:navigate-tab", handleNavigateTab);
+  }, [handleTabChange]);
 
   useEffect(() => {
     if (!hasResume && activeTab !== "resume") {

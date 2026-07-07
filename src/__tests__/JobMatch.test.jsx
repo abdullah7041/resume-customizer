@@ -100,14 +100,13 @@ describe('JobMatch', () => {
     );
 
     expect(screen.getByRole('heading', { name: /match a role/i })).toBeInTheDocument();
-    expect(screen.getByText(/missing keywords/i)).toBeInTheDocument();
-    expect(screen.getByText(/recognized strengths/i)).toBeInTheDocument();
     expect(screen.getByText(/optimize and export this version/i)).toBeInTheDocument();
     expect(screen.queryByText(/kubernetes/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/docker/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/add react experience/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
-    expect(screen.getByText(/add react experience/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /keywords/i }));
+    expect(screen.getByText(/missing keywords/i)).toBeInTheDocument();
+    expect(screen.getByText(/keywords found/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /score breakdown/i })).toBeInTheDocument();
   });
 
@@ -153,12 +152,13 @@ describe('JobMatch', () => {
       />
     );
 
+    expect(screen.getByText(/add verifiable evidence before optimizing/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/machine learning evidence is missing/i)).toHaveLength(1);
+    expect(screen.queryByRole('alert', { name: /strategic reality check/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /gaps & evidence/i }));
     expect(screen.getByRole('alert', { name: /strategic reality check/i })).toBeInTheDocument();
     expect(screen.getByText(/critical risk/i)).toBeInTheDocument();
-    expect(screen.queryByText(/machine learning evidence is missing/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/add verifiable evidence before optimizing/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
-    expect(screen.getByText(/machine learning evidence is missing/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/machine learning evidence is missing/i)).toHaveLength(2);
     expect(screen.getByText(/unclear: project ownership/i)).toBeInTheDocument();
   });
 

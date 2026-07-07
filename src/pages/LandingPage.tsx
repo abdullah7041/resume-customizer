@@ -1,28 +1,9 @@
-import { useEffect, useId, useMemo, useState, type SyntheticEvent } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
+import { useEffect, useId, useState, type ReactNode, type SyntheticEvent } from "react";
+import { ArrowRight, Check, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  ArrowRight,
-  CheckCircle2,
-  FileCheck2,
-  Languages,
-  ListChecks,
-  MessageSquareText,
-  SearchCheck,
-  ShieldCheck,
-  Sparkles,
-  Target,
-} from "lucide-react";
 
-import { PricingSection } from "../components/sections/PricingSection";
-import { ComparisonTable } from "../components/ui/ComparisonTable";
-import { FeatureHighlightSection } from "../components/sections/FeatureHighlightSection";
-import { Vision2030Mockup } from "../components/sections/landing/Vision2030Mockup";
-import { ClarificationMockup } from "../components/sections/landing/ClarificationMockup";
-import { InterviewPrepMockup } from "../components/sections/landing/InterviewPrepMockup";
+import { useTheme } from "../hooks/useTheme";
 import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "../lib/assets";
-
 import { analytics } from "../services/analytics";
 
 interface LandingPageProps {
@@ -30,589 +11,574 @@ interface LandingPageProps {
   onSignIn?: () => void;
 }
 
-function translatedList(t: ReturnType<typeof useTranslation>["t"], key: string) {
+type ThemeMode = "light" | "dark";
+
+type TextItem = {
+  text: string;
+};
+
+type KeyedCard = {
+  k: string;
+  title: string;
+  body: string;
+};
+
+type NumberedQuestion = {
+  n: string;
+  text: string;
+};
+
+type ComparisonRow = {
+  feature: string;
+  watheq: string;
+  c1: string;
+  c2: string;
+  c3: string;
+  othersSummary: string;
+};
+
+type FaqItem = {
+  q: string;
+  a: string;
+};
+
+type TranslationApi = ReturnType<typeof useTranslation>;
+
+const ARABIC_FINALE = "وثّق نجاحك";
+
+function translatedArray<T>(t: TranslationApi["t"], key: string, fallback: T[]) {
   const value = t(key, { returnObjects: true });
-  return Array.isArray(value) ? (value as string[]) : [];
+  return Array.isArray(value) ? (value as T[]) : fallback;
 }
 
-// Safety net only: if the bundled hero asset genuinely fails to load, swap to the
-// inline SVG fallback. We strip the <picture> <source> elements so the fallback
-// src actually wins, and log in dev so a broken asset is never silently masked.
+function localizedText(t: TranslationApi["t"], key: string, fallback: string) {
+  const value = t(key);
+  return typeof value === "string" && value !== key ? value : fallback;
+}
+
+function Numeral({ children }: { children: string }) {
+  return <span className="majlis-num">{children}</span>;
+}
+
 function handleSkylineError(event: SyntheticEvent<HTMLImageElement>) {
   const img = event.currentTarget;
   if (img.dataset.fallbackApplied === "true") return;
   img.dataset.fallbackApplied = "true";
-  img.closest("picture")?.querySelectorAll("source").forEach((source) => source.remove());
   img.src = SKYLINE_FALLBACK_URL;
   if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
-    console.warn("[LandingPage] Hero skyline asset failed to load; applied SVG fallback.");
+    console.warn("[LandingPage] Final CTA skyline asset failed to load; applied SVG fallback.");
   }
 }
 
-function ProofMetric({ value, label }: { value: string; label: string }) {
+function SectionHeader({
+  index,
+  title,
+  subtitle,
+  id,
+}: {
+  index: string;
+  title: string;
+  subtitle?: string;
+  id: string;
+}) {
   return (
-    <div className="rounded-2xl bg-white/86 p-4 text-start shadow-sm ring-1 ring-slate-900/6 backdrop-blur dark:bg-white/[0.08] dark:ring-white/10">
-      <div className="text-3xl font-black tabular-nums text-[#0b1026] dark:text-white">{value}</div>
-      <div className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-[#2b8994] dark:text-emerald-300">{label}</div>
-    </div>
-  );
-}
-
-function HeroProductStage() {
-  const { t } = useTranslation();
-  const skylineUrls = useMemo(() => getSkylineUrls(), []);
-  const isFallbackSkyline = skylineUrls.desktop.startsWith("data:image/");
-  const shouldReduceMotion = useReducedMotion();
-  const clarifyQuestions = translatedList(t, "landing.productWalkthrough.preview.clarifyQuestions");
-  const proofItems = translatedList(t, "landing.productWalkthrough.heroProof.items");
-  const keywordTags = translatedList(t, "landing.productWalkthrough.preview.keywordTags");
-
-  const floatSlow = shouldReduceMotion
-    ? {}
-    : { animate: { y: [0, -8, 0] }, transition: { duration: 4, repeat: Infinity, ease: "easeInOut" as const } };
-
-  const floatSlower = shouldReduceMotion
-    ? {}
-    : { animate: { y: [0, -7, 0] }, transition: { duration: 5, repeat: Infinity, ease: "easeInOut" as const, delay: 1 } };
-
-  return (
-    <div className="relative mx-auto w-full max-w-5xl">
-      <div className="landing-proof-panel relative overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] px-4 py-5 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#082b23] dark:shadow-black/30 dark:ring-white/10 sm:px-8 sm:py-8 lg:px-12">
-        <picture className="pointer-events-none absolute inset-x-4 top-0 h-48 opacity-40 sm:inset-x-8 sm:h-64">
-          <source
-            media="(max-width: 767px)"
-            srcSet={skylineUrls.mobile}
-            type={isFallbackSkyline ? undefined : "image/avif"}
-          />
-          <img
-            src={skylineUrls.desktop}
-            alt=""
-            className="h-full w-full rounded-b-[1.5rem] object-cover object-[54%_42%]"
-            decoding="async"
-            fetchPriority="high"
-            onError={handleSkylineError}
-          />
-        </picture>
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(245,244,240,0.84)_46%,rgba(240,239,235,0.58)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(16,185,129,0.08)_52%,rgba(236,72,153,0.05)_100%)]" />
-
-        <div className="relative grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
-          <div className="space-y-5 pt-1 sm:pt-4">
-            <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/10 dark:text-emerald-200 dark:ring-white/10">
-              {t("landing.productWalkthrough.heroProof.eyebrow")}
-            </div>
-            <h2 className="max-w-md text-2xl font-black leading-tight text-[#171717] dark:text-white sm:text-3xl">
-              {t("landing.productWalkthrough.heroProof.title")}
-            </h2>
-            <p className="max-w-md text-sm leading-7 text-slate-600 dark:text-white/62">
-              {t("landing.productWalkthrough.stageSubtitle")}
-            </p>
-            <div className="grid max-w-md gap-2">
-              {proofItems.map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-2xl bg-white/82 p-3 text-sm font-bold leading-6 text-[#0c3541] shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.07] dark:text-white/78 dark:ring-white/10">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#2b8994] dark:text-emerald-300" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative min-h-[430px] sm:min-h-[390px]">
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 18, rotate: -2 }}
-              animate={{ opacity: 1, y: 0, rotate: -4 }}
-              transition={{ duration: 0.55, ease: "easeOut" }}
-              {...floatSlow}
-              className="absolute left-0 top-10 hidden w-56 rounded-[1.5rem] bg-white p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 lg:block dark:bg-[#06231d] dark:ring-white/10"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                  {t("landing.productWalkthrough.preview.before")}
-                </span>
-                <span className="rounded-full bg-[#f5f4f0] px-2 py-1 text-xs font-black text-slate-500 dark:bg-white/10 dark:text-white/60">52</span>
-              </div>
-              <div className="mt-4 space-y-2">
-                <div className="h-2 w-4/5 rounded-full bg-[#f5f4f0] dark:bg-white/10" />
-                <div className="h-2 w-full rounded-full bg-[#f5f4f0] dark:bg-white/10" />
-                <div className="h-2 w-3/5 rounded-full bg-[#f5f4f0] dark:bg-white/10" />
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, delay: 0.08, ease: "easeOut" }}
-              className="mx-auto w-full max-w-sm rounded-[1.5rem] bg-white p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10 sm:p-5"
-            >
-              <div className="rounded-[1.25rem] bg-white p-4 text-[#171717] shadow-sm ring-1 ring-slate-900/5 dark:bg-[#06231d] dark:text-white dark:ring-white/10">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-white/70">
-                  <span>{t("landing.productWalkthrough.heroCardTitle")}</span>
-                  <span>{t("landing.productWalkthrough.preview.exampleLabel")}</span>
-                </div>
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <ProofMetric value="62%" label={t("landing.productWalkthrough.preview.matchScore")} />
-                  <ProofMetric value="86" label={t("landing.productWalkthrough.preview.after")} />
-                </div>
-                <div className="mt-4 text-sm font-semibold text-slate-600 dark:text-white/72">
-                  {t("landing.productWalkthrough.preview.keywordLift")}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {keywordTags.map((keyword) => (
-                    <span key={keyword} className="rounded-full bg-[#f5f4f0] px-2.5 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-white/10 dark:text-white/78 dark:ring-white/10">
-                      {keyword}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                {[
-                  t("landing.productWalkthrough.heroProof.clarify"),
-                  t("landing.productWalkthrough.heroProof.vision"),
-                  t("landing.productWalkthrough.heroProof.interview"),
-                ].map((item) => (
-                  <div key={item} className="flex items-center justify-between rounded-2xl bg-[#f5f4f0] px-4 py-3 text-sm font-bold text-slate-600 dark:bg-white/[0.06] dark:text-white/72">
-                    <span>{item}</span>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 18, rotate: 2 }}
-              animate={{ opacity: 1, y: 0, rotate: 3 }}
-              transition={{ duration: 0.55, delay: 0.16, ease: "easeOut" }}
-              {...floatSlower}
-              className="absolute bottom-0 right-0 w-[88%] rounded-[1.35rem] bg-white p-4 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10 sm:w-72 lg:bottom-8"
-            >
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
-                <MessageSquareText className="h-4 w-4" />
-                {t("landing.productWalkthrough.preview.clarifyEyebrow")}
-              </div>
-              <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-white/72">
-                {clarifyQuestions[0]}
-              </p>
-            </motion.div>
-          </div>
-        </div>
+    <div className="majlis-section-head">
+      <div className="majlis-section-title-row">
+        <span className="majlis-section-index">{index}</span>
+        <h2 id={id}>{title}</h2>
       </div>
+      {subtitle ? <p>{subtitle}</p> : null}
     </div>
   );
 }
 
-function SeeItInActionDemo() {
-  const { t } = useTranslation();
-  const resultRegionId = useId();
-  const shouldReduceMotion = useReducedMotion();
-  const [showOptimized, setShowOptimized] = useState(false);
-  const changeItems = translatedList(t, "landing.productWalkthrough.actionDemo.changes");
-  const activeBulletKey = showOptimized ? "optimizedBullet" : "weakBullet";
-  const activeLabelKey = showOptimized ? "optimizedLabel" : "weakLabel";
+function PrimaryButton({
+  children,
+  onClick,
+  inverted = false,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  inverted?: boolean;
+}) {
+  return (
+    <button type="button" onClick={onClick} className={inverted ? "majlis-btn majlis-btn-ivory" : "majlis-btn majlis-btn-primary"}>
+      <span>{children}</span>
+      <ArrowRight className="majlis-arrow" aria-hidden="true" />
+    </button>
+  );
+}
+
+function MatchReport({ t }: { t: TranslationApi["t"] }) {
+  const keywords = [
+    ["Power BI", localizedText(t, "landing.majlis.matched", "matched")],
+    [localizedText(t, "landing.majlis.kpiReporting", "KPI reporting"), localizedText(t, "landing.majlis.matched", "matched")],
+    [
+      localizedText(t, "landing.majlis.stakeholderMgmt", "Stakeholder management"),
+      localizedText(t, "landing.majlis.addedFromEvidence", "added from evidence"),
+    ],
+  ];
 
   return (
-    <section
-      id="see-it-in-action"
-      className="bg-white px-5 py-14 text-[#171717] dark:bg-[#031713] dark:text-white sm:px-8 lg:py-20"
-      aria-labelledby="see-action-title"
-    >
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-        <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.48, ease: "easeOut" }}
-          className="max-w-xl"
-        >
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
-            {t("landing.productWalkthrough.actionDemo.eyebrow")}
-          </p>
-          <h2 id="see-action-title" className="mt-4 text-4xl font-black leading-[0.98] sm:text-5xl">
-            {t("landing.productWalkthrough.actionDemo.title")}
-          </h2>
-          <p className="mt-5 text-lg leading-8 text-slate-600 dark:text-white/62">
-            {t("landing.productWalkthrough.actionDemo.subtitle")}
-          </p>
-
-          <div className="mt-7 rounded-[1.25rem] bg-[#f5f4f0] p-4 ring-1 ring-slate-900/6 dark:bg-white/[0.055] dark:ring-white/10">
-            <div className="flex items-start gap-3">
-              <MessageSquareText className="mt-1 h-5 w-5 shrink-0 text-[#2b8994] dark:text-emerald-300" />
-              <div>
-                <p className="text-sm font-black text-[#0c5963] dark:text-emerald-100">
-                  {t("landing.productWalkthrough.actionDemo.questionLabel")}
-                </p>
-                <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-white/70">
-                  {t("landing.productWalkthrough.actionDemo.question")}
-                </p>
-              </div>
-            </div>
+    <aside className="majlis-match-card" aria-label={localizedText(t, "landing.majlis.matchReport", "Match report")}>
+      <div className="majlis-card-header">
+        <span>{localizedText(t, "landing.majlis.matchReport", "Match report")}</span>
+        <span>{localizedText(t, "landing.majlis.example", "Example")}</span>
+      </div>
+      <div className="majlis-score-row">
+        <span>{localizedText(t, "landing.majlis.beforeTailoring", "Before tailoring")}</span>
+        <strong className="majlis-score-before">
+          <Numeral>62</Numeral>
+        </strong>
+      </div>
+      <div className="majlis-score-row">
+        <span>{localizedText(t, "landing.majlis.afterTailoring", "After tailoring")}</span>
+        <strong className="majlis-score-after">
+          <Numeral>86</Numeral>
+        </strong>
+      </div>
+      <div className="majlis-keyword-list">
+        {keywords.map(([label, status]) => (
+          <div key={label} className="majlis-keyword-row">
+            <span>{label}</span>
+            <span>{status}</span>
           </div>
-        </motion.div>
+        ))}
+      </div>
+    </aside>
+  );
+}
 
-        <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.55, delay: 0.08, ease: "easeOut" }}
-          className="landing-proof-panel overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] p-4 shadow-2xl shadow-slate-950/8 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:shadow-none dark:ring-white/10 sm:p-5"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500 dark:text-white/45">
-                {t("landing.productWalkthrough.actionDemo.sampleLabel")}
-              </p>
-              <h3 className="mt-1 text-xl font-black text-[#171717] dark:text-white">
-                {t("landing.productWalkthrough.actionDemo.sampleTitle")}
-              </h3>
+function DemoSection({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStarted: () => void }) {
+  const [optimized, setOptimized] = useState(false);
+  const resultId = useId();
+  const changes = translatedArray<TextItem>(t, "landing.majlis.changedList", []);
+  const score = optimized ? "86%" : "52%";
+  const bullet = optimized
+    ? localizedText(
+        t,
+        "landing.majlis.bulletAfter",
+        "Built weekly Power BI dashboards that helped leadership track KPI trends and prioritize stakeholder follow-ups across business units.",
+      )
+    : localizedText(t, "landing.majlis.bulletBefore", "Prepared weekly reports and dashboards for management.");
+
+  return (
+    <section id="mj2-demo" className="majlis-section" aria-labelledby="majlis-demo-title">
+      <div className="majlis-container">
+        <SectionHeader
+          index="01"
+          id="majlis-demo-title"
+          title={localizedText(t, "landing.majlis.s1Title", "One weak line, rewritten honestly.")}
+          subtitle={localizedText(
+            t,
+            "landing.majlis.s1Sub",
+            "The same truth, made clearer for the job ad. Switch between the two - and notice what Watheq refuses to invent.",
+          )}
+        />
+
+        <div className="majlis-demo-grid">
+          <article className="majlis-demo-card">
+            <div className="majlis-segmented" role="group" aria-label={localizedText(t, "landing.majlis.s1Title", "Demo state")}>
+              <button type="button" className={!optimized ? "is-active" : ""} onClick={() => setOptimized(false)}>
+                {localizedText(t, "landing.majlis.beforeTab", "Before")}
+              </button>
+              <button type="button" className={optimized ? "is-active" : ""} onClick={() => setOptimized(true)}>
+                {localizedText(t, "landing.majlis.afterTab", "Optimized")}
+              </button>
             </div>
-            <button
-              type="button"
-              aria-pressed={showOptimized}
-              aria-controls={resultRegionId}
-              onClick={() => setShowOptimized((value) => !value)}
-              className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full bg-[#0b1026] px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#2b8994] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f4f0] motion-reduce:transform-none dark:bg-emerald-300 dark:text-[#052e2b] dark:hover:bg-emerald-200 dark:focus-visible:ring-offset-[#06231d] sm:w-auto"
-            >
-              <Sparkles className="h-4 w-4" />
-              {t(showOptimized ? "landing.productWalkthrough.actionDemo.showWeak" : "landing.productWalkthrough.actionDemo.showOptimized")}
-            </button>
-          </div>
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.82fr]">
-            <div
-              id={resultRegionId}
-              aria-live="polite"
-              className="rounded-[1.25rem] bg-white p-4 ring-1 ring-slate-900/6 dark:bg-white/[0.06] dark:ring-white/10 sm:p-5"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#f5f4f0] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-white/10 dark:text-white/55">
-                  {t(`landing.productWalkthrough.actionDemo.${activeLabelKey}`)}
-                </span>
-                <span className="rounded-full bg-[#2b8994]/10 px-3 py-1 text-xs font-black text-[#0c5963] dark:bg-emerald-300/10 dark:text-emerald-200">
-                  {showOptimized ? "86%" : "52%"} {t("landing.productWalkthrough.preview.matchScore")}
-                </span>
-              </div>
-              <p className="mt-4 text-base font-black leading-7 text-[#171717] dark:text-white">
-                {t(`landing.productWalkthrough.actionDemo.${activeBulletKey}`)}
-              </p>
-              <div className="mt-5 rounded-xl bg-[#f5f4f0] p-4 dark:bg-[#031713]">
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                  {t("landing.productWalkthrough.actionDemo.jobContextLabel")}
-                </p>
-                <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-white/70">
-                  {t("landing.productWalkthrough.actionDemo.jobContext")}
-                </p>
-              </div>
+            <div className="majlis-demo-score">
+              <Numeral>{score}</Numeral> {localizedText(t, "landing.majlis.match", "match")} ·{" "}
+              {localizedText(t, "landing.majlis.exampleSmall", "example")}
             </div>
-
-            <div className="rounded-[1.25rem] bg-[#0b1026] p-4 text-white dark:bg-[#031713] dark:ring-1 dark:ring-white/10 sm:p-5">
-              <p className="text-sm font-black text-emerald-200">
-                {t("landing.productWalkthrough.actionDemo.changedTitle")}
-              </p>
-              <ul className="mt-4 space-y-3">
-                {changeItems.map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-sm font-semibold leading-6 text-white/78">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-5 rounded-xl bg-white/10 p-3 text-xs font-bold leading-5 text-emerald-100">
-                {t("landing.productWalkthrough.actionDemo.verifyNote")}
+            <p id={resultId} aria-live="polite" className="majlis-demo-bullet">
+              {bullet}
+            </p>
+            <div className="majlis-target-signal">
+              <span>{localizedText(t, "landing.majlis.targetSignal", "Target job signal")}</span>
+              <p>
+                {localizedText(
+                  t,
+                  "landing.majlis.targetSignalBody",
+                  "The role asks for KPI reporting, Power BI, stakeholder management, and decision-support evidence.",
+                )}
               </p>
             </div>
-          </div>
-        </motion.div>
+          </article>
+
+          <aside className="majlis-panel-card">
+            <span className="majlis-panel-kicker">{localizedText(t, "landing.majlis.changedTitle", "What changed - and what didn't")}</span>
+            <ul>
+              {changes.map((item) => (
+                <li key={item.text}>{item.text}</li>
+              ))}
+            </ul>
+            <div className="majlis-asked">
+              <span>{localizedText(t, "landing.majlis.askedFirst", "Watheq asked first")}</span>
+              <p>{localizedText(t, "landing.majlis.askedQuote", "Can you verify how many stakeholders used the dashboard?")}</p>
+            </div>
+          </aside>
+        </div>
+
+        <div className="majlis-repeat-cta">
+          <PrimaryButton onClick={onGetStarted}>{localizedText(t, "landing.majlis.cta", "See your match score - free")}</PrimaryButton>
+        </div>
       </div>
     </section>
   );
 }
 
-function ProofWorkflowStep({
-  icon: Icon,
-  title,
-  description,
-  index,
-}: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  index: number;
-}) {
+function WhySection({ t }: { t: TranslationApi["t"] }) {
+  const cards = translatedArray<KeyedCard>(t, "landing.majlis.whyCards", []);
   return (
-    <article className="group grid gap-4 rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-slate-900/6 transition hover:-translate-y-0.5 hover:ring-[#2b8994]/20 dark:bg-white/[0.055] dark:ring-white/10 dark:hover:ring-emerald-300/20 sm:grid-cols-[auto_1fr] sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0b1026] text-xs font-black tabular-nums text-white dark:bg-emerald-300 dark:text-[#052e2b]">
-          {index + 1}
-        </span>
-      </div>
-      <div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f5f4f0] text-[#2b8994] dark:bg-emerald-300/10 dark:text-emerald-200">
-        <Icon className="h-5 w-5" />
+    <section className="majlis-section" aria-labelledby="majlis-why-title">
+      <div className="majlis-container">
+        <SectionHeader
+          index="02"
+          id="majlis-why-title"
+          title={localizedText(t, "landing.majlis.s2Title", "One resume is not enough for every job.")}
+          subtitle={localizedText(
+            t,
+            "landing.majlis.s2Sub",
+            "Every job ad has different priorities, keywords, and proof expectations. Recruiters and ATS systems look for role-specific relevance.",
+          )}
+        />
+        <div className="majlis-why-grid">
+          {cards.map((card) => (
+            <article key={card.k} className="majlis-why-card">
+              <span>{card.k}</span>
+              <h3>{card.title}</h3>
+              <p>{card.body}</p>
+            </article>
+          ))}
         </div>
-        <h3 className="mt-4 text-xl font-black text-[#171717] dark:text-white">{title}</h3>
-        <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-white/62">{description}</p>
       </div>
-    </article>
+    </section>
+  );
+}
+
+function FeatureSections({ t }: { t: TranslationApi["t"] }) {
+  const visionRows = translatedArray<TextItem>(t, "landing.majlis.visionRows", []);
+  const clarifyQs = translatedArray<NumberedQuestion>(t, "landing.majlis.clarifyQs", []);
+  const interviewQs = translatedArray<TextItem>(t, "landing.majlis.interviewQs", []);
+
+  return (
+    <section className="majlis-section" aria-labelledby="majlis-features-title">
+      <div className="majlis-container">
+        <SectionHeader index="03" id="majlis-features-title" title={localizedText(t, "landing.majlis.s3Title", "Three things no generic tool does.")} />
+
+        <div className="majlis-feature-list">
+          <article className="majlis-feature-row">
+            <div className="majlis-feature-copy">
+              <span>{localizedText(t, "landing.majlis.f1Kicker", "Vision 2030 alignment")}</span>
+              <h3>{localizedText(t, "landing.majlis.f1Title", "Position yourself for Vision 2030 opportunities.")}</h3>
+              <p>{localizedText(t, "landing.majlis.f1Body", "")}</p>
+            </div>
+            <div className="majlis-feature-card majlis-feature-card-green">
+              <div className="majlis-card-header">
+                <span>{localizedText(t, "landing.majlis.visionSignal", "Vision 2030 signal")}</span>
+                <span>{localizedText(t, "landing.majlis.example", "Example")}</span>
+              </div>
+              <div className="majlis-vision-score">
+                <Numeral>92</Numeral>
+                <span>{localizedText(t, "landing.majlis.alignmentScore", "alignment score")}</span>
+              </div>
+              {visionRows.map((row) => (
+                <div key={row.text} className="majlis-check-row">
+                  <span>{row.text}</span>
+                  <Check aria-hidden="true" />
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="majlis-feature-row majlis-feature-row-reverse">
+            <div className="majlis-feature-copy">
+              <span>{localizedText(t, "landing.majlis.f2Kicker", "Ask-before-optimization")}</span>
+              <h3>{localizedText(t, "landing.majlis.f2Title", "Smart questions before smart suggestions.")}</h3>
+              <p>{localizedText(t, "landing.majlis.f2Body", "")}</p>
+            </div>
+            <div className="majlis-feature-card">
+              <div className="majlis-card-header">
+                <span>{localizedText(t, "landing.majlis.quickQuestions", "Quick questions")}</span>
+                <span>{localizedText(t, "landing.majlis.qMeta", "3 questions · 1 minute")}</span>
+              </div>
+              {clarifyQs.map((question) => (
+                <div key={question.n} className="majlis-question-row">
+                  <span>{question.n}</span>
+                  <p>{question.text}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="majlis-feature-row">
+            <div className="majlis-feature-copy">
+              <span>{localizedText(t, "landing.majlis.f3Kicker", "Interview preparation")}</span>
+              <h3>{localizedText(t, "landing.majlis.f3Title", "Practice with questions from your own resume.")}</h3>
+              <p>{localizedText(t, "landing.majlis.f3Body", "")}</p>
+            </div>
+            <div className="majlis-feature-card">
+              <div className="majlis-card-header">
+                <span>{localizedText(t, "landing.majlis.interviewPrep", "Interview prep")}</span>
+                <span>{localizedText(t, "landing.majlis.roleSpecific", "Role-specific")}</span>
+              </div>
+              {interviewQs.map((question) => (
+                <div key={question.text} className="majlis-interview-row">
+                  {question.text}
+                </div>
+              ))}
+              <p className="majlis-practice-note">{localizedText(t, "landing.majlis.practiceNote", "Practice with the same claims used in your tailored resume.")}</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ComparisonSection({ t }: { t: TranslationApi["t"] }) {
+  const rows = translatedArray<ComparisonRow>(t, "landing.majlis.comparisonRows", []);
+  const columns = [
+    localizedText(t, "landing.majlis.brand", "Watheq"),
+    localizedText(t, "landing.majlis.colGeneric", "Generic builder"),
+    localizedText(t, "landing.majlis.colScanner", "Keyword scanner"),
+    localizedText(t, "landing.majlis.colManual", "Manual editing"),
+  ];
+
+  return (
+    <section className="majlis-section" aria-labelledby="majlis-comparison-title">
+      <div className="majlis-container">
+        <SectionHeader index="04" id="majlis-comparison-title" title={localizedText(t, "landing.majlis.s4Title", "Compare proof, not just templates.")} />
+        <div className="majlis-comparison-table" role="table">
+          <div className="majlis-comparison-head" role="row">
+            <span role="columnheader" />
+            {columns.map((column) => (
+              <span key={column} role="columnheader">
+                {column}
+              </span>
+            ))}
+          </div>
+          {rows.map((row) => (
+            <div key={row.feature} className="majlis-comparison-row" role="row">
+              <strong role="cell">{row.feature}</strong>
+              <span role="cell">{row.watheq}</span>
+              <span role="cell">{row.c1}</span>
+              <span role="cell">{row.c2}</span>
+              <span role="cell">{row.c3}</span>
+            </div>
+          ))}
+        </div>
+        <div className="majlis-comparison-mobile">
+          {rows.map((row) => (
+            <article key={row.feature} className="majlis-mobile-compare-card">
+              <h3>{row.feature}</h3>
+              <p>
+                <strong>{localizedText(t, "landing.majlis.brand", "Watheq")}:</strong> {row.watheq}
+              </p>
+              <p>
+                <strong>{localizedText(t, "landing.majlis.others", "Others")}:</strong> {row.othersSummary}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingSection({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStarted: () => void }) {
+  const freeFeatures = translatedArray<TextItem>(t, "landing.majlis.freeFeatures", []);
+  const proFeatures = translatedArray<TextItem>(t, "landing.majlis.proFeatures", []);
+
+  return (
+    <section id="mj2-pricing" className="majlis-section" aria-labelledby="majlis-pricing-title">
+      <div className="majlis-container">
+        <SectionHeader index="05" id="majlis-pricing-title" title={localizedText(t, "landing.majlis.s5Title", "Start free. Everything you need to apply.")} />
+        <div className="majlis-pricing-grid">
+          <article className="majlis-price-card majlis-price-card-free">
+            <div className="majlis-price-head">
+              <h3>{localizedText(t, "landing.majlis.free", "Free")}</h3>
+              <span>{localizedText(t, "landing.majlis.liveNow", "Live now")}</span>
+            </div>
+            <p className="majlis-price">
+              <Numeral>{localizedText(t, "landing.majlis.freePrice", "0 SAR")}</Numeral>
+              <span>{localizedText(t, "landing.majlis.forever", "/ forever")}</span>
+            </p>
+            {freeFeatures.map((feature) => (
+              <div key={feature.text} className="majlis-check-row">
+                <span>{feature.text}</span>
+                <Check aria-hidden="true" />
+              </div>
+            ))}
+            <PrimaryButton onClick={onGetStarted}>{localizedText(t, "landing.majlis.navCta", "Check my match")}</PrimaryButton>
+          </article>
+
+          <article className="majlis-price-card majlis-price-card-pro">
+            <div className="majlis-price-head">
+              <h3>{localizedText(t, "landing.majlis.pro", "Pro")}</h3>
+              <span>{localizedText(t, "landing.majlis.waitlist", "Waitlist")}</span>
+            </div>
+            <p className="majlis-price">
+              <Numeral>{localizedText(t, "landing.majlis.proPrice", "29 SAR")}</Numeral>
+              <span>{localizedText(t, "landing.majlis.perMonth", "/ month · planned")}</span>
+            </p>
+            {proFeatures.map((feature) => (
+              <div key={feature.text} className="majlis-check-row majlis-check-row-gold">
+                <span>{feature.text}</span>
+                <Check aria-hidden="true" />
+              </div>
+            ))}
+            <a className="majlis-btn majlis-btn-secondary" href="#mj2-faq">
+              {localizedText(t, "landing.majlis.proCta", "Join the pricing waitlist")}
+            </a>
+          </article>
+        </div>
+        <p className="majlis-pricing-note">{localizedText(t, "landing.majlis.pricingNote", "Paid plans are not live yet - the waitlist helps shape launch pricing.")}</p>
+      </div>
+    </section>
+  );
+}
+
+function FaqSection({ t }: { t: TranslationApi["t"] }) {
+  const faqs = translatedArray<FaqItem>(t, "landing.majlis.faqs", []);
+  return (
+    <section id="mj2-faq" className="majlis-section" aria-labelledby="majlis-faq-title">
+      <div className="majlis-container majlis-faq-grid">
+        <SectionHeader
+          index="06"
+          id="majlis-faq-title"
+          title={localizedText(t, "landing.majlis.s6Title", "Questions, answered.")}
+          subtitle={localizedText(t, "landing.majlis.s6Sub", "The honest version, including what Watheq can't do yet.")}
+        />
+        <div className="majlis-faq-list">
+          {faqs.map((faq) => (
+            <details key={faq.q}>
+              <summary>
+                <span>{faq.q}</span>
+                <span aria-hidden="true">+</span>
+              </summary>
+              <p>{faq.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FinalCta({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStarted: () => void }) {
+  const skylineUrls = getSkylineUrls();
+  return (
+    <section className="majlis-final-cta" aria-labelledby="majlis-final-title" data-testid="majlis-final-cta">
+      <img src={skylineUrls.desktop} alt="" decoding="async" loading="lazy" onError={handleSkylineError} />
+      <div className="majlis-final-overlay" />
+      <div className="majlis-final-content">
+        <p>{ARABIC_FINALE}</p>
+        <h2 id="majlis-final-title">{localizedText(t, "landing.majlis.ctaTitle", "See where you stand before you hit apply.")}</h2>
+        <span>{localizedText(t, "landing.majlis.ctaSub", "Your real match score takes about two minutes. Free, in Arabic or English.")}</span>
+        <PrimaryButton inverted onClick={onGetStarted}>
+          {localizedText(t, "landing.majlis.cta", "See your match score - free")}
+        </PrimaryButton>
+      </div>
+    </section>
   );
 }
 
 export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps) {
-  const { t } = useTranslation();
-  const shouldReduceMotion = useReducedMotion();
-  const skylineUrls = useMemo(() => getSkylineUrls(), []);
-  const isFallbackSkyline = skylineUrls.desktop.startsWith("data:image/");
-
+  const { t, i18n } = useTranslation();
+  const [theme, toggleTheme] = useTheme() as readonly [ThemeMode, () => void];
+  const isArabic = i18n.language === "ar";
 
   useEffect(() => {
     analytics.trackLandingViewed();
   }, []);
 
-  const handleHeroCta = () => {
-    analytics.trackGetStartedClicked('hero');
+  const handleCta = (source: "hero" | "walkthrough" | "final_cta") => {
+    analytics.trackGetStartedClicked(source);
     onGetStarted();
   };
 
-  const handleSignInCta = () => {
-    onSignIn?.();
+  const toggleLanguage = () => {
+    const nextLanguage = isArabic ? "en" : "ar";
+    void i18n.changeLanguage(nextLanguage);
   };
-
-  const handleFinalCta = () => {
-    analytics.trackGetStartedClicked('final_cta');
-    onGetStarted();
-  };
-
-  const trustSignals = [
-    { icon: ListChecks, label: t("landing.productWalkthrough.heroProof.clarify") },
-    { icon: ShieldCheck, label: t("landing.productWalkthrough.identity.verified") },
-    { icon: Languages, label: t("landing.productWalkthrough.identity.bilingual") },
-    { icon: FileCheck2, label: t("landing.productWalkthrough.identity.vision") },
-  ];
-
-  const tailoringCards = [
-    { icon: Target, title: t("landing.productStory.why.cards.role.title"), description: t("landing.productStory.why.cards.role.description") },
-    { icon: SearchCheck, title: t("landing.productStory.why.cards.ats.title"), description: t("landing.productStory.why.cards.ats.description") },
-    { icon: ShieldCheck, title: t("landing.productStory.why.cards.proof.title"), description: t("landing.productStory.why.cards.proof.description") },
-  ];
-
-  const finalBenefits = translatedList(t, "landing.finalCta.benefits");
 
   return (
-    <main className="landing-page landing-walkthrough-performance relative isolate flex min-h-screen flex-col bg-white text-slate-950 dark:bg-[#031713] dark:text-white">
-      <section className="relative overflow-hidden px-5 pb-12 pt-16 sm:px-8 lg:pb-16 lg:pt-24">
-        <picture className="pointer-events-none absolute inset-0 z-0 block opacity-[0.65] dark:opacity-[0.5]">
-          <source
-            media="(max-width: 767px)"
-            srcSet={skylineUrls.mobile}
-            type={isFallbackSkyline ? undefined : "image/avif"}
-          />
-          <img
-            src={skylineUrls.desktop}
-            alt=""
-            className="h-full w-full object-cover object-[54%_42%]"
-            decoding="async"
-            fetchPriority="high"
-            onError={handleSkylineError}
-          />
-        </picture>
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(245,244,240,0.18)_0%,rgba(245,244,240,0.35)_42%,rgba(245,244,240,0.55)_75%,rgba(230,225,210,0.78)_100%)] dark:bg-[linear-gradient(180deg,rgba(6,19,15,0.55)_0%,rgba(6,19,15,0.68)_45%,rgba(6,19,15,0.82)_78%,rgba(6,19,15,0.95)_100%)]" />
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_28%,rgba(11,16,38,0.32)_0%,rgba(11,16,38,0)_55%)] dark:bg-[radial-gradient(circle_at_50%_28%,rgba(0,8,7,0.4)_0%,rgba(0,8,7,0)_55%)]" />
-
-        <div className="relative z-10 mx-auto w-full max-w-7xl">
-          <div className="mx-auto max-w-4xl text-center">
-            <motion.div
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 shadow-sm dark:border-white/10 dark:bg-white/[0.08] dark:text-emerald-200"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {t("landing.trustBadge")}
-            </motion.div>
-
-            <motion.h1
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.05, ease: "easeOut" }}
-              className="text-balance text-4xl font-black leading-[0.96] sm:text-6xl lg:text-7xl"
-            >
-              <span className="bg-gradient-to-br from-[#0b1026] via-[#0f766e] to-[#2b8994] bg-clip-text text-transparent dark:from-white dark:via-emerald-200 dark:to-emerald-400">
-                {t("landing.productWalkthrough.heroTitle")}
-              </span>
-            </motion.h1>
-
-            <motion.p
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.1, ease: "easeOut" }}
-              className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-white/64 sm:text-xl"
-            >
-              {t("landing.productWalkthrough.heroSubtitle")}
-            </motion.p>
-
-            <motion.div
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
-              className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
-            >
-              <button
-                type="button"
-                onClick={handleHeroCta}
-                className="btn-metal group relative inline-flex min-h-[52px] items-center justify-center gap-2 overflow-hidden rounded-full px-8 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-900/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transform-none"
-              >
-                <span className="relative z-10">{t("landing.hero.cta")}</span>
-                <ArrowRight className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
-              </button>
-              <a
-                href="#see-it-in-action"
-                className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-[#2b8994]/25 bg-white/82 px-5 py-2.5 text-sm font-black text-[#0c5963] shadow-sm ring-1 ring-white/50 transition hover:-translate-y-0.5 hover:border-[#2b8994]/45 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transform-none dark:border-white/10 dark:bg-white/[0.07] dark:text-emerald-100 dark:ring-white/10 dark:hover:bg-white/[0.11]"
-              >
-                <MessageSquareText className="h-4 w-4" />
-                {t("landing.productWalkthrough.actionDemo.heroLink")}
-              </a>
-              <span className="text-sm font-semibold text-slate-500 dark:text-white/52">
-                {t("landing.productWalkthrough.heroNote")}
-              </span>
-              {onSignIn && (
-                <button
-                  type="button"
-                  onClick={handleSignInCta}
-                  className="text-sm font-black text-[#0c5963] underline decoration-[#2b8994]/40 underline-offset-4 transition hover:text-[#2b8994] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:text-emerald-200 dark:hover:text-emerald-100"
-                >
-                  {t("landing.hero.signInCta", "Sign in only when you want to save progress")}
-                </button>
-              )}
-            </motion.div>
-          </div>
-
-          <div className="mx-auto mt-9 max-w-5xl">
-            <HeroProductStage />
-          </div>
-
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.25, ease: "easeOut" }}
-              className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4"
-            >
-              {trustSignals.map((signal) => (
-                <div
-                  key={signal.label}
-                  className="flex cursor-default items-center justify-center gap-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-900/6 dark:bg-white/[0.06] dark:text-white/72 dark:ring-white/10"
-                >
-                <signal.icon className="h-5 w-5 shrink-0 text-[#2b8994] dark:text-emerald-300" />
-                <span>{signal.label}</span>
-              </div>
-            ))}
-          </motion.div>
+    <main className="majlis-page" dir={isArabic ? "rtl" : "ltr"}>
+      <nav className="majlis-nav" aria-label="Landing">
+        <a className="majlis-brand" href="#top" aria-label={localizedText(t, "landing.majlis.brand", "Watheq")}>
+          <span>واثق</span>
+          <span>WATHEQ</span>
+        </a>
+        <div className="majlis-nav-links">
+          <a href="#mj2-demo">{localizedText(t, "landing.majlis.navProof", "The proof")}</a>
+          <a href="#mj2-pricing">{localizedText(t, "landing.majlis.navPricing", "Pricing")}</a>
+          <a href="#mj2-faq">{localizedText(t, "landing.majlis.navFaq", "Questions")}</a>
         </div>
-      </section>
-
-      <SeeItInActionDemo />
-
-      <section className="bg-[#f5f4f0] px-5 py-14 dark:bg-[#041c17] sm:px-8 lg:py-20" aria-labelledby="tailoring-title">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
-          <div className="lg:sticky lg:top-24">
-            <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
-              {t("landing.productStory.why.eyebrow")}
-            </p>
-            <h2 id="tailoring-title" className="mt-4 max-w-xl text-4xl font-black leading-[0.98] text-[#171717] dark:text-white sm:text-5xl">
-              {t("landing.productStory.why.title")}
-            </h2>
-            <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600 dark:text-white/62">
-              {t("landing.productStory.why.subtitle")}
-            </p>
-            <p className="mt-6 max-w-xl rounded-[1.25rem] bg-white/80 p-4 text-sm font-black leading-7 text-[#0c5963] shadow-sm ring-1 ring-[#cfe8e5] dark:bg-white/[0.06] dark:text-emerald-100 dark:ring-white/10">
-              {t("landing.productStory.why.bridge")}
-            </p>
-          </div>
-          <div className="grid gap-4">
-            {tailoringCards.map((card, index) => (
-              <ProofWorkflowStep key={card.title} {...card} index={index} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <FeatureHighlightSection
-        eyebrow={t("landing.featureHighlights.vision.eyebrow")}
-        title={t("landing.featureHighlights.vision.title")}
-        subtitle={t("landing.featureHighlights.vision.subtitle")}
-        benefits={translatedList(t, "landing.featureHighlights.vision.benefits")}
-        visual={<Vision2030Mockup />}
-        bgClassName="bg-white dark:bg-[#031713]"
-        accentColor="text-[#006C35] dark:text-emerald-300"
-      />
-
-      <FeatureHighlightSection
-        eyebrow={t("landing.featureHighlights.clarify.eyebrow")}
-        title={t("landing.featureHighlights.clarify.title")}
-        subtitle={t("landing.featureHighlights.clarify.subtitle")}
-        benefits={translatedList(t, "landing.featureHighlights.clarify.benefits")}
-        visual={<ClarificationMockup />}
-        reverse
-        bgClassName="bg-[#f5f4f0] dark:bg-[#041c17]"
-      />
-
-      <FeatureHighlightSection
-        eyebrow={t("landing.featureHighlights.interview.eyebrow")}
-        title={t("landing.featureHighlights.interview.title")}
-        subtitle={t("landing.featureHighlights.interview.subtitle")}
-        benefits={translatedList(t, "landing.featureHighlights.interview.benefits")}
-        visual={<InterviewPrepMockup />}
-        bgClassName="bg-white dark:bg-[#031713]"
-      />
-
-      <section className="bg-white px-5 py-16 text-[#171717] dark:bg-[#031713] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-comparison-title">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="inline-flex rounded-full border border-[#2b8994]/25 bg-[#2b8994]/10 px-4 py-1.5 text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:border-emerald-300/25 dark:bg-emerald-300/10 dark:text-emerald-200">
-              {t("landing.comparison.eyebrow")}
-            </p>
-            <h2 id="landing-comparison-title" className="mt-4 text-3xl font-black leading-tight text-[#171717] dark:text-white sm:text-4xl">
-              {t("landing.comparison.title")}
-            </h2>
-            <p className="mt-4 text-lg leading-8 text-slate-600 dark:text-white/72">
-              {t("landing.comparison.subtitle")}
-            </p>
-          </div>
-          <ComparisonTable />
-        </div>
-      </section>
-
-      <div className="bg-white px-5 pb-16 text-[#171717] dark:bg-[#031713] dark:text-white sm:px-8 lg:pb-20">
-        <div className="mx-auto max-w-7xl">
-          <PricingSection onGetStarted={handleFinalCta} />
-        </div>
-      </div>
-
-      <section className="bg-[#f5f4f0] px-5 py-16 text-[#171717] dark:bg-[#041c17] dark:text-white sm:px-8 lg:py-20" aria-labelledby="landing-final-title">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.16em] text-[#2b8994] dark:text-emerald-300">
-              {t("landing.productWalkthrough.finalEyebrow")}
-            </p>
-            <h2 id="landing-final-title" className="mt-4 max-w-3xl text-4xl font-black leading-[0.98] text-[#171717] dark:text-white sm:text-5xl">
-              {t("landing.productWalkthrough.finalTitle")}
-            </h2>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {finalBenefits.map((benefit) => (
-                <span key={benefit} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#0c5963] ring-1 ring-[#cfe8e5] dark:bg-white/10 dark:text-white/78 dark:ring-white/10">
-                  <CheckCircle2 className="h-4 w-4 text-[#2b8994] dark:text-[#5eead4]" />
-                  {benefit}
-                </span>
-              ))}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleFinalCta}
-            className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#5eead4] px-8 py-3.5 text-sm font-black text-[#052e2b] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f4f0] dark:focus-visible:ring-offset-[#092018]"
-          >
-            {t("landing.productWalkthrough.cta")}
-            <ArrowRight className="h-4 w-4 rtl:rotate-180" />
+        <div className="majlis-nav-actions">
+          <button type="button" className="majlis-icon-btn" onClick={toggleTheme} aria-label={localizedText(t, "common.toggleTheme", "Toggle theme")}>
+            {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+          </button>
+          <button type="button" className="majlis-lang-btn" onClick={toggleLanguage}>
+            {localizedText(t, "landing.majlis.langBtn", "العربية")}
+          </button>
+          {onSignIn ? (
+            <button type="button" className="majlis-signin" onClick={onSignIn}>
+              {localizedText(t, "landing.majlis.signIn", "Sign in")}
+            </button>
+          ) : null}
+          <button type="button" className="majlis-nav-cta" onClick={() => handleCta("hero")}>
+            {localizedText(t, "landing.majlis.navCta", "Check my match")}
           </button>
         </div>
+      </nav>
+
+      <section id="top" className="majlis-hero" aria-labelledby="majlis-hero-title">
+        <div className="majlis-container majlis-hero-grid">
+          <div className="majlis-hero-copy">
+            <div className="majlis-kicker-row">
+              <span />
+              <p>
+                <strong>{localizedText(t, "landing.majlis.kickerMain", "Built for Saudi careers")}</strong>
+                <em>{localizedText(t, "landing.majlis.kickerSub", "مصمم للوظائف السعودية")}</em>
+              </p>
+            </div>
+            <h1 id="majlis-hero-title">
+              {localizedText(t, "landing.majlis.heroL1", "Every job reads differently.")}
+              <br />
+              {localizedText(t, "landing.majlis.heroL2", "So should your resume.")}
+            </h1>
+            <p>{localizedText(t, "landing.majlis.heroSub", "")}</p>
+            <div className="majlis-hero-actions">
+              <PrimaryButton onClick={() => handleCta("hero")}>{localizedText(t, "landing.majlis.cta", "See your match score - free")}</PrimaryButton>
+              <a href="#mj2-demo">{localizedText(t, "landing.majlis.heroLink", "Read a real example")}</a>
+            </div>
+            <span className="majlis-hero-note">{localizedText(t, "landing.majlis.heroNote", "Free to start · No invented experience, ever")}</span>
+          </div>
+          <MatchReport t={t} />
+        </div>
       </section>
+
+      <DemoSection t={t} onGetStarted={() => handleCta("walkthrough")} />
+      <WhySection t={t} />
+      <FeatureSections t={t} />
+      <ComparisonSection t={t} />
+      <PricingSection t={t} onGetStarted={() => handleCta("walkthrough")} />
+      <FaqSection t={t} />
+      <FinalCta t={t} onGetStarted={() => handleCta("final_cta")} />
+
+      <footer className="majlis-footer">
+        <div className="majlis-container">
+          <p>
+            <strong>واثق</strong>
+            <span>{localizedText(t, "landing.majlis.footerTag", "Watheq · Built for Saudi careers")}</span>
+          </p>
+          <nav aria-label="Footer">
+            <a href="/privacy">{localizedText(t, "landing.majlis.privacy", "Privacy")}</a>
+            <a href="/terms">{localizedText(t, "landing.majlis.terms", "Terms")}</a>
+          </nav>
+        </div>
+      </footer>
     </main>
   );
 }

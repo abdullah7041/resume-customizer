@@ -488,6 +488,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
         topHits: data.matched_keywords || data.strongMatches || [],
         suggestions: data.recommendations || [],
         missingKeywords: data.missingKeywords || data.missing_keywords || [],
+        summary_bullets: Array.isArray(data.summary_bullets) ? data.summary_bullets : [],
         reasoning: data.overallAssessment || data.explanation?.reason || null, // AI's explanation of the match score
         strategicRealityCheck: normalizeStrategicRealityCheck(data.strategicRealityCheck),
       };

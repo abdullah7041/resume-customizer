@@ -182,6 +182,7 @@ export async function processMatchOnly(resumeText, jobDescription, language = 'e
       categoryScores: parsed.categoryScores,
       strongMatches: parsed.strongMatches,
       missingKeywords: parsed.missingKeywords,
+      summary_bullets: parsed.summary_bullets,
       reasoning: parsed.reasoning,
       strategicRealityCheck: postProcessStrategicRealityCheck(parsed.strategicRealityCheck, {
         resumeText: trimmedResume,
@@ -210,6 +211,7 @@ export async function processMatchOnly(resumeText, jobDescription, language = 'e
         categoryScores: parsed.categoryScores,
         strongMatches: parsed.strongMatches,
         missingKeywords: parsed.missingKeywords,
+        summary_bullets: parsed.summary_bullets,
         reasoning: parsed.reasoning,
         strategicRealityCheck: buildFallbackStrategicRealityCheck('Reality Check used a safe fallback after contract validation failed.'),
       };

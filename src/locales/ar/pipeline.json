@@ -20,6 +20,7 @@
     "confirmDelete": "تحذف هذه الوظيفة؟",
     "confirmDeleteDesc": "سيؤدي ذلك إلى حذف الوظيفة من مسارك ولا يمكن التراجع عنه.",
     "unknownCompany": "شركة غير معروفة",
+    "notSpecified": "غير محدد",
     "untitledRole": "وظيفة بدون عنوان",
     "saved": "محفوظة",
     "applied": "تم التقديم",

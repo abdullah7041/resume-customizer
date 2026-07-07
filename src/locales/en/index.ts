@@ -16,6 +16,7 @@ import landing_productWalkthrough from './landing/productWalkthrough.json';
 import landing_productStory from './landing/productStory.json';
 import landing_features from './landing/features.json';
 import landing_content from './landing/content.json';
+import landing_majlis from './landing/majlis.json';
 import upload from './upload.json';
 import analysis from './analysis.json';
 import optimize from './optimize.json';
@@ -73,6 +74,7 @@ const sources = [
     landing_productStory,
     landing_features,
     landing_content,
+    landing_majlis,
     upload,
     analysis,
     optimize,

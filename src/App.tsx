@@ -30,6 +30,7 @@ import { FeedbackPromptController } from "./components/Feedback/FeedbackPromptCo
 const ENABLE_HR_MASCOT = false;
 
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
+const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
 
 const getCurrentPath = () => {
   if (typeof window === "undefined") return "/";
@@ -39,6 +40,10 @@ const getCurrentPath = () => {
 export default function App() {
   const { user } = useAuth();
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
+  const [guestModeActive, setGuestModeActive] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
+  });
   const hasResume = useResumeStore((state) => Boolean(state.originalResume || state.parsedResumeText));
 
   // First-run onboarding gate (profile state, not device). The localStorage flag
@@ -65,12 +70,17 @@ export default function App() {
     if (typeof window === "undefined") return undefined;
 
     const handleLocationChange = () => setCurrentPath(window.location.pathname);
+    const handleGuestModeChange = () => {
+      setGuestModeActive(window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true");
+    };
     window.addEventListener("popstate", handleLocationChange);
     window.addEventListener("watheq:navigate", handleLocationChange);
+    window.addEventListener(GUEST_MODE_CHANGED_EVENT, handleGuestModeChange);
 
     return () => {
       window.removeEventListener("popstate", handleLocationChange);
       window.removeEventListener("watheq:navigate", handleLocationChange);
+      window.removeEventListener(GUEST_MODE_CHANGED_EVENT, handleGuestModeChange);
     };
   }, []);
 
@@ -80,6 +90,7 @@ export default function App() {
   // Onboarding tour (Joyride removed — run is permanently false)
   const { run } = useOnboardingTour();
   const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/admin/feedback";
+  const isSignedOutLanding = !user && !needsOnboarding && !guestModeActive && currentPath === "/";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -88,7 +99,7 @@ export default function App() {
           <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-[color:var(--bg)] dark:bg-gradient-to-b dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
             <OfflineIndicator />
             <EnvironmentBadge />
-            <Header showDecorativeSkyline={!isStaticPage} />
+            {!isSignedOutLanding && <Header showDecorativeSkyline={!isStaticPage} />}
 
             <Suspense fallback={null}>
               {currentPath === "/privacy" ? (
@@ -114,7 +125,7 @@ export default function App() {
                 <MainContent />
               )}
             </Suspense>
-            {!needsOnboarding && <Footer />}
+            {!needsOnboarding && !isSignedOutLanding && <Footer />}
             <ConsentBanner />
             <FeedbackPromptController />
 

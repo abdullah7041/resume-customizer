@@ -1,81 +1,64 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassCard } from '../ui/GlassCard';
+import {
+  AlertCircle,
+  Briefcase,
+  CheckCircle2,
+  ChevronDown,
+  Code2,
+  GraduationCap,
+  Info,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Users,
+  Zap,
+} from 'lucide-react';
 import { GlassButton } from '../ui/GlassButton';
+import { GlassCard } from '../ui/GlassCard';
 import { GlassCircle } from '../ui/GlassCircle';
 import { GlassTextarea } from '../ui/GlassTextarea';
-import {
-  Target,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Sparkles,
-  Info,
-  Zap,
-  Wrench,
-  ChevronDown,
-
-  Code2,
-  Briefcase,
-  GraduationCap,
-  Users,
-  ShieldCheck,
-  ShieldAlert
-} from 'lucide-react';
-import { cn } from '../../lib/utils/cn';
-import { analytics } from '../../services/analytics';
 import Tooltip from '../ui/Tooltip';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
-import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
-import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
-import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
-import { useUserCredits } from '../../hooks/useUserCredits';
-import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
-import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
-import type { ExtractedJobMetadata } from '../../types/pipeline';
+import { GapAnalysisCard, type GapItem } from '../GapAnalysisCard';
+import { HiddenMatchesCard, type HiddenMatch } from '../HiddenMatchesCard';
+import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
+import { useUserCredits } from '../../hooks/useUserCredits';
+import { cn } from '../../lib/utils/cn';
+import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { analytics } from '../../services/analytics';
+import type { ExtractedJobMetadata } from '../../types/pipeline';
+import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
-// === EXTRACTED FROM features/JobMatch.tsx ===
-// Semantic score states with calm, low-glow surfaces (Warm Saudi Premium):
-// strong → emerald, medium → amber, weak → rose.
+const LAST_JOB_KEY = 'watheq:lastJobDescription';
+const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchUsed';
+
 const resolveVariant = (score: number) => {
   if (score >= 70) {
     return {
-      gradient: "from-emerald-500/10 via-emerald-500/[0.04] to-transparent",
-      glow: "bg-emerald-500/15",
-      strokeStart: "#10B981",
-      strokeEnd: "#34D399",
-      label: "strongMatch",
-      icon: Target,
-      text: "text-emerald-700 dark:text-emerald-300"
+      gradient: 'from-emerald-500/10 via-emerald-500/[0.04] to-transparent',
+      glow: 'bg-emerald-500/15',
+      label: 'strongMatch',
+      text: 'text-emerald-700 dark:text-emerald-300',
     };
   }
   if (score >= 40) {
     return {
-      gradient: "from-amber-500/10 via-amber-500/[0.04] to-transparent",
-      glow: "bg-amber-500/12",
-      strokeStart: "#F59E0B",
-      strokeEnd: "#FBBF24",
-      label: "goodStart",
-      icon: Zap,
-      text: "text-amber-700 dark:text-amber-300"
+      gradient: 'from-amber-500/10 via-amber-500/[0.04] to-transparent',
+      glow: 'bg-amber-500/12',
+      label: 'goodStart',
+      text: 'text-amber-700 dark:text-amber-300',
     };
   }
   return {
-    gradient: "from-rose-500/10 via-rose-500/[0.04] to-transparent",
-    glow: "bg-rose-500/12",
-    strokeStart: "#F43F5E",
-    strokeEnd: "#FB7185",
-    label: "needsWork",
-    icon: Wrench,
-    text: "text-rose-700 dark:text-rose-300"
+    gradient: 'from-rose-500/10 via-rose-500/[0.04] to-transparent',
+    glow: 'bg-rose-500/12',
+    label: 'needsWork',
+    text: 'text-rose-700 dark:text-rose-300',
   };
 };
-
-const LAST_JOB_KEY = "watheq:lastJobDescription";
-const RING_RADIUS = 60;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 interface StrategicRealityCheck {
   riskTier: 'low' | 'medium' | 'high' | 'critical';
@@ -111,7 +94,6 @@ interface StrategicRealityCheck {
 const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => {
   if (riskTier === 'low') {
     return {
-      icon: ShieldCheck,
       container: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100',
       badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 border-emerald-500/20',
       role: 'status' as const,
@@ -119,7 +101,6 @@ const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => 
   }
   if (riskTier === 'medium') {
     return {
-      icon: Info,
       container: 'border-amber-500/25 bg-amber-500/10 text-amber-950 dark:text-amber-100',
       badge: 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/25',
       role: 'status' as const,
@@ -127,14 +108,12 @@ const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => 
   }
   if (riskTier === 'high') {
     return {
-      icon: ShieldAlert,
       container: 'border-rose-500/25 bg-rose-500/10 text-rose-950 dark:text-rose-100',
       badge: 'bg-rose-500/15 text-rose-800 dark:text-rose-200 border-rose-500/25',
       role: 'alert' as const,
     };
   }
   return {
-    icon: AlertCircle,
     container: 'border-red-600/30 bg-red-600/10 text-red-950 dark:text-red-100',
     badge: 'bg-red-600/15 text-red-800 dark:text-red-200 border-red-600/30',
     role: 'alert' as const,
@@ -147,6 +126,7 @@ interface MatchResult {
   missingKeywords?: string[];
   topHits?: string[];
   suggestions?: string[];
+  summary_bullets?: string[];
   reasoning?: string;
   categoryScores?: {
     hard_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
@@ -185,14 +165,65 @@ interface MatchSectionProps {
   protectedActionMessage?: string;
 }
 
-const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchUsed';
+type DetailKey = 'why' | 'gaps' | 'keywords' | 'full';
+
+interface DetailAccordionProps {
+  title: string;
+  count?: number;
+  icon: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}
+
+function DetailAccordion({ title, count, icon, open, onToggle, children }: DetailAccordionProps) {
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white/60 dark:border-white/10 dark:bg-white/[0.04]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-3 text-start"
+        aria-expanded={open}
+      >
+        <span className="flex min-w-0 items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
+          <span className="text-gray-500 dark:text-white/60">{icon}</span>
+          <span>{title}</span>
+          {typeof count === 'number' && (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-white/10 dark:text-white/60">
+              {count}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-gray-500 transition-transform rtl:rotate-180', open && 'rotate-180 rtl:rotate-0')} />
+      </button>
+      {open && <div className="px-4 pb-4 text-start">{children}</div>}
+    </section>
+  );
+}
+
+const splitReasoningIntoBullets = (reasoning?: string) => {
+  if (!reasoning) return [];
+  return reasoning
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+};
+
+const getJobWordCount = (value: string) =>
+  value.trim().split(/\s+/).filter(Boolean).length;
+
+const uniqueStrings = (items: string[]) =>
+  items
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
 
 export function MatchSection({
   onAnalyzeMatchAI,
   matchAnalysis,
   isAnalyzing = false,
   hasResume = false,
-  resumeText = '',
   onToast,
   onClear,
   jobDescription = '',
@@ -200,45 +231,37 @@ export function MatchSection({
   onJobSaved,
 }: MatchSectionProps) {
   const { t } = useTranslation();
-
-  // === STATE FROM features/JobMatch.tsx ===
   const [jobText, setJobText] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return getCompatibleStorageItem(LAST_JOB_KEY) ?? "";
+    if (typeof window === 'undefined') return '';
+    return getCompatibleStorageItem(LAST_JOB_KEY) ?? '';
   });
-  const [error, setError] = useState("");
-  const [whyOpen, setWhyOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [error, setError] = useState('');
+  const [scoreBreakdownOpen, setScoreBreakdownOpen] = useState(false);
+  const [saveJobOpen, setSaveJobOpen] = useState(false);
+  const [jobEditorOpen, setJobEditorOpen] = useState(false);
+  const [openDetails, setOpenDetails] = useState<Record<DetailKey, boolean>>({
+    why: false,
+    gaps: false,
+    keywords: false,
+    full: false,
+  });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+  const { isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
 
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  // Persist job description to localStorage
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (jobText && jobText.trim().length > 0) {
+    if (typeof window === 'undefined') return;
+    if (jobText.trim()) {
       setCompatibleStorageItem(LAST_JOB_KEY, jobText);
     } else {
       removeCompatibleStorageItem(LAST_JOB_KEY);
     }
   }, [jobText]);
 
-  // Close popover when clicking outside
   useEffect(() => {
-    if (!whyOpen) return undefined;
-    const handleClick = (event: MouseEvent) => {
-      if (
-        !popoverRef.current?.contains(event.target as Node) &&
-        !buttonRef.current?.contains(event.target as Node)
-      ) {
-        setWhyOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [whyOpen]);
+    if (matchAnalysis) {
+      setJobEditorOpen(false);
+    }
+  }, [matchAnalysis]);
 
   const hasFreePreviewRun = () =>
     typeof window !== 'undefined' && window.localStorage.getItem(FREE_MATCH_STORAGE_KEY) !== 'true';
@@ -255,19 +278,18 @@ export function MatchSection({
       const message = t('sections.match.errors.noJob', 'Paste the job description before analyzing.');
       setError(message);
       onToast?.({
-        type: "warning",
+        type: 'warning',
         title: t('sections.match.errors.jobNeeded', 'Job description needed'),
         description: message,
       });
       return;
     }
-    setError("");
+    setError('');
     analytics.trackJobDescriptionSubmitted();
     analytics.trackMatchAnalysisStarted();
     try {
       const result = await onAnalyzeMatchAI(trimmedJob, options);
       if (options?.freePreview) markFreePreviewUsed();
-      // Track match analysis run
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
         requestValueMomentFeedbackPrompt('match_success');
@@ -280,7 +302,6 @@ export function MatchSection({
           riskTypes: result.strategicRealityCheck.riskTypes,
         });
       }
-      // Refresh credits after consumption
       setTimeout(() => refetchCredits(), 500);
     } catch (err) {
       const msg = (err as Error)?.message || t('sections.match.errors.analyzeFailed', 'We could not analyze this match.');
@@ -293,7 +314,6 @@ export function MatchSection({
       else if (msg.includes('validation')) errorCategory = 'validation';
       analytics.trackMatchAnalysisFailed(errorCategory);
 
-      // Show info toast for degraded-service errors
       if (msg.includes('high load') || msg.includes('timed out') || msg.includes('wait 30 seconds')) {
         onToast?.({
           type: 'info',
@@ -304,14 +324,13 @@ export function MatchSection({
     }
   };
 
-  // Wrapper function that shows confirmation modal first
   const handleAnalyze = () => {
     const trimmedJob = jobText.trim();
     if (!trimmedJob) {
       const message = t('sections.match.errors.noJob', 'Paste the job description before analyzing.');
       setError(message);
       onToast?.({
-        type: "warning",
+        type: 'warning',
         title: t('sections.match.errors.jobNeeded', 'Job description needed'),
         description: message,
       });
@@ -323,15 +342,10 @@ export function MatchSection({
       return;
     }
 
-    // Wait for credits to load before showing modal
-    if (creditsLoading) {
-      return;
-    }
-
+    if (creditsLoading) return;
     setShowConfirmModal(true);
   };
 
-  // Handler for confirmed match analysis action
   const handleConfirmMatch = async () => {
     setShowConfirmModal(false);
     try {
@@ -342,21 +356,24 @@ export function MatchSection({
     }
   };
 
-  // Computed values
   const hasResults = Boolean(matchAnalysis);
   const rawScore = Number.isFinite(matchAnalysis?.score) ? matchAnalysis!.score : null;
   const score = rawScore != null ? Math.max(0, Math.min(100, Math.round(rawScore))) : null;
   const variant = resolveVariant(score ?? 0);
-  const progress = score == null ? 0 : Math.max(0, Math.min(100, score));
-  const ringOffset = useMemo(
-    () => RING_CIRCUMFERENCE - (progress / 100) * RING_CIRCUMFERENCE,
-    [progress]
-  );
-  const missing = matchAnalysis?.missingKeywords?.slice(0, 3) ?? [];
-  const hits = matchAnalysis?.topHits?.slice(0, 3) ?? [];
+  const missing = matchAnalysis?.missingKeywords ?? [];
+  const found = matchAnalysis?.topHits ?? matchAnalysis?.matchedKeywords ?? [];
   const realityCheck = matchAnalysis?.strategicRealityCheck ?? null;
   const realityVariant = realityCheck ? getRealityCheckVariant(realityCheck.riskTier) : null;
-  const RealityIcon = realityVariant?.icon;
+  const summaryBullets = (matchAnalysis?.summary_bullets?.length
+    ? matchAnalysis.summary_bullets
+    : splitReasoningIntoBullets(matchAnalysis?.reasoning)
+  ).slice(0, 5);
+  const gapChips = uniqueStrings([
+    ...(realityCheck?.confirmedRisks.map((risk) => risk.title) ?? []),
+    ...(realityCheck?.unclearRisks.map((risk) => risk.topic) ?? []),
+    ...(matchAnalysis?.gapAnalysis?.map((gap) => gap.requirement) ?? []),
+    ...missing,
+  ]).slice(0, 3);
   const nextActionKey = realityCheck
     ? `reality.${realityCheck.recommendation}`
     : score !== null && score >= 70
@@ -364,40 +381,70 @@ export function MatchSection({
       : score !== null && score >= 40
         ? 'closeGaps'
         : 'reviewFit';
-  const nextActionText = t(
-    `sections.match.results.nextAction.${nextActionKey}`,
-    score !== null && score >= 70
+  const nextActionFallback = realityCheck
+    ? {
+        optimize_now: 'Next: optimize and export this version.',
+        answer_clarifications_first: 'Next: answer clarifying questions before rewriting.',
+        add_evidence_first: 'Next: add verifiable evidence before optimizing.',
+        review_role_fit: 'Next: review role fit before spending optimization effort.',
+      }[realityCheck.recommendation]
+    : score !== null && score >= 70
       ? 'Next: optimize and export this version.'
       : score !== null && score >= 40
         ? 'Next: close the top gaps before optimizing.'
-        : 'Next: review role fit before spending optimization effort.'
+        : 'Next: review role fit before spending optimization effort.';
+  const nextActionText = t(
+    `sections.match.results.nextAction.${nextActionKey}`,
+    nextActionFallback
   );
-  const hasDetailedResults = Boolean(
-    matchAnalysis?.suggestions?.length ||
-    matchAnalysis?.gapAnalysis?.length ||
-    matchAnalysis?.keywordStrategy?.hiddenMatches?.length ||
-    matchAnalysis?.keywordStrategy?.mirroredPhrases?.length ||
-    matchAnalysis?.keywordStrategy?.structuralChanges?.length ||
-    realityCheck?.confirmedRisks?.length ||
-    realityCheck?.unclearRisks?.length
-  );
-
+  const jobWordCount = getJobWordCount(jobText);
   const buttonDisabled = !jobText.trim() || !hasResume || isAnalyzing;
   const disabledHint = !hasResume
     ? t('sections.match.hints.uploadFirst', 'Upload or paste your resume first.')
     : !jobText.trim()
       ? t('sections.match.hints.pasteJob', 'Paste a job description to continue.')
-      : "";
+      : '';
+  const hasDetails = Boolean(
+    summaryBullets.length ||
+    matchAnalysis?.gapAnalysis?.length ||
+    matchAnalysis?.keywordStrategy?.hiddenMatches?.length ||
+    matchAnalysis?.keywordStrategy?.mirroredPhrases?.length ||
+    matchAnalysis?.keywordStrategy?.structuralChanges?.length ||
+    realityCheck?.confirmedRisks.length ||
+    realityCheck?.unclearRisks.length ||
+    missing.length ||
+    found.length ||
+    matchAnalysis?.reasoning
+  );
+
+  const categoryRows = useMemo(
+    () => [
+      { key: 'hard_skills' as const, i18nKey: 'hardSkills', color: 'bg-blue-500', text: 'text-blue-500', icon: Code2 },
+      { key: 'experience' as const, i18nKey: 'experience', color: 'bg-purple-500', text: 'text-purple-500', icon: Briefcase },
+      { key: 'education' as const, i18nKey: 'education', color: 'bg-amber-500', text: 'text-amber-500', icon: GraduationCap },
+      { key: 'soft_skills' as const, i18nKey: 'softSkills', color: 'bg-emerald-500', text: 'text-emerald-500', icon: Users },
+    ],
+    []
+  );
+
+  const toggleDetail = (key: DetailKey) => {
+    setOpenDetails((current) => ({ ...current, [key]: !current[key] }));
+  };
+
+  const handleOptimizeClick = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'optimize' } }));
+    }
+  };
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Input Section */}
-        <GlassCard>
-          <div className="flex items-center justify-between mb-6">
+      <div className="space-y-5">
+        <GlassCard className="mx-auto w-full">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <GlassCircle size="md" variant="success">
-                <Target className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </GlassCircle>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -408,504 +455,387 @@ export function MatchSection({
                 </p>
               </div>
             </div>
-            {jobText && (
+            {jobText && !hasResults && (
               <button
+                type="button"
                 onClick={() => {
-                  setJobText("");
+                  setJobText('');
                   onClear?.();
                 }}
-                className="text-xs font-medium text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-white/5 hover:bg-rose-500/20 px-2.5 py-1 rounded-lg transition-all"
+                className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500 transition-all hover:bg-rose-500/20 hover:text-gray-900 dark:bg-white/5 dark:hover:text-white"
               >
                 {t('common.clear', 'Clear')}
               </button>
             )}
           </div>
 
-          <GlassTextarea
-            id="jobDescription"
-            name="jobDescription"
-            value={jobText}
-            onChange={(e) => setJobText(e.target.value)}
-            placeholder={t('sections.match.jobInput.placeholder', 'Paste the job description here...')}
-            className="w-full h-64 mb-4 font-mono text-sm leading-relaxed"
-            error={error}
-          />
-
-
-
-          {/* No Resume Warning */}
-          {!hasResume && (
-            <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-              <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0" />
-              <p className="text-sm text-amber-400">{t('sections.match.noResume', 'Upload your resume first')}</p>
+          {hasResults && (
+            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="min-w-0 text-sm font-medium text-gray-700 dark:text-white/75">
+                  <span className="font-bold text-gray-900 dark:text-white">
+                    {extractedMetadata?.jobTitle || t('sections.match.jobInput.collapsedTitle', 'Job description')}
+                  </span>
+                  <span className="mx-2 text-gray-400">·</span>
+                  <span>{t('sections.match.jobInput.wordCount', '{{count}} words', { count: jobWordCount })}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setJobEditorOpen((value) => !value)}
+                    className="rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-500/10 dark:text-emerald-300"
+                  >
+                    {jobEditorOpen ? t('sections.match.jobInput.doneEditing', 'Done') : t('sections.match.jobInput.viewEdit', 'View/edit')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setJobText('');
+                      onClear?.();
+                    }}
+                    className="rounded-lg px-3 py-2 text-xs font-bold text-gray-500 transition-colors hover:bg-rose-500/10 hover:text-rose-600 dark:text-white/60 dark:hover:text-rose-300"
+                  >
+                    {t('common.clear', 'Clear')}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
-          <GlassButton
-            onClick={handleAnalyze}
-            disabled={buttonDisabled}
-            isLoading={isAnalyzing}
-            className="w-full group relative font-bold"
-            variant="prominent"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-            <Sparkles className={cn("w-4 h-4 me-2", isAnalyzing && "animate-spin")} />
-            {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
-              <>
-                {t('sections.match.analyze', 'Analyze Match with AI')}
-                {!hasFreePreviewRun() && (
-                  <span className="ml-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>
-                )}
-              </>
-            )}
-          </GlassButton>
-
-          {disabledHint && (
-            <p className="text-xs text-gray-500 mt-2 text-center">{disabledHint}</p>
+          {(!hasResults || jobEditorOpen) && (
+            <GlassTextarea
+              id="jobDescription"
+              name="jobDescription"
+              value={jobText}
+              onChange={(event) => setJobText(event.target.value)}
+              placeholder={t('sections.match.jobInput.placeholder', 'Paste the job description here...')}
+              className="mb-4 h-64 w-full font-mono text-sm leading-relaxed"
+              error={error}
+            />
           )}
+
+          {!hasResume && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3">
+              <AlertCircle className="h-5 w-5 shrink-0 text-amber-500" />
+              <p className="text-sm text-amber-700 dark:text-amber-300">{t('sections.match.noResume', 'Upload your resume first')}</p>
+            </div>
+          )}
+
+          {(!hasResults || jobEditorOpen) && (
+            <GlassButton
+              onClick={handleAnalyze}
+              disabled={buttonDisabled}
+              isLoading={isAnalyzing}
+              className="group relative w-full font-bold"
+              variant="prominent"
+            >
+              <div className="absolute inset-0 -translate-x-full skew-x-12 bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full" />
+              <Sparkles className={cn('me-2 h-4 w-4', isAnalyzing && 'animate-spin')} />
+              {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
+                <>
+                  {t('sections.match.analyze', 'Analyze Match with AI')}
+                  {!hasFreePreviewRun() && <span className="ms-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>}
+                </>
+              )}
+            </GlassButton>
+          )}
+
+          {disabledHint && <p className="mt-2 text-center text-xs text-gray-500">{disabledHint}</p>}
         </GlassCard>
 
-        {/* Results Section */}
-        <GlassCard>
-          <div className="flex items-center gap-3 mb-6">
-            <GlassCircle size="md" variant="blue">
-              <TrendingUp className="w-5 h-5 text-blue-400" />
-            </GlassCircle>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('sections.match.results.title', 'Match Results')}
-            </h3>
-          </div>
-
-          {isAnalyzing ? (
-            <div className="flex flex-col items-center justify-center p-12 space-y-4">
+        {isAnalyzing ? (
+          <GlassCard>
+            <div className="flex flex-col items-center justify-center space-y-4 p-12">
               <div className="relative">
-                <svg className="animate-spin h-20 w-20 text-emerald-500" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
+                <svg className="h-20 w-20 animate-spin text-emerald-500" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path
                     className="opacity-75"
                     fill="currentColor"
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-emerald-300 animate-pulse" />
+                <Sparkles className="absolute inset-0 m-auto h-8 w-8 animate-pulse text-emerald-300" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h4 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
                 {t('sections.match.analyzingTitle', 'Analyzing Match...')}
               </h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">
-                {t(
-                  'sections.match.analyzingDesc',
-                  'AI is comparing your resume against job requirements. This takes 10-20 seconds.'
-                )}
+              <p className="max-w-md text-center text-sm text-gray-500 dark:text-gray-400">
+                {t('sections.match.analyzingDesc', 'AI is comparing your resume against job requirements. This takes 10-20 seconds.')}
               </p>
             </div>
-          ) : hasResults && score !== null ? (
-            <div className="flex flex-col h-full gap-5">
-              {/* Score Ring Display - Fixed at top */}
-              <div className="relative rounded-2xl overflow-hidden shrink-0">
-                {/* Background gradient */}
-                <div className={cn(
-                  'absolute inset-0 bg-gradient-to-br',
-                  variant.gradient
-                )}>
-                  <div className={cn('absolute inset-0 opacity-20 blur-2xl', variant.glow)} />
-                </div>
-
-                {/* Content */}
-                <div className="relative z-10 p-6 text-gray-900 dark:text-white">
-                  <div className="flex flex-col items-center gap-4">
-                    {/* SVG Ring */}
-                    <div 
-                      className="relative shrink-0 mx-auto" 
-                      style={{ width: '140px', height: '140px', minWidth: '140px', minHeight: '140px' }}
-                    >
-                      <div className={cn('absolute inset-0 rounded-full blur-xl opacity-20', variant.glow)} />
-                      <svg
-                        className="absolute inset-0 rotate-[-90deg] overflow-visible"
-                        style={{ width: '100%', height: '100%' }}
-                        viewBox="0 0 140 140"
-                      >
-                        <defs>
-                          <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor={variant.strokeStart} />
-                            <stop offset="100%" stopColor={variant.strokeEnd} />
-                          </linearGradient>
-                          <filter id="glow-shadow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                            <feMerge>
-                              <feMergeNode in="coloredBlur" />
-                              <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                          </filter>
-                        </defs>
-                        <circle
-                          cx="70"
-                          cy="70"
-                          r={RING_RADIUS}
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="8"
-                          className="text-gray-200 dark:text-white/10"
-                        />
-                        <circle
-                          cx="70"
-                          cy="70"
-                          r={RING_RADIUS}
-                          fill="none"
-                          stroke="url(#score-gradient)"
-                          strokeWidth="12"
-                          strokeLinecap="round"
-                          strokeDasharray={RING_CIRCUMFERENCE}
-                          strokeDashoffset={ringOffset}
-                          className="transition-[stroke-dashoffset] duration-1000 ease-out"
-                        />
-                      </svg>
-
-                      {/* Inner Score */}
-                      <div 
-                        className="!absolute grid place-items-center gauge-badge overflow-hidden rounded-full"
-                        style={{ inset: '12px' }}
-                      >
-                        <div className="flex flex-col items-center justify-center text-center relative z-10 w-full h-full">
-                          <Tooltip
-                            content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`}
-                            position="bottom"
-                          >
-                            <div className="flex flex-col items-center justify-center cursor-help">
-                              <AnimatedCounter
-                                to={score}
-                                duration={1500}
-                                className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-none"
-                              />
-                              <span className="text-[10px] font-bold text-gray-400 dark:text-white/50 uppercase tracking-widest mt-1 block w-full text-center">{t('sections.match.scoreLabel', 'Score')}</span>
-                            </div>
-                          </Tooltip>
-                        </div>
+          </GlassCard>
+        ) : hasResults && score !== null ? (
+          <>
+            <section className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white/70 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+              <div className={cn('absolute inset-0 bg-gradient-to-br', variant.gradient)}>
+                <div className={cn('absolute inset-0 opacity-20 blur-2xl', variant.glow)} />
+              </div>
+              <div className="relative z-10 flex flex-col gap-4 p-4 text-gray-900 dark:text-white sm:p-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                  <Tooltip content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`} position="bottom">
+                    <div className="grid h-20 w-20 shrink-0 cursor-help place-items-center rounded-full border border-white/50 bg-white/70 shadow-sm dark:border-white/10 dark:bg-black/15">
+                      <div className="text-center">
+                        <AnimatedCounter to={score} duration={1200} className="text-3xl font-black leading-none text-gray-900 dark:text-white" />
+                        <span className="mt-0.5 block text-[10px] font-bold uppercase text-gray-500 dark:text-white/50">{t('sections.match.scoreLabel', 'Score')}</span>
                       </div>
                     </div>
+                  </Tooltip>
+                  <div className="min-w-0 text-start">
+                    <p className={cn('text-sm font-bold uppercase', variant.text)}>
+                      {t(`sections.match.variant.${variant.label}`, variant.label)}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-gray-800 dark:text-white/85">{nextActionText}</p>
+                    {gapChips.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {gapChips.map((gap) => (
+                          <span key={gap} className="rounded-full border border-rose-500/15 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:text-rose-200">
+                            {gap}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-3 text-xs text-gray-500 dark:text-white/55">
+                      {t('sections.match.results.optimizedCaption', 'Optimized-score verification appears here after you run Optimize.')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex w-full flex-col gap-2 md:w-auto md:min-w-56">
+                  <GlassButton type="button" variant="prominent" className="w-full justify-center font-bold" onClick={handleOptimizeClick}>
+                    <Zap className="me-2 h-4 w-4" />
+                    {t('sections.match.results.optimizeCta', 'Optimize resume')}
+                    <span className="ms-2 text-xs opacity-80">(2 {t('common.credits', 'credits')})</span>
+                  </GlassButton>
+                  <div className="flex items-center justify-center gap-3 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSaveJobOpen((value) => !value)}
+                      className="inline-flex min-h-8 items-center gap-1 font-semibold text-gray-500 hover:text-gray-900 dark:text-white/60 dark:hover:text-white"
+                      aria-expanded={saveJobOpen}
+                    >
+                      {t('sections.match.results.saveJobToggle', 'Save job')}
+                      <ChevronDown className={cn('h-3.5 w-3.5 transition-transform rtl:rotate-180', saveJobOpen && 'rotate-180 rtl:rotate-0')} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScoreBreakdownOpen((value) => !value)}
+                      className="min-h-8 font-semibold text-gray-500 hover:text-gray-900 dark:text-white/60 dark:hover:text-white"
+                      aria-expanded={scoreBreakdownOpen}
+                    >
+                      {t('sections.match.results.breakdown', 'Score breakdown')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
 
-                    {/* Score Label */}
-                    <div className="text-center">
-                      <p className={cn('text-sm font-bold uppercase tracking-[0.2em]', variant.text)}>
-                        {t(`sections.match.variant.${variant.label}`, variant.label)}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-700 dark:text-white/80">
-                        {matchAnalysis?.reasoning || (
-                          score >= 70
-                            ? t('sections.match.results.strongMessage', 'Your profile is highly aligned with this role.')
-                            : score >= 40
-                              ? t('sections.match.results.moderateMessage', 'Addressing a few key gaps could boost your chances.')
-                              : t('sections.match.results.weakMessage', 'Consider tailoring your experience to the job requirements.')
-                        )}
-                      </p>
-                      <p className="mt-2 rounded-xl border border-emerald-500/15 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-800 dark:text-emerald-100">
-                        {nextActionText}
-                      </p>
-                      <p className="mt-2 inline-flex items-center justify-center gap-1.5 text-xs text-emerald-400/90 bg-emerald-500/10 px-2.5 py-0.5 rounded-full mx-auto">
-                        <Target className="h-3 w-3" />
-                        {t('trust.matchAnalysis')}
-                      </p>
-                    </div>
+            {scoreBreakdownOpen && (
+              <GlassCard>
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-white/60">
+                    {t('sections.match.results.howItWorks', 'Score Breakdown')}
+                  </p>
+                  <button type="button" onClick={() => setScoreBreakdownOpen(false)} className="text-gray-400 transition-colors hover:text-gray-900 dark:text-white/40 dark:hover:text-white">
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
+                {matchAnalysis?.categoryScores ? (
+                  <div className="space-y-3">
+                    {categoryRows.map((cat) => {
+                      const data = matchAnalysis.categoryScores?.[cat.key];
+                      if (!data) return null;
+                      const CatIcon = cat.icon;
+                      const percent = Math.min(100, (data.score / data.max) * 100);
+                      return (
+                        <div key={cat.key} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <CatIcon className={cn('h-3.5 w-3.5', cat.text)} />
+                              <span className="font-medium text-gray-700 dark:text-white/80">{t(`sections.match.categoryScores.${cat.i18nKey}`)}</span>
+                            </div>
+                            <span className={cn('font-bold', cat.text)}>{data.score}/{data.max}</span>
+                          </div>
+                          <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200 ring-1 ring-gray-300/50 dark:bg-black/20 dark:ring-white/5">
+                            <div className={cn('h-full rounded-full transition-all duration-700 ease-out', cat.color)} style={{ width: `${percent}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-start text-sm leading-relaxed text-gray-800 dark:text-white/90">
+                    <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
+                  </p>
+                )}
+              </GlassCard>
+            )}
 
-                    {realityCheck && realityVariant && RealityIcon && (
+            {saveJobOpen && jobDescription && (
+              <SaveJobToPipelineCard
+                jobDescription={jobDescription}
+                matchScore={score}
+                extractedMetadata={extractedMetadata}
+                onSaved={onJobSaved}
+                onToast={onToast}
+              />
+            )}
+
+            {hasDetails && (
+              <div className="space-y-3">
+                <DetailAccordion
+                  title={t('sections.match.details.whyScore', 'Why this score')}
+                  count={summaryBullets.length}
+                  icon={<Info className="h-4 w-4" />}
+                  open={openDetails.why}
+                  onToggle={() => toggleDetail('why')}
+                >
+                  {summaryBullets.length > 0 ? (
+                    <ul className="space-y-2 text-sm leading-relaxed text-gray-700 dark:text-white/75">
+                      {summaryBullets.map((bullet) => (
+                        <li key={bullet} className="flex gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-white/65">
+                      {t('sections.match.details.noSummaryBullets', 'Open Full analysis for the complete explanation.')}
+                    </p>
+                  )}
+                </DetailAccordion>
+
+                <DetailAccordion
+                  title={t('sections.match.details.gapsEvidence', 'Gaps & evidence')}
+                  count={(realityCheck?.confirmedRisks.length ?? 0) + (realityCheck?.unclearRisks.length ?? 0) + (matchAnalysis?.gapAnalysis?.length ?? 0)}
+                  icon={<ShieldAlert className="h-4 w-4" />}
+                  open={openDetails.gaps}
+                  onToggle={() => toggleDetail('gaps')}
+                >
+                  <div className="space-y-3">
+                    {realityCheck && realityVariant && (
                       <section
                         aria-label={t('sections.match.realityCheck.ariaLabel', 'Strategic Reality Check')}
                         role={realityVariant.role}
-                        className={cn(
-                          'w-full rounded-xl border p-4 text-start',
-                          realityVariant.container
-                        )}
+                        className={cn('rounded-xl border p-4 text-start', realityVariant.container)}
                       >
-                        <div className="flex items-start gap-3">
-                          <RealityIcon className="mt-0.5 h-5 w-5 shrink-0" />
-                          <div className="min-w-0 flex-1 space-y-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-sm font-bold">
-                                {t('sections.match.realityCheck.title', 'Strategic Reality Check')}
-                              </h4>
-                              <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase', realityVariant.badge)}>
-                                {t(`sections.match.realityCheck.tiers.${realityCheck.riskTier}`, realityCheck.riskTier)}
-                              </span>
-                              {detailsOpen && (
-                                <span className="rounded-full border border-gray-300/40 bg-white/30 px-2 py-0.5 text-[11px] font-medium dark:border-white/10 dark:bg-white/10">
-                                  {t('sections.match.realityCheck.confidence', 'Confidence')}: {t(`sections.match.realityCheck.confidenceLevels.${realityCheck.confidence}`, realityCheck.confidence)}
-                                </span>
-                              )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-bold">{t('sections.match.realityCheck.title', 'Strategic Reality Check')}</h4>
+                          <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase', realityVariant.badge)}>
+                            {t(`sections.match.realityCheck.tiers.${realityCheck.riskTier}`, realityCheck.riskTier)}
+                          </span>
+                          <span className="rounded-full border border-gray-300/40 bg-white/30 px-2 py-0.5 text-[11px] font-medium dark:border-white/10 dark:bg-white/10">
+                            {t('sections.match.realityCheck.confidence', 'Confidence')}: {t(`sections.match.realityCheck.confidenceLevels.${realityCheck.confidence}`, realityCheck.confidence)}
+                          </span>
+                        </div>
+                        <p className="mt-3 text-sm leading-relaxed">
+                          {realityCheck.summary || t('sections.match.realityCheck.fallbackSummary', 'Review the evidence before optimizing this resume.')}
+                        </p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          {realityCheck.confirmedRisks.map((risk, index) => (
+                            <div key={`confirmed-${index}`} className="rounded-lg bg-white/35 p-3 text-sm dark:bg-black/15">
+                              <p className="font-semibold">{risk.title}</p>
+                              <p className="mt-1 text-xs opacity-80">{risk.explanation}</p>
+                              <p className="mt-2 text-xs font-semibold opacity-90">{risk.mitigation}</p>
                             </div>
-                            <p className="text-sm leading-relaxed">
-                              {realityCheck.summary || t('sections.match.realityCheck.fallbackSummary', 'Review the evidence before optimizing this resume.')}
-                            </p>
-                            {detailsOpen && (realityCheck.confirmedRisks.length > 0 || realityCheck.unclearRisks.length > 0) && (
-                              <div className="grid gap-2 text-xs sm:grid-cols-2">
-                                {realityCheck.confirmedRisks.slice(0, 2).map((risk, index) => (
-                                  <div key={`confirmed-${index}`} className="rounded-lg bg-white/35 p-2 dark:bg-black/15">
-                                    <p className="font-semibold">{risk.title}</p>
-                                    <p className="mt-1 opacity-80">{risk.mitigation}</p>
-                                  </div>
-                                ))}
-                                {realityCheck.unclearRisks.slice(0, 2).map((risk, index) => (
-                                  <div key={`unclear-${index}`} className="rounded-lg bg-white/35 p-2 dark:bg-black/15">
-                                    <p className="font-semibold">
-                                      {t('sections.match.realityCheck.unclearLabel', 'Unclear')}: {risk.topic}
-                                    </p>
-                                    <p className="mt-1 opacity-80">{risk.evidenceNeeded || risk.reason}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <p className="text-xs font-medium opacity-85">
-                              {t(`sections.match.realityCheck.recommendations.${realityCheck.recommendation}`, 'Review evidence before optimizing.')}
-                            </p>
-                          </div>
+                          ))}
+                          {realityCheck.unclearRisks.map((risk, index) => (
+                            <div key={`unclear-${index}`} className="rounded-lg bg-white/35 p-3 text-sm dark:bg-black/15">
+                              <p className="font-semibold">
+                                {t('sections.match.realityCheck.unclearLabel', 'Unclear')}: {risk.topic}
+                              </p>
+                              <p className="mt-1 text-xs opacity-80">{risk.reason}</p>
+                              <p className="mt-2 text-xs font-semibold opacity-90">{risk.evidenceNeeded}</p>
+                            </div>
+                          ))}
                         </div>
                       </section>
                     )}
 
-                    {/* Score Breakdown Button */}
-                    <button
-                      ref={buttonRef}
-                      type="button"
-                      onClick={() => setWhyOpen(!whyOpen)}
-                      className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-200 dark:border-white/20 bg-gray-200/50 dark:bg-white/10 text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white hover:bg-gray-300/50 dark:hover:bg-white/20 transition-all"
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                      {t('sections.match.results.breakdown', 'Score Breakdown')}
-                    </button>
+                    {matchAnalysis?.gapAnalysis && matchAnalysis.gapAnalysis.length > 0 && <GapAnalysisCard gaps={matchAnalysis.gapAnalysis} />}
+                    {matchAnalysis?.keywordStrategy?.hiddenMatches && matchAnalysis.keywordStrategy.hiddenMatches.length > 0 && <HiddenMatchesCard matches={matchAnalysis.keywordStrategy.hiddenMatches} />}
+                    {matchAnalysis?.keywordStrategy && (matchAnalysis.keywordStrategy.mirroredPhrases?.length || matchAnalysis.keywordStrategy.structuralChanges?.length) ? (
+                      <MirroredKeywordsCard
+                        mirroredPhrases={matchAnalysis.keywordStrategy.mirroredPhrases || []}
+                        structuralChanges={matchAnalysis.keywordStrategy.structuralChanges || []}
+                      />
+                    ) : null}
                   </div>
-                </div>
+                </DetailAccordion>
 
-                {/* Popover - Category Breakdown */}
-                {whyOpen && (
-                  <div
-                    ref={popoverRef}
-                    className="absolute left-2 right-2 bottom-2 z-50 rounded-2xl border border-gray-200 dark:border-white/20 bg-white/90 dark:bg-[#041c17]/80 p-5 backdrop-blur-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-white/60">
-                        {t('sections.match.results.howItWorks', 'Score Breakdown')}
-                      </p>
-                      <button
-                        onClick={() => setWhyOpen(false)}
-                        className="text-gray-400 dark:text-white/40 hover:text-gray-900 dark:hover:text-white transition-colors"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {matchAnalysis?.categoryScores ? (
-                      <div className="space-y-3">
-                        {[
-                          { key: 'hard_skills', i18nKey: 'hardSkills', color: 'bg-blue-500', text: 'text-blue-400', icon: Code2 },
-                          { key: 'experience', i18nKey: 'experience', color: 'bg-purple-500', text: 'text-purple-400', icon: Briefcase },
-                          { key: 'education', i18nKey: 'education', color: 'bg-amber-500', text: 'text-amber-400', icon: GraduationCap },
-                          { key: 'soft_skills', i18nKey: 'softSkills', color: 'bg-emerald-500', text: 'text-emerald-400', icon: Users }
-                        ].map(cat => {
-                          const data = matchAnalysis.categoryScores?.[cat.key as keyof typeof matchAnalysis.categoryScores];
-                          if (!data) return null;
-                          const CatIcon = cat.icon;
-                          const percent = Math.min(100, (data.score / data.max) * 100);
-
-                          return (
-                            <div key={cat.key} className="space-y-1.5">
-                              <div className="flex items-center justify-between text-xs">
-                                <div className="flex items-center gap-2">
-                                  <CatIcon className={cn("w-3.5 h-3.5", cat.text)} />
-                                  <span className="text-gray-700 dark:text-white/80 font-medium">{t(`sections.match.categoryScores.${cat.i18nKey}`)}</span>
-                                </div>
-                                <span className={cn("font-bold", cat.text)}>{data.score}/{data.max}</span>
-                              </div>
-                              <div className="h-2.5 w-full bg-gray-200 dark:bg-black/20 rounded-full overflow-hidden ring-1 ring-gray-300/50 dark:ring-white/5">
-                                <div
-                                  className={cn("h-full rounded-full transition-all duration-700 ease-out", cat.color)}
-                                  style={{ width: `${percent}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
+                <DetailAccordion
+                  title={t('sections.match.details.keywords', 'Keywords')}
+                  count={missing.length + found.length}
+                  icon={<CheckCircle2 className="h-4 w-4" />}
+                  open={openDetails.keywords}
+                  onToggle={() => toggleDetail('keywords')}
+                >
+                  <div className="space-y-4">
+                    {missing.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold uppercase text-rose-600 dark:text-rose-300">
+                          {t('sections.match.results.missing', 'Missing Keywords')}
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {missing.map((keyword) => (
+                            <span key={keyword} className="rounded-lg border border-rose-500/15 bg-rose-500/5 px-3 py-1.5 text-sm text-rose-700 dark:text-rose-300">
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-800 dark:text-white/90 leading-relaxed">
-                        <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
-                      </p>
                     )}
-                    <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/50 mb-2">
-                        {t('sections.match.results.calculation.title', 'How is this calculated?')}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-500 dark:text-white/60">
-                        <div>
-                          <span className="text-blue-400 font-medium block mb-0.5">{t('sections.match.categoryScores.hardSkills', 'Hard Skills')}</span>
-                          {t('sections.match.categoryScores.hardSkillsDesc', 'Matching technical keywords')}
-                        </div>
-                        <div>
-                          <span className="text-purple-400 font-medium block mb-0.5">{t('sections.match.categoryScores.experience', 'Experience')}</span>
-                          {t('sections.match.categoryScores.experienceDesc', 'Job titles & years relevance')}
-                        </div>
-                        <div>
-                          <span className="text-amber-400 font-medium block mb-0.5">{t('sections.match.categoryScores.education', 'Education')}</span>
-                          {t('sections.match.categoryScores.educationDesc', 'Degree & field match')}
-                        </div>
-                        <div>
-                          <span className="text-emerald-400 font-medium block mb-0.5">{t('sections.match.categoryScores.softSkills', 'Soft Skills')}</span>
-                          {t('sections.match.categoryScores.softSkillsDesc', 'Behavioral & leadership traits')}
+                    {found.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">
+                          {t('sections.match.results.keywords', 'Keywords Found')}
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {found.map((keyword) => (
+                            <span key={keyword} className="rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300">
+                              <CheckCircle2 className="me-1.5 inline h-3 w-3 opacity-70" />
+                              {keyword}
+                            </span>
+                          ))}
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
-                )}
+                </DetailAccordion>
+
+                <DetailAccordion
+                  title={t('sections.match.details.fullAnalysis', 'Full analysis')}
+                  icon={<Sparkles className="h-4 w-4" />}
+                  open={openDetails.full}
+                  onToggle={() => toggleDetail('full')}
+                >
+                  <p className="text-sm leading-relaxed text-gray-700 dark:text-white/75">
+                    {matchAnalysis?.reasoning || t('sections.match.details.noFullAnalysis', 'No narrative analysis was returned for this saved result.')}
+                  </p>
+                </DetailAccordion>
               </div>
-
-              {jobDescription && (
-                <SaveJobToPipelineCard
-                  jobDescription={jobDescription}
-                  matchScore={score}
-                  extractedMetadata={extractedMetadata}
-                  onSaved={onJobSaved}
-                  onToast={onToast}
-                />
-              )}
-
-              {/* Scrollable Content Area */}
-              <div className="flex-1 overflow-y-auto glass-scrollbar space-y-5 pr-2 -mr-2 max-h-[500px]">
-
-                {/* Missing Keywords */}
-                {missing.length > 0 && (
-                  <div className="space-y-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
-                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-rose-400/90">
-                      <div className="p-1 rounded bg-rose-500/20">
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      </div>
-                      {t('sections.match.results.missing', 'Missing Keywords')} <span className="text-gray-400 dark:text-white/40">({missing.length})</span>
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {missing.map((keyword, i) => (
-                        <span
-                          key={i}
-                          className="group px-3 py-1.5 bg-rose-500/5 text-rose-700 dark:text-rose-300/90 rounded-lg text-sm border border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all cursor-pointer hover:scale-[1.02]"
-                          title={t('sections.match.results.addKeyword', 'Consider adding this keyword')}
-                        >
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Matched Keywords (Top Hits) */}
-                {hits.length > 0 && (
-                  <div className="space-y-3 animate-fade-in" style={{ animationDelay: '200ms' }}>
-                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400/90">
-                      <div className="p-1 rounded bg-emerald-500/20">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      </div>
-                      {t('sections.match.results.keywords', 'Recognized Strengths')} <span className="text-gray-400 dark:text-white/40">({hits.length})</span>
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {hits.map((keyword, i) => (
-                        <span
-                          key={i}
-                          className="px-3 py-1.5 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300/90 rounded-lg text-sm border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors"
-                        >
-                          <CheckCircle2 className="w-3 h-3 inline me-1.5 opacity-60" />
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Suggestions */}
-                {hasDetailedResults && (
-                  <button
-                    type="button"
-                    onClick={() => setDetailsOpen((value) => !value)}
-                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
-                    aria-expanded={detailsOpen}
-                  >
-                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", detailsOpen && "rotate-180")} />
-                    {detailsOpen
-                      ? t('sections.match.results.hideDetails', 'Hide details')
-                      : t('sections.match.results.showDetails', 'Show details')}
-                  </button>
-                )}
-
-                {/* Suggestions */}
-                {detailsOpen && matchAnalysis?.suggestions && matchAnalysis.suggestions.length > 0 && (
-                  <div className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
-                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-400/90">
-                      <div className="p-1 rounded bg-amber-500/20">
-                        <Sparkles className="h-3.5 w-3.5" />
-                      </div>
-                      {t('sections.match.results.suggestions', 'Suggestions')}
-                    </h4>
-                    <ul className="space-y-2">
-                      {matchAnalysis.suggestions.map((suggestion, i) => (
-                        <li
-                          key={i}
-                          className="p-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-white/10 hover:border-gray-200 dark:hover:border-white/20 transition-all cursor-default"
-                        >
-                          <span className="text-amber-400 mr-2">•</span>
-                          {suggestion}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Gap Analysis Section */}
-                {detailsOpen && matchAnalysis?.gapAnalysis && matchAnalysis.gapAnalysis.length > 0 && (
-                  <GapAnalysisCard gaps={matchAnalysis.gapAnalysis} />
-                )}
-
-                {/* Hidden Matches - Skills that match using different terminology */}
-                {detailsOpen && matchAnalysis?.keywordStrategy?.hiddenMatches && matchAnalysis.keywordStrategy.hiddenMatches.length > 0 && (
-                  <HiddenMatchesCard matches={matchAnalysis.keywordStrategy.hiddenMatches} />
-                )}
-
-                {/* Mirrored Keywords - JD phrases injected into optimized content */}
-                {detailsOpen && matchAnalysis?.keywordStrategy && (
-                  matchAnalysis.keywordStrategy.mirroredPhrases?.length || matchAnalysis.keywordStrategy.structuralChanges?.length
-                ) ? (
-                  <MirroredKeywordsCard
-                    mirroredPhrases={matchAnalysis.keywordStrategy.mirroredPhrases || []}
-                    structuralChanges={matchAnalysis.keywordStrategy.structuralChanges || []}
-                  />
-                ) : null}
-
-
-              </div>
-            </div>
-          ) : (
-            <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8 animate-fade-in">
-              <div className="relative mb-6 group">
-                <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-1000 animate-pulse" />
-                <div className="relative p-6 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 group-hover:border-gray-300 dark:group-hover:border-white/20 transition-all duration-500 group-hover:scale-110">
-                  <Target className="w-10 h-10 text-gray-400 group-hover:text-blue-400 transition-colors duration-500" />
+            )}
+          </>
+        ) : (
+          <GlassCard>
+            <div className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center animate-fade-in">
+              <div className="group relative mb-6">
+                <div className="absolute inset-0 animate-pulse rounded-full bg-blue-500/20 opacity-60 blur-3xl transition-opacity duration-1000 group-hover:opacity-100" />
+                <div className="relative rounded-full border border-gray-200 bg-gray-100 p-6 transition-all duration-500 group-hover:scale-110 group-hover:border-gray-300 dark:border-white/10 dark:bg-white/5 dark:group-hover:border-white/20">
+                  <Target className="h-10 w-10 text-gray-400 transition-colors duration-500 group-hover:text-blue-400" />
                 </div>
               </div>
-              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="mb-2 text-lg font-medium text-gray-900 dark:text-white">
                 {t('sections.match.emptyState.title', 'Ready to Analyze')}
               </h4>
-              <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">
+              <p className="mx-auto max-w-xs text-sm leading-relaxed text-gray-500">
                 {t('sections.match.emptyState', 'Paste a job description to see how well your resume matches the requirements.')}
               </p>
             </div>
-          )}
-        </GlassCard>
+          </GlassCard>
+        )}
       </div>
 
-      {/* Vision 2030 Info Modal */}
-
-      {/* Credit Confirmation Modal */}
       <ConfirmActionModal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}

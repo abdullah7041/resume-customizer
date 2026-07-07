@@ -412,6 +412,34 @@ describe('AI contract layer', () => {
     );
   });
 
+  it('normalizes summary bullets without rejecting an otherwise valid match response', async () => {
+    const longBullet = 'This verdict bullet is useful but longer than the compact UI limit because the provider ignored the requested maximum character count.';
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      score: 72,
+      categoryScores: {
+        hard_skills: { score: 30, max: 40, reasoning: 'Good technical overlap' },
+        experience: { score: 22, max: 30, reasoning: 'Relevant experience' },
+        education: { score: 10, max: 15, reasoning: 'Relevant education' },
+        soft_skills: { score: 10, max: 15, reasoning: 'Some leadership evidence' },
+      },
+      strongMatches: ['SQL'],
+      missingKeywords: ['Power BI'],
+      summary_bullets: [longBullet, 'Power BI remains the clearest gap.'],
+      reasoning: 'Good match with one clear tooling gap.',
+    }));
+
+    const result = await executeAiContract('ai_match', {
+      resumeText: 'SQL analyst resume',
+      jobDescription: 'Power BI analyst role',
+      language: 'en',
+    });
+
+    expect(result.summary_bullets).toHaveLength(2);
+    expect(result.summary_bullets[0]).toHaveLength(120);
+    expect(result.summary_bullets[0]).toBe(longBullet.slice(0, 120));
+    expect(result.summary_bullets[1]).toBe('Power BI remains the clearest gap.');
+  });
+
   it('fails closed when AI output violates the contract schema', async () => {
     callOpenRouterMock.mockResolvedValue(JSON.stringify({
       score: 88,

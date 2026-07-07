@@ -39,6 +39,7 @@ export interface MatchAnalysisResponse {
   coverage?: number;
   similarity?: number;
   reasoning?: string;
+  summary_bullets?: string[];
   missingKeywords: string[];
   topHits?: string[];
   matchedKeywords?: string[];

@@ -123,6 +123,7 @@ const baseHandler: Handler = async (event) => {
       coverage: normalizedScore / 100,
       similarity: normalizedScore / 100,
       missingKeywords: match.missingKeywords,
+      summary_bullets: match.summary_bullets || [],
       strongMatches: match.strongMatches,
       matched_keywords: match.strongMatches,
       recommendations: match.missingKeywords.slice(0, 5).map((k: string) =>

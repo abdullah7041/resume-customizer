@@ -1,29 +1,18 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import LandingPage from "../pages/LandingPage";
 
-// NOTE: we intentionally do NOT mock ../lib/assets here — this test verifies the
-// hero <picture> uses a visible opacity treatment (not the washed-out white gradient
-// regression) for the bundled skyline asset.
-
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: { returnObjects?: boolean }) => (options?.returnObjects ? [] : key),
+    i18n: { language: "en", changeLanguage: vi.fn() },
   }),
 }));
 
-vi.mock("framer-motion", () => ({
-  motion: new Proxy(
-    {},
-    {
-      get: (_target, tag: string) =>
-        ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
-          React.createElement(tag, props, children),
-    },
-  ),
-  useReducedMotion: () => true,
+vi.mock("../hooks/useTheme", () => ({
+  useTheme: () => ["light", vi.fn()],
 }));
 
 vi.mock("../services/analytics", () => ({
@@ -33,54 +22,22 @@ vi.mock("../services/analytics", () => ({
   },
 }));
 
-// Heavy, irrelevant subsections — stub so the test stays focused on the hero.
-vi.mock("../components/sections/PricingSection", () => ({ PricingSection: () => <div /> }));
-vi.mock("../components/ui/ComparisonTable", () => ({ ComparisonTable: () => <div /> }));
-vi.mock("../components/sections/FeatureHighlightSection", () => ({ FeatureHighlightSection: () => <div /> }));
-vi.mock("../components/sections/landing/Vision2030Mockup", () => ({ Vision2030Mockup: () => <div /> }));
-vi.mock("../components/sections/landing/ClarificationMockup", () => ({ ClarificationMockup: () => <div /> }));
-vi.mock("../components/sections/landing/InterviewPrepMockup", () => ({ InterviewPrepMockup: () => <div /> }));
-
-describe("LandingPage — signed-out hero visibility (regression guard)", () => {
-  it("resolves the hero <picture> to the bundled local skyline asset, not the SVG fallback", () => {
+describe("LandingPage — Majlis redesign structure", () => {
+  it("uses the bundled skyline only in the final CTA, not as the hero background", () => {
     const { container } = render(<LandingPage onGetStarted={vi.fn()} />);
 
-    const heroImgs = Array.from(container.querySelectorAll("img")).filter((img) =>
+    const skylineImgs = Array.from(container.querySelectorAll("img")).filter((img) =>
       img.getAttribute("src")?.includes("kafdh-hero-desktop"),
     );
 
-    expect(heroImgs.length).toBeGreaterThan(0);
-    for (const img of heroImgs) {
-      const src = img.getAttribute("src") ?? "";
-      expect(src).toContain("hero/kafdh-hero-desktop-1920x1080.avif");
-      expect(src.startsWith("data:image/")).toBe(false);
-    }
-
-    const mobileSource = Array.from(container.querySelectorAll("source")).find((s) =>
-      s.getAttribute("srcset")?.includes("kafdh-hero-mobile"),
-    );
-    expect(mobileSource).toBeTruthy();
+    expect(skylineImgs).toHaveLength(1);
+    expect(skylineImgs[0].closest("[data-testid='majlis-final-cta']")).toBeTruthy();
+    expect(container.querySelector(".majlis-hero img")).toBeNull();
   });
 
-  it("does not re-introduce the washed-out hero opacity classes", () => {
-    const { container } = render(<LandingPage onGetStarted={vi.fn()} />);
+  it("renders the required primary CTA copy exactly three times outside the nav", () => {
+    render(<LandingPage onGetStarted={vi.fn()} />);
 
-    const heroImg = Array.from(container.querySelectorAll("img")).find((img) =>
-      img.getAttribute("src")?.includes("kafdh-hero-desktop"),
-    );
-    expect(heroImg).toBeTruthy();
-
-    const picture = heroImg?.closest("picture");
-    expect(picture).toBeTruthy();
-    const className = picture?.getAttribute("class") ?? "";
-
-    // Guard against re-introducing the near-invisible washout opacities.
-    expect(className).not.toContain("opacity-[0.28]");
-    expect(className).not.toContain("opacity-[0.34]");
-    expect(className).not.toContain("opacity-20");
-
-    // Pin the new visible opacity classes for the main hero.
-    expect(className).toContain("opacity-[0.65]");
-    expect(className).toContain("dark:opacity-[0.5]");
+    expect(screen.getAllByText("See your match score - free")).toHaveLength(3);
   });
 });

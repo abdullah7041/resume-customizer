@@ -6,7 +6,11 @@
       "jobInput": {
         "title": "وصف الوظيفة",
         "placeholder": "الصق وصف الوظيفة هنا...",
-        "url": "أو أدخل رابط إعلان الوظيفة"
+        "url": "أو أدخل رابط إعلان الوظيفة",
+        "collapsedTitle": "وصف الوظيفة",
+        "wordCount": "{{count}} كلمة",
+        "viewEdit": "عرض/تعديل",
+        "doneEditing": "تم"
       },
       "results": {
         "title": "تحليل المطابقة",
@@ -16,6 +20,9 @@
         "suggestions": "الاقتراحات",
         "showDetails": "عرض التفاصيل",
         "hideDetails": "إخفاء التفاصيل",
+        "optimizeCta": "حسّن السيرة",
+        "saveJobToggle": "حفظ الوظيفة",
+        "optimizedCaption": "سيظهر تحقق درجة النسخة المحسّنة هنا بعد تشغيل التحسين.",
         "nextAction": {
           "optimize": "التالي: حسّن هذه النسخة وصدّرها.",
           "closeGaps": "التالي: عالج أهم الفجوات قبل التحسين.",
@@ -30,6 +37,14 @@
         "calculation": {
           "title": "كيف حسبناها؟"
         }
+      },
+      "details": {
+        "whyScore": "سبب هذه الدرجة",
+        "gapsEvidence": "الفجوات والأدلة",
+        "keywords": "الكلمات المفتاحية",
+        "fullAnalysis": "التحليل الكامل",
+        "noSummaryBullets": "افتح التحليل الكامل لقراءة التفسير.",
+        "noFullAnalysis": "لا يوجد تحليل سردي محفوظ لهذه النتيجة."
       },
       "analyze": "تحليل المطابقة",
       "analyzing": "يحلل...",

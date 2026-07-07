@@ -6,7 +6,11 @@
       "jobInput": {
         "title": "Job Description",
         "placeholder": "Paste the job description here...",
-        "url": "Or enter job posting URL"
+        "url": "Or enter job posting URL",
+        "collapsedTitle": "Job description",
+        "wordCount": "{{count}} words",
+        "viewEdit": "View/edit",
+        "doneEditing": "Done"
       },
       "results": {
         "title": "Match Analysis",
@@ -16,6 +20,9 @@
         "suggestions": "Suggestions",
         "showDetails": "Show details",
         "hideDetails": "Hide details",
+        "optimizeCta": "Optimize resume",
+        "saveJobToggle": "Save job",
+        "optimizedCaption": "Optimized-score verification appears here after you run Optimize.",
         "nextAction": {
           "optimize": "Next: optimize and export this version.",
           "closeGaps": "Next: close the top gaps before optimizing.",
@@ -30,6 +37,14 @@
         "calculation": {
           "title": "How is this calculated?"
         }
+      },
+      "details": {
+        "whyScore": "Why this score",
+        "gapsEvidence": "Gaps & evidence",
+        "keywords": "Keywords",
+        "fullAnalysis": "Full analysis",
+        "noSummaryBullets": "Open Full analysis for the complete explanation.",
+        "noFullAnalysis": "No narrative analysis was returned for this saved result."
       },
       "analyze": "Analyze Match",
       "analyzing": "Analyzing...",

@@ -20,6 +20,7 @@
     "confirmDelete": "Delete this job?",
     "confirmDeleteDesc": "This will remove the job from your pipeline. This action cannot be undone.",
     "unknownCompany": "Unknown company",
+    "notSpecified": "Not specified",
     "untitledRole": "Untitled role",
     "saved": "Saved",
     "applied": "Applied",

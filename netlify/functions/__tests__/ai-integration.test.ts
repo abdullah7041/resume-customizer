@@ -114,6 +114,7 @@ describe('AI Integration Functions', () => {
                 score: 85,
                 strongMatches: ['typescript'],
                 missingKeywords: ['react'],
+                summary_bullets: ['Strong TypeScript evidence', 'React is the main gap'],
                 reasoning: 'Good match',
                 strategicRealityCheck: {
                     riskTier: 'low',
@@ -140,6 +141,7 @@ describe('AI Integration Functions', () => {
             const body = JSON.parse(result.body);
             expect(body.score).toBe(85);
             expect(body.strongMatches).toContain('typescript');
+            expect(body.summary_bullets).toEqual(['Strong TypeScript evidence', 'React is the main gap']);
             expect(body.strategicRealityCheck.riskTier).toBe('low');
             expect(mockDbFrom).toHaveBeenCalledWith('strategic_reality_checks');
             expect(mockDbFrom).not.toHaveBeenCalledWith('job_matches');
