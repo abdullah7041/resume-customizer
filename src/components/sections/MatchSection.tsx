@@ -28,6 +28,7 @@ import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptCont
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { cn } from '../../lib/utils/cn';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { FEATURE_COSTS } from '../../types/credits';
 import { analytics } from '../../services/analytics';
 import type { ExtractedJobMetadata } from '../../types/pipeline';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
@@ -604,7 +605,7 @@ export function MatchSection({
                   <GlassButton type="button" variant="prominent" className="w-full justify-center font-bold" onClick={handleOptimizeClick}>
                     <Zap className="me-2 h-4 w-4" />
                     {t('sections.match.results.optimizeCta', 'Optimize resume')}
-                    <span className="ms-2 text-xs opacity-80">(2 {t('common.credits', 'credits')})</span>
+                    <span className="ms-2 text-xs opacity-80">({FEATURE_COSTS.optimize} {t('common.credits', 'credits')})</span>
                   </GlassButton>
                   <div className="flex items-center justify-center gap-3 text-xs">
                     <button

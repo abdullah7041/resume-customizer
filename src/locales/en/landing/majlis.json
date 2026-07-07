@@ -152,7 +152,7 @@
         },
         {
           "q": "Can I upload a scanned PDF?",
-          "a": "Not yet — Watheq needs selectable text. Upload a text-based PDF or DOCX, or simply paste your resume text. Scanned image-only files aren't supported for now."
+          "a": "Signed-in users can upload scanned PDFs; Watheq will try OCR when selectable text is missing. Guest preview still needs selectable text, so paste the resume text or upload a text-based PDF/DOCX."
         },
         {
           "q": "Will the AI invent experience I don't have?",
