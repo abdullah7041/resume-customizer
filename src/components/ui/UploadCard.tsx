@@ -5,6 +5,7 @@ import { AppError } from "../../services/supabase.js";
 import { cn } from "../../lib/utils/cn";
 import { GlassButton } from "./GlassButton";
 import { GlassCard } from "./GlassCard";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 
 
 const DOCUMENT_MIME_TYPES = new Set([
@@ -89,6 +90,7 @@ export default function UploadCard({
   onSaudiNationalChange,
 }) {
   const { t } = useTranslation();
+  const saudiToggleEnabled = useFeatureFlag("saudiNationalityToggle");
   const inputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -381,7 +383,7 @@ export default function UploadCard({
         )
       }
 
-      {isSaved && (
+      {isSaved && saudiToggleEnabled && (
         <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
           <label className="relative flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border border-emerald-900/12 bg-emerald-50/70 cursor-pointer hover:bg-emerald-50 transition-all group overflow-hidden dark:border-emerald-200/14 dark:bg-white/[0.06] dark:hover:bg-white/[0.08]">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/0 group-hover:to-emerald-500/0 transition-all duration-500" />

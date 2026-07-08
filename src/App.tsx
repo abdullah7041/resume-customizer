@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { MotionConfig } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
@@ -20,8 +20,14 @@ import { useResumeStore } from "./lib/stores/resumeStore";
 import OnboardingChat from "./components/onboarding/OnboardingChat";
 import { isOnboarded, markOnboarded } from "./lib/onboarding/onboardedFlag";
 import { useAuth } from "./hooks/useAuth";
+import { useFeatureFlag } from "./hooks/useFeatureFlag";
 
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
+
+// Feature-flags dashboard. Reachable in dev always, and in prod for signed-in
+// admins (the page self-gates via app_metadata.role, mirroring AdminFeedbackPage).
+// Lazy so it stays out of the initial chunk.
+const DevFlagsPage = lazy(() => import("./pages/DevFlagsPage"));
 
 const getCurrentPath = () => {
   if (typeof window === "undefined") return "/";
@@ -41,12 +47,14 @@ export default function App() {
       const resumeState = useResumeStore.getState();
       return (
         !isOnboarded() &&
-        !Boolean(resumeState.originalResume || resumeState.parsedResumeText) &&
-        !Boolean(resumeState.searchIntent)
+        !(resumeState.originalResume || resumeState.parsedResumeText) &&
+        !resumeState.searchIntent
       );
     }
   );
-  const needsOnboarding = onboardingGateActive && !onboardedFlag;
+  const onboardingChatEnabled = useFeatureFlag("onboardingChat");
+  const hrOverlayEnabled = useFeatureFlag("hrSuperSaudOverlay");
+  const needsOnboarding = onboardingChatEnabled && onboardingGateActive && !onboardedFlag;
 
   // Run storage migration once on app initialization
   useEffect(() => {
@@ -71,7 +79,7 @@ export default function App() {
 
   // Onboarding tour (Joyride removed — run is permanently false)
   const { run } = useOnboardingTour();
-  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/admin/feedback";
+  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/admin/feedback" || currentPath === "/dev/flags";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -88,6 +96,10 @@ export default function App() {
               <TermsOfService />
             ) : currentPath === "/admin/feedback" ? (
               <AdminFeedbackPage />
+            ) : currentPath === "/dev/flags" ? (
+              <Suspense fallback={null}>
+                <DevFlagsPage />
+              </Suspense>
             ) : needsOnboarding ? (
               <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
                 <OnboardingChat
@@ -116,7 +128,7 @@ export default function App() {
               source="credits"
             />
 
-            {!isStaticPage && (
+            {!isStaticPage && hrOverlayEnabled && (
               <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
             )}
           </div>

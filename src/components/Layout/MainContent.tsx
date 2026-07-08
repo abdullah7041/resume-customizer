@@ -57,6 +57,8 @@ import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
 import { emitHRSuperSaudEvent, useHRSuperSaud } from "../../features/hr-super-saud";
 import { useUserCredits } from "../../hooks/useUserCredits";
+import { useFeatureFlags } from "@/hooks/useFeatureFlag";
+import type { FeatureFlagName } from "@/types/featureFlags";
 
 /** Lightweight skeleton shown while lazy sections load */
 function SectionSkeleton() {
@@ -102,19 +104,19 @@ class LazyErrorBoundary extends Component<
 }
 
 
-const getTabsConfig = (t) => [
+const getTabsConfig = (t): (Tab & { icon: NonNullable<Tab["icon"]>; flag?: FeatureFlagName })[] => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
-  { value: "truth-check", label: t("tabs.truthCheck", "Truth Check"), icon: ShieldCheck },
-  { value: "match", label: t("tabs.match"), icon: Target },
-  { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
+  { value: "truth-check", label: t("tabs.truthCheck", "Truth Check"), icon: ShieldCheck, flag: "truthCheck" },
+  { value: "match", label: t("tabs.match"), icon: Target, flag: "aiMatch" },
+  { value: "optimize", label: t("tabs.optimize"), icon: Sparkles, flag: "optimize" },
 
-  { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate },
+  { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate, flag: "templatesExport" },
   { value: "more-tools", label: t("tabs.moreTools", "More tools"), icon: MoreHorizontal },
-  { value: "interview", label: t("tabs.interview"), icon: MessageSquare },
-  { value: "bulk", label: t("tabs.bulk"), icon: FileText },
-  { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail },
-  { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true },
-  { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase },
+  { value: "interview", label: t("tabs.interview"), icon: MessageSquare, flag: "interview" },
+  { value: "bulk", label: t("tabs.bulk"), icon: FileText, flag: "bulkAnalysis" },
+  { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail, flag: "coverLetter" },
+  { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true, flag: "vision2030" },
+  { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase, flag: "pipeline" },
 ];
 const PRIMARY_TAB_VALUES = ["resume", "truth-check", "match", "optimize", "templates", "more-tools"];
 const PRE_UPLOAD_TAB_VALUES = new Set(PRIMARY_TAB_VALUES);
@@ -350,10 +352,19 @@ export default function MainContent() {
     "Upload a resume first to unlock the next steps."
   );
 
+  // Feature flags gate tab visibility BEFORE hasResume/isPremium/guest logic —
+  // flag check is always the outermost condition. Flag-less tabs (resume,
+  // more-tools) are core and always pass this filter.
+  const flags = useFeatureFlags();
+  const isFlagEnabled = useCallback(
+    (tab: { flag?: FeatureFlagName }) => !tab.flag || flags[tab.flag],
+    [flags]
+  );
+
   // Memoize tabs to avoid recreating on every render
   const tabs = useMemo<Tab[]>(
     () => {
-      const baseTabs = getTabsConfig(t);
+      const baseTabs = getTabsConfig(t).filter(isFlagEnabled);
       const visibleTabs = hasResume
         ? baseTabs.filter((tab) => PRIMARY_TAB_VALUES.includes(tab.value))
         : baseTabs.filter((tab) => PRE_UPLOAD_TAB_VALUES.has(tab.value));
@@ -364,7 +375,7 @@ export default function MainContent() {
           : tab
       );
     },
-    [hasResume, resumeGateReason, t]
+    [hasResume, isFlagEnabled, resumeGateReason, t]
   );
   const mobilePrimarySteps = useMemo<MobileWorkflowItem[]>(() => {
     const mobileLabels = {
@@ -377,21 +388,23 @@ export default function MainContent() {
     };
 
     return getTabsConfig(t)
+      .filter(isFlagEnabled)
       .filter((tab) => MOBILE_PRIMARY_TAB_VALUES.includes(tab.value))
       .map((tab) => ({
         ...tab,
         label: mobileLabels[tab.value] ?? tab.label,
         disabledReason: !hasResume && tab.value !== "resume" ? mobileWorkflowGateReason : undefined,
       }));
-  }, [hasResume, mobileWorkflowGateReason, t]);
+  }, [hasResume, isFlagEnabled, mobileWorkflowGateReason, t]);
   const mobileSecondarySteps = useMemo<MobileWorkflowItem[]>(
     () =>
       hasResume
         ? getTabsConfig(t)
+            .filter(isFlagEnabled)
             .filter((tab) => MOBILE_SECONDARY_TAB_VALUES.includes(tab.value))
             .map((tab) => ({ ...tab }))
         : [],
-    [hasResume, t]
+    [hasResume, isFlagEnabled, t]
   );
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState(() => {
@@ -641,6 +654,19 @@ export default function MainContent() {
     }
   }, [activeTab, hasResume]);
 
+  // If the active tab's feature flag is off, fall back to "resume". Mandatory:
+  // a persisted `watheq:lastActiveTab` can point at a tab disabled via the dev
+  // flags dashboard, which would otherwise leave a blank workspace.
+  useEffect(() => {
+    const activeTabConfig = getTabsConfig(t).find((tab) => tab.value === activeTab);
+    if (activeTabConfig && !isFlagEnabled(activeTabConfig) && activeTab !== "resume") {
+      setActiveTab("resume");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
+      }
+    }
+  }, [activeTab, isFlagEnabled, t]);
+
   const activeNavValue = SECONDARY_TAB_VALUES.has(activeTab) ? "more-tools" : activeTab;
 
   const hasNextTab = useMemo(() => {
@@ -665,7 +691,16 @@ export default function MainContent() {
     const gatedStatus = (status: WorkflowStepStatus): WorkflowStepStatus =>
       hasResume ? status : "locked";
 
-    return [
+    // Desktop stepper is a 4th nav surface — it must honor feature flags like
+    // tabs/mobilePrimarySteps/mobileSecondarySteps do.
+    const stepFlags: Record<string, FeatureFlagName | undefined> = {
+      "truth-check": "truthCheck",
+      match: "aiMatch",
+      optimize: "optimize",
+      export: "templatesExport",
+    };
+
+    const steps: WorkflowStep[] = [
       {
         id: "resume",
         label: t("workspace.stepper.resume", "Resume"),
@@ -710,7 +745,12 @@ export default function MainContent() {
         lockedReason: resumeGateReason,
       },
     ];
-  }, [activeTab, hasResume, jobDescription, matchAnalysis, optimizationData, optimizations.length, resumeGateReason, t, truthCheckResult]);
+
+    return steps.filter((step) => {
+      const flag = stepFlags[step.id];
+      return !flag || flags[flag];
+    });
+  }, [activeTab, flags, hasResume, jobDescription, matchAnalysis, optimizationData, optimizations.length, resumeGateReason, t, truthCheckResult]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1703,8 +1743,8 @@ export default function MainContent() {
   );
 
   const secondaryToolTabs = useMemo(
-    () => getTabsConfig(t).filter((tab) => SECONDARY_TAB_VALUES.has(tab.value)),
-    [t]
+    () => getTabsConfig(t).filter(isFlagEnabled).filter((tab) => SECONDARY_TAB_VALUES.has(tab.value)),
+    [isFlagEnabled, t]
   );
 
   const renderClearAllAction = (showText: boolean) =>
@@ -1871,7 +1911,7 @@ export default function MainContent() {
               )}
             </>
           )}
-          {activeTab === "match" && (
+          {activeTab === "match" && flags.aiMatch && (
             <LazyErrorBoundary label="Match section">
               <Suspense fallback={<SectionSkeleton />}>
                 <MatchSection
@@ -1892,7 +1932,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "truth-check" && (
+          {activeTab === "truth-check" && flags.truthCheck && (
             <LazyErrorBoundary label="Truth Check section">
               <Suspense fallback={<SectionSkeleton />}>
                 <TruthCheckSection
@@ -1909,7 +1949,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "vision2030" && (
+          {activeTab === "vision2030" && flags.vision2030 && (
             <LazyErrorBoundary label="Vision 2030 section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -1923,7 +1963,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "optimize" && (
+          {activeTab === "optimize" && flags.optimize && (
             <LazyErrorBoundary label="Optimize section">
               <Suspense fallback={<SectionSkeleton />}>
                 <OptimizeSection
@@ -1952,14 +1992,14 @@ export default function MainContent() {
             </LazyErrorBoundary>
           )}
 
-          {activeTab === "templates" && (
+          {activeTab === "templates" && flags.templatesExport && (
             <TemplateGallery
               resumeData={resumeData}
               optimizationData={optimizationData}
             />
           )}
           {activeTab === "more-tools" && renderMoreToolsPanel()}
-          {activeTab === "interview" && (
+          {activeTab === "interview" && flags.interview && (
             <LazyErrorBoundary label="Interview section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -1976,7 +2016,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "bulk" && (
+          {activeTab === "bulk" && flags.bulkAnalysis && (
             <LazyErrorBoundary label="Bulk Analysis section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -1989,7 +2029,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "cover-letter" && (
+          {activeTab === "cover-letter" && flags.coverLetter && (
             <LazyErrorBoundary label="Cover Letter section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -2004,7 +2044,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "pipeline" && (
+          {activeTab === "pipeline" && flags.pipeline && (
             <LazyErrorBoundary label="Pipeline section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode

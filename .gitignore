@@ -45,6 +45,7 @@ coverage
 # Test artifacts
 *.pdf
 scripts/benchmark-reports/
+src/lib/featureFlags/report/
 i18n-missing-ar.json
 i18n-translation-prompt-ar.md
 

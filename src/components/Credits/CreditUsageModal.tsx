@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import type { CreditTransaction } from '../../types/credits';
 import { ReferralLink } from '../Referrals/ReferralLink';
 import { ReferralStats } from '../Referrals/ReferralStats';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
 
 interface CreditUsageModalProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isArabic = i18n.language === 'ar';
+  const referralEnabled = useFeatureFlag('referral');
 
   // Only fetch transactions if in full mode
   useEffect(() => {
@@ -242,10 +244,12 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
             )}
 
             {/* Referral Section */}
-            <div className="mb-6 space-y-4">
-              <ReferralStats />
-              <ReferralLink />
-            </div>
+            {referralEnabled && (
+              <div className="mb-6 space-y-4">
+                <ReferralStats />
+                <ReferralLink />
+              </div>
+            )}
 
             {/* Transaction History */}
             <div>
@@ -330,7 +334,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                 <span className="text-emerald-400 font-bold">{t('referrals.theyGet')}</span>
               </div>
             </div>
-            <ReferralLink />
+            {referralEnabled && <ReferralLink />}
           </div>
         )}
       </div>
