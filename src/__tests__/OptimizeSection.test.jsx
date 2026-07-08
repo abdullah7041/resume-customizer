@@ -21,6 +21,11 @@ vi.mock('react-i18next', () => ({
             if (typeof options === 'string') {
                 return options || key;
             }
+            if (options?.defaultValue) {
+                return Object.entries(options).reduce((text, [name, value]) => (
+                    name === 'defaultValue' ? text : text.replaceAll(`{{${name}}}`, String(value))
+                ), options.defaultValue);
+            }
             // Return key (translation strings are not critical for these tests)
             return key;
         },
@@ -269,27 +274,27 @@ describe('OptimizeSection', () => {
             expect(screen.getByText('Diff')).toBeInTheDocument();
         });
 
-        it('renders section filter tabs', () => {
+        it('renders queue status filters', () => {
             mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('All Sections')).toBeInTheDocument();
-            expect(screen.getByText('Headline')).toBeInTheDocument();
-            expect(screen.getByText('Summary')).toBeInTheDocument();
-            expect(screen.getByText('Experience')).toBeInTheDocument();
-            expect(screen.getByText('Skills')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Pending' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Applied' })).toBeInTheDocument();
         });
 
-        it('renders keyword strategy section', () => {
+        it('renders collapsed strategy section when optimization strategy exists', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection keywords={{ add: ['React'], neutral: [], remove: [] }} />);
 
-            expect(screen.getByText('Keyword Strategy')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /strategy/i })).toBeInTheDocument();
+            expect(screen.queryByText('React')).not.toBeInTheDocument();
         });
 
         it('hides keyword strategy section when there is no keyword data', () => {
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.queryByText('Keyword Strategy')).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /strategy/i })).not.toBeInTheDocument();
         });
 
         it('shows empty state when no optimizations', () => {
@@ -349,33 +354,39 @@ describe('OptimizeSection', () => {
 
     describe('Keywords Display', () => {
         it('displays "add" keywords when available', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             mockStoreState.keywordSuggestions = [
                 { keyword: 'React', category: 'add' },
                 { keyword: 'TypeScript', category: 'add' },
             ];
 
             renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /strategy/i }));
 
             expect(screen.getByText('React')).toBeInTheDocument();
             expect(screen.getByText('TypeScript')).toBeInTheDocument();
         });
 
         it('displays "keep" keywords when available', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             mockStoreState.keywordSuggestions = [
                 { keyword: 'JavaScript', category: 'keep' },
             ];
 
             renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /strategy/i }));
 
             expect(screen.getByText('JavaScript')).toBeInTheDocument();
         });
 
         it('displays "deemphasize" keywords when available', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             mockStoreState.keywordSuggestions = [
                 { keyword: 'Outdated', category: 'deemphasize' },
             ];
 
             renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /strategy/i }));
 
             expect(screen.getByText('Outdated')).toBeInTheDocument();
         });
@@ -384,10 +395,11 @@ describe('OptimizeSection', () => {
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.queryByText('No keywords identified')).not.toBeInTheDocument();
-            expect(screen.queryByText('Keyword Strategy')).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /strategy/i })).not.toBeInTheDocument();
         });
 
         it('uses props keywords when store keywords are empty', () => {
+            mockStoreState.optimizations = [sampleOptimization];
             const propsKeywords = {
                 add: ['PropReact', 'PropNode'],
                 neutral: ['PropJS'],
@@ -395,6 +407,7 @@ describe('OptimizeSection', () => {
             };
 
             renderWithProviders(<OptimizeSection keywords={propsKeywords} />);
+            fireEvent.click(screen.getByRole('button', { name: /strategy/i }));
 
             expect(screen.getByText('PropReact')).toBeInTheDocument();
             expect(screen.getByText('PropNode')).toBeInTheDocument();
@@ -417,17 +430,12 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            // Card header shows section type
-            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.getAllByText('summary').length).toBeGreaterThan(0);
 
-            // Expand the card by clicking on the header
-            const cardHeader = screen.getByText('summary').closest('div[class*="cursor-pointer"]');
-            if (cardHeader) {
-                fireEvent.click(cardHeader);
-            }
+            fireEvent.click(screen.getByRole('button', { name: /Original summary text/i }));
 
             // After expansion, content should be visible
-            expect(screen.getByText('Original summary text')).toBeInTheDocument();
+            expect(screen.getAllByText('Original summary text').length).toBeGreaterThan(0);
             expect(screen.getByText('Optimized summary text')).toBeInTheDocument();
         });
 
@@ -462,7 +470,7 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('Pending')).toBeInTheDocument();
+            expect(screen.getAllByText('Pending').length).toBeGreaterThan(0);
         });
 
         it('displays applied count correctly', () => {
@@ -474,56 +482,50 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            // The counter shows applied count and total in separate elements
-            // Find the emerald text that contains the applied count
-            const counterText = screen.getByText('2');
-            expect(counterText).toBeInTheDocument();
-            expect(screen.getByText('/ 3')).toBeInTheDocument();
+            expect(screen.getByText('2/3 applied')).toBeInTheDocument();
         });
     });
 
-    describe('Section Filtering', () => {
-        it('filters optimizations by section type', () => {
+    describe('Queue Filtering', () => {
+        it('filters optimizations by pending/applied state', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'summary-0', sectionType: 'summary', original: 'Summary text', optimized: 'Optimized summary', applied: false },
-                { sectionId: 'experience-0', sectionType: 'experience', original: 'Experience text', optimized: 'Optimized experience', applied: false },
+                { sectionId: 'experience-0', sectionType: 'experience', original: 'Experience text', optimized: 'Optimized experience', applied: true },
             ];
 
             renderWithProviders(<OptimizeSection />);
 
-            // Initially shows all - verify by checking section type labels in card headers
-            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.getByText('Summary text')).toBeInTheDocument();
             expect(screen.getByText('Experience 1')).toBeInTheDocument();
 
-            // Click on Summary tab
-            fireEvent.click(screen.getByRole('button', { name: /^Summary/ }));
+            fireEvent.click(screen.getByRole('button', { name: 'Pending' }));
 
-            // Should only show summary (experience card should be hidden)
-            expect(screen.getByText('summary')).toBeInTheDocument();
+            expect(screen.getByText('Summary text')).toBeInTheDocument();
             expect(screen.queryByText('Experience 1')).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('button', { name: 'Applied' }));
+            expect(screen.queryByText('Summary text')).not.toBeInTheDocument();
+            expect(screen.getByText('Experience 1')).toBeInTheDocument();
         });
 
-        it('shows all optimizations when "All Sections" is selected', () => {
+        it('shows all optimizations when "All" is selected', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'summary-0', sectionType: 'summary', original: 'Summary Content Here', optimized: 'Opt Summary', applied: false },
-                { sectionId: 'headline-0', sectionType: 'headline', original: 'Headline Content Here', optimized: 'Opt Headline', applied: false },
+                { sectionId: 'headline-0', sectionType: 'headline', original: 'Headline Content Here', optimized: 'Opt Headline', applied: true },
             ];
 
             renderWithProviders(<OptimizeSection />);
 
-            // Initially both should be visible - verify by section type labels
-            expect(screen.getByText('summary')).toBeInTheDocument();
-            expect(screen.getByText('headline')).toBeInTheDocument();
+            expect(screen.getByText('Summary Content Here')).toBeInTheDocument();
+            expect(screen.getByText('Headline Content Here')).toBeInTheDocument();
 
-            // Click on Summary tab - should only show summary card
-            fireEvent.click(screen.getByRole('button', { name: /^Summary/ }));
-            expect(screen.getByText('summary')).toBeInTheDocument();
-            expect(screen.queryByText('headline')).not.toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: 'Pending' }));
+            expect(screen.getByText('Summary Content Here')).toBeInTheDocument();
+            expect(screen.queryByText('Headline Content Here')).not.toBeInTheDocument();
 
-            // Click on All Sections - both should be visible again
-            fireEvent.click(screen.getByRole('button', { name: 'All Sections' }));
-            expect(screen.getByText('summary')).toBeInTheDocument();
-            expect(screen.getByText('headline')).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: 'All' }));
+            expect(screen.getByText('Summary Content Here')).toBeInTheDocument();
+            expect(screen.getByText('Headline Content Here')).toBeInTheDocument();
         });
     });
 
@@ -553,10 +555,10 @@ describe('OptimizeSection', () => {
 
             const { container } = renderWithProviders(<OptimizeSection />);
 
-            // Find the Apply button within the card (not Apply All)
+            fireEvent.click(screen.getByRole('button', { name: /Original/i }));
             const allButtons = container.querySelectorAll('button');
             const applyButton = Array.from(allButtons).find(btn =>
-                btn.textContent?.trim() === 'Apply' && !btn.textContent?.includes('All')
+                btn.textContent?.trim() === 'Apply Suggestion'
             );
 
             if (applyButton) {
@@ -565,51 +567,40 @@ describe('OptimizeSection', () => {
             }
         });
 
-        it('has no per-card revert button - only Revert All is available', () => {
-            // This test documents that individual card revert is not implemented
-            // The component only provides revertAllOptimizations via the header "Revert" button
+        it('calls revertOptimization when card Revert Changes is clicked', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'summary-0', sectionType: 'summary', original: 'Original', optimized: 'Optimized', applied: true },
             ];
 
-            const { container } = renderWithProviders(<OptimizeSection />);
+            renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /Original/i }));
+            fireEvent.click(screen.getByRole('button', { name: /revert changes/i }));
 
-            // The Revert button in header calls revertAllOptimizations
-            const allButtons = container.querySelectorAll('button');
-            const revertButton = Array.from(allButtons).find(btn =>
-                btn.textContent?.trim() === 'Revert'
-            );
-
-            expect(revertButton).toBeDefined();
+            expect(mockRevertOptimization).toHaveBeenCalledWith('summary-0');
         });
 
-        it('calls applyAllOptimizations when Apply All is clicked', () => {
+        it('applies all pending suggestions in a group when Apply all is clicked', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: false },
-                { sectionId: 'b', sectionType: 'headline', original: 'c', optimized: 'd', applied: false },
+                { sectionId: 'b', sectionType: 'summary', original: 'c', optimized: 'd', applied: false },
             ];
 
             renderWithProviders(<OptimizeSection />);
 
-            // Use getAllByRole to handle multiple "Apply All" buttons (header + results summary)
-            const applyAllButtons = screen.getAllByRole('button', { name: /apply all/i });
-            fireEvent.click(applyAllButtons[0]); // Click the first one (header button)
+            fireEvent.click(screen.getByRole('button', { name: /apply all in this job/i }));
 
-            expect(mockApplyAllOptimizations).toHaveBeenCalled();
+            expect(mockApplyOptimization).toHaveBeenCalledWith('a');
+            expect(mockApplyOptimization).toHaveBeenCalledWith('b');
         });
 
-        it('calls revertAllOptimizations when Revert is clicked', () => {
+        it('does not show the old header-level Revert button', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: true },
             ];
 
             renderWithProviders(<OptimizeSection />);
 
-            // The Revert button (not "Revert All") triggers revertAllOptimizations
-            const revertButton = screen.getByRole('button', { name: /^revert$/i });
-            fireEvent.click(revertButton);
-
-            expect(mockRevertAllOptimizations).toHaveBeenCalled();
+            expect(screen.queryByRole('button', { name: /^revert$/i })).not.toBeInTheDocument();
         });
 
         it('refines a card through the API without applying it directly', async () => {
@@ -835,14 +826,13 @@ describe('OptimizeSection', () => {
             });
         });
 
-        it('section tabs are keyboard navigable', () => {
+        it('queue filters are keyboard navigable', () => {
             mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);
 
-            const tabs = ['All Sections', 'Headline', /^Summary/, 'Experience', 'Skills'];
-            tabs.forEach(tabName => {
-                const tab = screen.getByRole('button', { name: tabName });
-                expect(tab).toBeVisible();
+            ['All', 'Pending', 'Applied'].forEach(filterName => {
+                const filter = screen.getByRole('button', { name: filterName });
+                expect(filter).toBeVisible();
             });
         });
     });
@@ -866,17 +856,17 @@ describe('OptimizeSection', () => {
             window.dispatchEvent(new Event('resize'));
         };
 
-        it.each([360, 390, 768])('keeps filter tabs horizontally scrollable at %ipx', (width) => {
+        it.each([360, 390, 768])('keeps queue filters horizontally scrollable at %ipx', (width) => {
             setViewportWidth(width);
             mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);
 
-            const projectsTab = screen.getByRole('button', { name: 'Projects' });
-            const scrollContainer = projectsTab.closest('div.overflow-x-auto');
+            const appliedFilter = screen.getByRole('button', { name: 'Applied' });
+            const scrollContainer = appliedFilter.closest('div.overflow-x-auto');
 
             expect(scrollContainer).toBeInTheDocument();
             expect(scrollContainer).toHaveClass('overflow-x-auto');
-            expect(projectsTab).toHaveClass('whitespace-nowrap');
+            expect(appliedFilter).toHaveClass('whitespace-nowrap');
         });
 
         it.each([360, 390, 768])('wraps header actions and guards card header text at %ipx', (width) => {
@@ -896,7 +886,7 @@ describe('OptimizeSection', () => {
             const actionWrap = container.querySelector('.md\\:justify-end');
             expect(actionWrap).toHaveClass('w-full', 'md:w-auto', 'flex-wrap');
 
-            const cardHeader = screen.getByText('summary').closest('div[class*="cursor-pointer"]');
+            const cardHeader = screen.getByRole('button', { name: /Original summary text/i });
             expect(cardHeader).toHaveClass('gap-3');
             expect(cardHeader?.firstElementChild).toHaveClass('min-w-0');
             expect(cardHeader?.lastElementChild).toHaveClass('shrink-0');
@@ -916,9 +906,12 @@ describe('OptimizeSection', () => {
             ];
 
             renderWithProviders(<OptimizeSection onCopy={vi.fn()} />);
-            fireEvent.click(screen.getByText('summary').closest('div[class*="cursor-pointer"]'));
+            fireEvent.click(screen.getByRole('button', { name: new RegExp(longToken) }));
 
-            expect(screen.getByText(longToken)).toHaveClass('break-words', 'whitespace-pre-wrap');
+            const expandedOriginal = screen.getAllByText(longToken).find((node) =>
+                node.className.includes('break-words') && node.className.includes('whitespace-pre-wrap')
+            );
+            expect(expandedOriginal).toBeInTheDocument();
 
             const applyButton = screen.getByRole('button', { name: /apply suggestion/i });
             expect(applyButton.closest('div')).toHaveClass('flex-col', 'sm:flex-row');
@@ -1029,7 +1022,7 @@ describe('Optimization Card Types', () => {
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.queryByText('0%')).not.toBeInTheDocument();
-            expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('-').length).toBeGreaterThan(0);
         });
 
         it('passes verify mode when auto-verifying the optimized resume', async () => {
@@ -1227,8 +1220,8 @@ describe('Optimization Card Types', () => {
             { sectionId: 'headline-0', sectionType: 'headline', original: 'Old Title', optimized: 'New Title', applied: false },
         ];
 
-        renderWithProviders(<OptimizeSection />);
-        expect(screen.getByText('headline')).toBeInTheDocument();
+    renderWithProviders(<OptimizeSection />);
+        expect(screen.getAllByText('headline').length).toBeGreaterThan(0);
     });
 
     it('displays experience optimization with index', () => {
