@@ -73,6 +73,31 @@
       "verifying": "جارٍ التحقق...",
       "verifiedTooltip": "أعدنا تقييم سيرتك الذاتية المحسّنة مقابل هذا الوصف الوظيفي",
       "verifiedByReanalysis": "تم التحقق بإعادة التحليل",
+      "scoreHeader": {
+        "projectedScore": "متوقعة ~{{score}}%",
+        "verified": "تم التحقق",
+        "progress": "{{applied}}/{{total}} مطبّق",
+        "rerun": "إعادة التشغيل",
+        "continue": "متابعة",
+        "breakdown": "تفصيل الدرجة"
+      },
+      "strategy": {
+        "title": "الاستراتيجية",
+        "subtitle": "الكلمات والفجوات ومواءمة العنوان",
+        "gapsTitle": "فجوات المتطلبات"
+      },
+      "queue": {
+        "experienceFallback": "خبرة {{number}}",
+        "workSubtitle": "الخبرة العملية",
+        "suggestionsCount": "{{count}} اقتراحات",
+        "applyGroup": "تطبيق كل اقتراحات هذه الوظيفة",
+        "filters": {
+          "all": "الكل",
+          "pending": "معلّق",
+          "applied": "مطبّق"
+        },
+        "emptyFiltered": "لا توجد اقتراحات تطابق هذا الفلتر."
+      },
       "shareResult": "شارك نتيجتك",
       "revert": "تراجع",
       "applyAll": "تطبيق الكل",

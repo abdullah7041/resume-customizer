@@ -10,37 +10,28 @@ import { useRateLimit } from '../../hooks/useRateLimit';
 import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
   Sparkles,
-  Copy,
-  ChevronDown,
-  Check,
   CheckCircle2,
   Briefcase,
   RotateCcw,
-  ArrowLeftRight,
   AlertCircle,
-  Info,
-  TrendingUp,
-  TrendingDown,
-  Loader2,
   Share2,
-  Wand2,
-  Send,
-  Lightbulb,
 } from 'lucide-react';
 
 const ShareScoreCard = lazy(() => import('../ui/ShareScoreCard'));
 import { cn } from '../../lib/utils/cn';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import type { OptimizationMetrics } from '../../types/templates';
-import { GapAnalysisCard, GapItem } from '../GapAnalysisCard';
-import { ScoreBreakdown, ScoreBreakdownData, CategoryScoresData } from '../ScoreBreakdown';
-import { HiddenMatchesCard, HiddenMatch } from '../HiddenMatchesCard';
-import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
+import type { GapItem } from '../GapAnalysisCard';
+import type { CategoryScoresData } from '../ScoreBreakdown';
+import type { HiddenMatch } from '../HiddenMatchesCard';
 import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
-import { PositionSuggestionBanner } from '../PositionSuggestionBanner';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { ScoreHeader } from './optimize/ScoreHeader';
+import { StrategyBlock } from './optimize/StrategyBlock';
+import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
+import type { Work } from '../../types/resume';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -88,6 +79,7 @@ interface OptimizeSectionProps {
   hasMatchAnalysis?: boolean;
   onClear?: () => void;
   onExport?: (variant: any, exportMethod?: string) => Promise<void>;
+  onContinueToExport?: () => void;
   canExport?: boolean;
   // Optional: can pass resume text directly or use store
   resumeText?: string | null;
@@ -146,6 +138,9 @@ export function OptimizeSection({
   onUpgrade,
   hasMatchAnalysis: propHasMatchAnalysis = false,
   onClear,
+  onExport,
+  onContinueToExport,
+  canExport = false,
   resumeText: propResumeText,
   activeJobApplicationId,
   pendingAttachment,
@@ -166,8 +161,6 @@ export function OptimizeSection({
     applyOptimization,
     revertOptimization,
     refineOptimization,
-    applyAllOptimizations,
-    revertAllOptimizations,
     keywordSuggestions,
     optimizationMetrics,
     setOptimizationMetrics,
@@ -194,6 +187,10 @@ export function OptimizeSection({
   const [verifyAnomaly, setVerifyAnomaly] = useState<{ rawScore: number | null; textLength: number } | null>(null);
   const [verifyRetryUsed, setVerifyRetryUsed] = useState(false);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
+  const [scoreHeaderExpanded, setScoreHeaderExpanded] = useState(false);
+  const [expandedScoreCategories, setExpandedScoreCategories] = useState<Set<keyof CategoryScoresData>>(new Set());
+  const [strategyExpanded, setStrategyExpanded] = useState(false);
+  const [queueFilter, setQueueFilter] = useState<'all' | 'pending' | 'applied'>('all');
   // Single-bullet correction loop: which card has its refine input open, the
   // instruction text, which card is mid-request, and any per-refine error.
   const [refiningCardId, setRefiningCardId] = useState<string | null>(null);
@@ -1001,41 +998,165 @@ export function OptimizeSection({
     });
   };
 
+  const toggleScoreCategory = (category: keyof CategoryScoresData) => {
+    setExpandedScoreCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
   // Get applied count
   const appliedCount = optimizations.filter(o => o.applied).length;
 
-  // Section tabs for filtering
-  const tabs = [
-    { id: 'all', label: t('sections.optimize.tabs.all', 'All Sections') },
-    { id: 'headline', label: t('sections.optimize.tabs.headline', 'Headline') },
-    { id: 'summary', label: t('sections.optimize.tabs.summary', 'Summary') },
-    { id: 'experience', label: t('sections.optimize.tabs.experience', 'Experience') },
-    { id: 'skills', label: t('sections.optimize.tabs.skills', 'Skills') },
-    { id: 'projects', label: t('sections.optimize.tabs.projects', 'Projects') },
-    { id: 'certifications', label: t('sections.optimize.tabs.certifications', 'Certifications') },
-  ];
+  const queueGroups = useMemo<QueueGroup[]>(() => {
+    const workEntries = (originalResume?.work ?? []) as Work[];
+    const groups = new Map<string, QueueGroup & { order: number }>();
+    const orderByType: Record<string, number> = {
+      headline: 0,
+      summary: 1,
+      experience: 2,
+      skills: 1000,
+      certifications: 1001,
+      projects: 1002,
+      education: 1003,
+      general: 1004,
+    };
+    let unmatchedExperienceIndex = 0;
 
-  const [activeSection, setActiveSection] = useState<'all' | 'headline' | 'summary' | 'experience' | 'skills' | 'projects' | 'certifications'>('all');
+    const getText = (value: string | string[] | undefined) => Array.isArray(value) ? value.join('\n') : value ?? '';
+    const findWorkIndex = (opt: OptimizationResult) => {
+      const originalText = getText(opt.original).toLowerCase();
+      if (!originalText) return -1;
 
-  // Filter optimizations by section
-  const filteredOptimizations = activeSection === 'all'
-    ? optimizations
-    : optimizations.filter(o => o.sectionType === activeSection);
+      return workEntries.findIndex((work) => {
+        const fields = [
+          work.position,
+          work.name,
+          work.summary,
+          ...(work.highlights ?? []),
+        ].filter(Boolean);
+
+        return fields.some((field) => {
+          const normalized = field.toLowerCase();
+          return normalized.includes(originalText) || originalText.includes(normalized);
+        });
+      });
+    };
+
+    const workTitle = (work: Work | undefined, fallbackIndex: number) => {
+      if (!work) return t('sections.optimize.queue.experienceFallback', { defaultValue: 'Experience {{number}}', number: fallbackIndex + 1 });
+      const dateRange = [work.startDate, work.endDate].filter(Boolean).join(' - ');
+      const parts = [work.position, work.name, dateRange].filter(Boolean);
+      return parts.length > 0
+        ? parts.join(' · ')
+        : t('sections.optimize.queue.experienceFallback', { defaultValue: 'Experience {{number}}', number: fallbackIndex + 1 });
+    };
+
+    optimizations.forEach((opt) => {
+      const sectionType = opt.sectionType || 'general';
+      let groupId = `section-${sectionType}`;
+      let title = t(`sections.optimize.tabs.${sectionType}`, sectionType);
+      let subtitle: string | undefined;
+      let order = orderByType[sectionType] ?? orderByType.general;
+
+      if (sectionType === 'experience') {
+        const matchedIndex = findWorkIndex(opt);
+        const fallbackIndex = matchedIndex >= 0 ? matchedIndex : unmatchedExperienceIndex++;
+        const work = matchedIndex >= 0 ? workEntries[matchedIndex] : undefined;
+        groupId = `work-${fallbackIndex}`;
+        title = workTitle(work, fallbackIndex);
+        subtitle = t('sections.optimize.queue.workSubtitle', 'Work experience');
+        order = orderByType.experience + (fallbackIndex / 100);
+      }
+
+      if (!groups.has(groupId)) {
+        groups.set(groupId, {
+          id: groupId,
+          title,
+          subtitle,
+          type: sectionType as QueueGroup['type'],
+          items: [],
+          order,
+        });
+      }
+
+      groups.get(groupId)?.items.push(opt);
+    });
+
+    return Array.from(groups.values())
+      .sort((a, b) => a.order - b.order)
+      .map(({ order: _order, ...group }) => group);
+  }, [optimizations, originalResume?.work, t]);
+
+  const filteredQueueGroups = queueGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (queueFilter === 'pending') return !item.applied;
+        if (queueFilter === 'applied') return item.applied;
+        return true;
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const visibleQueueOptimizations = filteredQueueGroups.flatMap((group) => group.items);
   const hasOptimizationResults = optimizations.length > 0;
   const hasKeywordData = keywordBuckets.add.length + keywordBuckets.neutral.length + keywordBuckets.remove.length > 0;
   const scoreDelta = resultsSummaryData.afterScore - resultsSummaryData.beforeScore;
-  const hasRealScoreDelta = !resultsSummaryData.isPlaceholderImprovement && !resultsSummaryData.isPlaceholderScore;
   const scoreDeltaLabel = scoreDelta > 0
     ? `+${scoreDelta}%`
     : scoreDelta < 0
       ? `${scoreDelta}%`
       : t('sections.optimize.noScoreChange', 'no change');
-  const ScoreDeltaIcon = scoreDelta < 0 ? TrendingDown : TrendingUp;
   const scoreDeltaClass = scoreDelta > 0
     ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
     : scoreDelta < 0
       ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
       : 'bg-gray-500/10 border-gray-500/20 text-gray-500';
+  const queueFilters = [
+    { id: 'all', label: t('sections.optimize.queue.filters.all', 'All') },
+    { id: 'pending', label: t('sections.optimize.queue.filters.pending', 'Pending') },
+    { id: 'applied', label: t('sections.optimize.queue.filters.applied', 'Applied') },
+  ] as const;
+  const categoryScores = optimizationMetrics.categoryScores as unknown as CategoryScoresData | undefined;
+  const hiddenMatches = (optimizationMetrics.keywordStrategy?.hiddenMatches as HiddenMatch[] | undefined) || [];
+  const mirroredPhrases = (optimizationMetrics.keywordStrategy?.mirroredPhrases as string[] | undefined) || [];
+  const structuralChanges = (optimizationMetrics.keywordStrategy?.structuralChanges as string[] | undefined) || [];
+
+  const handleApplyOptimization = (opt: OptimizationResult) => {
+    analytics.trackOptimization('applied', { section_type: opt.sectionType });
+    applyOptimization(opt.sectionId);
+  };
+
+  const handleApplyQueueGroup = (ids: string[]) => {
+    ids.forEach((sectionId) => applyOptimization(sectionId));
+  };
+
+  const handleToggleCompare = (sectionId: string) => {
+    setCompareMode(compareMode === sectionId ? null : sectionId);
+  };
+
+  const handleStartRefine = (sectionId: string) => {
+    setRefineError(null);
+    setRefineInstruction('');
+    setRefiningCardId(refiningCardId === sectionId ? null : sectionId);
+  };
+
+  const handleContinue = () => {
+    if (onContinueToExport) {
+      onContinueToExport();
+      return;
+    }
+
+    if (onExport) {
+      void onExport('optimized');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -1060,71 +1181,6 @@ export function OptimizeSection({
             </div>
           </div>
           <div className="flex w-full md:w-auto flex-wrap items-center justify-start md:justify-end gap-3">
-            {/* Applied Counter */}
-            {optimizations.length > 0 && (
-              <div className="flex items-center gap-3 bg-[color:var(--surface-control)] dark:bg-white/5 rounded-xl p-1.5 pr-3 border border-[color:var(--glass-border)] dark:border-white/5">
-                <div className="px-3 py-1.5 rounded-lg bg-[color:var(--surface-control-hover)] dark:bg-black/20 border border-[color:var(--glass-border)] dark:border-white/5">
-                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                    {appliedCount} <span className="text-gray-500">/ {optimizations.length}</span>
-                  </span>
-                </div>
-
-                {appliedCount > 0 && (
-                  <button
-                    onClick={revertAllOptimizations}
-                    className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors px-2"
-                  >
-                    {t('optimization.revert', 'Revert')}
-                  </button>
-                )}
-
-                <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-1" />
-
-                <button
-                  onClick={applyAllOptimizations}
-                  disabled={appliedCount === optimizations.length}
-                  className={cn(
-                    "text-xs font-bold transition-colors px-2",
-                    appliedCount === optimizations.length
-                      ? "text-gray-500 cursor-not-allowed"
-                      : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300"
-                  )}
-                >
-                  {t('optimization.applyAll', 'Apply All')}
-                </button>
-              </div>
-            )}
-
-            {/* View Mode Toggle */}
-          {hasOptimizationResults && (
-          <div className="flex items-center bg-[color:var(--surface-control)] dark:bg-black/20 rounded-xl p-1 border border-[color:var(--glass-border)] dark:border-white/5">
-              <button
-                onClick={() => setViewMode('split')}
-                aria-pressed={viewMode === 'split'}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-[color,background-color,box-shadow] duration-300',
-                  viewMode === 'split'
-                    ? 'bg-[color:var(--surface-glass-elevated)] dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                )}
-              >
-                {t('sections.optimize.sideBySide', 'Split')}
-              </button>
-              <button
-                onClick={() => setViewMode('diff')}
-                aria-pressed={viewMode === 'diff'}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-[color,background-color,box-shadow] duration-300',
-                  viewMode === 'diff'
-                    ? 'bg-[color:var(--surface-glass-elevated)] dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                )}
-              >
-                {t('sections.optimize.inlineDiff', 'Diff')}
-              </button>
-            </div>
-          )}
-
             {optimizations.length > 0 && (
               <GlassButton
                 variant="ghost"
@@ -1138,46 +1194,6 @@ export function OptimizeSection({
             )}
           </div>
         </div >
-
-        {/* Section Tabs */}
-        {hasOptimizationResults && (
-        <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 mb-6">
-          <div className="flex items-center gap-2 p-1 bg-[color:var(--surface-control)] dark:bg-black/20 rounded-xl border border-[color:var(--glass-border)] dark:border-white/5">
-            {tabs.map((tab) => {
-              const isActive = activeSection === tab.id;
-              const hasItems = tab.id === 'all'
-                ? optimizations.length > 0
-                : optimizations.some(o => o.sectionType === tab.id);
-
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveSection(tab.id as typeof activeSection)}
-                  className={cn(
-                    'relative px-4 py-2 rounded-lg text-sm font-medium transition-[color,background-color,opacity] duration-300 whitespace-nowrap',
-                    isActive
-                      ? 'text-gray-900 dark:text-white'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/5',
-                    !hasItems && !isActive && 'opacity-50'
-                  )}
-                >
-                  {isActive && (
-                    <div className="absolute inset-0 bg-[color:var(--surface-glass-elevated)] dark:bg-white/10 rounded-lg shadow-sm border border-[color:var(--glass-border)] dark:border-white/5" />
-                  )}
-                  <span className="relative z-10">
-                    {tab.label}
-                    {tab.id !== 'all' && hasItems && (
-                      <span className="ml-2 text-xs opacity-60 bg-[color:var(--surface-control-hover)] dark:bg-white/10 px-1.5 py-0.5 rounded-full">
-                        {optimizations.filter(o => o.sectionType === tab.id).length}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        )}
 
         {/* Error Message */}
         {
@@ -1206,44 +1222,46 @@ export function OptimizeSection({
         }
 
         {/* Optimize Button */}
-        <button
-          onClick={handleGenerate}
-          disabled={isOptimizing || !hasResume}
-          className={cn(
-            "w-full relative group overflow-hidden rounded-xl p-[1px] transition-[scale,box-shadow] duration-150 ease-out active:scale-[0.96]",
-            (!hasResume || isOptimizing) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
-          )}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-700 opacity-100 group-hover:opacity-100 animate-gradient-xy transition-opacity" />
-          <div className="relative bg-[color:var(--surface-glass-elevated)] backdrop-blur-xl rounded-xl px-6 py-4 flex items-center justify-center gap-3 transition-colors group-hover:bg-[color:var(--surface-glass-strong)] dark:bg-gray-900/90 dark:group-hover:bg-gray-900/80">
-            {isOptimizing ? (
-              <>
-                <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-900 dark:border-white/30 dark:border-t-white rounded-full animate-spin" />
-                <span className="text-gray-900 dark:text-white font-semibold tracking-wide">
-                  {t('sections.optimize.optimizingResume', 'Optimizing Resume...')}
-                </span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 text-emerald-700 group-hover:text-emerald-800 dark:text-emerald-300 dark:group-hover:text-white transition-colors" />
-                <span className="text-gray-900 dark:text-white font-bold tracking-wide">
-                  {hasResume
-                    ? (
-                      <>
-                        {t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')}
-                        {!hasFreePreviewRun() && (
-                          <span className="ml-2 text-xs opacity-75">(5 {t('common.credits', 'credits')})</span>
-                        )}
-                      </>
-                    )
-                    : t('sections.optimize.runMatchFirst', 'Upload Resume First')
-                  }
-                </span>
-              </>
+        {!hasOptimizationResults && (
+          <button
+            onClick={handleGenerate}
+            disabled={isOptimizing || !hasResume}
+            className={cn(
+              "w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 transform active:scale-[0.99]",
+              (!hasResume || isOptimizing) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
             )}
-          </div>
-        </button>
-        {hasResume && (
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-700 opacity-100 group-hover:opacity-100 animate-gradient-xy transition-opacity" />
+            <div className="relative bg-[color:var(--surface-glass-elevated)] backdrop-blur-xl rounded-xl px-6 py-4 flex items-center justify-center gap-3 transition-colors group-hover:bg-[color:var(--surface-glass-strong)] dark:bg-gray-900/90 dark:group-hover:bg-gray-900/80">
+              {isOptimizing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-900 dark:border-white/30 dark:border-t-white rounded-full animate-spin" />
+                  <span className="text-gray-900 dark:text-white font-semibold tracking-wide">
+                    {t('sections.optimize.optimizingResume', 'Optimizing Resume...')}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 text-emerald-700 group-hover:text-emerald-800 dark:text-emerald-300 dark:group-hover:text-white transition-colors" />
+                  <span className="text-gray-900 dark:text-white font-bold tracking-wide">
+                    {hasResume
+                      ? (
+                        <>
+                          {t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')}
+                          {!hasFreePreviewRun() && (
+                            <span className="ml-2 text-xs opacity-75">(5 {t('common.credits', 'credits')})</span>
+                          )}
+                        </>
+                      )
+                      : t('sections.optimize.runMatchFirst', 'Upload Resume First')
+                    }
+                  </span>
+                </>
+              )}
+            </div>
+          </button>
+        )}
+        {hasResume && !hasOptimizationResults && (
           <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
             {t('trust.askBeforeRewrite', 'When proof may be missing, Watheq can ask clarifying questions before rewriting.')}
             {' '}
@@ -1252,177 +1270,57 @@ export function OptimizeSection({
         )}
       </GlassCard >
 
-      {/* Keyword Focus Section - Manual Buckets */}
-      {hasKeywordData && (
-      <GlassCard>
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-            {t('sections.optimize.keywordFocus', 'Keyword Strategy')}
-          </h3>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {(['add', 'neutral', 'remove'] as const).map((bucket) => {
-            const items = keywordBuckets[bucket] ?? [];
-            const config = {
-              add: { label: 'Add to Resume', color: 'emerald', icon: Check },
-              neutral: { label: 'Keep as is', color: 'blue', icon: Info },
-              remove: { label: 'Consider Removing', color: 'rose', icon: AlertCircle },
-            }[bucket];
-
-            const Icon = config.icon;
-
-            return (
-              <div key={bucket} className="space-y-3 p-4 rounded-xl bg-[color:var(--surface-control)] dark:bg-black/40 border border-[color:var(--glass-border)] dark:border-white/5 hover:border-[color:var(--glass-border-strong)] dark:hover:border-white/10 transition-colors">
-                <div className="flex items-center justify-between">
-                  <p className={`text-xs font-bold uppercase tracking-wider text-${config.color}-600 dark:text-${config.color}-400 flex items-center gap-2`}>
-                    <Icon className="w-3.5 h-3.5" />
-                    {t(`sections.optimize.chipLabels.${bucket}`)}
-                  </p>
-                  <span className="text-[10px] font-medium text-gray-500 bg-[color:var(--surface-control-hover)] dark:bg-black/20 px-2 py-0.5 rounded-full">
-                    {items.length}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {items.length > 0 ? (
-                    items.map((token) => (
-                      <span
-                        key={token}
-                        title={token}
-                        className={cn(
-                          'px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors truncate max-w-[140px]',
-                          bucket === 'add' && 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20',
-                          bucket === 'neutral' && 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/20',
-                          bucket === 'remove' && 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 line-through decoration-rose-500/50'
-                        )}
-                      >
-                        {token}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-gray-600 italic py-1">
-                      {t('sections.optimize.noKeywords', 'No keywords identified')}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </GlassCard >
-      )}
-
-      {/* Score Summary — Prominent Top Card */}
       {optimizations.length > 0 && (
-        <GlassCard className="mb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col items-center flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
-                {t('sections.optimize.currentScore', 'Current Score')}
-              </span>
-              <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore ? 'text-gray-600 italic' : 'text-gray-900 dark:text-white'}`}>
-                {resultsSummaryData.isPlaceholderScore ? '—' : `${resultsSummaryData.beforeScore}%`}
-              </span>
-            </div>
-
-            {/* Improvement Arrow */}
-            <div className="flex flex-col items-center px-4">
-              {hasRealScoreDelta ? (
-                <>
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${scoreDeltaClass}`}>
-                    {scoreDelta !== 0 && <ScoreDeltaIcon className="w-4 h-4" />}
-                    <span className="text-sm font-bold">
-                      {scoreDeltaLabel}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center border border-gray-300/50 dark:border-white/10">
-                  <span className="text-gray-600 text-lg">→</span>
-                </div>
-              )}
-            </div>
-
-            {/* After Score */}
-            <div className="flex flex-col items-center flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
-                {t('sections.optimize.optimizedScore', 'Optimized Score')}
-              </span>
-              {verifyAnomaly ? (
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-300 text-center">
-                    {t('sections.optimize.verifyAnomalyTitle', "Couldn't verify the new score")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={retryVerifyOptimizedResume}
-                    disabled={verifyRetryUsed || isAutoVerifying}
-                    className="min-h-11 rounded-lg border border-amber-500/30 px-3 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-300"
-                  >
-                    {isAutoVerifying
-                      ? t('sections.optimize.verifying', 'Verifying...')
-                      : t('sections.optimize.retryVerify', 'Retry')}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
-                    ? 'text-gray-600 italic'
-                    : resultsSummaryData.isScoreVerified
-                      ? 'bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent'
-                      : 'text-gray-500 dark:text-gray-400'
-                    }`}>
-                    {resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
-                      ? '—'
-                      : resultsSummaryData.isScoreVerified
-                        ? `${resultsSummaryData.afterScore}% ✓`
-                        : `Projected ~${resultsSummaryData.afterScore}%`}
-                  </span>
-                  {isAutoVerifying && (
-                    <span className="mt-1 flex items-center gap-1 text-xs text-gray-500">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      {t('sections.optimize.verifying', 'Verifying...')}
-                    </span>
-                  )}
-                  {resultsSummaryData.isScoreVerified && (
-                    <span
-                      className="mt-1 text-xs text-emerald-600 dark:text-emerald-300"
-                      title={t('sections.optimize.verifiedTooltip', 'We re-scored your optimized resume against this job description')}
-                    >
-                      {t('sections.optimize.verifiedByReanalysis', 'Verified by re-analysis')}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Share button — only for meaningful improvements with real scores */}
-          {!resultsSummaryData.isPlaceholderScore &&
-            !resultsSummaryData.isPlaceholderImprovement &&
-            resultsSummaryData.afterScore - resultsSummaryData.beforeScore > 10 && (
-              <div className="flex justify-center mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
-                <GlassButton
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    analytics.track('share_card_opened', {
-                      before_score: resultsSummaryData.beforeScore,
-                      after_score: resultsSummaryData.afterScore,
-                      improvement: resultsSummaryData.afterScore - resultsSummaryData.beforeScore,
-                    });
-                    setShowShareCard(true);
-                  }}
-                  leftIcon={<Share2 className="w-3.5 h-3.5" />}
-                >
-                  {t('sections.optimize.shareResult', 'Share Your Result')}
-                </GlassButton>
-              </div>
-            )}
-      </GlassCard>
+        <ScoreHeader
+          beforeScore={resultsSummaryData.beforeScore}
+          afterScore={resultsSummaryData.afterScore}
+          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
+          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
+          isScoreVerified={resultsSummaryData.isScoreVerified}
+          isAutoVerifying={isAutoVerifying}
+          verifyAnomaly={Boolean(verifyAnomaly)}
+          verifyRetryUsed={verifyRetryUsed}
+          appliedCount={appliedCount}
+          totalCount={optimizations.length}
+          scoreDeltaLabel={scoreDeltaLabel}
+          scoreDeltaClass={scoreDeltaClass}
+          scoreDelta={scoreDelta}
+          categoryScores={categoryScores}
+          expanded={scoreHeaderExpanded}
+          expandedCategories={expandedScoreCategories}
+          isArabic={isArabic}
+          isOptimizing={isOptimizing}
+          canExport={canExport}
+          onToggleExpanded={() => setScoreHeaderExpanded((value) => !value)}
+          onToggleCategory={toggleScoreCategory}
+          onRetryVerify={retryVerifyOptimizedResume}
+          onRerun={() => void handleGenerateActual()}
+          onContinue={handleContinue}
+        />
       )}
+
+      {optimizations.length > 0 &&
+        !resultsSummaryData.isPlaceholderScore &&
+        !resultsSummaryData.isPlaceholderImprovement &&
+        resultsSummaryData.afterScore - resultsSummaryData.beforeScore > 10 && (
+          <div className="flex justify-end">
+            <GlassButton
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                analytics.track('share_card_opened', {
+                  before_score: resultsSummaryData.beforeScore,
+                  after_score: resultsSummaryData.afterScore,
+                  improvement: resultsSummaryData.afterScore - resultsSummaryData.beforeScore,
+                });
+                setShowShareCard(true);
+              }}
+              leftIcon={<Share2 className="w-3.5 h-3.5" />}
+            >
+              {t('sections.optimize.shareResult', 'Share Your Result')}
+            </GlassButton>
+          </div>
+        )}
 
       {/* Share Score Card Modal */}
       {showShareCard && (
@@ -1433,6 +1331,25 @@ export function OptimizeSection({
             onClose={() => setShowShareCard(false)}
           />
         </Suspense>
+      )}
+
+      {optimizations.length > 0 && (
+        <StrategyBlock
+          expanded={strategyExpanded}
+          hasKeywordData={hasKeywordData}
+          keywordBuckets={keywordBuckets}
+          gapAnalysis={Array.isArray(optimizationMetrics.gapAnalysis) ? optimizationMetrics.gapAnalysis as GapItem[] : null}
+          hiddenMatches={hiddenMatches}
+          mirroredPhrases={mirroredPhrases}
+          structuralChanges={structuralChanges}
+          positionSuggestion={optimizationMetrics.positionSuggestion ?? null}
+          positionBannerDismissed={positionBannerDismissed}
+          isArabic={isArabic}
+          onToggle={() => setStrategyExpanded((value) => !value)}
+          onApplyPositionSuggestion={handleApplyPositionSuggestion}
+          onRevertPositionSuggestion={handleRevertPositionSuggestion}
+          onDismissPositionSuggestion={() => setPositionBannerDismissed(true)}
+        />
       )}
 
       {/* Pipeline attachment and mark-applied CTAs */}
@@ -1478,459 +1395,107 @@ export function OptimizeSection({
         </GlassCard>
       )}
 
-      {
-        optimizations.length > 0 && (
-          <ScoreBreakdown
-            data={optimizationMetrics.scoreBreakdown as ScoreBreakdownData | null}
-            categoryScores={optimizationMetrics.categoryScores as unknown as CategoryScoresData | undefined}
-            beforeScore={resultsSummaryData.beforeScore}
-            afterScore={resultsSummaryData.afterScore}
-            isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
-            isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
-            className="mb-2"
-          />
-        )
-      }
-
-      {/* Position Name Suggestion Banner */}
-      {optimizations.length > 0 &&
-        (optimizationMetrics.positionSuggestion?.is_necessary === true ||
-          optimizationMetrics.positionSuggestion?.applied === true) &&
-        !positionBannerDismissed && (
-          <PositionSuggestionBanner
-            suggestion={optimizationMetrics.positionSuggestion!}
-            onApply={handleApplyPositionSuggestion}
-            onRevert={handleRevertPositionSuggestion}
-            onDismiss={() => setPositionBannerDismissed(true)}
-            className="mb-2"
-          />
-        )}
-
-      {/* Auto-Verify Loading Indicator */}
-      {isAutoVerifying && (
-        <GlassCard padding="md" className="mb-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {t('sections.optimize.autoVerifying', 'Auto-verifying match score...')}
-              </p>
-              <p className="text-xs text-gray-500">
-                {t('sections.optimize.autoVerifyingDesc', 'Running AI re-analysis on your optimized resume')}
-              </p>
-            </div>
-          </div>
-        </GlassCard>
-      )}
-
-      {/* Gap Analysis */}
-      {
-        optimizations.length > 0 && (
-          optimizationMetrics.gapAnalysis &&
-            Array.isArray(optimizationMetrics.gapAnalysis) &&
-            optimizationMetrics.gapAnalysis.length > 0 ? (
-            <GapAnalysisCard
-              gaps={optimizationMetrics.gapAnalysis as GapItem[]}
-              className="mb-2"
-            />
-          ) : (
-            <GlassCard padding="md" className="mb-2">
-              <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <Check className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {t('sections.optimize.noGapsDetected', 'No Critical Gaps Detected')}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {isArabic
-                      ? 'سيرتك الذاتية تتوافق جيدًا مع المتطلبات الأساسية. استمر في إضافة الكلمات المفتاحية المقترحة.'
-                      : 'Your resume aligns well with core requirements. Consider adding the suggested keywords above.'}
-                  </p>
-                </div>
-              </div>
-            </GlassCard>
-          )
-        )
-      }
-
-      {/* Hidden Matches */}
-      {
-        optimizationMetrics.keywordStrategy?.hiddenMatches &&
-        (optimizationMetrics.keywordStrategy.hiddenMatches as HiddenMatch[]).length > 0 && (
-          <HiddenMatchesCard
-            matches={optimizationMetrics.keywordStrategy.hiddenMatches as HiddenMatch[]}
-            className="mb-2"
-          />
-        )
-      }
-
-      {/* Mirrored Keywords */}
-      {
-        optimizationMetrics.keywordStrategy && (
-          <MirroredKeywordsCard
-            mirroredPhrases={(optimizationMetrics.keywordStrategy.mirroredPhrases as string[]) || []}
-            structuralChanges={(optimizationMetrics.keywordStrategy.structuralChanges as string[]) || []}
-            className="mb-2"
-          />
-        )
-      }
-
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
+        {visibleQueueOptimizations.length > 0 && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-1 dark:border-white/10 dark:bg-black/20">
+              {queueFilters.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setQueueFilter(filter.id)}
+                  className={cn(
+                    'min-h-11 rounded-lg px-4 text-sm font-medium transition-colors whitespace-nowrap',
+                    queueFilter === filter.id
+                      ? 'bg-[color:var(--surface-glass-elevated)] text-gray-900 shadow-sm dark:bg-white/10 dark:text-white'
+                      : 'text-gray-500 hover:bg-[color:var(--surface-control-hover)] hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white'
+                  )}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
 
-        {filteredOptimizations.length > 0 && (
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={() => {
-                const filteredIds = filteredOptimizations.map(o => o.sectionId);
-                // Check if all filtered items are expanded
-                const allExpanded = filteredIds.every(id => expandedCards.has(id));
-
-                if (allExpanded) {
-                  // Collapse all filtered items
+            <div className="flex flex-wrap justify-end gap-2">
+              <div className="flex items-center rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-1 dark:border-white/10 dark:bg-black/20">
+                <button
+                  onClick={() => setViewMode('split')}
+                  aria-pressed={viewMode === 'split'}
+                  className={cn(
+                    'min-h-9 rounded-lg px-3 text-xs font-medium transition-colors',
+                    viewMode === 'split'
+                      ? 'bg-[color:var(--surface-glass-elevated)] text-gray-900 shadow-sm dark:bg-white/10 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  )}
+                >
+                  {t('sections.optimize.sideBySide', 'Split')}
+                </button>
+                <button
+                  onClick={() => setViewMode('diff')}
+                  aria-pressed={viewMode === 'diff'}
+                  className={cn(
+                    'min-h-9 rounded-lg px-3 text-xs font-medium transition-colors',
+                    viewMode === 'diff'
+                      ? 'bg-[color:var(--surface-glass-elevated)] text-gray-900 shadow-sm dark:bg-white/10 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  )}
+                >
+                  {t('sections.optimize.inlineDiff', 'Diff')}
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  const visibleIds = visibleQueueOptimizations.map(o => o.sectionId);
+                  const allExpanded = visibleIds.every(id => expandedCards.has(id));
                   setExpandedCards(prev => {
                     const next = new Set(prev);
-                    filteredIds.forEach(id => next.delete(id));
+                    visibleIds.forEach(id => {
+                      if (allExpanded) {
+                        next.delete(id);
+                      } else {
+                        next.add(id);
+                      }
+                    });
                     return next;
                   });
-                } else {
-                  // Expand all filtered items
-                  setExpandedCards(prev => {
-                    const next = new Set(prev);
-                    filteredIds.forEach(id => next.add(id));
-                    return next;
-                  });
+                }}
+                className="min-h-11 rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-xs font-medium text-gray-500 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+              >
+                {visibleQueueOptimizations.every(o => expandedCards.has(o.sectionId))
+                  ? t('sections.optimize.collapseAll', 'Collapse All')
+                  : t('sections.optimize.expandAll', 'Expand All')
                 }
-              }}
-              className="text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded-md border border-gray-300/50 dark:border-white/5"
-            >
-              {filteredOptimizations.every(o => expandedCards.has(o.sectionId))
-                ? t('sections.optimize.collapseAll', 'Collapse All')
-                : t('sections.optimize.expandAll', 'Expand All')
-              }
-            </button>
+              </button>
+            </div>
           </div>
         )}
 
-        {filteredOptimizations.length > 0 ? (
+        {filteredQueueGroups.length > 0 ? (
           <div className="grid gap-4">
-            {filteredOptimizations.map((opt, index) => (
-              <GlassCard
-                key={opt.sectionId}
-                padding="none"
-                className={cn(
-                  'overflow-hidden transition-[border-color,box-shadow] duration-300 border',
-                  opt.applied
-                    ? 'border-emerald-500/30 ring-1 ring-emerald-500/20'
-                    : 'border-[color:var(--glass-border)] dark:border-white/5 hover:border-[color:var(--glass-border-strong)] dark:hover:border-white/10'
-                )}
-              >
-                {/* Card Header - Always Visible */}
-                <div
-                  className={cn(
-                    "p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/5 transition-colors",
-                    expandedCards.has(opt.sectionId) && "bg-[color:var(--surface-control)] dark:bg-white/5 border-b border-[color:var(--glass-border)] dark:border-white/5"
-                  )}
-                  onClick={() => toggleCard(opt.sectionId)}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={cn(
-                      "p-2 rounded-lg border shrink-0",
-                      opt.applied
-                        ? "bg-emerald-500/10 border-emerald-500/20"
-                        : "bg-emerald-500/10 border-emerald-500/20"
-                    )}>
-                      {opt.applied
-                        ? <Check className="w-4 h-4 text-emerald-400" />
-                        : <Sparkles className="w-4 h-4 text-emerald-500 dark:text-emerald-300" />
-                      }
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-bold text-gray-900 dark:text-white capitalize truncate">
-                          {opt.sectionType === 'experience'
-                            ? (function () {
-                              // Calculate index specifically among experience items
-                              const expIndex = filteredOptimizations
-                                .filter(o => o.sectionType === 'experience')
-                                .findIndex(o => o.sectionId === opt.sectionId);
-                              return `${t('sections.optimize.tabs.experience', 'Experience')} ${expIndex !== -1 ? expIndex + 1 : ''}`;
-                            })()
-                            : t(`sections.optimize.tabs.${opt.sectionType}`, opt.sectionType)
-                          }
-                        </span>
-                        {/* Status Badge */}
-                        <span className={cn(
-                          'shrink-0 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold border',
-                          opt.applied
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-[color:var(--surface-control)] dark:bg-white/5 border-[color:var(--glass-border)] dark:border-white/10 text-gray-500 dark:text-gray-400'
-                        )}>
-                          {opt.applied
-                            ? t('sections.optimize.status.applied', 'Applied')
-                            : t('sections.optimize.status.pending', 'Pending')
-                          }
-                        </span>
-
-                        {/* Info icon for Skills section */}
-                        {opt.sectionType === 'skills' && (
-                          <span
-                            className="group relative cursor-help"
-                            title={isArabic
-                              ? 'هذه توصيات فقط ولن تُضاف تلقائياً إلى سيرتك الذاتية'
-                              : 'These are recommendations only and will not be added to your resume'
-                            }
-                          >
-                            <Info className="w-3.5 h-3.5 text-amber-400/70 hover:text-amber-400 transition-colors" />
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                        {t('sections.optimize.clickToExpand', 'Click to review suggestions')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCompareMode(compareMode === opt.sectionId ? null : opt.sectionId);
-                      }}
-                      className={cn(
-                        "p-2 rounded-lg transition-colors border border-transparent",
-                        compareMode === opt.sectionId
-                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                          : "hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                      )}
-                      title={t('sections.optimize.compare', 'Compare')}
-                    >
-                      <ArrowLeftRight className="w-4 h-4" />
-                    </button>
-                    <div className={cn(
-                      "p-2 text-gray-400 transition-transform duration-300",
-                      expandedCards.has(opt.sectionId) && "rotate-180"
-                    )}>
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded Content */}
-                {(expandedCards.has(opt.sectionId) || compareMode === opt.sectionId) && (
-                  <div className="p-4 pt-0 animate-in slide-in-from-top-2 duration-200">
-
-                    {/* Compare Mode (Full View) */}
-                    {compareMode === opt.sectionId && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 mt-2">
-                        <div className="p-4 bg-red-500/5 rounded-xl border border-red-500/10">
-                          <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                            {t('sections.optimize.originalContent', 'Original Content')}
-                          </p>
-                          <div className="text-xs text-gray-600 dark:text-gray-300 font-mono leading-relaxed opacity-80 bg-[color:var(--surface-control)] dark:bg-black/20 p-3 rounded-lg whitespace-pre-wrap break-words">
-                            {Array.isArray(opt.original)
-                              ? opt.original.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-gray-200 dark:border-white/5 last:border-0">{item}</div>)
-                              : opt.original || 'No content'
-                            }
-                          </div>
-                        </div>
-                        <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
-                          <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            {t('sections.optimize.optimizedVersion', 'Optimized Version')}
-                          </p>
-                          <div className="text-xs text-gray-700 dark:text-gray-200 font-mono leading-relaxed bg-[color:var(--surface-control)] dark:bg-black/20 p-3 rounded-lg shadow-inner whitespace-pre-wrap break-words">
-                            {Array.isArray(opt.optimized)
-                              ? opt.optimized.map((item, i) => <div key={i} className="mb-1 last:mb-0 pb-1 border-b border-gray-200 dark:border-white/5 last:border-0">{item}</div>)
-                              : opt.optimized || 'No content'
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Standard Mode (Split/Diff) */}
-                    {compareMode !== opt.sectionId && (
-                      viewMode === 'split' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                          <div className="space-y-2">
-                            <p className="text-xs text-gray-500 uppercase tracking-wider pl-1">
-                              {t('sections.optimize.original', 'Original')}
-                            </p>
-                            <div className="p-3 bg-[color:var(--surface-control)] dark:bg-white/5 rounded-xl border border-[color:var(--glass-border)] dark:border-white/5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words">
-                              {Array.isArray(opt.original)
-                                ? opt.original.join('\n')
-                                : opt.original || t('sections.optimize.noOriginal', 'No original text')
-                              }
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-xs text-emerald-500/70 uppercase tracking-wider pl-1">
-                              {t('sections.optimize.optimized', 'Optimized')}
-                            </p>
-                            <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-sm text-gray-700 dark:text-gray-200 leading-relaxed shadow-sm whitespace-pre-wrap break-words">
-                              {Array.isArray(opt.optimized)
-                                ? opt.optimized.join('\n')
-                                : opt.optimized || t('sections.optimize.noOptimized', 'No optimized text')
-                              }
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-2 p-4 bg-[color:var(--surface-control)] dark:bg-black/20 rounded-xl border border-[color:var(--glass-border)] dark:border-white/5 font-mono text-sm leading-7 break-words">
-                          <span className="bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-300 px-1 rounded mx-1 line-through decoration-red-400/50">
-                            {Array.isArray(opt.original) ? opt.original.join(' ') : opt.original}
-                          </span>
-                          <span className="text-gray-500 mx-2">→</span>
-                          <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1 rounded mx-1">
-                            {Array.isArray(opt.optimized) ? opt.optimized.join(' ') : opt.optimized}
-                          </span>
-                        </div>
-                      )
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                      {opt.applied ? (
-                        <GlassButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => revertOptimization(opt.sectionId)}
-                          leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-                          className="flex-1 hover:bg-red-500/10 hover:text-red-400"
-                        >
-                          {t('sections.optimize.revertChanges', 'Revert Changes')}
-                        </GlassButton>
-                      ) : (
-                        <GlassButton
-                          variant="primary"
-                          size="sm"
-                          onClick={() => {
-                            analytics.trackOptimization('applied', { section_type: opt.sectionType });
-                            applyOptimization(opt.sectionId);
-                          }}
-                          leftIcon={<Check className="w-3.5 h-3.5" />}
-                          className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-0"
-                        >
-                          {t('sections.optimize.applySuggestion', 'Apply Suggestion')}
-                        </GlassButton>
-                      )}
-
-                      {REFINABLE_SECTIONS.includes(opt.sectionType) && (
-                        <button
-                          onClick={() => {
-                            setRefineError(null);
-                            setRefineInstruction('');
-                            setRefiningCardId(refiningCardId === opt.sectionId ? null : opt.sectionId);
-                          }}
-                          className={cn(
-                            'inline-flex w-full sm:w-auto items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors border text-sm font-medium',
-                            refiningCardId === opt.sectionId
-                              ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
-                              : 'bg-[color:var(--surface-control)] dark:bg-white/5 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border-[color:var(--glass-border)] dark:border-white/5'
-                          )}
-                          title={t('sections.optimize.refine.button', 'Refine')}
-                        >
-                          <Wand2 className="w-3.5 h-3.5" />
-                          {t('sections.optimize.refine.button', 'Refine')}
-                        </button>
-                      )}
-
-                      {onCopy && (
-                        <button
-                          onClick={() => onCopy(Array.isArray(opt.optimized) ? opt.optimized.join('\n') : opt.optimized)}
-                          className="inline-flex w-full sm:w-auto items-center justify-center p-2 bg-[color:var(--surface-control)] dark:bg-white/5 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-[color:var(--glass-border)] dark:border-white/5"
-                          title={t('common.copy', 'Copy Text')}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Refine input — single-bullet correction loop */}
-                    {refiningCardId === opt.sectionId && (
-                      <div className="mt-4 p-4 rounded-xl bg-purple-500/5 border border-purple-500/15 animate-in slide-in-from-top-2 duration-200">
-                        <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-2">
-                          <Wand2 className="w-3.5 h-3.5" />
-                          {t('sections.optimize.refine.title', 'Refine this bullet')}
-                        </label>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                          {t('sections.optimize.refine.hint', 'Describe the change (e.g. "more leadership focus", "the real number is 20%"). Watheq rewrites only from your resume — it will not invent facts.')}
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <input
-                            type="text"
-                            value={refineInstruction}
-                            onChange={(e) => setRefineInstruction(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey && refineLoadingId !== opt.sectionId) {
-                                e.preventDefault();
-                                handleRefineBullet(opt);
-                              }
-                            }}
-                            disabled={refineLoadingId === opt.sectionId}
-                            placeholder={t('sections.optimize.refine.placeholder', 'e.g. emphasize measurable impact')}
-                            maxLength={500}
-                            className="flex-1 px-3 py-2 text-sm rounded-lg bg-[color:var(--surface-control)] dark:bg-black/20 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/40 disabled:opacity-60"
-                          />
-                          <GlassButton
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleRefineBullet(opt)}
-                            disabled={refineLoadingId === opt.sectionId || !refineInstruction.trim()}
-                            leftIcon={refineLoadingId === opt.sectionId
-                              ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              : <Send className="w-3.5 h-3.5" />}
-                            className="shrink-0"
-                          >
-                            {refineLoadingId === opt.sectionId
-                              ? t('sections.optimize.refine.refining', 'Refining...')
-                              : t('sections.optimize.refine.submit', 'Refine')}
-                          </GlassButton>
-                        </div>
-                        {refineError && (
-                          <p className="mt-2 text-xs font-medium text-red-500 dark:text-red-400">{refineError}</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Refinement reasoning — surfaced so the user can judge the edit */}
-                    {(opt.rationale || opt.issue) && (
-                      <div className="mt-4 space-y-2">
-                        {opt.rationale && (
-                          <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                            <Lightbulb className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                                {t('sections.optimize.refine.rationaleLabel', 'Why this change')}
-                              </p>
-                              <p className="text-sm text-gray-700 dark:text-gray-200 mt-0.5">{opt.rationale}</p>
-                            </div>
-                          </div>
-                        )}
-                        {opt.issue && (
-                          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
-                            <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                                {t('sections.optimize.refine.issueLabel', 'Not applied')}
-                              </p>
-                              <p className="text-sm text-gray-700 dark:text-gray-200 mt-0.5">{opt.issue}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </GlassCard>
+            {filteredQueueGroups.map((group) => (
+              <JobGroupCard
+                key={group.id}
+                group={group}
+                viewMode={viewMode}
+                expandedCards={expandedCards}
+                compareMode={compareMode}
+                refiningCardId={refiningCardId}
+                refineInstruction={refineInstruction}
+                refineLoadingId={refineLoadingId}
+                refineError={refineError}
+                refinableSections={REFINABLE_SECTIONS}
+                isArabic={isArabic}
+                onToggleCard={toggleCard}
+                onToggleCompare={handleToggleCompare}
+                onApply={handleApplyOptimization}
+                onRevert={revertOptimization}
+                onApplyGroup={handleApplyQueueGroup}
+                onCopy={onCopy}
+                onStartRefine={handleStartRefine}
+                onRefineInstructionChange={setRefineInstruction}
+                onSubmitRefine={handleRefineBullet}
+              />
             ))}
           </div>
         ) : (

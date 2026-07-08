@@ -73,6 +73,31 @@
       "verifying": "Verifying...",
       "verifiedTooltip": "We re-scored your optimized resume against this job description",
       "verifiedByReanalysis": "Verified by re-analysis",
+      "scoreHeader": {
+        "projectedScore": "Projected ~{{score}}%",
+        "verified": "verified",
+        "progress": "{{applied}}/{{total}} applied",
+        "rerun": "Re-run",
+        "continue": "Continue",
+        "breakdown": "Breakdown"
+      },
+      "strategy": {
+        "title": "Strategy",
+        "subtitle": "Keywords, gaps, and title alignment",
+        "gapsTitle": "Requirement gaps"
+      },
+      "queue": {
+        "experienceFallback": "Experience {{number}}",
+        "workSubtitle": "Work experience",
+        "suggestionsCount": "{{count}} suggestions",
+        "applyGroup": "Apply all in this job",
+        "filters": {
+          "all": "All",
+          "pending": "Pending",
+          "applied": "Applied"
+        },
+        "emptyFiltered": "No suggestions match this filter."
+      },
       "shareResult": "Share Your Result",
       "revert": "Revert",
       "applyAll": "Apply All",
