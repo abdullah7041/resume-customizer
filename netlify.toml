@@ -72,9 +72,6 @@
 [functions."vision2030-alignment"]
   timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer
 
-[functions."parse-arabic-resume"]
-  timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer
-
 # Scheduled Functions (Cron Jobs)
 [functions."cron-reset-credits"]
   timeout = 30

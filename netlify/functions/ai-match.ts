@@ -27,8 +27,6 @@ const baseHandler: Handler = async (event) => {
     rawBody = {};
   }
   const freePreview = rawBody.freePreview === true;
-  const requestMode = rawBody.mode === 'verify' ? 'verify' : 'match';
-  const isVerifyMode = requestMode === 'verify';
 
   // Extract auth token from header
   const authHeader = event.headers.authorization || event.headers.Authorization;
@@ -80,7 +78,7 @@ const baseHandler: Handler = async (event) => {
   }
 
   // Check credits BEFORE processing (2 credits for ai_match)
-  const creditCheck = freePreview || isVerifyMode || !userEmail
+  const creditCheck = freePreview || !userEmail
     ? { hasCredits: true, required: 0, available: 0 }
     : await checkCredits(userEmail, 'ai_match', { ipAddress, emailVerified });
 
@@ -113,7 +111,7 @@ const baseHandler: Handler = async (event) => {
 
     const { resumeText, jobText, language, mode } = parseResult.data;
     if (mode === 'verify') {
-      console.log('[ai-match] verify mode: skipping credit charge');
+      console.log('[ai-match] verify mode requested; normal credit billing enforced');
     }
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
@@ -153,7 +151,7 @@ const baseHandler: Handler = async (event) => {
     };
 
     // Consume credits AFTER successful match (BEFORE database writes to minimize latency)
-    const creditResult = freePreview || mode === 'verify' || !userEmail
+    const creditResult = freePreview || !userEmail
       ? { creditsRemaining: null }
       : await consumeCredits(userEmail, 'ai_match');
 

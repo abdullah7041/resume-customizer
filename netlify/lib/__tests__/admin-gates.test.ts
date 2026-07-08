@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HandlerEvent } from '@netlify/functions';
 import {
   requireAdminMutationGate,
@@ -20,6 +20,7 @@ function buildEvent(
 describe('admin and scheduled function gates', () => {
   afterEach(() => {
     process.env = { ...originalEnv };
+    vi.restoreAllMocks();
   });
 
   it('allows Netlify scheduled calls through the internal scheduler header', () => {
@@ -42,6 +43,47 @@ describe('admin and scheduled function gates', () => {
       statusCode: 403,
       error: 'Unauthorized',
     });
+  });
+
+  it('allows scheduled functions with the cron secret header', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CRON_SECRET = 'strong-cron-secret';
+
+    const gate = requireScheduledFunctionGate(
+      buildEvent({ 'x-cron-secret': 'strong-cron-secret' })
+    );
+
+    expect(gate).toEqual({ ok: true });
+  });
+
+  it('rejects incorrect cron secrets without the scheduler header', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CRON_SECRET = 'strong-cron-secret';
+
+    const gate = requireScheduledFunctionGate(
+      buildEvent({ 'x-cron-secret': 'wrong-secret' })
+    );
+
+    expect(gate).toEqual({
+      ok: false,
+      statusCode: 403,
+      error: 'Unauthorized',
+    });
+  });
+
+  it('keeps scheduler-header compatibility when CRON_SECRET is not configured', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.CRON_SECRET;
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const gate = requireScheduledFunctionGate(
+      buildEvent({ 'x-netlify-internal-functions': 'true' })
+    );
+
+    expect(gate).toEqual({ ok: true });
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[AdminGates] Scheduled call accepted via header only - set CRON_SECRET to harden'
+    );
   });
 
   it('requires an explicit environment flag before non-local dev mutations', () => {

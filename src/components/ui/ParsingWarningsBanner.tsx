@@ -14,7 +14,7 @@ export function ParsingWarningsBanner() {
     const originalResume = useResumeStore((s) => s.originalResume);
     const [expanded, setExpanded] = useState(false);
 
-    if (!import.meta.env.DEV || !originalResume) return null;
+    if (!originalResume) return null;
 
     const warnings = getParsingWarnings(originalResume);
     if (warnings.length === 0) return null;

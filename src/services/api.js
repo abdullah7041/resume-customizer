@@ -843,11 +843,11 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
               recordSuccess('openrouter-ai');
               break;
             case 'error': {
-              // Server explicitly signals failure before processing (before credits consumed).
-              // Billing state is known-safe — safe to fall back to legacy.
+              // billingStateUnknown=true means credits were or may have been consumed;
+              // recover through the cache-only path, not a fresh paid fallback.
               const error = new Error(parsed.error);
               error.retryable = parsed.retryable;
-              error.isBillingStateUnknown = false;
+              error.isBillingStateUnknown = parsed.billingStateUnknown === true;
               attachErrorDebug(error, response, parsed);
               recordFailure('openrouter-ai');
               throw error;

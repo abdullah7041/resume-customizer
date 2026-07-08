@@ -1,4 +1,5 @@
 import type { HandlerEvent } from '@netlify/functions';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 const UNSAFE_ADMIN_SECRETS = new Set(['', 'change-me-in-production']);
 
@@ -40,9 +41,28 @@ function getConfiguredAdminSecret(): string | undefined {
   return secret;
 }
 
+function timingSafeEqualStrings(a: string, b: string): boolean {
+  const left = createHash('sha256').update(a).digest();
+  const right = createHash('sha256').update(b).digest();
+  return timingSafeEqual(left, right);
+}
+
 export function requireScheduledFunctionGate(event: HandlerEvent): GateResult {
   const isScheduledCall = getHeader(event, 'x-netlify-internal-functions') === 'true';
-  if (isScheduledCall || isLocalDevelopment()) {
+  const cronSecret = process.env.CRON_SECRET;
+  const providedSecret = getHeader(event, 'x-cron-secret');
+  const secretMatches = Boolean(
+    cronSecret && providedSecret && timingSafeEqualStrings(providedSecret, cronSecret)
+  );
+
+  if (secretMatches || isLocalDevelopment()) {
+    return { ok: true };
+  }
+
+  if (isScheduledCall) {
+    if (!cronSecret) {
+      console.warn('[AdminGates] Scheduled call accepted via header only - set CRON_SECRET to harden');
+    }
     return { ok: true };
   }
 

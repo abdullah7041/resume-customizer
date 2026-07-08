@@ -3,11 +3,11 @@ import { optimizeResume } from "../lib/gemini-client.js";
 import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
-import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
+import { checkCredits, consumeCredits, isEmailVerified } from "../lib/credit-manager.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
-import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
+import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
 import { MODELS } from "../lib/model-registry.js";
 
@@ -19,6 +19,20 @@ function hasRenderableCards(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const cards = (value as { cards?: unknown }).cards;
   return Array.isArray(cards) && cards.length > 0;
+}
+
+async function attachLiveCredits<T extends Record<string, unknown>>(
+  payload: T,
+  userEmail: string | undefined,
+  freePreview: boolean,
+): Promise<T & { creditsRemaining: number | null }> {
+  if (freePreview || !userEmail) return { ...payload, creditsRemaining: null };
+  try {
+    const check = await checkCredits(userEmail, 'optimize');
+    return { ...payload, creditsRemaining: check.available };
+  } catch {
+    return { ...payload, creditsRemaining: null };
+  }
 }
 
 const baseHandler: Handler = async (event) => {
@@ -85,32 +99,7 @@ const baseHandler: Handler = async (event) => {
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user?.email_confirmed_at !== null || (user as any)?.email_verified !== false;
-
-  if (freePreview) {
-    const previewLimit = await checkFreePreviewRateLimit(event, "optimize-free-preview", user?.id || userEmail);
-    if (!previewLimit.allowed && previewLimit.response) {
-      return previewLimit.response;
-    }
-  }
-
-  // Check credits BEFORE processing (5 credits for optimize)
-  const creditCheck = freePreview || !userEmail
-    ? { hasCredits: true, required: 0, available: 0 }
-    : await checkCredits(userEmail, 'optimize', { ipAddress, emailVerified });
-
-  if (!creditCheck.hasCredits) {
-    return {
-      statusCode: 403,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Insufficient credits",
-        creditsRequired: creditCheck.required,
-        creditsAvailable: creditCheck.available,
-        creditsNeeded: creditCheck.required - creditCheck.available
-      })
-    };
-  }
+  const emailVerified = isEmailVerified(user);
 
   try {
     // Validate request using Zod schema
@@ -137,11 +126,12 @@ const baseHandler: Handler = async (event) => {
     // -----------------------------------------------------------------------
     // P0 FIX: Redis cache check — bypass Gemini on identical payloads
     // -----------------------------------------------------------------------
-    const cacheKey = buildCacheKey('optimize', {
-      resumeText: resumeText.trim(),
-      jobText: jobText.trim(),
+    const cacheKey = buildOptimizeCacheKey({
+      userScope: user?.id || userEmail || `free-preview:${ipAddress || 'unknown'}`,
+      resumeText,
+      jobText,
       language: language || 'en',
-      vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
+      vulnerabilities: vulnerabilities.map((v: { type: string }) => v.type),
       userClarifications: userClarifications || '',
       userHardStops: userHardStops || [],
     });
@@ -149,10 +139,11 @@ const baseHandler: Handler = async (event) => {
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
     if (hasRenderableCards(cachedResponse)) {
       console.log('[optimize] Cache HIT — returning cached result, skipping Gemini call.');
+      const responsePayload = await attachLiveCredits(cachedResponse, userEmail, freePreview);
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
-        body: JSON.stringify(cachedResponse),
+        body: JSON.stringify(responsePayload),
       };
     }
     if (cachedResponse) {
@@ -160,6 +151,31 @@ const baseHandler: Handler = async (event) => {
     }
     console.log('[optimize] Cache MISS — calling Gemini.');
     // -----------------------------------------------------------------------
+
+    if (freePreview) {
+      const previewLimit = await checkFreePreviewRateLimit(event, "optimize-free-preview", user?.id || userEmail);
+      if (!previewLimit.allowed && previewLimit.response) {
+        return previewLimit.response;
+      }
+    }
+
+    // Check credits after cache lookup so already-paid retries can return.
+    const creditCheck = freePreview || !userEmail
+      ? { hasCredits: true, required: 0, available: 0 }
+      : await checkCredits(userEmail, 'optimize', { ipAddress, emailVerified });
+
+    if (!creditCheck.hasCredits) {
+      return {
+        statusCode: 403,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Insufficient credits",
+          creditsRequired: creditCheck.required,
+          creditsAvailable: creditCheck.available,
+          creditsNeeded: creditCheck.required - creditCheck.available
+        })
+      };
+    }
 
     // Add timeout logging
     const startTime = Date.now();
@@ -361,8 +377,22 @@ const baseHandler: Handler = async (event) => {
 
     // Consume credits AFTER successful optimization
     const creditResult = freePreview || !userEmail
-      ? { creditsRemaining: null }
+      ? { success: true, creditsRemaining: null }
       : await consumeCredits(userEmail, 'optimize');
+
+    if (!freePreview && userEmail && creditResult.success === false) {
+      console.warn('[optimize] Credit consumption failed post-generation - balance raced to insufficient');
+      return {
+        statusCode: 403,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Insufficient credits",
+          creditsRequired: 5,
+          creditsAvailable: creditResult.creditsRemaining ?? 0,
+          creditsNeeded: Math.max(0, 5 - (creditResult.creditsRemaining ?? 0))
+        })
+      };
+    }
 
     const responsePayload = {
       cards: cards,
@@ -442,7 +472,9 @@ const baseHandler: Handler = async (event) => {
     // We cache AFTER credit consumption so replays are still free for the user
     // but don't re-charge — credits are only charged once per unique payload.
     // -----------------------------------------------------------------------
-    await setCached(cacheKey, responsePayload, OPTIMIZE_CACHE_TTL_SECONDS);
+    const { creditsRemaining: _omittedCreditsRemaining, ...cacheablePayload } = responsePayload;
+    void _omittedCreditsRemaining;
+    await setCached(cacheKey, cacheablePayload, OPTIMIZE_CACHE_TTL_SECONDS);
     console.log('[optimize] Cache SET for key:', cacheKey.substring(0, 50));
 
     return {

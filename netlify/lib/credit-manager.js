@@ -23,6 +23,15 @@ export const FEATURE_COSTS = {
 };
 
 /**
+ * True when the Supabase auth user has a confirmed email.
+ * Supabase sets email_confirmed_at to an ISO string on confirmation;
+ * it is undefined/null otherwise.
+ */
+export function isEmailVerified(user) {
+  return Boolean(user?.email_confirmed_at);
+}
+
+/**
  * Initialize Supabase client with service role
  * @returns {import('@supabase/supabase-js').SupabaseClient}
  */
@@ -239,18 +248,23 @@ export async function consumeCredits(email, feature, amount = null) {
   // Fallback to direct update if RPC doesn't exist yet
   if (updateError && updateError.code === '42883') {
     console.log('[CreditManager] RPC not found, using direct update');
-    const { error: directUpdateError } = await supabase
+    const { data: directUpdateRows, error: directUpdateError } = await supabase
       .from('user_credits')
       .update({
         credits_remaining: creditsAfter,
         updated_at: new Date().toISOString(),
       })
       .eq('email', email)
-      .eq('credits_remaining', creditsBefore); // Optimistic locking
+      .eq('credits_remaining', creditsBefore) // Optimistic locking
+      .select('credits_remaining');
 
     if (directUpdateError) {
       console.error('[CreditManager] Failed to consume credits:', summarizeErrorForLog(directUpdateError));
       throw new Error('Failed to consume credits');
+    }
+    if (!directUpdateRows || directUpdateRows.length === 0) {
+      console.warn(`[CreditManager] Optimistic lock lost for ${feature} - balance changed concurrently, no deduction applied`);
+      return { success: false, creditsRemaining: creditsBefore };
     }
   } else if (updateError) {
     console.error('[CreditManager] Failed to consume credits:', summarizeErrorForLog(updateError));

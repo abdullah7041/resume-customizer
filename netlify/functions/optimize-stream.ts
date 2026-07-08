@@ -16,9 +16,9 @@
 import { optimizeResume } from "../lib/gemini-client.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
-import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
+import { checkCredits, consumeCredits, isEmailVerified } from "../lib/credit-manager.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
-import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
+import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
 import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
@@ -68,6 +68,20 @@ function hasRenderableCards(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const cards = (value as { cards?: unknown }).cards;
   return Array.isArray(cards) && cards.length > 0;
+}
+
+async function attachLiveCredits<T extends Record<string, unknown>>(
+  payload: T,
+  userEmail: string | undefined,
+  freePreview: boolean,
+): Promise<T & { creditsRemaining: number | null }> {
+  if (freePreview || !userEmail) return { ...payload, creditsRemaining: null };
+  try {
+    const check = await checkCredits(userEmail, "optimize");
+    return { ...payload, creditsRemaining: check.available };
+  } catch {
+    return { ...payload, creditsRemaining: null };
+  }
 }
 
 export default async function handler(request: Request): Promise<Response> {
@@ -141,7 +155,7 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   const ipAddress = getClientIPFromRequest(request);
-  const emailVerified = user?.email_confirmed_at !== null || (user as any)?.email_verified !== false;
+  const emailVerified = isEmailVerified(user);
 
   if (freePreview && rawBody.cacheOnly !== true) {
     const previewLimit = await checkFreePreviewRateLimitForRequest(request, "optimize-free-preview", user?.id || userEmail);
@@ -183,12 +197,12 @@ export default async function handler(request: Request): Promise<Response> {
   // content hash. This covers edge cases where the content hash collides or
   // the TTL has expired before the user can retry.
   // -----------------------------------------------------------------------
-  const cacheKey = buildCacheKey('optimize', {
-    userId: user?.id || userEmail || `free-preview:${ipAddress || 'unknown'}`,
-    resumeText: resumeText.trim(),
-    jobText: jobText.trim(),
+  const cacheKey = buildOptimizeCacheKey({
+    userScope: user?.id || userEmail || `free-preview:${ipAddress || 'unknown'}`,
+    resumeText,
+    jobText,
     language: language || 'en',
-    vulnerabilities: vulnerabilities.map((v: any) => v.type).sort(),
+    vulnerabilities: vulnerabilities.map((v: { type: string }) => v.type),
     userClarifications: userClarifications || '',
     userHardStops: userHardStops || [],
   });
@@ -196,7 +210,8 @@ export default async function handler(request: Request): Promise<Response> {
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
   if (hasRenderableCards(cachedResponse)) {
     console.log('[optimize-stream] Cache HIT — returning cached JSON (no credit deduction).');
-    return new Response(JSON.stringify(cachedResponse), {
+    const responsePayload = await attachLiveCredits(cachedResponse, userEmail, freePreview);
+    return new Response(JSON.stringify(responsePayload), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -251,6 +266,7 @@ export default async function handler(request: Request): Promise<Response> {
 
   const stream = new ReadableStream({
     async start(controller) {
+      let creditsConsumed = false;
       try {
         // Phase 1: Validating
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "validating" })));
@@ -302,8 +318,25 @@ export default async function handler(request: Request): Promise<Response> {
 
         // Consume credits after successful optimization
         const creditResult = freePreview || !userEmail
-          ? { creditsRemaining: null }
+          ? { success: true, creditsRemaining: null }
           : await consumeCredits(userEmail, "optimize");
+
+        if (!freePreview && userEmail && creditResult.success === false) {
+          console.warn('[optimize-stream] Credit consumption failed post-generation - balance raced to insufficient');
+          controller.enqueue(
+            encoder.encode(
+              sseEvent("error", {
+                error: "Insufficient credits",
+                retryable: false,
+                billingStateUnknown: false,
+              })
+            )
+          );
+          return;
+        }
+        if (!freePreview && userEmail) {
+          creditsConsumed = true;
+        }
 
         const resultPayload = {
           cards,
@@ -369,7 +402,9 @@ export default async function handler(request: Request): Promise<Response> {
         };
 
         // Cache briefly because optimization cards can include resume snippets.
-        await setCached(cacheKey, resultPayload, OPTIMIZE_CACHE_TTL_SECONDS);
+        const { creditsRemaining: _omittedCreditsRemaining, ...cacheablePayload } = resultPayload;
+        void _omittedCreditsRemaining;
+        await setCached(cacheKey, cacheablePayload, OPTIMIZE_CACHE_TTL_SECONDS);
         console.log('[optimize-stream] Cache SET for key:', cacheKey.substring(0, 50));
 
         // Send the full result as a single SSE event
@@ -402,6 +437,7 @@ export default async function handler(request: Request): Promise<Response> {
                 ? "Optimization timed out. Retrying automatically..."
                 : "Failed to optimize resume",
               retryable: isTimeout,
+              billingStateUnknown: creditsConsumed,
             })
           )
         );
