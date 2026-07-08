@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -85,6 +85,14 @@ vi.mock('../components/Layout/MainContent', () => ({
   default: () => <main>Workspace</main>,
 }));
 
+vi.mock('../components/onboarding/OnboardingChat', () => ({
+  default: ({ onComplete }: { onComplete?: () => void }) => (
+    <button type="button" onClick={onComplete}>
+      Complete onboarding
+    </button>
+  ),
+}));
+
 vi.mock('../pages/AdminFeedbackPage', () => ({
   AdminFeedbackPage: () => <main>Admin feedback dashboard</main>,
 }));
@@ -148,11 +156,13 @@ describe('App compliance navigation', () => {
   beforeEach(() => {
     setPath('/');
     headerProps.calls.length = 0;
+    window.localStorage.clear();
     // Returning user: skip the first-run onboarding gate so the workspace renders.
     window.localStorage.setItem('watheq:onboarded', 'true');
   });
 
   it('renders workspace for the default app path', () => {
+    window.localStorage.setItem('watheq:guestMode', 'true');
     render(<App />);
 
     expect(screen.getByText('Workspace')).toBeInTheDocument();
@@ -184,5 +194,16 @@ describe('App compliance navigation', () => {
     expect(await screen.findByText('Admin feedback dashboard')).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
     expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
+  });
+
+  it('keeps the normal app shell visible after signed-out onboarding enters guest mode', async () => {
+    window.localStorage.removeItem('watheq:onboarded');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /complete onboarding/i }));
+
+    expect(await screen.findByText('Workspace')).toBeInTheDocument();
+    expect(screen.getByText('Header')).toBeInTheDocument();
   });
 });

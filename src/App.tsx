@@ -114,6 +114,8 @@ export default function App() {
                     onComplete={() => {
                       if (!user && typeof window !== "undefined") {
                         window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
+                        setGuestModeActive(true);
+                        window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
                       }
                       markOnboarded();
                       setOnboardedFlag(true);
