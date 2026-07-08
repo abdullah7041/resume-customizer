@@ -25,6 +25,7 @@
     "benchmark:ai": "tsx scripts/benchmark-ai-models.mjs",
     "eval:optimize": "tsx scripts/optimize-quality-eval.mjs",
     "eval:parse": "tsx scripts/parse-eval.mjs",
+    "flags:report": "tsx scripts/flags-test-report.mjs",
     "i18n:validate": "node scripts/i18n-validate.mjs",
     "i18n:missing": "node scripts/i18n-missing.mjs",
     "i18n:translation-prompt": "node scripts/i18n-translation-prompt.mjs",

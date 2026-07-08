@@ -7,6 +7,7 @@ import { getSkylineUrls } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { useTheme } from "../../hooks/useTheme";
 
 // Header modals are state-gated overlays — lazy-load them so they stay out of the entry chunk.
@@ -52,6 +53,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const feedbackEnabled = useFeatureFlag("feedback");
   const { credits } = useUserCredits();
   const isSignedOutHeader = !user;
   const showFixedSkyline = showDecorativeSkyline;
@@ -377,6 +379,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                             <Settings className="h-4 w-4" />
                             <span>{t('common.settings', 'Settings')}</span>
                           </button>
+                          {feedbackEnabled && (
                           <button
                             type="button"
                             onClick={() => {
@@ -389,6 +392,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                             <MessageSquare className="h-4 w-4" />
                             <span>{t('feedback.cta', 'Feedback')}</span>
                           </button>
+                          )}
                           <button
                             type="button"
                             onClick={toggleTheme}
@@ -604,6 +608,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                       <Settings className="h-4 w-4" />
                       <span>{t('common.settings', 'Settings')}</span>
                     </button>
+                    {feedbackEnabled && (
                     <button
                       onClick={() => {
                         setShowFeedbackModal(true);
@@ -614,6 +619,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                       <MessageSquare className="h-4 w-4" />
                       <span>{t('feedback.cta', 'Feedback')}</span>
                     </button>
+                    )}
                   </>
                 ) : (
                   <button
@@ -681,7 +687,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
           />
         )}
 
-        {showFeedbackModal && (
+        {feedbackEnabled && showFeedbackModal && (
           <FeedbackModal
             isOpen={showFeedbackModal}
             onClose={() => setShowFeedbackModal(false)}
