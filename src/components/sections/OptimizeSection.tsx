@@ -20,6 +20,8 @@ import {
   AlertCircle,
   Info,
   TrendingUp,
+  TrendingDown,
+  Loader2,
   Share2,
   Wand2,
   Send,
@@ -189,6 +191,8 @@ export function OptimizeSection({
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
+  const [verifyAnomaly, setVerifyAnomaly] = useState<{ rawScore: number | null; textLength: number } | null>(null);
+  const [verifyRetryUsed, setVerifyRetryUsed] = useState(false);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   // Single-bullet correction loop: which card has its refine input open, the
   // instruction text, which card is mid-request, and any per-refine error.
@@ -397,9 +401,9 @@ export function OptimizeSection({
     const potentialAfterScore = beforeScore + (optimizationMetrics.improvement ?? maxImprovement);
 
     // Use verified score if available, otherwise show projected estimate
-    const isScoreVerified = verifiedScore !== null || (optimizationMetrics.afterScore !== null && optimizationMetrics.afterScore !== undefined);
+    const isScoreVerified = verifiedScore !== null;
     const displayAfterScore = isScoreVerified
-      ? (verifiedScore ?? optimizationMetrics.afterScore ?? afterScore)
+      ? (verifiedScore ?? afterScore)
       : afterScore;
 
     return {
@@ -423,6 +427,87 @@ export function OptimizeSection({
       isScoreVerified,
     };
   }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore, verifiedScore]);
+
+  const verifyOptimizedResume = async (jobDescription: string, beforeScore: number, options?: { freePreview?: boolean }) => {
+    if (!jobDescription.trim()) return;
+
+    try {
+      setIsAutoVerifying(true);
+      setVerifyAnomaly(null);
+
+      // Fix B3: Save each optimization's applied state before blanket apply/revert
+      const storeState = useResumeStore.getState();
+      const savedAppliedStates = storeState.optimizations.map(o => ({ sectionId: o.sectionId, applied: o.applied }));
+      storeState.applyAllOptimizations();
+      const optimizedResume = storeState.getActiveResume();
+      // Restore original applied states instead of blanket revert
+      savedAppliedStates.forEach(({ sectionId, applied }) => {
+        if (applied) {
+          storeState.applyOptimization(sectionId);
+        } else {
+          storeState.revertOptimization(sectionId);
+        }
+      });
+
+      if (!optimizedResume) return;
+
+      const { analyzeResumeWithAI } = await import('../../services/api');
+      const { formatResumeToText } = await import('../../lib/utils/resumeUtils');
+      // Give AI a realistic plain text string (what ATS sees) instead of structured JSON
+      // to prevent artificially inflated scores.
+      const optimizedText = formatResumeToText(optimizedResume);
+      const sourceTextLength = (resumeText || JSON.stringify(originalResume ?? '')).length;
+      const minimumLength = Math.max(200, sourceTextLength * 0.5);
+
+      if (optimizedText.length < minimumLength) {
+        console.warn(`[OptimizeSection] verify skipped: optimized text too short (${optimizedText.length} chars)`);
+        setVerifyAnomaly({ rawScore: null, textLength: optimizedText.length });
+        return;
+      }
+
+      const result = await analyzeResumeWithAI(optimizedText, jobDescription, i18n.language, {
+        mode: 'verify',
+        ...(options?.freePreview ? { freePreview: true } : {}),
+      });
+
+      const verifiedResultScore = finiteScore(result?.score);
+      if (verifiedResultScore !== null) {
+        if (verifiedResultScore < beforeScore - 25) {
+          console.warn(`[OptimizeSection] verify anomaly: raw score ${result?.score}, optimized text length ${optimizedText.length}`);
+          setVerifyAnomaly({ rawScore: verifiedResultScore, textLength: optimizedText.length });
+          return;
+        }
+
+        setVerifiedScore(verifiedResultScore);
+        // Update metrics with genuine verified scores
+        setOptimizationMetrics({
+          afterScore: verifiedResultScore,
+          improvement: verifiedResultScore - beforeScore,
+        });
+        // Cache the verified score under the optimized key (forceIsOptimized: true)
+        setCachedAnalysis(optimizedText, jobDescription, {
+          score: verifiedResultScore,
+          matchedKeywords: result.topHits || [],
+          missingKeywords: result.missingKeywords || [],
+        }, true);
+      }
+    } catch (verifyErr) {
+      // Auto-verify is non-fatal - optimization still succeeds
+      console.warn('[OptimizeSection] Auto-verify failed (non-fatal):', verifyErr);
+      setVerifyAnomaly({ rawScore: null, textLength: 0 });
+    } finally {
+      setIsAutoVerifying(false);
+    }
+  };
+
+  const retryVerifyOptimizedResume = async () => {
+    if (verifyRetryUsed) return;
+    const jobDescription = typeof window !== 'undefined'
+      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
+      : '';
+    setVerifyRetryUsed(true);
+    await verifyOptimizedResume(jobDescription, resultsSummaryData.beforeScore);
+  };
 
   const hasFreePreviewRun = () =>
     typeof window !== 'undefined' && window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY) !== 'true';
@@ -454,6 +539,9 @@ export function OptimizeSection({
 
     setIsGenerating(true);
     setError(null);
+    setVerifiedScore(null);
+    setVerifyAnomaly(null);
+    setVerifyRetryUsed(false);
 
     // Generate a session ID for feedback tracking
     const newSessionId = crypto.randomUUID();
@@ -742,54 +830,8 @@ export function OptimizeSection({
         : '';
 
       if (jobDescription.trim()) {
-        try {
-          setIsAutoVerifying(true);
-
-          // Fix B3: Save each optimization's applied state before blanket apply/revert
-          const storeState = useResumeStore.getState();
-          const savedAppliedStates = storeState.optimizations.map(o => ({ sectionId: o.sectionId, applied: o.applied }));
-          storeState.applyAllOptimizations();
-          const optimizedResume = storeState.getActiveResume();
-          // Restore original applied states instead of blanket revert
-          savedAppliedStates.forEach(({ sectionId, applied }) => {
-            if (applied) {
-              storeState.applyOptimization(sectionId);
-            } else {
-              storeState.revertOptimization(sectionId);
-            }
-          });
-
-          if (optimizedResume) {
-            const { analyzeResumeWithAI } = await import('../../services/api');
-            const { formatResumeToText } = await import('../../lib/utils/resumeUtils');
-            // Give AI a realistic plain text string (what ATS sees) instead of structured JSON 
-            // to prevent artificially inflated scores.
-            const optimizedText = formatResumeToText(optimizedResume);
-            const result = await analyzeResumeWithAI(optimizedText, jobDescription);
-
-            const verifiedResultScore = finiteScore(result?.score);
-            if (verifiedResultScore !== null) {
-              const beforeScore = existingBaseline ?? metricsToUpdate.beforeScore ?? resultsSummaryData.beforeScore;
-              setVerifiedScore(verifiedResultScore);
-              // Update metrics with genuine verified scores
-              setOptimizationMetrics({
-                afterScore: verifiedResultScore,
-                improvement: verifiedResultScore - beforeScore,
-              });
-              // Cache the verified score under the optimized key (forceIsOptimized: true)
-              setCachedAnalysis(optimizedText, jobDescription, {
-                score: verifiedResultScore,
-                matchedKeywords: result.topHits || [],
-                missingKeywords: result.missingKeywords || [],
-              }, true);
-            }
-          }
-        } catch (verifyErr) {
-          // Auto-verify is non-fatal - optimization still succeeds
-          console.warn('[OptimizeSection] Auto-verify failed (non-fatal):', verifyErr);
-        } finally {
-          setIsAutoVerifying(false);
-        }
+        const beforeScore = existingBaseline ?? metricsToUpdate.beforeScore ?? resultsSummaryData.beforeScore;
+        await verifyOptimizedResume(jobDescription, beforeScore, options);
       }
 
     } catch (err) {
@@ -981,6 +1023,19 @@ export function OptimizeSection({
     : optimizations.filter(o => o.sectionType === activeSection);
   const hasOptimizationResults = optimizations.length > 0;
   const hasKeywordData = keywordBuckets.add.length + keywordBuckets.neutral.length + keywordBuckets.remove.length > 0;
+  const scoreDelta = resultsSummaryData.afterScore - resultsSummaryData.beforeScore;
+  const hasRealScoreDelta = !resultsSummaryData.isPlaceholderImprovement && !resultsSummaryData.isPlaceholderScore;
+  const scoreDeltaLabel = scoreDelta > 0
+    ? `+${scoreDelta}%`
+    : scoreDelta < 0
+      ? `${scoreDelta}%`
+      : t('sections.optimize.noScoreChange', 'no change');
+  const ScoreDeltaIcon = scoreDelta < 0 ? TrendingDown : TrendingUp;
+  const scoreDeltaClass = scoreDelta > 0
+    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+    : scoreDelta < 0
+      ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+      : 'bg-gray-500/10 border-gray-500/20 text-gray-500';
 
   return (
     <div className="space-y-6">
@@ -1274,12 +1329,12 @@ export function OptimizeSection({
 
             {/* Improvement Arrow */}
             <div className="flex flex-col items-center px-4">
-              {!resultsSummaryData.isPlaceholderImprovement && !resultsSummaryData.isPlaceholderScore ? (
+              {hasRealScoreDelta ? (
                 <>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                    <span className="text-sm font-bold text-emerald-400">
-                      +{resultsSummaryData.afterScore - resultsSummaryData.beforeScore}%
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${scoreDeltaClass}`}>
+                    {scoreDelta !== 0 && <ScoreDeltaIcon className="w-4 h-4" />}
+                    <span className="text-sm font-bold">
+                      {scoreDeltaLabel}
                     </span>
                   </div>
                 </>
@@ -1295,14 +1350,52 @@ export function OptimizeSection({
               <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
                 {t('sections.optimize.optimizedScore', 'Optimized Score')}
               </span>
-              <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
-                ? 'text-gray-600 italic'
-                : 'bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent'
-                }`}>
-                {resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
-                  ? '—'
-                  : `${resultsSummaryData.afterScore}%`}
-              </span>
+              {verifyAnomaly ? (
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-300 text-center">
+                    {t('sections.optimize.verifyAnomalyTitle', "Couldn't verify the new score")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={retryVerifyOptimizedResume}
+                    disabled={verifyRetryUsed || isAutoVerifying}
+                    className="min-h-11 rounded-lg border border-amber-500/30 px-3 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-300"
+                  >
+                    {isAutoVerifying
+                      ? t('sections.optimize.verifying', 'Verifying...')
+                      : t('sections.optimize.retryVerify', 'Retry')}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className={`text-3xl font-bold tabular-nums ${resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
+                    ? 'text-gray-600 italic'
+                    : resultsSummaryData.isScoreVerified
+                      ? 'bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent'
+                      : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                    {resultsSummaryData.isPlaceholderScore || resultsSummaryData.isPlaceholderImprovement
+                      ? '—'
+                      : resultsSummaryData.isScoreVerified
+                        ? `${resultsSummaryData.afterScore}% ✓`
+                        : `Projected ~${resultsSummaryData.afterScore}%`}
+                  </span>
+                  {isAutoVerifying && (
+                    <span className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {t('sections.optimize.verifying', 'Verifying...')}
+                    </span>
+                  )}
+                  {resultsSummaryData.isScoreVerified && (
+                    <span
+                      className="mt-1 text-xs text-emerald-600 dark:text-emerald-300"
+                      title={t('sections.optimize.verifiedTooltip', 'We re-scored your optimized resume against this job description')}
+                    >
+                      {t('sections.optimize.verifiedByReanalysis', 'Verified by re-analysis')}
+                    </span>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

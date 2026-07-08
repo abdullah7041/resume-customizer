@@ -217,6 +217,19 @@ beforeEach(() => {
         baselineMatchScore: null,
     };
 
+    mockSetOptimizations.mockImplementation((optimizations) => {
+        mockStoreState.optimizations = optimizations;
+    });
+    mockSetOptimizationMetrics.mockImplementation((metrics) => {
+        mockStoreState.optimizationMetrics = {
+            ...mockStoreState.optimizationMetrics,
+            ...metrics,
+        };
+    });
+    mockSetKeywordSuggestions.mockImplementation((keywordSuggestions) => {
+        mockStoreState.keywordSuggestions = keywordSuggestions;
+    });
+
     Object.defineProperty(window, 'localStorage', {
         configurable: true,
         value: {
@@ -992,7 +1005,7 @@ describe('Optimization Card Types', () => {
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.getByText('0%')).toBeInTheDocument();
-            expect(screen.getByText('5%')).toBeInTheDocument();
+            expect(screen.getByText('Projected ~5%')).toBeInTheDocument();
         });
 
         it('does not treat missing score fields as a real zero score', () => {
@@ -1019,14 +1032,86 @@ describe('Optimization Card Types', () => {
             expect(screen.getAllByText('—').length).toBeGreaterThan(0);
         });
 
-        it('stores a verified optimized score of 0 instead of dropping it as falsy', async () => {
+        it('passes verify mode when auto-verifying the optimized resume', async () => {
             mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
-            mockStoreState.parsedResumeText = 'Original resume text';
+            mockStoreState.parsedResumeText = 'Original resume text that is long enough to make verification meaningful after optimization';
             mockStoreState.getActiveResume = vi.fn(() => ({
-                basics: { name: 'Test User', summary: 'Optimized summary' },
-                work: [],
+                basics: {
+                    name: 'Test User',
+                    summary: 'Optimized summary with enough detailed text to exceed the minimum verification length threshold for the test scenario.',
+                },
+                work: [{
+                    name: 'Company',
+                    position: 'Engineer',
+                    startDate: '2020',
+                    endDate: '2024',
+                    highlights: [
+                        'Improved backend APIs with measurable latency reductions and production reliability gains.',
+                        'Built React dashboards for hiring managers with accessible workflows and analytics.',
+                    ],
+                }],
                 education: [],
-                skills: [],
+                skills: [{ name: 'Technical', keywords: ['React', 'TypeScript', 'Node.js'] }],
+            }));
+            mockStoreState.baselineMatchScore = 45;
+            mockAnalyzeResumeWithAI.mockResolvedValue({
+                score: 52,
+                topHits: ['React'],
+                missingKeywords: [],
+            });
+            global.fetch.mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve({
+                    cards: [{
+                        section: 'Summary',
+                        exampleBefore: 'Original summary',
+                        exampleAfter: 'Optimized summary',
+                    }],
+                    matchScoring: {
+                        beforeScore: 45,
+                        estimatedImprovement: 10,
+                        afterScore: 55,
+                        jdKeywords: ['React'],
+                        matchedKeywords: [],
+                        reasoning: 'Initial projected score',
+                    },
+                    debug: { hasJobDescription: true },
+                }),
+            });
+
+            renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
+
+            await waitFor(() => {
+                expect(mockAnalyzeResumeWithAI).toHaveBeenCalledWith(
+                    expect.any(String),
+                    'Backend engineer role',
+                    'en',
+                    expect.objectContaining({ mode: 'verify' })
+                );
+            });
+        });
+
+        it('shows an anomaly instead of storing an implausibly low verified score', async () => {
+            mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
+            mockStoreState.parsedResumeText = 'Original resume text with enough detailed work history and skills evidence for verification. '.repeat(3);
+            mockStoreState.getActiveResume = vi.fn(() => ({
+                basics: {
+                    name: 'Test User',
+                    summary: 'Optimized summary with enough detail to pass the verification text-length guard before score anomaly handling.',
+                },
+                work: [{
+                    name: 'Company',
+                    position: 'Engineer',
+                    startDate: '2020',
+                    endDate: '2024',
+                    highlights: [
+                        'Improved backend APIs with measurable latency reductions and reliability gains.',
+                        'Built React dashboards for hiring managers with accessible workflows and analytics.',
+                    ],
+                }],
+                education: [],
+                skills: [{ name: 'Technical', keywords: ['React', 'TypeScript', 'Node.js'] }],
             }));
             mockStoreState.baselineMatchScore = 45;
             mockAnalyzeResumeWithAI.mockResolvedValue({
@@ -1061,19 +1146,79 @@ describe('Optimization Card Types', () => {
                 expect(mockAnalyzeResumeWithAI).toHaveBeenCalled();
             });
             await waitFor(() => {
-                expect(mockSetOptimizationMetrics).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        afterScore: 0,
-                        improvement: -45,
-                    })
-                );
+                expect(screen.getByText("Couldn't verify the new score")).toBeInTheDocument();
             });
-            expect(mockSetCachedAnalysis).toHaveBeenCalledWith(
+            expect(mockSetOptimizationMetrics).not.toHaveBeenCalledWith(
+                expect.objectContaining({
+                    afterScore: 0,
+                    improvement: -45,
+                })
+            );
+            expect(mockSetCachedAnalysis).not.toHaveBeenCalledWith(
                 expect.any(String),
                 'Backend engineer role',
                 expect.objectContaining({ score: 0 }),
                 true
             );
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+        });
+
+        it('skips auto-verify when formatted optimized text is too short', async () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
+            mockStoreState.parsedResumeText = 'Original resume text with enough characters that a tiny optimized output should be rejected before verification '.repeat(3);
+            mockStoreState.getActiveResume = vi.fn(() => ({
+                basics: { name: 'A' },
+                work: [],
+                education: [],
+                skills: [],
+            }));
+            mockStoreState.baselineMatchScore = 45;
+            global.fetch.mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve({
+                    cards: [{
+                        section: 'Summary',
+                        exampleBefore: 'Original summary',
+                        exampleAfter: 'Optimized summary',
+                    }],
+                    matchScoring: {
+                        beforeScore: 45,
+                        estimatedImprovement: 10,
+                        afterScore: 55,
+                        jdKeywords: ['React'],
+                        matchedKeywords: [],
+                        reasoning: 'Initial projected score',
+                    },
+                    debug: { hasJobDescription: true },
+                }),
+            });
+
+            renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
+
+            await waitFor(() => {
+                expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[OptimizeSection] verify skipped: optimized text too short'));
+            });
+            expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
+            warnSpy.mockRestore();
+        });
+
+        it('shows projected and verified score states with a signed delta', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.baselineMatchScore = 78;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                afterScore: null,
+                improvement: -3,
+                hasJobDescription: true,
+            };
+
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.getByText('Projected ~75%')).toBeInTheDocument();
+            expect(screen.getByText('-3%')).toBeInTheDocument();
+            expect(screen.queryByText('+-3%')).not.toBeInTheDocument();
         });
     });
 

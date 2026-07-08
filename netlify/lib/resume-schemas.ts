@@ -224,6 +224,7 @@ export const MatchRequestSchema = z.object({
     jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
     freePreview: z.boolean().optional(),
+    mode: z.enum(["match", "verify"]).optional().default("match"),
 });
 
 export const WorkHistoryEntrySchema = z.object({

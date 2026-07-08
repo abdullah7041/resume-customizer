@@ -279,6 +279,29 @@ describe('AI Integration Functions', () => {
             expect(body.similarity).toBe(0);
         });
 
+        it('does not check or consume credits for verify mode', async () => {
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 84,
+                strongMatches: ['typescript'],
+                missingKeywords: [],
+                summary_bullets: ['Verified optimized resume evidence'],
+                reasoning: 'Verified score',
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'optimized resume', jobText: 'job', mode: 'verify' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+            expect(result.statusCode).toBe(200);
+            expect(JSON.parse(result.body).score).toBe(84);
+            expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+            expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+        });
+
         it('returns a retryable user-facing timeout response', async () => {
             const timeoutError = new Error('AI request timed out after 65000ms.');
             timeoutError.name = 'TimeoutError';

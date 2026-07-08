@@ -467,12 +467,13 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
   return retryWithBackoff(async () => {
     try {
       const freePreview = !!options.freePreview;
+      const mode = options.mode === 'verify' ? 'verify' : undefined;
       const headers = await getAuthHeaders({ requireAuth: !freePreview });
 
       const response = await fetch(MATCH_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDescription, language, ...(freePreview ? { freePreview } : {}) }),
+        body: JSON.stringify({ resumeText, jobText: jobDescription, language, ...(freePreview ? { freePreview } : {}), ...(mode ? { mode } : {}) }),
       });
 
       const data = await handleResponse(response);

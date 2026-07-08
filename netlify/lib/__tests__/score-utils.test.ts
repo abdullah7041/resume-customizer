@@ -13,9 +13,17 @@ describe('score-utils', () => {
     expect(normalizeScore('67.8')).toBe(68);
   });
 
+  it('rescales strict fractional scores but preserves exact boundary values', () => {
+    expect(normalizeScore(0.79)).toBe(79);
+    expect(normalizeScore(79)).toBe(79);
+    expect(normalizeScore(0)).toBe(0);
+    expect(normalizeScore(1)).toBe(1);
+  });
+
   it('rejects missing or invalid scores', () => {
     expect(() => normalizeScore(undefined, 'match_score')).toThrow('match_score');
     expect(() => normalizeScore('not-a-score', 'match_score')).toThrow('match_score');
+    expect(() => normalizeScore(Number.NaN, 'match_score')).toThrow('match_score');
   });
 
   it('derives category score totals from valid complete category scores', () => {
