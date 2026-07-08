@@ -270,7 +270,7 @@ export default function UploadSection({
 
 
             {/* Validation Warnings — rendered from store via shared banner component */}
-            {import.meta.env.DEV && <ParsingWarningsBanner />}
+            <ParsingWarningsBanner />
         </div>
     );
 }

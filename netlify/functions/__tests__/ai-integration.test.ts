@@ -46,7 +46,8 @@ const mockCreditManager = {
     consumeCredits: vi.fn().mockResolvedValue({
         success: true,
         creditsRemaining: 13
-    })
+    }),
+    isEmailVerified: vi.fn((user) => Boolean(user?.email_confirmed_at))
 };
 
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
@@ -279,7 +280,7 @@ describe('AI Integration Functions', () => {
             expect(body.similarity).toBe(0);
         });
 
-        it('does not check or consume credits for verify mode', async () => {
+        it('still checks and consumes credits when a client sends verify mode directly', async () => {
             mockGeminiClient.processMatchOnly.mockResolvedValue({
                 score: 84,
                 strongMatches: ['typescript'],
@@ -298,8 +299,12 @@ describe('AI Integration Functions', () => {
 
             expect(result.statusCode).toBe(200);
             expect(JSON.parse(result.body).score).toBe(84);
-            expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
-            expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+            expect(mockCreditManager.checkCredits).toHaveBeenCalledWith(
+                'user@example.com',
+                'ai_match',
+                expect.objectContaining({ emailVerified: true })
+            );
+            expect(mockCreditManager.consumeCredits).toHaveBeenCalledWith('user@example.com', 'ai_match');
         });
 
         it('returns a retryable user-facing timeout response', async () => {

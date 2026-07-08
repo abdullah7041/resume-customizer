@@ -3,7 +3,7 @@ import { predictInterviewQuestions } from "../lib/gemini-client.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { PredictQuestionsRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
-import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
+import { checkCredits, consumeCredits, isEmailVerified } from "../lib/credit-manager.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
@@ -54,7 +54,7 @@ const baseHandler: Handler = async (event) => {
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
+  const emailVerified = isEmailVerified(user);
 
   // Check credits BEFORE processing (3 credits for interview_prep)
   const creditCheck = await checkCredits(userEmail, 'interview_prep', { ipAddress, emailVerified });

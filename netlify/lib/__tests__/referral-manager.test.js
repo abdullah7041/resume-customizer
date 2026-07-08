@@ -64,11 +64,18 @@ function mockConditionalReferralUpdate(result) {
   };
 }
 
-function mockUpdateEq(result) {
+function mockReferralCompletionClaim(result) {
+  const maybeSingle = vi.fn().mockResolvedValue(result);
+  const query = {
+    eq: vi.fn(() => query),
+    not: vi.fn(() => query),
+    select: vi.fn(() => ({ maybeSingle })),
+  };
+  const update = vi.fn(() => query);
+
   return {
-    update: vi.fn(() => ({
-      eq: vi.fn().mockResolvedValue(result),
-    })),
+    table: { update },
+    spies: { update, eq: query.eq, not: query.not, select: query.select, maybeSingle },
   };
 }
 
@@ -268,16 +275,16 @@ describe('ReferralManager tracking idempotency', () => {
   it('completes existing UUID referrals by resolving the referrer email from user_id', async () => {
     setServerEnv();
     supabaseMock.rpc.mockResolvedValue({ error: null });
+    const claimMock = mockReferralCompletionClaim({
+      data: { referred_by_user_id: 'referrer-user-id' },
+      error: null,
+    });
     supabaseMock.from
-      .mockReturnValueOnce(mockSelectSingle({
-        data: { referred_by_user_id: 'referrer-user-id', referral_completed: false },
-        error: null,
-      }))
+      .mockReturnValueOnce(claimMock.table)
       .mockReturnValueOnce(mockSelectSingle({
         data: { email: 'referrer@example.com' },
         error: null,
-      }))
-      .mockReturnValueOnce(mockUpdateEq({ error: null }));
+      }));
 
     const { completeReferral } = await importFreshReferralManager();
 
@@ -294,5 +301,63 @@ describe('ReferralManager tracking idempotency', () => {
       p_email: 'new-user@example.com',
       p_transaction_type: 'referral_reward',
     }));
+    expect(claimMock.spies.update).toHaveBeenCalledWith(expect.objectContaining({
+      referral_completed: true,
+    }));
+    expect(claimMock.spies.eq).toHaveBeenCalledWith('email', 'new-user@example.com');
+    expect(claimMock.spies.eq).toHaveBeenCalledWith('referral_completed', false);
+    expect(claimMock.spies.not).toHaveBeenCalledWith('referred_by_user_id', 'is', null);
+  });
+
+  it('does not award credits when referral completion was already claimed', async () => {
+    setServerEnv();
+    const claimMock = mockReferralCompletionClaim({
+      data: null,
+      error: null,
+    });
+    supabaseMock.from.mockReturnValueOnce(claimMock.table);
+
+    const { completeReferral } = await importFreshReferralManager();
+
+    await expect(completeReferral('new-user@example.com')).resolves.toEqual({
+      completed: false,
+    });
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
+    expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
+    expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
+  });
+
+  it('reopens completion when reward payment fails after claim so the referral can be retried', async () => {
+    setServerEnv();
+    const reopenMock = mockConditionalReferralUpdate({
+      data: { email: 'new-user@example.com' },
+      error: null,
+    });
+    const claimMock = mockReferralCompletionClaim({
+      data: { referred_by_user_id: 'referrer-user-id' },
+      error: null,
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(claimMock.table)
+      .mockReturnValueOnce(mockSelectSingle({
+        data: { email: 'referrer@example.com' },
+        error: null,
+      }))
+      .mockReturnValueOnce(reopenMock.table);
+    supabaseMock.rpc.mockResolvedValueOnce({ error: { message: 'RPC failed' } });
+
+    const { completeReferral } = await importFreshReferralManager();
+
+    await expect(completeReferral('new-user@example.com')).resolves.toEqual({
+      completed: false,
+      error: 'Reward payment failed; referral can be retried',
+    });
+    expect(supabaseMock.rpc).toHaveBeenCalledTimes(1);
+    expect(claimMock.spies.update).toHaveBeenCalledTimes(1);
+    expect(reopenMock.spies.update).toHaveBeenCalledWith(expect.objectContaining({
+      referral_completed: false,
+      referral_completed_at: null,
+    }));
+    expect(reopenMock.spies.eq).toHaveBeenCalledWith('email', 'new-user@example.com');
   });
 });

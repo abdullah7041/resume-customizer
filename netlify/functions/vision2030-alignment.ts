@@ -4,7 +4,7 @@ import { executeAiContract } from '../lib/ai-contracts/index.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { Vision2030RequestSchema, formatZodError } from '../lib/resume-schemas.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
-import { checkCredits, consumeCredits } from '../lib/credit-manager.js';
+import { checkCredits, consumeCredits, isEmailVerified } from '../lib/credit-manager.js';
 import { getClientIP } from '../lib/ip-utils.js';
 import type { Vision2030AnalysisResponse } from '../lib/vision2030-types.js';
 
@@ -55,7 +55,7 @@ const baseHandler: Handler = async (event) => {
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
+  const emailVerified = isEmailVerified(user);
 
   // Check credits BEFORE processing (2 credits for vision2030)
   const creditCheck = await checkCredits(userEmail, 'vision2030', { ipAddress, emailVerified });

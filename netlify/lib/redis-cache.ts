@@ -59,6 +59,28 @@ export function buildCacheKey(namespace: string, data: Record<string, unknown>):
   return `watheq:${namespace}:${hash}`;
 }
 
+export interface OptimizeCacheKeyInput {
+  userScope: string;
+  resumeText: string;
+  jobText: string;
+  language: string;
+  vulnerabilities: string[];
+  userClarifications: string;
+  userHardStops: string[];
+}
+
+export function buildOptimizeCacheKey(input: OptimizeCacheKeyInput): string {
+  return buildCacheKey('optimize', {
+    userId: input.userScope,
+    resumeText: input.resumeText.trim(),
+    jobText: input.jobText.trim(),
+    language: input.language || 'en',
+    vulnerabilities: [...input.vulnerabilities].sort(),
+    userClarifications: input.userClarifications || '',
+    userHardStops: input.userHardStops || [],
+  });
+}
+
 // ---------------------------------------------------------------------------
 // get / set helpers
 // ---------------------------------------------------------------------------
