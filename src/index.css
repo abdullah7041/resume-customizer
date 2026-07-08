@@ -2718,40 +2718,42 @@
   .btn-metal {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(180deg, var(--color-emerald-500) 0%, var(--emerald-700) 100%);
-    border-radius: var(--radius-md);
-    border: 1px solid color-mix(in oklab, var(--color-emerald-400), transparent 50%);
-    border-bottom-width: 2px;
-    border-bottom-color: var(--emerald-900);
+    background: var(--button-primary-fill);
+    border-radius: var(--radius-sm);
+    border: 1px solid color-mix(in oklab, var(--button-primary-fill), #021715 18%);
     box-shadow:
-      0 8px 18px -12px rgba(0, 108, 53, 0.38),
-      inset 0 1px 1px rgba(255, 255, 255, 0.28);
+      0 10px 22px -16px rgba(0, 108, 53, 0.42),
+      0 1px 0 rgba(255, 255, 255, 0.16) inset;
     color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    transition: all 0.2s var(--transition-spring);
+    transition: background-color 0.2s var(--transition-spring), border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s var(--transition-spring);
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 650;
   }
 
   .btn-metal::after {
     content: "";
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
-    height: 50%;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
+    height: 100%;
+    background: color-mix(in oklab, #ffffff, transparent 94%);
+    opacity: 0;
     pointer-events: none;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-radius: inherit;
+    transition: opacity 0.2s ease;
   }
 
   .btn-metal:hover {
-    background: linear-gradient(180deg, var(--color-emerald-400) 0%, var(--emerald-700) 100%);
+    background: var(--button-primary-fill-hover);
+    border-color: color-mix(in oklab, var(--button-primary-fill-hover), #021715 12%);
     box-shadow:
-      0 12px 24px -14px rgba(0, 108, 53, 0.48),
-      0 2px 6px rgba(52, 211, 153, 0.12),
-      inset 0 1px 2px rgba(255, 255, 255, 0.4);
+      0 14px 28px -18px rgba(0, 108, 53, 0.5),
+      0 1px 0 rgba(255, 255, 255, 0.18) inset;
     transform: translateY(-1px);
+  }
+
+  .btn-metal:hover::after {
+    opacity: 1;
   }
 
   .btn-metal:active,
@@ -2763,8 +2765,7 @@
   }
 
   .btn-metal:active {
-    border-bottom-width: 1px;
-    margin-bottom: 1px;
+    border-color: color-mix(in oklab, var(--button-primary-fill-hover), #021715 20%);
   }
 
   /* General spring scale class for clickable elements */
