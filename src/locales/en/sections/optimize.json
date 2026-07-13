@@ -1,6 +1,21 @@
 {
   "sections": {
     "optimize": {
+      "scoreDiff": {
+        "title": "Score projection",
+        "estimateBadge": "Estimate",
+        "estimateNote": "Projected gains are estimates based on the suggestions you applied — not a guarantee.",
+        "verifiedBadge": "Verified",
+        "verifiedNote": "Verified by AI re-analysis with all suggestions applied.",
+        "appliedOf": "{{applied}} of {{total}} suggestions applied",
+        "perCardShare": "Each applied suggestion adds about +{{points}} pts to the estimate",
+        "counted": "Counted in projection",
+        "notCounted": "Not applied — not counted",
+        "noneApplied": "Apply suggestions to see their effect on the projection.",
+        "potentialNote": "Up to {{score}}% if all suggestions are applied (estimate)",
+        "showCards": "See which changes count",
+        "hideCards": "Hide breakdown"
+      },
       "title": "Optimize",
       "subtitle": "AI-powered suggestions to improve your resume",
       "optimizeBtn": "Optimize resume with AI",

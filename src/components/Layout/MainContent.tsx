@@ -1100,6 +1100,10 @@ export default function MainContent() {
             missingKeywords: result.missingKeywords || [],
             suggestions: result.suggestions || [],
             reasoning: result.reasoning || '',
+            // Explainability payload — persisted so the Optimize tab can rebuild
+            // the "Why this score" panel from the original match after refresh.
+            categoryScores: result.categoryScores ?? null,
+            strategicRealityCheck: result.strategicRealityCheck ?? null,
           });
 
           // Always save match analysis score — line 500 already ensures we analyze

@@ -1,6 +1,8 @@
 // Template system types - extends JSON Resume schema
 import type { PartialResumeSchema, ResumeSchema } from './resume';
 import type { SearchIntent } from './onboarding';
+import type { StrategicRealityCheck } from './analysis';
+import type { CategoryScoresData } from '../components/ScoreBreakdown';
 
 /**
  * Available template identifiers
@@ -95,6 +97,11 @@ export interface CachedAnalysis {
   suggestions?: string[];
   reasoning?: string;
   overallAssessment?: string;
+  // Optional explainability payload. Persisted so the Optimize tab can rebuild
+  // the "Why this score" panel from the original match after a page refresh.
+  // Both optional → legacy cache entries parse unchanged.
+  categoryScores?: CategoryScoresData | null;
+  strategicRealityCheck?: StrategicRealityCheck | null;
   timestamp: number;
 }
 
@@ -143,12 +150,14 @@ export interface OptimizationMetrics {
       insight: string;
     }[];
   };
-  // Category scores from API
+  // Category scores from API. The matched/missing/gaps arrays already flow
+  // through at runtime (from ai-match); typing them here makes that evidence
+  // usable by the explainability panel without a data change.
   categoryScores?: {
-    hard_skills?: { score: number; max: number; reasoning: string };
-    experience?: { score: number; max: number; reasoning: string };
-    education?: { score: number; max: number; reasoning: string };
-    soft_skills?: { score: number; max: number; reasoning: string };
+    hard_skills?: { score: number; max: number; reasoning?: string; matched?: string[]; missing?: string[]; gaps?: string[] };
+    experience?: { score: number; max: number; reasoning?: string; matched?: string[]; missing?: string[]; gaps?: string[] };
+    education?: { score: number; max: number; reasoning?: string; matched?: string[]; missing?: string[]; gaps?: string[] };
+    soft_skills?: { score: number; max: number; reasoning?: string; matched?: string[]; missing?: string[]; gaps?: string[] };
   } | null;
   // Score breakdown from API
   scoreBreakdown?: {
@@ -260,7 +269,7 @@ export interface ResumeState {
   resetOptimizationMetrics: () => void;
 
   // Cache actions
-  getCachedAnalysis: (resumeText: string, jobDescription: string) => CachedAnalysis | null;
+  getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean) => CachedAnalysis | null;
   setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => void;
   clearAnalysisCache: () => void;
 

@@ -24,6 +24,9 @@ import type { OptimizationMetrics } from '../../types/templates';
 import type { GapItem } from '../GapAnalysisCard';
 import type { CategoryScoresData } from '../ScoreBreakdown';
 import type { HiddenMatch } from '../HiddenMatchesCard';
+import { ScoreDiffBreakdown } from '../ScoreDiffBreakdown';
+import { AtsExplainabilityPanel } from '../AtsExplainabilityPanel';
+import type { AtsExplainabilitySource } from '../../types/explainability';
 import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
@@ -505,6 +508,25 @@ export function OptimizeSection({
     setVerifyRetryUsed(true);
     await verifyOptimizedResume(jobDescription, resultsSummaryData.beforeScore);
   };
+
+  // Explainability source for the Optimize tab — rebuilt from the ORIGINAL
+  // cached match analysis (survives refresh) plus optimize-side gaps. No fetch,
+  // no scoring; everything here already exists in the store.
+  const optimizeExplainabilitySource: AtsExplainabilitySource = useMemo(() => {
+    const jobDescription = typeof window !== 'undefined'
+      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
+      : '';
+    const cached = resumeText && jobDescription
+      ? getCachedAnalysis(resumeText, jobDescription, false)
+      : null;
+    return {
+      matchedKeywords: cached?.matchedKeywords ?? optimizationMetrics.matchedKeywords ?? [],
+      missingKeywords: cached?.missingKeywords ?? [],
+      categoryScores: (cached?.categoryScores ?? optimizationMetrics.categoryScores ?? null) as AtsExplainabilitySource['categoryScores'],
+      realityCheck: cached?.strategicRealityCheck ?? null,
+      gapAnalysis: optimizationMetrics.gapAnalysis ?? [],
+    };
+  }, [resumeText, getCachedAnalysis, optimizationMetrics]);
 
   const hasFreePreviewRun = () =>
     typeof window !== 'undefined' && window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY) !== 'true';
@@ -1299,6 +1321,19 @@ export function OptimizeSection({
         />
       )}
 
+      {optimizations.length > 0 && (
+        <ScoreDiffBreakdown
+          beforeScore={resultsSummaryData.beforeScore}
+          afterScore={resultsSummaryData.afterScore}
+          potentialScore={resultsSummaryData.potentialScore}
+          improvement={optimizationMetrics.improvement}
+          isScoreVerified={resultsSummaryData.isScoreVerified}
+          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
+          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
+          optimizations={optimizations}
+        />
+      )}
+
       {optimizations.length > 0 &&
         !resultsSummaryData.isPlaceholderScore &&
         !resultsSummaryData.isPlaceholderImprovement &&
@@ -1395,6 +1430,14 @@ export function OptimizeSection({
         </GlassCard>
       )}
 
+      {/* ATS Explainability — why this score, mapped to real resume/JD text */}
+      {optimizations.length > 0 && (
+        <AtsExplainabilityPanel
+          source={optimizeExplainabilitySource}
+          context="optimize"
+          className="mb-2"
+        />
+      )}
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
         {visibleQueueOptimizations.length > 0 && (

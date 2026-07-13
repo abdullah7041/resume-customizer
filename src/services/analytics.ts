@@ -327,6 +327,40 @@ class Analytics {
         });
     }
 
+    // Metadata only — counts and enums, never keyword strings / snippets /
+    // resume / job-description text.
+    trackExplainabilityPanelOpened(data: {
+        context: 'match' | 'optimize';
+        matchedCount: number;
+        missingCount: number;
+        weakCount: number;
+        cautionCount: number;
+        riskTier?: string | null;
+    }) {
+        this.track('explainability_panel_opened', {
+            context: data.context,
+            matched_count: data.matchedCount,
+            missing_count: data.missingCount,
+            weak_count: data.weakCount,
+            caution_count: data.cautionCount,
+            risk_tier: data.riskTier || 'unknown',
+        });
+    }
+
+    trackScoreDiffExpanded(data: {
+        appliedCount: number;
+        totalCount: number;
+        isVerified: boolean;
+        improvementEstimate: number | null;
+    }) {
+        this.track('score_diff_expanded', {
+            applied_count: data.appliedCount,
+            total_count: data.totalCount,
+            is_verified: data.isVerified,
+            improvement_estimate: data.improvementEstimate ?? 0,
+        });
+    }
+
     trackMatchAnalysisFailed(errorCategory: string) {
         this.track('match_analysis_failed', { error_category: errorCategory });
     }

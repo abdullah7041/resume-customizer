@@ -574,4 +574,61 @@ describe('resumeStore.getActiveResume()', () => {
       expect(active?.basics?.summary).toBe('Saudi-based engineer with a decade of experience');
     });
   });
+
+  describe('cached analysis explainability payload', () => {
+    const RESUME = 'resume text for cache';
+    const JOB = 'job description for cache';
+
+    it('round-trips categoryScores and strategicRealityCheck', () => {
+      const realityCheck = {
+        riskTier: 'medium' as const,
+        recommendation: 'optimize_now' as const,
+        confidence: 'medium' as const,
+        riskTypes: ['tenure'],
+        summary: 'Review before optimizing.',
+        strengths: [{ title: 'Led a team', evidence: [{ source: 'resume' as const, snippet: 'Managed 6 people' }] }],
+        confirmedRisks: [],
+        unclearRisks: [{ type: 'skill', topic: 'K8s', reason: 'no detail', evidenceNeeded: 'a project' }],
+        limits: { cannotDetermine: [], assumptions: ['Assumed fluency'] },
+      };
+      useResumeStore.getState().setCachedAnalysis(RESUME, JOB, {
+        score: 72,
+        coverage: 0.7,
+        similarity: 0.7,
+        missingKeywords: ['GraphQL'],
+        strongMatches: ['React'],
+        recommendations: [],
+        overallAssessment: '',
+        categoryScores: {
+          hard_skills: { score: 8, max: 10, matched: ['React'] },
+          experience: { score: 6, max: 10 },
+          education: { score: 5, max: 10 },
+          soft_skills: { score: 7, max: 10 },
+        },
+        strategicRealityCheck: realityCheck,
+      }, false);
+
+      const cached = useResumeStore.getState().getCachedAnalysis(RESUME, JOB, false);
+      expect(cached?.categoryScores?.hard_skills.matched).toEqual(['React']);
+      expect(cached?.strategicRealityCheck?.unclearRisks).toHaveLength(1);
+      expect(cached?.strategicRealityCheck?.limits.assumptions).toEqual(['Assumed fluency']);
+    });
+
+    it('reads a legacy-shape entry without the new fields', () => {
+      useResumeStore.getState().setCachedAnalysis(RESUME, JOB, {
+        score: 60,
+        coverage: 0.6,
+        similarity: 0.6,
+        missingKeywords: [],
+        strongMatches: [],
+        recommendations: [],
+        overallAssessment: '',
+      }, false);
+
+      const cached = useResumeStore.getState().getCachedAnalysis(RESUME, JOB, false);
+      expect(cached?.score).toBe(60);
+      expect(cached?.categoryScores).toBeUndefined();
+      expect(cached?.strategicRealityCheck).toBeUndefined();
+    });
+  });
 });

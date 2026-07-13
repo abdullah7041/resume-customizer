@@ -92,6 +92,8 @@ vi.mock('../services/analytics', () => ({
     analytics: {
         track: mockAnalyticsTrack,
         trackOptimization: mockTrackOptimization,
+        trackScoreDiffExpanded: vi.fn(),
+        trackExplainabilityPanelOpened: vi.fn(),
     },
 }));
 
@@ -997,7 +999,7 @@ describe('Optimization Card Types', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('0%')).toBeInTheDocument();
+            expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
             expect(screen.getByText('Projected ~5%')).toBeInTheDocument();
         });
 
@@ -1245,5 +1247,87 @@ describe('Optimization Card Types', () => {
         // Skills section should have an info icon
         const infoIcon = container.querySelector('.lucide-info');
         expect(infoIcon).toBeInTheDocument();
+    });
+
+    describe('score diff + explainability', () => {
+        it('mounts the score projection with only applied:true cards counted', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 's-0', sectionType: 'summary', original: 'Built apps.', optimized: 'Built React apps.', applied: true },
+                { sectionId: 'e-0', sectionType: 'experience', original: 'Did work.', optimized: 'Led work.', applied: false },
+            ];
+            mockStoreState.baselineMatchScore = 60;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: 60,
+                improvement: 20,
+                hasJobDescription: true,
+            };
+
+            renderWithProviders(<OptimizeSection />);
+
+            // Projection title present.
+            expect(screen.getByText('sections.optimize.scoreDiff.title')).toBeInTheDocument();
+            // 1 of 2 applied — interpolated key returns the raw key with the mock t().
+            expect(screen.getByText('sections.optimize.scoreDiff.appliedOf')).toBeInTheDocument();
+        });
+
+        it('projection equals the resultsSummaryData formula (before + round(improvement * appliedRatio))', () => {
+            // before=60, improvement=20, applied=1/2 => afterScore = 60 + round(20*0.5) = 70
+            mockStoreState.optimizations = [
+                { sectionId: 's-0', sectionType: 'summary', original: 'Built apps.', optimized: 'Built React apps.', applied: true },
+                { sectionId: 'e-0', sectionType: 'experience', original: 'Did work.', optimized: 'Led work.', applied: false },
+            ];
+            mockStoreState.baselineMatchScore = 60;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: 60,
+                improvement: 20,
+                hasJobDescription: true,
+            };
+
+            renderWithProviders(<OptimizeSection />);
+
+            // The diff renders the same projected value the header computes: 70%.
+            // (Header + diff both show 70% — the diff must not fork the formula.)
+            expect(screen.getAllByText('70%').length).toBeGreaterThanOrEqual(1);
+            // No fabricated verified badge — estimate path only.
+            expect(screen.getByText('sections.optimize.scoreDiff.estimateBadge')).toBeInTheDocument();
+        });
+
+        it('feeds the explainability panel from the cached original analysis', () => {
+            mockStoreState.parsedResumeText = 'Original resume text used as the cache key.';
+            mockStoreState.optimizations = [
+                { sectionId: 's-0', sectionType: 'summary', original: 'Built apps.', optimized: 'Built React apps.', applied: true },
+            ];
+            mockStoreState.baselineMatchScore = 55;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: 55,
+                improvement: 10,
+                hasJobDescription: true,
+            };
+            mockGetCachedAnalysis.mockReturnValue({
+                score: 55,
+                matchedKeywords: ['React'],
+                missingKeywords: ['GraphQL'],
+                strategicRealityCheck: {
+                    riskTier: 'medium',
+                    recommendation: 'optimize_now',
+                    confidence: 'medium',
+                    riskTypes: [],
+                    summary: '',
+                    strengths: [{ title: 'Led a team', evidence: [{ source: 'resume', snippet: 'Managed 6 analysts' }] }],
+                    confirmedRisks: [],
+                    unclearRisks: [],
+                    limits: { cannotDetermine: [], assumptions: ['Assumed fluency'] },
+                },
+                timestamp: Date.now(),
+            });
+
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.getByText('sections.explainability.title')).toBeInTheDocument();
+            mockGetCachedAnalysis.mockReturnValue(null);
+        });
     });
 });

@@ -162,6 +162,51 @@ describe('JobMatch', () => {
     expect(screen.getByText(/unclear: project ownership/i)).toBeInTheDocument();
   });
 
+  it('shows the explainability panel and treats strengths-only as detailed results', () => {
+    const match = {
+      score: 78,
+      missingKeywords: ['GraphQL'],
+      topHits: ['React'],
+      matchedKeywords: ['React'],
+      coverage: 0.6,
+      cosine: 0.6,
+      // Only strengths + assumptions — no suggestions, no gaps, no confirmed risks.
+      strategicRealityCheck: {
+        riskTier: 'low',
+        recommendation: 'optimize_now',
+        confidence: 'medium',
+        riskTypes: [],
+        summary: 'Strong fit.',
+        strengths: [{
+          title: 'Led a data team',
+          whyItMatters: 'Matches the leadership requirement.',
+          evidence: [{ source: 'resume', snippet: 'Managed a team of 6 analysts' }],
+        }],
+        confirmedRisks: [],
+        unclearRisks: [],
+        limits: { cannotDetermine: [], assumptions: ['Assumed English fluency'] },
+      },
+    };
+
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={match}
+        isAnalyzing={false}
+        hasResume
+      />
+    );
+
+    // Strengths/assumptions alone keep the current full-analysis accordion available.
+    const detailsBtn = screen.getByRole('button', { name: /full analysis/i });
+    fireEvent.click(detailsBtn);
+
+    // Panel present; expand it and confirm the evidence snippet renders verbatim.
+    const panelToggle = screen.getByRole('button', { name: /sections\.explainability\.title/i });
+    fireEvent.click(panelToggle);
+    expect(screen.getByText('“Managed a team of 6 analysts”')).toBeInTheDocument();
+  });
+
   it('prefills saved job description text', () => {
     window.localStorage.setItem('airo:lastJobDescription', 'Saved JD');
 

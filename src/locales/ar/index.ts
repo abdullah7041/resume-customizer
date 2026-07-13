@@ -38,6 +38,7 @@ import sections_resume from './sections/resume.json';
 import sections_match from './sections/match.json';
 import sections_optimizationResults from './sections/optimizationResults.json';
 import sections_optimize from './sections/optimize.json';
+import sections_explainability from './sections/explainability.json';
 import sections_keywords from './sections/keywords.json';
 import sections_templates from './sections/templates.json';
 import sections_interview from './sections/interview.json';
@@ -97,6 +98,7 @@ const sources = [
     sections_match,
     sections_optimizationResults,
     sections_optimize,
+    sections_explainability,
     sections_keywords,
     sections_templates,
     sections_interview,
