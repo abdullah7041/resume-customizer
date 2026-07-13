@@ -35,6 +35,7 @@ import { ScoreHeader } from './optimize/ScoreHeader';
 import { StrategyBlock } from './optimize/StrategyBlock';
 import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
 import type { Work } from '../../types/resume';
+import { JobVariantsBar } from './JobVariantsBar';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -171,6 +172,7 @@ export function OptimizeSection({
     getCachedAnalysis,
     setCachedAnalysis,
     baselineMatchScore,
+    variantRestoreNonce,
   } = useResumeStore();
 
   // Use props or store
@@ -256,6 +258,16 @@ export function OptimizeSection({
       setSessionId(crypto.randomUUID());
     }
   }, [optimizations.length, sessionId]);
+
+  // When a saved job variant is REOPENED (store bumps variantRestoreNonce), drop
+  // per-run ephemeral UI state so the reopened variant shows its own snapshot —
+  // not the previous run's verified score / feedback session. Saving the current
+  // run as a new variant does NOT bump the nonce, so it never wipes a fresh score.
+  useEffect(() => {
+    setVerifiedScore(null);
+    setSessionId(null);
+    setError(null);
+  }, [variantRestoreNonce]);
 
   // Rerun Vision 2030 analysis on mount if optimizations exist but vision2030 data is missing
   // This happens when the user refreshes the page and optimizationMetrics is restored but vision2030 was calculated client-side
@@ -1291,6 +1303,9 @@ export function OptimizeSection({
           </p>
         )}
       </GlassCard >
+
+      {/* Save or reopen this optimization run for a specific job. */}
+      <JobVariantsBar />
 
       {optimizations.length > 0 && (
         <ScoreHeader

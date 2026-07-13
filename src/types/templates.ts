@@ -185,6 +185,36 @@ export interface OptimizationMetrics {
 }
 
 /**
+ * Snapshot of the working optimization set captured when a job variant is saved.
+ * A variant never copies the base resume (originalResume stays canonical) — it only
+ * holds the job-scoped, user-gated optimization cards + view state, replayed over the
+ * shared base on open. See docs/adr/ADR-job-specific-resume-builder.md.
+ */
+export interface JobVariantSnapshot {
+  optimizations: OptimizationResult[];
+  keywordSuggestions: KeywordSuggestion[];
+  optimizationMetrics: OptimizationMetrics;
+  baselineMatchScore: number | null;
+  selectedTemplate: TemplateId;
+}
+
+/**
+ * A resume variant tuned for one job description. Phase 1: local-only, one active at
+ * a time. The base resume is shared/immutable; the variant carries job context plus
+ * its own applied-cards snapshot.
+ */
+export interface JobVariant {
+  id: string;
+  label: string;
+  jobTitle?: string;
+  /** Stored truncated for retention hygiene (see ADR §5). */
+  jobDescription: string;
+  createdAt: string;
+  updatedAt: string;
+  snapshot: JobVariantSnapshot;
+}
+
+/**
  * Display options for template rendering (user-adjustable)
  */
 export interface DisplayOptions {
@@ -237,6 +267,14 @@ export interface ResumeState {
   // Onboarding: job-search intent (target role / comp / location). The one new
   // canonical-profile slice — everything else onboarding produces lives on the resume.
   searchIntent: SearchIntent | null;
+
+  // Job-specific resume variants (Phase 1: local-only, single active at a time).
+  jobVariants: JobVariant[];
+  activeVariantId: string | null;
+  // Ephemeral (not persisted) signal — bumped only by openVariant so views can
+  // reset per-run UI state (e.g. verified score) when a variant is REOPENED,
+  // without also firing when the current run is saved as a new variant.
+  variantRestoreNonce: number;
 
   // View state
   showOptimized: boolean;
@@ -297,6 +335,19 @@ export interface ResumeState {
   patchProfile: (patch: PartialResumeSchema) => void;
   /** 0-100 profile completeness across resume + searchIntent (item-2 foundation). */
   getProfileCompleteness: () => number;
+
+  // Job variant actions (Phase 1). Snapshot/restore over the shared base resume —
+  // saving/opening a variant never mutates originalResume.
+  /** Snapshot the current working set as a new variant; returns its id and makes it active. */
+  saveCurrentAsVariant: (label: string, jobDescription: string, jobTitle?: string) => string;
+  /** Re-snapshot the current working set into an existing variant (bumps updatedAt). */
+  updateVariant: (id: string, jobDescription: string) => void;
+  /** Restore a variant's snapshot into the working set; returns the variant (for JD restore) or null. */
+  openVariant: (id: string) => JobVariant | null;
+  /** Rename a variant (label only). */
+  renameVariant: (id: string, label: string) => void;
+  /** Delete a variant; clears activeVariantId if it was the active one. */
+  deleteVariant: (id: string) => void;
 }
 
 /**

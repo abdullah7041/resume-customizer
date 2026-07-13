@@ -75,6 +75,15 @@ let mockStoreState = {
     setCachedAnalysis: mockSetCachedAnalysis,
     getActiveResume: vi.fn(() => null),
     baselineMatchScore: null,
+    // Job variants slice (Phase 1) — JobVariantsBar reads these
+    jobVariants: [],
+    activeVariantId: null,
+    variantRestoreNonce: 0,
+    saveCurrentAsVariant: vi.fn(() => 'variant-test'),
+    updateVariant: vi.fn(),
+    openVariant: vi.fn(() => null),
+    renameVariant: vi.fn(),
+    deleteVariant: vi.fn(),
 };
 
 vi.mock('../lib/stores/resumeStore', () => {
@@ -222,6 +231,15 @@ beforeEach(() => {
         setCachedAnalysis: mockSetCachedAnalysis,
         getActiveResume: vi.fn(() => null),
         baselineMatchScore: null,
+        // Job variants slice (Phase 1) — JobVariantsBar reads these
+        jobVariants: [],
+        activeVariantId: null,
+    variantRestoreNonce: 0,
+        saveCurrentAsVariant: vi.fn(() => 'variant-test'),
+        updateVariant: vi.fn(),
+        openVariant: vi.fn(() => null),
+        renameVariant: vi.fn(),
+        deleteVariant: vi.fn(),
     };
 
     mockSetOptimizations.mockImplementation((optimizations) => {
@@ -984,6 +1002,14 @@ describe('Optimization Card Types', () => {
             setCachedAnalysis: mockSetCachedAnalysis,
             getActiveResume: vi.fn(() => null),
             baselineMatchScore: null,
+            jobVariants: [],
+            activeVariantId: null,
+    variantRestoreNonce: 0,
+            saveCurrentAsVariant: vi.fn(() => 'variant-test'),
+            updateVariant: vi.fn(),
+            openVariant: vi.fn(() => null),
+            renameVariant: vi.fn(),
+            deleteVariant: vi.fn(),
         };
     });
 
