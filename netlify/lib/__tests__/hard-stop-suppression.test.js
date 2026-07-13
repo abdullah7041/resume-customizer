@@ -96,4 +96,52 @@ describe('hard-stop suppression', () => {
     expect(result.missing_keywords).toEqual(['NoSQL', 'PostgreSQL']);
     expect(result.keywords_to_keep).toEqual(['NoSQL', 'PostgreSQL']);
   });
+
+  it('removes hard-stopped terms from gap analysis recommendations', () => {
+    const result = suppressHardStopClaims({
+      gap_analysis: [{
+        requirement: 'Excel',
+        current_state: 'No evidence of Excel.',
+        gap_severity: 'moderate',
+        recommendation: 'Add Excel only if you can verify it.',
+      }, {
+        requirement: 'SQL',
+        current_state: 'Evidence is present.',
+        gap_severity: 'minor',
+        recommendation: 'Keep SQL evidence visible.',
+      }],
+      missing_keywords: ['Excel', 'SQL'],
+      keywords_to_keep: ['SQL'],
+    }, ['Excel']);
+
+    expect(result.gap_analysis).toEqual([{
+      requirement: 'SQL',
+      current_state: 'Evidence is present.',
+      gap_severity: 'minor',
+      recommendation: 'Keep SQL evidence visible.',
+    }]);
+  });
+
+  it('does not suppress unrelated keywords that merely contain a hard-stop term', () => {
+    const result = suppressHardStopClaims({
+      missing_keywords: ['SQL', 'NoSQL', 'PostgreSQL'],
+      keywords_to_keep: ['NoSQL analytics'],
+      original_headline: 'Data Analyst',
+      suggested_headline: 'NoSQL Data Analyst',
+      original_summary: 'Analyzed data.',
+      summary_rewrite: 'Built NoSQL analytics dashboards.',
+      bullet_improvements: [{
+        original: 'Analyzed data.',
+        improved: 'Built NoSQL analytics dashboards.',
+        issue: 'Could mention storage tooling.',
+        rationale: 'NoSQL is relevant to the role.',
+      }],
+    }, ['SQL']);
+
+    expect(result.missing_keywords).toEqual(['NoSQL', 'PostgreSQL']);
+    expect(result.keywords_to_keep).toEqual(['NoSQL analytics']);
+    expect(result.suggested_headline).toBe('NoSQL Data Analyst');
+    expect(result.summary_rewrite).toBe('Built NoSQL analytics dashboards.');
+    expect(result.bullet_improvements).toHaveLength(1);
+  });
 });

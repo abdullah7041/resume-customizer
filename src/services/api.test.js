@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AUTH_REQUIRED, analyzeResume, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
+import { AUTH_REQUIRED, analyzeResume, analyzeResumeTruthCheck, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
 import { supabase } from './supabase';
 
 const mockResumeText = vi.hoisted(() => ({
@@ -437,6 +437,37 @@ describe('analyzeResume', () => {
       confirmedRisks: [],
       unclearRisks: [],
     }));
+  });
+});
+
+describe('analyzeResumeTruthCheck', () => {
+  it('passes persistent hard stops to the truth-check endpoint', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers(),
+      json: () => Promise.resolve({
+        overallRisk: 'low',
+        summary: '',
+        claims: [],
+        limits: { cannotVerify: [] },
+      }),
+    });
+
+    await analyzeResumeTruthCheck({
+      resumeText: 'resume',
+      userHardStops: ['Excel'],
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/.netlify/functions/resume-truth-check',
+      expect.objectContaining({
+        body: JSON.stringify({
+          resumeText: 'resume',
+          language: 'en',
+          userHardStops: ['Excel'],
+        }),
+      }),
+    );
   });
 });
 

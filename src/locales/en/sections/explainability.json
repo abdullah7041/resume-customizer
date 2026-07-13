@@ -1,0 +1,57 @@
+{
+  "sections": {
+    "explainability": {
+      "title": "Why this score",
+      "subtitle": "Every item below comes from your resume, the job description, or the analysis you already ran — no new AI call.",
+      "disclaimer": "Derived entirely from your existing analysis. Nothing here is newly generated.",
+      "expand": "Show details",
+      "collapse": "Hide details",
+      "sourceBadge": {
+        "resume": "From your resume",
+        "job_description": "From the job description",
+        "both": "Resume + job description"
+      },
+      "buckets": {
+        "matched": {
+          "title": "What matched",
+          "keywords": "Matched keywords",
+          "strengths": "Verified strengths",
+          "whyItMatters": "Why it matters",
+          "empty": "No confirmed matches identified in this analysis."
+        },
+        "missing": {
+          "title": "What's missing",
+          "keywords": "Missing keywords",
+          "gaps": "Requirement gaps",
+          "currentState": "Where you stand",
+          "recommendation": "Suggested next step",
+          "note": "These stay recommendations — Watheq never adds skills you don't have.",
+          "empty": "No missing requirements were identified."
+        },
+        "weak": {
+          "title": "Weak or unclear evidence",
+          "reason": "Why it's unclear",
+          "evidenceNeeded": "Evidence that would settle it",
+          "hiddenMatch": "Possible match under different wording",
+          "empty": "No unclear areas flagged."
+        },
+        "caution": {
+          "title": "Caution notes",
+          "mitigation": "How to address it",
+          "assumptions": "Assumptions made by the analysis",
+          "cannotDetermine": "Cannot be determined from documents",
+          "empty": "No cautions flagged."
+        }
+      },
+      "severity": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "moderate": "Moderate",
+        "minor": "Minor"
+      },
+      "itemCount_one": "{{count}} item",
+      "itemCount_other": "{{count}} items"
+    }
+  }
+}

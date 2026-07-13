@@ -46,7 +46,8 @@ const mockCreditManager = {
     consumeCredits: vi.fn().mockResolvedValue({
         success: true,
         creditsRemaining: 13
-    })
+    }),
+    isEmailVerified: vi.fn((user) => Boolean(user?.email_confirmed_at))
 };
 
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
@@ -279,6 +280,33 @@ describe('AI Integration Functions', () => {
             expect(body.similarity).toBe(0);
         });
 
+        it('still checks and consumes credits when a client sends verify mode directly', async () => {
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 84,
+                strongMatches: ['typescript'],
+                missingKeywords: [],
+                summary_bullets: ['Verified optimized resume evidence'],
+                reasoning: 'Verified score',
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'optimized resume', jobText: 'job', mode: 'verify' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+            expect(result.statusCode).toBe(200);
+            expect(JSON.parse(result.body).score).toBe(84);
+            expect(mockCreditManager.checkCredits).toHaveBeenCalledWith(
+                'user@example.com',
+                'ai_match',
+                expect.objectContaining({ emailVerified: true })
+            );
+            expect(mockCreditManager.consumeCredits).toHaveBeenCalledWith('user@example.com', 'ai_match');
+        });
+
         it('returns a retryable user-facing timeout response', async () => {
             const timeoutError = new Error('AI request timed out after 65000ms.');
             timeoutError.name = 'TimeoutError';
@@ -393,7 +421,11 @@ describe('AI Integration Functions', () => {
             const event = {
                 httpMethod: 'POST',
                 headers: { 'Authorization': 'Bearer test-token' },
-                body: JSON.stringify({ resumeText: 'Owned national transformation', language: 'en' })
+                body: JSON.stringify({
+                    resumeText: 'Owned national transformation',
+                    language: 'en',
+                    userHardStops: ['Excel'],
+                })
             } as Partial<HandlerEvent>;
 
             const result = await truthCheckHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
@@ -403,7 +435,11 @@ describe('AI Integration Functions', () => {
             expect(body.overallRisk).toBe('medium');
             expect(body.claims[0].claimText).toContain('Owned national transformation');
             expect(body.creditsRemaining).toBeUndefined();
-            expect(mockGeminiClient.analyzeResumeTruthCheck).toHaveBeenCalledWith('Owned national transformation', 'en');
+            expect(mockGeminiClient.analyzeResumeTruthCheck).toHaveBeenCalledWith(
+                'Owned national transformation',
+                'en',
+                { userHardStops: ['Excel'] },
+            );
             expect(mockCreditManager.checkCredits).not.toHaveBeenCalledWith('user@example.com', 'resume_truth_check', expect.anything());
             expect(mockCreditManager.consumeCredits).not.toHaveBeenCalledWith('user@example.com', 'resume_truth_check');
         });

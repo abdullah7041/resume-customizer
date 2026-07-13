@@ -14,7 +14,10 @@ import {
 } from "../../services/api.js";
 import { type ClarificationQuestion } from "../modals/ClarificationModal";
 import {
+  filterClarificationQuestionsByHardStops,
   formatClarificationAnswers,
+  loadPersistentHardStops,
+  persistHardStops,
   shouldRequestClarifications,
   type ClarificationAnswers,
   type WorkEntry,
@@ -56,6 +59,8 @@ import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
 import { emitHRSuperSaudEvent, useHRSuperSaud } from "../../features/hr-super-saud";
 import { useUserCredits } from "../../hooks/useUserCredits";
+import { useFeatureFlags } from "@/hooks/useFeatureFlag";
+import type { FeatureFlagName } from "@/types/featureFlags";
 
 /** Lightweight skeleton shown while lazy sections load */
 function SectionSkeleton() {
@@ -101,19 +106,19 @@ class LazyErrorBoundary extends Component<
 }
 
 
-const getTabsConfig = (t) => [
+const getTabsConfig = (t): (Tab & { icon: NonNullable<Tab["icon"]>; flag?: FeatureFlagName })[] => [
   { value: "resume", label: t("tabs.resume"), icon: FileText },
-  { value: "truth-check", label: t("tabs.truthCheck", "Truth Check"), icon: ShieldCheck },
-  { value: "match", label: t("tabs.match"), icon: Target },
-  { value: "optimize", label: t("tabs.optimize"), icon: Sparkles },
+  { value: "truth-check", label: t("tabs.truthCheck", "Truth Check"), icon: ShieldCheck, flag: "truthCheck" },
+  { value: "match", label: t("tabs.match"), icon: Target, flag: "aiMatch" },
+  { value: "optimize", label: t("tabs.optimize"), icon: Sparkles, flag: "optimize" },
 
-  { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate },
+  { value: "templates", label: t("tabs.templates"), icon: LayoutTemplate, flag: "templatesExport" },
   { value: "more-tools", label: t("tabs.moreTools", "More tools"), icon: MoreHorizontal },
-  { value: "interview", label: t("tabs.interview"), icon: MessageSquare },
-  { value: "bulk", label: t("tabs.bulk"), icon: FileText },
-  { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail },
-  { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true },
-  { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase },
+  { value: "interview", label: t("tabs.interview"), icon: MessageSquare, flag: "interview" },
+  { value: "bulk", label: t("tabs.bulk"), icon: FileText, flag: "bulkAnalysis" },
+  { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail, flag: "coverLetter" },
+  { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true, flag: "vision2030" },
+  { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase, flag: "pipeline" },
 ];
 const PRIMARY_TAB_VALUES = ["resume", "truth-check", "match", "optimize", "templates", "more-tools"];
 const PRE_UPLOAD_TAB_VALUES = new Set(PRIMARY_TAB_VALUES);
@@ -149,17 +154,25 @@ const scheduleTimeout = (callback, delay) => {
 };
 
 const getResumeFingerprint = (text: string) => `${text.length}:${text.slice(0, 120)}`;
+const getHardStopsFingerprint = (hardStops: string[]) => hardStops
+  .map(value => value.trim().toLocaleLowerCase())
+  .filter(Boolean)
+  .sort()
+  .join('|');
 
-const loadCachedTruthCheck = (resumeText: string): ResumeTruthCheckResult | null => {
+const loadCachedTruthCheck = (resumeText: string, hardStops: string[] = []): ResumeTruthCheckResult | null => {
   if (typeof window === "undefined" || !resumeText) return null;
   try {
     const stored = window.localStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as {
       resumeHash?: string;
+      hardStopsHash?: string;
       result?: ResumeTruthCheckResult;
     };
-    return parsed?.resumeHash === getResumeFingerprint(resumeText) && parsed.result
+    return parsed?.resumeHash === getResumeFingerprint(resumeText)
+      && (parsed.hardStopsHash ?? '') === getHardStopsFingerprint(hardStops)
+      && parsed.result
       ? parsed.result
       : null;
   } catch (error) {
@@ -238,6 +251,8 @@ type AiDebugSnapshot = {
   errorDetail?: string | null;
 };
 
+type ClarificationOutcome = 'answered' | 'skipped';
+
 const toRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? value as Record<string, unknown> : {};
 
@@ -246,6 +261,17 @@ const toNumber = (value: unknown): number | null =>
 
 const toStringValue = (value: unknown): string | null =>
   typeof value === "string" && value.trim().length > 0 ? value : null;
+
+const getOptimizationScorePair = (result: unknown): { beforeScore: number; afterScore: number } | null => {
+  const matchScoring = toRecord(toRecord(result).matchScoring);
+  const beforeScore = toNumber(matchScoring.beforeScore);
+  const explicitAfterScore = toNumber(matchScoring.afterScore);
+  const improvement = toNumber(matchScoring.estimatedImprovement) ?? toNumber(matchScoring.improvement);
+  const afterScore = explicitAfterScore ?? (beforeScore !== null && improvement !== null
+    ? beforeScore + improvement
+    : null);
+  return beforeScore !== null && afterScore !== null ? { beforeScore, afterScore } : null;
+};
 
 const buildAiDebugSnapshot = (
   source: unknown,
@@ -350,10 +376,19 @@ export default function MainContent() {
     "Upload a resume first to unlock the next steps."
   );
 
+  // Feature flags gate tab visibility BEFORE hasResume/isPremium/guest logic —
+  // flag check is always the outermost condition. Flag-less tabs (resume,
+  // more-tools) are core and always pass this filter.
+  const flags = useFeatureFlags();
+  const isFlagEnabled = useCallback(
+    (tab: { flag?: FeatureFlagName }) => !tab.flag || flags[tab.flag],
+    [flags]
+  );
+
   // Memoize tabs to avoid recreating on every render
   const tabs = useMemo<Tab[]>(
     () => {
-      const baseTabs = getTabsConfig(t);
+      const baseTabs = getTabsConfig(t).filter(isFlagEnabled);
       const visibleTabs = hasResume
         ? baseTabs.filter((tab) => PRIMARY_TAB_VALUES.includes(tab.value))
         : baseTabs.filter((tab) => PRE_UPLOAD_TAB_VALUES.has(tab.value));
@@ -364,7 +399,7 @@ export default function MainContent() {
           : tab
       );
     },
-    [hasResume, resumeGateReason, t]
+    [hasResume, isFlagEnabled, resumeGateReason, t]
   );
   const mobilePrimarySteps = useMemo<MobileWorkflowItem[]>(() => {
     const mobileLabels = {
@@ -377,21 +412,23 @@ export default function MainContent() {
     };
 
     return getTabsConfig(t)
+      .filter(isFlagEnabled)
       .filter((tab) => MOBILE_PRIMARY_TAB_VALUES.includes(tab.value))
       .map((tab) => ({
         ...tab,
         label: mobileLabels[tab.value] ?? tab.label,
         disabledReason: !hasResume && tab.value !== "resume" ? mobileWorkflowGateReason : undefined,
       }));
-  }, [hasResume, mobileWorkflowGateReason, t]);
+  }, [hasResume, isFlagEnabled, mobileWorkflowGateReason, t]);
   const mobileSecondarySteps = useMemo<MobileWorkflowItem[]>(
     () =>
       hasResume
         ? getTabsConfig(t)
+            .filter(isFlagEnabled)
             .filter((tab) => MOBILE_SECONDARY_TAB_VALUES.includes(tab.value))
             .map((tab) => ({ ...tab }))
         : [],
-    [hasResume, t]
+    [hasResume, isFlagEnabled, t]
   );
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState(() => {
@@ -400,7 +437,10 @@ export default function MainContent() {
   });
   const [matchAnalysis, setMatchAnalysis] = useState(null);
   const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
-    loadCachedTruthCheck(typeof resumeData?.plainText === "string" ? resumeData.plainText : "")
+    loadCachedTruthCheck(
+      typeof resumeData?.plainText === "string" ? resumeData.plainText : "",
+      loadPersistentHardStops(),
+    )
   );
   const [optimizations, setOptimizations] = useState([]);
   const [optimizationData, setOptimizationData] = useState(null);
@@ -419,7 +459,12 @@ export default function MainContent() {
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
-  const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{ mode: string; workHistory?: { name: string; position: string; startDate: string; endDate: string }[]; freePreview?: boolean } | null>(null);
+  const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{
+    mode: string;
+    workHistory?: WorkEntry[];
+    persistentHardStops?: string[];
+    freePreview?: boolean;
+  } | null>(null);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.DEV;
 
@@ -656,6 +701,19 @@ export default function MainContent() {
     }
   }, [activeTab, hasResume]);
 
+  // If the active tab's feature flag is off, fall back to "resume". Mandatory:
+  // a persisted `watheq:lastActiveTab` can point at a tab disabled via the dev
+  // flags dashboard, which would otherwise leave a blank workspace.
+  useEffect(() => {
+    const activeTabConfig = getTabsConfig(t).find((tab) => tab.value === activeTab);
+    if (activeTabConfig && !isFlagEnabled(activeTabConfig) && activeTab !== "resume") {
+      setActiveTab("resume");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
+      }
+    }
+  }, [activeTab, isFlagEnabled, t]);
+
   const activeNavValue = SECONDARY_TAB_VALUES.has(activeTab) ? "more-tools" : activeTab;
 
   const hasNextTab = useMemo(() => {
@@ -680,7 +738,16 @@ export default function MainContent() {
     const gatedStatus = (status: WorkflowStepStatus): WorkflowStepStatus =>
       hasResume ? status : "locked";
 
-    return [
+    // Desktop stepper is a 4th nav surface — it must honor feature flags like
+    // tabs/mobilePrimarySteps/mobileSecondarySteps do.
+    const stepFlags: Record<string, FeatureFlagName | undefined> = {
+      "truth-check": "truthCheck",
+      match: "aiMatch",
+      optimize: "optimize",
+      export: "templatesExport",
+    };
+
+    const steps: WorkflowStep[] = [
       {
         id: "resume",
         label: t("workspace.stepper.resume", "Resume"),
@@ -725,7 +792,12 @@ export default function MainContent() {
         lockedReason: resumeGateReason,
       },
     ];
-  }, [activeTab, hasResume, jobDescription, matchAnalysis, optimizationData, optimizations.length, resumeGateReason, t, truthCheckResult]);
+
+    return steps.filter((step) => {
+      const flag = stepFlags[step.id];
+      return !flag || flags[flag];
+    });
+  }, [activeTab, flags, hasResume, jobDescription, matchAnalysis, optimizationData, optimizations.length, resumeGateReason, t, truthCheckResult]);
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1028,6 +1100,10 @@ export default function MainContent() {
             missingKeywords: result.missingKeywords || [],
             suggestions: result.suggestions || [],
             reasoning: result.reasoning || '',
+            // Explainability payload — persisted so the Optimize tab can rebuild
+            // the "Why this score" panel from the original match after refresh.
+            categoryScores: result.categoryScores ?? null,
+            strategicRealityCheck: result.strategicRealityCheck ?? null,
           });
 
           // Always save match analysis score — line 500 already ensures we analyze
@@ -1100,7 +1176,9 @@ export default function MainContent() {
     }
 
     const resumeHash = getResumeFingerprint(resumeTextToAnalyze);
-    const cached = loadCachedTruthCheck(resumeTextToAnalyze);
+    const userHardStops = loadPersistentHardStops();
+    const hardStopsHash = getHardStopsFingerprint(userHardStops);
+    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops);
     if (cached) {
       setTruthCheckResult(cached);
       return cached;
@@ -1120,6 +1198,7 @@ export default function MainContent() {
       const result = await analyzeResumeTruthCheck({
         resumeText: resumeTextToAnalyze,
         language: i18n.language,
+        userHardStops,
       }) as ResumeTruthCheckResult;
 
       setAiDebug(buildAiDebugSnapshot(result, "success"));
@@ -1127,6 +1206,7 @@ export default function MainContent() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
           resumeHash,
+          hardStopsHash,
           result,
           timestamp: new Date().toISOString(),
         }));
@@ -1163,7 +1243,7 @@ export default function MainContent() {
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
-    async ({ mode, workHistory, userClarifications, userHardStops, freePreview }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean }) => {
+    async ({ mode, workHistory, userClarifications, userHardStops, freePreview, clarificationOutcome }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean; clarificationOutcome?: ClarificationOutcome }) => {
       if (!resumeData?.plainText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
@@ -1242,6 +1322,13 @@ export default function MainContent() {
           );
         }
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        const clarificationScores = getOptimizationScorePair(result);
+        if (clarificationOutcome && clarificationScores) {
+          analytics.trackClarificationScoreDelta({
+            outcome: clarificationOutcome,
+            ...clarificationScores,
+          });
+        }
 
         // Build full cards array including projects and certifications
         const allCards = [...(result.cards ?? [])];
@@ -1414,11 +1501,17 @@ export default function MainContent() {
 
       try {
         const workHistory = buildWorkHistory();
+        const persistentHardStops = loadPersistentHardStops();
 
         // E1: only skip the clarification endpoint when deterministic evidence
         // says this is a known strong match with no career vulnerabilities.
         if (!shouldRequestClarifications(matchAnalysis?.score, workHistory)) {
-          return await handleOptimizeActual({ mode, workHistory, freePreview: options?.freePreview });
+          return await handleOptimizeActual({
+            mode,
+            workHistory,
+            userHardStops: persistentHardStops,
+            freePreview: options?.freePreview,
+          });
         }
 
         // ---- Clarification Step (free, non-fatal) ----
@@ -1438,10 +1531,20 @@ export default function MainContent() {
           language: i18n.language,
         });
 
-        if (clarifyResult.clarifications?.length > 0) {
+        const unansweredQuestions = filterClarificationQuestionsByHardStops(
+          clarifyResult.clarifications ?? [],
+          persistentHardStops,
+        );
+
+        if (unansweredQuestions.length > 0) {
           // Pause the flow — show the modal and wait for user answers
-          setClarificationQuestions(clarifyResult.clarifications);
-          setPendingOptimizeArgs({ mode, workHistory, freePreview: options?.freePreview });
+          setClarificationQuestions(unansweredQuestions);
+          setPendingOptimizeArgs({
+            mode,
+            workHistory,
+            persistentHardStops,
+            freePreview: options?.freePreview,
+          });
           setIsInterrogating(true);
           setIsOptimizing(false);
           setFlowProgress(0);
@@ -1449,11 +1552,23 @@ export default function MainContent() {
         }
 
         // No questions → fall through to the actual optimize call
-        return await handleOptimizeActual({ mode, workHistory, userClarifications: undefined, freePreview: options?.freePreview });
+        return await handleOptimizeActual({
+          mode,
+          workHistory,
+          userClarifications: undefined,
+          userHardStops: persistentHardStops,
+          freePreview: options?.freePreview,
+        });
       } catch (outerError) {
         // If clarification itself throws (shouldn't — it's non-fatal), proceed anyway
         console.warn('[handleOptimize] Clarification error, proceeding without:', outerError);
-        return await handleOptimizeActual({ mode, workHistory: buildWorkHistory(), userClarifications: undefined, freePreview: options?.freePreview });
+        return await handleOptimizeActual({
+          mode,
+          workHistory: buildWorkHistory(),
+          userClarifications: undefined,
+          userHardStops: loadPersistentHardStops(),
+          freePreview: options?.freePreview,
+        });
       }
     },
     [handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
@@ -1463,24 +1578,56 @@ export default function MainContent() {
 
   const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers) => {
     setIsInterrogating(false);
-    const { userClarifications, userHardStops } = formatClarificationAnswers(
+    const { userClarifications, userHardStops, persistentHardStops: newPersistentHardStops } = formatClarificationAnswers(
       clarificationQuestions,
       answers,
       t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
     );
-    const { mode, workHistory, freePreview } = pendingOptimizeArgs || {};
+    const {
+      mode,
+      workHistory,
+      persistentHardStops = [],
+      freePreview,
+    } = pendingOptimizeArgs || {};
+    const allHardStops = persistHardStops([...persistentHardStops, ...(newPersistentHardStops ?? [])]);
+    analytics.trackClarificationOutcome({
+      outcome: 'answered',
+      questionCount: clarificationQuestions.length,
+      answeredCount: Object.keys(answers).length,
+      hardStopCount: userHardStops?.length ?? 0,
+    });
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications, userHardStops, freePreview });
+    await handleOptimizeActual({
+      mode,
+      workHistory,
+      userClarifications,
+      userHardStops: allHardStops,
+      freePreview,
+      clarificationOutcome: 'answered',
+    });
   }, [clarificationQuestions, handleOptimizeActual, pendingOptimizeArgs, t]);
 
   const handleClarificationSkip = useCallback(async () => {
     setIsInterrogating(false);
-    const { mode, workHistory, freePreview } = pendingOptimizeArgs || {};
+    const { mode, workHistory, persistentHardStops, freePreview } = pendingOptimizeArgs || {};
+    analytics.trackClarificationOutcome({
+      outcome: 'skipped',
+      questionCount: clarificationQuestions.length,
+      answeredCount: 0,
+      hardStopCount: 0,
+    });
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({ mode, workHistory, userClarifications: undefined, freePreview });
-  }, [handleOptimizeActual, pendingOptimizeArgs]);
+    await handleOptimizeActual({
+      mode,
+      workHistory,
+      userClarifications: undefined,
+      userHardStops: persistentHardStops,
+      freePreview,
+      clarificationOutcome: 'skipped',
+    });
+  }, [clarificationQuestions.length, handleOptimizeActual, pendingOptimizeArgs]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {
@@ -1722,8 +1869,8 @@ export default function MainContent() {
   );
 
   const secondaryToolTabs = useMemo(
-    () => getTabsConfig(t).filter((tab) => SECONDARY_TAB_VALUES.has(tab.value)),
-    [t]
+    () => getTabsConfig(t).filter(isFlagEnabled).filter((tab) => SECONDARY_TAB_VALUES.has(tab.value)),
+    [isFlagEnabled, t]
   );
 
   const renderClearAllAction = (showText: boolean) =>
@@ -1892,7 +2039,7 @@ export default function MainContent() {
               )}
             </>
           )}
-          {activeTab === "match" && (
+          {activeTab === "match" && flags.aiMatch && (
             <LazyErrorBoundary label="Match section">
               <Suspense fallback={<SectionSkeleton />}>
                 <MatchSection
@@ -1913,7 +2060,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "truth-check" && (
+          {activeTab === "truth-check" && flags.truthCheck && (
             <LazyErrorBoundary label="Truth Check section">
               <Suspense fallback={<SectionSkeleton />}>
                 <TruthCheckSection
@@ -1930,7 +2077,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "vision2030" && (
+          {activeTab === "vision2030" && flags.vision2030 && (
             <LazyErrorBoundary label="Vision 2030 section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -1944,7 +2091,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "optimize" && (
+          {activeTab === "optimize" && flags.optimize && (
             <LazyErrorBoundary label="Optimize section">
               <Suspense fallback={<SectionSkeleton />}>
                 <OptimizeSection
@@ -1957,6 +2104,7 @@ export default function MainContent() {
                   previewUsed={previewUsed}
                   onUpgrade={handleUpgrade}
                   onExport={handleExportPdf}
+                  onContinueToExport={() => setActiveTab("templates")}
                   canExport={Boolean(resumeData?.plainText)}
                   hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
                   onClear={handleClearOptimizations}
@@ -1973,7 +2121,7 @@ export default function MainContent() {
             </LazyErrorBoundary>
           )}
 
-          {activeTab === "templates" && (
+          {activeTab === "templates" && flags.templatesExport && (
             <LazyErrorBoundary label="Templates section">
               <Suspense fallback={<SectionSkeleton />}>
                 <TemplateGallery
@@ -1984,7 +2132,7 @@ export default function MainContent() {
             </LazyErrorBoundary>
           )}
           {activeTab === "more-tools" && renderMoreToolsPanel()}
-          {activeTab === "interview" && (
+          {activeTab === "interview" && flags.interview && (
             <LazyErrorBoundary label="Interview section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -2001,7 +2149,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "bulk" && (
+          {activeTab === "bulk" && flags.bulkAnalysis && (
             <LazyErrorBoundary label="Bulk Analysis section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -2014,7 +2162,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "cover-letter" && (
+          {activeTab === "cover-letter" && flags.coverLetter && (
             <LazyErrorBoundary label="Cover Letter section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
@@ -2029,7 +2177,7 @@ export default function MainContent() {
               </Suspense>
             </LazyErrorBoundary>
           )}
-          {activeTab === "pipeline" && (
+          {activeTab === "pipeline" && flags.pipeline && (
             <LazyErrorBoundary label="Pipeline section">
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode

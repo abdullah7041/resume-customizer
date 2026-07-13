@@ -63,6 +63,14 @@ export function suppressHardStopClaims(optimization, userHardStops) {
     keywords_to_keep: filterStrings(optimization.keywords_to_keep, terms),
   };
 
+  if (Array.isArray(result.gap_analysis)) {
+    result.gap_analysis = result.gap_analysis.filter(item => !(
+      containsHardStop(item?.requirement, terms)
+      || containsHardStop(item?.current_state, terms)
+      || containsHardStop(item?.recommendation, terms)
+    ));
+  }
+
   if (containsHardStop(result.suggested_headline, terms)) {
     result.suggested_headline = result.original_headline;
   }

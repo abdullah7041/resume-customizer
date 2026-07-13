@@ -159,6 +159,7 @@ describe('App compliance navigation', () => {
     window.localStorage.clear();
     // Returning user: skip the first-run onboarding gate so the workspace renders.
     window.localStorage.setItem('watheq:onboarded', 'true');
+    window.localStorage.setItem('watheq:guestMode', 'true');
   });
 
   it('renders workspace for the default app path', () => {

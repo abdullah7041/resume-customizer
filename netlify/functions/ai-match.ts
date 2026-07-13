@@ -109,7 +109,10 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
-    const { resumeText, jobText, language } = parseResult.data;
+    const { resumeText, jobText, language, mode } = parseResult.data;
+    if (mode === 'verify') {
+      console.log('[ai-match] verify mode requested; normal credit billing enforced');
+    }
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
     const aiStartTime = Date.now();

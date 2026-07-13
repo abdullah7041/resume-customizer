@@ -31,6 +31,9 @@ import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleSto
 import { FEATURE_COSTS } from '../../types/credits';
 import { analytics } from '../../services/analytics';
 import type { ExtractedJobMetadata } from '../../types/pipeline';
+import type { StrategicRealityCheck } from '../../types/analysis';
+import type { AtsExplainabilitySource } from '../../types/explainability';
+import { AtsExplainabilityPanel } from '../AtsExplainabilityPanel';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -60,37 +63,6 @@ const resolveVariant = (score: number) => {
     text: 'text-rose-700 dark:text-rose-300',
   };
 };
-
-interface StrategicRealityCheck {
-  riskTier: 'low' | 'medium' | 'high' | 'critical';
-  recommendation: 'optimize_now' | 'answer_clarifications_first' | 'add_evidence_first' | 'review_role_fit';
-  confidence: 'low' | 'medium' | 'high';
-  riskTypes: string[];
-  summary: string;
-  strengths: Array<{
-    title: string;
-    whyItMatters?: string;
-    evidence?: Array<{ source: 'resume' | 'job_description' | 'both'; snippet: string }>;
-  }>;
-  confirmedRisks: Array<{
-    type: string;
-    severity: 'medium' | 'high' | 'critical';
-    title: string;
-    explanation: string;
-    mitigation: string;
-    evidence?: Array<{ source: 'resume' | 'job_description' | 'both'; snippet: string }>;
-  }>;
-  unclearRisks: Array<{
-    type: string;
-    topic: string;
-    reason: string;
-    evidenceNeeded: string;
-  }>;
-  limits: {
-    cannotDetermine: string[];
-    assumptions: string[];
-  };
-}
 
 const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => {
   if (riskTier === 'low') {
@@ -413,6 +385,8 @@ export function MatchSection({
     matchAnalysis?.keywordStrategy?.structuralChanges?.length ||
     realityCheck?.confirmedRisks.length ||
     realityCheck?.unclearRisks.length ||
+    realityCheck?.strengths.length ||
+    realityCheck?.limits.assumptions.length ||
     missing.length ||
     found.length ||
     matchAnalysis?.reasoning
@@ -436,6 +410,15 @@ export function MatchSection({
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'optimize' } }));
     }
+  };
+
+  // Source for the explainability panel — assembled entirely from the live
+  // match analysis. No new fetch, no scoring.
+  const explainabilitySource: AtsExplainabilitySource = {
+    matchedKeywords: matchAnalysis?.matchedKeywords ?? matchAnalysis?.topHits ?? [],
+    missingKeywords: matchAnalysis?.missingKeywords ?? [],
+    categoryScores: (matchAnalysis?.categoryScores ?? null) as AtsExplainabilitySource['categoryScores'],
+    realityCheck,
   };
 
   return (
@@ -812,6 +795,7 @@ export function MatchSection({
                   <p className="text-sm leading-relaxed text-gray-700 dark:text-white/75">
                     {matchAnalysis?.reasoning || t('sections.match.details.noFullAnalysis', 'No narrative analysis was returned for this saved result.')}
                   </p>
+                  <AtsExplainabilityPanel source={explainabilitySource} context="match" className="mt-4" />
                 </DetailAccordion>
               </div>
             )}

@@ -224,6 +224,7 @@ export const MatchRequestSchema = z.object({
     jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
     freePreview: z.boolean().optional(),
+    mode: z.enum(["match", "verify"]).optional().default("match"),
 });
 
 export const WorkHistoryEntrySchema = z.object({
@@ -289,6 +290,7 @@ export const Vision2030RequestSchema = z.object({
 export const TruthCheckRequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
+    userHardStops: z.array(z.string().trim().min(1).max(300)).max(20).optional(),
 });
 
 // ============================================

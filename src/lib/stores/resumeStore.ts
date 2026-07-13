@@ -10,6 +10,8 @@ import type {
   TemplateId,
   CachedAnalysis,
   MergeDiagnostics,
+  JobVariant,
+  JobVariantSnapshot,
 } from '../../types/templates';
 import {
   validateResume,
@@ -124,6 +126,33 @@ const generateCacheKey = (resumeText: string, jobDescription: string, isOptimize
   return result;
 };
 
+// --- Job variant helpers (module-level, pure) -----------------------------
+// JD stored truncated for retention hygiene (ADR §5); variants are local-only.
+const JOB_DESCRIPTION_MAX_CHARS = 8000;
+
+const truncateJobDescription = (jd: string): string => {
+  if (typeof jd !== 'string') return '';
+  return jd.length > JOB_DESCRIPTION_MAX_CHARS ? jd.slice(0, JOB_DESCRIPTION_MAX_CHARS) : jd;
+};
+
+const generateVariantId = (): string =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `variant-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+/**
+ * Deep-copy the current working optimization set. structuredClone decouples the
+ * snapshot from later apply/revert on the live cards — the base resume is never
+ * touched (variants only carry cards + view state).
+ */
+const snapshotWorkingSet = (state: ResumeState): JobVariantSnapshot => ({
+  optimizations: structuredClone(state.optimizations),
+  keywordSuggestions: structuredClone(state.keywordSuggestions),
+  optimizationMetrics: structuredClone(state.optimizationMetrics),
+  baselineMatchScore: state.baselineMatchScore,
+  selectedTemplate: state.selectedTemplate,
+});
+
 /**
  * Resume store with optimization merge logic
  * Handles original/optimized toggle and template selection
@@ -157,6 +186,9 @@ export const useResumeStore = create<ResumeState>()(
       baselineMatchScore: null, // Original resume's match score (before any optimizations)
       isSaudiNational: false, // Saudi nationality flag for Saudization ATS
       searchIntent: null, // Onboarding job-search intent (target role / comp / location)
+      jobVariants: [], // Job-specific resume variants (Phase 1, local-only)
+      activeVariantId: null,
+      variantRestoreNonce: 0, // Ephemeral open-variant signal (not persisted)
       showOptimized: false, // Start with original
       selectedTemplate: 'modern-professional',
       displayOptions: {
@@ -839,6 +871,75 @@ export const useResumeStore = create<ResumeState>()(
         return computeCompleteness(state.originalResume, state.searchIntent);
       },
 
+      // --- Job variants (Phase 1) -------------------------------------------
+      // Snapshot/restore over the shared, immutable base resume. structuredClone
+      // decouples the snapshot from later working-set edits so a saved variant is
+      // never mutated by subsequent apply/revert on the live cards.
+      saveCurrentAsVariant: (label, jobDescription, jobTitle) => {
+        const state = get();
+        const id = generateVariantId();
+        const now = new Date().toISOString();
+        const variant: JobVariant = {
+          id,
+          label: label.trim() || 'Untitled',
+          jobTitle: jobTitle?.trim() || undefined,
+          jobDescription: truncateJobDescription(jobDescription),
+          createdAt: now,
+          updatedAt: now,
+          snapshot: snapshotWorkingSet(state),
+        };
+        set((s) => ({
+          jobVariants: [...s.jobVariants, variant],
+          activeVariantId: id,
+        }));
+        return id;
+      },
+
+      updateVariant: (id, jobDescription) => {
+        const state = get();
+        const snapshot = snapshotWorkingSet(state);
+        const now = new Date().toISOString();
+        set((s) => ({
+          jobVariants: s.jobVariants.map((v) =>
+            v.id === id
+              ? { ...v, snapshot, jobDescription: truncateJobDescription(jobDescription), updatedAt: now }
+              : v
+          ),
+        }));
+      },
+
+      openVariant: (id) => {
+        const variant = get().jobVariants.find((v) => v.id === id);
+        if (!variant) return null;
+        const snap = variant.snapshot;
+        set({
+          optimizations: structuredClone(snap.optimizations),
+          keywordSuggestions: structuredClone(snap.keywordSuggestions),
+          optimizationMetrics: structuredClone(snap.optimizationMetrics),
+          baselineMatchScore: snap.baselineMatchScore,
+          selectedTemplate: snap.selectedTemplate,
+          activeVariantId: id,
+          variantRestoreNonce: get().variantRestoreNonce + 1,
+          hasDownloaded: false,
+        });
+        return variant;
+      },
+
+      renameVariant: (id, label) => {
+        set((s) => ({
+          jobVariants: s.jobVariants.map((v) =>
+            v.id === id ? { ...v, label: label.trim() || v.label, updatedAt: new Date().toISOString() } : v
+          ),
+        }));
+      },
+
+      deleteVariant: (id) => {
+        set((s) => ({
+          jobVariants: s.jobVariants.filter((v) => v.id !== id),
+          activeVariantId: s.activeVariantId === id ? null : s.activeVariantId,
+        }));
+      },
+
       clearAll: () => {
         cacheKeyMemo.clear();
         set({
@@ -869,6 +970,8 @@ export const useResumeStore = create<ResumeState>()(
           baselineMatchScore: null,
           showOptimized: false,
           searchIntent: null, // Full reset clears job-search intent too
+          jobVariants: [], // Variants are job-specific to a resume — clear them
+          activeVariantId: null,
         });
       },
 
@@ -903,12 +1006,25 @@ export const useResumeStore = create<ResumeState>()(
           },
           baselineMatchScore: null,
           showOptimized: false,
+          jobVariants: [], // Variants belong to the previous resume — clear on new upload
+          activeVariantId: null,
         });
       },
     }),
     {
       name: 'resume-storage',
       storage: createJSONStorage(() => localStorage),
+      // v1: added jobVariants/activeVariantId slice (job-specific resume builder).
+      version: 1,
+      migrate: (persistedState, fromVersion) => {
+        const state = (persistedState ?? {}) as Partial<ResumeState>;
+        if (fromVersion < 1) {
+          // Older persisted state predates variants — seed empty defaults so
+          // hydration never reads undefined.
+          return { ...state, jobVariants: [], activeVariantId: null };
+        }
+        return state;
+      },
       partialize: (state) => ({
         originalResume: state.originalResume,
         parsedResumeText: state.parsedResumeText,
@@ -927,6 +1043,9 @@ export const useResumeStore = create<ResumeState>()(
         isSaudiNational: state.isSaudiNational,
         // Persist onboarding job-search intent (survives refresh; flushed to Supabase on sign-in)
         searchIntent: state.searchIntent,
+        // Persist job variants (Phase 1, local-only)
+        jobVariants: state.jobVariants,
+        activeVariantId: state.activeVariantId,
       }),
       // Custom merge to properly handle nested optimizationMetrics
       merge: (persistedState, currentState) => {

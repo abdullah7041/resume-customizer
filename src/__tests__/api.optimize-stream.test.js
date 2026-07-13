@@ -65,7 +65,7 @@ describe('optimizeResumeStream billing-state errors', () => {
     });
   });
 
-  it('preserves known-safe billing state from server SSE errors', async () => {
+  it('preserves known-safe billing state when server SSE errors omit the billing flag', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -82,6 +82,26 @@ describe('optimizeResumeStream billing-state errors', () => {
       message: 'Failed to optimize resume',
       retryable: true,
       isBillingStateUnknown: false,
+    });
+  });
+
+  it('marks server SSE errors as billing-state unknown when the server says credits may be consumed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        sseResponse('event: error\ndata: {"error":"Failed to optimize resume","retryable":true,"billingStateUnknown":true}\n\n')
+      )
+    );
+
+    await expect(
+      optimizeResumeStream({
+        resumeText: 'Resume text with enough detail',
+        jobDesc: 'Job description with enough detail',
+      })
+    ).rejects.toMatchObject({
+      message: 'Failed to optimize resume',
+      retryable: true,
+      isBillingStateUnknown: true,
     });
   });
 

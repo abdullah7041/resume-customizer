@@ -191,24 +191,44 @@ export async function completeReferral(refereeEmail) {
   try {
     const supabase = getSupabaseClient();
 
-    // Check if referral exists and is incomplete
-    const { data: refereeData, error: fetchError } = await supabase
+    const reopenClaimForRetry = async () => {
+      const { error: reopenError } = await supabase
+        .from('user_credits')
+        .update({
+          referral_completed: false,
+          referral_completed_at: null
+        })
+        .eq('email', refereeEmail);
+
+      if (reopenError) {
+        console.error('[ReferralManager] Failed to reopen referral completion after reward failure:', summarizeErrorForLog(reopenError));
+      }
+    };
+
+    // Atomically claim completion. Rewards are only paid when this conditional
+    // write returns the row, preventing concurrent double-award races.
+    const { data: claimed, error: claimError } = await supabase
       .from('user_credits')
-      .select('referred_by_user_id, referral_completed')
+      .update({
+        referral_completed: true,
+        referral_completed_at: new Date().toISOString()
+      })
       .eq('email', refereeEmail)
-      .single();
+      .eq('referral_completed', false)
+      .not('referred_by_user_id', 'is', null)
+      .select('referred_by_user_id')
+      .maybeSingle();
 
-    if (fetchError || !refereeData) {
-      // No referral relationship - this is normal
+    if (claimError) {
+      console.error('[ReferralManager] Failed to claim referral completion:', summarizeErrorForLog(claimError));
+      return { completed: false, error: 'Failed to claim completion' };
+    }
+
+    if (!claimed) {
       return { completed: false };
     }
 
-    const { referred_by_user_id: referrerUserId, referral_completed: alreadyCompleted } = refereeData;
-
-    // Skip if no referrer or already completed
-    if (!referrerUserId || alreadyCompleted) {
-      return { completed: false };
-    }
+    const referrerUserId = claimed.referred_by_user_id;
 
     const { data: referrerData, error: referrerFetchError } = await supabase
       .from('user_credits')
@@ -235,7 +255,8 @@ export async function completeReferral(refereeEmail) {
 
     if (referrerError) {
       console.error('[ReferralManager] Failed to reward referrer:', summarizeErrorForLog(referrerError));
-      return { completed: false, error: 'Failed to reward referrer' };
+      await reopenClaimForRetry();
+      return { completed: false, error: 'Reward payment failed; referral can be retried' };
     }
 
     // Award credits to referee
@@ -248,21 +269,7 @@ export async function completeReferral(refereeEmail) {
 
     if (refereeError) {
       console.error('[ReferralManager] Failed to reward referee:', summarizeErrorForLog(refereeError));
-      return { completed: false, error: 'Failed to reward referee' };
-    }
-
-    // Mark referral as completed
-    const { error: completeError } = await supabase
-      .from('user_credits')
-      .update({
-        referral_completed: true,
-        referral_completed_at: new Date().toISOString()
-      })
-      .eq('email', refereeEmail);
-
-    if (completeError) {
-      console.error('[ReferralManager] Failed to mark referral complete:', summarizeErrorForLog(completeError));
-      return { completed: false, error: 'Failed to mark complete' };
+      return { completed: false, error: 'Reward payment failed after claim' };
     }
 
     console.log(`[ReferralManager] Referral completed: ${redactForLog(referrerEmail)} (+${REFERRER_REWARD}) and ${redactForLog(refereeEmail)} (+${REFEREE_REWARD})`);

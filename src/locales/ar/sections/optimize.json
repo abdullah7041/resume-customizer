@@ -1,6 +1,21 @@
 {
   "sections": {
     "optimize": {
+      "scoreDiff": {
+        "title": "توقع النتيجة",
+        "estimateBadge": "تقدير",
+        "estimateNote": "المكاسب المتوقعة هي تقديرات بناءً على الاقتراحات التي طبّقتها — وليست ضمانًا.",
+        "verifiedBadge": "مُتحقق منه",
+        "verifiedNote": "تم التحقق منه عبر إعادة تحليل بالذكاء الاصطناعي مع تطبيق جميع الاقتراحات.",
+        "appliedOf": "تم تطبيق {{applied}} من {{total}} اقتراحًا",
+        "perCardShare": "كل اقتراح مُطبَّق يضيف نحو +{{points}} نقطة إلى التقدير",
+        "counted": "محتسب في التوقع",
+        "notCounted": "غير مُطبَّق — غير محتسب",
+        "noneApplied": "طبّق الاقتراحات لرؤية تأثيرها على التوقع.",
+        "potentialNote": "حتى {{score}}٪ إذا طُبّقت جميع الاقتراحات (تقدير)",
+        "showCards": "اطّلع على التغييرات المحتسبة",
+        "hideCards": "إخفاء التفصيل"
+      },
       "title": "صقل كل قسم",
       "subtitle": "اقتراحات مدعومة بالذكاء الاصطناعي لتحسين سيرتك الذاتية",
       "optimizeBtn": "حسّن السيرة",
@@ -67,6 +82,37 @@
       "optimizingResume": "جاري التحسين...",
       "currentScore": "الحالي",
       "optimizedScore": "المُحسَّن",
+      "noScoreChange": "لا تغيير",
+      "verifyAnomalyTitle": "تعذّر التحقق من الدرجة الجديدة",
+      "retryVerify": "إعادة المحاولة",
+      "verifying": "جارٍ التحقق...",
+      "verifiedTooltip": "أعدنا تقييم سيرتك الذاتية المحسّنة مقابل هذا الوصف الوظيفي",
+      "verifiedByReanalysis": "تم التحقق بإعادة التحليل",
+      "scoreHeader": {
+        "projectedScore": "متوقعة ~{{score}}%",
+        "verified": "تم التحقق",
+        "progress": "{{applied}}/{{total}} مطبّق",
+        "rerun": "إعادة التشغيل",
+        "continue": "متابعة",
+        "breakdown": "تفصيل الدرجة"
+      },
+      "strategy": {
+        "title": "الاستراتيجية",
+        "subtitle": "الكلمات والفجوات ومواءمة العنوان",
+        "gapsTitle": "فجوات المتطلبات"
+      },
+      "queue": {
+        "experienceFallback": "خبرة {{number}}",
+        "workSubtitle": "الخبرة العملية",
+        "suggestionsCount": "{{count}} اقتراحات",
+        "applyGroup": "تطبيق كل اقتراحات هذه الوظيفة",
+        "filters": {
+          "all": "الكل",
+          "pending": "معلّق",
+          "applied": "مطبّق"
+        },
+        "emptyFiltered": "لا توجد اقتراحات تطابق هذا الفلتر."
+      },
       "shareResult": "شارك نتيجتك",
       "revert": "تراجع",
       "applyAll": "تطبيق الكل",

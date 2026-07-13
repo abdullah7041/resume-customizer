@@ -32,6 +32,7 @@ import {
   getUserCredits,
   checkCredits,
   consumeCredits,
+  isEmailVerified,
   addCredits,
 } from '../credit-manager.js';
 
@@ -217,6 +218,13 @@ describe('CreditManager', () => {
   });
 
   describe('consumeCredits', () => {
+    it('detects confirmed Supabase auth users', () => {
+      expect(isEmailVerified({ email_confirmed_at: '2026-01-01T00:00:00Z' })).toBe(true);
+      expect(isEmailVerified({})).toBe(false);
+      expect(isEmailVerified({ email_confirmed_at: null })).toBe(false);
+      expect(isEmailVerified(undefined)).toBe(false);
+    });
+
     it('successfully consumes credits using RPC', async () => {
       // Mock checkCredits (via getUserCredits)
       supabaseMock.from.mockReturnValueOnce({
@@ -274,10 +282,16 @@ describe('CreditManager', () => {
       });
 
       // Mock direct update
+      const selectMock = vi.fn().mockResolvedValue({
+        data: [{ credits_remaining: 5 }],
+        error: null,
+      });
       supabaseMock.from.mockReturnValueOnce({
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ error: null }),
+            eq: vi.fn().mockReturnValue({
+              select: selectMock,
+            }),
           }),
         }),
       });
@@ -294,6 +308,43 @@ describe('CreditManager', () => {
         creditsRemaining: 5,
       });
     });
+
+    it('does not report success when the RPC fallback loses the optimistic lock', async () => {
+      supabaseMock.from.mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { credits_remaining: 10, credits_total: 20 },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      supabaseMock.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { code: '42883', message: 'Function not found' },
+      });
+
+      supabaseMock.from.mockReturnValueOnce({
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              select: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await consumeCredits('user-123', 'optimize');
+
+      expect(result).toEqual({
+        success: false,
+        creditsRemaining: 10,
+      });
+      expect(supabaseMock.from).not.toHaveBeenCalledWith('credit_transactions');
+    });
+
 
     it('returns failure when insufficient credits', async () => {
       supabaseMock.from.mockReturnValueOnce({

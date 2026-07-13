@@ -8,6 +8,15 @@
  * Brand Colors: Saudi Green (#006C35), Warm Gold (#DAA520)
  */
 
+export function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export const emailTemplates = {
   creditsRefreshed: {
     en: {
@@ -47,7 +56,7 @@ export const emailTemplates = {
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">Hi <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">Hi <strong>${escapeHtml(userName)}</strong>,</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
         Great news! Your monthly Watheq credits have been refreshed. You now have a fresh set of credits to optimize your resume and land your dream job.
@@ -99,7 +108,7 @@ export const emailTemplates = {
 </html>
       `,
       text: (userName, credits) => `
-Hi ${userName},
+Hi ${escapeHtml(userName)},
 
 Great news! Your monthly Watheq credits have been refreshed.
 
@@ -158,7 +167,7 @@ https://watheqai.app
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">حيّاك الله <strong>${userName}</strong>،</p>
+      <p style="color: #333; font-size: 16px;">حيّاك الله <strong>${escapeHtml(userName)}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
         جايبين لك علوم زينة! رصيدك الشهري في واثق تجدّد. الحين يمديك ترجع تضبط سيرتك الذاتية وتزيد فرصك الوظيفية.
@@ -210,7 +219,7 @@ https://watheqai.app
 </html>
       `,
       text: (userName, credits) => `
-حيّاك الله ${userName},
+حيّاك الله ${escapeHtml(userName)},
 
 أبشرك! رصيدك الشهري في واثق تجدّد.
 
@@ -271,7 +280,7 @@ https://watheqai.app
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">Hi <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">Hi <strong>${escapeHtml(userName)}</strong>,</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
         Here's a summary of how you've used your Watheq credits this month. Keep optimizing!
@@ -308,7 +317,7 @@ https://watheqai.app
         <tbody>
           ${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `
           <tr>
-            <td>${feature}</td>
+            <td>${escapeHtml(feature)}</td>
             <td>${data.count || 0}</td>
             <td>${data.credits || 0}</td>
           </tr>
@@ -333,7 +342,7 @@ https://watheqai.app
 </html>
       `,
       text: (userName, stats) => `
-Hi ${userName},
+Hi ${escapeHtml(userName)},
 
 Here's your Watheq monthly usage summary:
 
@@ -343,7 +352,7 @@ Total Actions: ${stats.totalActions || 0}
 Monthly Usage: ${Math.round((stats.usagePercentage || 0) * 100) / 100}%
 
 Breakdown by Feature:
-${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${feature}: ${data.count || 0} times (${data.credits || 0} credits)`).join('\n') : 'No usage data available'}
+${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${escapeHtml(feature)}: ${data.count || 0} times (${data.credits || 0} credits)`).join('\n') : 'No usage data available'}
 
 Tip: Next month's credits will be available on ${stats.nextResetDate || 'your signup anniversary'}.
 Want more credits? Invite friends and earn 5 bonus credits per referral!
@@ -391,7 +400,7 @@ https://watheqai.app
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">حيّاك الله <strong>${userName}</strong>،</p>
+      <p style="color: #333; font-size: 16px;">حيّاك الله <strong>${escapeHtml(userName)}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
         جبنا لك علوم استخدامك لرصيد واثق هالشهر. فالك التوفيق!
@@ -428,7 +437,7 @@ https://watheqai.app
         <tbody>
           ${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `
           <tr>
-            <td>${feature}</td>
+            <td>${escapeHtml(feature)}</td>
             <td>${data.count || 0}</td>
             <td>${data.credits || 0}</td>
           </tr>
@@ -453,7 +462,7 @@ https://watheqai.app
 </html>
       `,
       text: (userName, stats) => `
-حيّاك الله ${userName},
+حيّاك الله ${escapeHtml(userName)},
 
 إليك ملخص استخدامك هالشهر في واثق:
 
@@ -463,7 +472,7 @@ https://watheqai.app
 نسبة استخدامك: ${Math.round((stats.usagePercentage || 0) * 100) / 100}%
 
 التفاصيل:
-${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${feature}: ${data.count || 0} مرة (${data.credits || 0} نقطة)`).join('\n') : 'ما فيه بيانات'}
+${stats.breakdown ? Object.entries(stats.breakdown).map(([feature, data]) => `${escapeHtml(feature)}: ${data.count || 0} مرة (${data.credits || 0} نقطة)`).join('\n') : 'ما فيه بيانات'}
 
 تلميحة: رصيدك الجاي بينزل في ${stats.nextResetDate || 'تاريخ تسجيلك'}.
 تبي نقاط زيادة؟ اعزِم ربعك واكسب 5 نقاط لكل واحد يسجل!
@@ -921,10 +930,10 @@ https://watheqai.app
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">Hi <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">Hi <strong>${escapeHtml(userName)}</strong>,</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        Great news! ${refereeName ? `<strong>${refereeName}</strong>` : 'Your friend'} just used Watheq and completed their first action. As a thank you for the referral, we've added <strong>5 bonus credits</strong> to your account!
+        Great news! ${refereeName ? `<strong>${escapeHtml(refereeName)}</strong>` : 'Your friend'} just used Watheq and completed their first action. As a thank you for the referral, we've added <strong>5 bonus credits</strong> to your account!
       </p>
 
       <div class="credits-badge">+5</div>
@@ -954,9 +963,9 @@ https://watheqai.app
 </html>
       `,
       text: (userName, refereeName) => `
-Hi ${userName},
+Hi ${escapeHtml(userName)},
 
-Great news! ${refereeName || 'Your friend'} just used Watheq and completed their first action. As a thank you for the referral, we've added 5 bonus credits to your account!
+Great news! ${escapeHtml(refereeName || 'Your friend')} just used Watheq and completed their first action. As a thank you for the referral, we've added 5 bonus credits to your account!
 
 +5 Credits Added
 
@@ -999,10 +1008,10 @@ https://watheqai.app
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">يا هلا <strong>${userName}</strong>،</p>
+      <p style="color: #333; font-size: 16px;">يا هلا <strong>${escapeHtml(userName)}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        علوم طيبة! ${refereeName ? `<strong>${refereeName}</strong>` : 'خويك'} استخدم واثق عن طريقك وضبّط وضعه. وعشان كذا، لك منا <strong>5 نقاط إضافية</strong> في حسابك تستاهلها!
+        علوم طيبة! ${refereeName ? `<strong>${escapeHtml(refereeName)}</strong>` : 'خويك'} استخدم واثق عن طريقك وضبّط وضعه. وعشان كذا، لك منا <strong>5 نقاط إضافية</strong> في حسابك تستاهلها!
       </p>
 
       <div class="credits-badge">+5</div>
@@ -1032,9 +1041,9 @@ https://watheqai.app
 </html>
       `,
       text: (userName, refereeName) => `
-حيّاك الله ${userName},
+حيّاك الله ${escapeHtml(userName)},
 
-علوم طيبة! ${refereeName || 'خويك'} استخدم واثق عن طريقك. وعشان كذا، لك منا 5 نقاط إضافية في حسابك تستاهلها!
+علوم طيبة! ${escapeHtml(refereeName || 'خويك')} استخدم واثق عن طريقك. وعشان كذا، لك منا 5 نقاط إضافية في حسابك تستاهلها!
 
 +5 رصيد وصلك
 
@@ -1080,10 +1089,10 @@ https://watheqai.app
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">Hi <strong>${userName}</strong>,</p>
+      <p style="color: #333; font-size: 16px;">Hi <strong>${escapeHtml(userName)}</strong>,</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        Thanks for joining Watheq! ${referrerName ? `Since you were referred by <strong>${referrerName}</strong>, ` : ''}We've added <strong>5 bonus credits</strong> to your account to help you get started!
+        Thanks for joining Watheq! ${referrerName ? `Since you were referred by <strong>${escapeHtml(referrerName)}</strong>, ` : ''}We've added <strong>5 bonus credits</strong> to your account to help you get started!
       </p>
 
       <div class="credits-badge">+5</div>
@@ -1113,9 +1122,9 @@ https://watheqai.app
 </html>
       `,
       text: (userName, referrerName) => `
-Hi ${userName},
+Hi ${escapeHtml(userName)},
 
-Thanks for joining Watheq! ${referrerName ? `Since you were referred by ${referrerName}, ` : ''}We've added 5 bonus credits to your account to help you get started!
+Thanks for joining Watheq! ${referrerName ? `Since you were referred by ${escapeHtml(referrerName)}, ` : ''}We've added 5 bonus credits to your account to help you get started!
 
 +5 Credits Added
 
@@ -1158,10 +1167,10 @@ https://watheqai.app
     </div>
 
     <div class="content">
-      <p style="color: #333; font-size: 16px;">يا هلا وسهلا <strong>${userName}</strong>،</p>
+      <p style="color: #333; font-size: 16px;">يا هلا وسهلا <strong>${escapeHtml(userName)}</strong>،</p>
 
       <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        نوّرت واثق! ${referrerName ? `وبما أنك جاي من طرف <strong>${referrerName}</strong>، ` : ''}حطينا لك <strong>5 نقاط إضافية</strong> في حسابك كبداية قوية لك!
+        نوّرت واثق! ${referrerName ? `وبما أنك جاي من طرف <strong>${escapeHtml(referrerName)}</strong>، ` : ''}حطينا لك <strong>5 نقاط إضافية</strong> في حسابك كبداية قوية لك!
       </p>
 
       <div class="credits-badge">+5</div>
@@ -1191,9 +1200,9 @@ https://watheqai.app
 </html>
       `,
       text: (userName, referrerName) => `
-يا هلا وسهلا ${userName},
+يا هلا وسهلا ${escapeHtml(userName)},
 
-نوّرت واثق! ${referrerName ? `وبما أنك جاي من طرف ${referrerName}، ` : ''}حطينا لك 5 نقاط إضافية في حسابك كبداية قوية لك!
+نوّرت واثق! ${referrerName ? `وبما أنك جاي من طرف ${escapeHtml(referrerName)}، ` : ''}حطينا لك 5 نقاط إضافية في حسابك كبداية قوية لك!
 
 +5 نقاط وصلتك
 

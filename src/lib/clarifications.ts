@@ -8,6 +8,9 @@ export type { WorkEntry } from '../../netlify/lib/vulnerability-detector';
 export const OTHER_OPTION_VALUE = '__other__';
 export const FALLBACK_HARD_STOP_VALUE = '__hard_stop__';
 export const STRONG_MATCH_THRESHOLD = 80;
+export const HARD_STOPS_STORAGE_KEY = 'watheq:hardStops';
+
+type HardStopStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 export interface ClarificationOption {
   value: string;
@@ -36,6 +39,7 @@ export type ClarificationAnswers = Record<string, ClarificationAnswer>;
 export interface FormattedClarifications {
   userClarifications?: string;
   userHardStops?: string[];
+  persistentHardStops?: string[];
 }
 
 function keywordFromHardStopOption(question: ClarificationQuestion, option: ClarificationOption): string {
@@ -62,6 +66,62 @@ function formatHardStopTerm(question: ClarificationQuestion, option: Clarificati
   const labelLower = label.toLocaleLowerCase();
   const keywordLower = keyword.toLocaleLowerCase();
   return labelLower.includes(keywordLower) ? label : `${keyword}: ${label}`;
+}
+
+function getBrowserStorage(): HardStopStorage | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return window.localStorage;
+}
+
+function normalizeHardStops(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    const key = trimmed.toLocaleLowerCase();
+    if (!trimmed || seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(trimmed);
+    if (normalized.length === 20) break;
+  }
+  return normalized;
+}
+
+export function loadPersistentHardStops(storage = getBrowserStorage()): string[] {
+  if (!storage) return [];
+  try {
+    return normalizeHardStops(JSON.parse(storage.getItem(HARD_STOPS_STORAGE_KEY) ?? '[]'));
+  } catch {
+    return [];
+  }
+}
+
+export function persistHardStops(
+  hardStops: string[],
+  storage = getBrowserStorage(),
+): string[] {
+  const merged = normalizeHardStops([
+    ...loadPersistentHardStops(storage),
+    ...hardStops,
+  ]);
+  if (!storage) return merged;
+  try {
+    storage.setItem(HARD_STOPS_STORAGE_KEY, JSON.stringify(merged));
+  } catch {
+    // Storage can be unavailable in privacy mode; optimization still proceeds.
+  }
+  return merged;
+}
+
+export function filterClarificationQuestionsByHardStops(
+  questions: ClarificationQuestion[],
+  hardStops: string[],
+): ClarificationQuestion[] {
+  const suppressedThemes = new Set(normalizeHardStops(hardStops).map(value => value.toLocaleLowerCase()));
+  return questions.filter(question => !suppressedThemes.has(question.theme.trim().toLocaleLowerCase()));
 }
 
 export function isValidOtherAnswer(text: string): boolean {
@@ -98,6 +158,7 @@ export function formatClarificationAnswers(
 ): FormattedClarifications {
   const positiveBlocks: string[] = [];
   const hardStops: string[] = [];
+  const persistentHardStops: string[] = [];
 
   for (const sourceQuestion of questions) {
     const question = normalizeClarificationQuestion(sourceQuestion, fallbackHardStopLabel);
@@ -114,6 +175,9 @@ export function formatClarificationAnswers(
     for (const term of hardStopOptions.map(option => formatHardStopTerm(question, option))) {
       if (!hardStops.includes(term)) hardStops.push(term);
     }
+    for (const term of hardStopOptions.map(option => keywordFromHardStopOption(question, option))) {
+      if (term && !persistentHardStops.includes(term)) persistentHardStops.push(term);
+    }
 
     const positiveEvidence = [...positiveLabels, ...(otherText ? [otherText] : [])];
     if (positiveEvidence.length > 0) {
@@ -124,6 +188,7 @@ export function formatClarificationAnswers(
   return {
     userClarifications: positiveBlocks.length > 0 ? positiveBlocks.join('\n\n') : undefined,
     userHardStops: hardStops.length > 0 ? hardStops : undefined,
+    ...(persistentHardStops.length > 0 ? { persistentHardStops } : {}),
   };
 }
 

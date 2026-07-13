@@ -175,7 +175,78 @@ export const KeywordSuggestionSchema = z.object({
 });
 
 /**
- * Cached analysis schema
+ * Reality-check evidence snippet (already server-verified before it reaches
+ * the client). Kept lenient here — this is a persisted-cache round-trip guard,
+ * not a trust boundary.
+ */
+const RealityCheckEvidenceSchema = z.object({
+    source: z.enum(['resume', 'job_description', 'both']),
+    snippet: z.string(),
+});
+
+/**
+ * Strategic reality check schema (optional in cache). Mirrors
+ * src/types/analysis.ts StrategicRealityCheck.
+ */
+export const StrategicRealityCheckSchema = z.object({
+    riskTier: z.enum(['low', 'medium', 'high', 'critical']),
+    recommendation: z.enum([
+        'optimize_now',
+        'answer_clarifications_first',
+        'add_evidence_first',
+        'review_role_fit',
+    ]),
+    confidence: z.enum(['low', 'medium', 'high']),
+    riskTypes: z.array(z.string()),
+    summary: z.string(),
+    strengths: z.array(z.object({
+        title: z.string(),
+        whyItMatters: z.string().optional(),
+        evidence: z.array(RealityCheckEvidenceSchema).optional(),
+    })),
+    confirmedRisks: z.array(z.object({
+        type: z.string(),
+        severity: z.enum(['medium', 'high', 'critical']),
+        title: z.string(),
+        explanation: z.string(),
+        mitigation: z.string(),
+        evidence: z.array(RealityCheckEvidenceSchema).optional(),
+    })),
+    unclearRisks: z.array(z.object({
+        type: z.string(),
+        topic: z.string(),
+        reason: z.string(),
+        evidenceNeeded: z.string(),
+    })),
+    limits: z.object({
+        cannotDetermine: z.array(z.string()),
+        assumptions: z.array(z.string()),
+    }),
+});
+
+/** Per-category score with optional evidence arrays. */
+const CategoryScoreSchema = z.object({
+    score: z.number(),
+    max: z.number(),
+    reasoning: z.string().optional(),
+    matched: z.array(z.string()).optional(),
+    missing: z.array(z.string()).optional(),
+    gaps: z.array(z.string()).optional(),
+});
+
+const CategoryScoresSchema = z.object({
+    hard_skills: CategoryScoreSchema,
+    experience: CategoryScoreSchema,
+    education: CategoryScoreSchema,
+    soft_skills: CategoryScoreSchema,
+});
+
+/**
+ * Cached analysis schema.
+ * matchedKeywords/suggestions/reasoning were already written by MainContent but
+ * missing from this schema — added here (optional) so the schema is truthful.
+ * categoryScores/strategicRealityCheck are the new explainability payload
+ * (optional → legacy localStorage entries validate unchanged).
  */
 export const CachedAnalysisSchema = z.object({
     score: z.number().min(0).max(100),
@@ -183,8 +254,13 @@ export const CachedAnalysisSchema = z.object({
     similarity: z.number().min(0).max(1),
     missingKeywords: z.array(z.string()),
     strongMatches: z.array(z.string()),
+    matchedKeywords: z.array(z.string()).optional(),
     recommendations: z.array(z.string()),
+    suggestions: z.array(z.string()).optional(),
+    reasoning: z.string().optional(),
     overallAssessment: z.string(),
+    categoryScores: CategoryScoresSchema.nullish(),
+    strategicRealityCheck: StrategicRealityCheckSchema.nullish(),
     timestamp: z.number(),
 });
 

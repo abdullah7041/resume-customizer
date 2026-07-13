@@ -1,6 +1,21 @@
 {
   "sections": {
     "optimize": {
+      "scoreDiff": {
+        "title": "Score projection",
+        "estimateBadge": "Estimate",
+        "estimateNote": "Projected gains are estimates based on the suggestions you applied — not a guarantee.",
+        "verifiedBadge": "Verified",
+        "verifiedNote": "Verified by AI re-analysis with all suggestions applied.",
+        "appliedOf": "{{applied}} of {{total}} suggestions applied",
+        "perCardShare": "Each applied suggestion adds about +{{points}} pts to the estimate",
+        "counted": "Counted in projection",
+        "notCounted": "Not applied — not counted",
+        "noneApplied": "Apply suggestions to see their effect on the projection.",
+        "potentialNote": "Up to {{score}}% if all suggestions are applied (estimate)",
+        "showCards": "See which changes count",
+        "hideCards": "Hide breakdown"
+      },
       "title": "Optimize",
       "subtitle": "AI-powered suggestions to improve your resume",
       "optimizeBtn": "Optimize resume with AI",
@@ -67,6 +82,37 @@
       "optimizingResume": "Optimizing Resume...",
       "currentScore": "Current Score",
       "optimizedScore": "Optimized Score",
+      "noScoreChange": "no change",
+      "verifyAnomalyTitle": "Couldn't verify the new score",
+      "retryVerify": "Retry",
+      "verifying": "Verifying...",
+      "verifiedTooltip": "We re-scored your optimized resume against this job description",
+      "verifiedByReanalysis": "Verified by re-analysis",
+      "scoreHeader": {
+        "projectedScore": "Projected ~{{score}}%",
+        "verified": "verified",
+        "progress": "{{applied}}/{{total}} applied",
+        "rerun": "Re-run",
+        "continue": "Continue",
+        "breakdown": "Breakdown"
+      },
+      "strategy": {
+        "title": "Strategy",
+        "subtitle": "Keywords, gaps, and title alignment",
+        "gapsTitle": "Requirement gaps"
+      },
+      "queue": {
+        "experienceFallback": "Experience {{number}}",
+        "workSubtitle": "Work experience",
+        "suggestionsCount": "{{count}} suggestions",
+        "applyGroup": "Apply all in this job",
+        "filters": {
+          "all": "All",
+          "pending": "Pending",
+          "applied": "Applied"
+        },
+        "emptyFiltered": "No suggestions match this filter."
+      },
       "shareResult": "Share Your Result",
       "revert": "Revert",
       "applyAll": "Apply All",

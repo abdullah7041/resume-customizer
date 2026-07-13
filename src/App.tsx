@@ -26,12 +26,18 @@ const AdminFeedbackPage = lazy(() => import("./pages/AdminFeedbackPage").then((m
 const PricingWaitlistModal = lazy(() => import("./components/Credits/PricingWaitlistModal").then((m) => ({ default: m.PricingWaitlistModal })));
 import { useAuth } from "./hooks/useAuth";
 import { FeedbackPromptController } from "./components/Feedback/FeedbackPromptController";
+import { useFeatureFlag } from "./hooks/useFeatureFlag";
 
 // Launch flag: mascot hidden for launch (decision 2026-07-06). Flip to true to re-enable.
 const ENABLE_HR_MASCOT = false;
 
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
+
+// Feature-flags dashboard. Reachable in dev always, and in prod for signed-in
+// admins (the page self-gates via app_metadata.role, mirroring AdminFeedbackPage).
+// Lazy so it stays out of the initial chunk.
+const DevFlagsPage = lazy(() => import("./pages/DevFlagsPage"));
 
 const getCurrentPath = () => {
   if (typeof window === "undefined") return "/";
@@ -60,7 +66,9 @@ export default function App() {
       );
     }
   );
-  const needsOnboarding = onboardingGateActive && !onboardedFlag;
+  const onboardingChatEnabled = useFeatureFlag("onboardingChat");
+  const hrOverlayEnabled = useFeatureFlag("hrSuperSaudOverlay");
+  const needsOnboarding = onboardingChatEnabled && onboardingGateActive && !onboardedFlag;
 
   // Run storage migration once on app initialization
   useEffect(() => {
@@ -90,7 +98,7 @@ export default function App() {
 
   // Onboarding tour (Joyride removed — run is permanently false)
   const { run } = useOnboardingTour();
-  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/refund" || currentPath === "/admin/feedback";
+  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/refund" || currentPath === "/admin/feedback" || currentPath === "/dev/flags";
   const isSignedOutLanding = !user && !needsOnboarding && !guestModeActive && currentPath === "/";
 
   return (
@@ -111,6 +119,8 @@ export default function App() {
                 <RefundPolicy />
               ) : currentPath === "/admin/feedback" ? (
                 <AdminFeedbackPage />
+              ) : currentPath === "/dev/flags" ? (
+                <DevFlagsPage />
               ) : needsOnboarding ? (
                 <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
                   <OnboardingChat
@@ -147,7 +157,7 @@ export default function App() {
               </Suspense>
             )}
 
-            {ENABLE_HR_MASCOT && !isStaticPage && (
+            {ENABLE_HR_MASCOT && !isStaticPage && hrOverlayEnabled && (
               <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
             )}
           </div>

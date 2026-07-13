@@ -15,6 +15,7 @@ const mockCreditManager = {
   checkCredits: vi.fn(),
   consumeCredits: vi.fn(),
   addCredits: vi.fn(),
+  isEmailVerified: vi.fn((user: { email_confirmed_at?: string | null } | null) => Boolean(user?.email_confirmed_at)),
 };
 
 const mockVulnerabilityDetector = {
@@ -23,6 +24,7 @@ const mockVulnerabilityDetector = {
 
 const mockRedisCache = {
   buildCacheKey: vi.fn(() => 'mock-cache-key'),
+  buildOptimizeCacheKey: vi.fn(() => 'mock-cache-key'),
   getCached: vi.fn(),
   setCached: vi.fn(),
 };
@@ -135,8 +137,9 @@ describe('optimize-stream function', () => {
       'optimize-stream'
     );
     expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('test-token');
-    // Cache hit returns before credit check — correct behaviour: no double-charge on retries.
-    expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+    // Cache hit returns before pre-charge enforcement but still attaches live balance.
+    expect(mockCreditManager.checkCredits).toHaveBeenCalledWith('user@example.com', 'optimize');
+    expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
   });
 
   it('does not return a cached empty card payload as a successful optimization', async () => {
@@ -188,10 +191,9 @@ describe('optimize-stream function', () => {
   it('scopes no-charge cache hits to the authenticated user', async () => {
     await handler(buildRequest({ Authorization: 'Bearer test-token' }));
 
-    expect(mockRedisCache.buildCacheKey).toHaveBeenCalledWith(
-      'optimize',
+    expect(mockRedisCache.buildOptimizeCacheKey).toHaveBeenCalledWith(
       expect.objectContaining({
-        userId: 'user-123',
+        userScope: 'user-123',
       })
     );
   });
@@ -222,6 +224,7 @@ describe('optimize-stream function', () => {
       }),
       600
     );
+    expect(mockRedisCache.setCached.mock.calls[0][1]).not.toHaveProperty('creditsRemaining');
   });
 
   it('restores consumed credits when result delivery fails', async () => {
@@ -265,6 +268,7 @@ describe('optimize-stream function', () => {
         reason: 'result_delivery_failed',
       }),
     );
+    expect(streamText).toContain('"billingStateUnknown":false');
   });
 
   it('labels AI usage events for the streaming endpoint without passing content in options', async () => {
@@ -314,8 +318,7 @@ describe('optimize-stream function', () => {
     ));
     await response.text();
 
-    expect(mockRedisCache.buildCacheKey).toHaveBeenCalledWith(
-      'optimize',
+    expect(mockRedisCache.buildOptimizeCacheKey).toHaveBeenCalledWith(
       expect.objectContaining({ userHardStops: ['Excel'] }),
     );
     expect(mockGeminiClient.optimizeResume).toHaveBeenCalledWith(
@@ -348,5 +351,64 @@ describe('optimize-stream function', () => {
     expect(streamText).toContain('event: error');
     expect(streamText).toContain('Failed to optimize resume');
     expect(mockRedisCache.setCached).not.toHaveBeenCalled();
+  });
+
+  it('emits an error and no result when credit consumption loses the race', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: false,
+      creditsRemaining: 0,
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(streamText).toContain('event: error');
+    expect(streamText).toContain('Insufficient credits');
+    expect(streamText).not.toContain('event: result');
+    expect(mockRedisCache.setCached).not.toHaveBeenCalled();
+  });
+
+  it('marks post-charge cache failures as billing-state unknown when the refund is unconfirmed', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 5,
+    });
+    mockCreditManager.addCredits.mockResolvedValue({
+      success: false,
+      creditsRemaining: 5,
+    });
+    mockRedisCache.setCached.mockRejectedValue(new Error('Redis unavailable'));
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(streamText).toContain('event: error');
+    expect(streamText).toContain('"billingStateUnknown":true');
+  });
+
+  it('marks pre-charge AI failures as billing-state known safe', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockRejectedValue(new Error('AI unavailable'));
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(streamText).toContain('event: error');
+    expect(streamText).toContain('"billingStateUnknown":false');
+    expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
   });
 });

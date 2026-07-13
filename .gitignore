@@ -48,7 +48,10 @@ coverage
 
 # Test artifacts
 *.pdf
+eslint.json
+deno.lock
 scripts/benchmark-reports/
+src/lib/featureFlags/report/
 i18n-missing-ar.json
 i18n-translation-prompt-ar.md
 

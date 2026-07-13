@@ -3,7 +3,7 @@ import { generateCoverLetter } from "../lib/gemini-client.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { CoverLetterRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
-import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
+import { checkCredits, consumeCredits, isEmailVerified } from "../lib/credit-manager.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 
@@ -53,7 +53,7 @@ const baseHandler: Handler = async (event) => {
 
   // Extract IP and email verification for anti-abuse checks
   const ipAddress = getClientIP(event);
-  const emailVerified = user.email_confirmed_at !== null || (user as any).email_verified !== false;
+  const emailVerified = isEmailVerified(user);
 
   // Check credits BEFORE processing (4 credits for cover_letter)
   const creditCheck = await checkCredits(userEmail, 'cover_letter', { ipAddress, emailVerified });

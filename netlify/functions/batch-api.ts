@@ -11,7 +11,7 @@ const HEADERS = {
   "Content-Type": "application/json",
 } as const;
 
-type TaskType = "parse" | "optimize" | "predict-questions" | "generate-cover-letter";
+type TaskType = "optimize" | "predict-questions" | "generate-cover-letter";
 
 type BatchTask = {
   id: string; // Client-provided ID to match responses
@@ -37,7 +37,6 @@ type BatchRequest = {
 
 const NETLIFY_BASE = process.env.URL || "http://localhost:8888";
 const INTERNAL_ENDPOINTS: Record<TaskType, string> = {
-  parse: "/.netlify/functions/parse-resume",
   optimize: "/.netlify/functions/optimize",
   "predict-questions": "/.netlify/functions/predict-questions",
   "generate-cover-letter": "/.netlify/functions/generate-cover-letter",
@@ -52,7 +51,7 @@ const rateLimiter = new RateLimiter({
 /**
  * Execute a single task by calling the appropriate internal endpoint
  */
-async function executeTask(task: BatchTask, betaCode: string, authHeader?: string): Promise<BatchResponse> {
+async function executeTask(task: BatchTask, authHeader?: string): Promise<BatchResponse> {
   const endpoint = INTERNAL_ENDPOINTS[task.type];
 
   if (!endpoint) {
@@ -69,7 +68,6 @@ async function executeTask(task: BatchTask, betaCode: string, authHeader?: strin
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "X-Beta-Code": betaCode,
     };
 
     // Forward Authorization header if provided
@@ -174,17 +172,8 @@ const handler: Handler = async (event) => {
     };
   }
 
-  // Extract beta code and auth header from headers
-  const betaCode = event.headers["x-beta-code"] || event.headers["X-Beta-Code"];
+  // Extract auth header from headers
   const authHeader = event.headers["authorization"] || event.headers["Authorization"];
-
-  if (!betaCode) {
-    return {
-      statusCode: 401,
-      headers: HEADERS,
-      body: JSON.stringify({ error: "Beta code required. Please sign in with a valid beta code." })
-    };
-  }
 
   // Note: No separate batch quota check needed here.
   // Child tasks (extract, match, etc.) consume their own quotas when called.
@@ -211,7 +200,7 @@ const handler: Handler = async (event) => {
     const results = await batchWithConcurrency(
       tasks,
       async (task) => {
-        const result = await executeTask(task, betaCode, authHeader);
+        const result = await executeTask(task, authHeader);
 
         // If continueOnError is false and we hit an error, throw to stop batch
         if (!continueOnError && result.status === "error") {

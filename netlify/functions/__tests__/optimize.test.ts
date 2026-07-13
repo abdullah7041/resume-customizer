@@ -18,6 +18,7 @@ vi.mock('../../lib/sentry', () => ({
 
 const mockRedisCache = vi.hoisted(() => ({
     buildCacheKey: vi.fn(() => 'mock-cache-key'),
+    buildOptimizeCacheKey: vi.fn(() => 'mock-cache-key'),
     getCached: vi.fn().mockResolvedValue(null),
     setCached: vi.fn().mockResolvedValue(undefined)
 }));
@@ -28,7 +29,7 @@ vi.mock('../../lib/supabase-client', () => ({
     getSupabaseClient: vi.fn(() => ({
         auth: {
             getUser: vi.fn().mockResolvedValue({
-                data: { user: { id: 'test-user-123' } },
+                data: { user: { id: 'test-user-123', email: 'user@example.com', email_confirmed_at: '2026-01-01T00:00:00.000Z' } },
                 error: null
             })
         }
@@ -39,7 +40,7 @@ vi.mock('@supabase/supabase-js', () => ({
     createClient: vi.fn(() => ({
         auth: {
             getUser: vi.fn().mockResolvedValue({
-                data: { user: { id: 'test-user-123' } },
+                data: { user: { id: 'test-user-123', email: 'user@example.com', email_confirmed_at: '2026-01-01T00:00:00.000Z' } },
                 error: null
             })
         }
@@ -55,11 +56,13 @@ vi.mock('../../lib/credit-manager', () => ({
     consumeCredits: vi.fn().mockResolvedValue({
         success: true,
         creditsRemaining: 10
-    })
+    }),
+    isEmailVerified: vi.fn((user: { email_confirmed_at?: string | null } | null) => Boolean(user?.email_confirmed_at))
 }));
 
 import { optimizeResume } from '../../lib/gemini-client.js';
-import { buildCacheKey } from '../../lib/redis-cache.js';
+import { buildOptimizeCacheKey, getCached, setCached } from '../../lib/redis-cache.js';
+import { checkCredits, consumeCredits } from '../../lib/credit-manager.js';
 
 // Import handler after mocks
 const { handler } = await import('../optimize.js');
@@ -89,6 +92,15 @@ describe('optimize function', () => {
         vi.clearAllMocks();
         mockRedisCache.getCached.mockResolvedValue(null);
         mockRedisCache.setCached.mockResolvedValue(undefined);
+        vi.mocked(checkCredits).mockResolvedValue({
+            hasCredits: true,
+            required: 5,
+            available: 15,
+        });
+        vi.mocked(consumeCredits).mockResolvedValue({
+            success: true,
+            creditsRemaining: 10,
+        });
     });
 
     describe('HTTP method validation', () => {
@@ -171,7 +183,7 @@ describe('optimize function', () => {
         const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
 
         expect(result.statusCode).toBe(200);
-        expect(buildCacheKey).toHaveBeenCalledWith('optimize', expect.objectContaining({
+        expect(buildOptimizeCacheKey).toHaveBeenCalledWith(expect.objectContaining({
             userHardStops: ['Excel'],
         }));
         expect(optimizeResume).toHaveBeenCalledWith(
@@ -209,6 +221,66 @@ describe('optimize function', () => {
         expect(body.cards.length).toBeGreaterThan(0);
         expect(JSON.stringify(body)).toContain('React');
         expect(optimizeResume).toHaveBeenCalled();
+    });
+
+    it('returns cached optimize results before enforcing the live credit check', async () => {
+        vi.mocked(getCached).mockResolvedValue({
+            cards: [{
+                section: 'General',
+                issue: 'Cached issue',
+                suggestion: 'Cached suggestion',
+                exampleBefore: 'Before',
+                exampleAfter: 'After',
+            }],
+            creditsRemaining: 99,
+            source: 'gemini',
+        });
+        vi.mocked(checkCredits).mockResolvedValue({
+            hasCredits: false,
+            required: 5,
+            available: 0,
+        });
+
+        const event = {
+            httpMethod: 'POST',
+            headers: TEST_HEADERS,
+            body: JSON.stringify({ resumeText: 'test resume', jobText: 'React job' }),
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+        const body = JSON.parse(result.body);
+
+        expect(result.statusCode).toBe(200);
+        expect(result.headers?.['X-Cache']).toBe('HIT');
+        expect(body.cards).toHaveLength(1);
+        expect(body.creditsRemaining).toBe(0);
+        expect(optimizeResume).not.toHaveBeenCalled();
+        expect(consumeCredits).not.toHaveBeenCalled();
+    });
+
+    it('does not cache or return paid output when credit consumption loses the race', async () => {
+        vi.mocked(optimizeResume).mockResolvedValue({
+            match_score: 60,
+            missing_keywords: ['React'],
+            keywords_to_keep: [],
+            keywords_to_avoid: [],
+        });
+        vi.mocked(consumeCredits).mockResolvedValue({
+            success: false,
+            creditsRemaining: 0,
+        });
+
+        const event = {
+            httpMethod: 'POST',
+            headers: TEST_HEADERS,
+            body: JSON.stringify({ resumeText: 'test resume', jobText: 'React job' }),
+        } as Partial<HandlerEvent>;
+
+        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+        expect(result.statusCode).toBe(403);
+        expect(JSON.parse(result.body).error).toBe('Insufficient credits');
+        expect(setCached).not.toHaveBeenCalled();
     });
 
     describe('card generation', () => {
@@ -315,6 +387,11 @@ describe('optimize function', () => {
             expect(result.statusCode).toBe(200);
             expect(body.matchScoring.beforeScore).toBe(95);
             expect(body.matchScoring.estimatedImprovement).toBe(5);
+            expect(setCached).toHaveBeenCalledWith(
+                'mock-cache-key',
+                expect.not.objectContaining({ creditsRemaining: expect.anything() }),
+                600,
+            );
         });
 
         it('fails instead of returning a placeholder score when AI omits score data', async () => {

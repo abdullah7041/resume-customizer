@@ -6,8 +6,18 @@ import LandingPage from '../pages/LandingPage';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
+    i18n: {
+      language: 'en',
+      dir: () => 'ltr',
+    },
     t: (key: string, options?: { returnObjects?: boolean }) => {
       if (options?.returnObjects) {
+        if (key === 'landing.majlis.changedList') {
+          return [
+            { text: 'Specific job-ad keywords surfaced.' },
+            { text: 'No fake metrics were added.' },
+          ];
+        }
         if (key === 'landing.productWalkthrough.actionDemo.changes') {
           return [
             'Specific job-ad keywords surfaced.',
@@ -101,30 +111,32 @@ describe('Landing pricing and comparison placement', () => {
     render(<LandingPage onGetStarted={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'Compare proof, not just templates.' })).toBeInTheDocument();
-    expect(screen.getAllByText('Generic Resume Builder').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Keyword Scanner').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Manual Editing').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Ask-before-rewrite clarification').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Evidence-based fit scoring before rewriting').length).toBeGreaterThan(0);
+    expect(screen.getByRole('columnheader', { name: 'Generic builder' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Keyword scanner' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Manual editing' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Start free. Everything you need to apply.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Free' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
+    expect(screen.getByText('0 SAR')).toBeInTheDocument();
+    expect(screen.getByText('29 SAR')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Join the pricing waitlist' })).toHaveAttribute('href', '#mj2-faq');
     expect(screen.queryByText('Native Arabic Support')).not.toBeInTheDocument();
     expect(screen.queryByText('Professional Templates')).not.toBeInTheDocument();
     expect(screen.queryByText(RegExp(['Generic', 'Tool', 'A'].join(' '), 'i'))).not.toBeInTheDocument();
-    expect(screen.getByText('Public pricing plans')).toBeInTheDocument();
   });
 
   it('lets visitors compare a weak sample with an optimized proof-led version', () => {
     render(<LandingPage onGetStarted={vi.fn()} />);
 
-    expect(screen.getByRole('link', { name: /see it in action/i })).toHaveAttribute('href', '#see-it-in-action');
-    expect(screen.getByRole('heading', { name: 'Watch a weak bullet become proof-led.' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'The proof' })).toHaveAttribute('href', '#mj2-demo');
+    expect(screen.getByRole('heading', { name: 'One weak line, rewritten honestly.' })).toBeInTheDocument();
     expect(screen.getByText('Prepared weekly reports and dashboards for management.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /show optimized/i }));
+    const optimizedButton = screen.getByRole('button', { name: 'Optimized' });
+    fireEvent.click(optimizedButton);
 
-    const toggleButton = screen.getByRole('button', { name: /show before/i });
-    expect(toggleButton).toHaveAttribute('aria-pressed', 'true');
-    expect(toggleButton).toHaveAttribute('aria-controls');
-    expect(screen.getByText('Built weekly Power BI dashboards for leadership follow-ups.')).toBeInTheDocument();
+    expect(optimizedButton).toHaveClass('is-active');
+    expect(screen.getByText('Built weekly Power BI dashboards that helped leadership track KPI trends and prioritize stakeholder follow-ups across business units.')).toBeInTheDocument();
     expect(screen.getByText('Specific job-ad keywords surfaced.')).toBeInTheDocument();
   });
 });

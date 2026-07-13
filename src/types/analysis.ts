@@ -53,6 +53,68 @@ export interface MatchAnalysisResponse {
 }
 
 /**
+ * A short, source-attributed evidence snippet. Snippets are verified
+ * server-side (netlify/lib/strategic-reality-check.js) — those without
+ * sufficient token overlap with the source text are stripped/downgraded,
+ * so the client renders them verbatim without risk of fabrication.
+ */
+export interface RealityCheckEvidence {
+  source: 'resume' | 'job_description' | 'both';
+  snippet: string;
+}
+
+/**
+ * A confirmed strength of the resume against the job description.
+ */
+export interface RealityCheckStrength {
+  title: string;
+  whyItMatters?: string;
+  evidence?: RealityCheckEvidence[];
+}
+
+/**
+ * A confirmed risk / red flag with mitigation guidance.
+ */
+export interface ConfirmedRisk {
+  type: string;
+  severity: 'medium' | 'high' | 'critical';
+  title: string;
+  explanation: string;
+  mitigation: string;
+  evidence?: RealityCheckEvidence[];
+}
+
+/**
+ * A risk that could not be confirmed from the documents alone.
+ */
+export interface UnclearRisk {
+  type: string;
+  topic: string;
+  reason: string;
+  evidenceNeeded: string;
+}
+
+/**
+ * Strategic reality check from processMatchOnly. Every array is already
+ * normalized/clamped server-side; the frontend treats it as read-only
+ * evidence and never re-scores from it.
+ */
+export interface StrategicRealityCheck {
+  riskTier: 'low' | 'medium' | 'high' | 'critical';
+  recommendation: 'optimize_now' | 'answer_clarifications_first' | 'add_evidence_first' | 'review_role_fit';
+  confidence: 'low' | 'medium' | 'high';
+  riskTypes: string[];
+  summary: string;
+  strengths: RealityCheckStrength[];
+  confirmedRisks: ConfirmedRisk[];
+  unclearRisks: UnclearRisk[];
+  limits: {
+    cannotDetermine: string[];
+    assumptions: string[];
+  };
+}
+
+/**
  * Career vulnerability types detected from work history
  */
 export type VulnerabilityType = 'short_tenure' | 'gap' | 'pivot' | 'job_hopping' | 'demotion';

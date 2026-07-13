@@ -231,12 +231,14 @@ export async function analyzeResumeTruthCheck(resumeText, language = 'en', optio
   console.log(`[Gemini] Resume Truth Check with ${MODELS.flash} (resume: ${trimmedResume.length} chars)`);
 
   try {
+    const { userHardStops = [], ...contractOptions } = options;
     return await executeAiContract('resume_truth_check', {
       resumeText: trimmedResume,
       language,
+      userHardStops,
     }, {
-      ...options,
-      featureName: options.featureName || 'resume_truth_check',
+      ...contractOptions,
+      featureName: contractOptions.featureName || 'resume_truth_check',
     });
   } catch (error) {
     console.error('[OpenRouter] Error in analyzeResumeTruthCheck:', summarizeErrorForLog(error));

@@ -25,6 +25,7 @@
     "benchmark:ai": "tsx scripts/benchmark-ai-models.mjs",
     "eval:optimize": "tsx scripts/optimize-quality-eval.mjs",
     "eval:parse": "tsx scripts/parse-eval.mjs",
+    "flags:report": "tsx scripts/flags-test-report.mjs",
     "i18n:validate": "node scripts/i18n-validate.mjs",
     "i18n:missing": "node scripts/i18n-missing.mjs",
     "i18n:translation-prompt": "node scripts/i18n-translation-prompt.mjs",
@@ -32,7 +33,6 @@
     "cleanup": "node -e \"const fs=require('fs');const files=['unified-pipeline.js','test-local.sh','test-parse-resume.ps1','debug_output.png','deno.lock','scripts/debug-gemini.js','LOCAL_TESTING_GUIDE.md'];files.forEach(f=>{try{fs.unlinkSync(f);console.log('Deleted:',f)}catch(e){if(e.code!=='ENOENT')console.error('Error:',f,e.message)}});console.log('Cleanup complete!')\""
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^2.1.207",
     "@netlify/functions": "^5.2.0",
     "@sentry/node": "^10.65.0",
     "@sentry/react": "^10.65.0",
@@ -114,7 +114,7 @@
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix",
-      "bash -c 'tsc --noEmit'"
+      "bash -c 'npm run type:check'"
     ]
   }
 }
