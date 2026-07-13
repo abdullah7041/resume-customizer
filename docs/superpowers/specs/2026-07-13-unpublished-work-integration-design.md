@@ -40,4 +40,3 @@ Each recovered bundle receives its focused Vitest coverage before the next bundl
 - `git diff --check origin/main...HEAD`
 
 Completion also requires remote verification of the five source branches and the integration branch, plus a final audit proving every registered worktree is clean or has only an explicitly preserved named stash.
-
