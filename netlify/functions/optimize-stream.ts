@@ -16,7 +16,7 @@
 import { optimizeResume } from "../lib/gemini-client.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
-import { checkCredits, consumeCredits } from "../lib/credit-manager.js";
+import { FEATURE_COSTS, addCredits, checkCredits, consumeCredits } from "../lib/credit-manager.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
@@ -248,6 +248,8 @@ export default async function handler(request: Request): Promise<Response> {
   // --- Stream the optimization ---
   const encoder = new TextEncoder();
   const startTime = Date.now();
+  let creditsConsumed = false;
+  let resultDelivered = false;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -301,9 +303,14 @@ export default async function handler(request: Request): Promise<Response> {
           .filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i);
 
         // Consume credits after successful optimization
-        const creditResult = freePreview || !userEmail
-          ? { creditsRemaining: null }
-          : await consumeCredits(userEmail, "optimize");
+        let creditResult: { creditsRemaining: number | null };
+        if (freePreview || !userEmail) {
+          creditResult = { creditsRemaining: null };
+        } else {
+          const consumption = await consumeCredits(userEmail, "optimize");
+          creditsConsumed = consumption.success;
+          creditResult = consumption;
+        }
 
         const resultPayload = {
           cards,
@@ -374,6 +381,7 @@ export default async function handler(request: Request): Promise<Response> {
 
         // Send the full result as a single SSE event
         controller.enqueue(encoder.encode(sseEvent("result", resultPayload)));
+        resultDelivered = true;
 
         // Signal completion
         controller.enqueue(
@@ -383,6 +391,24 @@ export default async function handler(request: Request): Promise<Response> {
         );
       } catch (error: any) {
         console.error("[optimize-stream] Error:", summarizeErrorForLog(error));
+
+        if (creditsConsumed && !resultDelivered && userEmail) {
+          try {
+            await addCredits(userEmail, FEATURE_COSTS.optimize, "refund", {
+              feature: "optimize",
+              reason: "result_delivery_failed",
+            });
+            creditsConsumed = false;
+          } catch (refundError) {
+            console.error(
+              "[optimize-stream] Failed to restore credits:",
+              summarizeErrorForLog(refundError)
+            );
+            captureError(refundError, {
+              function: "optimize-stream-credit-refund",
+            });
+          }
+        }
 
         captureError(error, {
           function: "optimize-stream",

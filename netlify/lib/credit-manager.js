@@ -301,7 +301,7 @@ export async function consumeCredits(email, feature, amount = null) {
  * Add credits to user (for referrals, feedback, etc.)
  * @param {string} userId - User ID
  * @param {number} amount - Credits to add
- * @param {'referral_reward' | 'feedback_reward' | 'monthly_reset'} type - Transaction type
+ * @param {'referral_reward' | 'feedback_reward' | 'monthly_reset' | 'refund'} type - Transaction type
  * @param {object} [metadata] - Optional metadata
  * @returns {Promise<{success: boolean, creditsRemaining: number}>}
  */

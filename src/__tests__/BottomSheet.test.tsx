@@ -75,4 +75,32 @@ describe('BottomSheet drag dismissal', () => {
 
     expect(reopenedGrabber?.parentElement).toHaveStyle({ transform: 'translateY(0px)' });
   });
+
+  it('ignores a secondary pointer while the primary drag is active', () => {
+    const onClose = vi.fn();
+    render(
+      <BottomSheet isOpen onClose={onClose} title="Actions">
+        Content
+      </BottomSheet>,
+    );
+
+    const grabber = screen.getByRole('dialog').querySelector('.touch-none');
+    expect(grabber).not.toBeNull();
+    Object.defineProperty(grabber, 'setPointerCapture', { value: vi.fn() });
+
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+
+    fireEvent.pointerDown(grabber!, { clientY: 0, pointerId: 1, isPrimary: true });
+    now = 100;
+    fireEvent.pointerMove(grabber!, { clientY: 60, pointerId: 1, isPrimary: true });
+    now = 110;
+    fireEvent.pointerDown(grabber!, { clientY: 200, pointerId: 2, isPrimary: false });
+    now = 200;
+    fireEvent.pointerMove(grabber!, { clientY: 120, pointerId: 1, isPrimary: true });
+    now = 210;
+    fireEvent.pointerUp(grabber!, { clientY: 120, pointerId: 1, isPrimary: true });
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });

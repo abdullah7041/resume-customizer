@@ -11,8 +11,10 @@ const mockSentry = {
 };
 
 const mockCreditManager = {
+  FEATURE_COSTS: { optimize: 5 },
   checkCredits: vi.fn(),
   consumeCredits: vi.fn(),
+  addCredits: vi.fn(),
 };
 
 const mockVulnerabilityDetector = {
@@ -219,6 +221,49 @@ describe('optimize-stream function', () => {
         source: 'gemini',
       }),
       600
+    );
+  });
+
+  it('restores consumed credits when result delivery fails', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockGeminiClient.optimizeResume.mockResolvedValue({
+      match_score: 60,
+      missing_keywords: ['React'],
+      keywords_to_keep: [],
+      keywords_to_avoid: [],
+    });
+    mockCreditManager.consumeCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 5,
+    });
+    mockCreditManager.addCredits.mockResolvedValue({
+      success: true,
+      creditsRemaining: 10,
+    });
+
+    const originalEnqueue = ReadableStreamDefaultController.prototype.enqueue;
+    vi.spyOn(ReadableStreamDefaultController.prototype, 'enqueue').mockImplementation(function (chunk) {
+      const eventText = chunk instanceof Uint8Array
+        ? new TextDecoder().decode(chunk)
+        : '';
+      if (eventText.includes('event: result')) {
+        throw new Error('Result delivery failed');
+      }
+      return originalEnqueue.call(this, chunk);
+    });
+
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    const streamText = await response.text();
+
+    expect(streamText).toContain('event: error');
+    expect(mockCreditManager.addCredits).toHaveBeenCalledWith(
+      'user@example.com',
+      5,
+      'refund',
+      expect.objectContaining({
+        feature: 'optimize',
+        reason: 'result_delivery_failed',
+      }),
     );
   });
 

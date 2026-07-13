@@ -54,6 +54,7 @@ export function BottomSheet({
     const [offset, setOffset] = useState(0);
 
     const drag = useRef({ startY: 0, prevY: 0, prevT: 0, lastY: 0, lastT: 0 });
+    const activePointerId = useRef<number | null>(null);
 
     // Mount on open; on close, play the exit then unmount.
     useEffect(() => {
@@ -62,6 +63,9 @@ export function BottomSheet({
             return;
         }
         if (render) {
+            activePointerId.current = null;
+            setDragging(false);
+            setOffset(0);
             setEntered(false);
             const timer = setTimeout(() => setRender(false), reduce ? 0 : SHEET_MS);
             return () => clearTimeout(timer);
@@ -101,6 +105,9 @@ export function BottomSheet({
     }, [isOpen, onClose]);
 
     const handlePointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
+        if (activePointerId.current !== null) return;
+
+        activePointerId.current = e.pointerId;
         const now = performance.now();
         drag.current = { startY: e.clientY, prevY: e.clientY, prevT: now, lastY: e.clientY, lastT: now };
         setOffset(0);
@@ -109,7 +116,7 @@ export function BottomSheet({
     }, []);
 
     const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
-        if (!dragging) return;
+        if (!dragging || activePointerId.current !== e.pointerId) return;
         const deltaY = e.clientY - drag.current.startY;
         // Downward: track 1:1. Upward: rubber-band with rising friction.
         const next = deltaY >= 0 ? deltaY : deltaY * 0.2;
@@ -121,7 +128,8 @@ export function BottomSheet({
     }, [dragging]);
 
     const handlePointerUp = useCallback((e: PointerEvent<HTMLDivElement>) => {
-        if (!dragging) return;
+        if (!dragging || activePointerId.current !== e.pointerId) return;
+        activePointerId.current = null;
         const releaseT = performance.now();
         const dt = releaseT - drag.current.prevT;
         const velocity = dt > 0 ? (e.clientY - drag.current.prevY) / dt : 0;
