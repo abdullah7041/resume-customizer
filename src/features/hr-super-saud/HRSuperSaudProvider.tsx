@@ -5,7 +5,9 @@ import { getHRSuperSaudReaction, type HRSuperSaudReaction, type HRSuperSaudWorkf
 interface HRSuperSaudContextValue {
   reaction: HRSuperSaudReaction | null;
   workflowState: HRSuperSaudWorkflowState;
+  isOverlaySuppressed: boolean;
   dismissReaction: () => void;
+  registerCompanion: () => () => void;
   setWorkflowState: (state: HRSuperSaudWorkflowState) => void;
 }
 
@@ -14,9 +16,21 @@ const HRSuperSaudContext = createContext<HRSuperSaudContextValue | null>(null);
 export function HRSuperSaudProvider({ children }: { children: ReactNode }) {
   const [reaction, setReaction] = useState<HRSuperSaudReaction | null>(null);
   const [workflowState, setWorkflowState] = useState<HRSuperSaudWorkflowState>('noResume');
+  const [companionCount, setCompanionCount] = useState(0);
 
   const dismissReaction = useCallback(() => {
     setReaction(null);
+  }, []);
+
+  const registerCompanion = useCallback(() => {
+    setCompanionCount((count) => count + 1);
+    let isRegistered = true;
+
+    return () => {
+      if (!isRegistered) return;
+      isRegistered = false;
+      setCompanionCount((count) => Math.max(0, count - 1));
+    };
   }, []);
 
   useEffect(() => {
@@ -41,10 +55,12 @@ export function HRSuperSaudProvider({ children }: { children: ReactNode }) {
     () => ({
       reaction,
       workflowState,
+      isOverlaySuppressed: companionCount > 0,
       dismissReaction,
+      registerCompanion,
       setWorkflowState,
     }),
-    [dismissReaction, reaction, workflowState],
+    [companionCount, dismissReaction, reaction, registerCompanion, workflowState],
   );
 
   return (
@@ -60,7 +76,9 @@ export function useHRSuperSaud() {
     return {
       reaction: null,
       workflowState: 'noResume' as HRSuperSaudWorkflowState,
+      isOverlaySuppressed: false,
       dismissReaction: () => undefined,
+      registerCompanion: () => () => undefined,
       setWorkflowState: () => undefined,
     };
   }

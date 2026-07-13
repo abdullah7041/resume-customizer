@@ -173,6 +173,21 @@
         "empty": "فارغ",
         "noChanges": "لا توجد تغييرات مطبّقة بعد"
       }
+    },
+    "characterResults": {
+      "picker": "اختر رفيقك",
+      "male": "رفيق",
+      "female": "رفيقة",
+      "states": {
+        "struggling": "بحاجة إلى تعزيز",
+        "confident": "توافق تنافسي",
+        "celebrating": "نتيجة قوية"
+      },
+      "before": "قبل",
+      "after": "بعد",
+      "unavailableScore": "النتيجة غير متاحة",
+      "changeCompanion": "تغيير الرفيق",
+      "imageAlt": "{{gender}}: {{state}}"
     }
   }
 }

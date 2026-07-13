@@ -36,6 +36,7 @@ import { StrategyBlock } from './optimize/StrategyBlock';
 import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
 import type { Work } from '../../types/resume';
 import { JobVariantsBar } from './JobVariantsBar';
+import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -439,6 +440,18 @@ export function OptimizeSection({
       isScoreVerified,
     };
   }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore, verifiedScore]);
+
+  const companionBeforeScore = resultsSummaryData.isPlaceholderScore
+    ? null
+    : resultsSummaryData.beforeScore;
+  const existingAfterScore = typeof optimizationMetrics.afterScore === 'number'
+    && Number.isFinite(optimizationMetrics.afterScore)
+    ? optimizationMetrics.afterScore
+    : null;
+  const companionAfterScore = !resultsSummaryData.isPlaceholderScore
+    && !resultsSummaryData.isPlaceholderImprovement
+    ? resultsSummaryData.potentialScore
+    : existingAfterScore;
 
   const verifyOptimizedResume = async (jobDescription: string, beforeScore: number, options?: { freePreview?: boolean }) => {
     if (!jobDescription.trim()) return;
@@ -1333,6 +1346,14 @@ export function OptimizeSection({
           onRetryVerify={retryVerifyOptimizedResume}
           onRerun={() => void handleGenerateActual()}
           onContinue={handleContinue}
+        />
+      )}
+
+      {optimizations.length > 0 && (
+        <CharacterResultsCompanion
+          variant="optimize"
+          beforeScore={companionBeforeScore}
+          afterScore={companionAfterScore}
         />
       )}
 

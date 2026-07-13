@@ -57,6 +57,13 @@ function WorkflowStateSetter({ state }: { state: HRSuperSaudWorkflowState }) {
   return null;
 }
 
+function CompanionRegistration() {
+  const { registerCompanion } = useHRSuperSaud();
+
+  useEffect(() => registerCompanion(), [registerCompanion]);
+  return null;
+}
+
 function renderAssistant({
   isCompact = false,
   isOnboardingActive = false,
@@ -123,5 +130,49 @@ describe('HR Super Saud contextual assistant', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Upload a selectable PDF, DOCX, or TXT resume to begin.');
     expect(screen.queryByRole('button', { name: /wave to hr super saud/i })).not.toBeInTheDocument();
+  });
+
+  it('suppresses the overlay while one companion is registered and restores it after cleanup', () => {
+    const { rerender } = render(
+      <HRSuperSaudProvider>
+        <CompanionRegistration />
+        <HRSuperSaudOverlay />
+      </HRSuperSaudProvider>,
+    );
+
+    expect(screen.queryByText('Upload a selectable PDF, DOCX, or TXT resume to begin.')).not.toBeInTheDocument();
+
+    rerender(
+      <HRSuperSaudProvider>
+        <HRSuperSaudOverlay />
+      </HRSuperSaudProvider>,
+    );
+
+    expect(screen.getByText('Upload a selectable PDF, DOCX, or TXT resume to begin.')).toBeInTheDocument();
+  });
+
+  it('keeps the overlay suppressed until every companion registration is cleaned up', () => {
+    const { rerender } = render(
+      <HRSuperSaudProvider>
+        <CompanionRegistration />
+        <CompanionRegistration />
+        <HRSuperSaudOverlay />
+      </HRSuperSaudProvider>,
+    );
+
+    rerender(
+      <HRSuperSaudProvider>
+        <CompanionRegistration />
+        <HRSuperSaudOverlay />
+      </HRSuperSaudProvider>,
+    );
+    expect(screen.queryByText('Upload a selectable PDF, DOCX, or TXT resume to begin.')).not.toBeInTheDocument();
+
+    rerender(
+      <HRSuperSaudProvider>
+        <HRSuperSaudOverlay />
+      </HRSuperSaudProvider>,
+    );
+    expect(screen.getByText('Upload a selectable PDF, DOCX, or TXT resume to begin.')).toBeInTheDocument();
   });
 });
