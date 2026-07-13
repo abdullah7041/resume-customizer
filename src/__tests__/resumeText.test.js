@@ -1,6 +1,17 @@
 import { deflateRawSync } from "node:zlib";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { pdfGetDocument, pdfWorkerOptions } = vi.hoisted(() => ({
+  pdfGetDocument: vi.fn(),
+  pdfWorkerOptions: {},
+}));
+
+vi.doMock(
+  "pdfjs-dist/legacy/build/pdf.worker.mjs?url",
+  () => ({ default: "/assets/pdf.worker.test.mjs" }),
+  { virtual: true }
+);
+
 vi.doMock(
   "pdfjs-dist/legacy/build/pdf.mjs",
   () => {
@@ -21,9 +32,12 @@ vi.doMock(
       destroy: vi.fn(),
     };
 
+    pdfGetDocument.mockReturnValue({ promise: Promise.resolve(document) });
+
     return {
-      getDocument: vi.fn(() => ({ promise: Promise.resolve(document) })),
-      GlobalWorkerOptions: {},
+      getDocument: pdfGetDocument,
+      GlobalWorkerOptions: pdfWorkerOptions,
+      version: "5.7.284",
     };
   },
   { virtual: true }
@@ -54,6 +68,13 @@ describe("resume text helpers", () => {
     const buffer = new Uint8Array([1, 2, 3]).buffer;
     const text = await extractPlainTextFromArrayBuffer(buffer, { mimeType: "application/pdf" });
     expect(text).toBe("Hello Riyadh");
+    expect(pdfGetDocument).toHaveBeenCalledWith({
+      data: buffer,
+      cMapUrl: "https://unpkg.com/pdfjs-dist@5.7.284/cmaps/",
+      cMapPacked: true,
+      standardFontDataUrl: "https://unpkg.com/pdfjs-dist@5.7.284/standard_fonts/",
+    });
+    expect(pdfWorkerOptions.workerSrc).toBe("/assets/pdf.worker.test.mjs");
   });
 
   it("decodes utf-8 text when not a pdf", async () => {

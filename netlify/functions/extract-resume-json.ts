@@ -29,13 +29,18 @@ const OCR_PARSE_RESERVE_MS = OCR_PARSE_MAX_TIMEOUT_MS + FUNCTION_SAFETY_MS;
 const GATEWAY_WALL_CLOCK_MS = 26_000;
 
 const computeRemainingBudgetMs = (
-  context: { getRemainingTimeInMillis?: () => number } | undefined,
+  context: ParseHandlerContext | undefined,
   startedAt: number,
 ): number => {
   const lambdaRemainingMs = context?.getRemainingTimeInMillis?.() ?? Number.POSITIVE_INFINITY;
   const gatewayRemainingMs = GATEWAY_WALL_CLOCK_MS - (Date.now() - startedAt);
   return Math.max(0, Math.min(lambdaRemainingMs, gatewayRemainingMs));
 };
+
+interface ParseHandlerContext {
+  getRemainingTimeInMillis?: () => number;
+  requestStartedAt?: number;
+}
 
 // Normalize an AI-parse failure into a short, stable code recorded in
 // meta.parseQuality.aiFailureCode (never log/store resume text).
@@ -56,9 +61,9 @@ const UNREADABLE_FILE_RESPONSE = {
 
 const baseHandler = async (
   event: { httpMethod: string; body: string; headers: any; },
-  context?: { getRemainingTimeInMillis?: () => number },
+  context?: ParseHandlerContext,
 ) => {
-  const startedAt = Date.now();
+  const startedAt = context?.requestStartedAt ?? Date.now();
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -565,5 +570,12 @@ const baseHandler = async (
   }
 };
 
-// Export handler with rate limiting applied
-export const handler = withRateLimit("extract-resume-json", baseHandler);
+const rateLimitedHandler = withRateLimit("extract-resume-json", baseHandler);
+
+// Capture the HTTP request start before rate limiting. Upstash is allowed to
+// consume up to 3s, and that time belongs to the same ~30s gateway window as
+// extraction, OCR, and parsing.
+export const handler: typeof rateLimitedHandler = (event, context) => {
+  (context as ParseHandlerContext).requestStartedAt = Date.now();
+  return rateLimitedHandler(event, context);
+};

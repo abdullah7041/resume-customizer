@@ -22,6 +22,10 @@ const mockGeminiClient = {
     parseResumeOnly: vi.fn()
 };
 
+const mockOcrExtract = {
+    extractScannedPdfText: vi.fn()
+};
+
 const mockResumeText = {
     extractPlainTextFromArrayBuffer: vi.fn(),
     inferMimeType: vi.fn(),
@@ -53,6 +57,7 @@ const mockSentry = {
 };
 
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
+vi.mock('../../lib/ocr-extract.js', () => mockOcrExtract);
 vi.mock('../../lib/resumeText.js', () => mockResumeText);
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/supabase-client.js', () => mockSupabaseClientModule);
@@ -71,6 +76,7 @@ describe('extract-resume-json function', () => {
             data: { user: { id: 'user-1', email: 'user@example.com' } },
             error: null,
         });
+        mockOcrExtract.extractScannedPdfText.mockRejectedValue(new Error('OCR unavailable in unit test'));
     });
 
     it('rejects GET requests with 405', async () => {

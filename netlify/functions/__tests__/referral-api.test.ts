@@ -222,6 +222,9 @@ describe('referral-api auth binding', () => {
     expect(body.creditsEarned).toBe(10);
     expect(body.referralUrl).toBeUndefined();
     expect(body.linkError).toContain('referral columns are missing');
+    expect(body.linkError).toContain('42703');
+    expect(body.linkErrorCode).toBe('referral/db-undefined-column');
+    expect(body.linkErrorStatus).toBe(500);
   });
 
   it('does not hand out a referral code that could not be persisted', async () => {
@@ -254,5 +257,10 @@ describe('referral-api auth binding', () => {
     expect(response.statusCode).toBe(500);
     const body = JSON.parse(response.body!);
     expect(body.details).toContain('Referral profile not found');
+    expect(body).toMatchObject({
+      status: 500,
+      code: 'referral/profile-not-found',
+      message: expect.stringContaining('Referral profile not found'),
+    });
   });
 });
