@@ -70,8 +70,8 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
         </div>
         <div className="w-full bg-ink/10 rounded-full h-3 mt-4">
           <div
-            className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500"
-            style={{ width: `${analysis.overallScore}%` }}
+            className="w-full origin-left rtl:origin-right bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-transform duration-500"
+            style={{ transform: `scaleX(${Math.min(Math.max(analysis.overallScore, 0), 100) / 100})` }}
           />
         </div>
       </div>
@@ -100,8 +100,8 @@ export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
               </div>
               <div className="w-full bg-ink/10 rounded-full h-2">
                 <div
-                  className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${sector.score}%` }}
+                  className="w-full origin-left rtl:origin-right bg-emerald-500 h-2 rounded-full transition-transform duration-500"
+                  style={{ transform: `scaleX(${Math.min(Math.max(sector.score, 0), 100) / 100})` }}
                 />
               </div>
             </div>

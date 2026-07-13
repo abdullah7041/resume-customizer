@@ -1155,7 +1155,7 @@ export function OptimizeSection({
           onClick={handleGenerate}
           disabled={isOptimizing || !hasResume}
           className={cn(
-            "w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 transform active:scale-[0.99]",
+            "w-full relative group overflow-hidden rounded-xl p-[1px] transition-[transform,box-shadow] duration-150 ease-out active:scale-[0.97]",
             (!hasResume || isOptimizing) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
           )}
         >
@@ -1874,7 +1874,7 @@ export function OptimizeSection({
       {/* Optimization Loading Toast - Non-blocking */}
       {
         isOptimizing && createPortal(
-          <div className="fixed inset-x-3 bottom-4 sm:inset-x-auto sm:right-6 sm:bottom-6 z-[100] animate-in slide-in-from-bottom-10 fade-in duration-500 pointer-events-auto">
+          <div className="fixed inset-x-3 bottom-4 sm:inset-x-auto sm:right-6 sm:bottom-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-200 ease-out pointer-events-auto">
             <LoadingMessages type="optimize" estimatedTime={25000} className="max-w-full sm:max-w-sm" />
           </div>,
           document.body

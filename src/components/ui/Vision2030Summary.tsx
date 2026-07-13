@@ -132,7 +132,6 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
     // Demo mode banner component
     const DemoBanner = () => (
         <div className="mb-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 backdrop-blur-sm relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
             <div className="flex items-start gap-3 relative z-10">
                 <div className="p-2 rounded-lg bg-amber-500/10">
                     <Upload className="w-4 h-4 text-amber-400" />
@@ -158,7 +157,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
             >
                 <div className="flex items-center gap-4 rtl:flex-row-reverse">
                     <div className="relative">
-                        <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-md animate-pulse-slow" />
+                        <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-md" />
                         <GlassCircle size="lg" variant="success" className="shrink-0 relative z-10 border-emerald-500/30">
                             <Target className="w-6 h-6 text-emerald-400" />
                         </GlassCircle>
@@ -213,7 +212,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
             </div>
 
             {/* Collapsible Content */}
-            <div className={`grid transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className={`grid transition-[grid-template-rows,opacity] duration-[260ms] ease-emphasized ${expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                 <div className="overflow-hidden">
                     <div className="px-5 pb-5 pt-0">
                         <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-5 dark:via-white/10" />

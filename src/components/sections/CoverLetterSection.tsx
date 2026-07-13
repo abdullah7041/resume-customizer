@@ -399,7 +399,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in fade-in duration-200 ease-out">
       {/* Configuration */}
       <GlassCard className="overflow-hidden">
         <div className="flex items-center gap-4 mb-8">

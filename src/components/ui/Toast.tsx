@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, Info, X, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "../../lib/utils/cn";
 
 const variants = {
@@ -53,7 +54,12 @@ export function ToastContainer({ children }) {
       aria-live="polite"
       aria-label="Notifications"
     >
-      {children}
+      {/* initial={false} skips an entrance burst for toasts already present on
+          first mount; later additions still animate in, removals animate out,
+          and `layout` on each toast reflows the stack smoothly. Transform
+          motion is stripped automatically under prefers-reduced-motion by the
+          app-level MotionConfig reducedMotion="user". */}
+      <AnimatePresence initial={false}>{children}</AnimatePresence>
     </div>
   );
 }
@@ -63,11 +69,15 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
   const Icon = variant.icon;
 
   return (
-    <div
+    <motion.div
       role="status"
+      layout
+      initial={{ opacity: 0, x: 40 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 40, transition: { duration: 0.15, ease: [0.23, 1, 0.32, 1] } }}
+      transition={{ type: "spring", stiffness: 400, damping: 34, mass: 0.8 }}
       className={cn(
-        "group pointer-events-auto relative overflow-hidden rounded-xl border bg-white/95 dark:bg-[#031713]/80 p-4 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:bg-white dark:hover:bg-[#031713]/90 shadow-lg",
-        "animate-in slide-in-from-right-8 fade-in duration-300",
+        "group pointer-events-auto relative overflow-hidden rounded-xl border bg-white/95 dark:bg-[#031713]/80 p-4 backdrop-blur-xl transition-colors duration-200 hover:bg-white dark:hover:bg-[#031713]/90 shadow-lg",
         variant.border,
         variant.glow
       )}
@@ -97,13 +107,13 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className="group/close -mr-1 -mt-1 flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-gray-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-300"
+            className="group/close -mr-1 -mt-1 flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-[color,background-color,transform] duration-150 ease-out active:scale-95 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-300"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

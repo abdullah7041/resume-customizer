@@ -126,7 +126,7 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
                             <div
                                 key={index}
                                 className={`
-                                    group rounded-xl border transition-all duration-300 overflow-hidden
+                                    group rounded-xl border transition-[background-color,border-color,box-shadow] duration-200 overflow-hidden
                                     ${isExpanded
                                         ? `bg-gray-50 dark:bg-white/5 ${config.border} shadow-lg shadow-black/5 dark:shadow-black/20`
                                         : 'bg-transparent border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-300 dark:hover:border-white/10'
@@ -156,7 +156,7 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
 
                                 {/* Expanded Content */}
                                 <div className={`
-                                    grid transition-all duration-300 ease-in-out
+                                    grid transition-[grid-template-rows,opacity] duration-[260ms] ease-emphasized
                                     ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}
                                 `}>
                                     <div className="overflow-hidden">

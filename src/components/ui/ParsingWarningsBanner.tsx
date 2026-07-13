@@ -18,7 +18,7 @@ export function ParsingWarningsBanner() {
     if (warnings.length === 0) return null;
 
     return (
-        <div className="w-full max-w-5xl mx-auto animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="w-full max-w-5xl mx-auto animate-in fade-in slide-in-from-top-2 duration-200 ease-out">
             <div className="glass-card p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
                 <div className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />

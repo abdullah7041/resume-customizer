@@ -146,7 +146,7 @@ function ImprovementRing({
                     strokeWidth="4"
                     fill="none"
                     strokeLinecap="round"
-                    className="text-emerald-400 transition-all duration-1000"
+                    className="text-emerald-400 transition-[stroke-dashoffset] duration-1000"
                     style={{
                         strokeDasharray: circumference,
                         strokeDashoffset: offset,

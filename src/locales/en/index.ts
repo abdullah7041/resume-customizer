@@ -26,6 +26,7 @@ import auth from './auth.json';
 import footer from './footer.json';
 import consent from './consent.json';
 import privacy from './privacy.json';
+import refund from './refund.json';
 import dataRights from './dataRights.json';
 import vision2030 from './vision2030.json';
 import templates from './templates.json';
@@ -84,6 +85,7 @@ const sources = [
     footer,
     consent,
     privacy,
+    refund,
     dataRights,
     vision2030,
     templates,

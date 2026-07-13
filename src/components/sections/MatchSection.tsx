@@ -530,7 +530,6 @@ export function MatchSection({
               className="group relative w-full font-bold"
               variant="prominent"
             >
-              <div className="absolute inset-0 -translate-x-full skew-x-12 bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full" />
               <Sparkles className={cn('me-2 h-4 w-4', isAnalyzing && 'animate-spin')} />
               {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
                 <>
@@ -657,7 +656,7 @@ export function MatchSection({
                             <span className={cn('font-bold', cat.text)}>{data.score}/{data.max}</span>
                           </div>
                           <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200 ring-1 ring-gray-300/50 dark:bg-black/20 dark:ring-white/5">
-                            <div className={cn('h-full rounded-full transition-all duration-700 ease-out', cat.color)} style={{ width: `${percent}%` }} />
+                            <div className={cn('h-full w-full origin-left rtl:origin-right rounded-full transition-transform duration-700 ease-out', cat.color)} style={{ transform: `scaleX(${Math.min(Math.max(percent, 0), 100) / 100})` }} />
                           </div>
                         </div>
                       );
@@ -821,9 +820,9 @@ export function MatchSection({
           <GlassCard>
             <div className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center animate-fade-in">
               <div className="group relative mb-6">
-                <div className="absolute inset-0 animate-pulse rounded-full bg-blue-500/20 opacity-60 blur-3xl transition-opacity duration-1000 group-hover:opacity-100" />
-                <div className="relative rounded-full border border-gray-200 bg-gray-100 p-6 transition-all duration-500 group-hover:scale-110 group-hover:border-gray-300 dark:border-white/10 dark:bg-white/5 dark:group-hover:border-white/20">
-                  <Target className="h-10 w-10 text-gray-400 transition-colors duration-500 group-hover:text-blue-400" />
+                <div className="absolute inset-0 rounded-full bg-blue-500/20 opacity-60 blur-3xl" />
+                <div className="relative rounded-full border border-gray-200 bg-gray-100 p-6 transition-colors duration-200 group-hover:border-gray-300 dark:border-white/10 dark:bg-white/5 dark:group-hover:border-white/20">
+                  <Target className="h-10 w-10 text-gray-400 transition-colors duration-200 group-hover:text-blue-400" />
                 </div>
               </div>
               <h4 className="mb-2 text-lg font-medium text-gray-900 dark:text-white">

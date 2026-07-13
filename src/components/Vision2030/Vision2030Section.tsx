@@ -305,8 +305,8 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                     </div>
                     <div className="w-full h-1.5 bg-gray-900/50 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-1000"
-                        style={{ width: `${sector.score}%` }}
+                        className="h-full w-full origin-left rtl:origin-right bg-gradient-to-r from-emerald-600 to-emerald-400 transition-transform duration-1000"
+                        style={{ transform: `scaleX(${Math.min(Math.max(sector.score, 0), 100) / 100})` }}
                       />
                     </div>
                   </div>

@@ -118,7 +118,7 @@ export function FormattingPanel() {
             initial="expanded"
             animate={isExpanded ? "expanded" : "collapsed"}
             className={cn(
-                "neu-card rounded-2xl overflow-hidden will-change-[width]"
+                "neu-card rounded-2xl overflow-hidden"
             )}
         >
             {/* Header Toggle */}

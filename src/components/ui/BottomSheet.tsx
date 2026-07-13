@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, type ReactNode, type TouchEvent, type MouseEvent } from 'react';
+import { useEffect, useRef, useCallback, useState, type ReactNode, type PointerEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 
@@ -11,28 +11,75 @@ interface BottomSheetProps {
     height?: 'auto' | 'half' | 'full';
 }
 
+/** iOS-like drawer curve. Duration mirrors --duration-expand + a touch more. */
+const SHEET_MS = 300;
+const SHEET_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+/** Fling threshold: dismiss when the finger is still moving down faster than
+ *  this (px/ms) on release, regardless of distance. */
+const VELOCITY_DISMISS = 0.11;
+/** Distance fallback when the release is slow. */
+const DISTANCE_DISMISS = 100;
+
+function prefersReducedMotion(): boolean {
+    return typeof window !== 'undefined'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /**
- * Mobile-native bottom sheet component
- * - Smooth slide-up animation
- * - Drag-to-dismiss (swipe down)
- * - Backdrop click to close
- * - ESC key to close
- * - Respects prefers-reduced-motion
+ * Mobile-native bottom sheet.
+ * - Transition-based slide-up entrance and slide-down exit (interruptible,
+ *   no restart-from-zero keyframe pinning the drag transform).
+ * - Drag-to-dismiss tracks the finger 1:1 with transition disabled; dismissal
+ *   is velocity-based (a fast flick) OR distance-based.
+ * - Upward drag rubber-bands with rising friction instead of a dead stop.
+ * - Backdrop click / ESC to close. Respects prefers-reduced-motion (fades in
+ *   place, no translate).
  */
 export function BottomSheet({
     isOpen,
     onClose,
     title,
     children,
-    height = 'auto'
+    height = 'auto',
 }: BottomSheetProps) {
     const sheetRef = useRef<HTMLDivElement>(null);
-    const dragStartY = useRef<number | null>(null);
-    const currentY = useRef<number>(0);
+    const reduce = prefersReducedMotion();
+
+    // Keep the sheet mounted through its exit animation.
+    const [render, setRender] = useState(isOpen);
+    // Drives the entrance/exit transition (false = off-screen/hidden).
+    const [entered, setEntered] = useState(false);
+    // Live drag state.
+    const [dragging, setDragging] = useState(false);
+    const [offset, setOffset] = useState(0);
+
+    const drag = useRef({ startY: 0, prevY: 0, prevT: 0, lastY: 0, lastT: 0 });
+
+    // Mount on open; on close, play the exit then unmount.
+    useEffect(() => {
+        if (isOpen) {
+            setRender(true);
+            return;
+        }
+        if (render) {
+            setEntered(false);
+            const timer = setTimeout(() => setRender(false), reduce ? 0 : SHEET_MS);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, render, reduce]);
+
+    // Trigger the entrance once mounted (next frame, so the off-screen initial
+    // state is painted first).
+    useEffect(() => {
+        if (render && isOpen) {
+            const raf = requestAnimationFrame(() => setEntered(true));
+            return () => cancelAnimationFrame(raf);
+        }
+    }, [render, isOpen]);
 
     // Body scroll lock
     useEffect(() => {
-        if (isOpen) {
+        if (render) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = '';
@@ -40,7 +87,7 @@ export function BottomSheet({
         return () => {
             document.body.style.overflow = '';
         };
-    }, [isOpen]);
+    }, [render]);
 
     // ESC key to close
     useEffect(() => {
@@ -53,52 +100,64 @@ export function BottomSheet({
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isOpen, onClose]);
 
-    // Handle drag gestures
-    const handleTouchStart = useCallback((e: TouchEvent) => {
-        dragStartY.current = e.touches[0].clientY;
+    const handlePointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
+        const now = performance.now();
+        drag.current = { startY: e.clientY, prevY: e.clientY, prevT: now, lastY: e.clientY, lastT: now };
+        setOffset(0);
+        setDragging(true);
+        e.currentTarget.setPointerCapture(e.pointerId);
     }, []);
 
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-        if (dragStartY.current === null || !sheetRef.current) return;
+    const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
+        if (!dragging) return;
+        const deltaY = e.clientY - drag.current.startY;
+        // Downward: track 1:1. Upward: rubber-band with rising friction.
+        const next = deltaY >= 0 ? deltaY : deltaY * 0.2;
+        drag.current.prevY = drag.current.lastY;
+        drag.current.prevT = drag.current.lastT;
+        drag.current.lastY = e.clientY;
+        drag.current.lastT = performance.now();
+        setOffset(next);
+    }, [dragging]);
 
-        const deltaY = e.touches[0].clientY - dragStartY.current;
+    const handlePointerUp = useCallback((e: PointerEvent<HTMLDivElement>) => {
+        if (!dragging) return;
+        const releaseT = performance.now();
+        const dt = releaseT - drag.current.prevT;
+        const velocity = dt > 0 ? (e.clientY - drag.current.prevY) / dt : 0;
+        const shouldClose = velocity > VELOCITY_DISMISS || offset > DISTANCE_DISMISS;
 
-        // Only allow dragging down
-        if (deltaY > 0) {
-            currentY.current = deltaY;
-            sheetRef.current.style.transform = `translateY(${deltaY}px)`;
-        }
-    }, []);
-
-    const handleTouchEnd = useCallback(() => {
-        if (!sheetRef.current) return;
-
-        // If dragged more than 100px, close the sheet
-        if (currentY.current > 100) {
+        setDragging(false);
+        if (shouldClose) {
+            // Slide down from the current dragged position, then unmount.
+            setEntered(false);
             onClose();
         } else {
-            // Snap back
-            sheetRef.current.style.transform = 'translateY(0)';
+            // Snap back up.
+            setOffset(0);
         }
-
-        dragStartY.current = null;
-        currentY.current = 0;
-    }, [onClose]);
+    }, [dragging, offset, onClose]);
 
     // Handle backdrop click
-    const handleBackdropClick = useCallback((e: MouseEvent) => {
+    const handleBackdropClick = useCallback((e: ReactMouseEvent) => {
         if (e.target === e.currentTarget) {
             onClose();
         }
     }, [onClose]);
 
-    if (!isOpen) return null;
+    if (!render) return null;
 
     const heightClasses = {
         auto: 'max-h-[85vh]',
         half: 'h-[50vh]',
         full: 'h-[90vh]',
     };
+
+    const translateY = dragging
+        ? `${offset}px`
+        : entered || reduce
+            ? '0px'
+            : '100%';
 
     return (
         <div
@@ -108,7 +167,10 @@ export function BottomSheet({
             role="dialog"
         >
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" />
+            <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-out"
+                style={{ opacity: entered ? 1 : 0 }}
+            />
 
             {/* Sheet */}
             <div
@@ -116,65 +178,50 @@ export function BottomSheet({
                 className={cn(
                     "absolute bottom-0 left-0 right-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800",
                     "rounded-t-2xl border-t border-gray-200 dark:border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]",
-                    "animate-slide-up transition-transform duration-200",
                     heightClasses[height]
                 )}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
+                style={{
+                    transform: `translateY(${translateY})`,
+                    opacity: reduce ? (entered ? 1 : 0) : 1,
+                    transition: dragging
+                        ? 'none'
+                        : `transform ${SHEET_MS}ms ${SHEET_EASE}, opacity ${SHEET_MS}ms ease-out`,
+                }}
             >
-                {/* Drag handle */}
-                <div className="flex justify-center pt-3 pb-2">
-                    <div className="w-10 h-1 rounded-full bg-white/20" />
-                </div>
-
-                {/* Header */}
-                {title && (
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-                        <h3 className="text-lg font-semibold text-white">{title}</h3>
-                        <button
-                            onClick={onClose}
-                            className="inline-flex items-center justify-center w-10 h-10 min-w-[44px] min-h-[44px] -mr-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                            aria-label="Close"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
+                {/* Drag grabber — handle + header. touch-none here so the drag
+                    gesture never fights the content's own touch scrolling. */}
+                <div
+                    className="touch-none"
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                >
+                    {/* Drag handle */}
+                    <div className="flex justify-center pt-3 pb-2">
+                        <div className="w-10 h-1 rounded-full bg-white/20" />
                     </div>
-                )}
+
+                    {/* Header */}
+                    {title && (
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+                            <h3 className="text-lg font-semibold text-white">{title}</h3>
+                            <button
+                                onClick={onClose}
+                                className="inline-flex items-center justify-center w-10 h-10 min-w-[44px] min-h-[44px] -mr-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-[color,background-color,transform] duration-150 ease-out active:scale-95"
+                                aria-label="Close"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 {/* Content */}
                 <div className="overflow-y-auto px-5 py-4" style={{ maxHeight: 'calc(100% - 80px)' }}>
                     {children}
                 </div>
             </div>
-
-            {/* Animation keyframes */}
-            <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slide-up {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out forwards;
-        }
-        
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out forwards;
-        }
-        
-        @media (prefers-reduced-motion: reduce) {
-          .animate-fade-in,
-          .animate-slide-up {
-            animation: none;
-          }
-        }
-      `}</style>
         </div>
     );
 }

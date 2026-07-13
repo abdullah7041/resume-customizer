@@ -149,7 +149,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
     };
 
     const renderBasics = () => (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="space-y-6 animate-in fade-in duration-200 ease-out">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <GlassInput
                     label={isArabic ? 'الاسم' : 'Name'}
@@ -275,7 +275,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
         }
 
         return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? (
                     renderEmptyState(isArabic ? 'لم تتم إضافة خبرات بعد' : 'No experience added yet')
                 ) : (
@@ -375,7 +375,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
         }
 
         return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لم تتم إضافة تعليم بعد' : 'No education added yet') : (
                     items.map((item, idx) => (
                         <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
@@ -444,7 +444,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
         }
 
         return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {consolidatedItems.length === 0 ? (
                     renderEmptyState(isArabic ? 'لم تتم إضافة مهارات بعد' : 'No skills added yet')
                 ) : (
@@ -538,7 +538,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
         }
 
         return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لم تتم إضافة مشاريع' : 'No projects added yet') : (
                     items.map((item, idx) => (
                         <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
@@ -609,7 +609,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
         }
 
         return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لا توجد شهادات' : 'No certifications added') : (
                     items.map((item, idx) => (
                         <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
@@ -675,7 +675,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
         }
 
         return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لا توجد لغات' : 'No languages added') : (
                     items.map((item, idx) => (
                         <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
@@ -703,7 +703,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
     };
 
     const renderDisplay = () => (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="space-y-6 animate-in fade-in duration-200 ease-out">
             <div className="p-6 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">{isArabic ? 'حجم الخط' : 'Font Size'}</h3>

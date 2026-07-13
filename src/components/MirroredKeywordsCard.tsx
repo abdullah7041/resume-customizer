@@ -68,8 +68,6 @@ export function MirroredKeywordsCard({
                                     ) : (
                                         <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 transition-opacity relative z-10" />
                                     )}
-                                    {/* Subtle gradient background effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 dark:via-white/5" />
                                 </button>
                             ))}
                         </div>

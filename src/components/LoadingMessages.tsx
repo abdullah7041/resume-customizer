@@ -123,8 +123,8 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
       {/* Progress Bar */}
       <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-700/50 rounded-full overflow-hidden relative z-10">
         <div
-          className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 transition-all duration-300 ease-out relative"
-          style={{ width: `${progress}%` }}
+          className="h-full w-full origin-left rtl:origin-right bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 transition-transform duration-300 ease-out relative"
+          style={{ transform: `scaleX(${Math.min(Math.max(progress, 0), 100) / 100})` }}
         >
           <div className="absolute inset-0 bg-white/30 w-full animate-[shimmer_2s_infinite]" />
         </div>
@@ -138,7 +138,7 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
             <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
               Pro Tip
             </p>
-            <p key={currentTipIndex} className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <p key={currentTipIndex} className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed animate-in fade-in duration-200 ease-out">
               "{PRO_TIPS[currentTipIndex]}"
             </p>
           </div>

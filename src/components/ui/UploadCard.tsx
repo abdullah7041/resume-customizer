@@ -299,7 +299,7 @@ export default function UploadCard({
       />
 
       {isSaved && fileName && (
-        <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-600/28 bg-emerald-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(16,185,129,0.4)] animate-in fade-in slide-in-from-bottom-2 duration-500 dark:border-emerald-300/24 dark:bg-emerald-400/12 dark:text-emerald-50">
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-600/28 bg-emerald-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(16,185,129,0.4)] animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out dark:border-emerald-300/24 dark:bg-emerald-400/12 dark:text-emerald-50">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
               <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -326,7 +326,7 @@ export default function UploadCard({
 
       {/* File Selected Indicator (Not Saved Yet) */}
       {fileName && !isSaved && (
-        <div className="mt-6 flex items-center justify-between rounded-xl border border-blue-600/25 bg-blue-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(59,130,246,0.35)] animate-in fade-in slide-in-from-bottom-2 duration-500 dark:border-blue-300/22 dark:bg-blue-400/12 dark:text-blue-50">
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-blue-600/25 bg-blue-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(59,130,246,0.35)] animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out dark:border-blue-300/22 dark:bg-blue-400/12 dark:text-blue-50">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 border border-blue-500/30">
               <FileText className="h-5 w-5 text-blue-400" />
@@ -354,8 +354,8 @@ export default function UploadCard({
         <div className="mt-6 space-y-2" aria-live="assertive">
           <div className="relative h-2 w-full overflow-hidden rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_50%)]">
             <div
-              className="h-full w-full origin-left bg-[image:var(--gradient-primary-value)] transition-all duration-breathe ease-snappy"
-              style={{ width: `${Math.min(progress, 100)}%` }}
+              className="h-full w-full origin-left rtl:origin-right bg-[image:var(--gradient-primary-value)] transition-transform duration-breathe ease-snappy"
+              style={{ transform: `scaleX(${Math.min(Math.max(progress, 0), 100) / 100})` }}
             />
             <span
               aria-hidden="true"
@@ -382,7 +382,7 @@ export default function UploadCard({
       }
 
       {isSaved && (
-        <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-200 ease-out">
           <label className="relative flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border border-emerald-900/12 bg-emerald-50/70 cursor-pointer hover:bg-emerald-50 transition-all group overflow-hidden dark:border-emerald-200/14 dark:bg-white/[0.06] dark:hover:bg-white/[0.08]">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/0 group-hover:to-emerald-500/0 transition-all duration-500" />
 

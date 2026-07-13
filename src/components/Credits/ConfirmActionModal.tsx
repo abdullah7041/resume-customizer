@@ -128,7 +128,7 @@ export function ConfirmActionModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md"
+        className="fixed inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -137,7 +137,7 @@ export function ConfirmActionModal({
       <div
         className={cn(
           glass.elevated,
-          'relative rounded-xl p-6 max-w-md w-full'
+          'relative rounded-xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200 ease-out'
         )}
         role="dialog"
         aria-modal="true"

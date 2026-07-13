@@ -120,7 +120,7 @@ export function ScoreBreakdown({
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                                    className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent"
+                                    className="text-3xl font-bold tabular-nums bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent"
                                 >
                                     {totalScore}
                                 </motion.div>
@@ -183,30 +183,28 @@ export function ScoreBreakdown({
                                                         </div>
                                                     </div>
                                                     <div className="flex items-baseline gap-1">
-                                                        <span className={`text-base font-bold ${config.colorClass}`}>
+                                                        <span className={`text-base font-bold tabular-nums ${config.colorClass}`}>
                                                             {catData.score}
                                                         </span>
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400">/{catData.max}</span>
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">/{catData.max}</span>
                                                     </div>
                                                 </div>
 
                                                 <div className="h-2 w-full bg-gray-200 dark:bg-black/40 rounded-full overflow-hidden ring-1 ring-gray-300 dark:ring-white/5">
                                                     <motion.div
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${percentage}%` }}
+                                                        initial={{ transform: "scaleX(0)" }}
+                                                        animate={{ transform: `scaleX(${percentage / 100})` }}
                                                         transition={{
                                                             type: "spring",
                                                             stiffness: 60,
                                                             damping: 15,
                                                             delay: 0.2 + (idx * 0.1)
                                                         }}
-                                                        className={`h-full rounded-full relative overflow-hidden ${config.barClass}`}
+                                                        className={`h-full w-full origin-left rtl:origin-right rounded-full relative overflow-hidden ${config.barClass}`}
                                                     >
-                                                        {/* Auto shimmer on load, hover shimmer for interaction */}
-                                                        <motion.div
-                                                            animate={{ x: ['-100%', '200%'] }}
-                                                            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
+                                                        {/* Sheen sweep — CSS keyframe (off the main thread) */}
+                                                        <div
+                                                            className="absolute inset-0 animate-shimmer motion-reduce:animate-none bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
                                                         />
                                                     </motion.div>
                                                 </div>
@@ -315,7 +313,7 @@ export function ScoreBreakdown({
                             className="flex items-center justify-between py-2 border-b border-white/5 last:border-0"
                         >
                             <span className="text-sm text-gray-400">{item.label}</span>
-                            <span className={`text-sm font-medium ${item.type === 'penalty'
+                            <span className={`text-sm font-medium tabular-nums ${item.type === 'penalty'
                                 ? 'text-red-400'
                                 : item.type === 'bonus'
                                     ? 'text-emerald-400'
@@ -330,7 +328,7 @@ export function ScoreBreakdown({
                         <span className="text-sm font-semibold text-white">
                             {t('optimize.scoreBreakdown.finalScore', 'Final Score')}
                         </span>
-                        <span className="text-lg font-bold text-emerald-400">
+                        <span className="text-lg font-bold text-emerald-400 tabular-nums">
                             {data.final_score}%
                         </span>
                     </div>

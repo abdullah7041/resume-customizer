@@ -1,0 +1,47 @@
+{
+  "refund": {
+    "title": "Refund Policy",
+    "lastUpdated": "Last Updated",
+    "sections": {
+      "intro": {
+        "title": "Introduction",
+        "content": "This policy explains when payments for Watheq's paid plans and credit packs are refundable. It follows the Saudi E-Commerce Law and its Implementing Regulations, and nothing in it limits your statutory rights."
+      },
+      "packs": {
+        "title": "Credit Packs (One-Time Purchases)",
+        "content": "You can get a full refund within 7 days of purchase if you have not used any credits from the pack. Once a credit is used, the pack counts as a delivered digital service and is no longer refundable, except where the service failed or was defective (see below)."
+      },
+      "subscription": {
+        "title": "Monthly Subscription",
+        "cancel": "Cancel anytime. You keep your access and remaining credits until the end of the paid period, and you will not be charged again.",
+        "statutory": "If you have not used the service, you can get a full refund within 7 days of starting any new subscription.",
+        "firstTime": "On your first subscription, we extend this: a full refund within 7 days even if you have used up to 10 credits."
+      },
+      "failures": {
+        "title": "Failed or Undelivered Service",
+        "auto": "If credits are deducted but we fail to deliver the result (for example, an optimization that errors out), the credits are restored automatically.",
+        "delay": "If we charge you and cannot deliver the service within 15 days, you may cancel and receive a full refund."
+      },
+      "defects": {
+        "title": "Defective Service",
+        "content": "The limits above apply to change-of-mind refunds. If what we delivered is defective or does not match what we advertised, contact us and we will refund or fix it regardless of usage."
+      },
+      "method": {
+        "title": "How Refunds Are Paid",
+        "content": "Refunds go back to the same payment method you paid with. We process refund requests within 3 business days; your bank may take up to 14 days to post the amount."
+      },
+      "pricing": {
+        "title": "Pricing",
+        "content": "All prices are shown in Saudi Riyals (SAR)."
+      },
+      "contact": {
+        "title": "Contact Us",
+        "content": "To request a refund or ask about this policy:",
+        "reply": "We reply within 1 business day."
+      },
+      "law": {
+        "content": "This policy is governed by the laws of the Kingdom of Saudi Arabia, including the E-Commerce Law and its Implementing Regulations. Your statutory rights are not limited by anything in this policy."
+      }
+    }
+  }
+}

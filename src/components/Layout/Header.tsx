@@ -16,6 +16,7 @@ const SettingsModal = lazy(() => import("../Settings/SettingsModal").then((m) =>
 const FeedbackModal = lazy(() => import("../Feedback/FeedbackModal").then((m) => ({ default: m.FeedbackModal })));
 import { useUserCredits } from "../../hooks/useUserCredits";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 
 
 
@@ -29,11 +30,6 @@ interface HeaderProps {
   showDecorativeSkyline?: boolean;
 }
 
-const getPrefersReducedMotion = () => {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-};
-
 export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { user, signInWithGoogle, signOut } = useAuth();
@@ -44,9 +40,6 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
     () => skylineUrls.desktop.startsWith("data:image/"),
     [skylineUrls.desktop]
   );
-  const initialReducedMotion = useMemo(getPrefersReducedMotion, []);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialReducedMotion);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [badgeFlipped, setBadgeFlipped] = useState(false);
@@ -103,16 +96,6 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
       zIndex: 120,
     });
   }, [textDirection]);
-
-  // Mouse tracking for interactive gradient
-  const handleMouseMove = useCallback((e: MouseEvent<HTMLElement>) => {
-    if (prefersReducedMotion || user) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    setMousePosition({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    });
-  }, [prefersReducedMotion, user]);
 
   // Mobile nav body scroll lock
   useEffect(() => {
@@ -212,39 +195,6 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
     return () => clearTimeout(timer);
   }, [isFallbackSkyline, skylineLoaded]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateFromMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
-      const shouldReduce = event.matches;
-      setPrefersReducedMotion(shouldReduce);
-    };
-
-    updateFromMediaQuery(mediaQuery);
-
-
-
-    if (!mediaQuery.matches) {
-      // Intentionally empty since animations were removed
-    }
-
-    const removeMotionListener =
-      typeof mediaQuery.addEventListener === "function"
-        ? (() => {
-          mediaQuery.addEventListener("change", updateFromMediaQuery);
-          return () => mediaQuery.removeEventListener("change", updateFromMediaQuery);
-        })()
-        : (() => {
-          mediaQuery.addListener(updateFromMediaQuery);
-          return () => mediaQuery.removeListener(updateFromMediaQuery);
-        })();
-
-    return () => {
-      removeMotionListener();
-    };
-  }, []);
-
 
 
   return (
@@ -256,22 +206,9 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
           ? "bg-[color:var(--bg)] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
           : "text-gray-900 dark:text-white pb-4"
       )}
-      onMouseMove={handleMouseMove}
     >
       {/* Animated background effects */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
-        {/* Interactive gradient that follows mouse */}
-        {isSignedOutHeader && (
-          <div
-            className="absolute h-[520px] w-[520px] rounded-full opacity-[0.05] blur-[44px] transition-all duration-1000 ease-out"
-            style={{
-              background: "radial-gradient(circle, rgba(16,185,129,0.4) 0%, transparent 70%)",
-              left: `${mousePosition.x - 20}%`,
-              top: `${mousePosition.y - 20}%`,
-              transform: "translate(-50%, -50%)",
-            }}
-          />
-        )}
 
         {/* Noise texture overlay - reduced opacity for better text contrast */}
         <div className="absolute inset-0 opacity-[0.01] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
@@ -344,12 +281,11 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
             {isSignedOutHeader && (
               <button
                 onClick={() => setBadgeFlipped(!badgeFlipped)}
-                className="hidden lg:inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-4 py-1.5 text-xs font-semibold tracking-wide text-emerald-700 backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:border-emerald-300 group dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
+                className="hidden lg:inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-4 py-1.5 text-xs font-semibold tracking-wide text-emerald-700 backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:scale-105 hover:border-emerald-300 group dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
                 aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
                 title={badgeFlipped ? t("header.badge") : t("header.badgeAlt")}
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 dark:bg-emerald-400" />
                 </span>
                 <span
@@ -379,7 +315,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                       type="button"
                       ref={accountMenuButtonRef}
                       onClick={() => setAccountMenuOpen((open) => !open)}
-                      className="btn-spring inline-flex h-10 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-gray-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)] dark:border-white/15 dark:bg-black/55 dark:text-gray-100 dark:hover:bg-black/70 dark:hover:text-white"
+                      className="btn-spring inline-flex h-10 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-gray-800 shadow-sm backdrop-blur-sm transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)] dark:border-white/15 dark:bg-black/55 dark:text-gray-100 dark:hover:bg-black/70 dark:hover:text-white"
                       aria-label={t('common.accountMenu', 'Account menu')}
                       aria-expanded={accountMenuOpen}
                       aria-haspopup="menu"
@@ -393,7 +329,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                         ref={accountMenuPanelRef}
                         role="menu"
                         style={accountMenuStyle}
-                        className="overflow-y-auto rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] p-3 text-gray-800 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#071f1a]/95 dark:text-gray-100"
+                        className="origin-top-right rtl:origin-top-left animate-in fade-in zoom-in-95 duration-150 ease-out overflow-y-auto rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] p-3 text-gray-800 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#071f1a]/95 dark:text-gray-100"
                       >
                         <div className="border-b border-[color:var(--glass-border)] pb-3 dark:border-white/10">
                           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50">
@@ -484,7 +420,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 <>
                   <button
                     onClick={toggleTheme}
-                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-all duration-300 shadow-sm bg-[color:var(--surface-control)] border-[color:var(--glass-border)] text-slate-700 hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out shadow-sm bg-[color:var(--surface-control)] border-[color:var(--glass-border)] text-slate-700 hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
                     aria-label={t('common.toggleTheme', 'Toggle theme')}
                   >
                   {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
@@ -498,7 +434,6 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                     size="md"
                     className="group relative font-bold bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                     <LogIn className="h-4 w-4 mr-2" />
                     {t("common.signIn")}
                   </GlassButton>
@@ -522,7 +457,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
               <button
                 onClick={() => setMobileNavOpen(true)}
                 className={cn(
-                  "relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-all duration-300 active:scale-95",
+                  "relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out active:scale-95",
                   isSignedOutHeader
                     ? "bg-[color:var(--surface-control)] border-[color:var(--glass-border)] text-slate-950 hover:bg-[color:var(--surface-control-hover)] dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
                     : "bg-[color:var(--surface-control)] dark:bg-black/55 border-[color:var(--glass-border)] dark:border-white/15 text-gray-900 dark:text-white hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-black/70"
@@ -540,7 +475,9 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
       </div>
 
       {/* Mobile Navigation Overlay */}
-      {mobileNavOpen && createPortal(
+      {createPortal(
+        <AnimatePresence>
+          {mobileNavOpen && (
         <div
           className="fixed inset-0 z-[100] md:hidden"
           onClick={handleMobileNavOutsideClick}
@@ -548,12 +485,22 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
           role="dialog"
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm animate-fade-in" />
+          <motion.div
+            className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          />
 
-          {/* Nav Panel - slides in from right */}
-          <div
+          {/* Nav Panel - slides in from the inline-end edge (RTL-aware) */}
+          <motion.div
             ref={mobileNavRef}
-            className="absolute end-0 top-0 h-full w-[85%] max-w-[320px] bg-[color:var(--surface-glass-elevated)] dark:bg-[#031713] border-s border-[color:var(--glass-border)] dark:border-white/10 shadow-[-10px_0_40px_rgba(39,31,18,0.12)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] animate-slide-in-right overflow-y-auto"
+            className="absolute end-0 top-0 h-full w-[85%] max-w-[320px] bg-[color:var(--surface-glass-elevated)] dark:bg-[#031713] border-s border-[color:var(--glass-border)] dark:border-white/10 shadow-[-10px_0_40px_rgba(39,31,18,0.12)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] overflow-y-auto"
+            initial={{ x: textDirection === "rtl" ? "-100%" : "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: textDirection === "rtl" ? "-100%" : "100%" }}
+            transition={{ type: "spring", stiffness: 400, damping: 40 }}
           >
             {/* Header with close button */}
             <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
@@ -567,14 +514,14 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleTheme}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-slate-700 dark:text-white transition-all duration-300 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-95"
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-slate-700 dark:text-white transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-95"
                   aria-label={t('common.toggleTheme', 'Toggle theme')}
                 >
                   {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
                 </button>
                 <button
                   onClick={() => setMobileNavOpen(false)}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white transition-all duration-300 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-95"
+                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-95"
                   aria-label={t('common.closeNavigation', 'Close navigation menu')}
                 >
                   <X className="h-5 w-5" />
@@ -698,8 +645,10 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 </a>
               </div>
             </div>
-          </div>
-        </div>,
+          </motion.div>
+        </div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
 

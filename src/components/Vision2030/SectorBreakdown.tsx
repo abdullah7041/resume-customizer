@@ -96,8 +96,8 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                   <div className="flex items-center gap-2">
                     <div className="w-24 h-2 bg-gray-200 dark:bg-gray-900/50 rounded-full overflow-hidden">
                       <div
-                        className={`h-full bg-gradient-to-r ${getScoreBg(sector.score)} transition-all duration-1000`}
-                        style={{ width: `${sector.score}%` }}
+                        className={`h-full w-full origin-left rtl:origin-right bg-gradient-to-r ${getScoreBg(sector.score)} transition-transform duration-1000`}
+                        style={{ transform: `scaleX(${Math.min(Math.max(sector.score, 0), 100) / 100})` }}
                       />
                     </div>
                     <span className={`text-lg font-bold min-w-[3rem] text-right ${getScoreColor(sector.score)}`}>

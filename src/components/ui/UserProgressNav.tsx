@@ -268,8 +268,8 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                 {/* Progress Line */}
                 <div className="absolute left-[28px] top-[4.5rem] bottom-6 w-px bg-gray-200 dark:bg-white/5" />
                 <div
-                    className="absolute left-[28px] top-[4.5rem] w-px bg-gradient-to-b from-emerald-500 to-emerald-500/0 transition-all duration-700 ease-out"
-                    style={{ height: `${(currentStepIndex / (steps.length - 1)) * 80}%` }}
+                    className="absolute left-[28px] top-[4.5rem] h-[80%] w-px origin-top bg-gradient-to-b from-emerald-500 to-emerald-500/0 transition-transform duration-700 ease-out"
+                    style={{ transform: `scaleY(${steps.length > 1 ? Math.min(Math.max(currentStepIndex / (steps.length - 1), 0), 1) : 0})` }}
                 />
 
                 {steps.map((step, idx) => {
@@ -294,9 +294,6 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                                             : "border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-black/40 text-gray-400 dark:text-white/20"
                                 )}
                             >
-                                {step.isActive && (
-                                    <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/20" />
-                                )}
                                 <Icon className="h-3 w-3" />
                             </div>
 

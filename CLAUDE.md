@@ -5,6 +5,20 @@ React 19 + Vite 8 + Tailwind CSS v4 + Zustand + Netlify Functions + Supabase + O
 
 Shared agent context: `AGENTS.md`. This file (`CLAUDE.md`) is the single source of truth for rules, commands, gotchas, and standards.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked with GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the standard Matt Pocock triage vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use the single-context domain-documentation layout. See `docs/agents/domain.md`.
+
 ## Commands
 
 ```bash
@@ -28,7 +42,6 @@ npm run test               # Vitest unit tests
 - Optimizations: only applied when `applied: true` flag is set
 - Skills are never auto-injected — recommendations only, user adds manually
 - AI-modified data tracked in `meta.ai_suggestions` to preserve schema integrity
-- Always use Context7 mcp when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 - Preserve the proprietary licensing language already present in the repo — never strip or alter license headers.
 
 ## Quality

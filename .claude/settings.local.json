@@ -79,7 +79,9 @@
       "Bash(rtk ls *)",
       "Bash(git merge *)",
       "Bash(git ls-tree *)",
-      "Bash(rtk npx *)"
+      "Bash(rtk npx *)",
+      "Bash(claude --version)",
+      "Bash(npm -g config get prefix)"
     ]
   },
   "enableAllProjectMcpServers": false,
@@ -89,5 +91,9 @@
   ],
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true
+  },
+  "skillOverrides": {
+    "fix-light-dark-mode": "off",
+    "review-parse-quality": "off"
   }
 }

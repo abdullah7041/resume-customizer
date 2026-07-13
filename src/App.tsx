@@ -21,6 +21,7 @@ import { isOnboarded, markOnboarded } from "./lib/onboarding/onboardedFlag";
 // first-run gate's initial paint, so a Suspense flash there would be visible.
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy").then((m) => ({ default: m.PrivacyPolicy })));
 const TermsOfService = lazy(() => import("./pages/TermsOfService").then((m) => ({ default: m.TermsOfService })));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy").then((m) => ({ default: m.RefundPolicy })));
 const AdminFeedbackPage = lazy(() => import("./pages/AdminFeedbackPage").then((m) => ({ default: m.AdminFeedbackPage })));
 const PricingWaitlistModal = lazy(() => import("./components/Credits/PricingWaitlistModal").then((m) => ({ default: m.PricingWaitlistModal })));
 import { useAuth } from "./hooks/useAuth";
@@ -89,7 +90,7 @@ export default function App() {
 
   // Onboarding tour (Joyride removed — run is permanently false)
   const { run } = useOnboardingTour();
-  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/admin/feedback";
+  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/refund" || currentPath === "/admin/feedback";
   const isSignedOutLanding = !user && !needsOnboarding && !guestModeActive && currentPath === "/";
 
   return (
@@ -106,6 +107,8 @@ export default function App() {
                 <PrivacyPolicy />
               ) : currentPath === "/terms" ? (
                 <TermsOfService />
+              ) : currentPath === "/refund" ? (
+                <RefundPolicy />
               ) : currentPath === "/admin/feedback" ? (
                 <AdminFeedbackPage />
               ) : needsOnboarding ? (

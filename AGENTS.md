@@ -25,6 +25,7 @@ Watheq is a proprietary Saudi-market AI resume optimizer. The app uses React 19,
 
 ## Tooling Rules
 
+- When `.codegraph/` exists, use CodeGraph first for code discovery, architecture/data-flow tracing, symbol lookup, callers/callees, and change-impact analysis. Prefer the `codegraph_explore` MCP tool after restarting the agent; use `codegraph explore "<question or symbols>"` as the shell fallback. Use direct file reads to verify live content when CodeGraph reports pending/stale files.
 - Prefer `rtk` for compatible shell executables when reading, searching, checking, or summarizing repository state, especially when it reduces noisy output. If `rtk` is unavailable or unsuitable for the command, use the narrowest normal shell command and note the fallback.
 - Optional: use `$caveman lite` only for low-risk summaries. Never use it for security, architecture, or correctness-critical reviews.
 - Use Context7 MCP for current third-party library, framework, SDK, CLI, and cloud-service documentation when implementation is blocked by API details, version behavior, setup/configuration uncertainty, or stale local knowledge. Use the configured Context7 MCP tools; the source project is `https://github.com/upstash/context7.git`.
@@ -33,10 +34,10 @@ Watheq is a proprietary Saudi-market AI resume optimizer. The app uses React 19,
 
 ### RTK on Windows / PowerShell
 
-- Prefer explicit RTK commands only when they exist: `rtk git status`, `rtk git diff --stat`, `rtk git diff`, `rtk read <file>`, `rtk grep "<pattern>" <path>`, `rtk find "<glob>" <path>`, `rtk test <command>`, `rtk lint`, and `rtk tsc`.
+- Prefer explicit RTK commands only when they exist: `rtk git status`, `rtk git diff --stat`, `rtk git diff`, `rtk read <file>`, `rtk rg "<pattern>" <path>`, `rtk find "<glob>" <path>`, `rtk test <command>`, `rtk lint`, and `rtk tsc`.
 - Do not run PowerShell cmdlets as RTK subcommands. Wrong: `rtk Get-Content AGENTS.md`. Right: `rtk read AGENTS.md`.
-- Do not use `rtk rg`; use `rtk grep` instead.
-- Avoid running multiple `rtk read` or `rtk grep` commands in parallel under short tool timeouts. Run them sequentially, or give RTK calls about 30 seconds when parallelism is necessary; if RTK still hangs, use a narrow PowerShell fallback and report it.
+- On native Windows, prefer `rtk rg`; `rtk grep` requires an external `grep` binary and will fail when only ripgrep (`rg`) is installed.
+- Avoid running multiple `rtk read` or `rtk rg` commands in parallel under short tool timeouts. Run them sequentially, or give RTK calls about 30 seconds when parallelism is necessary; if RTK still hangs, use a narrow PowerShell fallback and report it.
 - If PowerShell syntax or cmdlets are required, wrap them with `rtk proxy`, for example `rtk proxy powershell -NoProfile -Command "Get-Content -Raw -LiteralPath 'AGENTS.md'"` or `rtk proxy powershell -NoProfile -Command "Test-Path -LiteralPath './src'"`.
 - If RTK search hits access-denied errors, first verify the working directory, then restrict the search to repo paths such as `src`, `netlify`, `docs`, `supabase`, and `.agents`.
 - If RTK output is insufficient, use a narrow non-RTK fallback and explicitly explain why.
@@ -44,6 +45,7 @@ Watheq is a proprietary Saudi-market AI resume optimizer. The app uses React 19,
 ### Tooling Checklist
 
 - [ ] Start with repo-local context and focused file reads.
+- [ ] Use CodeGraph first for structural code discovery and impact analysis when the repository is indexed.
 - [ ] Use `rtk` for compatible searches/checks before falling back to normal shell tools.
 - [ ] Use Context7 MCP when third-party docs or API behavior are uncertain.
 - [ ] Use OpenAI Docs MCP for OpenAI-specific implementation details.

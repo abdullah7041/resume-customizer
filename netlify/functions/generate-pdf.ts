@@ -53,6 +53,7 @@ const isNetlify = !!process.env.NETLIFY;
 let browserInstance: Browser | null = null;
 let lastUsedTime = 0;
 const BROWSER_IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const RENDER_TIMEOUT_MS = 30_000;
 
 async function getBrowser() {
   const now = Date.now();
@@ -201,7 +202,10 @@ const baseHandler: Handler = async (event) => {
     // Disable JavaScript to prevent script execution from client-provided HTML
     await page.setJavaScriptEnabled(false);
 
-    // Render the final HTML string with embedded styles
+    // Render the final HTML string with embedded styles. setContent and the
+    // explicit network-idle wait share one deadline so this migration from
+    // waitUntil: "networkidle2" does not double the render budget.
+    const renderDeadline = Date.now() + RENDER_TIMEOUT_MS;
     await page.setContent(`
       <!DOCTYPE html>
       <html dir="${pageDirection}" class="light" data-theme="light">
@@ -246,7 +250,12 @@ const baseHandler: Handler = async (event) => {
         </head>
         <body>${html}</body>
       </html>
-    `, { waitUntil: 'networkidle2', timeout: 30_000 });
+    `, { waitUntil: 'load', timeout: RENDER_TIMEOUT_MS });
+    await page.waitForNetworkIdle({
+      concurrency: 2,
+      idleTime: 500,
+      timeout: Math.max(1, renderDeadline - Date.now()),
+    });
 
     // Use print media so screen-only components are hidden natively.
     await page.emulateMediaType('print');

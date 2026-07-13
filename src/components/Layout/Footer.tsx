@@ -48,6 +48,9 @@ export default function Footer() {
             <a href="/terms" className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
               {t("footer.links.terms")}
             </a>
+            <a href="/refund" className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
+              {t("footer.links.refund")}
+            </a>
             <a href="mailto:support@watheqai.app" className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
               {t("footer.links.contact")}
             </a>
@@ -109,6 +112,12 @@ export default function Footer() {
                 className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200"
               >
                 {t("footer.links.terms")}
+              </a>
+              <a
+                href="/refund"
+                className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200"
+              >
+                {t("footer.links.refund")}
               </a>
             </nav>
           </div>

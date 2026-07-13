@@ -2136,13 +2136,13 @@ export default function MainContent() {
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-all duration-300 bg-gray-100 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-black border border-gray-300/50 dark:border-white/10 text-gray-900 dark:text-white shadow-md active:scale-95"
+                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out bg-gray-100 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-black border border-gray-300/50 dark:border-white/10 text-gray-900 dark:text-white shadow-md active:scale-95"
                 >
                   {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   onClick={confirmDeleteAllData}
-                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-all duration-300 bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_8px_30px_rgba(239,68,68,0.4)] border border-red-400/20 flex items-center justify-center gap-2 active:scale-95"
+                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_8px_30px_rgba(239,68,68,0.4)] border border-red-400/20 flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Trash2 className="w-4 h-4" />
                   {t("workspace.deleteAllConfirm.confirm", "Delete All")}
