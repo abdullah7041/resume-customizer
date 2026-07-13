@@ -125,7 +125,7 @@ describe('referral-api auth binding', () => {
     supabaseFromMock.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
+          maybeSingle: vi.fn().mockResolvedValue({
             data: { referral_code: 'REALCODE' },
             error: null,
           }),
@@ -163,7 +163,7 @@ describe('referral-api auth binding', () => {
     supabaseFromMock.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
+          maybeSingle: vi.fn().mockResolvedValue({
             data: { referral_code: 'REALCODE' },
             error: null,
           }),
@@ -186,5 +186,81 @@ describe('referral-api auth binding', () => {
     expect(getUserMock).toHaveBeenCalledTimes(1);
     expect(response.body).toContain('REALCODE');
     expect(response.body).toContain('"creditsEarned":10');
+  });
+
+  it('returns stats with a linkError instead of failing the whole summary when the link leg breaks', async () => {
+    getReferralStatsMock.mockResolvedValue({
+      total: 3,
+      completed: 2,
+      pending: 1,
+      creditsEarned: 10,
+    });
+    // Simulate the referral migrations missing in production: Postgres 42703
+    supabaseFromMock.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: '42703', message: 'column user_credits.referral_code does not exist' },
+          }),
+        }),
+      }),
+    });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-summary' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body!);
+    expect(body.success).toBe(true);
+    expect(body.creditsEarned).toBe(10);
+    expect(body.referralUrl).toBeUndefined();
+    expect(body.linkError).toContain('referral columns are missing');
+    expect(body.linkError).toContain('42703');
+    expect(body.linkErrorCode).toBe('referral/db-undefined-column');
+    expect(body.linkErrorStatus).toBe(500);
+  });
+
+  it('does not hand out a referral code that could not be persisted', async () => {
+    supabaseFromMock.mockReturnValue({
+      // No existing code on file…
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      }),
+      // …and the update matches no user_credits row (row not initialized yet).
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      }),
+    });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-link' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(500);
+    const body = JSON.parse(response.body!);
+    expect(body.details).toContain('Referral profile not found');
+    expect(body).toMatchObject({
+      status: 500,
+      code: 'referral/profile-not-found',
+      message: expect.stringContaining('Referral profile not found'),
+    });
   });
 });

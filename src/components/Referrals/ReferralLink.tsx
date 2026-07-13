@@ -40,7 +40,7 @@ export function ReferralLink({ className }: ReferralLinkProps) {
         if (summary.referralUrl) {
           setReferralUrl(summary.referralUrl);
         } else {
-          setError('Failed to generate referral link');
+          setError(summary.linkError || 'Failed to generate referral link');
         }
       } catch (error) {
         console.error('[ReferralLink] Failed to fetch referral link:', error);

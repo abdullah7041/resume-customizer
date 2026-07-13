@@ -448,7 +448,15 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
             {/* Mobile: compact credits plus menu button */}
             <div className="md:hidden flex min-w-0 items-center gap-2">
               {user && (
-                <div data-tour="credits" className="min-w-0">
+                // Fixed positioning: the credits pill stays visible while the
+                // page scrolls (the nav bar itself is not sticky on mobile).
+                // Offsets place it beside the hamburger button at rest; z-40
+                // keeps it under the mobile nav overlay (z-[100]) and the
+                // credit modal (z-[60]).
+                <div
+                  data-tour="credits"
+                  className="fixed z-40 top-[max(18px,env(safe-area-inset-top))] sm:top-[max(22px,env(safe-area-inset-top))] end-[calc(var(--app-shell-gutter)+52px)]"
+                >
                   <CreditBalance
                     variant="compact"
                     onClick={() => {

@@ -17,35 +17,45 @@ import { redactForLog } from '../lib/sentry.js';
 // Generate short, URL-safe referral codes (8 characters)
 const generateCode = customAlphabet('0123456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz', 8);
 
-interface HttpError {
-    statusCode: number;
-    message: string;
+class ReferralError extends Error {
+    readonly status: number;
+    readonly code: string;
+
+    constructor(status: number, code: string, message: string) {
+        super(message);
+        this.name = 'ReferralError';
+        this.status = status;
+        this.code = code;
+    }
 }
 
-function httpError(statusCode: number, message: string): HttpError {
-    return { statusCode, message };
+function httpError(status: number, code: string, message: string): ReferralError {
+    return new ReferralError(status, code, message);
 }
 
-function isHttpError(error: unknown): error is HttpError {
-    return Boolean(
-        error &&
-        typeof error === 'object' &&
-        'statusCode' in error &&
-        'message' in error
-    );
+function isHttpError(error: unknown): error is ReferralError {
+    return error instanceof ReferralError;
+}
+
+function normalizeReferralError(error: unknown, fallbackCode: string, fallbackMessage: string): ReferralError {
+    if (isHttpError(error)) return error;
+    if (error instanceof Error) return httpError(500, fallbackCode, error.message);
+    return httpError(500, fallbackCode, fallbackMessage);
 }
 
 function summarizeErrorForLog(error: unknown) {
-    if (error instanceof Error) {
+    if (isHttpError(error)) {
         return {
+            status: error.status,
+            code: error.code,
             name: error.name,
             message: redactForLog(error.message)
         };
     }
 
-    if (isHttpError(error)) {
+    if (error instanceof Error) {
         return {
-            statusCode: error.statusCode,
+            name: error.name,
             message: redactForLog(error.message)
         };
     }
@@ -62,23 +72,39 @@ async function getAuthenticatedUser(event: Parameters<Handler>[0]): Promise<Auth
     const authHeader = event.headers.authorization || event.headers.Authorization;
 
     if (!authHeader) {
-        throw httpError(401, 'Authentication required');
+        throw httpError(401, 'referral/auth-required', 'Authentication required');
     }
 
     const supabase = getSupabaseClient();
 
     if (!supabase) {
-        throw httpError(500, 'Server configuration error. Please contact support.');
+        throw httpError(500, 'referral/server-misconfigured', 'Server configuration error. Please contact support.');
     }
 
     const token = authHeader.replace(/^Bearer\s+/i, '');
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user?.id || !user?.email) {
-        throw httpError(401, 'Invalid or expired authentication token');
+        throw httpError(401, 'referral/auth-invalid', 'Invalid or expired authentication token');
     }
 
     return { id: user.id, email: user.email };
+}
+
+// Postgres "undefined column" — the referral migrations were not applied to
+// this database. Surface a precise message instead of a generic failure so the
+// Netlify function log (and the error details) say exactly what to run.
+const PG_UNDEFINED_COLUMN = '42703';
+
+function describeDbError(prefix: string, dbError: { code?: string; message?: string }): ReferralError {
+    if (dbError.code === PG_UNDEFINED_COLUMN) {
+        return httpError(
+            500,
+            'referral/db-undefined-column',
+            `${prefix} (db code: ${PG_UNDEFINED_COLUMN}): the user_credits referral columns are missing. Apply the referral migrations in supabase/migrations (see 20260713000000_ensure_referral_schema.sql).`
+        );
+    }
+    return httpError(500, 'referral/db-error', `${prefix} (db code: ${dbError.code || 'unknown'})`);
 }
 
 /**
@@ -88,7 +114,7 @@ async function handleGetLink(email: string) {
     const supabase = getSupabaseClient();
 
     if (!supabase) {
-        throw new Error('Supabase client not available');
+        throw httpError(500, 'referral/server-misconfigured', 'Supabase client not available');
     }
 
     // Check if user already has a referral code
@@ -96,11 +122,11 @@ async function handleGetLink(email: string) {
         .from('user_credits')
         .select('referral_code')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
+    if (fetchError) {
         console.error('[referral-api] Fetch error:', summarizeErrorForLog(fetchError));
-        throw new Error('Failed to fetch user data');
+        throw describeDbError('Failed to fetch referral profile', fetchError);
     }
 
     let referralCode = userData?.referral_code;
@@ -109,14 +135,28 @@ async function handleGetLink(email: string) {
     if (!referralCode) {
         referralCode = generateCode();
 
-        const { error: updateError } = await supabase
+        // .select() verifies a row was actually updated: without it, a missing
+        // user_credits row silently "succeeds" and we hand out a referral code
+        // that was never persisted — a dead link no signup can ever match.
+        const { data: savedRow, error: updateError } = await supabase
             .from('user_credits')
             .update({ referral_code: referralCode })
-            .eq('email', email);
+            .eq('email', email)
+            .select('referral_code')
+            .maybeSingle();
 
         if (updateError) {
             console.error('[referral-api] Update error:', summarizeErrorForLog(updateError));
-            throw new Error('Failed to save referral code');
+            throw describeDbError('Failed to save referral code', updateError);
+        }
+
+        if (!savedRow) {
+            console.error(`[referral-api] No user_credits row for ${redactForLog(email)} — cannot persist referral code.`);
+            throw httpError(
+                500,
+                'referral/profile-not-found',
+                'Referral profile not found. Your credits account may still be initializing — try again shortly.'
+            );
         }
 
         console.log(`[referral-api] Generated new code for user ${redactForLog(email)}: ${referralCode}`);
@@ -145,12 +185,42 @@ async function handleGetStats(userId: string) {
 }
 
 async function handleGetSummary(user: AuthenticatedReferralUser) {
-    const [link, stats] = await Promise.all([
+    // One failing leg must not take down the whole summary: previously a
+    // get-link failure rejected the Promise.all and the modal showed BOTH
+    // "Referral stats unavailable" and "Referral link unavailable". Now stats
+    // still render and the link box carries the specific error.
+    const [linkResult, statsResult] = await Promise.allSettled([
         handleGetLink(user.email),
         handleGetStats(user.id)
     ]);
 
-    return { ...link, ...stats };
+    if (linkResult.status === 'rejected' && statsResult.status === 'rejected') {
+        throw linkResult.reason;
+    }
+
+    if (linkResult.status === 'rejected') {
+        console.error('[referral-api] get-summary link leg failed:', summarizeErrorForLog(linkResult.reason));
+    }
+    if (statsResult.status === 'rejected') {
+        console.error('[referral-api] get-summary stats leg failed:', summarizeErrorForLog(statsResult.reason));
+    }
+
+    const linkError = linkResult.status === 'rejected'
+        ? normalizeReferralError(linkResult.reason, 'referral/link-failed', 'Failed to generate referral link')
+        : null;
+
+    return {
+        ...(linkResult.status === 'fulfilled'
+            ? linkResult.value
+            : {
+                linkError: linkError!.message,
+                linkErrorCode: linkError!.code,
+                linkErrorStatus: linkError!.status,
+            }),
+        ...(statsResult.status === 'fulfilled'
+            ? statsResult.value
+            : { totalReferrals: 0, completedReferrals: 0, pendingReferrals: 0, creditsEarned: 0 }),
+    };
 }
 
 /**
@@ -162,13 +232,13 @@ async function handleTrack(body: { referral_code: string }, refereeEmail: string
 
     // Validate required fields
     if (!referral_code) {
-        throw httpError(400, 'Missing required field: referral_code');
+        throw httpError(400, 'referral/code-required', 'Missing required field: referral_code');
     }
 
     const result = await trackReferral(referral_code, refereeEmail, refereeUserId);
 
     if (!result.success) {
-        throw httpError(400, result.error || 'Failed to track referral');
+        throw httpError(400, 'referral/track-failed', result.error || 'Failed to track referral');
     }
 
     return { success: true, message: 'Referral tracked successfully' };
@@ -192,11 +262,19 @@ const handler: Handler = async (event) => {
                     };
                 } catch (linkError) {
                     console.error('[referral-api] get-link error:', summarizeErrorForLog(linkError));
+                    const normalizedError = normalizeReferralError(
+                        linkError,
+                        'referral/link-failed',
+                        'Failed to generate referral link'
+                    );
                     return {
-                        statusCode: 500,
+                        statusCode: normalizedError.status,
                         body: JSON.stringify({
                             error: 'Failed to generate referral link',
-                            details: linkError instanceof Error ? linkError.message : 'Unknown error'
+                            status: normalizedError.status,
+                            code: normalizedError.code,
+                            message: normalizedError.message,
+                            details: normalizedError.message
                         }),
                     };
                 }
@@ -256,8 +334,13 @@ const handler: Handler = async (event) => {
         // Handle custom errors with statusCode
         if (isHttpError(error)) {
             return {
-                statusCode: error.statusCode,
-                body: JSON.stringify({ error: error.message }),
+                statusCode: error.status,
+                body: JSON.stringify({
+                    status: error.status,
+                    code: error.code,
+                    message: error.message,
+                    error: error.message,
+                }),
             };
         }
 
