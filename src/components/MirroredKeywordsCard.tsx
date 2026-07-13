@@ -54,7 +54,7 @@ export function MirroredKeywordsCard({
                                     key={index}
                                     onClick={() => handleCopy(phrase, index)}
                                     className={`
-                                        group relative px-4 py-2 text-sm font-medium rounded-xl transition-all duration-300
+                                        group relative px-4 py-2 text-sm font-medium rounded-xl transition-[color,background-color,box-shadow] duration-300
                                         flex items-center gap-2.5 overflow-hidden
                                         ${copiedIndex === index
                                             ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/50'

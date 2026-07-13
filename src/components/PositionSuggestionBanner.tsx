@@ -46,7 +46,7 @@ export function PositionSuggestionBanner({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border transition-all duration-300',
+        'relative overflow-hidden rounded-2xl border transition-colors duration-300',
         applied
           ? 'border-emerald-500/40 bg-emerald-500/5'
           : 'border-amber-500/30 bg-gradient-to-br from-amber-500/8 via-orange-500/5 to-transparent',
@@ -179,9 +179,9 @@ export function PositionSuggestionBanner({
               id="position-suggestion-apply"
               onClick={() => onApply(suggestion.suggested)}
               className={cn(
-                'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200',
+                'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-[background-color,box-shadow,scale] duration-200',
                 'bg-amber-500 hover:bg-amber-400 text-white shadow-sm shadow-amber-500/20',
-                'hover:shadow-amber-500/30 hover:shadow-md active:scale-[0.98]'
+                'hover:shadow-amber-500/30 hover:shadow-md active:scale-[0.96]'
               )}
             >
               <Check className="w-3.5 h-3.5" />
@@ -202,9 +202,9 @@ export function PositionSuggestionBanner({
             id="position-suggestion-revert"
             onClick={onRevert}
             className={cn(
-              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-[background-color,scale] duration-200',
               'text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-white/20',
-              'hover:bg-gray-100 dark:hover:bg-white/10 active:scale-[0.98]'
+              'hover:bg-gray-100 dark:hover:bg-white/10 active:scale-[0.96]'
             )}
           >
             <Undo2 className="w-3.5 h-3.5" />

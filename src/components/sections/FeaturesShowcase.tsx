@@ -140,7 +140,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
     return (
         <GlassCard
             className={cn(
-                "p-6 h-full transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+                "p-6 h-full transition-[scale,box-shadow] duration-300 hover:scale-[1.02] hover:shadow-xl",
                 feature.highlight &&
                 "border-[#006C35] shadow-[0_0_30px_rgba(0,108,53,0.2)]"
             )}
@@ -227,7 +227,7 @@ export default function FeaturesShowcase() {
                 <div className="flex justify-center mt-8 relative z-10">
                     <button
                         onClick={() => setShowAllFeatures(!showAllFeatures)}
-                        className={cn("flex items-center gap-2 px-6 py-3 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all font-medium shadow-lg cursor-pointer", glass.card)}
+                        className={cn("flex items-center gap-2 px-6 py-3 rounded-xl text-emerald-400 hover:text-emerald-300 transition-colors font-medium shadow-lg cursor-pointer", glass.card)}
                         aria-expanded={showAllFeatures}
                         aria-controls="additional-features"
                         type="button"
@@ -250,7 +250,7 @@ export default function FeaturesShowcase() {
                 <div
                     id="additional-features"
                     className={cn(
-                        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 overflow-hidden transition-all duration-500 ease-in-out",
+                        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out",
                         showAllFeatures
                             ? "max-h-[2000px] opacity-90 pb-4"
                             : "max-h-0 opacity-0"

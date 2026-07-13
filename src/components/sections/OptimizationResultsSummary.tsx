@@ -86,7 +86,7 @@ function AnimatedScore({
 
     return (
         <div className={cn(
-            'flex flex-col items-center p-6 rounded-2xl border transition-all',
+            'flex flex-col items-center p-6 rounded-2xl border transition-colors',
             getBgColor(score, variant === 'after'),
             variant === 'after'
                 ? 'border-emerald-500/30'

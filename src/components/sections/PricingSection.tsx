@@ -57,7 +57,7 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                                     variant="default"
                                     padding="lg"
                                     className={cn(
-                                        'neu-card flex flex-col h-full transition-all duration-300 relative overflow-hidden p-6 sm:p-8',
+                                        'neu-card flex flex-col h-full transition-[translate,border-color,box-shadow] duration-300 relative overflow-hidden p-6 sm:p-8',
                                         'hover:-translate-y-1',
                                         plan.active && 'border-emerald-500/40',
                                         plan.waitlist && 'border-[color:var(--accent-gold)]/30'

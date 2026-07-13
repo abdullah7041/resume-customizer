@@ -66,7 +66,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
           return (
             <div
               key={sector.sectorId}
-              className="rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden bg-gradient-to-br from-white/[0.02] to-white/[0.01] hover:border-gray-300 dark:hover:border-white/20 transition-all"
+              className="rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden bg-gradient-to-br from-white/[0.02] to-white/[0.01] hover:border-gray-300 dark:hover:border-white/20 transition-colors"
             >
               {/* Sector Header */}
               <button

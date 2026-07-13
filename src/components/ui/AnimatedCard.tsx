@@ -78,8 +78,8 @@ export const AnimatedCard = forwardRef<HTMLElement, AnimatedCardProps>(function 
       <Component
         ref={ref}
         className={cn(
-          "relative overflow-hidden rounded-card p-6 shadow-card transition-all duration-300 ease-out",
-          "before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:transition-all before:duration-300 before:content-[''] before:bg-[image:var(--glass-reflection)] hover:before:opacity-90 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100",
+          "relative overflow-hidden rounded-card p-6 shadow-card transition-[box-shadow,border-color,scale,translate] duration-300 ease-out",
+          "before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:transition-opacity before:duration-300 before:content-[''] before:bg-[image:var(--glass-reflection)] hover:before:opacity-90 hover:before:bg-[image:var(--glass-reflection-hover)] active:before:opacity-100",
           "hover:shadow-[var(--shadow-hover)] hover:border-[color:var(--glass-border-hover)] hover:scale-[1.02] hover:-translate-y-0.5",
           glow ? "shadow-glass" : "",
           toneStyles[tone] ?? toneStyles.glass,

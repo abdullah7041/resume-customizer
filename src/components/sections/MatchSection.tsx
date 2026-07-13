@@ -463,7 +463,7 @@ export function MatchSection({
                   setJobText('');
                   onClear?.();
                 }}
-                className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500 transition-all hover:bg-rose-500/20 hover:text-gray-900 dark:bg-white/5 dark:hover:text-white"
+                className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-rose-500/20 hover:text-gray-900 dark:bg-white/5 dark:hover:text-white"
               >
                 {t('common.clear', 'Clear')}
               </button>

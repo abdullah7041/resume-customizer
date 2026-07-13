@@ -205,7 +205,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     {isArabic ? 'الملخص المهني' : 'Professional Summary'}
                 </label>
                 <textarea
-                    className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none transition-all"
+                    className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none transition-shadow"
                     value={localResume?.basics?.summary || ''}
                     onChange={(e) => updateNestedState('basics.summary', e.target.value)}
                 />
@@ -280,7 +280,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     renderEmptyState(isArabic ? 'لم تتم إضافة خبرات بعد' : 'No experience added yet')
                 ) : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-colors">
                             <div>
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{item.position || (isArabic ? 'منصب غير محدد' : 'Untitled Position')}</h4>
                                 <p className="text-sm text-gray-500 dark:text-white/60">{item.name} • {item.startDate} - {item.endDate}</p>
@@ -378,7 +378,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لم تتم إضافة تعليم بعد' : 'No education added yet') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-colors">
                             <div>
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{item.institution || (isArabic ? 'مؤسسة غير محددة' : 'Untitled Institution')}</h4>
                                 <p className="text-sm text-gray-500 dark:text-white/60">{item.studyType} in {item.area}</p>
@@ -541,7 +541,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لم تتم إضافة مشاريع' : 'No projects added yet') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-colors">
                             <div>
                             <h4 className="font-semibold text-gray-900 dark:text-white">{item.name || (isArabic ? 'مشروع بدون عنوان' : 'Untitled Project')}</h4>
                                 <p className="text-sm text-gray-500 dark:text-white/60 line-clamp-1">{item.description}</p>
@@ -612,7 +612,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لا توجد شهادات' : 'No certifications added') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-colors">
                             <div>
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{item.name || 'Untitled'}</h4>
                                 <p className="text-sm text-gray-500 dark:text-white/60">{item.issuer}</p>
@@ -678,7 +678,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             <div className="space-y-4 animate-in fade-in duration-200 ease-out">
                 {items.length === 0 ? renderEmptyState(isArabic ? 'لا توجد لغات' : 'No languages added') : (
                     items.map((item, idx) => (
-                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-all">
+                        <div key={idx} className="group flex items-center justify-between p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-emerald-500/30 transition-colors">
                             <div>
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{item.language || (isArabic ? 'غير محدد' : 'Unknown')}</h4>
                                 <p className="text-sm text-gray-500 dark:text-white/60">{item.fluency}</p>
@@ -792,7 +792,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-6 py-3 transition-all relative",
+                                        "w-full flex items-center gap-3 px-6 py-3 transition-colors relative",
                                         isActive
                                             ? "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10"
                                             : "text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/5"
@@ -840,7 +840,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                 onClick={handleSave}
                                 disabled={!hasChanges}
                                 className={cn(
-                                    "min-w-[100px] transition-all",
+                                    "min-w-[100px] transition-[color,background-color,border-color,opacity]",
                                     hasChanges ? "opacity-100 translate-y-0" : "opacity-50"
                                 )}
                             >

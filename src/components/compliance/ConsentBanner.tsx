@@ -25,7 +25,7 @@ export function ConsentBanner() {
   return (
     <div
       className={cn(
-        'fixed z-50 transition-all duration-500 ease-out transform',
+        'fixed z-50 transition-[translate,opacity] duration-500 ease-out',
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none',
         'bottom-4 sm:bottom-6',
         'end-4 sm:end-6',
@@ -96,8 +96,8 @@ export function ConsentBanner() {
               'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white',
               'shadow-lg shadow-emerald-500/25',
               'hover:shadow-emerald-500/40 hover:scale-[1.02]',
-              'active:scale-[0.98]',
-              'transition-all duration-200 group relative overflow-hidden'
+              'active:scale-[0.96]',
+              'transition-[box-shadow,scale] duration-200 group relative overflow-hidden'
             )}
           >
             <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rotate-12" />

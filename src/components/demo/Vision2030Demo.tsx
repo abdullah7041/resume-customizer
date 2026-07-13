@@ -186,7 +186,7 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                         {VISION_2030_SECTORS.map((sector) => (
                             <div
                                 key={sector.id}
-                                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 hover:border-[#006C35]/50 hover:bg-[#006C35]/10 transition-all min-w-[100px]"
+                                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 hover:border-[#006C35]/50 hover:bg-[#006C35]/10 transition-colors min-w-[100px]"
                             >
                                 <div className="w-10 h-10 rounded-lg bg-[#006C35]/20 flex items-center justify-center">
                                     <SectorIcon sectorId={sector.id} className="w-5 h-5 text-[#4ade80]" />

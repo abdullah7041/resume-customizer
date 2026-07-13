@@ -178,7 +178,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
               onClick={handleRefresh}
               disabled={isRefreshing}
               className={cn(
-                "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-all",
+                "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-colors",
                 isRefreshing && "animate-spin text-emerald-500 dark:text-emerald-400"
               )}
               aria-label={t('credits.refresh', 'Refresh credits')}

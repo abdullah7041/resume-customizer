@@ -31,7 +31,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
             ref={ref}
             className={cn(
               glass.input,
-              'w-full px-4 py-3 rounded-xl text-gray-900 bg-white/50 border border-gray-300/50 dark:border-white/10 dark:text-white dark:bg-white/5 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all',
+              'w-full px-4 py-3 rounded-xl text-gray-900 bg-white/50 border border-gray-300/50 dark:border-white/10 dark:text-white dark:bg-white/5 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-[border-color,background-color,box-shadow]',
               leftIcon && 'pl-10',
               error && 'border-red-500/50 focus:border-red-500',
               className

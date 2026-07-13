@@ -216,7 +216,7 @@ export function BottomSheet({
                             <h3 className="text-lg font-semibold text-white">{title}</h3>
                             <button
                                 onClick={onClose}
-                                className="inline-flex items-center justify-center w-10 h-10 min-w-[44px] min-h-[44px] -mr-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-[color,background-color,transform] duration-150 ease-out active:scale-95"
+                                className="inline-flex items-center justify-center w-10 h-10 min-w-[44px] min-h-[44px] -mr-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
                                 aria-label="Close"
                             >
                                 <X className="h-5 w-5" />

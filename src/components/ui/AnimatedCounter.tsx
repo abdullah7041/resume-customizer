@@ -122,7 +122,7 @@ export function AnimatedStatCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative p-8 rounded-2xl bg-surface-glass/50 backdrop-blur-md border border-glass-border hover:border-emerald-400/50 transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-1",
+        "group relative p-8 rounded-2xl bg-surface-glass/50 backdrop-blur-md border border-glass-border hover:border-emerald-400/50 transition-[border-color,scale,translate] duration-300 cursor-pointer hover:scale-105 hover:-translate-y-1",
         className
       )}
     >

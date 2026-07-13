@@ -216,7 +216,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                         if (!hasDraggedRef.current) setIsMinimized(false);
                     }}
                     className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-full border border-white/20 backdrop-blur-md transition-all",
+                        "flex h-12 w-12 items-center justify-center rounded-full border border-white/20 backdrop-blur-md transition-transform",
                         "bg-gradient-to-br from-emerald-500/80 to-teal-500/80 shadow-lg",
                         !isDragging && "hover:scale-110"
                     )}
@@ -230,7 +230,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
     const content = (
         <div
             className={cn(
-                "relative flex flex-col overflow-hidden rounded-2xl border border-emerald-500/20 bg-white/80 dark:bg-black/40 backdrop-blur-xl shadow-2xl transition-all duration-300",
+                "relative flex flex-col overflow-hidden rounded-2xl border border-emerald-500/20 bg-white/80 dark:bg-black/40 backdrop-blur-xl shadow-2xl",
                 mode === 'inline' ? "h-full" : ""
             )}
         >
@@ -280,13 +280,13 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                         <div
                             key={step.id}
                             className={cn(
-                                "relative flex items-center gap-3 py-2 px-2 rounded-lg transition-all duration-300",
+                                "relative flex items-center gap-3 py-2 px-2 rounded-lg transition-colors duration-300",
                                 step.isActive ? "bg-emerald-50 dark:bg-white/5 border border-emerald-200/50 dark:border-white/5" : "hover:bg-gray-50 dark:hover:bg-white/[0.02]"
                             )}
                         >
                             <div
                                 className={cn(
-                                    "relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all duration-500",
+                                    "relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-[color,background-color,border-color,box-shadow] duration-500",
                                     step.isCompleted
                                         ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]"
                                         : step.isActive

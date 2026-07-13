@@ -92,7 +92,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
 
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-all duration-200"
+                        className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
                         aria-label="Close modal"
                     >
                         <X className="w-5 h-5" />
@@ -138,10 +138,10 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                                 {VISION_2030_SECTORS.map((sector) => (
                                     <div
                                         key={sector.id}
-                                        className="group relative flex flex-col items-center gap-3 p-4 rounded-xl border border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-glass)] dark:bg-white/[0.02] hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 cursor-default"
+                                        className="group relative flex flex-col items-center gap-3 p-4 rounded-xl border border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-glass)] dark:bg-white/[0.02] hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-500/30 transition-[background-color,border-color,translate] duration-300 hover:-translate-y-1 cursor-default"
                                     >
                                         <div
-                                            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-50 to-white dark:from-white/5 dark:to-white/[0.01] border border-emerald-100 dark:border-white/5 group-hover:border-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all"
+                                            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-50 to-white dark:from-white/5 dark:to-white/[0.01] border border-emerald-100 dark:border-white/5 group-hover:border-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-[border-color,box-shadow]"
                                         >
                                             <SectorIcon sectorId={sector.id} className="w-6 h-6 text-emerald-700 dark:text-white/60 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" />
                                         </div>
@@ -188,7 +188,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                                     href="https://www.vision2030.gov.sa/"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#006C35] hover:bg-[#007A3D] text-white font-bold text-sm shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:scale-105 transition-all duration-300"
+                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#006C35] hover:bg-[#007A3D] text-white font-bold text-sm shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:scale-105 transition-[background-color,box-shadow,scale] duration-300"
                                 >
                                     {t('vision2030.modal.learnMore', 'Visit vision2030.gov.sa')}
                                     <ExternalLink className="w-4 h-4" />

@@ -78,7 +78,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
 
   return (
     <div className="group relative">
-      <GlassCard padding="sm" className="h-full transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-gray-300 dark:hover:border-white/20">
+      <GlassCard padding="sm" className="h-full transition-[scale,box-shadow,border-color] duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-gray-300 dark:hover:border-white/20">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className={cn(
@@ -462,7 +462,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={cn(
-            'group relative rounded-2xl border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer overflow-hidden',
+            'group relative rounded-2xl border-2 border-dashed transition-[border-color,background-color,box-shadow] duration-300 ease-in-out cursor-pointer overflow-hidden',
             isDragging
               ? 'border-emerald-500 bg-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
               : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-black/60 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-gray-200 dark:hover:bg-black/70'
@@ -472,7 +472,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
           <div className="relative py-16 px-6 text-center">
             <div className={cn(
-              "w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center transition-all duration-300",
+              "w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center transition-[background-color,scale] duration-300",
               isDragging ? "bg-emerald-500/20 scale-110" : "bg-gray-200 dark:bg-white/5 group-hover:bg-gray-300 dark:group-hover:bg-white/10 group-hover:scale-105"
             )}>
               <Upload className={cn(

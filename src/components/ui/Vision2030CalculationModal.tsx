@@ -31,7 +31,7 @@ export function Vision2030CalculationModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/40 backdrop-blur-sm transition-all duration-300">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/40 backdrop-blur-sm">
       <GlassCard
         className="max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col p-0 border-[color:var(--glass-border)] dark:border-white/10 shadow-2xl shadow-emerald-900/10 dark:shadow-black/60 bg-[color:var(--surface-glass)] dark:bg-[#0a0a0a]/95 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300"
       >
@@ -188,7 +188,7 @@ export function Vision2030CalculationModal({
         <div className="p-4 border-t border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-control)] dark:bg-white/[0.04] flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:-translate-y-0.5 transition-all text-xs"
+            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:-translate-y-0.5 transition-[background-color,box-shadow,translate] text-xs"
           >
             {t('vision2030.calculation.close', 'Got it, thanks')}
           </button>

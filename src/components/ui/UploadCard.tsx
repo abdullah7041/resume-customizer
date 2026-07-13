@@ -190,7 +190,7 @@ export default function UploadCard({
   return (
     <GlassCard
       padding="lg"
-      className="mx-auto w-full max-w-full sm:max-w-5xl transition-all duration-300 relative overflow-hidden bg-surface"
+      className="mx-auto w-full max-w-full sm:max-w-5xl relative overflow-hidden bg-surface"
     >
       <header data-tour="upload-header" className="space-y-1.5 sm:space-y-2 text-center sm:text-left mb-6 sm:mb-8">
         <div className="flex items-center justify-between gap-2">
@@ -220,7 +220,7 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-2.5 sm:gap-4 overflow-hidden rounded-lg sm:rounded-xl border-2 border-dashed border-emerald-700/30 bg-emerald-50/80 px-3 pt-12 pb-6 sm:px-6 sm:py-12 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--workspace-surface)] dark:border-emerald-200/24 dark:bg-black/24 dark:focus-visible:ring-offset-[#082b23] cursor-pointer",
+          "group relative flex flex-col items-center justify-center gap-2.5 sm:gap-4 overflow-hidden rounded-lg sm:rounded-xl border-2 border-dashed border-emerald-700/30 bg-emerald-50/80 px-3 pt-12 pb-6 sm:px-6 sm:py-12 text-center transition-[border-color,background-color,scale,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--workspace-surface)] dark:border-emerald-200/24 dark:bg-black/24 dark:focus-visible:ring-offset-[#082b23] cursor-pointer",
           "hover:border-emerald-600/50 hover:bg-emerald-50 dark:hover:border-emerald-200/35 dark:hover:bg-black/32",
           isDragging &&
           "border-emerald-500/70 bg-emerald-100/90 dark:border-emerald-300/50 dark:bg-emerald-500/12 scale-[1.01]"
@@ -239,8 +239,8 @@ export default function UploadCard({
         </div>
         <span className="relative inline-flex items-center justify-center">
           <span className="absolute inset-0 rounded-full bg-emerald-400/12 blur-xl" aria-hidden="true" />
-          <span className="relative inline-flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full border-2 border-emerald-500/30 bg-emerald-100/80 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.45)] transition-all duration-300 hover:border-emerald-600/42 hover:bg-emerald-100 dark:border-emerald-300/25 dark:bg-emerald-400/12 dark:hover:border-emerald-300/40">
-            <UploadCloud className="h-7 w-7 sm:h-9 sm:w-9 text-emerald-700 transition-all duration-300 group-hover:scale-105 dark:text-emerald-200" aria-hidden="true" />
+          <span className="relative inline-flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full border-2 border-emerald-500/30 bg-emerald-100/80 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.45)] transition-[border-color,background-color] duration-300 hover:border-emerald-600/42 hover:bg-emerald-100 dark:border-emerald-300/25 dark:bg-emerald-400/12 dark:hover:border-emerald-300/40">
+            <UploadCloud className="h-7 w-7 sm:h-9 sm:w-9 text-emerald-700 transition-transform duration-300 group-hover:scale-105 dark:text-emerald-200" aria-hidden="true" />
           </span>
         </span>
         <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white px-2">
@@ -315,7 +315,7 @@ export default function UploadCard({
           <button
             type="button"
             onClick={onFileClear}
-            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-emerald-200/70 transition-all hover:bg-red-500/20 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-emerald-200/70 transition-colors hover:bg-red-500/20 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/50"
             aria-label={removeFileLabel}
             title={removeFileLabel}
           >
@@ -340,7 +340,7 @@ export default function UploadCard({
           <button
             type="button"
             onClick={onFileClear}
-            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-blue-200/70 transition-all hover:bg-blue-500/20 hover:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-blue-200/70 transition-colors hover:bg-blue-500/20 hover:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             aria-label={removeFileLabel}
             title={removeFileLabel}
           >
@@ -383,8 +383,8 @@ export default function UploadCard({
 
       {isSaved && (
         <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-200 ease-out">
-          <label className="relative flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border border-emerald-900/12 bg-emerald-50/70 cursor-pointer hover:bg-emerald-50 transition-all group overflow-hidden dark:border-emerald-200/14 dark:bg-white/[0.06] dark:hover:bg-white/[0.08]">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/0 group-hover:to-emerald-500/0 transition-all duration-500" />
+          <label className="relative flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border border-emerald-900/12 bg-emerald-50/70 cursor-pointer hover:bg-emerald-50 transition-colors group overflow-hidden dark:border-emerald-200/14 dark:bg-white/[0.06] dark:hover:bg-white/[0.08]">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-emerald-500/0 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
             <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
               <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
@@ -407,7 +407,7 @@ export default function UploadCard({
                 onChange={(e) => onSaudiNationalChange?.(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-white/10 rounded-full peer peer-focus:ring-2 peer-focus:ring-emerald-500/30 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+              <div className="w-11 h-6 bg-white/10 rounded-full peer peer-focus:ring-2 peer-focus:ring-emerald-500/30 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-[translate,border-color] transition-colors peer-checked:bg-emerald-500 shadow-inner"></div>
             </div>
           </label>
         </div>

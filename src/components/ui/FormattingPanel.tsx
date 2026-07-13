@@ -91,7 +91,7 @@ function SliderControl({ label, value, min, max, step, unit, onChange }: SliderC
                 step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-gray-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:bg-gray-300 dark:hover:bg-white/20 transition-all origin-left"
+                className="w-full h-1.5 bg-gray-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:bg-gray-300 dark:hover:bg-white/20 transition-colors origin-left"
             />
         </div>
     );
@@ -123,13 +123,13 @@ export function FormattingPanel() {
         >
             {/* Header Toggle */}
             <motion.button
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="w-full flex items-center justify-between p-4 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group"
             >
                 <div className="flex items-center gap-2">
                     <Type className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <AnimatePresence>
+                    <AnimatePresence initial={false}>
                         {isExpanded && (
                             <motion.span
                                 initial={{ opacity: 0, width: 0 }}
@@ -151,7 +151,7 @@ export function FormattingPanel() {
             </motion.button>
 
             {/* Expanded Content */}
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
                 {isExpanded && (
                     <motion.div
                         variants={contentVariants}
@@ -175,7 +175,7 @@ export function FormattingPanel() {
                                     {t('templates.formatting.fontStyle', 'Font Style')}
                                 </label>
                                 <motion.select
-                                    whileTap={{ scale: 0.98 }}
+                                    whileTap={{ scale: 0.96 }}
                                     value={displayOptions.fontFamily}
                                     onChange={(e) => setDisplayOptions({ fontFamily: e.target.value })}
                                     className="w-full px-3 py-2 neu-inset rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"

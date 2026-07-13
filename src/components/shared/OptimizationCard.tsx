@@ -24,7 +24,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
   return (
     <GlassCard
       padding="none"
-      className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-500/30 dark:hover:border-emerald-400/30"
+      className="transition-[translate,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-500/30 dark:hover:border-emerald-400/30"
     >
       <header
         className="flex cursor-pointer items-start justify-between gap-4 p-4"

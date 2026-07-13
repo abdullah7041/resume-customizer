@@ -149,7 +149,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
     );
 
     return (
-        <GlassCard className={`p-0 overflow-hidden ${className} transition-all duration-300 border-[color:var(--glass-border)] dark:border-white/10`}>
+        <GlassCard className={`p-0 overflow-hidden ${className} border-[color:var(--glass-border)] dark:border-white/10`}>
             {/* Header - Always Visible */}
             <div
                 className={`p-5 flex items-center justify-between cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-white/[0.02] transition-colors`}
@@ -195,7 +195,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
 
                 <div className="flex items-center gap-4">
                     {analysis && (
-                        <div className={`px-4 py-2 rounded-xl border backdrop-blur-md transition-all duration-300 ${getScoreBg(analysis.overallScore)}`}>
+                        <div className={`px-4 py-2 rounded-xl border backdrop-blur-md transition-colors duration-300 ${getScoreBg(analysis.overallScore)}`}>
                             <div className="flex flex-col items-center leading-none">
                                 <span className={`text-2xl font-bold tracking-tighter ${getScoreColor(analysis.overallScore)}`}>
                                     {analysis.overallScore}%
@@ -204,7 +204,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                         </div>
                     )}
                     <div
-                        className={`p-2 rounded-full border border-gray-200 bg-white/70 hover:bg-white transition-all duration-300 dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10 ${expanded ? 'rotate-180 bg-white dark:bg-white/10' : ''}`}
+                        className={`p-2 rounded-full border border-gray-200 bg-white/70 hover:bg-white transition-[rotate,background-color] duration-300 dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10 ${expanded ? 'rotate-180 bg-white dark:bg-white/10' : ''}`}
                     >
                         <ChevronDown className="w-4 h-4 text-gray-600 dark:text-white/70" />
                     </div>
@@ -238,7 +238,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                 </div>
                                 <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden border border-gray-300 dark:bg-gray-900/50 dark:border-white/5">
                                     <div
-                                        className="h-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.3)] transition-all duration-1000 ease-out relative"
+                                        className="h-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.3)] transition-[width] duration-1000 ease-out relative"
                                         style={{ width: `${analysis.overallScore}%` }}
                                     >
                                         <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
@@ -282,7 +282,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                     {analysis.sectorBreakdown.map((sector) => (
                                         <div
                                             key={sector.sectorId}
-                                            className={`flex items-center justify-between p-2.5 rounded-lg border transition-all duration-300 group ${sector.score > 0
+                                            className={`flex items-center justify-between p-2.5 rounded-lg border transition-colors duration-300 group ${sector.score > 0
                                                 ? 'bg-gradient-to-r from-gray-200/50 dark:from-white/10 to-gray-100 dark:to-white/5 border-gray-200 dark:border-white/10 hover:border-emerald-500/30'
                                                 : 'bg-white/[0.02] border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10'
                                                 }`}

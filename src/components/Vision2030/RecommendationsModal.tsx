@@ -93,7 +93,7 @@ export function RecommendationsModal({
                 key={idx}
                 className={cn(
                   glass.card,
-                  'p-4 hover:bg-white/[0.03] transition-all'
+                  'p-4 hover:bg-white/[0.03] transition-colors'
                 )}
               >
                 <div className="flex items-start justify-between gap-3 mb-2">

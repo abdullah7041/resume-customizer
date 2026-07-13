@@ -114,10 +114,10 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
         onClick={onClick}
         className={cn(
           // Glassy dark/light background
-          'bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 flex items-center rounded-xl transition-all shadow-sm',
+          'bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 flex items-center rounded-xl transition-[background-color,scale] shadow-sm',
           isCompact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-4 py-2',
           colorClasses.border, // Optional solid border color
-          'hover:bg-gray-100 dark:hover:bg-black/50 active:scale-[0.98]',
+          'hover:bg-gray-100 dark:hover:bg-black/50 active:scale-[0.96]',
           !isCompact && 'hover:scale-[1.02]',
           colorClasses.pulse
         )}
@@ -153,7 +153,7 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
           disabled={isRefreshing}
           className={cn(
             'p-2 rounded-lg bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 shadow-sm',
-            'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.98] transition-all',
+            'hover:bg-gray-100 dark:hover:bg-black/50 hover:scale-[1.02] active:scale-[0.96] transition-[background-color,scale]',
             isRefreshing && 'animate-spin'
           )}
           aria-label={t('credits.refresh', 'Refresh credits')}

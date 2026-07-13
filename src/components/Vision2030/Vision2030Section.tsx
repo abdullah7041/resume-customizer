@@ -293,7 +293,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                 .map((sector) => (
                   <div
                     key={sector.sectorId}
-                    className="p-4 rounded-lg bg-gradient-to-br from-gray-100 dark:from-white/5 to-gray-50 dark:to-white/[0.02] border border-gray-200 dark:border-white/10 hover:border-emerald-500/30 transition-all"
+                    className="p-4 rounded-lg bg-gradient-to-br from-gray-100 dark:from-white/5 to-gray-50 dark:to-white/[0.02] border border-gray-200 dark:border-white/10 hover:border-emerald-500/30 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-800 dark:text-white/90">

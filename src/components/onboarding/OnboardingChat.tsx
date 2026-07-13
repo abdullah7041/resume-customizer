@@ -199,7 +199,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
             <span>{completeness}%</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
-            <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${completeness}%` }} />
+            <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${completeness}%` }} />
           </div>
         </div>
         {path === 'no_cv' && (
@@ -210,7 +210,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         <button
           type="button"
           onClick={() => onComplete?.()}
-          className="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.97] dark:bg-emerald-500 dark:text-slate-900"
+          className="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.96] dark:bg-emerald-500 dark:text-slate-900"
         >
           Continue
         </button>
@@ -253,7 +253,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         {Array.from({ length: total }).map((_, i) => (
           <span
             key={i}
-            className={`h-2 rounded-full transition-all ${i < answered ? 'w-6 bg-emerald-500' : i === answered ? 'w-6 bg-emerald-400 dark:bg-emerald-300' : 'w-2 bg-gray-300 dark:bg-slate-600'}`}
+            className={`h-2 rounded-full transition-[width,background-color] ${i < answered ? 'w-6 bg-emerald-500' : i === answered ? 'w-6 bg-emerald-400 dark:bg-emerald-300' : 'w-2 bg-gray-300 dark:bg-slate-600'}`}
           />
         ))}
       </div>
@@ -272,7 +272,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
               type="button"
               disabled={busy}
               onClick={() => pickWorkMode(m)}
-              className="rounded-full border border-emerald-500/40 px-4 py-2 text-sm capitalize text-emerald-800 transition-transform duration-150 ease-out active:scale-95 disabled:opacity-50 dark:text-emerald-300"
+              className="rounded-full border border-emerald-500/40 px-4 py-2 text-sm capitalize text-emerald-800 transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-50 dark:text-emerald-300"
             >
               {m}
             </button>
@@ -302,7 +302,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           type="button"
           onClick={skip}
           disabled={busy}
-          className="rounded-xl px-4 py-3 text-base font-medium text-gray-500 transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-50 dark:text-slate-400"
+          className="rounded-xl px-4 py-3 text-base font-medium text-gray-500 transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-50 dark:text-slate-400"
         >
           Skip
         </button>
@@ -310,7 +310,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           type="button"
           onClick={() => void submitText()}
           disabled={busy}
-          className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-60 dark:bg-emerald-500 dark:text-slate-900"
+          className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60 dark:bg-emerald-500 dark:text-slate-900"
         >
           {busy ? 'Reading…' : 'Next'}
         </button>

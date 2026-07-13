@@ -846,14 +846,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         <div className="hidden lg:flex absolute top-24 end-4 lg:end-6 z-30 flex-col gap-2 bg-white/70 dark:bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-gray-300/50 dark:border-white/10 shadow-xl lg:opacity-0 lg:hover:opacity-100 lg:group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handleZoomIn}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,transform] duration-150 ease-out active:scale-95"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
             title={t('common.zoomIn', 'Zoom In')}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,transform] duration-150 ease-out active:scale-95"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
             title={t('common.zoomOut', 'Zoom Out')}
           >
             <ZoomOut className="w-4 h-4" />
@@ -861,7 +861,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           <div className="h-px bg-gray-300 dark:bg-white/10 my-0.5" />
           <button
             onClick={handleResetZoom}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,transform] duration-150 ease-out active:scale-95"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
             title={t('common.resetZoom', 'Reset Zoom')}
           >
             <RotateCcw className="w-4 h-4" />
@@ -956,7 +956,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                         key={template.id}
                         onClick={() => handleSelectTemplate(template)}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0",
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,scale] duration-200 shrink-0",
                           isSelected
                             ? "btn-metal text-emerald-900 dark:text-white scale-105 shadow-md border-emerald-500/30"
                             : "text-gray-600 hover:text-gray-900 hover:bg-black/5 dark:text-white/70 dark:hover:text-white dark:hover:bg-white/10 btn-spring"

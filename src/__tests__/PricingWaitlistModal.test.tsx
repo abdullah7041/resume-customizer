@@ -27,6 +27,7 @@ vi.mock('react-i18next', () => ({
 
 import { PricingWaitlistModal } from '../components/Credits/PricingWaitlistModal';
 import { PricingSection } from '../components/sections/PricingSection';
+import { PRO_LAUNCH_PRICE_SAR } from '../constants/pricing';
 import { analytics } from '../services/analytics';
 
 const renderModal = () =>
@@ -102,6 +103,7 @@ describe('PricingWaitlistModal', () => {
     expect(analytics.trackPricingIntent).toHaveBeenCalledWith({
       source: 'pricing_page',
       planHint: 'pro_waitlist',
+      shownPriceSar: PRO_LAUNCH_PRICE_SAR,
     });
     expect(await screen.findByText("You're on the list")).toBeInTheDocument();
   });

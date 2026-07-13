@@ -28,7 +28,7 @@ export default function EnvironmentBadge() {
 
     if (status.active) {
         return (
-            <div className="fixed top-4 right-4 z-50 flex items-center gap-3 rounded-full border-2 border-sky-600 bg-sky-100 px-4 py-2 shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-top-4 text-sky-900">
+            <div className="fixed top-4 right-4 z-50 flex items-center gap-3 rounded-full border-2 border-sky-600 bg-sky-100 px-4 py-2 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300 text-sky-900">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-xs font-bold uppercase tracking-wider">
                     {status.operation || "Processing..."}
@@ -42,7 +42,7 @@ export default function EnvironmentBadge() {
         return (
             <div
                 className={cn(
-                    "fixed top-4 right-4 z-50 flex items-center gap-3 rounded-full border-2 px-4 py-2 shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-top-4",
+                    "fixed top-4 right-4 z-50 flex items-center gap-3 rounded-full border-2 px-4 py-2 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300",
                     isMock
                         ? "border-yellow-600 bg-yellow-100 text-yellow-900"
                         : "border-emerald-600 bg-emerald-100 text-emerald-900"

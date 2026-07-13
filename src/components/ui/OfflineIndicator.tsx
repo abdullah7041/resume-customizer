@@ -45,7 +45,7 @@ export function OfflineIndicator() {
         <div
             className={cn(
                 "fixed top-0 left-0 right-0 z-[100] px-4 py-2 text-center text-sm font-medium",
-                "transform transition-all duration-300 ease-out",
+                "transition-colors duration-300 ease-out",
                 !isOnline && "bg-red-500 text-white",
                 showReconnected && isOnline && "bg-emerald-500 text-white"
             )}

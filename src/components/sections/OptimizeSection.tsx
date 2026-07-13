@@ -1047,7 +1047,7 @@ export function OptimizeSection({
                 onClick={() => setViewMode('split')}
                 aria-pressed={viewMode === 'split'}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
+                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-[color,background-color,box-shadow] duration-300',
                   viewMode === 'split'
                     ? 'bg-[color:var(--surface-glass-elevated)] dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -1059,7 +1059,7 @@ export function OptimizeSection({
                 onClick={() => setViewMode('diff')}
                 aria-pressed={viewMode === 'diff'}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300',
+                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-[color,background-color,box-shadow] duration-300',
                   viewMode === 'diff'
                     ? 'bg-[color:var(--surface-glass-elevated)] dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -1099,7 +1099,7 @@ export function OptimizeSection({
                   key={tab.id}
                   onClick={() => setActiveSection(tab.id as typeof activeSection)}
                   className={cn(
-                    'relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap',
+                    'relative px-4 py-2 rounded-lg text-sm font-medium transition-[color,background-color,opacity] duration-300 whitespace-nowrap',
                     isActive
                       ? 'text-gray-900 dark:text-white'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/5',
@@ -1155,7 +1155,7 @@ export function OptimizeSection({
           onClick={handleGenerate}
           disabled={isOptimizing || !hasResume}
           className={cn(
-            "w-full relative group overflow-hidden rounded-xl p-[1px] transition-[transform,box-shadow] duration-150 ease-out active:scale-[0.97]",
+            "w-full relative group overflow-hidden rounded-xl p-[1px] transition-[scale,box-shadow] duration-150 ease-out active:scale-[0.96]",
             (!hasResume || isOptimizing) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
           )}
         >
@@ -1237,7 +1237,7 @@ export function OptimizeSection({
                         key={token}
                         title={token}
                         className={cn(
-                          'px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all truncate max-w-[140px]',
+                          'px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors truncate max-w-[140px]',
                           bucket === 'add' && 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20',
                           bucket === 'neutral' && 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/20',
                           bucket === 'remove' && 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 line-through decoration-rose-500/50'
@@ -1530,7 +1530,7 @@ export function OptimizeSection({
                 key={opt.sectionId}
                 padding="none"
                 className={cn(
-                  'overflow-hidden transition-all duration-300 border',
+                  'overflow-hidden transition-[border-color,box-shadow] duration-300 border',
                   opt.applied
                     ? 'border-emerald-500/30 ring-1 ring-emerald-500/20'
                     : 'border-[color:var(--glass-border)] dark:border-white/5 hover:border-[color:var(--glass-border-strong)] dark:hover:border-white/10'

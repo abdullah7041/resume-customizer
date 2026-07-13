@@ -464,7 +464,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                     key={tOption.value}
                     onClick={() => setTone(tOption.value)}
                     className={cn(
-                      'relative px-4 py-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 group',
+                      'relative px-4 py-3 rounded-xl border transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center gap-2 group',
                       isSelected
                         ? `border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-white shadow-sm shadow-indigo-500/20`
                         : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:border-gray-300 dark:hover:border-white/20'
@@ -602,7 +602,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
             <button
               onClick={() => setIsEditing(!isEditing)}
               className={cn(
-                "absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                "absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-[color,background-color,box-shadow]",
                 isEditing
                   ? "bg-indigo-600 text-white shadow-lg"
                   : "bg-white/80 text-gray-600 hover:bg-white shadow-md"

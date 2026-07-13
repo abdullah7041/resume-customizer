@@ -239,7 +239,7 @@ export function ConfirmActionModal({
                           'bg-gray-100/50 dark:bg-white/5 border border-gray-300 dark:border-white/10',
                           'text-gray-900 dark:text-white placeholder:text-gray-500',
                           'focus:outline-none focus:ring-2 focus:ring-emerald-500/50',
-                          'transition-all duration-200'
+                          'transition-shadow duration-200'
                         )}
                         disabled={isSubmitting}
                         required

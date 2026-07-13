@@ -149,7 +149,7 @@ export function ReferralLink({ className }: ReferralLinkProps) {
           onClick={handleCopy}
           className={cn(
             glass.badge.neutral,
-            'p-2 rounded-lg transition-all hover:bg-gray-200 dark:hover:bg-white/10 bg-gray-100/80 dark:bg-white/5 border border-gray-300 dark:border-white/10',
+            'p-2 rounded-lg transition-colors hover:bg-gray-200 dark:hover:bg-white/10 bg-gray-100/80 dark:bg-white/5 border border-gray-300 dark:border-white/10',
             copied && 'bg-emerald-100 border-emerald-400 dark:bg-emerald-500/20 dark:border-emerald-500/50'
           )}
           aria-label={copied ? t('common.copied') : t('common.copy')}
