@@ -14,11 +14,11 @@
  * validated against the exact prod JSON schema. No production logic is modified.
  *
  * Usage:
- *   node scripts/optimize-quality-eval.mjs                 # baseline vs temp_05 vs prompt_v2
- *   node scripts/optimize-quality-eval.mjs --candidate google/gemini-3.1-flash-lite
- *   node scripts/optimize-quality-eval.mjs --judge google/gemini-2.5-pro
- *   node scripts/optimize-quality-eval.mjs --fixture en-resume-jd.json
- *   node scripts/optimize-quality-eval.mjs --dry-run      # build prompts, NO API calls
+ *   npx tsx scripts/optimize-quality-eval.mjs              # prod vs prod_aa (A/A noise-floor check)
+ *   npx tsx scripts/optimize-quality-eval.mjs --candidate "deepseek/deepseek-v4-flash,deepseek/deepseek-v4-pro"
+ *   npx tsx scripts/optimize-quality-eval.mjs --judges "google/gemini-2.5-flash,google/gemini-2.5-pro"
+ *   npx tsx scripts/optimize-quality-eval.mjs --fixture en-resume-jd.json
+ *   npx tsx scripts/optimize-quality-eval.mjs --dry-run    # build prompts, NO API calls
  *
  * Safety:
  * - Fixtures are synthetic (scripts/benchmark-fixtures/README.md). Point --fixtures at a
@@ -35,7 +35,7 @@ import { dirname, join } from 'path';
 import { callOpenRouter } from '../netlify/lib/openrouter-client.js';
 import { getAiContract } from '../netlify/lib/ai-contracts/contracts/index.js';
 import { parseAiJson } from '../netlify/lib/ai-contracts/json.js';
-import { buildMessages, taggedBlock, optionalTaggedBlock } from '../netlify/lib/ai-contracts/prompt.js';
+import { taggedBlock } from '../netlify/lib/ai-contracts/prompt.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,11 +58,21 @@ const DRY_RUN = cli._flags.has('dryRun');
 const FIXTURES_DIR = cli.fixtures ? cli.fixtures : join(__dirname, 'benchmark-fixtures');
 const FIXTURE_FILTER = cli.fixture || null;
 const BASELINE_MODEL = cli.baseline || 'google/gemini-2.5-flash';
-const CANDIDATE_MODEL = cli.candidate || null; // optional model-upgrade variant
-const JUDGE_MODEL = cli.judge || process.env.WATHEQ_EVAL_JUDGE_MODEL || 'google/gemini-2.5-flash';
-// Judge panel: pass --judges "a,b,c" to average across models and cut single-judge
-// variance (the 0.9-pt swing we saw on identical configs). Defaults to one strong judge.
-const JUDGE_MODELS = (cli.judges ? cli.judges.split(',').map(s => s.trim()).filter(Boolean) : [JUDGE_MODEL]);
+// Comma-separated to test several candidate models against prod/prod_aa in ONE run.
+const CANDIDATE_MODELS = cli.candidate
+  ? cli.candidate.split(',').map(s => s.trim()).filter(Boolean)
+  : [];
+const JUDGE_MODEL = cli.judge || process.env.WATHEQ_EVAL_JUDGE_MODEL || null;
+// Judge panel: --judges "a,b,c" overrides; --judge pins a single model. Default is a
+// two-model panel — a lone judge swung up to 0.9 pt on identical configs (the 2026-07-03
+// A/A pair showed a 0.5-pt truthfulness gap on bit-identical calls), so single-judge
+// deltas below that swing are unreadable. The second judge is deepseek-v4-flash, not
+// gemini-2.5-pro: ~1/10th the cost AND cross-family, which breaks the gemini-judging-gemini
+// self-preference bias.
+const DEFAULT_JUDGE_PANEL = ['google/gemini-2.5-flash', 'deepseek/deepseek-v4-flash'];
+const JUDGE_MODELS = cli.judges
+  ? cli.judges.split(',').map(s => s.trim()).filter(Boolean)
+  : (JUDGE_MODEL ? [JUDGE_MODEL] : DEFAULT_JUDGE_PANEL);
 const LIMIT = cli.limit ? parseInt(cli.limit, 10) : null; // cap fixtures for cheap runs
 const REPORTS_DIR = join(__dirname, 'benchmark-reports');
 
@@ -70,176 +80,24 @@ const optimizeContract = getAiContract('optimize');
 const emptyCtx = { retrievedContext: { documents: [], citations: [] } };
 
 // ---------------------------------------------------------------------------
-// Prompt variant: prompt_v2 — same anti-fabrication contract, plus explicit
-// specificity / anti-cliche guidance and one worked example. This is a TESTED
-// candidate, not a blind change: it only ships if the judge prefers it.
-// ---------------------------------------------------------------------------
-function buildOptimizeMessagesV2(input, context = emptyCtx) {
-  const resumeText = (input.resumeText || '').slice(0, 15000);
-  const jobDescription = (input.jobDescription || '').slice(0, 5000);
-  const languageInstruction = input.language === 'ar'
-    ? '\nWrite all descriptive text fields in formal Arabic. Keep JSON keys and technical keywords in English.'
-    : '';
-  const vulnerabilities = Array.isArray(input.vulnerabilities) && input.vulnerabilities.length > 0
-    ? input.vulnerabilities.map(v => `- [${v.type}]: ${v.description}`).join('\n')
-    : '';
-  const vulnerabilityBlock = vulnerabilities ? optionalTaggedBlock('career_vulnerabilities', vulnerabilities) : '';
-  const clarificationsBlock = optionalTaggedBlock('user_clarifications', input.userClarifications);
-  const ragBlock = optionalTaggedBlock('retrieved_context', context?.retrievedContext?.documents?.length
-    ? JSON.stringify(context.retrievedContext.documents) : '');
-
-  // Anti-fabrication rules are preserved verbatim in intent; the additions are the
-  // specificity rubric and the worked example.
-  const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications. Every improved bullet must use an action, task, and quantified result; inferred metrics must include "(verify)".
-
-Write like a top-tier human reviewer, not a template. Each rewrite must:
-- Lead with a strong, specific action verb; never reuse the same verb twice in one role.
-- Name the concrete technology, scope, or domain from the resume (e.g. "React dashboard", "Node.js API"), not vague nouns like "solutions", "systems", or "various tasks".
-- Keep the candidate's real metric when one exists; only append "(verify)" to a metric you inferred.
-- Ban filler and cliche: "results-driven", "responsible for", "leveraged", "spearheaded", "passionate", "team player", "synergy", "best-in-class".
-- Read tighter than the original. If a rewrite is not more specific AND more concise, keep the original.`;
-
-  const example = `Example of the bar to clear:
-- original: "Responsible for improving the API and making it faster for users."
-- improved: "Cut customer-facing API latency 40% by adding Redis caching and rewriting N+1 queries, across endpoints serving 1M+ requests/day."
-- issue: "Vague verb, no scope, no metric."
-- rationale: "Names the exact technique and system, keeps the real 40% metric, ties to traffic scale from the resume."`;
-
-  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric.
-
-${example}${languageInstruction}${ragBlock}${vulnerabilityBlock}${clarificationsBlock}
-
-${taggedBlock('job_description', jobDescription)}
-
-${taggedBlock('resume_text', resumeText)}`;
-
-  return buildMessages(system, user);
-}
-
-// ---------------------------------------------------------------------------
-// Prompt variant: v3_truthful — the winning v2 prompt PLUS truthfulness hardening.
-// Targets the gate dimension (truthfulness 3.4, fabrication flags 5) without a schema
-// change: a contrastive negative example, an explicit grounding rule, a final
-// self-audit pass, and a requirement that `rationale` quote the supporting resume
-// phrase (prompt-only grounding — forces the model to find evidence before asserting).
-// ---------------------------------------------------------------------------
-function buildOptimizeMessagesV3Truthful(input, context = emptyCtx) {
-  const resumeText = (input.resumeText || '').slice(0, 15000);
-  const jobDescription = (input.jobDescription || '').slice(0, 5000);
-  const languageInstruction = input.language === 'ar'
-    ? '\nWrite all descriptive text fields in formal Arabic. Keep JSON keys and technical keywords in English.'
-    : '';
-  const vulnerabilities = Array.isArray(input.vulnerabilities) && input.vulnerabilities.length > 0
-    ? input.vulnerabilities.map(v => `- [${v.type}]: ${v.description}`).join('\n')
-    : '';
-  const vulnerabilityBlock = vulnerabilities ? optionalTaggedBlock('career_vulnerabilities', vulnerabilities) : '';
-  const clarificationsBlock = optionalTaggedBlock('user_clarifications', input.userClarifications);
-  const ragBlock = optionalTaggedBlock('retrieved_context', context?.retrievedContext?.documents?.length
-    ? JSON.stringify(context.retrievedContext.documents) : '');
-
-  const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications. Every improved bullet must use an action, task, and quantified result; inferred metrics must include "(verify)".
-
-Write like a top-tier human reviewer, not a template. Each rewrite must:
-- Lead with a strong, specific action verb; never reuse the same verb twice in one role.
-- Name the concrete technology, scope, or domain from the resume (e.g. "React dashboard", "Node.js API"), not vague nouns like "solutions", "systems", or "various tasks".
-- Keep the candidate's real metric when one exists; only append "(verify)" to a metric you inferred.
-- Ban filler and cliche: "results-driven", "responsible for", "leveraged", "spearheaded", "passionate", "team player", "synergy", "best-in-class".
-- Read tighter than the original. If a rewrite is not more specific AND more concise, keep the original.
-
-GROUNDING — non-negotiable. Every company, job title, date, tool, technology, scope, and number in a rewrite MUST appear in, or be directly entailed by, the <resume_text>. You may NOT introduce a specific metric, percentage, dollar figure, employer, client, certification, or skill that is not in the resume. If a quantified result would strengthen a bullet but no real number exists in the resume, write the qualitative impact and append "(verify)" to the single inferred figure — never invent the figure as fact. In each item's "rationale", quote the exact phrase from the resume that supports the rewrite (e.g. rationale: "...supported by resume: 'Reduced API latency by 40%'"). If you cannot find a supporting phrase, do not make the claim.
-
-FINAL SELF-AUDIT before returning: re-read every improved bullet and the summary_rewrite. For each, verify every proper noun, date, tool, scope, and number traces to the resume. Remove or generalize anything unsupported; mark any inferred metric with "(verify)". Truthfulness outranks impressiveness — a plainer true bullet beats a stronger false one.`;
-
-  const goodExample = `Example of the bar to clear:
-- original: "Responsible for improving the API and making it faster for users."
-- improved: "Cut customer-facing API latency 40% by adding Redis caching and rewriting N+1 queries, across endpoints serving 1M+ requests/day."
-- issue: "Vague verb, no scope, no metric."
-- rationale: "Names the exact technique and system; keeps the real metric — supported by resume: 'Reduced API latency by 40%'."`;
-
-  const badExample = `Counter-example you must NOT produce (fabrication):
-- original: "Helped the team ship features."
-- BAD improved: "Drove $2.3M in revenue and led a team of 12 engineers across 4 countries."  ← INVENTED: no $2.3M, no team of 12, no countries in the resume.
-- CORRECT improved: "Shipped product features on tight deadlines in collaboration with the product team (scope/impact (verify))."
-- rationale: "Keeps only what the resume supports: 'Collaborated with product team to deliver features on tight deadlines'."`;
-
-  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric.
-
-${goodExample}
-
-${badExample}${languageInstruction}${ragBlock}${vulnerabilityBlock}${clarificationsBlock}
-
-${taggedBlock('job_description', jobDescription)}
-
-${taggedBlock('resume_text', resumeText)}`;
-
-  return buildMessages(system, user);
-}
-
-// ---------------------------------------------------------------------------
-// Prompt variant: v4_evidence — STRUCTURAL anti-fabrication. Requires a verbatim
-// `source_span` per bullet (the exact resume substring that grounds the rewrite). A
-// deterministic check then rejects bullets whose span is not in the resume, or whose
-// numbers aren't in the span — making fabrication mechanically detectable, not just
-// discouraged. This is the lever to push fab toward 0 and let us be specific AND grounded.
-// ---------------------------------------------------------------------------
-const evidenceJsonSchema = JSON.parse(JSON.stringify(optimizeContract.jsonSchema));
-{
-  const bi = evidenceJsonSchema.properties.bullet_improvements.items;
-  bi.properties.source_span = { type: 'string' };
-  if (Array.isArray(bi.required) && !bi.required.includes('source_span')) bi.required.push('source_span');
-}
-
-function buildOptimizeMessagesV4Evidence(input, context = emptyCtx) {
-  const resumeText = (input.resumeText || '').slice(0, 15000);
-  const jobDescription = (input.jobDescription || '').slice(0, 5000);
-  const languageInstruction = input.language === 'ar'
-    ? '\nWrite all descriptive text fields in formal Arabic. Keep JSON keys and technical keywords in English.'
-    : '';
-  const clarificationsBlock = optionalTaggedBlock('user_clarifications', input.userClarifications);
-
-  const system = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications.
-
-EVIDENCE PROTOCOL — mandatory and machine-checked:
-- For EVERY bullet_improvement, set "source_span" to a VERBATIM substring copied exactly from <resume_text> that supports the rewrite. Copy it character-for-character; do not paraphrase the span. Keep each source_span to the SHORTEST exact phrase that supports the claim — at most ~120 characters (about 15 words). Never copy whole sentences or paragraphs; a short verbatim fragment is enough.
-- The "improved" bullet may only assert facts, tools, scope, employers, and numbers that appear in its source_span (or elsewhere in the resume). If a number would strengthen the bullet but is not in the resume, write the qualitative result and append "(verify)" to the single inferred figure — never state an invented figure as fact.
-- When the resume ALREADY states a concrete metric, scope, technology, or number, KEEP it verbatim in the rewrite and put it in the source_span — do not generalize it away, soften it, or drop it. Grounding means preserving real specifics, not removing them; "(verify)" is only for figures you infer, never a replacement for a real one.
-- If no verbatim span in the resume supports a rewrite, do not produce that bullet.
-- Still write tightly and specifically: strong action verb, concrete tech/scope, no cliche ("results-driven", "responsible for", "leveraged", "spearheaded", "synergy", "best-in-class").
-
-FINAL SELF-AUDIT: for each bullet, confirm source_span is an exact quote from the resume and that every proper noun/number in "improved" traces to it or to the resume. Truthfulness outranks impressiveness.`;
-
-  const example = `Example item:
-- original: "Responsible for improving the API and making it faster for users."
-- improved: "Cut customer-facing API latency 40% by adding Redis caching and rewriting N+1 queries."
-- source_span: "Reduced API latency by 40% through caching and query optimization"
-- issue: "Vague verb, no scope, no metric."
-- rationale: "Keeps the real 40% from the cited span; names the concrete technique."`;
-
-  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Each bullet_improvement MUST include a verbatim source_span. Keep skills as recommendations only. Calculate baseline and projected scores with the strict ATS rubric.
-
-${example}${languageInstruction}${clarificationsBlock}
-
-${taggedBlock('job_description', jobDescription)}
-
-${taggedBlock('resume_text', resumeText)}`;
-
-  return buildMessages(system, user);
-}
-
-// ---------------------------------------------------------------------------
 // Variant matrix
 // ---------------------------------------------------------------------------
 function buildVariants() {
-  // Truthfulness-focused cycle. All variants at temp 0 (proven best), so the PROMPT is
-  // the only changed variable. baseline = whatever the worktree's prod prompt currently is.
+  // Post-#111 (commit 8c3ec8c): the evidence prompt + required source_span schema IS
+  // production. `prod` and `prod_aa` run the identical prod config twice — their score
+  // gap is the run's noise floor; only candidate deltas larger than that gap are signal.
+  // The retired prompt_v2 / v3_truthful / v4_evidence builders were settled by the
+  // 2026-07-03 run (v4 shipped as prod in #111; v2/v3 failed the truthfulness gate)
+  // and live in git history.
   const variants = [
-    { name: 'baseline',    modelId: BASELINE_MODEL, temperature: 0, buildMessages: optimizeContract.buildMessages,    note: 'current production prompt @ temp 0' },
-    { name: 'prompt_v2',   modelId: BASELINE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV2,           note: 'specificity prompt (consistency/noise-floor check)' },
-    { name: 'v3_truthful', modelId: BASELINE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV3Truthful,   note: 'v2 + grounding + negative example + self-audit' },
-    { name: 'v4_evidence', modelId: BASELINE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV4Evidence,   jsonSchema: evidenceJsonSchema, maxTokens: 24576, note: 'structural: required source_span + deterministic grounding check' },
+    { name: 'prod',    modelId: BASELINE_MODEL, temperature: 0, buildMessages: optimizeContract.buildMessages, note: 'production prompt + schema (evidence lever, shipped #111)' },
+    { name: 'prod_aa', modelId: BASELINE_MODEL, temperature: 0, buildMessages: optimizeContract.buildMessages, note: 'A/A control — identical to prod, measures noise floor' },
   ];
-  if (CANDIDATE_MODEL) {
-    variants.push({ name: 'v4_modelup', modelId: CANDIDATE_MODEL, temperature: 0, buildMessages: buildOptimizeMessagesV4Evidence, jsonSchema: evidenceJsonSchema, maxTokens: 24576, note: `evidence prompt on ${CANDIDATE_MODEL}` });
+  // Each candidate runs the SAME prod prompt/schema, only modelId changes — isolates the
+  // model as the one lever. Named up_<slug-tail> so the report row is readable.
+  for (const modelId of CANDIDATE_MODELS) {
+    const tail = modelId.split('/').pop();
+    variants.push({ name: `up_${tail}`, modelId, temperature: 0, buildMessages: optimizeContract.buildMessages, note: `production prompt on ${modelId}` });
   }
   return variants;
 }
@@ -503,21 +361,28 @@ only meaningful for evidence variants). Truthfulness is the gate.
 ${rows.join('\n')}
 
 ## How to read this
-1. \`v4_evidence\` is the structural test: if it cuts fab/ungrounded toward 0 while holding
-   truthfulness >= current prod, grounding via source_span is the lever — ship it.
-2. \`v4_modelup\` (with --candidate) tests the evidence prompt on the faster model.
-3. Trust the gate (truthfulness) deltas; treat composite gaps under ~0.3 as noise even with
-   the panel. Keep \`temperature: 0\`.
+1. \`prod\` and \`prod_aa\` are IDENTICAL configs: their gap is this run's noise floor.
+   Discard any candidate delta smaller than that gap, and composite gaps under ~0.3,
+   even with the judge panel. Keep \`temperature: 0\`.
+2. \`up_<model>\` rows (--candidate "a,b") test the production evidence prompt on other
+   models. Ship a model change ONLY if: truthfulness >= prod minus the noise floor,
+   ungrounded = 0, fab <= prod, majority of wins, AND p95 latency clears the legacy v1
+   optimize.ts path (~30s Netlify cap; streaming v2 tolerates more — contract timeoutMs is
+   100s, worst observed ~46s). State the cost delta before shipping. Run with GEMINI_API_KEY
+   empty so the openrouter-client Gemini fallback cannot silently substitute Gemini output
+   for a failing candidate and corrupt the comparison.
+3. Truthfulness is the gate. fab counts include certification_recommendations, which
+   legitimately name credentials not in the resume — compare fab across variants; never
+   read it as an absolute fabrication count.
 
-Ship ONE production change at a time (prompt OR schema+prompt for the evidence field), then
-re-run to confirm. The evidence variant needs a matching \`source_span\` field added to the
-optimize output schema before it can ship to prod.
+The source_span evidence lever shipped to prod in #111 (schema + prompt + passthrough).
+Ship ONE production change at a time, then re-run this eval to confirm.
 `;
 }
 
 async function main() {
   console.log(`[Eval] optimize rewrite-quality  dryRun=${DRY_RUN}`);
-  console.log(`[Eval] baseline=${BASELINE_MODEL}  candidate=${CANDIDATE_MODEL || '(none)'}  judges=${JUDGE_MODELS.join('+')}`);
+  console.log(`[Eval] baseline=${BASELINE_MODEL}  candidates=${CANDIDATE_MODELS.join(',') || '(none)'}  judges=${JUDGE_MODELS.join('+')}`);
 
   let fixtures = loadFixtures();
   if (!fixtures.length) { console.error('No fixtures found in ' + FIXTURES_DIR); process.exit(1); }
@@ -585,7 +450,7 @@ async function main() {
     };
   }
 
-  const meta = { runAt: new Date().toISOString(), judgeModel: JUDGE_MODELS.join(' + '), baselineModel: BASELINE_MODEL, candidateModel: CANDIDATE_MODEL, fixtureCount: fixtures.length };
+  const meta = { runAt: new Date().toISOString(), judgeModel: JUDGE_MODELS.join(' + '), baselineModel: BASELINE_MODEL, candidateModel: CANDIDATE_MODELS.join(', ') || null, fixtureCount: fixtures.length };
   if (!existsSync(REPORTS_DIR)) mkdirSync(REPORTS_DIR, { recursive: true });
   const stamp = Date.now();
   const jsonFile = join(REPORTS_DIR, `optimize-quality-${stamp}.json`);
