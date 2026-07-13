@@ -81,6 +81,18 @@ async function getAuthenticatedUser(event: Parameters<Handler>[0]): Promise<Auth
     return { id: user.id, email: user.email };
 }
 
+// Postgres "undefined column" — the referral migrations were not applied to
+// this database. Surface a precise message instead of a generic failure so the
+// Netlify function log (and the error details) say exactly what to run.
+const PG_UNDEFINED_COLUMN = '42703';
+
+function describeDbError(prefix: string, dbError: { code?: string; message?: string }): string {
+    if (dbError.code === PG_UNDEFINED_COLUMN) {
+        return `${prefix}: the user_credits referral columns are missing. Apply the referral migrations in supabase/migrations (see 20260713000000_ensure_referral_schema.sql).`;
+    }
+    return `${prefix} (db code: ${dbError.code || 'unknown'})`;
+}
+
 /**
  * Handle GET /get-link - Generate or retrieve referral link
  */
@@ -96,11 +108,11 @@ async function handleGetLink(email: string) {
         .from('user_credits')
         .select('referral_code')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
+    if (fetchError) {
         console.error('[referral-api] Fetch error:', summarizeErrorForLog(fetchError));
-        throw new Error('Failed to fetch user data');
+        throw new Error(describeDbError('Failed to fetch referral profile', fetchError));
     }
 
     let referralCode = userData?.referral_code;
@@ -109,14 +121,24 @@ async function handleGetLink(email: string) {
     if (!referralCode) {
         referralCode = generateCode();
 
-        const { error: updateError } = await supabase
+        // .select() verifies a row was actually updated: without it, a missing
+        // user_credits row silently "succeeds" and we hand out a referral code
+        // that was never persisted — a dead link no signup can ever match.
+        const { data: savedRow, error: updateError } = await supabase
             .from('user_credits')
             .update({ referral_code: referralCode })
-            .eq('email', email);
+            .eq('email', email)
+            .select('referral_code')
+            .maybeSingle();
 
         if (updateError) {
             console.error('[referral-api] Update error:', summarizeErrorForLog(updateError));
-            throw new Error('Failed to save referral code');
+            throw new Error(describeDbError('Failed to save referral code', updateError));
+        }
+
+        if (!savedRow) {
+            console.error(`[referral-api] No user_credits row for ${redactForLog(email)} — cannot persist referral code.`);
+            throw new Error('Referral profile not found. Your credits account may still be initializing — try again shortly.');
         }
 
         console.log(`[referral-api] Generated new code for user ${redactForLog(email)}: ${referralCode}`);
@@ -145,12 +167,34 @@ async function handleGetStats(userId: string) {
 }
 
 async function handleGetSummary(user: AuthenticatedReferralUser) {
-    const [link, stats] = await Promise.all([
+    // One failing leg must not take down the whole summary: previously a
+    // get-link failure rejected the Promise.all and the modal showed BOTH
+    // "Referral stats unavailable" and "Referral link unavailable". Now stats
+    // still render and the link box carries the specific error.
+    const [linkResult, statsResult] = await Promise.allSettled([
         handleGetLink(user.email),
         handleGetStats(user.id)
     ]);
 
-    return { ...link, ...stats };
+    if (linkResult.status === 'rejected' && statsResult.status === 'rejected') {
+        throw linkResult.reason;
+    }
+
+    if (linkResult.status === 'rejected') {
+        console.error('[referral-api] get-summary link leg failed:', summarizeErrorForLog(linkResult.reason));
+    }
+    if (statsResult.status === 'rejected') {
+        console.error('[referral-api] get-summary stats leg failed:', summarizeErrorForLog(statsResult.reason));
+    }
+
+    return {
+        ...(linkResult.status === 'fulfilled'
+            ? linkResult.value
+            : { linkError: linkResult.reason instanceof Error ? linkResult.reason.message : 'Failed to generate referral link' }),
+        ...(statsResult.status === 'fulfilled'
+            ? statsResult.value
+            : { totalReferrals: 0, completedReferrals: 0, pendingReferrals: 0, creditsEarned: 0 }),
+    };
 }
 
 /**
