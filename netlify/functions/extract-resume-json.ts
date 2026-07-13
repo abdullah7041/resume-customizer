@@ -15,8 +15,27 @@ const GUEST_MAX_FILE_BYTES = 2 * 1024 * 1024;
 const GUEST_MAX_TEXT_CHARS = 20_000;
 const OCR_MAX_TIMEOUT_MS = 12_000;
 const OCR_PARSE_MAX_TIMEOUT_MS = 12_000;
+const PARSE_MAX_TIMEOUT_MS = 20_000; // mirrors the parse_resume contract timeoutMs
 const FUNCTION_SAFETY_MS = 2_500;
 const OCR_PARSE_RESERVE_MS = OCR_PARSE_MAX_TIMEOUT_MS + FUNCTION_SAFETY_MS;
+
+// Netlify's HTTP gateway cuts synchronous function responses at ~30s in
+// production REGARDLESS of the (70s) Lambda timeout configured in netlify.toml.
+// getRemainingTimeInMillis() reports the Lambda budget, so trusting it alone
+// let pre-extraction + OCR (12s) + AI parse (12-20s) overrun the gateway →
+// the client saw a raw 502/504 ("AI service is experiencing high load") even
+// though the provider was healthy. Every AI budget below is therefore clamped
+// to the time remaining in this gateway window, measured from request start.
+const GATEWAY_WALL_CLOCK_MS = 26_000;
+
+const computeRemainingBudgetMs = (
+  context: { getRemainingTimeInMillis?: () => number } | undefined,
+  startedAt: number,
+): number => {
+  const lambdaRemainingMs = context?.getRemainingTimeInMillis?.() ?? Number.POSITIVE_INFINITY;
+  const gatewayRemainingMs = GATEWAY_WALL_CLOCK_MS - (Date.now() - startedAt);
+  return Math.max(0, Math.min(lambdaRemainingMs, gatewayRemainingMs));
+};
 
 // Normalize an AI-parse failure into a short, stable code recorded in
 // meta.parseQuality.aiFailureCode (never log/store resume text).
@@ -39,6 +58,7 @@ const baseHandler = async (
   event: { httpMethod: string; body: string; headers: any; },
   context?: { getRemainingTimeInMillis?: () => number },
 ) => {
+  const startedAt = Date.now();
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -111,6 +131,7 @@ const baseHandler = async (
     let extractedPlainText = "";
     let previewTruncated = false;
     let ocrMeta: { ocrFallback: true; pagesProcessed: number } | null = null;
+    let ocrAttempted = false;
     let aiParseFailed = false;
     let aiFailureCode: string | undefined;
 
@@ -176,7 +197,8 @@ const baseHandler = async (
         if (!guestPreview && isPdf && process.env.OPENROUTER_API_KEY) {
           try {
             console.log("[extract-resume-json] No selectable text found; attempting OCR fallback.");
-            const remainingMs = context?.getRemainingTimeInMillis?.() ?? 30_000;
+            ocrAttempted = true;
+            const remainingMs = computeRemainingBudgetMs(context, startedAt);
             const ocrTimeoutMs = Math.min(
               OCR_MAX_TIMEOUT_MS,
               Math.max(1_000, remainingMs - OCR_PARSE_RESERVE_MS),
@@ -199,6 +221,20 @@ const baseHandler = async (
 
         if (extractedPlainText.length < MIN_READABLE_TEXT_LENGTH) {
           console.warn("[extract-resume-json] File payload did not contain enough readable selectable text.");
+          // When OCR ran but couldn't finish (timeout/budget) or came back empty,
+          // "scanned resumes are not supported" would be wrong — tell the user
+          // what actually happened and how to succeed instead.
+          if (ocrAttempted) {
+            return {
+              statusCode: 422,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                error: "We couldn't finish reading this scanned file. Please try again, upload a smaller or text-based PDF, or paste your resume text directly.",
+                code: "resume/unreadable-file",
+                details: "OCR fallback was attempted but did not produce enough readable text within the time budget.",
+              }),
+            };
+          }
           return UNREADABLE_FILE_RESPONSE;
         }
       }
@@ -279,17 +315,15 @@ const baseHandler = async (
     // intentionally OUTSIDE this try so they surface normally.
     try {
       console.log("[extract-resume-json] Parsing extracted text...");
-      const parseOptions = ocrMeta
-        ? {
-            timeoutMs: Math.min(
-              OCR_PARSE_MAX_TIMEOUT_MS,
-              Math.max(1_000, (context?.getRemainingTimeInMillis?.() ?? 30_000) - FUNCTION_SAFETY_MS),
-            ),
-          }
-        : undefined;
-      analysis = parseOptions
-        ? await parseResumeOnly(extractedPlainText, false, parseOptions)
-        : await parseResumeOnly(extractedPlainText, false);
+      // Clamp the parse timeout to the gateway budget on EVERY path (not just
+      // after OCR): slow pre-extraction + the contract's 20s default could
+      // otherwise overrun the gateway. A too-small budget just means the parse
+      // times out fast and the deterministic baseline below still returns 200.
+      const parseTimeoutMs = Math.min(
+        ocrMeta ? OCR_PARSE_MAX_TIMEOUT_MS : PARSE_MAX_TIMEOUT_MS,
+        Math.max(1_000, computeRemainingBudgetMs(context, startedAt) - FUNCTION_SAFETY_MS),
+      );
+      analysis = await parseResumeOnly(extractedPlainText, false, { timeoutMs: parseTimeoutMs });
       console.log("[extract-resume-json] parseResumeOnly returned success.");
     } catch (parseError) {
       aiParseFailed = true;
