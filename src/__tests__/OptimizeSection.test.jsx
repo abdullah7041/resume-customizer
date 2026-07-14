@@ -321,6 +321,7 @@ describe('OptimizeSection', () => {
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.getByText(/run an analysis/i)).toBeInTheDocument();
+            expect(screen.queryByTestId('character-results-companion')).not.toBeInTheDocument();
         });
     });
 
@@ -1277,6 +1278,7 @@ describe('Optimization Card Types', () => {
 
     describe('score diff + explainability', () => {
         it('mounts the score projection with only applied:true cards counted', () => {
+            window.localStorage.setItem('watheq:characterGender', 'male');
             mockStoreState.optimizations = [
                 { sectionId: 's-0', sectionType: 'summary', original: 'Built apps.', optimized: 'Built React apps.', applied: true },
                 { sectionId: 'e-0', sectionType: 'experience', original: 'Did work.', optimized: 'Led work.', applied: false },
@@ -1295,6 +1297,29 @@ describe('Optimization Card Types', () => {
             expect(screen.getByText('sections.optimize.scoreDiff.title')).toBeInTheDocument();
             // 1 of 2 applied — interpolated key returns the raw key with the mock t().
             expect(screen.getByText('sections.optimize.scoreDiff.appliedOf')).toBeInTheDocument();
+            expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-variant', 'optimize');
+            expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-tier', 'confident');
+            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('70%');
+        });
+
+        it('passes a missing placeholder baseline and an existing API after score unchanged', () => {
+            window.localStorage.setItem('watheq:characterGender', 'female');
+            mockStoreState.optimizations = [sampleOptimization];
+            mockStoreState.baselineMatchScore = null;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: null,
+                afterScore: 84,
+                improvement: null,
+            };
+
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.getByTestId('before-score-bar')).toHaveTextContent('Unavailable');
+            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('84%');
+            const femalePicker = screen.queryByRole('button', { name: 'Female companion' });
+            if (femalePicker) fireEvent.click(femalePicker);
+            expect(screen.getByRole('img').getAttribute('src')).toContain('female-tier-3');
         });
 
         it('projection equals the resultsSummaryData formula (before + round(improvement * appliedRatio))', () => {

@@ -208,6 +208,9 @@ async function handleGetSummary(user: AuthenticatedReferralUser) {
     const linkError = linkResult.status === 'rejected'
         ? normalizeReferralError(linkResult.reason, 'referral/link-failed', 'Failed to generate referral link')
         : null;
+    const statsError = statsResult.status === 'rejected'
+        ? normalizeReferralError(statsResult.reason, 'referral/stats-failed', 'Failed to load referral statistics')
+        : null;
 
     return {
         ...(linkResult.status === 'fulfilled'
@@ -219,7 +222,11 @@ async function handleGetSummary(user: AuthenticatedReferralUser) {
             }),
         ...(statsResult.status === 'fulfilled'
             ? statsResult.value
-            : { totalReferrals: 0, completedReferrals: 0, pendingReferrals: 0, creditsEarned: 0 }),
+            : {
+                statsError: statsError!.message,
+                statsErrorCode: statsError!.code,
+                statsErrorStatus: statsError!.status,
+            }),
     };
 }
 

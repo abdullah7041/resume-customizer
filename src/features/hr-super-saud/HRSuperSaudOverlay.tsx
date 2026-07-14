@@ -211,7 +211,7 @@ function getWorkflowHint(workflowState: HRSuperSaudWorkflowState) {
 }
 
 export function HRSuperSaudOverlay({ isOnboardingActive = false, forceMinimized = false }: { isOnboardingActive?: boolean; forceMinimized?: boolean }) {
-  const { dismissReaction, reaction, workflowState } = useHRSuperSaud();
+  const { dismissReaction, isOverlaySuppressed, reaction, workflowState } = useHRSuperSaud();
   const { t } = useTranslation();
   const [isMinimized, setIsMinimized] = useState(readInitialMinimized);
   const [hasMinimizedPreference, setHasMinimizedPreference] = useState(() => hasStoredPreference(MINIMIZED_STORAGE_KEY));
@@ -247,7 +247,7 @@ export function HRSuperSaudOverlay({ isOnboardingActive = false, forceMinimized 
       return undefined;
     }
 
-    if (isDisabled || isMinimized || isOnboardingActive) {
+    if (isDisabled || isMinimized || isOnboardingActive || isOverlaySuppressed) {
       dismissReaction();
       return undefined;
     }
@@ -300,7 +300,7 @@ export function HRSuperSaudOverlay({ isOnboardingActive = false, forceMinimized 
     }, MOVE_DURATION_MS + reaction.durationMs + RETURN_DURATION_MS));
 
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [dismissReaction, isCompact, isDisabled, isMinimized, isOnboardingActive, prefersReducedMotion, reaction]);
+  }, [dismissReaction, isCompact, isDisabled, isMinimized, isOnboardingActive, isOverlaySuppressed, prefersReducedMotion, reaction]);
 
   const handleMascotClick = useCallback(() => {
     if (isDisabled || isMinimized || movement.phase !== 'idle') {
@@ -339,6 +339,10 @@ export function HRSuperSaudOverlay({ isOnboardingActive = false, forceMinimized 
     '--hr-super-saud-offset-x': `${movement.offsetX}px`,
     '--hr-super-saud-offset-y': `${movement.offsetY}px`,
   };
+
+  if (isOverlaySuppressed) {
+    return null;
+  }
 
   if (isDisabled) {
     return (

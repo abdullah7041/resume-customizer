@@ -173,6 +173,21 @@
         "empty": "Empty",
         "noChanges": "No changes applied yet"
       }
+    },
+    "characterResults": {
+      "picker": "Choose your companion",
+      "male": "Male companion",
+      "female": "Female companion",
+      "states": {
+        "struggling": "Needs strengthening",
+        "confident": "Competitive match",
+        "celebrating": "Strong result"
+      },
+      "before": "Before",
+      "after": "After",
+      "unavailableScore": "Unavailable",
+      "changeCompanion": "Change companion",
+      "imageAlt": "{{gender}}: {{state}}"
     }
   }
 }

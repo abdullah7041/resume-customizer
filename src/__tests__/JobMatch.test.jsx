@@ -82,6 +82,7 @@ describe('JobMatch', () => {
   });
 
   it('renders analysis results with Saudi styling', () => {
+    window.localStorage.setItem('watheq:characterGender', 'male');
     const match = {
       score: 80,
       missingKeywords: ['React', 'Node.js', 'PostgreSQL', 'Kubernetes'],
@@ -108,6 +109,8 @@ describe('JobMatch', () => {
     expect(screen.getByText(/missing keywords/i)).toBeInTheDocument();
     expect(screen.getByText(/keywords found/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /score breakdown/i })).toBeInTheDocument();
+    expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-variant', 'match');
+    expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-tier', 'celebrating');
   });
 
   it('renders critical Reality Check separately from unclear risks', () => {
@@ -223,6 +226,7 @@ describe('JobMatch', () => {
       screen.getByPlaceholderText(/paste the job description/i)
     ).toHaveValue('Saved JD');
     expect(screen.getByText(/matches the requirements/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('character-results-companion')).not.toBeInTheDocument();
   });
 
   it('allows guest match analysis to run one free preview without credit confirmation', async () => {

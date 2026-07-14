@@ -99,16 +99,24 @@ vi.mock("../components/sections/MatchSection", () => {
   };
 });
 
-vi.mock("../components/sections/OptimizeSection", () => {
-  const React = require("react");
+vi.mock("../components/sections/OptimizeSection", async () => {
+  const React = await vi.importActual("react");
+  const { useResumeStore: useMockResumeStore } = await vi.importActual("@/lib/stores/resumeStore");
   return {
     __esModule: true,
-    OptimizeSection: (props) =>
-      React.createElement(
+    OptimizeSection: (props) => {
+      const scoreState = useMockResumeStore((state) => state.optimizationMetrics);
+      return React.createElement(
         "div",
         { "data-testid": "optimization-mock" },
-        React.createElement("button", { onClick: () => props.onOptimize?.("auto", { freePreview: true }) }, "Run optimize")
-      ),
+        React.createElement("button", { onClick: () => props.onOptimize?.("auto", { freePreview: true }) }, "Run optimize"),
+        React.createElement(
+          "span",
+          { "data-testid": "optimization-companion-score-source" },
+          `${scoreState.beforeScore ?? "unavailable"}:${scoreState.afterScore ?? "unavailable"}`,
+        ),
+      );
+    },
   };
 });
 
@@ -801,6 +809,65 @@ describe("MainContent resume parsing", () => {
     expect(screen.queryByText(/Keyword Scanner/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Manual Editing/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Pricing/i)).not.toBeInTheDocument();
+  });
+
+  it("stores the API score pair from an SSE optimization for the results companion", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    useResumeStore.getState().resetOptimizationMetrics();
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+      matchScoring: { beforeScore: 59, afterScore: 80, estimatedImprovement: 21 },
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    await waitFor(() => {
+      expect(useResumeStore.getState().optimizationMetrics).toMatchObject({
+        beforeScore: 59,
+        afterScore: 80,
+        improvement: 21,
+      });
+    });
+    expect(screen.getByTestId("optimization-companion-score-source")).toHaveTextContent("59:80");
+    expect(optimizeResumeMock).not.toHaveBeenCalled();
+  });
+
+  it("stores the same API score pair after a known-safe legacy fallback", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    useResumeStore.getState().resetOptimizationMetrics();
+    optimizeResumeStreamMock.mockRejectedValueOnce(Object.assign(new Error("stream unavailable"), {
+      isBillingStateUnknown: false,
+      status: 503,
+      code: "STREAM_UNAVAILABLE",
+    }));
+    optimizeResumeMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+      matchScoring: { beforeScore: 59, afterScore: 80, estimatedImprovement: 21 },
+    });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    await waitFor(() => {
+      expect(useResumeStore.getState().optimizationMetrics).toMatchObject({
+        beforeScore: 59,
+        afterScore: 80,
+        improvement: 21,
+      });
+    });
+    expect(screen.getByTestId("optimization-companion-score-source")).toHaveTextContent("59:80");
+    expect(optimizeResumeMock).toHaveBeenCalledTimes(1);
+    warning.mockRestore();
   });
 
   it("shows the simplified primary workflow and keeps secondary tools behind More tools", async () => {

@@ -28,6 +28,7 @@ import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptCont
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { cn } from '../../lib/utils/cn';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
 import { FEATURE_COSTS } from '../../types/credits';
 import { analytics } from '../../services/analytics';
 import type { ExtractedJobMetadata } from '../../types/pipeline';
@@ -555,7 +556,7 @@ export function MatchSection({
                 <div className={cn('absolute inset-0 opacity-20 blur-2xl', variant.glow)} />
               </div>
               <div className="relative z-10 flex flex-col gap-4 p-4 text-gray-900 dark:text-white sm:p-5 md:flex-row md:items-center md:justify-between">
-                <div className="flex min-w-0 flex-1 items-center gap-4">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
                   <Tooltip content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`} position="bottom">
                     <div className="grid h-20 w-20 shrink-0 cursor-help place-items-center rounded-full border border-white/50 bg-white/70 shadow-sm dark:border-white/10 dark:bg-black/15">
                       <div className="text-center">
@@ -564,7 +565,8 @@ export function MatchSection({
                       </div>
                     </div>
                   </Tooltip>
-                  <div className="min-w-0 text-start">
+                  <CharacterResultsCompanion variant="match" score={score} />
+                  <div className="min-w-[12rem] flex-1 text-start">
                     <p className={cn('text-sm font-bold uppercase', variant.text)}>
                       {t(`sections.match.variant.${variant.label}`, variant.label)}
                     </p>
