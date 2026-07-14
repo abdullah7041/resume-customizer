@@ -227,6 +227,39 @@ describe('referral-api auth binding', () => {
     expect(body.linkErrorStatus).toBe(500);
   });
 
+  it('keeps failed stats distinguishable from a genuine zero-referral summary', async () => {
+    getReferralStatsMock.mockRejectedValue(new Error('stats query unavailable'));
+    supabaseFromMock.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { referral_code: 'REALCODE' },
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-summary' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body!)).toMatchObject({
+      success: true,
+      referralCode: 'REALCODE',
+      statsError: 'stats query unavailable',
+      statsErrorCode: 'referral/stats-failed',
+      statsErrorStatus: 500,
+    });
+    expect(response.body).not.toContain('"totalReferrals":0');
+  });
+
   it('does not hand out a referral code that could not be persisted', async () => {
     supabaseFromMock.mockReturnValue({
       // No existing code on file…

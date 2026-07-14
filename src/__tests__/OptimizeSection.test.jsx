@@ -1298,8 +1298,8 @@ describe('Optimization Card Types', () => {
             // 1 of 2 applied — interpolated key returns the raw key with the mock t().
             expect(screen.getByText('sections.optimize.scoreDiff.appliedOf')).toBeInTheDocument();
             expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-variant', 'optimize');
-            expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-tier', 'celebrating');
-            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('80%');
+            expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-tier', 'confident');
+            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('70%');
         });
 
         it('passes a missing placeholder baseline and an existing API after score unchanged', () => {

@@ -450,7 +450,7 @@ export function OptimizeSection({
     : null;
   const companionAfterScore = !resultsSummaryData.isPlaceholderScore
     && !resultsSummaryData.isPlaceholderImprovement
-    ? resultsSummaryData.potentialScore
+    ? resultsSummaryData.afterScore
     : existingAfterScore;
 
   const verifyOptimizedResume = async (jobDescription: string, beforeScore: number, options?: { freePreview?: boolean }) => {

@@ -136,4 +136,14 @@ describe('Supabase RLS migration hardening', () => {
     expect(migrationSql).not.toContain('public.strategic_reality_checks');
     expect(migrationSql).not.toContain('public.feedback ');
   });
+
+  it('keeps future referral credit rows bound to the auth UUID', () => {
+    const migrationSql = readMigrationSql('20260714000000_repair_referral_user_id_trigger.sql');
+
+    expect(migrationSql).toContain('create or replace function public.initialize_user_credits()');
+    expect(migrationSql).toContain('insert into public.user_credits (user_id, email, credits_remaining, credits_total)');
+    expect(migrationSql).toContain('values (new.id, new.email, 15, 15)');
+    expect(migrationSql).toContain('on conflict (email) do update');
+    expect(migrationSql).toContain('user_id = excluded.user_id');
+  });
 });

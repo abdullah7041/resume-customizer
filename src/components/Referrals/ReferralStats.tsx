@@ -40,6 +40,14 @@ export function ReferralStats({ className }: ReferralStatsProps) {
     async function fetchStats() {
       try {
         const summary = await fetchReferralSummary();
+        if (
+          summary.statsError ||
+          typeof summary.totalReferrals !== 'number' ||
+          typeof summary.completedReferrals !== 'number' ||
+          typeof summary.creditsEarned !== 'number'
+        ) {
+          throw new Error(summary.statsError || 'Referral statistics unavailable');
+        }
         setStats({
           totalReferrals: summary.totalReferrals,
           completedReferrals: summary.completedReferrals,
