@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from "react";
-import { MotionConfig } from "framer-motion";
+import { MotionConfig, LazyMotion } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
 import Footer from "./components/Layout/Footer";
@@ -104,6 +104,11 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
+      {/* LazyMotion: load framer-motion's DOM features from a dedicated async chunk
+          (src/lib/motion-features.ts) once at the root, so components use the lightweight
+          `m` primitive and the ~40KB feature bundle is fetched after first paint instead
+          of blocking it. */}
+      <LazyMotion features={() => import("./lib/motion-features").then((mod) => mod.default)}>
       <DirectionProvider>
         <HRSuperSaudProvider>
           <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-[color:var(--bg)] dark:bg-gradient-to-b dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
@@ -164,6 +169,7 @@ export default function App() {
           </div>
         </HRSuperSaudProvider>
       </DirectionProvider>
+      </LazyMotion>
     </MotionConfig>
   );
 }

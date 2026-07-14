@@ -82,12 +82,16 @@ export default defineConfig({
               return "vendor-utils";
             }
 
-            // ===== FRAMER MOTION (eager at App root via MotionConfig) =====
-            // ~150KB. Splitting it out of the entry keeps index-*.js lean; it
-            // still loads on first paint but as its own parallel chunk.
-            if (id.includes("framer-motion") || id.includes("/motion-dom/") || id.includes("/motion-utils/")) {
-              return "vendor-framer";
-            }
+            // ===== FRAMER MOTION =====
+            // The lightweight `m` primitive + LazyMotion/MotionConfig core are eager
+            // (used at first paint by Glass* components); the heavy DOM feature bundle
+            // (domMax: gestures, layout projection, drag) is loaded lazily by <LazyMotion>
+            // via src/lib/motion-features.ts. We intentionally do NOT force framer into a
+            // single manual chunk here — a manual assignment would re-merge the async
+            // feature graph back into an eager chunk and defeat the deferral. Letting
+            // Rolldown split automatically keeps the feature-only modules in their own
+            // async chunk while the core lands in a shared vendor chunk.
+            // (see docs/CONVENTIONS.md · vendor chunking)
 
             // ===== DOCX EXPORT GRAPH (lazy: DOCX export + cover letter only) =====
             // docx + jszip + hash.js + readable-stream polyfills (~400KB). Previously

@@ -834,6 +834,9 @@ export const exportResumeToPdf = async ({
   }
 
   try {
+    // Safe sink (react-doctor dangerous-html-sink is a false positive here): html is built by
+    // buildExportHtml/buildPlainExportHtml, which pass every interpolated field through
+    // escapeHtml. No raw user-controlled data reaches this write.
     printWindow.document.write(html);
     printWindow.document.close();
 

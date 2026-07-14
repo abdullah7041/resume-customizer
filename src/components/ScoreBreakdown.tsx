@@ -1,7 +1,7 @@
 import { TrendingUp, Code2, Briefcase, GraduationCap, Users, Info, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { GlassCard } from './ui/GlassCard';
 
 // New categorical scores structure
@@ -116,43 +116,42 @@ export function ScoreBreakdown({
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="flex flex-col items-end">
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ type: "spring", stiffness: 200, damping: 15 }}
                                     className="text-3xl font-bold tabular-nums bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent"
                                 >
                                     {totalScore}
-                                </motion.div>
+                                </m.div>
                                 <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     {t('optimize.scoreBreakdown.outOf', 'Out of 100')}
                                 </span>
                             </div>
-                            <motion.button
+                            <m.button
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => setExpanded(!expanded)}
                                 className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                             >
-                                <motion.div
+                                <m.div
                                     animate={{ rotate: expanded ? 0 : 180 }}
                                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                 >
                                     <ChevronUp className="w-5 h-5" />
-                                </motion.div>
-                            </motion.button>
+                                </m.div>
+                            </m.button>
                         </div>
                     </div>
 
                     <AnimatePresence initial={false}>
                         {expanded && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                className="overflow-hidden"
+                            <m.div
+                                initial={{ opacity: 0, transform: 'translateY(-4px)' }}
+                                animate={{ opacity: 1, transform: 'translateY(0)' }}
+                                exit={{ opacity: 0, transform: 'translateY(-4px)' }}
+                                transition={{ duration: 0.18, ease: 'easeOut' }}
                             >
-                                {/* Category Bars */}
+                                {/* Fade and transform after the layout snaps to avoid per-frame layout work. */}
                                 <div className="space-y-3 pt-2">
                                     {categories.map((cat, idx) => {
                                         const catData = categoryScores[cat.key];
@@ -164,7 +163,7 @@ export function ScoreBreakdown({
                                         const percentage = Math.min((catData.score / catData.max) * 100, 100);
 
                                         return (
-                                            <motion.div
+                                            <m.div
                                                 key={cat.key}
                                                 initial={{ x: -20, opacity: 0 }}
                                                 animate={{ x: 0, opacity: 1 }}
@@ -191,7 +190,7 @@ export function ScoreBreakdown({
                                                 </div>
 
                                                 <div className="h-2 w-full bg-gray-200 dark:bg-black/40 rounded-full overflow-hidden ring-1 ring-gray-300 dark:ring-white/5">
-                                                    <motion.div
+                                                    <m.div
                                                         initial={{ transform: "scaleX(0)" }}
                                                         animate={{ transform: `scaleX(${percentage / 100})` }}
                                                         transition={{
@@ -206,7 +205,7 @@ export function ScoreBreakdown({
                                                         <div
                                                             className="absolute inset-0 animate-shimmer motion-reduce:animate-none bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
                                                         />
-                                                    </motion.div>
+                                                    </m.div>
                                                 </div>
 
                                                 {catData.reasoning && (
@@ -214,7 +213,7 @@ export function ScoreBreakdown({
                                                         {catData.reasoning}
                                                     </p>
                                                 )}
-                                            </motion.div>
+                                            </m.div>
                                         );
                                     })}
                                 </div>
@@ -262,7 +261,7 @@ export function ScoreBreakdown({
                                         </div>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>
                 </div>

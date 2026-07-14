@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { m, HTMLMotionProps } from 'framer-motion';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 
@@ -41,7 +41,7 @@ export function GlassCard({
   ...props
 }: GlassCardProps) {
   return (
-    <motion.div
+    <m.div
       whileHover={{
         y: -1,
         transition: { type: "spring", stiffness: 260, damping: 24 }
@@ -55,7 +55,7 @@ export function GlassCard({
       {...props}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { LockKeyhole } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +47,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
           const isDisabled = Boolean(tab.disabledReason);
 
           return (
-            <motion.button
+            <m.button
               key={tab.value}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -77,7 +77,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
             >
               {/* Animated active indicator background */}
               {isActive && (
-                <motion.div
+                <m.div
                   layoutId="activeTabIndicator"
                   className={cn(
                     "absolute inset-0 rounded-xl -z-10",
@@ -89,7 +89,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
                 >
                   {/* Subtle shine effect for active tab */}
                   <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/12 to-transparent opacity-70" />
-                </motion.div>
+                </m.div>
               )}
 
               {Icon && (
@@ -103,7 +103,7 @@ export function GlassTabs({ tabs, activeValue, onTabChange, rightAction, 'data-t
               {isDisabled && <LockKeyhole className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
               {/* Show text on mobile for better UX, container scrolls */}
               <span className="relative z-10">{isArabic && tab.labelAr ? tab.labelAr : tab.label}</span>
-            </motion.button>
+            </m.button>
           );
         })}
       </div>

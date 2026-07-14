@@ -3,7 +3,7 @@
 
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Type, FileText, RotateCcw, Sparkles } from 'lucide-react';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { cn } from '../../lib/utils/cn';
@@ -82,7 +82,7 @@ function SliderControl({ label, value, min, max, step, unit, onChange }: SliderC
                     {value}{unit}
                 </span>
             </div>
-            <motion.input
+            <m.input
                 whileHover={{ scaleY: 1.2 }}
                 whileTap={{ scaleY: 1.5 }}
                 type="range"
@@ -114,7 +114,7 @@ export function FormattingPanel() {
     };
 
     return (
-        <motion.div
+        <m.div
             variants={panelVariants}
             initial="expanded"
             animate={isExpanded ? "expanded" : "collapsed"}
@@ -123,7 +123,7 @@ export function FormattingPanel() {
             )}
         >
             {/* Header Toggle */}
-            <motion.button
+            <m.button
                 whileTap={{ scale: 0.96 }}
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="w-full flex items-center justify-between p-4 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group"
@@ -132,29 +132,30 @@ export function FormattingPanel() {
                     <Type className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <AnimatePresence initial={false}>
                         {isExpanded && (
-                            <motion.span
-                                initial={{ opacity: 0, width: 0 }}
-                                animate={{ opacity: 1, width: "auto" }}
-                                exit={{ opacity: 0, width: 0 }}
-                                className="font-semibold text-gray-900 dark:text-white whitespace-nowrap overflow-hidden"
+                            <m.span
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15, ease: "easeOut" }}
+                                className="font-semibold text-gray-900 dark:text-white whitespace-nowrap"
                             >
                                 {t('templates.formatting.title', 'Formatting')}
-                            </motion.span>
+                            </m.span>
                         )}
                     </AnimatePresence>
                 </div>
-                <motion.div
+                <m.div
                     animate={{ rotate: isExpanded ? 0 : 180 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
                     <ChevronUp className="w-4 h-4 text-gray-400 group-hover:text-gray-900 dark:text-white/50 dark:group-hover:text-white transition-colors" />
-                </motion.div>
-            </motion.button>
+                </m.div>
+            </m.button>
 
             {/* Expanded Content */}
             <AnimatePresence initial={false}>
                 {isExpanded && (
-                    <motion.div
+                    <m.div
                         variants={contentVariants}
                         initial="hidden"
                         animate="visible"
@@ -175,7 +176,7 @@ export function FormattingPanel() {
                                 <label htmlFor={fontStyleId} className="text-sm text-gray-700 dark:text-white/70">
                                     {t('templates.formatting.fontStyle', 'Font Style')}
                                 </label>
-                                <motion.select
+                                <m.select
                                     id={fontStyleId}
                                     whileTap={{ scale: 0.96 }}
                                     value={displayOptions.fontFamily}
@@ -187,7 +188,7 @@ export function FormattingPanel() {
                                             {font.label}
                                         </option>
                                     ))}
-                                </motion.select>
+                                </m.select>
                             </div>
 
                             <SliderControl
@@ -288,7 +289,7 @@ export function FormattingPanel() {
                                 <span className="text-sm text-gray-700 dark:text-white/70">
                                     {t('templates.formatting.showPageBreaks', 'Show Page Breaks')}
                                 </span>
-                                <motion.button
+                                <m.button
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => setDisplayOptions({ showPageBreaks: !displayOptions.showPageBreaks })}
                                     className={cn(
@@ -298,21 +299,21 @@ export function FormattingPanel() {
                                             : "bg-gray-300 dark:bg-white/20 shadow-inner"
                                     )}
                                 >
-                                    <motion.span
+                                    <m.span
                                         animate={{ x: displayOptions.showPageBreaks ? (isArabic ? -20 : 20) : 0 }}
                                         transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                         className={cn(
                                             "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm"
                                         )}
                                     />
-                                </motion.button>
+                                </m.button>
                             </div>
                         </div>
 
                         {/* Quick Actions */}
                         <div className="space-y-2">
                             {/* Recommended Fit Button - Primary CTA */}
-                            <motion.button
+                            <m.button
                                 whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(16,185,129,0.2)' }}
                                 whileTap={{ scale: 0.96 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -321,10 +322,10 @@ export function FormattingPanel() {
                             >
                                 <Sparkles className="w-4 h-4" />
                                 {t('templates.formatting.recommendedFit', 'Recommended Fit')}
-                            </motion.button>
+                            </m.button>
 
                             {/* Reset Button - Secondary */}
-                            <motion.button
+                            <m.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.96 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -333,11 +334,11 @@ export function FormattingPanel() {
                             >
                                 <RotateCcw className="w-4 h-4" />
                                 {t('templates.formatting.reset', 'Reset to Defaults')}
-                            </motion.button>
+                            </m.button>
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
-        </motion.div>
+        </m.div>
     );
 }

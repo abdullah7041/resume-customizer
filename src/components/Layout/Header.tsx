@@ -17,7 +17,7 @@ const SettingsModal = lazy(() => import("../Settings/SettingsModal").then((m) =>
 const FeedbackModal = lazy(() => import("../Feedback/FeedbackModal").then((m) => ({ default: m.FeedbackModal })));
 import { useUserCredits } from "../../hooks/useUserCredits";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 
 
 
@@ -501,7 +501,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
           aria-label={t('common.openNavigation', 'Open navigation menu')}
         >
           {/* Backdrop */}
-          <motion.div
+          <m.div
             className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -510,7 +510,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
           />
 
           {/* Nav Panel - slides in from the inline-end edge (RTL-aware) */}
-          <motion.div
+          <m.div
             ref={mobileNavRef}
             className="absolute end-0 top-0 h-full w-[85%] max-w-[320px] bg-[color:var(--surface-glass-elevated)] dark:bg-[#031713] border-s border-[color:var(--glass-border)] dark:border-white/10 shadow-[-10px_0_40px_rgba(39,31,18,0.12)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] overflow-y-auto"
             initial={{ x: textDirection === "rtl" ? "-100%" : "100%" }}
@@ -670,7 +670,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 </a>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         </div>
           )}
         </AnimatePresence>,

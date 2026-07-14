@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, Info, X, Loader2 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { cn } from "../../lib/utils/cn";
 
 const variants = {
@@ -69,7 +69,7 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
   const Icon = variant.icon;
 
   return (
-    <motion.div
+    <m.div
       role="status"
       layout
       initial={{ opacity: 0, x: 40 }}
@@ -115,7 +115,7 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
           </button>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 

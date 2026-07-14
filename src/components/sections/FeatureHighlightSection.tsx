@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -44,7 +44,7 @@ export function FeatureHighlightSection({
     >
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
-          <motion.div
+          <m.div
             initial={fadeUp}
             whileInView={visible}
             viewport={{ once: true, margin: "-80px" }}
@@ -79,9 +79,9 @@ export function FeatureHighlightSection({
                 </li>
               ))}
             </ul>
-          </motion.div>
+          </m.div>
 
-          <motion.div
+          <m.div
             initial={fadeUp}
             whileInView={visible}
             viewport={{ once: true, margin: "-80px" }}
@@ -89,7 +89,7 @@ export function FeatureHighlightSection({
             className={cn("relative", reverse && "lg:order-1")}
           >
             {visual}
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </section>

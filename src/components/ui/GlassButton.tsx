@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { m, HTMLMotionProps } from 'framer-motion';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 import { Loader2 } from 'lucide-react';
@@ -39,7 +39,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
     ...props
   }, ref) => {
     return (
-      <motion.button
+      <m.button
         ref={ref}
         disabled={disabled || isLoading}
         // Hover: Lift up (-3px), add subtle diffuse glow/shadow
@@ -70,7 +70,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         ) : leftIcon}
         {children as React.ReactNode}
         {!isLoading && rightIcon}
-      </motion.button>
+      </m.button>
     );
   }
 );
