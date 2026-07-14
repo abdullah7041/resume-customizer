@@ -9,6 +9,7 @@
 
 import { Resend } from 'resend';
 import { emailTemplates } from './email-templates.js';
+import { RateLimiter } from './rate-limiter.js';
 import { redactForLog } from './sentry.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -20,6 +21,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'hello@watheqai.app';
 const SENDER_NAME_EN = process.env.RESEND_SENDER_NAME || 'Watheq';
 const SENDER_NAME_AR = 'واثق';
+const RESEND_BATCH_SIZE = 100;
+const resendBatchRateLimiter = new RateLimiter({
+  maxConcurrent: 1,
+  minDelayBetweenRequestsMs: 200,
+  maxRequestsPerMinute: 300,
+});
 
 /**
  * Get sender name based on language
@@ -60,6 +67,128 @@ function summarizeEmailError(error) {
   return redactForLog(error);
 }
 
+function prepareCreditsRefreshedEmail({ email, userName, credits, language = 'en' }) {
+  if (!email || !isValidEmail(email)) {
+    return { error: 'Invalid email address' };
+  }
+  if (!userName) {
+    return { error: 'Missing userName' };
+  }
+  if (!credits || credits <= 0) {
+    return { error: 'Invalid credits amount' };
+  }
+
+  const lang = language === 'ar' ? 'ar' : 'en';
+  const template = emailTemplates.creditsRefreshed[lang];
+  if (!template) {
+    return { error: `Template not found for language: ${lang}` };
+  }
+
+  return {
+    email,
+    lang,
+    payload: {
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
+      to: email,
+      subject: template.subject,
+      html: template.html(userName, credits),
+      text: template.text(userName, credits),
+      replyTo: REPLY_TO_EMAIL,
+    },
+  };
+}
+
+function prepareMonthlyUsageSummaryEmail({ email, userName, stats, language = 'en' }) {
+  if (!email || !isValidEmail(email)) {
+    return { error: 'Invalid email address' };
+  }
+  if (!userName) {
+    return { error: 'Missing userName' };
+  }
+  if (!stats || typeof stats !== 'object') {
+    return { error: 'Invalid stats object' };
+  }
+
+  const lang = language === 'ar' ? 'ar' : 'en';
+  const template = emailTemplates.monthlyUsageSummary[lang];
+  if (!template) {
+    return { error: `Template not found for language: ${lang}` };
+  }
+  const normalizedStats = {
+    totalUsed: stats.totalUsed || 0,
+    remaining: stats.remaining || 0,
+    totalActions: stats.totalActions || 0,
+    usagePercentage: stats.usagePercentage || 0,
+    nextResetDate: stats.nextResetDate || 'next month',
+    breakdown: stats.breakdown || {},
+  };
+
+  return {
+    email,
+    lang,
+    normalizedStats,
+    payload: {
+      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
+      to: email,
+      subject: template.subject,
+      html: template.html(userName, normalizedStats),
+      text: template.text(userName, normalizedStats),
+      replyTo: REPLY_TO_EMAIL,
+    },
+  };
+}
+
+async function sendPreparedEmailBatches(preparedEmails) {
+  const result = {
+    successCount: 0,
+    failureCount: 0,
+    errors: [],
+  };
+
+  for (let start = 0; start < preparedEmails.length; start += RESEND_BATCH_SIZE) {
+    const batch = preparedEmails.slice(start, start + RESEND_BATCH_SIZE);
+
+    try {
+      const response = await resendBatchRateLimiter.execute(() =>
+        resend.batch.send(
+          batch.map(({ payload }) => payload),
+          { batchValidation: 'permissive' },
+        )
+      );
+
+      if (response.error) {
+        for (const item of batch) {
+          result.errors.push({ email: item.email, error: response.error.message });
+        }
+        result.failureCount += batch.length;
+        continue;
+      }
+
+      const validationErrors = new Map(
+        (response.data?.errors || []).map((error) => [error.index, error.message])
+      );
+
+      batch.forEach((item, index) => {
+        const validationError = validationErrors.get(index);
+        if (validationError) {
+          result.failureCount += 1;
+          result.errors.push({ email: item.email, error: validationError });
+        } else {
+          result.successCount += 1;
+        }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown batch email error';
+      for (const item of batch) {
+        result.errors.push({ email: item.email, error: message });
+      }
+      result.failureCount += batch.length;
+    }
+  }
+
+  return result;
+}
+
 /**
  * Send credits refreshed email
  * Called when user's monthly credit allowance is reset
@@ -72,45 +201,25 @@ function summarizeEmailError(error) {
  */
 export async function sendCreditsRefreshedEmail(userEmail, userName, credits, language = 'en') {
   try {
-    // Validate inputs
-    if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
-      return { success: false, error: 'Invalid email address' };
-    }
-
-    if (!userName) {
-      console.error('[email-service] Missing userName');
-      return { success: false, error: 'Missing userName' };
-    }
-
-    if (!credits || credits <= 0) {
-      console.error('[email-service] Invalid credits amount:', credits);
-      return { success: false, error: 'Invalid credits amount' };
-    }
-
-    // Get template for language
-    const lang = language === 'ar' ? 'ar' : 'en';
-    const template = emailTemplates.creditsRefreshed[lang];
-
-    if (!template) {
-      throw new Error(`Template not found for language: ${lang}`);
+    const prepared = prepareCreditsRefreshedEmail({
+      email: userEmail,
+      userName,
+      credits,
+      language,
+    });
+    if (prepared.error) {
+      console.error('[email-service] Invalid credits email:', redactForLog(prepared.error));
+      return { success: false, error: prepared.error };
     }
 
     console.log('[email-service] Sending credits refreshed email', {
       email: redactForLog(userEmail),
       credits,
-      language: lang
+      language: prepared.lang
     });
 
     // Send email via Resend
-    const response = await resend.emails.send({
-      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
-      to: userEmail,
-      subject: template.subject,
-      html: template.html(userName, credits),
-      text: template.text(userName, credits),
-      replyTo: 'support@watheqai.app'
-    });
+    const response = await resend.emails.send(prepared.payload);
 
     if (response.error) {
       console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
@@ -123,6 +232,31 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
     console.error('[email-service] Failed to send credits email:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Queue credit-reset notifications through Resend's provider-side batch API.
+ * Each API request carries at most 100 independent emails.
+ */
+export async function sendCreditsRefreshedEmailBatch(recipients = []) {
+  const preparedEmails = [];
+  const invalidErrors = [];
+
+  for (const recipient of recipients) {
+    const prepared = prepareCreditsRefreshedEmail(recipient || {});
+    if (prepared.error) {
+      invalidErrors.push({ email: recipient?.email || '', error: prepared.error });
+      continue;
+    }
+    preparedEmails.push(prepared);
+  }
+
+  const result = await sendPreparedEmailBatches(preparedEmails);
+  return {
+    successCount: result.successCount,
+    failureCount: result.failureCount + invalidErrors.length,
+    errors: [...invalidErrors, ...result.errors],
+  };
 }
 
 /**
@@ -148,55 +282,25 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
  */
 export async function sendMonthlyUsageSummary(userEmail, userName, stats, language = 'en') {
   try {
-    // Validate inputs
-    if (!userEmail || !isValidEmail(userEmail)) {
-      console.error('[email-service] Invalid email address:', redactForLog(userEmail));
-      return { success: false, error: 'Invalid email address' };
-    }
-
-    if (!userName) {
-      console.error('[email-service] Missing userName');
-      return { success: false, error: 'Missing userName' };
-    }
-
-    if (!stats || typeof stats !== 'object') {
-      console.error('[email-service] Invalid stats object:', stats);
-      return { success: false, error: 'Invalid stats object' };
-    }
-
-    // Validate stats structure
-    const defaultStats = {
-      totalUsed: stats.totalUsed || 0,
-      remaining: stats.remaining || 0,
-      totalActions: stats.totalActions || 0,
-      usagePercentage: stats.usagePercentage || 0,
-      nextResetDate: stats.nextResetDate || 'next month',
-      breakdown: stats.breakdown || {}
-    };
-
-    // Get template for language
-    const lang = language === 'ar' ? 'ar' : 'en';
-    const template = emailTemplates.monthlyUsageSummary[lang];
-
-    if (!template) {
-      throw new Error(`Template not found for language: ${lang}`);
+    const prepared = prepareMonthlyUsageSummaryEmail({
+      email: userEmail,
+      userName,
+      stats,
+      language,
+    });
+    if (prepared.error) {
+      console.error('[email-service] Invalid monthly summary email:', redactForLog(prepared.error));
+      return { success: false, error: prepared.error };
     }
 
     console.log('[email-service] Sending monthly summary email', {
       email: redactForLog(userEmail),
-      stats: defaultStats,
-      language: lang
+      stats: prepared.normalizedStats,
+      language: prepared.lang
     });
 
     // Send email via Resend
-    const response = await resend.emails.send({
-      from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
-      to: userEmail,
-      subject: template.subject,
-      html: template.html(userName, defaultStats),
-      text: template.text(userName, defaultStats),
-      replyTo: 'support@watheqai.app'
-    });
+    const response = await resend.emails.send(prepared.payload);
 
     if (response.error) {
       console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
@@ -209,6 +313,30 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
     console.error('[email-service] Failed to send monthly summary:', summarizeEmailError(error));
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Queue personalized monthly summaries through Resend's provider-side batch API.
+ */
+export async function sendMonthlyUsageSummaryBatch(recipients = []) {
+  const preparedEmails = [];
+  const invalidErrors = [];
+
+  for (const recipient of recipients) {
+    const prepared = prepareMonthlyUsageSummaryEmail(recipient || {});
+    if (prepared.error) {
+      invalidErrors.push({ email: recipient?.email || '', error: prepared.error });
+      continue;
+    }
+    preparedEmails.push(prepared);
+  }
+
+  const result = await sendPreparedEmailBatches(preparedEmails);
+  return {
+    successCount: result.successCount,
+    failureCount: result.failureCount + invalidErrors.length,
+    errors: [...invalidErrors, ...result.errors],
+  };
 }
 
 /**

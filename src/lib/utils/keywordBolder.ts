@@ -98,7 +98,7 @@ export function splitTextWithKeywords(
 
   // Sort keywords by length (longest first) to handle overlapping matches correctly
   // e.g., "machine learning" should match before "machine"
-  const sortedKeywords = topKeywords.toSorted((a, b) => b.length - a.length);
+  const sortedKeywords = [...topKeywords].sort((a, b) => b.length - a.length);
 
   // Escape special regex characters and build pattern
   const escapedKeywords = sortedKeywords.map(k => escapeRegex(k));

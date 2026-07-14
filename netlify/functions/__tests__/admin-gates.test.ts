@@ -18,7 +18,9 @@ vi.mock('../../lib/supabase-client.js', () => ({
 vi.mock('../../lib/email-service.js', () => ({
   sendWaitlistNotification: sendWaitlistNotificationMock,
   sendCreditsRefreshedEmail: vi.fn(),
+  sendCreditsRefreshedEmailBatch: vi.fn(),
   sendMonthlyUsageSummary: vi.fn(),
+  sendMonthlyUsageSummaryBatch: vi.fn(),
 }));
 
 vi.mock('../../lib/sentry.js', () => ({

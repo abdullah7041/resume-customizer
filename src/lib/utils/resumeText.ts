@@ -132,7 +132,7 @@ const ROW_PAIRING_REJECT = 0.6; // if most right items share a row with a left i
 const buildLinesFromItems = (items: PdfTextItem[]): LineInfo[] => {
   if (items.length === 0) return [];
 
-  const sorted = items.toSorted((a, b) => b.y - a.y || a.x - b.x);
+  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
   const lines: LineInfo[] = [];
   let rowItems: PdfTextItem[] = [];
   let rowY = sorted[0].y;

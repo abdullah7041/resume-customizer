@@ -348,7 +348,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     ]);
 
     const completedResumes = resumes.filter(r => r.status === 'completed' && r.analysis);
-    const sortedResumes = completedResumes.toSorted((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
+    const sortedResumes = [...completedResumes].sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
 
     // Create PDF document
     const doc = new jsPDF();
@@ -428,7 +428,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
   const canUploadMore = resumes.length < MAX_FILES;
   const completedResumes = resumes.filter(r => r.status === 'completed' && r.analysis);
-  const sortedResumes = completedResumes.toSorted((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
+  const sortedResumes = [...completedResumes].sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
 
   return (
     <div className="space-y-8">

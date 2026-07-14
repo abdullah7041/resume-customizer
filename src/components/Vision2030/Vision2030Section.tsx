@@ -288,7 +288,8 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {analysis.sectorBreakdown
-                .toSorted((a, b) => b.score - a.score)
+                .slice()
+                .sort((a, b) => b.score - a.score)
                 .slice(0, 3)
                 .map((sector) => (
                   <div

@@ -47,7 +47,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
   };
 
   // Sort sectors by score (highest first)
-  const sortedSectors = sectorBreakdown.toSorted((a, b) => b.score - a.score);
+  const sortedSectors = [...sectorBreakdown].sort((a, b) => b.score - a.score);
 
   return (
     <GlassCard className="p-6">

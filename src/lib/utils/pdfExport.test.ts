@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { exportToPdf } from "./pdfExport";
-import type { ResumeSchema } from "../../types/resume";
+import { exportToPdf } from "@/lib/utils/pdfExport";
+import type { ResumeSchema } from "@/types/resume";
 
 describe("exportToPdf", () => {
   it("escapes language labels exactly once in ATS HTML", async () => {

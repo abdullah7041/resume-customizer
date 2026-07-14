@@ -74,21 +74,21 @@ describe('CreditManager', () => {
       expect(cronSource).not.toMatch(/const newCredits = \d+;/);
     });
 
-    it('paces scheduled email batches instead of relying on concurrency alone', () => {
+    it('uses provider-side email batches instead of throttling each user workflow', () => {
       const testDir = dirname(fileURLToPath(import.meta.url));
-      const cronSources = [
-        'cron-reset-credits.ts',
-        'cron-monthly-summary.ts',
-      ].map((fileName) => readFileSync(
-        join(testDir, '..', '..', 'functions', fileName),
+      const resetSource = readFileSync(
+        join(testDir, '..', '..', 'functions', 'cron-reset-credits.ts'),
         'utf8'
-      ));
+      );
+      const summarySource = readFileSync(
+        join(testDir, '..', '..', 'functions', 'cron-monthly-summary.ts'),
+        'utf8'
+      );
 
-      for (const cronSource of cronSources) {
-        expect(cronSource).toContain('RateLimiter');
-        expect(cronSource).toMatch(/minDelayBetweenRequestsMs:\s*500/);
-        expect(cronSource).toMatch(/rateLimiter:\s*emailRateLimiter/);
-      }
+      expect(resetSource).toContain('sendCreditsRefreshedEmailBatch');
+      expect(summarySource).toContain('sendMonthlyUsageSummaryBatch');
+      expect(resetSource).not.toContain('RateLimiter');
+      expect(summarySource).not.toContain('RateLimiter');
     });
   });
 

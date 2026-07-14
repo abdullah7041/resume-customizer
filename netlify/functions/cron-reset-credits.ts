@@ -13,15 +13,9 @@ import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { FREE_TIER_CREDITS } from '../lib/credit-manager.js';
 import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
-import { batchWithConcurrency, RateLimiter } from '../lib/rate-limiter.js';
-import { sendCreditsRefreshedEmail } from '../lib/email-service.js';
+import { batchWithConcurrency } from '../lib/rate-limiter.js';
+import { sendCreditsRefreshedEmailBatch } from '../lib/email-service.js';
 import { redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
-
-const emailRateLimiter = new RateLimiter({
-  maxConcurrent: 1,
-  minDelayBetweenRequestsMs: 500,
-  maxRequestsPerMinute: 120,
-});
 
 const handler: Handler = async (event) => {
   console.log('[cron-reset-credits] Starting scheduled credit reset...');
@@ -93,10 +87,15 @@ const handler: Handler = async (event) => {
     let successCount = 0;
     let emailFailCount = 0;
     const errors: Array<{ userId: string; error: string }> = [];
+    const emailRecipients: Array<{
+      email: string;
+      userName: string;
+      credits: number;
+      language: 'en';
+    }> = [];
 
-    // Process users a few at a time — each user's update → log → email chain
-    // must stay in order, but users are independent of each other. Concurrency
-    // stays low because the email step is Resend-rate-limited (~2 req/s).
+    // Reset independent user records concurrently. Email delivery happens after
+    // successful mutations through Resend's provider-side batch endpoint.
     await batchWithConcurrency(usersNeedingReset, async (userCredit) => {
       try {
         const email = userCredit.email;
@@ -145,23 +144,20 @@ const handler: Handler = async (event) => {
           // Don't fail the operation
         }
 
-        // Send email notification
         const userName = authUserInfo?.name || email.split('@')[0];
-        const emailResult = await sendCreditsRefreshedEmail(email, userName, newCredits, 'en');
-
-        if (!emailResult.success) {
-          console.warn(`[cron-reset-credits] Failed to send email for user ${redactForLog(email)}:`, redactForLog(emailResult.error));
-          emailFailCount++;
-        }
-
+        emailRecipients.push({ email, userName, credits: newCredits, language: 'en' });
         successCount++;
-        console.log(`[cron-reset-credits] Reset credits for user ${redactForLog(email)}. Email sent: ${emailResult.success}`);
+        console.log(`[cron-reset-credits] Reset credits for user ${redactForLog(email)}`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error(`[cron-reset-credits] Error processing user:`, errorMsg);
         errors.push({ userId: userCredit.email, error: errorMsg });
       }
-    }, { concurrency: 2, rateLimiter: emailRateLimiter });
+    }, { concurrency: 8 });
+
+    const emailResult = await sendCreditsRefreshedEmailBatch(emailRecipients);
+    emailFailCount = emailResult.failureCount;
+    errors.push(...emailResult.errors.map(({ email, error }) => ({ userId: email, error })));
 
     console.log(`[cron-reset-credits] Completed: ${successCount} users processed, ${emailFailCount} email failures, ${errors.length} errors`);
 
