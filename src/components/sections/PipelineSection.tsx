@@ -145,24 +145,28 @@ export function PipelineSection() {
                 </span>
                 <div className="flex gap-1 shrink-0">
                   <button
+                    type="button"
                     onClick={() => handleQuickUpdate(job, 'rejected')}
                     className="px-2 py-1 rounded-md text-xs bg-rose-500/10 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20 transition-colors"
                   >
                     {t('pipeline.updateToRejected', 'Rejected')}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleQuickUpdate(job, 'offer')}
                     className="px-2 py-1 rounded-md text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors"
                   >
                     {t('pipeline.updateToOffer', 'Offer')}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleQuickUpdate(job, 'withdrawn')}
                     className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 transition-colors"
                   >
                     {t('pipeline.updateToWithdrawn', 'Withdrawn')}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleQuickUpdate(job, 'applied')}
                     className="px-2 py-1 rounded-md text-xs bg-gray-500/10 text-gray-600 dark:text-gray-300 hover:bg-gray-500/20 transition-colors"
                   >
@@ -205,6 +209,7 @@ export function PipelineSection() {
                   <div className="relative">
                     <select
                       value={job.status}
+                      aria-label={t('pipeline.statusLabel', 'Application status')}
                       onChange={(e) => handleStatusChange(job, e.target.value as JobApplicationStatus)}
                       disabled={updatingStatusId === job.id}
                       className="appearance-none bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 pr-7 text-xs font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50"
@@ -219,20 +224,24 @@ export function PipelineSection() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingNotesId(job.id);
                       setNotesDraft(job.notes || '');
                     }}
                     className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
                     title={t('pipeline.editNotes', 'Edit notes')}
+                    aria-label={t('pipeline.editNotes', 'Edit notes')}
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setDeleteConfirmId(job.id)}
                     className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-rose-600 transition-colors"
                     title={t('pipeline.deleteJob', 'Delete')}
+                    aria-label={t('pipeline.deleteJob', 'Delete')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

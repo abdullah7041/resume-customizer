@@ -39,9 +39,9 @@ function EvidenceList({ evidence }: { evidence?: RealityCheckEvidence[] }) {
   if (!evidence || evidence.length === 0) return null;
   return (
     <ul className="mt-2 space-y-2">
-      {evidence.map((ev, i) => (
+      {evidence.map((ev) => (
         <li
-          key={i}
+          key={`${ev.source}-${ev.snippet}`}
           className="ps-3 border-s-2 border-emerald-500/30 text-sm text-gray-300"
         >
           <span className="italic">“{ev.snippet}”</span>

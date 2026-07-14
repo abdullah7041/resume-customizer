@@ -25,6 +25,13 @@ const roundedMap = {
   '3xl': 'rounded-3xl',
 };
 
+const variantStyles = {
+  default: glass.card,
+  light: glass.cardLight,
+  elevated: glass.elevated,
+  subtle: glass.subtle,
+};
+
 export function GlassCard({
   children,
   variant = 'default',
@@ -33,13 +40,6 @@ export function GlassCard({
   rounded = '2xl',
   ...props
 }: GlassCardProps) {
-  const variantStyles = {
-    default: glass.card,
-    light: glass.cardLight,
-    elevated: glass.elevated,
-    subtle: glass.subtle,
-  };
-
   return (
     <motion.div
       whileHover={{

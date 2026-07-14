@@ -57,7 +57,8 @@ import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
-import { emitHRSuperSaudEvent, useHRSuperSaud } from "../../features/hr-super-saud";
+import { emitHRSuperSaudEvent } from "../../features/hr-super-saud/events";
+import { useHRSuperSaud } from "../../features/hr-super-saud/HRSuperSaudProvider";
 import { useUserCredits } from "../../hooks/useUserCredits";
 import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 import type { FeatureFlagName } from "@/types/featureFlags";
@@ -155,8 +156,10 @@ const scheduleTimeout = (callback, delay) => {
 
 const getResumeFingerprint = (text: string) => `${text.length}:${text.slice(0, 120)}`;
 const getHardStopsFingerprint = (hardStops: string[]) => hardStops
-  .map(value => value.trim().toLocaleLowerCase())
-  .filter(Boolean)
+  .flatMap(value => {
+    const normalized = value.trim().toLocaleLowerCase();
+    return normalized ? [normalized] : [];
+  })
   .sort()
   .join('|');
 
@@ -411,22 +414,25 @@ export default function MainContent() {
       "more-tools": t("workspace.mobileWorkflow.moreTools", "More tools"),
     };
 
-    return getTabsConfig(t)
-      .filter(isFlagEnabled)
-      .filter((tab) => MOBILE_PRIMARY_TAB_VALUES.includes(tab.value))
-      .map((tab) => ({
+    return getTabsConfig(t).reduce<MobileWorkflowItem[]>((acc, tab) => {
+      if (!isFlagEnabled(tab) || !MOBILE_PRIMARY_TAB_VALUES.includes(tab.value)) return acc;
+      acc.push({
         ...tab,
         label: mobileLabels[tab.value] ?? tab.label,
         disabledReason: !hasResume && tab.value !== "resume" ? mobileWorkflowGateReason : undefined,
-      }));
+      });
+      return acc;
+    }, []);
   }, [hasResume, isFlagEnabled, mobileWorkflowGateReason, t]);
   const mobileSecondarySteps = useMemo<MobileWorkflowItem[]>(
     () =>
       hasResume
-        ? getTabsConfig(t)
-            .filter(isFlagEnabled)
-            .filter((tab) => MOBILE_SECONDARY_TAB_VALUES.includes(tab.value))
-            .map((tab) => ({ ...tab }))
+        ? getTabsConfig(t).reduce<MobileWorkflowItem[]>((acc, tab) => {
+            if (isFlagEnabled(tab) && MOBILE_SECONDARY_TAB_VALUES.includes(tab.value)) {
+              acc.push({ ...tab });
+            }
+            return acc;
+          }, [])
         : [],
     [hasResume, isFlagEnabled, t]
   );
@@ -1496,14 +1502,16 @@ export default function MainContent() {
       /** Helper: build typed work-history from Zustand store */
       const buildWorkHistory = (): WorkEntry[] | undefined => {
         const storeWork = useResumeStore.getState().originalResume?.work;
-        return storeWork
-          ?.map(w => ({
+        return storeWork?.reduce<WorkEntry[]>((acc, w) => {
+          const entry = {
             name: w.name || '',
             position: w.position || '',
             startDate: w.startDate || '',
             endDate: w.endDate || '',
-          }))
-          .filter(w => w.name && w.position) || undefined;
+          };
+          if (entry.name && entry.position) acc.push(entry);
+          return acc;
+        }, []) || undefined;
       };
 
       try {
@@ -1876,7 +1884,7 @@ export default function MainContent() {
   );
 
   const secondaryToolTabs = useMemo(
-    () => getTabsConfig(t).filter(isFlagEnabled).filter((tab) => SECONDARY_TAB_VALUES.has(tab.value)),
+    () => getTabsConfig(t).filter((tab) => isFlagEnabled(tab) && SECONDARY_TAB_VALUES.has(tab.value)),
     [isFlagEnabled, t]
   );
 
@@ -2290,12 +2298,14 @@ export default function MainContent() {
               </p>
               <div className="flex gap-3 justify-end">
                 <button
+                  type="button"
                   onClick={() => setShowDeleteConfirm(false)}
                   className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,scale] duration-150 ease-out bg-gray-100 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-black border border-gray-300/50 dark:border-white/10 text-gray-900 dark:text-white shadow-md active:scale-[0.96]"
                 >
                   {t("common.cancel", "Cancel")}
                 </button>
                 <button
+                  type="button"
                   onClick={confirmDeleteAllData}
                   className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,scale] duration-150 ease-out bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_8px_30px_rgba(239,68,68,0.4)] border border-red-400/20 flex items-center justify-center gap-2 active:scale-[0.96]"
                 >

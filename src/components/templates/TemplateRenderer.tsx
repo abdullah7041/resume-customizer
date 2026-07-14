@@ -48,19 +48,19 @@ const ContactIcon = ({ type }) => {
   return <Icon className="w-4 h-4" />;
 };
 
+const LAYOUT_CLASSES = {
+  centered: "text-center",
+  "left-aligned": "text-left",
+  sidebar: "flex items-center gap-6",
+  "centered-formal": "text-center border-b-2 pb-4"
+};
+
 const TemplateHeader = ({ template, userData }) => {
   const { header } = template.structure;
   const { layout, fields } = header;
 
-  const layoutClasses = {
-    centered: "text-center",
-    "left-aligned": "text-left",
-    sidebar: "flex items-center gap-6",
-    "centered-formal": "text-center border-b-2 pb-4"
-  };
-
   return (
-    <div className={cn("mb-6", layoutClasses[layout])}>
+    <div className={cn("mb-6", LAYOUT_CLASSES[layout])}>
       {header.includePhoto && userData.photo && (
         <img
           src={userData.photo}
@@ -144,41 +144,44 @@ const ParagraphSection = ({ section, content }) => {
   );
 };
 
-const TimelineSection = ({ section, items }) => {
-  const bulletStyles = {
-    "filled-circle": "•",
-    "dash": "–",
-    "arrow": "→"
-  };
+const BULLET_STYLES = {
+  "filled-circle": "•",
+  "dash": "–",
+  "arrow": "→"
+};
 
-  const bullet = bulletStyles[section.format?.bulletStyle] || "•";
+const TimelineSection = ({ section, items }) => {
+  const bullet = BULLET_STYLES[section.format?.bulletStyle] || "•";
 
   return (
     <div className="space-y-4">
-      {(items || [section.placeholder]).map((item, idx) => (
-        <div key={idx} className="border-l-2 border-emerald-500 pl-4">
-          <div className="font-semibold text-gray-900 dark:text-white mb-1">
-            {typeof item === "string" ? item.split("\n")[0] : item.title || "Position Title"}
+      {(items || [section.placeholder]).map((item) => {
+        const itemKey = typeof item === "string" ? item : `${item.title || ""}-${item.subtitle || ""}`;
+        return (
+          <div key={itemKey} className="border-l-2 border-emerald-500 pl-4">
+            <div className="font-semibold text-gray-900 dark:text-white mb-1">
+              {typeof item === "string" ? item.split("\n")[0] : item.title || "Position Title"}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              {typeof item === "string" ? item.split("\n")[1] : item.subtitle || "Company | Date Range"}
+            </div>
+            {typeof item === "string" && item.split("\n").length > 2 && (
+              <ul className="space-y-1 text-gray-700 dark:text-gray-300">
+                {item.split("\n").slice(2).map((line) => (
+                  line.trim() && <li key={line} className="ml-4">{bullet} {line.replace(/^[•\-–→]\s*/, "")}</li>
+                ))}
+              </ul>
+            )}
+            {typeof item === "object" && item.bullets && (
+              <ul className="space-y-1 text-gray-700 dark:text-gray-300">
+                {item.bullets.map((b) => (
+                  <li key={b} className="ml-4">{bullet} {b}</li>
+                ))}
+              </ul>
+            )}
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            {typeof item === "string" ? item.split("\n")[1] : item.subtitle || "Company | Date Range"}
-          </div>
-          {typeof item === "string" && item.split("\n").length > 2 && (
-            <ul className="space-y-1 text-gray-700 dark:text-gray-300">
-              {item.split("\n").slice(2).map((line, i) => (
-                line.trim() && <li key={i} className="ml-4">{bullet} {line.replace(/^[•\-–→]\s*/, "")}</li>
-              ))}
-            </ul>
-          )}
-          {typeof item === "object" && item.bullets && (
-            <ul className="space-y-1 text-gray-700 dark:text-gray-300">
-              {item.bullets.map((b, i) => (
-                <li key={i} className="ml-4">{bullet} {b}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
@@ -188,9 +191,9 @@ const GridSection = ({ section, items }) => {
 
   return (
     <div className={cn("grid gap-3", `grid-cols-${columns}`)}>
-      {(items || section.placeholder.split(",")).map((item, idx) => (
+      {(items || section.placeholder.split(",")).map((item) => (
         <div
-          key={idx}
+          key={typeof item === "string" ? item : JSON.stringify(item)}
           className="bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg text-center text-sm font-medium text-gray-900 dark:text-white"
         >
           {safeRender(item)}
@@ -211,8 +214,8 @@ const CategorizedSection = ({ section, data }) => {
 
   return (
     <div className="space-y-3">
-      {(Array.isArray(parsedData) ? parsedData : categories.map(c => ({ category: c, skills: "" }))).map((item, idx) => (
-        <div key={idx}>
+      {(Array.isArray(parsedData) ? parsedData : categories.map(c => ({ category: c, skills: "" }))).map((item) => (
+        <div key={`${item.category}-${item.skills}`}>
           <h4 className="font-semibold text-sm text-emerald-600 dark:text-emerald-400 mb-1">
             {item.category}
           </h4>
@@ -228,9 +231,9 @@ const CategorizedSection = ({ section, data }) => {
 const TagsSection = ({ section, tags }) => {
   return (
     <div className="flex flex-wrap gap-2">
-      {(tags || section.placeholder.split(",")).map((tag, idx) => (
+      {(tags || section.placeholder.split(",")).map((tag) => (
         <span
-          key={idx}
+          key={typeof tag === "string" ? tag : JSON.stringify(tag)}
           className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-medium rounded-full"
         >
           {safeRender(tag)}
@@ -243,8 +246,8 @@ const TagsSection = ({ section, tags }) => {
 const ListSection = ({ section, items }) => {
   return (
     <ul className="space-y-2">
-      {(items || [section.placeholder]).map((item, idx) => (
-        <li key={idx} className="text-gray-700 dark:text-gray-300">
+      {(items || [section.placeholder]).map((item) => (
+        <li key={typeof item === "string" ? item : JSON.stringify(item)} className="text-gray-700 dark:text-gray-300">
           • {safeRender(item)}
         </li>
       ))}
@@ -307,15 +310,17 @@ const DynamicTemplateRenderer = ({ template, userData }) => {
       <TemplateHeader template={template} userData={userData} />
 
       <div className="space-y-6">
-        {structure.sections
-          .filter(section => !section.optional || userData[section.id])
-          .map((section, idx) => (
-            <SectionRenderer
-              key={`${section.id}-${idx}`}
-              section={section}
-              userData={userData}
-            />
-          ))}
+        {structure.sections.flatMap((section) =>
+          !section.optional || userData[section.id]
+            ? [
+                <SectionRenderer
+                  key={section.id}
+                  section={section}
+                  userData={userData}
+                />,
+              ]
+            : []
+        )}
       </div>
     </div>
   );
@@ -339,7 +344,9 @@ interface TemplateRendererProps {
   contentDirection?: ResumeDirection;
 }
 
-export default function TemplateRenderer({ template, userData = {}, aiAnalysisResult = null, contentDirection }: TemplateRendererProps) {
+const EMPTY_USER_DATA: UserData = {};
+
+export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA, aiAnalysisResult = null, contentDirection }: TemplateRendererProps) {
   // Get display options from store (user's formatting preferences)
   const displayOptions = useResumeStore((state) => state.displayOptions);
 

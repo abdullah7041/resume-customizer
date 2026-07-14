@@ -54,6 +54,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
             <div
                 className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300"
                 onClick={onClose}
+                aria-hidden="true"
             />
 
             {/* Modal Container - Glassmorphism */}
@@ -91,6 +92,7 @@ export default function Vision2030Modal({ isOpen, onClose }: Vision2030ModalProp
                     </div>
 
                     <button
+                        type="button"
                         onClick={onClose}
                         className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
                         aria-label="Close modal"

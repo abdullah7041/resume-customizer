@@ -74,12 +74,15 @@ const splitLines = (text) =>
     .map((line) => normalize(line))
     .filter(isMeaningfulLine);
 
-const sanitizeLines = (items) =>
-  Array.isArray(items)
-    ? items
-      .map((item) => normalize(String(item ?? "")))
-      .filter(isMeaningfulLine)
-    : [];
+const sanitizeLines = (items) => {
+  if (!Array.isArray(items)) return [];
+  const result = [];
+  for (const item of items) {
+    const line = normalize(String(item ?? ""));
+    if (isMeaningfulLine(line)) result.push(line);
+  }
+  return result;
+};
 
 const ensureResumeDocument = (input) => {
   if (input && typeof input === "object" && typeof input.plainText === "string") {
@@ -152,9 +155,11 @@ export const deriveResumeSections = (resumeText = "") => {
     const contactCandidates = lines.filter((line) =>
       /@|\b(?:linkedin|github|behance|riyadh)\b|\+?\d{3}/i.test(line),
     );
+    const seenContactLines = new Set(sections.contactLines);
     for (const candidate of contactCandidates) {
-      if (!sections.contactLines.includes(candidate) && sections.contactLines.length < 6) {
+      if (!seenContactLines.has(candidate) && sections.contactLines.length < 6) {
         sections.contactLines.push(candidate);
+        seenContactLines.add(candidate);
       }
     }
   }
@@ -681,10 +686,9 @@ const buildPlainExportHtml = ({
 
   const optimizationBullets = Array.isArray(optimizations)
     ? optimizations
-      .map((item) =>
-        item?.suggestion ? `• ${escapeHtml(item.section ? `${item.section}: ${item.suggestion}` : item.suggestion)}` : null,
+      .flatMap((item) =>
+        item?.suggestion ? [`• ${escapeHtml(item.section ? `${item.section}: ${item.suggestion}` : item.suggestion)}`] : [],
       )
-      .filter(Boolean)
       .slice(0, 5)
     : [];
 

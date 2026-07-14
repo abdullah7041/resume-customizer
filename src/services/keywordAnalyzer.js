@@ -158,12 +158,11 @@ export const calculateTFIDF = (resumeText, jobText) => {
   // Find matched and missing keywords
   const resumeTermSet = new Set(resumeScores.keys());
 
-  const matchedKeywords = jobKeywords
-    .filter(kw => resumeTermSet.has(kw.term))
-    .map(kw => ({
-      ...kw,
-      resumeCount: resumeFreq.get(kw.term) || 0
-    }));
+  const matchedKeywords = jobKeywords.flatMap(kw =>
+    resumeTermSet.has(kw.term)
+      ? [{ ...kw, resumeCount: resumeFreq.get(kw.term) || 0 }]
+      : []
+  );
 
   const missingKeywords = jobKeywords
     .filter(kw => !resumeTermSet.has(kw.term))
@@ -239,13 +238,11 @@ export const suggestKeywordChanges = (resumeText, jobText) => {
     }));
 
   // Keywords that are well-represented
-  const wellRepresented = analysis.matchedKeywords
-    .filter(kw => kw.resumeCount >= kw.count) // Resume mentions >= job mentions
-    .map(kw => ({
-      term: kw.term,
-      jobCount: kw.count,
-      resumeCount: kw.resumeCount
-    }));
+  const wellRepresented = analysis.matchedKeywords.flatMap(kw =>
+    kw.resumeCount >= kw.count // Resume mentions >= job mentions
+      ? [{ term: kw.term, jobCount: kw.count, resumeCount: kw.resumeCount }]
+      : []
+  );
 
   // Keywords that need more emphasis
   const needEmphasis = analysis.matchedKeywords

@@ -14,40 +14,35 @@ vi.doMock(
 
 vi.doMock(
   "pdfjs-dist/legacy/build/pdf.mjs",
-  () => {
-    const getPage = vi.fn(async () => ({
-      getTextContent: vi.fn(async () => ({
-        items: [
-          { str: "Hello ", transform: [1, 0, 0, 1, 0, 100] },
-          { str: "Riyadh", transform: [1, 0, 0, 1, 50, 100] }
-        ]
-      })),
-      cleanup: vi.fn(),
-    }));
-
-    const document = {
-      numPages: 1,
-      getPage,
-      cleanup: vi.fn(),
-      destroy: vi.fn(),
-    };
-
-    pdfGetDocument.mockReturnValue({ promise: Promise.resolve(document) });
-
-    return {
+  () => ({
       getDocument: pdfGetDocument,
       GlobalWorkerOptions: pdfWorkerOptions,
       version: "5.7.284",
-    };
-  },
+    }),
   { virtual: true }
 );
 
 const { extractPlainTextFromArrayBuffer, inferMimeType } = await import("../lib/utils/resumeText.ts");
 
+const makePdfDocument = () => ({
+  numPages: 1,
+  getPage: vi.fn(async () => ({
+    getTextContent: vi.fn(async () => ({
+      items: [
+        { str: "Hello ", transform: [1, 0, 0, 1, 0, 100] },
+        { str: "Riyadh", transform: [1, 0, 0, 1, 50, 100] }
+      ]
+    })),
+    cleanup: vi.fn(),
+  })),
+  cleanup: vi.fn(),
+  destroy: vi.fn(),
+});
+
 describe("resume text helpers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pdfGetDocument.mockReturnValue({ promise: Promise.resolve(makePdfDocument()) });
   });
 
   it("infers mime type from explicit value", () => {
@@ -75,6 +70,34 @@ describe("resume text helpers", () => {
       standardFontDataUrl: "https://unpkg.com/pdfjs-dist@5.7.284/standard_fonts/",
     });
     expect(pdfWorkerOptions.workerSrc).toBe("/assets/pdf.worker.test.mjs");
+  });
+
+  it("bounds concurrent PDF page extraction", async () => {
+    let activePages = 0;
+    let maxActivePages = 0;
+    const document = {
+      ...makePdfDocument(),
+      numPages: 12,
+      getPage: vi.fn(async (pageNumber) => ({
+        getTextContent: vi.fn(async () => {
+          activePages += 1;
+          maxActivePages = Math.max(maxActivePages, activePages);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          activePages -= 1;
+          return { items: [{ str: `Page ${pageNumber}`, transform: [1, 0, 0, 1, 0, 100] }] };
+        }),
+        cleanup: vi.fn(),
+      })),
+    };
+    pdfGetDocument.mockReturnValue({ promise: Promise.resolve(document) });
+
+    await extractPlainTextFromArrayBuffer(
+      new Uint8Array([1, 2, 3]).buffer,
+      { mimeType: "application/pdf" }
+    );
+
+    expect(document.getPage).toHaveBeenCalledTimes(12);
+    expect(maxActivePages).toBeLessThanOrEqual(4);
   });
 
   it("decodes utf-8 text when not a pdf", async () => {

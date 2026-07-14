@@ -18,6 +18,18 @@ interface SectorBreakdownProps {
   isArabic: boolean;
 }
 
+const getScoreColor = (score: number) => {
+  if (score >= 70) return 'text-emerald-400';
+  if (score >= 40) return 'text-amber-400';
+  return 'text-red-400';
+};
+
+const getScoreBg = (score: number) => {
+  if (score >= 70) return 'from-emerald-600 to-emerald-400';
+  if (score >= 40) return 'from-amber-600 to-amber-400';
+  return 'from-red-600 to-red-400';
+};
+
 export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: SectorBreakdownProps) {
   const { t } = useTranslation();
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
@@ -34,20 +46,8 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
     });
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-emerald-400';
-    if (score >= 40) return 'text-amber-400';
-    return 'text-red-400';
-  };
-
-  const getScoreBg = (score: number) => {
-    if (score >= 70) return 'from-emerald-600 to-emerald-400';
-    if (score >= 40) return 'from-amber-600 to-amber-400';
-    return 'from-red-600 to-red-400';
-  };
-
   // Sort sectors by score (highest first)
-  const sortedSectors = [...sectorBreakdown].sort((a, b) => b.score - a.score);
+  const sortedSectors = sectorBreakdown.toSorted((a, b) => b.score - a.score);
 
   return (
     <GlassCard className="p-6">
@@ -125,9 +125,9 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                         {t('vision2030.breakdown.matchedSkills', 'Matched Skills')}
                       </h5>
                       <div className="space-y-2">
-                        {sectorSkills.map((skill, idx) => (
+                        {sectorSkills.map((skill) => (
                           <div
-                            key={idx}
+                            key={`${skill.skillNameEn}-${skill.matchedKeyword}`}
                             className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10"
                           >
                             <div className="flex items-start justify-between gap-3 mb-1">
@@ -156,9 +156,9 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                         {t('vision2030.breakdown.suggestedKeywords', 'Suggested Keywords to Add')}
                       </h5>
                       <div className="flex flex-wrap gap-2">
-                        {sector.suggestedKeywords.map((keyword, idx) => (
+                        {sector.suggestedKeywords.map((keyword) => (
                           <span
-                            key={idx}
+                            key={keyword}
                             className="px-3 py-1 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/30 transition-colors cursor-default"
                           >
                             + {keyword}

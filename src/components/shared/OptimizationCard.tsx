@@ -29,6 +29,14 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
       <header
         className="flex cursor-pointer items-start justify-between gap-4 p-4"
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsOpen(!isOpen);
+          }
+        }}
+        role="button"
+        tabIndex={0}
       >
         <div className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--glass-border-strong)] bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_25%)] text-emerald-500 shadow-soft">
@@ -49,6 +57,8 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
           </span>
           <button
             type="button"
+            tabIndex={-1}
+            aria-hidden="true"
             className="text-ink-soft transition-transform duration-300 hover:text-ink"
             style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
           >

@@ -147,12 +147,12 @@ export function TechnicalEngineer({
                         {getSectionLabel('technicalSkills')}
                     </h2>
                     <div className="flex flex-wrap gap-2">
-                        {skills.map((skillItem, i) => {
+                        {skills.map((skillItem, skillIndex) => {
                             // Handle both string and object formats
                             if (typeof skillItem === 'string') {
                                 return (
                                     <span
-                                        key={i}
+                                        key={`${skillItem}-${skillIndex}`}
                                         className="px-3 py-1 text-gray-700 rounded"
                                         style={{
                                             fontSize: fs(10.5),
@@ -166,9 +166,9 @@ export function TechnicalEngineer({
                             }
                             // Object format with keywords
                             const keywords = skillItem.keywords || [skillItem.name];
-                            return keywords.map((skill: string, j: number) => (
+                            return keywords.map((skill: string, keywordIndex: number) => (
                                 <span
-                                    key={`${i}-${j}`}
+                                    key={`${skillItem.name}-${skill}-${skillIndex}-${keywordIndex}`}
                                     className="px-3 py-1 text-gray-700 rounded"
                                     style={{
                                         fontSize: fs(10.5),
@@ -217,8 +217,8 @@ export function TechnicalEngineer({
                         {getSectionLabel('experience')}
                     </h2>
                     <div className="space-y-4">
-                        {work.map((job, i) => (
-                            <div key={i} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                        {work.map((job, jobIndex) => (
+                            <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
                                 <div style={{ breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
                                     <div className="flex justify-between items-baseline mb-1">
                                         <h3
@@ -267,8 +267,8 @@ export function TechnicalEngineer({
                         {getSectionLabel('projects')}
                     </h2>
                     <div className="space-y-3">
-                        {projects.map((project, i) => (
-                            <div key={i} style={{ breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                        {projects.map((project, projectIndex) => (
+                            <div key={`${project.name}-${projectIndex}`} style={{ breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
                                 <div style={{ breakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto' }}>
                                     <h3
                                         className="text-gray-900"
@@ -309,8 +309,8 @@ export function TechnicalEngineer({
                         {getSectionLabel('education')}
                     </h2>
                     <div className="space-y-3">
-                        {education.map((edu, i) => (
-                            <div key={i} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
+                        {education.map((edu, educationIndex) => (
+                            <div key={`${edu.institution}-${edu.studyType}-${educationIndex}`} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
                                 <div style={{ breakAfter: (edu.highlights && edu.highlights.length > 4) ? 'avoid' : 'auto' }}>
                                     <div className="flex justify-between items-baseline">
                                         <div style={{ minWidth: 0, overflow: 'hidden' }}>
@@ -369,8 +369,8 @@ export function TechnicalEngineer({
                         {getSectionLabel('certifications')}
                     </h2>
                     <div className="space-y-2">
-                        {certificates.map((cert, i) => (
-                            <div key={i} className="flex justify-between items-baseline">
+                        {certificates.map((cert, certificateIndex) => (
+                            <div key={`${cert.name}-${cert.date}-${certificateIndex}`} className="flex justify-between items-baseline">
                                 <div>
                                     <h3
                                         className="text-gray-900"
@@ -409,10 +409,10 @@ export function TechnicalEngineer({
                         {getSectionLabel('languages')}
                     </h2>
                     <div className="flex flex-wrap gap-3">
-                        {languages.map((lang, i) => {
+                        {languages.map((lang, languageIndex) => {
                             const { language, fluency } = safeLang(lang);
                             return (
-                                <span key={i} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
+                                <span key={`${language}-${languageIndex}`} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
                                     <strong>{language}</strong>{fluency ? `: ${fluency}` : ''}
                                 </span>
                             );

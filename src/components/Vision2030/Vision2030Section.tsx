@@ -27,6 +27,19 @@ import { TourTooltip } from '../Tour/TourTooltip';
 const VISION2030_STORAGE_KEY = 'watheq:vision2030Analysis';
 const VISION2030_ANALYZING_KEY = 'watheq:vision2030Analyzing';
 
+// Get score color based on value
+const getScoreColor = (score: number) => {
+  if (score >= 70) return 'text-emerald-400';
+  if (score >= 40) return 'text-amber-400';
+  return 'text-red-400';
+};
+
+const getScoreBg = (score: number) => {
+  if (score >= 70) return 'bg-emerald-500/10 border-emerald-500/20';
+  if (score >= 40) return 'bg-amber-500/10 border-amber-500/20';
+  return 'bg-red-500/10 border-red-500/20';
+};
+
 interface Vision2030SectionProps {
   resumeText?: string;
   onToast?: (toast: any) => void;
@@ -200,19 +213,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
     }
   }, [resumeText, isArabic, onToast, t, refreshCredits]);
 
-  // Get score color based on value
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-emerald-400';
-    if (score >= 40) return 'text-amber-400';
-    return 'text-red-400';
-  };
-
-  const getScoreBg = (score: number) => {
-    if (score >= 70) return 'bg-emerald-500/10 border-emerald-500/20';
-    if (score >= 40) return 'bg-amber-500/10 border-amber-500/20';
-    return 'bg-red-500/10 border-red-500/20';
-  };
-
   // Empty state when no resume uploaded
   if (!resumeText) {
     return (
@@ -288,7 +288,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {analysis.sectorBreakdown
-                .sort((a, b) => b.score - a.score)
+                .toSorted((a, b) => b.score - a.score)
                 .slice(0, 3)
                 .map((sector) => (
                   <div

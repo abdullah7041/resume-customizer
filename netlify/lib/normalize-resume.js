@@ -114,9 +114,11 @@ const deriveSections = (lines, plainText) => {
       .filter((segment) =>
         /@|\b(?:linkedin|github|behance|riyadh|ksa|saudi)\b|\+?\d{3}/i.test(segment),
       );
+    const seenContacts = new Set(sections.contact);
     for (const candidate of candidates) {
-      if (!sections.contact.includes(candidate) && sections.contact.length < 8) {
+      if (!seenContacts.has(candidate) && sections.contact.length < 8) {
         sections.contact.push(candidate);
+        seenContacts.add(candidate);
       }
     }
   }

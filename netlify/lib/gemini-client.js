@@ -1,4 +1,5 @@
-import { executeAiContract, MAX_PARSE_INPUT_CHARS } from './ai-contracts/index.js';
+import { executeAiContract } from './ai-contracts/executor.js';
+import { MAX_PARSE_INPUT_CHARS } from './ai-contracts/contracts/index.js';
 import { MODELS } from './model-registry.js';
 import { summarizeErrorForLog } from './sentry.js';
 import { suppressHardStopClaims } from './hard-stop-suppression.js';
@@ -44,7 +45,7 @@ function buildLegacyParseShape(parsed, inputData, isPdf) {
     location: result.basics?.location
       ? `${result.basics.location.city || ''}, ${result.basics.location.region || ''}`.trim().replace(/^,\s*|,\s*$/g, '')
       : '',
-    links: (result.basics?.profiles || []).map(profile => profile.url).filter(Boolean),
+    links: (result.basics?.profiles || []).flatMap(profile => (profile.url ? [profile.url] : [])),
   };
 
   const summary = extractSummaryFromInput(inputData, result);
@@ -58,7 +59,7 @@ function buildLegacyParseShape(parsed, inputData, isPdf) {
     dates: `${work.startDate || ''} - ${work.endDate || ''}`.trim(),
     description: [work.summary, ...(work.highlights || [])].filter(Boolean).join('\n• '),
   }));
-  result.certifications = (result.certificates || []).map(cert => cert.name).filter(Boolean);
+  result.certifications = (result.certificates || []).flatMap(cert => (cert.name ? [cert.name] : []));
 
   console.log(`[Gemini] Extraction Summary:
       - Work: ${result.work.length} entries

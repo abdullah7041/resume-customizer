@@ -25,6 +25,12 @@ function prefersReducedMotion(): boolean {
         && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+const HEIGHT_CLASSES = {
+    auto: 'max-h-[85vh]',
+    half: 'h-[50vh]',
+    full: 'h-[90vh]',
+};
+
 /**
  * Mobile-native bottom sheet.
  * - Transition-based slide-up entrance and slide-down exit (interruptible,
@@ -155,12 +161,6 @@ export function BottomSheet({
 
     if (!render) return null;
 
-    const heightClasses = {
-        auto: 'max-h-[85vh]',
-        half: 'h-[50vh]',
-        full: 'h-[90vh]',
-    };
-
     const translateY = dragging
         ? `${offset}px`
         : entered || reduce
@@ -171,8 +171,11 @@ export function BottomSheet({
         <div
             className="fixed inset-0 z-50 md:hidden"
             onClick={handleBackdropClick}
+            onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
             aria-modal="true"
             role="dialog"
+            aria-labelledby={title ? 'bottom-sheet-heading' : undefined}
+            aria-label={title ? undefined : 'Dialog'}
         >
             {/* Backdrop */}
             <div
@@ -186,7 +189,7 @@ export function BottomSheet({
                 className={cn(
                     "absolute bottom-0 left-0 right-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800",
                     "rounded-t-2xl border-t border-gray-200 dark:border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]",
-                    heightClasses[height]
+                    HEIGHT_CLASSES[height]
                 )}
                 style={{
                     transform: `translateY(${translateY})`,
@@ -213,8 +216,9 @@ export function BottomSheet({
                     {/* Header */}
                     {title && (
                         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-                            <h3 className="text-lg font-semibold text-white">{title}</h3>
+                            <h3 id="bottom-sheet-heading" className="text-lg font-semibold text-white">{title}</h3>
                             <button
+                                type="button"
                                 onClick={onClose}
                                 className="inline-flex items-center justify-center w-10 h-10 min-w-[44px] min-h-[44px] -mr-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
                                 aria-label="Close"

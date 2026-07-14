@@ -111,6 +111,7 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
   return (
     <div className={cn("flex items-center", isCompact ? "gap-1" : "gap-2")}>
       <button
+        type="button"
         onClick={onClick}
         className={cn(
           // Glassy dark/light background
@@ -149,6 +150,7 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
       {/* Refresh Button */}
       {!isCompact && (
         <button
+          type="button"
           onClick={handleRefresh}
           disabled={isRefreshing}
           className={cn(

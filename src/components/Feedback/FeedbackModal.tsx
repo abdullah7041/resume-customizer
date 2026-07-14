@@ -134,7 +134,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
   const modal = (
     <div className="fixed inset-0 z-[130] flex items-center justify-center p-3 sm:p-4" dir={i18n.dir()}>
-      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-md dark:bg-black/75" onClick={onClose} />
+      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-md dark:bg-black/75" onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"

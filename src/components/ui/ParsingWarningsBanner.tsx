@@ -38,9 +38,9 @@ export function ParsingWarningsBanner() {
             {expanded && (
                 <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
                     <div className="space-y-2">
-                        {warnings.map((warning, index) => (
+                        {warnings.map((warning) => (
                             <div
-                                key={index}
+                                key={warning.code}
                                 className={cn(
                                     'text-xs p-2 rounded-lg border',
                                     warning.level === 'warning'

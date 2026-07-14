@@ -19,7 +19,7 @@
  */
 // Resume template gallery with floating overlay template selector
 
-import { useState, useMemo, useLayoutEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
+import { useState, useMemo, useLayoutEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
@@ -40,6 +40,8 @@ import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 import { directionFromLanguage } from "../../lib/utils/resumeDirection";
 
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
+
+const DRAG_HANDLE_KEYBOARD_STEP_PX = 12;
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -314,12 +316,24 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     dragRef.current = null;
   }, []);
 
+  const handleDragHandleKeyDown = useCallback((e: ReactKeyboardEvent) => {
+    const delta = {
+      ArrowLeft: { x: -DRAG_HANDLE_KEYBOARD_STEP_PX, y: 0 },
+      ArrowRight: { x: DRAG_HANDLE_KEYBOARD_STEP_PX, y: 0 },
+      ArrowUp: { x: 0, y: -DRAG_HANDLE_KEYBOARD_STEP_PX },
+      ArrowDown: { x: 0, y: DRAG_HANDLE_KEYBOARD_STEP_PX },
+    }[e.key];
+    if (!delta) return;
+    e.preventDefault();
+    setBarPosition((prev) => ({ x: prev.x + delta.x, y: prev.y + delta.y }));
+  }, []);
+
   // Attach global listeners when dragging
   useLayoutEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleDragMove);
       window.addEventListener('mouseup', handleDragEnd);
-      window.addEventListener('touchmove', handleDragMove);
+      window.addEventListener('touchmove', handleDragMove, { passive: true });
       window.addEventListener('touchend', handleDragEnd);
       return () => {
         window.removeEventListener('mousemove', handleDragMove);
@@ -375,9 +389,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       clone.style.overflow = 'visible';
       clone.style.boxSizing = 'border-box';
 
-      // 3. inline all images as base64 so Puppeteer doesn't need to load external URLs
+      // 3. inline all images as base64 so Puppeteer doesn't need to load external URLs.
+      // Images are independent, so fetch them concurrently.
       const images = clone.querySelectorAll('img');
-      for (const img of Array.from(images)) {
+      await Promise.all(Array.from(images).map(async (img) => {
         try {
           if (img.src && !img.src.startsWith('data:')) {
             const res = await fetch(img.src);
@@ -392,7 +407,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         } catch (e) {
           console.warn('Could not inline image for PDF:', summarizeErrorForConsole(e));
         }
-      }
+      }));
 
       // 4. Remove no-print elements
       clone.querySelectorAll('[data-no-print]').forEach(el => el.remove());
@@ -845,24 +860,30 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         {showAdvancedFormatting && (
         <div className="hidden lg:flex absolute top-24 end-4 lg:end-6 z-30 flex-col gap-2 bg-white/70 dark:bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-gray-300/50 dark:border-white/10 shadow-xl lg:opacity-0 lg:hover:opacity-100 lg:group-hover:opacity-100 transition-opacity duration-300">
           <button
+            type="button"
             onClick={handleZoomIn}
             className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
             title={t('common.zoomIn', 'Zoom In')}
+            aria-label={t('common.zoomIn', 'Zoom In')}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
+            type="button"
             onClick={handleZoomOut}
             className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
             title={t('common.zoomOut', 'Zoom Out')}
+            aria-label={t('common.zoomOut', 'Zoom Out')}
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <div className="h-px bg-gray-300 dark:bg-white/10 my-0.5" />
           <button
+            type="button"
             onClick={handleResetZoom}
             className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-white/80 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96]"
             title={t('common.resetZoom', 'Reset Zoom')}
+            aria-label={t('common.resetZoom', 'Reset Zoom')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -940,19 +961,23 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               >
                 <div className="flex items-center gap-1 px-2 py-2 neu-card rounded-full max-w-full no-scrollbar overflow-x-auto shadow-2xl">
                   {/* Drag Handle - hidden on mobile for space */}
-                  <div
+                  <button
+                    type="button"
+                    aria-label={t('templates.dragHandle', 'Drag to reposition, or use arrow keys')}
                     className="hidden md:block p-2 text-gray-400 hover:text-gray-900 dark:text-white/50 dark:hover:text-white cursor-grab active:cursor-grabbing touch-none shrink-0"
                     onMouseDown={handleDragStart}
                     onTouchStart={handleDragStart}
+                    onKeyDown={handleDragHandleKeyDown}
                   >
                     <GripHorizontal className="w-4 h-4" />
-                  </div>
+                  </button>
 
                   {/* Template Pills */}
                   {activeTemplates.map((template) => {
                     const isSelected = selectedTemplate.id === template.id;
                     return (
                       <button
+                        type="button"
                         key={template.id}
                         onClick={() => handleSelectTemplate(template)}
                         className={cn(

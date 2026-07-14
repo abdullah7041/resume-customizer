@@ -96,7 +96,7 @@ async function recordUsageEvent({
  * Convert Google AI SDK JSON Schema format to OpenRouter format
  */
 function convertGoogleSchemaToOpenRouter(googleSchema) {
-  const schema = JSON.parse(JSON.stringify(googleSchema));
+  const schema = structuredClone(googleSchema);
   return {
     type: schema.type || 'object',
     properties: schema.properties || {},

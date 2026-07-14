@@ -42,6 +42,7 @@ export function PositionSuggestionBanner({
     (c, i, arr) => arr.findIndex(x => x.original === c.original) === i // dedupe by original
   );
   const hasGranularChanges = changesToShow.length > 0;
+  const appliedChanges = changesToShow.filter(c => c.change_needed);
 
   return (
     <div
@@ -85,6 +86,7 @@ export function PositionSuggestionBanner({
           </div>
 
           <button
+            type="button"
             id="position-suggestion-dismiss"
             onClick={onDismiss}
             aria-label={t('common.dismiss', 'Dismiss')}
@@ -150,13 +152,13 @@ export function PositionSuggestionBanner({
         {/* Applied state: show what was changed */}
         {applied && (
           <div className="mb-3 space-y-1.5">
-            {changesToShow.filter(c => c.change_needed).map((c, i) => (
+            {appliedChanges.map((c, i) => (
               <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs">
                 <Briefcase className="w-3 h-3 text-emerald-400 flex-shrink-0" />
                 <span className="font-semibold text-emerald-700 dark:text-emerald-300">{c.suggested}</span>
               </div>
             ))}
-            {changesToShow.filter(c => c.change_needed).length === 0 && (
+            {appliedChanges.length === 0 && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs">
                 <Briefcase className="w-3 h-3 text-emerald-400 flex-shrink-0" />
                 <span className="font-semibold text-emerald-700 dark:text-emerald-300">{suggestion.suggested}</span>
@@ -176,6 +178,7 @@ export function PositionSuggestionBanner({
         {!applied && (
           <div className="flex items-center gap-2 flex-wrap">
             <button
+              type="button"
               id="position-suggestion-apply"
               onClick={() => onApply(suggestion.suggested)}
               className={cn(
@@ -188,6 +191,7 @@ export function PositionSuggestionBanner({
               {t('positionSuggestion.apply', 'Apply Suggestions')}
             </button>
             <button
+              type="button"
               onClick={onDismiss}
               className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
             >
@@ -199,6 +203,7 @@ export function PositionSuggestionBanner({
         {/* Revert action */}
         {applied && (
           <button
+            type="button"
             id="position-suggestion-revert"
             onClick={onRevert}
             className={cn(

@@ -281,23 +281,30 @@ const extractPdfPlainText = async (arrayBuffer) => {
         cMapPacked: true,
         standardFontDataUrl: "https://unpkg.com/pdfjs-dist@5.4.394/standard_fonts/",
       }).promise;
-      const lines = [];
+      let lines = [];
 
       try {
-        for (let pageIndex = 1; pageIndex <= document.numPages; pageIndex += 1) {
-          const page = await document.getPage(pageIndex);
-          try {
-            const content = await page.getTextContent();
-            const text = collectPdfPageText(content.items ?? []);
-            if (text) {
-              lines.push(text);
-            }
-          } finally {
-            if (typeof page.cleanup === "function") {
-              page.cleanup();
-            }
-          }
+        const pageTexts = [];
+        const pageConcurrency = 4;
+        for (let start = 0; start < document.numPages; start += pageConcurrency) {
+          const batchSize = Math.min(pageConcurrency, document.numPages - start);
+          const batch = await Promise.all(
+            Array.from({ length: batchSize }, async (_, batchIndex) => {
+              const pageIndex = start + batchIndex;
+              const page = await document.getPage(pageIndex + 1);
+              try {
+                const content = await page.getTextContent();
+                return collectPdfPageText(content.items ?? []);
+              } finally {
+                if (typeof page.cleanup === "function") {
+                  page.cleanup();
+                }
+              }
+            }),
+          );
+          pageTexts.push(...batch);
         }
+        lines = pageTexts.filter((text) => Boolean(text));
       } finally {
         if (typeof document.cleanup === "function") {
           document.cleanup();
@@ -423,8 +430,8 @@ const decodeEntities = (value) =>
 const decodeXmlParagraphs = (xml) => {
   const paragraphs = Array.from(xml.matchAll(/<w:p[\s\S]*?<\/w:p>/gi));
   const lines = paragraphs
-    .map((match) => match[0])
-    .map((paragraph) => {
+    .flatMap((match) => {
+      const paragraph = match[0];
       const hasBullet = /w:numPr/.test(paragraph) || /ListParagraph/i.test(paragraph);
       const text = decodeEntities(
         paragraph
@@ -436,12 +443,11 @@ const decodeXmlParagraphs = (xml) => {
         .trim();
 
       if (!text) {
-        return null;
+        return [];
       }
 
-      return hasBullet ? `• ${text}` : text;
-    })
-    .filter((line) => Boolean(line));
+      return [hasBullet ? `• ${text}` : text];
+    });
 
   if (lines.length > 0) {
     return lines.join("\n");

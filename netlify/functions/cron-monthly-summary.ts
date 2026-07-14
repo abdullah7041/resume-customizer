@@ -11,6 +11,7 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
+import { batchWithConcurrency, RateLimiter } from '../lib/rate-limiter.js';
 import { sendMonthlyUsageSummary } from '../lib/email-service.js';
 import { redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 
@@ -22,6 +23,12 @@ interface UserStats {
   nextResetDate: string;
   breakdown: Record<string, { count: number; credits: number }>;
 }
+
+const emailRateLimiter = new RateLimiter({
+  maxConcurrent: 1,
+  minDelayBetweenRequestsMs: 500,
+  maxRequestsPerMinute: 120,
+});
 
 const handler: Handler = async (event) => {
   console.log('[cron-monthly-summary] Starting scheduled monthly summary...');
@@ -154,14 +161,15 @@ const handler: Handler = async (event) => {
     let emailFailCount = 0;
     const errors: Array<{ userId: string; error: string }> = [];
 
-    // Send emails to each user
-    for (const user of authUsers.users) {
+    // Send emails to users a few at a time — Resend rate-limits around 2 req/s,
+    // so keep concurrency low instead of fanning out unbounded.
+    await batchWithConcurrency(authUsers.users, async (user) => {
       try {
         const userEmail = user.email;
         if (!userEmail) {
           console.warn(`[cron-monthly-summary] User has no email, skipping`);
           errors.push({ userId: user.id, error: 'User has no email' });
-          continue;
+          return;
         }
 
         const userName = user.user_metadata?.full_name || userEmail.split('@')[0] || 'User';
@@ -198,7 +206,7 @@ const handler: Handler = async (event) => {
         console.error(`[cron-monthly-summary] Error processing user:`, errorMsg);
         errors.push({ userId: user.id, error: errorMsg });
       }
-    }
+    }, { concurrency: 2, rateLimiter: emailRateLimiter });
 
     console.log(`[cron-monthly-summary] Completed: ${successCount} users processed, ${emailFailCount} email failures`);
 

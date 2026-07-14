@@ -19,21 +19,21 @@ interface SectorIconProps {
     className?: string;
 }
 
-export const SectorIcon: React.FC<SectorIconProps> = ({ sectorId, className }) => {
-    const iconMap: Record<string, React.ElementType> = {
-        'technology': Code2,
-        'tourism': Plane,
-        'healthcare': HeartPulse,
-        'renewable-energy': Zap,
-        'finance': Landmark,
-        'manufacturing': Factory,
-        'education': GraduationCap,
-        'mega-projects': HardHat,
-        'retail-ecommerce': ShoppingBag,
-        'logistics': Truck,
-    };
+const SECTOR_ICON_MAP: Record<string, React.ElementType> = {
+    'technology': Code2,
+    'tourism': Plane,
+    'healthcare': HeartPulse,
+    'renewable-energy': Zap,
+    'finance': Landmark,
+    'manufacturing': Factory,
+    'education': GraduationCap,
+    'mega-projects': HardHat,
+    'retail-ecommerce': ShoppingBag,
+    'logistics': Truck,
+};
 
-    const IconComponent = iconMap[sectorId] || HelpCircle;
+export const SectorIcon: React.FC<SectorIconProps> = ({ sectorId, className }) => {
+    const IconComponent = SECTOR_ICON_MAP[sectorId] || HelpCircle;
 
     return <IconComponent className={cn("w-5 h-5", className)} />;
 };

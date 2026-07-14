@@ -29,7 +29,7 @@ export async function exportToPdf(
     <html>
       <head>
         <meta charset="UTF-8">
-        <title>${documentTitle}</title>
+        <title>${escapeHtml(documentTitle)}</title>
         <style>
           @page {
             size: A4;
@@ -143,9 +143,9 @@ function generateAtsHtml(resume: ResumeSchema): string {
     <div style="margin-bottom: 12pt;">
       <div class="job-header">
         <h3>${escapeHtml(job.position)}</h3>
-        <span class="job-dates">${job.startDate || ''}${job.endDate ? ` - ${job.endDate}` : ''}</span>
+        <span class="job-dates">${escapeHtml(job.startDate || '')}${job.endDate ? ` - ${escapeHtml(job.endDate)}` : ''}</span>
       </div>
-      <p class="job-company">${escapeHtml(job.name)}${job.url ? ` (${job.url})` : ''}</p>
+      <p class="job-company">${escapeHtml(job.name)}${job.url ? ` (${escapeHtml(job.url)})` : ''}</p>
       ${job.highlights && job.highlights.length > 0 ? `
         <ul>
           ${job.highlights.map((h) => `<li>${escapeHtml(h)}</li>`).join('')}

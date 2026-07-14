@@ -27,6 +27,13 @@ interface TabConfig {
     icon: React.ElementType;
 }
 
+const renderEmptyState = (message: string) => (
+    <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-gray-300 dark:border-white/10 rounded-xl bg-gray-50/50 dark:bg-white/5">
+        <LayoutTemplate className="w-12 h-12 text-gray-300 dark:text-white/20 mb-4" />
+        <p className="text-gray-500 dark:text-white/50">{message}</p>
+    </div>
+);
+
 const TABS: TabConfig[] = [
     { id: 'basics', labelEn: 'Basics', labelAr: 'الأساسيات', icon: User },
     { id: 'experience', labelEn: 'Experience', labelAr: 'الخبرة', icon: Briefcase },
@@ -59,7 +66,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
 
     useEffect(() => {
         if (isOpen && originalResume) {
-            setLocalResume(JSON.parse(JSON.stringify(originalResume)));
+            setLocalResume(structuredClone(originalResume));
             setLocalFontSize(displayOptions.fontSize);
             setHasChanges(false);
             setEditingIndex(null);
@@ -86,7 +93,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
 
     const updateNestedState = (path: string, value: any) => {
         if (!localResume) return;
-        const newResume = JSON.parse(JSON.stringify(localResume));
+        const newResume = structuredClone(localResume);
 
         const keys = path.split('.');
         let current = newResume;
@@ -122,13 +129,6 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
     };
 
     // --- Renderers ---
-
-    const renderEmptyState = (message: string) => (
-        <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-gray-300 dark:border-white/10 rounded-xl bg-gray-50/50 dark:bg-white/5">
-            <LayoutTemplate className="w-12 h-12 text-gray-300 dark:text-white/20 mb-4" />
-            <p className="text-gray-500 dark:text-white/50">{message}</p>
-        </div>
-    );
 
     // Helper to get/set LinkedIn URL from profiles array
     const getLinkedInUrl = () => {
@@ -201,10 +201,11 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
+                <label htmlFor="basics-summary" className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
                     {isArabic ? 'الملخص المهني' : 'Professional Summary'}
                 </label>
                 <textarea
+                    id="basics-summary"
                     className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none transition-shadow"
                     value={localResume?.basics?.summary || ''}
                     onChange={(e) => updateNestedState('basics.summary', e.target.value)}
@@ -256,10 +257,11 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
+                        <label htmlFor="work-highlights" className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
                             {isArabic ? 'الإنجازات (واحد في كل سطر)' : 'Highlights (one per line)'}
                         </label>
                         <textarea
+                            id="work-highlights"
                             className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
                             value={(item.highlights || []).join('\n')}
                             onChange={(e) => updateItem('work', editingIndex, 'highlights', e.target.value.split('\n'))}
@@ -287,16 +289,20 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
+                                    type="button"
                                     onClick={() => setEditingIndex(idx)}
                                     className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                                     title={isArabic ? 'تعديل' : 'Edit'}
+                                    aria-label={isArabic ? 'تعديل' : 'Edit'}
                                 >
                                     <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => removeItem('work', idx)}
                                     className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20 transition-colors"
                                     title={isArabic ? 'حذف' : 'Delete'}
+                                    aria-label={isArabic ? 'حذف' : 'Delete'}
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -385,14 +391,18 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
+                                    type="button"
                                     onClick={() => setEditingIndex(idx)}
                                     className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                    aria-label={isArabic ? 'تعديل' : 'Edit'}
                                 >
                                     <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => removeItem('education', idx)}
                                     className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20 transition-colors"
+                                    aria-label={isArabic ? 'حذف' : 'Delete'}
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -451,17 +461,20 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     consolidatedItems.map((item, idx) => (
                         <div key={idx} className="p-4 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl space-y-3">
                             <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                <label htmlFor={`skill-category-name-${idx}`} className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                                     {item.name || (isArabic ? `فئة ${idx + 1}` : `Category ${idx + 1}`)}
                                 </label>
                                 <button
+                                    type="button"
                                     onClick={() => removeItem('skills', idx)}
                                     className="text-gray-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                    aria-label={isArabic ? 'حذف الفئة' : 'Remove category'}
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                             <GlassInput
+                                id={`skill-category-name-${idx}`}
                                 value={item.name || ''}
                                 onChange={(e) => updateItem('skills', idx, 'name', e.target.value)}
                                 placeholder={isArabic ? 'اسم الفئة (مثال: لغات البرمجة)' : 'Category Name (e.g., Programming)'}
@@ -514,10 +527,11 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         onChange={(e) => updateItem('projects', editingIndex, 'name', e.target.value)}
                     />
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
+                        <label htmlFor="project-description" className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-2">
                             {isArabic ? 'الوصف' : 'Description'}
                         </label>
                         <textarea
+                            id="project-description"
                             className="w-full h-32 px-4 py-3 bg-white/50 dark:bg-white/5 border border-gray-300/50 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
                             value={item.description || ''}
                             onChange={(e) => updateItem('projects', editingIndex, 'description', e.target.value)}
@@ -547,8 +561,8 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                 <p className="text-sm text-gray-500 dark:text-white/60 line-clamp-1">{item.description}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => removeItem('projects', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20" aria-label={isArabic ? 'تعديل' : 'Edit'}><Edit2 className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => removeItem('projects', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20" aria-label={isArabic ? 'حذف' : 'Delete'}><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ))
@@ -618,8 +632,8 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                 <p className="text-sm text-gray-500 dark:text-white/60">{item.issuer}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => removeItem('certificates', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20" aria-label={isArabic ? 'تعديل' : 'Edit'}><Edit2 className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => removeItem('certificates', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20" aria-label={isArabic ? 'حذف' : 'Delete'}><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ))
@@ -684,8 +698,8 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                 <p className="text-sm text-gray-500 dark:text-white/60">{item.fluency}</p>
                             </div>
                             <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => removeItem('languages', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => setEditingIndex(idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20" aria-label={isArabic ? 'تعديل' : 'Edit'}><Edit2 className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => removeItem('languages', idx)} className="p-2 rounded-lg bg-black/5 dark:bg-white/10 text-red-500 dark:text-red-400 hover:bg-red-500/20" aria-label={isArabic ? 'حذف' : 'Delete'}><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ))
@@ -722,6 +736,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                         setLocalFontSize(parseFloat(e.target.value));
                         setHasChanges(true);
                     }}
+                    aria-label={isArabic ? 'حجم الخط' : 'Font Size'}
                     className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
 
@@ -790,6 +805,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                             return (
                                 <button
                                     key={tab.id}
+                                    type="button"
                                     onClick={() => setActiveTab(tab.id)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-6 py-3 transition-colors relative",
@@ -811,7 +827,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     </div>
 
                     <div className="p-4 border-t border-gray-200 dark:border-white/10 md:hidden flex justify-center">
-                        <button onClick={onClose} className="p-2 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white">
+                        <button type="button" onClick={onClose} className="p-2 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white" aria-label={isArabic ? 'إغلاق' : 'Close'}>
                             <X className="w-6 h-6" />
                         </button>
                     </div>

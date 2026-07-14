@@ -228,7 +228,7 @@ export function ComparisonTable({ className }: ComparisonTableProps) {
           <div className="divide-y divide-gray-200 dark:divide-white/5">
             {comparisonData.map((row, idx) => (
               <div
-                key={idx}
+                key={row.feature}
                 className={cn(
                   "grid grid-cols-5 transition-colors hover:bg-gray-100 dark:hover:bg-white/5",
                   idx % 2 === 0 ? "bg-transparent" : "bg-gray-50/50 dark:bg-black/20" // Zebra striping ledger style

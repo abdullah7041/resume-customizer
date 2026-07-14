@@ -3,6 +3,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
+const visible = { opacity: 1, y: 0 };
+
 interface FeatureHighlightSectionProps {
   eyebrow: string;
   title: string;
@@ -31,8 +33,6 @@ export function FeatureHighlightSection({
   const fadeUp = shouldReduceMotion
     ? { opacity: 1, y: 0 }
     : { opacity: 0, y: 24 };
-
-  const visible = { opacity: 1, y: 0 };
 
   return (
     <section

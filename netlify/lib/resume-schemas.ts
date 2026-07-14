@@ -20,7 +20,7 @@ export const LocationSchema = z.object({
 export const ProfileSchema = z.object({
     network: z.string(),
     username: z.string(),
-    url: z.string().url().optional(),
+    url: z.url().optional(),
 });
 
 // ============================================
@@ -30,10 +30,10 @@ export const ProfileSchema = z.object({
 export const BasicsSchema = z.object({
     name: z.string().min(1, "Name is required"),
     label: z.string().optional().default(""),
-    image: z.string().url().optional(),
-    email: z.string().email().optional().or(z.literal("")),
+    image: z.url().optional(),
+    email: z.email().optional().or(z.literal("")),
     phone: z.string().optional().default(""),
-    url: z.string().url().optional(),
+    url: z.url().optional(),
     summary: z.string().optional().default(""),
     location: LocationSchema.optional(),
     profiles: z.array(ProfileSchema).optional().default([]),
@@ -42,7 +42,7 @@ export const BasicsSchema = z.object({
 export const WorkSchema = z.object({
     name: z.string().min(1, "Company name is required"),
     position: z.string().min(1, "Position is required"),
-    url: z.string().url().optional(),
+    url: z.url().optional(),
     startDate: z.string().optional().default(""),
     endDate: z.string().optional().default(""),
     summary: z.string().optional().default(""),
@@ -51,7 +51,7 @@ export const WorkSchema = z.object({
 
 export const EducationSchema = z.object({
     institution: z.string().min(1, "Institution is required"),
-    url: z.string().url().optional(),
+    url: z.url().optional(),
     area: z.string().optional().default(""),
     studyType: z.string().optional().default(""),
     startDate: z.string().optional().default(""),
@@ -73,7 +73,7 @@ export const ProjectSchema = z.object({
     keywords: z.array(z.string()).optional().default([]),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
-    url: z.string().url().optional(),
+    url: z.url().optional(),
     roles: z.array(z.string()).optional(),
     entity: z.string().optional(),
     type: z.string().optional(),
@@ -83,7 +83,7 @@ export const CertificateSchema = z.object({
     name: z.string().min(1, "Certificate name is required"),
     date: z.string().optional().default(""),
     issuer: z.string().optional().default(""),
-    url: z.string().url().optional(),
+    url: z.url().optional(),
 });
 
 export const AwardSchema = z.object({
@@ -101,7 +101,7 @@ export const LanguageSchema = z.object({
 export const VolunteerSchema = z.object({
     organization: z.string().min(1, "Organization is required"),
     position: z.string().optional().default(""),
-    url: z.string().url().optional(),
+    url: z.url().optional(),
     startDate: z.string().optional().default(""),
     endDate: z.string().optional().default(""),
     summary: z.string().optional(),
@@ -114,7 +114,7 @@ export const ReferenceSchema = z.object({
 });
 
 export const MetaSchema = z.object({
-    canonical: z.string().url().optional(),
+    canonical: z.url().optional(),
     version: z.string().optional(),
     lastModified: z.string().optional(),
 });

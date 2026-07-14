@@ -54,7 +54,7 @@ export const mergeResumeData = (original, aiResult) => {
     }
 
     // Deep clone - data is always JSON Resume format now
-    const mergedData = JSON.parse(JSON.stringify(original));
+    const mergedData = structuredClone(original);
 
     // If no AI result, return the data as-is
     if (!aiResult || !aiResult.optimization) {

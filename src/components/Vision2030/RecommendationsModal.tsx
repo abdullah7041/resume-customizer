@@ -83,14 +83,14 @@ export function RecommendationsModal({
         </div>
 
         <div className="space-y-2">
-          {suggestions.map((suggestion, idx) => {
+          {suggestions.map((suggestion) => {
             const badge = getImpactBadge(suggestion.relevanceScore);
             const globalIndex = missingSuggestions.indexOf(suggestion);
             const isCopied = copiedIndex === globalIndex;
 
             return (
               <div
-                key={idx}
+                key={`${suggestion.sectorId}-${suggestion.skillNameEn}`}
                 className={cn(
                   glass.card,
                   'p-4 hover:bg-white/[0.03] transition-colors'
@@ -116,6 +116,7 @@ export function RecommendationsModal({
                     onClick={() => handleCopy(isArabic ? suggestion.skillNameAr : suggestion.skillNameEn, globalIndex)}
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors shrink-0"
                     title={t('common.copy', 'Copy')}
+                    aria-label={t('common.copy', 'Copy')}
                   >
                     {isCopied ? (
                       <Check className="w-4 h-4 text-emerald-400" />
@@ -169,6 +170,7 @@ export function RecommendationsModal({
             </h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             aria-label="Close dialog"

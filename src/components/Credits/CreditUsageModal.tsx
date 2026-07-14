@@ -35,6 +35,24 @@ const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   export_template: Download,
 };
 
+const humanizeFeature = (feature: string) =>
+  feature.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const getTransactionColor = (type: string) => {
+  switch (type) {
+    case 'consumption':
+      return 'text-red-400';
+    case 'feedback_reward':
+    case 'referral_reward':
+    case 'celebration_bonus':
+      return 'text-emerald-400';
+    case 'monthly_reset':
+      return 'text-blue-400';
+    default:
+      return 'text-gray-400';
+  }
+};
+
 export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditUsageModalProps) {
   const { user } = useAuth();
   const { credits, refetch } = useUserCredits();
@@ -88,9 +106,6 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
 
   if (!isOpen) return null;
 
-  const humanizeFeature = (feature: string) =>
-    feature.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-
   const getFeatureLabel = (feature: string) =>
     t(`credits.usage.features.${feature}`, humanizeFeature(feature));
 
@@ -110,21 +125,6 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
     if (diffDays < 7) return t('credits.usage.time.daysAgo', { count: diffDays });
 
     return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US');
-  };
-
-  const getTransactionColor = (type: string) => {
-    switch (type) {
-      case 'consumption':
-        return 'text-red-400';
-      case 'feedback_reward':
-      case 'referral_reward':
-      case 'celebration_bonus':
-        return 'text-emerald-400';
-      case 'monthly_reset':
-        return 'text-blue-400';
-      default:
-        return 'text-gray-400';
-    }
   };
 
   const handleRefresh = async () => {
@@ -177,6 +177,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
           <div className="flex items-center gap-2">
             {/* Refresh Button */}
             <button
+              type="button"
               onClick={handleRefresh}
               disabled={isRefreshing}
               className={cn(
@@ -190,6 +191,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
             </button>
             {/* Close Button */}
             <button
+              type="button"
               onClick={onClose}
               className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
               aria-label={t('common.closeDialog', 'Close dialog')}

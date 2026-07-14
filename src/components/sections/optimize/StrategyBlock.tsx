@@ -58,14 +58,17 @@ const bucketStyles = {
   },
 } as const;
 
+const EMPTY_HIDDEN_MATCHES: HiddenMatch[] = [];
+const EMPTY_STRINGS: string[] = [];
+
 export function StrategyBlock({
   expanded,
   hasKeywordData,
   keywordBuckets,
   gapAnalysis,
-  hiddenMatches = [],
-  mirroredPhrases = [],
-  structuralChanges = [],
+  hiddenMatches = EMPTY_HIDDEN_MATCHES,
+  mirroredPhrases = EMPTY_STRINGS,
+  structuralChanges = EMPTY_STRINGS,
   positionSuggestion,
   positionBannerDismissed,
   isArabic,
@@ -163,29 +166,30 @@ export function StrategyBlock({
                 {t('sections.optimize.strategy.gapsTitle', 'Requirement gaps')}
               </h4>
               <div className="space-y-2">
-                {gapAnalysis?.map((gap, index) => (
-                  <div key={`${gap.severity}-${gap.requirement}-${index}`} className="rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-3 dark:border-white/10 dark:bg-black/20">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{gap.requirement}</span>
-                      <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:text-amber-300">
-                        {gap.severity}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-400">{gap.currentState}</p>
-                    <p className="mt-2 text-xs leading-relaxed text-emerald-700 dark:text-emerald-300">{gap.recommendation}</p>
-                    {keywordBuckets.add.some((keyword) => gap.recommendation?.toLowerCase().includes(keyword.toLowerCase()) || gap.requirement?.toLowerCase().includes(keyword.toLowerCase())) && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {keywordBuckets.add
-                          .filter((keyword) => gap.recommendation?.toLowerCase().includes(keyword.toLowerCase()) || gap.requirement?.toLowerCase().includes(keyword.toLowerCase()))
-                          .map((keyword) => (
+                {gapAnalysis?.map((gap) => {
+                  const relatedKeywords = keywordBuckets.add.filter((keyword) => gap.recommendation?.toLowerCase().includes(keyword.toLowerCase()) || gap.requirement?.toLowerCase().includes(keyword.toLowerCase()));
+                  return (
+                    <div key={`${gap.severity}-${gap.requirement}`} className="rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-3 dark:border-white/10 dark:bg-black/20">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{gap.requirement}</span>
+                        <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:text-amber-300">
+                          {gap.severity}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-400">{gap.currentState}</p>
+                      <p className="mt-2 text-xs leading-relaxed text-emerald-700 dark:text-emerald-300">{gap.recommendation}</p>
+                      {relatedKeywords.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {relatedKeywords.map((keyword) => (
                             <span key={keyword} className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
                               {keyword}
                             </span>
                           ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (

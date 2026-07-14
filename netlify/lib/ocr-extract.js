@@ -85,11 +85,13 @@ export async function extractScannedPdfText({ base64Data, mime, fileName } = {},
 
   const pages = Array.isArray(parsed?.pages) ? parsed.pages : [];
   const ordered = pages
-    .filter((page) => page && typeof page.text === 'string' && page.text.trim().length > 0)
-    .map((page, index) => ({
-      pageNumber: Number.isFinite(Number(page.pageNumber)) ? Number(page.pageNumber) : index + 1,
-      text: page.text.trim(),
-    }))
+    .flatMap((page, index) => {
+      if (!page || typeof page.text !== 'string' || page.text.trim().length === 0) return [];
+      return [{
+        pageNumber: Number.isFinite(Number(page.pageNumber)) ? Number(page.pageNumber) : index + 1,
+        text: page.text.trim(),
+      }];
+    })
     .sort((a, b) => a.pageNumber - b.pageNumber);
 
   const text = ordered.map((page) => `--- Page ${page.pageNumber} ---\n${page.text}`).join('\n\n');

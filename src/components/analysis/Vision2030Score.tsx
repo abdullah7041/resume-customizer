@@ -9,16 +9,16 @@ interface Vision2030ScoreProps {
   analysis: Vision2030Analysis;
 }
 
+function getScoreColor(score: number) {
+  if (score >= 70) return 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15';
+  if (score >= 40) return 'text-amber-700 dark:text-amber-300 bg-amber-500/15';
+  return 'text-red-700 dark:text-red-300 bg-red-500/15';
+}
+
 export function Vision2030Score({ analysis }: Vision2030ScoreProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const [showCalculationHelp, setShowCalculationHelp] = useState(false);
-
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15';
-    if (score >= 40) return 'text-amber-700 dark:text-amber-300 bg-amber-500/15';
-    return 'text-red-700 dark:text-red-300 bg-red-500/15';
-  };
 
   const getScoreLabel = (score: number) => {
     if (score >= 70) return t('vision2030.excellent', 'Excellent');

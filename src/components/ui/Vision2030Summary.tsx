@@ -17,6 +17,49 @@ interface Vision2030SummaryProps {
     className?: string;
 }
 
+const getScoreColor = (score: number) => {
+    if (score >= 70) return 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]';
+    if (score >= 40) return 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]';
+    return 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]';
+};
+
+const getScoreBg = (score: number) => {
+    if (score >= 70) return 'bg-emerald-500/10 border-emerald-500/20';
+    if (score >= 40) return 'bg-amber-500/10 border-amber-500/20';
+    return 'bg-red-500/10 border-red-500/20';
+};
+
+// Render icon based on type
+const renderEncouragementIcon = (iconType: string) => {
+    const iconClass = "w-4 h-4 text-emerald-400";
+    switch (iconType) {
+        case 'star': return <Star className={iconClass} />;
+        case 'zap': return <Zap className={iconClass} />;
+        case 'thumbsUp': return <ThumbsUp className={iconClass} />;
+        case 'rocket': return <Rocket className={iconClass} />;
+        default: return <Star className={iconClass} />;
+    }
+};
+
+// Demo mode banner component
+const DemoBanner = ({ t }: { t: (key: string, defaultValue: string) => string }) => (
+    <div className="mb-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 backdrop-blur-sm relative overflow-hidden group">
+        <div className="flex items-start gap-3 relative z-10">
+            <div className="p-2 rounded-lg bg-amber-500/10">
+                <Upload className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+                <h4 className="text-sm font-semibold text-amber-400 mb-1">
+                    {t('vision2030.demoMode', 'Example Analysis')}
+                </h4>
+                <p className="text-xs text-gray-600 dark:text-white/70 leading-relaxed">
+                    {t('vision2030.demoBanner', 'This shows how a well-optimized resume aligns with Vision 2030. Upload yours to see your personal score!')}
+                </p>
+            </div>
+        </div>
+    </div>
+);
+
 export function Vision2030Summary({ resumeText, className = '' }: Vision2030SummaryProps) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
@@ -85,18 +128,6 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
         return analyzeVision2030Alignment(textToAnalyze, isArabic ? 'ar' : 'en');
     }, [textToAnalyze, isArabic]);
 
-    const getScoreColor = (score: number) => {
-        if (score >= 70) return 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]';
-        if (score >= 40) return 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]';
-        return 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]';
-    };
-
-    const getScoreBg = (score: number) => {
-        if (score >= 70) return 'bg-emerald-500/10 border-emerald-500/20';
-        if (score >= 40) return 'bg-amber-500/10 border-amber-500/20';
-        return 'bg-red-500/10 border-red-500/20';
-    };
-
     // Get encouragement message based on score
     const getEncouragementMessage = (score: number): { message: string; icon: 'star' | 'zap' | 'thumbsUp' | 'rocket' } => {
         if (score >= 80) return {
@@ -117,43 +148,20 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
         };
     };
 
-    // Render icon based on type
-    const renderEncouragementIcon = (iconType: string) => {
-        const iconClass = "w-4 h-4 text-emerald-400";
-        switch (iconType) {
-            case 'star': return <Star className={iconClass} />;
-            case 'zap': return <Zap className={iconClass} />;
-            case 'thumbsUp': return <ThumbsUp className={iconClass} />;
-            case 'rocket': return <Rocket className={iconClass} />;
-            default: return <Star className={iconClass} />;
-        }
-    };
-
-    // Demo mode banner component
-    const DemoBanner = () => (
-        <div className="mb-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 backdrop-blur-sm relative overflow-hidden group">
-            <div className="flex items-start gap-3 relative z-10">
-                <div className="p-2 rounded-lg bg-amber-500/10">
-                    <Upload className="w-4 h-4 text-amber-400" />
-                </div>
-                <div>
-                    <h4 className="text-sm font-semibold text-amber-400 mb-1">
-                        {t('vision2030.demoMode', 'Example Analysis')}
-                    </h4>
-                    <p className="text-xs text-gray-600 dark:text-white/70 leading-relaxed">
-                        {t('vision2030.demoBanner', 'This shows how a well-optimized resume aligns with Vision 2030. Upload yours to see your personal score!')}
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
         <GlassCard className={`p-0 overflow-hidden ${className} border-[color:var(--glass-border)] dark:border-white/10`}>
             {/* Header - Always Visible */}
             <div
+                role="button"
+                tabIndex={0}
                 className={`p-5 flex items-center justify-between cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-white/[0.02] transition-colors`}
                 onClick={() => toggleExpanded()}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleExpanded();
+                    }
+                }}
             >
                 <div className="flex items-center gap-4 rtl:flex-row-reverse">
                     <div className="relative">
@@ -183,6 +191,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                     setCalculationModalOpen(true);
                                 }}
                                 className="group/info relative"
+                                aria-label={isArabic ? 'كيف يتم الحساب' : 'How this is calculated'}
                             >
                                 <Info className="w-4 h-4 text-gray-500 hover:text-emerald-600 dark:text-white/40 dark:hover:text-emerald-400 transition-colors" />
                             </button>
@@ -218,7 +227,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                         <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-5 dark:via-white/10" />
 
                         {/* Demo Mode Banner */}
-                        {isDemo && <DemoBanner />}
+                        {isDemo && <DemoBanner t={t} />}
 
                         {/* Score Bar */}
                         {analysis && (
@@ -322,9 +331,9 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                             </span>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
-                                            {analysis.matchedSkills.map((skill, index) => (
+                                            {analysis.matchedSkills.map((skill) => (
                                                 <div
-                                                    key={index}
+                                                    key={skill.skillNameEn}
                                                     className="px-3 py-1.5 text-xs font-medium rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 shadow-sm shadow-emerald-900/20"
                                                 >
                                                     <Check className="w-3 h-3 text-emerald-500" />
@@ -351,9 +360,9 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                                                 .slice(0, 3)
                                                 .flatMap(s => s.suggestedKeywords)
                                                 .slice(0, 6)
-                                                .map((skill, index) => (
+                                                .map((skill) => (
                                                     <span
-                                                        key={index}
+                                                        key={skill}
                                                         className="px-3 py-1 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/30 transition-colors cursor-default"
                                                     >
                                                         + {skill}

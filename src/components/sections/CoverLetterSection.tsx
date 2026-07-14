@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
@@ -75,7 +75,8 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
   const [tone, setTone] = useState('professional');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [wordCount, setWordCount] = useState(0);
+  // Derived during render — no state/effect needed (word count always matches displayed text)
+  const wordCount = coverLetter ? coverLetter.trim().split(/\s+/).length : 0;
   const [keyHighlights, setKeyHighlights] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -105,17 +106,17 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
     }
   }, []);
 
-  // Auto-fill signature from resume data
+  // Auto-fill signature once from resume data, only if the user hasn't typed one.
+  // Keyed on the resume name so editing/clearing the signature can't re-trigger it
+  // (that self-referential dep caused a chained re-render and re-filled a cleared field).
+  const seededSignatureRef = useRef<string | null>(null);
   useEffect(() => {
-    if (resumeData?.basics?.name && !signatureName) {
-      setSignatureName(resumeData.basics.name);
-    }
-  }, [resumeData?.basics?.name, signatureName]);
-
-  // Update word count
-  useEffect(() => {
-    setWordCount(coverLetter ? coverLetter.trim().split(/\s+/).length : 0);
-  }, [coverLetter]);
+    const name = resumeData?.basics?.name;
+    if (!name || seededSignatureRef.current === name) return;
+    seededSignatureRef.current = name;
+    if (!signatureName) setSignatureName(name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- signatureName intentionally excluded; seed runs once per resume name
+  }, [resumeData?.basics?.name]);
 
   // Auto-fill useEffect removed - company name and hiring manager should be manually entered
 
@@ -184,7 +185,6 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
       setCoverLetter(generatedText);
       setKeyHighlights(generatedKeyHighlights);
-      setWordCount(calculatedWordCount);
 
       // Track cover letter generation
       analytics.trackCoverLetter(calculatedWordCount);
@@ -436,10 +436,11 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
           {/* Signature Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="cover-letter-signature-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('sections.coverLetter.signatureName', 'Signature Name')}
             </label>
             <GlassInput
+              id="cover-letter-signature-name"
               value={signatureName}
               onChange={(e) => setSignatureName(e.target.value)}
               placeholder={t('sections.coverLetter.signatureNamePlaceholder', 'Your full name')}
@@ -452,15 +453,16 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
           {/* Tone Selector */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 ml-1">
+            <span id="cover-letter-tone-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 ml-1">
               {t('sections.coverLetter.tone', 'Select Tone')}
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            </span>
+            <div role="group" aria-labelledby="cover-letter-tone-label" className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {tones.map(tOption => {
                 const IconComponent = tOption.icon;
                 const isSelected = tone === tOption.value;
                 return (
                   <button
+                    type="button"
                     key={tOption.value}
                     onClick={() => setTone(tOption.value)}
                     className={cn(
@@ -586,8 +588,8 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                 {t('sections.coverLetter.highlights', 'Key Highlights Included')}
               </h4>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {keyHighlights.map((h, idx) => (
-                  <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2.5">
+                {keyHighlights.map((h) => (
+                  <li key={h} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
                     <span className="leading-tight">{h}</span>
                   </li>
@@ -600,6 +602,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
           <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 p-4 md:p-8 lg:p-12 rounded-xl" dir={documentDirection}>
             {/* Edit Toggle Button */}
             <button
+              type="button"
               onClick={() => setIsEditing(!isEditing)}
               className={cn(
                 "absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-[color,background-color,box-shadow]",
@@ -628,6 +631,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                   <textarea
                     value={coverLetter}
                     onChange={(e) => setCoverLetter(e.target.value)}
+                    aria-label={t('sections.coverLetter.editContent', 'Cover letter content')}
                     dir={documentDirection}
                     className={cn(
                       "w-full min-h-[600px] text-gray-800 text-[17px] leading-relaxed bg-transparent resize-none focus:outline-none border-2 border-dashed border-gray-300 rounded-lg p-4 -m-4",

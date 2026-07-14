@@ -187,11 +187,34 @@ const splitReasoningIntoBullets = (reasoning?: string) => {
 const getJobWordCount = (value: string) =>
   value.trim().split(/\s+/).filter(Boolean).length;
 
-const uniqueStrings = (items: string[]) =>
-  items
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .filter((item, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+const uniqueStrings = (items: string[]) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of items) {
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+  return result;
+};
+
+const hasFreePreviewRun = () =>
+  typeof window !== 'undefined' && window.localStorage.getItem(FREE_MATCH_STORAGE_KEY) !== 'true';
+
+const markFreePreviewUsed = () => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(FREE_MATCH_STORAGE_KEY, 'true');
+  }
+};
+
+const handleOptimizeClick = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'optimize' } }));
+  }
+};
 
 export function MatchSection({
   onAnalyzeMatchAI,
@@ -236,15 +259,6 @@ export function MatchSection({
       setJobEditorOpen(false);
     }
   }, [matchAnalysis]);
-
-  const hasFreePreviewRun = () =>
-    typeof window !== 'undefined' && window.localStorage.getItem(FREE_MATCH_STORAGE_KEY) !== 'true';
-
-  const markFreePreviewUsed = () => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(FREE_MATCH_STORAGE_KEY, 'true');
-    }
-  };
 
   const handleAnalyzeActual = async (options?: { freePreview?: boolean }) => {
     const trimmedJob = jobText.trim();
@@ -405,12 +419,6 @@ export function MatchSection({
 
   const toggleDetail = (key: DetailKey) => {
     setOpenDetails((current) => ({ ...current, [key]: !current[key] }));
-  };
-
-  const handleOptimizeClick = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'optimize' } }));
-    }
   };
 
   // Source for the explainability panel — assembled entirely from the live
@@ -620,7 +628,7 @@ export function MatchSection({
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-white/60">
                     {t('sections.match.results.howItWorks', 'Score Breakdown')}
                   </p>
-                  <button type="button" onClick={() => setScoreBreakdownOpen(false)} className="text-gray-400 transition-colors hover:text-gray-900 dark:text-white/40 dark:hover:text-white">
+                  <button type="button" onClick={() => setScoreBreakdownOpen(false)} aria-label={t('common.close', 'Close')} className="text-gray-400 transition-colors hover:text-gray-900 dark:text-white/40 dark:hover:text-white">
                     <ChevronDown className="h-4 w-4" />
                   </button>
                 </div>
@@ -717,15 +725,15 @@ export function MatchSection({
                           {realityCheck.summary || t('sections.match.realityCheck.fallbackSummary', 'Review the evidence before optimizing this resume.')}
                         </p>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          {realityCheck.confirmedRisks.map((risk, index) => (
-                            <div key={`confirmed-${index}`} className="rounded-lg bg-white/35 p-3 text-sm dark:bg-black/15">
+                          {realityCheck.confirmedRisks.map((risk) => (
+                            <div key={risk.title} className="rounded-lg bg-white/35 p-3 text-sm dark:bg-black/15">
                               <p className="font-semibold">{risk.title}</p>
                               <p className="mt-1 text-xs opacity-80">{risk.explanation}</p>
                               <p className="mt-2 text-xs font-semibold opacity-90">{risk.mitigation}</p>
                             </div>
                           ))}
-                          {realityCheck.unclearRisks.map((risk, index) => (
-                            <div key={`unclear-${index}`} className="rounded-lg bg-white/35 p-3 text-sm dark:bg-black/15">
+                          {realityCheck.unclearRisks.map((risk) => (
+                            <div key={risk.topic} className="rounded-lg bg-white/35 p-3 text-sm dark:bg-black/15">
                               <p className="font-semibold">
                                 {t('sections.match.realityCheck.unclearLabel', 'Unclear')}: {risk.topic}
                               </p>

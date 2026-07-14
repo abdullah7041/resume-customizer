@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Save, Loader2 } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
@@ -54,33 +54,32 @@ export function SaveJobToPipelineCard({
 
   const needsConfirmation = extractedMetadata?.needsUserConfirmation ?? true;
 
-  useEffect(() => {
-    const nextCompanyName = sanitizeCompanyName(extractedMetadata?.companyName);
-    const nextJobTitle = sanitizeMetadataField(extractedMetadata?.jobTitle);
-    const nextLocation = sanitizeMetadataField(extractedMetadata?.location);
-    const nextEmploymentType = sanitizeMetadataField(extractedMetadata?.employmentType);
-    const nextSeniority = sanitizeMetadataField(extractedMetadata?.seniority);
-    const nextSector = sanitizeMetadataField(extractedMetadata?.sector);
+  const seededMetadataRef = useRef<ExtractedJobMetadata | null>(null);
 
-    if (nextCompanyName && !companyName) {
-      setCompanyName(nextCompanyName);
-    }
-    if (nextJobTitle && !jobTitle) {
-      setJobTitle(nextJobTitle);
-    }
-    if (nextLocation && !location) {
-      setLocation(nextLocation);
-    }
-    if (nextEmploymentType && !employmentType) {
-      setEmploymentType(nextEmploymentType);
-    }
-    if (nextSeniority && !seniority) {
-      setSeniority(nextSeniority);
-    }
-    if (nextSector && !sector) {
-      setSector(nextSector);
-    }
-  }, [companyName, employmentType, extractedMetadata, jobTitle, location, sector, seniority]);
+  // Seed editable fields once per distinct metadata object, filling only blanks so
+  // user edits are never clobbered. Keyed on metadata identity (not the field values)
+  // so editing/clearing a field can't re-trigger this — that dep chain caused an extra
+  // render per field and re-filled fields the user had cleared. React 19 batches the
+  // setters below into a single render.
+  useEffect(() => {
+    if (!extractedMetadata || seededMetadataRef.current === extractedMetadata) return;
+    seededMetadataRef.current = extractedMetadata;
+
+    const nextCompanyName = sanitizeCompanyName(extractedMetadata.companyName);
+    const nextJobTitle = sanitizeMetadataField(extractedMetadata.jobTitle);
+    const nextLocation = sanitizeMetadataField(extractedMetadata.location);
+    const nextEmploymentType = sanitizeMetadataField(extractedMetadata.employmentType);
+    const nextSeniority = sanitizeMetadataField(extractedMetadata.seniority);
+    const nextSector = sanitizeMetadataField(extractedMetadata.sector);
+
+    if (nextCompanyName && !companyName) setCompanyName(nextCompanyName);
+    if (nextJobTitle && !jobTitle) setJobTitle(nextJobTitle);
+    if (nextLocation && !location) setLocation(nextLocation);
+    if (nextEmploymentType && !employmentType) setEmploymentType(nextEmploymentType);
+    if (nextSeniority && !seniority) setSeniority(nextSeniority);
+    if (nextSector && !sector) setSector(nextSector);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- field values intentionally excluded; seed runs once per metadata identity
+  }, [extractedMetadata]);
 
   const handleSave = async () => {
     if (!user) {
@@ -166,10 +165,11 @@ export function SaveJobToPipelineCard({
       <div className="space-y-3">
         {(needsConfirmation || !extractedMetadata?.companyName) && (
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="pipeline-company-name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('pipeline.companyName', 'Company')}
             </label>
             <input
+              id="pipeline-company-name"
               type="text"
               aria-label={t('pipeline.companyName', 'Company')}
               value={companyName}
@@ -182,10 +182,11 @@ export function SaveJobToPipelineCard({
 
         {(needsConfirmation || !extractedMetadata?.jobTitle) && (
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="pipeline-job-title" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('pipeline.jobTitle', 'Job Title')}
             </label>
             <input
+              id="pipeline-job-title"
               type="text"
               aria-label={t('pipeline.jobTitle', 'Job Title')}
               value={jobTitle}
@@ -204,10 +205,11 @@ export function SaveJobToPipelineCard({
         )}
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="pipeline-job-url" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t('pipeline.jobUrl', 'Job URL')}
           </label>
           <input
+            id="pipeline-job-url"
             type="url"
             aria-label={t('pipeline.jobUrl', 'Job URL')}
             value={jobUrl}
@@ -219,10 +221,11 @@ export function SaveJobToPipelineCard({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="pipeline-location" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('pipeline.location', 'Location')}
             </label>
             <input
+              id="pipeline-location"
               type="text"
               aria-label={t('pipeline.location', 'Location')}
               value={location}
@@ -232,10 +235,11 @@ export function SaveJobToPipelineCard({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="pipeline-employment-type" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('pipeline.employmentType', 'Employment type')}
             </label>
             <input
+              id="pipeline-employment-type"
               type="text"
               aria-label={t('pipeline.employmentType', 'Employment type')}
               value={employmentType}
@@ -245,10 +249,11 @@ export function SaveJobToPipelineCard({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="pipeline-seniority" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('pipeline.seniority', 'Seniority')}
             </label>
             <input
+              id="pipeline-seniority"
               type="text"
               aria-label={t('pipeline.seniority', 'Seniority')}
               value={seniority}
@@ -258,10 +263,11 @@ export function SaveJobToPipelineCard({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="pipeline-sector" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('pipeline.sector', 'Sector')}
             </label>
             <input
+              id="pipeline-sector"
               type="text"
               aria-label={t('pipeline.sector', 'Sector')}
               value={sector}
@@ -273,10 +279,11 @@ export function SaveJobToPipelineCard({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="pipeline-status" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t('pipeline.status', 'Status')}
           </label>
           <select
+            id="pipeline-status"
             aria-label={t('pipeline.status', 'Status')}
             value={status}
             onChange={(e) => setStatus(e.target.value as JobApplicationStatus)}
@@ -291,10 +298,11 @@ export function SaveJobToPipelineCard({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="pipeline-notes" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t('pipeline.notes', 'Notes')}
           </label>
           <textarea
+            id="pipeline-notes"
             aria-label={t('pipeline.notes', 'Notes')}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

@@ -82,14 +82,15 @@ interface InterviewSectionProps {
 }
 
 // === Sub-components ===
+const DIFFICULTY_COLORS: Record<string, string> = {
+  easy: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  medium: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
+  hard: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30'
+};
+
 const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
-  const colors: Record<string, string> = {
-    easy: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-    medium: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
-    hard: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30'
-  };
   return (
-    <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm', colors[difficulty] || colors.medium)}>
+    <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm', DIFFICULTY_COLORS[difficulty] || DIFFICULTY_COLORS.medium)}>
       {difficulty || 'medium'}
     </span>
   );
@@ -123,8 +124,8 @@ const STARMethodTip = () => {
               { letter: 'T', word: t('sections.interview.starMethod.steps.task.title'), desc: t('sections.interview.starMethod.steps.task.desc'), icon: <FileSpreadsheet className="w-4 h-4" /> },
               { letter: 'A', word: t('sections.interview.starMethod.steps.action.title'), desc: t('sections.interview.starMethod.steps.action.desc'), icon: <Zap className="w-4 h-4" /> },
               { letter: 'R', word: t('sections.interview.starMethod.steps.result.title'), desc: t('sections.interview.starMethod.steps.result.desc'), icon: <Award className="w-4 h-4" /> }
-            ].map((item, idx) => (
-              <GlassCard key={idx} padding="sm" className="group border-emerald-500/10">
+            ].map((item) => (
+              <GlassCard key={item.letter} padding="sm" className="group border-emerald-500/10">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-700 dark:text-emerald-300 group-hover:scale-110 transition-transform">
                     {item.letter}
@@ -214,7 +215,10 @@ const normalizeQuestion = (question: unknown, index: number): Question | null =>
       category: (q.category || 'General') as string,
       answerFramework: (q.answerFramework || q.answer_framework || '') as string,
       skills_tested: Array.isArray(q.skills_tested)
-        ? q.skills_tested.map(s => String(s)).filter(Boolean)
+        ? q.skills_tested.flatMap(s => {
+            const skill = String(s);
+            return skill ? [skill] : [];
+          })
         : inferSkillsFromQuestion(questionText, type),
       coachingTip: (q.coachingTip || q.coaching_tip || '') as string || undefined,
       vulnerabilityType: (q.vulnerabilityType || q.vulnerability_type) as VulnerabilityType | undefined,
@@ -267,7 +271,10 @@ export function InterviewSection({
 
   // Get unique skills from standard questions (vulnerability questions have their own section)
   const uniqueSkills = useMemo(() => {
-    const allSkills = questions.filter(q => !q.vulnerabilityType).flatMap(q => q.skills_tested || []);
+    const allSkills: string[] = [];
+    for (const q of questions) {
+      if (!q.vulnerabilityType) allSkills.push(...(q.skills_tested || []));
+    }
     return Array.from(new Set(allSkills)).sort();
   }, [questions]);
 
@@ -321,7 +328,10 @@ export function InterviewSection({
     if (!forceRegenerate) {
       const existingData = extractQuestionsFromData();
       if (existingData) {
-        const normalized = existingData.questions.map((q, i) => normalizeQuestion(q, i)).filter(Boolean) as Question[];
+        const normalized = existingData.questions.flatMap((q, i) => {
+          const question = normalizeQuestion(q, i);
+          return question ? [question] : [];
+        });
         setQuestions(normalized);
         setRoleLevel(existingData.roleLevel);
         setFocusAreas(existingData.focusAreas);
@@ -371,7 +381,10 @@ export function InterviewSection({
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      const normalized = (data.questions || []).map((q: unknown, i: number) => normalizeQuestion(q, i)).filter(Boolean) as Question[];
+      const normalized = (data.questions || []).flatMap((q: unknown, i: number) => {
+        const question = normalizeQuestion(q, i);
+        return question ? [question] : [];
+      });
       setQuestions(normalized);
       setRoleLevel(data.roleLevel || data.role_level || 'mid');
       setFocusAreas(data.focusAreas || data.focus_areas || []);
@@ -436,7 +449,10 @@ export function InterviewSection({
     // First, try to load from props
     const existingData = extractQuestionsFromData();
     if (existingData) {
-      const normalized = existingData.questions.map((q, i) => normalizeQuestion(q, i)).filter(Boolean) as Question[];
+      const normalized = existingData.questions.flatMap((q, i) => {
+        const question = normalizeQuestion(q, i);
+        return question ? [question] : [];
+      });
       setQuestions(normalized);
       setRoleLevel(existingData.roleLevel);
       setFocusAreas(existingData.focusAreas);
@@ -584,8 +600,8 @@ export function InterviewSection({
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('sections.interview.focusAreas', 'Focus Areas')}</p>
                 <div className="flex flex-wrap gap-2">
-                  {focusAreas.length > 0 ? focusAreas.map((area, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-white/5 hover:bg-gray-200/50 dark:hover:bg-white/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 rounded-full text-xs font-medium transition-colors cursor-default backdrop-blur-sm">
+                  {focusAreas.length > 0 ? focusAreas.map((area) => (
+                    <span key={area} className="px-3 py-1 bg-gray-100 dark:bg-white/5 hover:bg-gray-200/50 dark:hover:bg-white/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 rounded-full text-xs font-medium transition-colors cursor-default backdrop-blur-sm">
                       {area}
                     </span>
                   )) : (
@@ -702,7 +718,7 @@ export function InterviewSection({
                   const globalIdx = questions.indexOf(question);
                   return (
                     <GlassCard
-                      key={`vuln-${index}`}
+                      key={`vuln-${question.question}`}
                       padding="none"
                       className={cn(
                         "overflow-hidden transition-[border-color,box-shadow] duration-300 border-amber-500/20",
@@ -711,7 +727,15 @@ export function InterviewSection({
                     >
                       <div
                         className="p-5 flex items-start gap-4 cursor-pointer"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => toggleQuestion(globalIdx)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleQuestion(globalIdx);
+                          }
+                        }}
                       >
                         <div className="mt-1">
                           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">
@@ -727,10 +751,14 @@ export function InterviewSection({
                             )}>
                               {question.question}
                             </h4>
-                            <button className={cn(
-                              "p-2 rounded-full transition-[color,background-color,rotate] duration-300",
-                              expandedQuestions.has(globalIdx) ? "bg-amber-500/20 text-amber-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
-                            )}>
+                            <button
+                              type="button"
+                              aria-label={t('sections.interview.toggleExpand', 'Toggle question details')}
+                              className={cn(
+                                "p-2 rounded-full transition-[color,background-color,rotate] duration-300",
+                                expandedQuestions.has(globalIdx) ? "bg-amber-500/20 text-amber-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+                              )}
+                            >
                               <ChevronDown className="w-4 h-4" />
                             </button>
                           </div>
@@ -810,11 +838,12 @@ export function InterviewSection({
 
                           {/* Practice answer */}
                           <div className="pt-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
+                            <label htmlFor={`practice-answer-vuln-${globalIdx}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
                               {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
                               <span className="text-xs text-gray-500 font-normal">{t('sections.interview.privateToYou', 'Private to you')}</span>
                             </label>
                             <textarea
+                              id={`practice-answer-vuln-${globalIdx}`}
                               value={savedAnswers[globalIdx] || ''}
                               onChange={(e) => setSavedAnswers(prev => ({ ...prev, [globalIdx]: e.target.value }))}
                               placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}
@@ -866,10 +895,10 @@ export function InterviewSection({
           {uniqueSkills.length > 0 && (
             <div className="mb-6 p-5 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 backdrop-blur-sm">
               <div className="flex items-center justify-between mb-4">
-                <label className="text-sm font-semibold text-gray-800 dark:text-white/90 flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-800 dark:text-white/90 flex items-center gap-2">
                   <Target className="w-4 h-4 text-emerald-400" />
                   {t('sections.interview.filterBySkill', 'Filter by Skill')}
-                </label>
+                </span>
                 <span className="text-xs text-gray-400 dark:text-white/40 font-medium px-2 py-1 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5">
                   {uniqueSkills.length} {t('common.skills', 'Skills')}
                 </span>
@@ -877,6 +906,7 @@ export function InterviewSection({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 <button
+                  type="button"
                   onClick={() => setSkillFilter(null)}
                   className={cn(
                     'group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-200 border flex items-center justify-between',
@@ -896,6 +926,7 @@ export function InterviewSection({
                 {uniqueSkills.map(skill => (
                   <button
                     key={skill}
+                    type="button"
                     onClick={() => setSkillFilter(skill)}
                     className={cn(
                       'group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-200 border flex items-center justify-between',
@@ -920,7 +951,7 @@ export function InterviewSection({
           <div className="space-y-4">
             {filteredQuestions.map((question, index) => (
               <GlassCard
-                key={index}
+                key={question.question}
                 padding="none"
                 className={cn(
                   "overflow-hidden transition-[border-color,box-shadow] duration-300 border-gray-100 dark:border-white/5",
@@ -930,7 +961,15 @@ export function InterviewSection({
                 {/* Header / Question Summary */}
                 <div
                   className="p-5 flex items-start gap-4 cursor-pointer"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleQuestion(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleQuestion(index);
+                    }
+                  }}
                 >
                   <div className="mt-1">
                     <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/50 text-sm font-bold">
@@ -946,10 +985,14 @@ export function InterviewSection({
                       )}>
                         {question.question}
                       </h4>
-                      <button className={cn(
-                        "p-2 rounded-full transition-[color,background-color,rotate] duration-300",
-                        expandedQuestions.has(index) ? "bg-emerald-500/20 text-emerald-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
-                      )}>
+                      <button
+                        type="button"
+                        aria-label={t('sections.interview.toggleExpand', 'Toggle question details')}
+                        className={cn(
+                          "p-2 rounded-full transition-[color,background-color,rotate] duration-300",
+                          expandedQuestions.has(index) ? "bg-emerald-500/20 text-emerald-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+                        )}
+                      >
                         <ChevronDown className="w-4 h-4" />
                       </button>
                     </div>
@@ -982,9 +1025,9 @@ export function InterviewSection({
                           {t('sections.interview.skillsEvaluated', 'Skills Being Evaluated')}
                         </h5>
                         <div className="flex flex-wrap gap-2">
-                          {question.skills_tested.map((skill, idx) => (
+                          {question.skills_tested.map((skill) => (
                             <span
-                              key={idx}
+                              key={skill}
                               className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-white/5 text-blue-600 dark:text-blue-300 border border-blue-500/20 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors cursor-default"
                             >
                               {skill}
@@ -1049,11 +1092,12 @@ export function InterviewSection({
                     )}
 
                     <div className="pt-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
+                      <label htmlFor={`practice-answer-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
                         {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
                         <span className="text-xs text-gray-500 font-normal">{t('sections.interview.privateToYou', 'Private to you')}</span>
                       </label>
                       <textarea
+                        id={`practice-answer-${index}`}
                         value={savedAnswers[index] || ''}
                         onChange={(e) => setSavedAnswers(prev => ({ ...prev, [index]: e.target.value }))}
                         placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}

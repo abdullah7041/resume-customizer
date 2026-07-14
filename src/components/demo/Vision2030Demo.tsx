@@ -73,8 +73,8 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
 
                 {/* Stats Row */}
                 <div className="grid grid-cols-3 gap-4 mb-12 max-w-lg mx-auto">
-                    {stats.map((stat, idx) => (
-                        <div key={idx} className="text-center p-4 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10">
+                    {stats.map((stat) => (
+                        <div key={stat.label} className="text-center p-4 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10">
                             <stat.icon className="w-6 h-6 text-[#4ade80] mx-auto mb-2" />
                             <div className="text-2xl font-bold text-[#4ade80]">{stat.value}</div>
                             <div className="text-xs text-gray-500 dark:text-white/60">{stat.label}</div>
@@ -156,9 +156,9 @@ export function Vision2030Demo({ onGetStarted }: Vision2030DemoProps) {
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                             {isArabic ? 'لماذا هذا مهم لمستقبلك المهني؟' : 'Why This Matters for Your Career'}
                         </h3>
-                        {benefits.map((benefit, idx) => (
+                        {benefits.map((benefit) => (
                             <div
-                                key={idx}
+                                key={benefit.titleEn}
                                 className="flex items-start gap-3 p-4 rounded-xl bg-[color:var(--surface-glass)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 hover:border-[#006C35]/50 transition-colors"
                             >
                                 <div className="w-8 h-8 rounded-lg bg-[#006C35]/20 flex items-center justify-center flex-shrink-0">

@@ -73,6 +73,23 @@ describe('CreditManager', () => {
       expect(cronSource).toMatch(/const newCredits = FREE_TIER_CREDITS;/);
       expect(cronSource).not.toMatch(/const newCredits = \d+;/);
     });
+
+    it('paces scheduled email batches instead of relying on concurrency alone', () => {
+      const testDir = dirname(fileURLToPath(import.meta.url));
+      const cronSources = [
+        'cron-reset-credits.ts',
+        'cron-monthly-summary.ts',
+      ].map((fileName) => readFileSync(
+        join(testDir, '..', '..', 'functions', fileName),
+        'utf8'
+      ));
+
+      for (const cronSource of cronSources) {
+        expect(cronSource).toContain('RateLimiter');
+        expect(cronSource).toMatch(/minDelayBetweenRequestsMs:\s*500/);
+        expect(cronSource).toMatch(/rateLimiter:\s*emailRateLimiter/);
+      }
+    });
   });
 
   describe('getUserCredits', () => {

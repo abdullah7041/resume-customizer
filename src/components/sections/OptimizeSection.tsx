@@ -102,6 +102,71 @@ interface OptimizeSectionProps {
 const emptyKeywords = { add: [], remove: [], neutral: [] };
 const FREE_OPTIMIZE_STORAGE_KEY = 'watheq:freeOptimizeUsed';
 
+const hasFreePreviewRun = () =>
+  typeof window !== 'undefined' && window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY) !== 'true';
+
+const markFreePreviewUsed = () => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, 'true');
+  }
+};
+
+// Apply position suggestion: update only matching work positions per AI's positionChanges map
+const handleApplyPositionSuggestion = (suggested: string) => {
+  const state = useResumeStore.getState();
+  if (!state.originalResume?.work?.length) return;
+
+  const updated = structuredClone(state.originalResume);
+  const positionChanges = state.optimizationMetrics?.positionSuggestion?.positionChanges;
+
+  // Save originals for revert before mutating
+  const originalPositions = updated.work!.map((w: { position?: string }) => w.position || '');
+
+  if (positionChanges?.length) {
+    // Per-position granular update: only change entries where change_needed=true
+    updated.work!.forEach((w: { position?: string }) => {
+      const match = positionChanges.find(
+        (c) => c.change_needed && c.original.trim().toLowerCase() === (w.position || '').trim().toLowerCase()
+      );
+      if (match) w.position = match.suggested;
+    });
+  } else {
+    // Fallback: rename all (legacy behaviour for old AI responses)
+    updated.work!.forEach((w: { position?: string }) => { w.position = suggested; });
+  }
+
+  state.setOriginalResume(updated);
+
+  const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
+  if (currentSuggestion) {
+    state.setOptimizationMetrics({
+      positionSuggestion: { ...currentSuggestion, applied: true, originalPositions },
+    });
+  }
+};
+
+// Revert position suggestion: restore each work[].position from saved array
+const handleRevertPositionSuggestion = () => {
+  const state = useResumeStore.getState();
+  const saved = state.optimizationMetrics?.positionSuggestion?.originalPositions;
+
+  if (state.originalResume?.work?.length && saved?.length) {
+    const updated = structuredClone(state.originalResume);
+    updated.work!.forEach((w: { position?: string }, i: number) => {
+      w.position = saved[i] ?? w.position;
+    });
+    state.setOriginalResume(updated);
+  }
+
+  // Clear applied flag — banner goes back to "apply" state
+  const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
+  if (currentSuggestion) {
+    state.setOptimizationMetrics({
+      positionSuggestion: { ...currentSuggestion, applied: false, originalPositions: undefined },
+    });
+  }
+};
+
 const finiteScore = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null;
   const score = Number(value);
@@ -343,11 +408,13 @@ export function OptimizeSection({
   const keywordBuckets = useMemo(() => {
     // If store has keyword suggestions, transform them
     if (keywordSuggestions.length > 0) {
-      return {
-        add: keywordSuggestions.filter(k => k.category === 'add').map(k => k.keyword),
-        neutral: keywordSuggestions.filter(k => k.category === 'keep').map(k => k.keyword),
-        remove: keywordSuggestions.filter(k => k.category === 'deemphasize').map(k => k.keyword),
-      };
+      const buckets: { add: string[]; neutral: string[]; remove: string[] } = { add: [], neutral: [], remove: [] };
+      for (const k of keywordSuggestions) {
+        if (k.category === 'add') buckets.add.push(k.keyword);
+        else if (k.category === 'keep') buckets.neutral.push(k.keyword);
+        else if (k.category === 'deemphasize') buckets.remove.push(k.keyword);
+      }
+      return buckets;
     }
     return {
       add: keywords?.add ?? [],
@@ -552,15 +619,6 @@ export function OptimizeSection({
       gapAnalysis: optimizationMetrics.gapAnalysis ?? [],
     };
   }, [resumeText, getCachedAnalysis, optimizationMetrics]);
-
-  const hasFreePreviewRun = () =>
-    typeof window !== 'undefined' && window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY) !== 'true';
-
-  const markFreePreviewUsed = () => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, 'true');
-    }
-  };
 
   // Generate optimizations from API
   const handleGenerateActual = async (options?: { freePreview?: boolean }) => {
@@ -859,10 +917,11 @@ export function OptimizeSection({
         if (finiteScore(metricsToUpdate.beforeScore) !== null && resumeText && (metricsToUpdate.hasJobDescription)) {
           const jobDesc = typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '';
           if (jobDesc) {
+            const matchedKeywordSet = new Set(metricsToUpdate.matchedKeywords || []);
             useResumeStore.getState().setCachedAnalysis(resumeText, jobDesc, {
               score: metricsToUpdate.beforeScore,
               matchedKeywords: metricsToUpdate.matchedKeywords || [],
-              missingKeywords: metricsToUpdate.jdKeywords?.filter((k: string) => !metricsToUpdate.matchedKeywords?.includes(k)) || []
+              missingKeywords: metricsToUpdate.jdKeywords?.filter((k: string) => !matchedKeywordSet.has(k)) || []
             });
           }
         }
@@ -921,62 +980,6 @@ export function OptimizeSection({
     await handleGenerateActual();
   };
 
-  // Apply position suggestion: update only matching work positions per AI's positionChanges map
-  const handleApplyPositionSuggestion = (suggested: string) => {
-    const state = useResumeStore.getState();
-    if (!state.originalResume?.work?.length) return;
-
-    const updated = structuredClone(state.originalResume);
-    const positionChanges = state.optimizationMetrics?.positionSuggestion?.positionChanges;
-
-    // Save originals for revert before mutating
-    const originalPositions = updated.work!.map((w: { position?: string }) => w.position || '');
-
-    if (positionChanges?.length) {
-      // Per-position granular update: only change entries where change_needed=true
-      updated.work!.forEach((w: { position?: string }) => {
-        const match = positionChanges.find(
-          (c) => c.change_needed && c.original.trim().toLowerCase() === (w.position || '').trim().toLowerCase()
-        );
-        if (match) w.position = match.suggested;
-      });
-    } else {
-      // Fallback: rename all (legacy behaviour for old AI responses)
-      updated.work!.forEach((w: { position?: string }) => { w.position = suggested; });
-    }
-
-    state.setOriginalResume(updated);
-
-    const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
-    if (currentSuggestion) {
-      state.setOptimizationMetrics({
-        positionSuggestion: { ...currentSuggestion, applied: true, originalPositions },
-      });
-    }
-  };
-
-  // Revert position suggestion: restore each work[].position from saved array
-  const handleRevertPositionSuggestion = () => {
-    const state = useResumeStore.getState();
-    const saved = state.optimizationMetrics?.positionSuggestion?.originalPositions;
-
-    if (state.originalResume?.work?.length && saved?.length) {
-      const updated = structuredClone(state.originalResume);
-      updated.work!.forEach((w: { position?: string }, i: number) => {
-        w.position = saved[i] ?? w.position;
-      });
-      state.setOriginalResume(updated);
-    }
-
-    // Clear applied flag — banner goes back to "apply" state
-    const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
-    if (currentSuggestion) {
-      state.setOptimizationMetrics({
-        positionSuggestion: { ...currentSuggestion, applied: false, originalPositions: undefined },
-      });
-    }
-  };
-
   const handleClear = () => {
     if (onClear) {
       onClear();
@@ -992,7 +995,7 @@ export function OptimizeSection({
 
   // Sections whose cards map to real, editable resume text (skills are
   // recommendation-only and certifications are display-only, so they cannot be refined).
-  const REFINABLE_SECTIONS = ['summary', 'headline', 'experience', 'projects', 'education'];
+  const REFINABLE_SECTIONS = new Set(['summary', 'headline', 'experience', 'projects', 'education']);
 
   const handleRefineBullet = async (opt: OptimizationResult) => {
     const instruction = refineInstruction.trim();
@@ -1140,16 +1143,15 @@ export function OptimizeSection({
       .map(({ order: _order, ...group }) => group);
   }, [optimizations, originalResume?.work, t]);
 
-  const filteredQueueGroups = queueGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        if (queueFilter === 'pending') return !item.applied;
-        if (queueFilter === 'applied') return item.applied;
-        return true;
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  const filteredQueueGroups = queueGroups.reduce<QueueGroup[]>((acc, group) => {
+    const items = group.items.filter((item) => {
+      if (queueFilter === 'pending') return !item.applied;
+      if (queueFilter === 'applied') return item.applied;
+      return true;
+    });
+    if (items.length > 0) acc.push({ ...group, items });
+    return acc;
+  }, []);
 
   const visibleQueueOptimizations = filteredQueueGroups.flatMap((group) => group.items);
   const hasOptimizationResults = optimizations.length > 0;
@@ -1271,6 +1273,7 @@ export function OptimizeSection({
         {/* Optimize Button */}
         {!hasOptimizationResults && (
           <button
+            type="button"
             onClick={handleGenerate}
             disabled={isOptimizing || !hasResume}
             className={cn(
@@ -1499,6 +1502,7 @@ export function OptimizeSection({
             <div className="flex flex-wrap justify-end gap-2">
               <div className="flex items-center rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-1 dark:border-white/10 dark:bg-black/20">
                 <button
+                  type="button"
                   onClick={() => setViewMode('split')}
                   aria-pressed={viewMode === 'split'}
                   className={cn(
@@ -1511,6 +1515,7 @@ export function OptimizeSection({
                   {t('sections.optimize.sideBySide', 'Split')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewMode('diff')}
                   aria-pressed={viewMode === 'diff'}
                   className={cn(
@@ -1524,6 +1529,7 @@ export function OptimizeSection({
                 </button>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   const visibleIds = visibleQueueOptimizations.map(o => o.sectionId);
                   const allExpanded = visibleIds.every(id => expandedCards.has(id));

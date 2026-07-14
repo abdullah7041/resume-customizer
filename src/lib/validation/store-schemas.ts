@@ -97,16 +97,16 @@ export const LanguageSchema = z.object({
     fluency: z.string().optional().default(''),
 });
 
-export const MetaSchema = z.object({
+export const MetaSchema = z.looseObject({
     version: z.string().optional(),
     lastModified: z.string().optional(),
     raw_text: z.string().optional(),
-}).passthrough(); // Allow additional properties
+}); // Allow additional properties
 
 /**
  * Complete Resume Schema (JSON Resume standard)
  */
-export const ResumeZodSchema = z.object({
+export const ResumeZodSchema = z.looseObject({
     $schema: z.string().optional(),
     basics: BasicsSchema.optional(),
     work: z.array(WorkSchema).optional().default([]),
@@ -116,7 +116,7 @@ export const ResumeZodSchema = z.object({
     certificates: z.array(CertificateSchema).optional().default([]),
     languages: z.array(LanguageSchema).optional().default([]),
     meta: MetaSchema.optional(),
-}).passthrough(); // Allow additional properties like 'plainText', 'sections', etc.
+}); // Allow additional properties like 'plainText', 'sections', etc.
 
 // ============================================
 // Search Intent (onboarding) Schema

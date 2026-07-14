@@ -117,6 +117,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       <div
         className="absolute inset-0 bg-[color:var(--ink)]/35 backdrop-blur-sm animate-fade-in"
         onClick={() => !isDeleting && onClose()}
+        aria-hidden="true"
       />
 
       {/* Modal */}
@@ -130,6 +131,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <h2 className="text-xl font-bold">{t('common.settings', 'Settings')}</h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
             disabled={isDeleting}
             className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
@@ -182,6 +184,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={toggleTheme}
                   className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
                   aria-label={t('common.toggleTheme', 'Toggle theme')}
@@ -211,6 +214,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={handleExportData}
                   disabled={isExporting || isDeleting}
                   className="shrink-0 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50"
@@ -257,6 +261,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                 {!showDeleteConfirm ? (
                   <button
+                    type="button"
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={isDeleting}
                     className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/20 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
@@ -271,6 +276,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </p>
                     <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={handleDeleteAccount}
                         disabled={isDeleting}
                         className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-w-[70px]"
@@ -280,6 +286,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         ) : t('common.yes', 'Yes')}
                       </button>
                       <button
+                        type="button"
                         onClick={() => setShowDeleteConfirm(false)}
                         disabled={isDeleting}
                         className="px-3 py-1.5 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-white/20 transition-colors disabled:opacity-50"

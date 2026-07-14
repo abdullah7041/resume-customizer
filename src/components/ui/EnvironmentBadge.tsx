@@ -57,6 +57,7 @@ export default function EnvironmentBadge() {
                     {isMock ? "Mock Data (Fallback)" : "Live Data"}
                 </span>
                 <button
+                    type="button"
                     onClick={() => setShowResult(false)}
                     className="ml-1 rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/10"
                     aria-label="Dismiss"

@@ -57,6 +57,21 @@ interface OptimizationResultsSummaryProps {
     } | null;
 }
 
+// Determine color based on score
+const getScoreColor = (s: number, isAfter: boolean) => {
+    if (!isAfter) return 'text-gray-400';
+    if (s >= 80) return 'text-emerald-400';
+    if (s >= 60) return 'text-yellow-400';
+    return 'text-orange-400';
+};
+
+const getBgColor = (s: number, isAfter: boolean) => {
+    if (!isAfter) return 'bg-gray-100 dark:bg-white/5';
+    if (s >= 80) return 'bg-emerald-500/10';
+    if (s >= 60) return 'bg-yellow-500/10';
+    return 'bg-orange-500/10';
+};
+
 // Animated score display component
 function AnimatedScore({
     score,
@@ -68,21 +83,6 @@ function AnimatedScore({
     variant: 'before' | 'after'
 }) {
     const { t } = useTranslation();
-
-    // Determine color based on score
-    const getScoreColor = (s: number, isAfter: boolean) => {
-        if (!isAfter) return 'text-gray-400';
-        if (s >= 80) return 'text-emerald-400';
-        if (s >= 60) return 'text-yellow-400';
-        return 'text-orange-400';
-    };
-
-    const getBgColor = (s: number, isAfter: boolean) => {
-        if (!isAfter) return 'bg-gray-100 dark:bg-white/5';
-        if (s >= 80) return 'bg-emerald-500/10';
-        if (s >= 60) return 'bg-yellow-500/10';
-        return 'bg-orange-500/10';
-    };
 
     return (
         <div className={cn(
@@ -251,9 +251,9 @@ function Vision2030Card({
                         {t('vision2030.skillsDetected', 'Vision 2030 Skills Detected')}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
-                        {vision2030.topMatchedSkills.map((skill, idx) => (
+                        {vision2030.topMatchedSkills.map((skill) => (
                             <span
-                                key={idx}
+                                key={skill}
                                 className="px-2 py-1 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs rounded-md border border-gray-200 dark:border-white/10"
                             >
                                 {skill}
@@ -289,6 +289,8 @@ export function OptimizationResultsSummary({
 }: OptimizationResultsSummaryProps) {
     const { t } = useTranslation();
 
+    const keywordsFromJDSet = useMemo(() => new Set(keywordsFromJD), [keywordsFromJD]);
+
     // Calculate improvement
     const improvement = afterScore - beforeScore;
     const hasImprovement = improvement > 0;
@@ -298,11 +300,11 @@ export function OptimizationResultsSummary({
 
     // Get applied sections summary
     const appliedSections = useMemo(() => {
-        return optimizationsBySection
-            .filter(s => s.applied > 0)
-            .map(s => {
-                return t(`sections.optimizationResults.sectionLabels.${s.section}`, s.section);
-            });
+        return optimizationsBySection.flatMap(s =>
+            s.applied > 0
+                ? [t(`sections.optimizationResults.sectionLabels.${s.section}`, s.section)]
+                : []
+        );
     }, [optimizationsBySection, t]);
 
     // Track visibility
@@ -453,17 +455,17 @@ export function OptimizationResultsSummary({
                                 </h4>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                {keywordsAdded.slice(0, 10).map((keyword, idx) => (
+                                {keywordsAdded.slice(0, 10).map((keyword) => (
                                     <span
-                                        key={idx}
+                                        key={keyword}
                                         className={cn(
                                             'px-3 py-1.5 rounded-full text-sm font-medium',
                                             'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-                                            keywordsFromJD.includes(keyword) && 'ring-1 ring-emerald-400'
+                                            keywordsFromJDSet.has(keyword) && 'ring-1 ring-emerald-400'
                                         )}
                                     >
                                         {keyword}
-                                        {keywordsFromJD.includes(keyword) && (
+                                        {keywordsFromJDSet.has(keyword) && (
                                             <Zap className="w-3 h-3 inline ml-1 text-emerald-400" />
                                         )}
                                     </span>
@@ -487,9 +489,9 @@ export function OptimizationResultsSummary({
                                 </h4>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                {matchedKeywords.slice(0, 8).map((keyword, idx) => (
+                                {matchedKeywords.slice(0, 8).map((keyword) => (
                                     <span
-                                        key={idx}
+                                        key={keyword}
                                         className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10"
                                     >
                                         {keyword}
@@ -511,9 +513,9 @@ export function OptimizationResultsSummary({
                                 {t('sections.optimizationResults.improvementsApplied', 'Improvements Applied')}
                             </h4>
                             <div className="space-y-2">
-                                {appliedSections.map((section, idx) => (
+                                {appliedSections.map((section) => (
                                     <div
-                                        key={idx}
+                                        key={section}
                                         className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                                     >
                                         <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />

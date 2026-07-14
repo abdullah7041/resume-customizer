@@ -61,6 +61,7 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
             <p className="text-sm text-ink-muted mt-1">{t('dataRights.export.description')}</p>
           </div>
           <button
+            type="button"
             onClick={handleExport}
             disabled={isExporting}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -85,6 +86,7 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
             <p className="text-sm text-ink-muted mt-1">{t('dataRights.delete.description')}</p>
           </div>
           <button
+            type="button"
             onClick={() => setShowDeleteConfirm(true)}
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
@@ -109,12 +111,14 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
             </p>
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 px-4 py-2 bg-ink/5 text-ink rounded-lg hover:bg-ink/10 transition-colors"
               >
                 {t('common.cancel')}
               </button>
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"

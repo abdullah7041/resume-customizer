@@ -146,6 +146,7 @@ export function ReferralLink({ className }: ReferralLinkProps) {
           </p>
         </div>
         <button
+          type="button"
           onClick={handleCopy}
           className={cn(
             glass.badge.neutral,

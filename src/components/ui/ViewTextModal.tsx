@@ -40,7 +40,9 @@ export default function ViewTextModal({ isOpen, onClose, text }) {
                 <div className="flex items-center justify-between border-b border-ink-200/50 dark:border-white/10 bg-white/50 dark:bg-ink-800/50 px-6 py-4 backdrop-blur-md">
                     <h3 className="text-lg font-semibold text-ink-900 dark:text-white">Extracted Resume Text</h3>
                     <button
+                        type="button"
                         onClick={onClose}
+                        aria-label="Close"
                         className="rounded-full p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-white/10 hover:text-ink-600 dark:hover:text-white transition-colors"
                     >
                         <X className="h-5 w-5" />

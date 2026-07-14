@@ -140,7 +140,7 @@ export function buildTruthCheckView(result: ResumeTruthCheckResult): TruthCheckV
     sectionsScanned,
   };
 
-  const priorities = [...reviewableClaims].sort(priorityComparator).slice(0, 3);
+  const priorities = reviewableClaims.toSorted(priorityComparator).slice(0, 3);
 
   const groupMap = new Map<TruthCheckGroupKey, TruthCheckClaim[]>();
   for (const claim of reviewableClaims) {

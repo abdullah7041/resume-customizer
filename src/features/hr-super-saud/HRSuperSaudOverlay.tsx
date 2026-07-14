@@ -72,11 +72,12 @@ function hasStoredPreference(key: string) {
   return typeof window !== 'undefined' && window.localStorage.getItem(key) !== null;
 }
 
+function handleMascotImageError(event: SyntheticEvent<HTMLImageElement>) {
+  event.currentTarget.src = MASCOT_IMAGE_FALLBACK;
+}
+
 function HRSuperSaudMascotImage({ className, pose }: { className: string; pose: MascotPose }) {
   const asset = mascotAssets[pose];
-  const handleImageError = (event: SyntheticEvent<HTMLImageElement>) => {
-    event.currentTarget.src = MASCOT_IMAGE_FALLBACK;
-  };
 
   return (
     <picture className="hr-super-saud-avatar-frame" data-pose={pose}>
@@ -86,7 +87,7 @@ function HRSuperSaudMascotImage({ className, pose }: { className: string; pose: 
         src={asset.png}
         alt=""
         draggable={false}
-        onError={handleImageError}
+        onError={handleMascotImageError}
       />
     </picture>
   );

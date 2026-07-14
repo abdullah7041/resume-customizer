@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { analytics } from '../../services/analytics';
 
@@ -24,31 +24,34 @@ export function DirectionProvider({ children }) {
     }
   }, [i18n.language]);
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     const currentLang = i18n.language;
     const newLang = currentLang === 'ar' ? 'en' : 'ar';
     analytics.trackLanguageChange(currentLang, newLang);
     i18n.changeLanguage(newLang);
-  };
+  }, [i18n]);
 
-  const setLanguage = (lang) => {
+  const setLanguage = useCallback((lang) => {
     const currentLang = i18n.language;
     if (currentLang !== lang) {
       analytics.trackLanguageChange(currentLang, lang);
     }
     i18n.changeLanguage(lang);
-  };
+  }, [i18n]);
+
+  const value = useMemo(
+    () => ({
+      direction,
+      isRTL: direction === 'rtl',
+      toggleLanguage,
+      setLanguage,
+      currentLanguage: i18n.language,
+    }),
+    [direction, i18n, toggleLanguage, setLanguage],
+  );
 
   return (
-    <DirectionContext.Provider
-      value={{
-        direction,
-        isRTL: direction === 'rtl',
-        toggleLanguage,
-        setLanguage,
-        currentLanguage: i18n.language,
-      }}
-    >
+    <DirectionContext.Provider value={value}>
       {children}
     </DirectionContext.Provider>
   );

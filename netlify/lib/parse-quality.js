@@ -235,6 +235,13 @@ export function mergeWithEvidence(firstPass = {}, retry = {}, signals) {
 
   if (retryWork.length > 0 && isWorkIncomplete(firstWork)) {
     const mergedWork = firstWork.length > 0 ? firstWork : [];
+    // Pre-build a position-key -> entry map for O(1) lookups below (first-match wins,
+    // matching the .find() semantics this replaces, since duplicate/empty keys can occur).
+    const mergedWorkByPosition = new Map();
+    for (const e of mergedWork) {
+      const key = String(e.position || "").toLowerCase().trim();
+      if (!mergedWorkByPosition.has(key)) mergedWorkByPosition.set(key, e);
+    }
 
     for (const retryEntry of retryWork) {
       if (!retryEntry || typeof retryEntry !== "object") continue;
@@ -244,9 +251,7 @@ export function mergeWithEvidence(firstPass = {}, retry = {}, signals) {
       if (!isEvidenceBacked) continue;
 
       const positionKey = String(retryEntry.position || "").toLowerCase().trim();
-      const existing = mergedWork.find(
-        (e) => String(e.position || "").toLowerCase().trim() === positionKey,
-      );
+      const existing = mergedWorkByPosition.get(positionKey);
 
       if (existing) {
         // Fill company name if first-pass dropped it and retry value is in raw text.
@@ -263,7 +268,10 @@ export function mergeWithEvidence(firstPass = {}, retry = {}, signals) {
         if (!existing.endDate && evidencedText(signals, retryEntry.endDate)) existing.endDate = retryEntry.endDate;
       } else if (signals.experience) {
         const recoveredEntry = buildEvidenceBackedWorkEntry(signals, retryEntry);
-        if (Object.keys(recoveredEntry).length > 0) mergedWork.push(recoveredEntry);
+        if (Object.keys(recoveredEntry).length > 0) {
+          mergedWork.push(recoveredEntry);
+          if (!mergedWorkByPosition.has(positionKey)) mergedWorkByPosition.set(positionKey, recoveredEntry);
+        }
       }
     }
 
@@ -321,8 +329,10 @@ export function sliceSection(rawText, sectionKey) {
 
   return lines
     .slice(startIdx + 1, endIdx)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .flatMap((line) => {
+      const trimmed = line.trim();
+      return trimmed.length > 0 ? [trimmed] : [];
+    });
 }
 
 /**
@@ -367,8 +377,10 @@ const COMPANY_SEP_RE = /\s+at\s+|\s[–—|]\s/i;
  */
 export function parseWorkBlocks(lines) {
   const rows = (Array.isArray(lines) ? lines : [])
-    .map((line) => String(line || "").trim())
-    .filter((line) => line.length > 0);
+    .flatMap((line) => {
+      const trimmed = String(line || "").trim();
+      return trimmed.length > 0 ? [trimmed] : [];
+    });
 
   const entries = [];
   let current = null;
@@ -778,8 +790,7 @@ export function buildDeterministicBaseline(rawText, signals) {
   }
   if (sections.certificates?.length > 0) {
     baseline.certificates = sections.certificates
-      .flatMap((line) => splitCertLine(line))
-      .map((name) => ({ name, issuer: "", date: "" }));
+      .flatMap((line) => splitCertLine(line).map((name) => ({ name, issuer: "", date: "" })));
   }
   if (sections.projects?.length > 0) {
     // Split "Title: description" so only the short title lands in project.name

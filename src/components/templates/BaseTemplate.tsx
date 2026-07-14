@@ -163,13 +163,16 @@ export function cleanHighlight(s: string): string {
  */
 export function filterEducationHighlights(arr: string[] | undefined): string[] {
   if (!arr) return [];
-  return arr
-    .map(cleanHighlight)
-    .filter(
-      (h) =>
-        h.length > 0 &&
-        !/^(certificates?|certifications?|courses?|languages?)\s*[:-]/i.test(h)
-    );
+  return arr.reduce<string[]>((acc, item) => {
+    const cleaned = cleanHighlight(item);
+    if (
+      cleaned.length > 0 &&
+      !/^(certificates?|certifications?|courses?|languages?)\s*[:-]/i.test(cleaned)
+    ) {
+      acc.push(cleaned);
+    }
+    return acc;
+  }, []);
 }
 
 /**
@@ -199,8 +202,8 @@ export function ATSResume({ resume }: { resume: ResumeSchema }) {
       {work.length > 0 && (
         <>
           <h2 style={ATS_STYLES.sectionHeader}>WORK EXPERIENCE</h2>
-          {work.map((job, i) => (
-            <div key={i} style={{ marginBottom: '12pt' }}>
+          {work.map((job, jobIndex) => (
+            <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} style={{ marginBottom: '12pt' }}>
               <p style={ATS_STYLES.jobTitle}>{safeString(job.position)}</p>
               <p style={ATS_STYLES.jobMeta}>
                 {safeString(job.name)}
@@ -225,8 +228,8 @@ export function ATSResume({ resume }: { resume: ResumeSchema }) {
       {projects.length > 0 && (
         <>
           <h2 style={ATS_STYLES.sectionHeader}>PROJECTS</h2>
-          {projects.map((project, i) => (
-            <div key={i} style={{ marginBottom: '12pt' }}>
+          {projects.map((project, projectIndex) => (
+            <div key={`${project.name}-${projectIndex}`} style={{ marginBottom: '12pt' }}>
               <p style={ATS_STYLES.jobTitle}>{safeString(project.name)}</p>
               {project.description && <p>{project.description}</p>}
               {project.highlights && project.highlights.length > 0 && (
@@ -247,8 +250,8 @@ export function ATSResume({ resume }: { resume: ResumeSchema }) {
       {education.length > 0 && (
         <>
           <h2 style={ATS_STYLES.sectionHeader}>EDUCATION</h2>
-          {education.map((edu, i) => (
-            <p key={i} style={{ marginBottom: '8pt' }}>
+          {education.map((edu, educationIndex) => (
+            <p key={`${edu.institution}-${edu.studyType}-${educationIndex}`} style={{ marginBottom: '8pt' }}>
               <strong>
                 {safeString(edu.studyType)} {edu.area && `in ${edu.area}`}
               </strong>{' '}

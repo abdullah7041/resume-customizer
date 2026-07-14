@@ -211,6 +211,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                 onDoubleClick={handleResetPosition}
             >
                 <button
+                    type="button"
                     onClick={(e) => {
                         // Only open if no actual drag occurred
                         if (!hasDraggedRef.current) setIsMinimized(false);
@@ -220,6 +221,7 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                         "bg-gradient-to-br from-emerald-500/80 to-teal-500/80 shadow-lg",
                         !isDragging && "hover:scale-110"
                     )}
+                    aria-label={t('nav.workflowSteps.yourWorkflow')}
                 >
                     <ChevronLeft className="h-6 w-6 text-white" />
                 </button>
@@ -256,8 +258,10 @@ export function UserProgressNav({ mode = 'fixed', className }: UserProgressNavPr
                 </h3>
                 {mode === 'fixed' && (
                     <button
+                        type="button"
                         onClick={() => setIsMinimized(true)}
                         className="rounded-full p-1 text-emerald-400/60 hover:bg-emerald-500/10 hover:text-emerald-300 transition-colors"
+                        aria-label={t('common.minimize', 'Minimize')}
                     >
                         <X className="h-4 w-4" />
                     </button>

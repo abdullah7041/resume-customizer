@@ -71,6 +71,7 @@ export function ConsentBanner() {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 relative z-10 pt-1">
           <button
+            type="button"
             onClick={() => {
               rejectAll();
               setIsVisible(false);
@@ -85,6 +86,7 @@ export function ConsentBanner() {
           </button>
 
           <button
+            type="button"
             onClick={() => {
               acceptAll();
               analytics.init();

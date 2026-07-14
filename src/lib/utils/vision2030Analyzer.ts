@@ -144,7 +144,7 @@ export function analyzeVision2030Alignment(
     const encouragedScore = Math.min(100, Math.sqrt(rawScore / 100) * 100 * 1.2);
 
     // Get top 3 missing keywords for suggestions
-    const matchedSkillNames = new Set(matchedSkills.filter(s => s.sectorId === sector.id).map(s => s.skillNameEn));
+    const matchedSkillNames = new Set(matchedSkills.flatMap(s => s.sectorId === sector.id ? [s.skillNameEn] : []));
     const missingSkills = sector.skills
       .filter(s => !matchedSkillNames.has(s.nameEn))
       .sort((a, b) => b.weight - a.weight)
@@ -172,9 +172,7 @@ export function analyzeVision2030Alignment(
   const overallScore = Math.max(weightedScore, 60);
 
   // Get all sectors with any matches (not just top 3)
-  const allSectorsWithMatches = sectorBreakdown
-    .filter(s => s.matchedCount > 0)
-    .map(s => s.sectorId);
+  const allSectorsWithMatches = sectorBreakdown.flatMap(s => s.matchedCount > 0 ? [s.sectorId] : []);
 
   // Keep top 3 for backwards compatibility
   const topSectorIds = sectorBreakdown.slice(0, 3).map(s => s.sectorId);
@@ -229,9 +227,10 @@ export function analyzeVision2030Alignment(
 
     // PRIORITY 2: High-weight skills from relevant sectors (if we need more)
     if (missingSuggestions.length < 8) {
+      const relevantSectorSet = new Set(careerArchetype.relevantSectors);
       const sectorSuggestions = ALL_VISION_2030_SKILLS
         .filter(skill =>
-          careerArchetype.relevantSectors.includes(skill.sectorId) &&
+          relevantSectorSet.has(skill.sectorId) &&
           !matchedSkillNames.has(skill.nameEn) &&
           !missingSuggestions.some(s => s.skillNameEn === skill.nameEn) &&
           skill.weight >= 2
@@ -252,13 +251,13 @@ export function analyzeVision2030Alignment(
     }
   } else {
     // Fallback: No career detected - suggest from sectors with matches
-    const relevantSectorIds = allSectorsWithMatches.length > 0
+    const relevantSectorIds = new Set(allSectorsWithMatches.length > 0
       ? allSectorsWithMatches
-      : sectorBreakdown.slice(0, 3).map(s => s.sectorId);
+      : sectorBreakdown.slice(0, 3).map(s => s.sectorId));
 
     const fallbackSuggestions = ALL_VISION_2030_SKILLS
       .filter(skill =>
-        relevantSectorIds.includes(skill.sectorId) &&
+        relevantSectorIds.has(skill.sectorId) &&
         !matchedSkillNames.has(skill.nameEn) &&
         skill.weight >= 2
       )

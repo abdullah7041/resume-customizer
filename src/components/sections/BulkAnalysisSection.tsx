@@ -59,13 +59,13 @@ interface BulkAnalysisSectionProps {
 }
 
 // === Sub-components ===
-const ScoreBadge = ({ score }: { score: number }) => {
-  const getScoreColor = (s: number) => {
-    if (s >= 75) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-    if (s >= 50) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-    return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
-  };
+const getScoreColor = (s: number) => {
+  if (s >= 75) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  if (s >= 50) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+};
 
+const ScoreBadge = ({ score }: { score: number }) => {
   return (
     <div className={cn('flex items-center gap-1.5 px-3 py-1 rounded-full border', getScoreColor(score))}>
       <span className="text-sm font-bold">{score}%</span>
@@ -114,7 +114,9 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
             </div>
           </div>
           <button
+            type="button"
             onClick={onRemove}
+            aria-label="Remove resume"
             className="text-gray-500 hover:text-rose-400 transition-colors md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-rose-500/10 rounded"
           >
             <X className="w-4 h-4" />
@@ -191,9 +193,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const toSave = resumes
-        .filter(r => r.status === 'completed' || r.status === 'error')
-        .map(r => ({ ...r, file: null }));
+      const toSave: Resume[] = [];
+      for (const r of resumes) {
+        if (r.status === 'completed' || r.status === 'error') toSave.push({ ...r, file: null });
+      }
       if (toSave.length > 0) {
         setCompatibleStorageItem(STORAGE_KEY, JSON.stringify(toSave));
       } else {
@@ -279,8 +282,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     setShowConfirmModal(false);
     const ids = [...pendingResumeIds];
     setPendingResumeIds([]);
+    const resumeById = new Map(resumes.map(r => [r.id, r]));
     for (const id of ids) {
-      const resume = resumes.find(r => r.id === id);
+      const resume = resumeById.get(id);
       if (resume?.file) {
         await processResumeActual(id, resume.file);
       }
@@ -308,9 +312,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     }));
 
     setResumes(prev => [...prev, ...newResumes]);
-    // Process sequentially to avoid overwhelming the API with concurrent requests
+    // processResume is synchronous: it either queues the batch confirmation
+    // modal or kicks off a fire-and-forget parse, so there is nothing to await.
     for (const resume of newResumes) {
-      await processResume(resume.id, resume.file!);
+      processResume(resume.id, resume.file!);
     }
   }, [resumes.length, processResume]);
 
@@ -337,11 +342,13 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   }, []);
 
   const exportComparison = async () => {
-    const { jsPDF } = await import('jspdf');
-    const { default: autoTable } = await import('jspdf-autotable');
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
 
     const completedResumes = resumes.filter(r => r.status === 'completed' && r.analysis);
-    const sortedResumes = [...completedResumes].sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
+    const sortedResumes = completedResumes.toSorted((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
 
     // Create PDF document
     const doc = new jsPDF();
@@ -421,7 +428,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
   const canUploadMore = resumes.length < MAX_FILES;
   const completedResumes = resumes.filter(r => r.status === 'completed' && r.analysis);
-  const sortedResumes = [...completedResumes].sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
+  const sortedResumes = completedResumes.toSorted((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
 
   return (
     <div className="space-y-8">
@@ -498,6 +505,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               accept=".pdf,.docx"
               onChange={handleFileInput}
               className="hidden"
+              aria-label={t('sections.bulk.uploadTitle', 'Upload Resume Files')}
             />
 
             <div className="inline-flex flex-col items-center gap-3">

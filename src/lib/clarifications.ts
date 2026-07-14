@@ -157,26 +157,27 @@ export function formatClarificationAnswers(
   fallbackHardStopLabel = "I don't have this experience",
 ): FormattedClarifications {
   const positiveBlocks: string[] = [];
-  const hardStops: string[] = [];
-  const persistentHardStops: string[] = [];
+  const hardStopSet = new Set<string>();
+  const persistentHardStopSet = new Set<string>();
 
   for (const sourceQuestion of questions) {
     const question = normalizeClarificationQuestion(sourceQuestion, fallbackHardStopLabel);
     const answer = answers[question.id];
     if (!answer) continue;
 
-    const selectedOptions = question.options.filter(option => answer.selectedValues.includes(option.value));
+    const selectedValueSet = new Set(answer.selectedValues);
+    const selectedOptions = question.options.filter(option => selectedValueSet.has(option.value));
     const hardStopOptions = selectedOptions.filter(option => option.isHardStop);
-    const positiveLabels = selectedOptions.filter(option => !option.isHardStop).map(option => option.label);
-    const otherText = answer.selectedValues.includes(OTHER_OPTION_VALUE) && isValidOtherAnswer(answer.otherText)
+    const positiveLabels = selectedOptions.flatMap(option => option.isHardStop ? [] : [option.label]);
+    const otherText = selectedValueSet.has(OTHER_OPTION_VALUE) && isValidOtherAnswer(answer.otherText)
       ? answer.otherText.trim()
       : '';
 
     for (const term of hardStopOptions.map(option => formatHardStopTerm(question, option))) {
-      if (!hardStops.includes(term)) hardStops.push(term);
+      hardStopSet.add(term);
     }
     for (const term of hardStopOptions.map(option => keywordFromHardStopOption(question, option))) {
-      if (term && !persistentHardStops.includes(term)) persistentHardStops.push(term);
+      if (term) persistentHardStopSet.add(term);
     }
 
     const positiveEvidence = [...positiveLabels, ...(otherText ? [otherText] : [])];
@@ -187,8 +188,8 @@ export function formatClarificationAnswers(
 
   return {
     userClarifications: positiveBlocks.length > 0 ? positiveBlocks.join('\n\n') : undefined,
-    userHardStops: hardStops.length > 0 ? hardStops : undefined,
-    ...(persistentHardStops.length > 0 ? { persistentHardStops } : {}),
+    userHardStops: hardStopSet.size > 0 ? [...hardStopSet] : undefined,
+    ...(persistentHardStopSet.size > 0 ? { persistentHardStops: [...persistentHardStopSet] } : {}),
   };
 }
 

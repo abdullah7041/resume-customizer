@@ -122,7 +122,10 @@ export function ClarificationModal({
     setAnswers(previous => {
       const current = previous[question.id] ?? emptyAnswer();
       const isSelected = current.selectedValues.includes(option.value);
-      const hardStopValues = question.options.filter(item => item.isHardStop).map(item => item.value);
+      const hardStopValues = question.options.reduce((acc, item) => {
+        if (item.isHardStop) acc.add(item.value);
+        return acc;
+      }, new Set<string>());
       let selectedValues: string[];
 
       if (option.isHardStop) {
@@ -130,7 +133,7 @@ export function ClarificationModal({
       } else if (question.type === 'single') {
         selectedValues = isSelected ? [] : [option.value];
       } else {
-        const withoutHardStops = current.selectedValues.filter(value => !hardStopValues.includes(value));
+        const withoutHardStops = current.selectedValues.filter(value => !hardStopValues.has(value));
         selectedValues = isSelected
           ? withoutHardStops.filter(value => value !== option.value)
           : [...withoutHardStops, option.value];
@@ -255,7 +258,8 @@ export function ClarificationModal({
         <div className="p-6 space-y-5">
           {normalizedQuestions.map((q, idx) => {
             const answer = answers[q.id] ?? emptyAnswer();
-            const otherSelected = answer.selectedValues.includes(OTHER_OPTION_VALUE);
+            const selectedValueSet = new Set(answer.selectedValues);
+            const otherSelected = selectedValueSet.has(OTHER_OPTION_VALUE);
             const isInvalid = touched[q.id] && otherSelected && answer.otherText.trim().length > 0 && !isValidOtherAnswer(answer.otherText);
 
             return (
@@ -289,7 +293,7 @@ export function ClarificationModal({
 
                 <div className="space-y-2" role="group" aria-label={q.question}>
                   {[...q.options.filter(option => !option.isHardStop), ...(q.allowOther ? [{ value: OTHER_OPTION_VALUE, label: t('clarificationModal.otherOption', 'Other') }] : []), ...q.options.filter(option => option.isHardStop)].map((option, optionIndex) => {
-                    const selected = answer.selectedValues.includes(option.value);
+                    const selected = selectedValueSet.has(option.value);
                     return (
                       <button
                         key={option.value}

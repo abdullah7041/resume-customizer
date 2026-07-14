@@ -229,7 +229,7 @@ describe('resumeUtils', () => {
 
         describe('data immutability', () => {
             it('does not mutate original data', () => {
-                const original = JSON.parse(JSON.stringify(baseResume));
+                const original = structuredClone(baseResume);
                 const aiResult = {
                     optimization: { suggested_headline: 'New Title' }
                 };

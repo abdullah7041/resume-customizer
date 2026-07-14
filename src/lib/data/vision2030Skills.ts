@@ -808,10 +808,11 @@ export const CAREER_ARCHETYPES: CareerArchetype[] = [
 export function detectCareerArchetype(matchedSkillNames: string[]): CareerArchetype | null {
   let bestMatch: CareerArchetype | null = null;
   let bestScore = 0;
+  const matchedSkillSet = new Set(matchedSkillNames);
 
   for (const archetype of CAREER_ARCHETYPES) {
     const matchCount = archetype.primarySkills.filter(skill =>
-      matchedSkillNames.includes(skill)
+      matchedSkillSet.has(skill)
     ).length;
 
     // Score = matches / total primary skills (weighted)

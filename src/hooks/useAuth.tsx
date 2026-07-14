@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, createContext, useContext } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, createContext, useContext } from "react";
 import { resolveAuthRedirectUrl } from "../lib/auth/authRedirect";
 import { useResumeStore } from "@/lib/stores/resumeStore";
 import { flushSearchIntentOnSignIn } from "@/lib/onboarding/flushSearchIntent";
@@ -160,6 +160,42 @@ const trackReferralAfterSignup = async (userId: string, accessToken?: string) =>
   }
 };
 
+const signInWithGoogle = async (options: SignInWithGoogleOptions = {}) => {
+  if (options.intent === "signup") {
+    analytics.trackSignupStarted(options.source);
+  } else {
+    analytics.trackSigninStarted(options.source);
+  }
+
+  const redirectUrl = resolveRedirectUrl();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+  });
+  if (error) {
+    console.error("Google login error:", error.message);
+    return;
+  }
+
+  if (data?.url) {
+    let targetUrl;
+    try {
+      const authUrl = new URL(data.url);
+      if (redirectUrl) {
+        authUrl.searchParams.set("redirect_to", redirectUrl);
+      }
+      targetUrl = authUrl.toString();
+      // Enforce the computed redirect target across Supabase environments.
+      window.location.assign(targetUrl);
+    } catch (navigationError) {
+      console.error("Google redirect resolution failed:", navigationError);
+    }
+    return targetUrl ?? redirectUrl;
+  }
+
+  return redirectUrl;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -209,52 +245,21 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const signInWithGoogle = async (options: SignInWithGoogleOptions = {}) => {
-    if (options.intent === "signup") {
-      analytics.trackSignupStarted(options.source);
-    } else {
-      analytics.trackSigninStarted(options.source);
-    }
-
-    const redirectUrl = resolveRedirectUrl();
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
-    });
-    if (error) {
-      console.error("Google login error:", error.message);
-      return;
-    }
-
-    if (data?.url) {
-      let targetUrl;
-      try {
-        const authUrl = new URL(data.url);
-        if (redirectUrl) {
-          authUrl.searchParams.set("redirect_to", redirectUrl);
-        }
-        targetUrl = authUrl.toString();
-        // Enforce the computed redirect target across Supabase environments.
-        window.location.assign(targetUrl);
-      } catch (navigationError) {
-        console.error("Google redirect resolution failed:", navigationError);
-      }
-      return targetUrl ?? redirectUrl;
-    }
-
-    return redirectUrl;
-  };
-
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     clearSensitiveSessionData();
     setStoredAuthUserId(null);
     lastUserIdRef.current = null;
     setUser(null);
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, signInWithGoogle, signOut }),
+    [user, loading, signOut],
+  );
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

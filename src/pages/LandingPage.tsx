@@ -351,7 +351,7 @@ function ComparisonSection({ t }: { t: TranslationApi["t"] }) {
         <SectionHeader index="04" id="majlis-comparison-title" title={localizedText(t, "landing.majlis.s4Title", "Compare proof, not just templates.")} />
         <div className="majlis-comparison-table" role="table">
           <div className="majlis-comparison-head" role="row">
-            <span role="columnheader" />
+            <span role="columnheader" aria-hidden="true" />
             {columns.map((column) => (
               <span key={column} role="columnheader">
                 {column}

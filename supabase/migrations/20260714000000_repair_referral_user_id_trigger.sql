@@ -19,7 +19,7 @@ begin
   on conflict do nothing;
 
   insert into public.user_credits (user_id, email, credits_remaining, credits_total)
-  values (new.id, new.email, 15, 15)
+  values (new.id, new.email, 20, 20)
   on conflict (email) do update
   set user_id = excluded.user_id;
 

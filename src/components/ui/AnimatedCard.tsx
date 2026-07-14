@@ -12,6 +12,15 @@ interface AnimatedCardProps extends HTMLAttributes<HTMLElement> {
   tiltIntensity?: number;
 }
 
+const toneStyles = {
+  glass:
+    "border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-xl shadow-xl",
+  solid:
+    "border border-gray-200/50 dark:border-white/15 bg-white/60 dark:bg-black/60 backdrop-blur-xl shadow-xl",
+  translucent:
+    "border border-gray-200/50 dark:border-white/10 bg-white/30 dark:bg-black/30 backdrop-blur-lg shadow-lg",
+};
+
 /**
  * AnimatedCard - Enhanced Card with 3D tilt and hover effects
  * Simplified version without framer-motion
@@ -33,15 +42,6 @@ export const AnimatedCard = forwardRef<HTMLElement, AnimatedCardProps>(function 
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-
-  const toneStyles = {
-    glass:
-      "border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-xl shadow-xl",
-    solid:
-      "border border-gray-200/50 dark:border-white/15 bg-white/60 dark:bg-black/60 backdrop-blur-xl shadow-xl",
-    translucent:
-      "border border-gray-200/50 dark:border-white/10 bg-white/30 dark:bg-black/30 backdrop-blur-lg shadow-lg",
-  };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!enableTilt || !isHovered) return;

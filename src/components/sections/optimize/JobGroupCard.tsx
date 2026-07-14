@@ -22,7 +22,7 @@ interface JobGroupCardProps {
   refineInstruction: string;
   refineLoadingId: string | null;
   refineError: string | null;
-  refinableSections: string[];
+  refinableSections: ReadonlySet<string>;
   isArabic: boolean;
   onToggleCard: (sectionId: string) => void;
   onToggleCompare: (sectionId: string) => void;
@@ -67,7 +67,7 @@ export function JobGroupCard({
 }: JobGroupCardProps) {
   const { t } = useTranslation();
   const appliedCount = group.items.filter((item) => item.applied).length;
-  const pendingIds = group.items.filter((item) => !item.applied).map((item) => item.sectionId);
+  const pendingIds = group.items.flatMap((item) => item.applied ? [] : [item.sectionId]);
   const allApplied = pendingIds.length === 0;
 
   return (
@@ -138,6 +138,7 @@ export function JobGroupCard({
                   <span
                     role="button"
                     tabIndex={0}
+                    aria-label={t('sections.optimize.compare', 'Compare')}
                     onClick={(event) => {
                       event.stopPropagation();
                       onToggleCompare(opt.sectionId);
@@ -198,7 +199,7 @@ export function JobGroupCard({
                       </GlassButton>
                     )}
 
-                    {refinableSections.includes(opt.sectionType) && (
+                    {refinableSections.has(opt.sectionType) && (
                       <button
                         type="button"
                         onClick={() => onStartRefine(opt.sectionId)}
@@ -220,6 +221,7 @@ export function JobGroupCard({
                         onClick={() => void onCopy(textValue(opt.optimized))}
                         className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-2 text-gray-500 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white sm:w-auto"
                         title={t('common.copy', 'Copy Text')}
+                        aria-label={t('common.copy', 'Copy Text')}
                       >
                         <Copy className="h-4 w-4" />
                       </button>
@@ -228,7 +230,7 @@ export function JobGroupCard({
 
                   {refiningCardId === opt.sectionId && (
                     <div className="mt-4 rounded-xl border border-purple-500/15 bg-purple-500/5 p-4">
-                      <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                      <label htmlFor={`refine-input-${opt.sectionId}`} className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
                         <Wand2 className="h-3.5 w-3.5" />
                         {t('sections.optimize.refine.title', 'Refine this bullet')}
                       </label>
@@ -237,6 +239,7 @@ export function JobGroupCard({
                       </p>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <input
+                          id={`refine-input-${opt.sectionId}`}
                           type="text"
                           value={refineInstruction}
                           onChange={(event) => onRefineInstructionChange(event.target.value)}

@@ -15,7 +15,7 @@ import { redactForLog, summarizeErrorForLog } from "../lib/sentry.js";
 import { withRateLimit } from "../lib/rate-limiter.js";
 
 const WaitlistConfirmRequestSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   language: z.enum(["en", "ar"]).optional(),
 });
 

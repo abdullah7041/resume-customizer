@@ -1,7 +1,7 @@
 // src/components/ui/FormattingPanel.tsx
 // Collapsible side panel for live resume formatting controls
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Type, FileText, RotateCcw, Sparkles } from 'lucide-react';
@@ -101,6 +101,7 @@ export function FormattingPanel() {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const [isExpanded, setIsExpanded] = useState(true);
+    const fontStyleId = useId();
 
     const { displayOptions, setDisplayOptions } = useResumeStore();
 
@@ -171,10 +172,11 @@ export function FormattingPanel() {
 
                             {/* Font Style Dropdown */}
                             <div className="space-y-2">
-                                <label className="text-sm text-gray-700 dark:text-white/70">
+                                <label htmlFor={fontStyleId} className="text-sm text-gray-700 dark:text-white/70">
                                     {t('templates.formatting.fontStyle', 'Font Style')}
                                 </label>
                                 <motion.select
+                                    id={fontStyleId}
                                     whileTap={{ scale: 0.96 }}
                                     value={displayOptions.fontFamily}
                                     onChange={(e) => setDisplayOptions({ fontFamily: e.target.value })}

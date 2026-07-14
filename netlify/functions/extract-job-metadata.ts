@@ -1,7 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
-import { executeAiContract } from '../lib/ai-contracts/index.js';
+import { executeAiContract } from '../lib/ai-contracts/executor.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 import { z } from 'zod';
 

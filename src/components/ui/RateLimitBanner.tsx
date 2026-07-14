@@ -7,6 +7,12 @@ interface RateLimitBannerProps {
     onDismiss: () => void;
 }
 
+const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+};
+
 export function RateLimitBanner({ retryAfter, onRetry, onDismiss }: RateLimitBannerProps) {
     const { t, i18n } = useTranslation();
     const [countdown, setCountdown] = useState(retryAfter);
@@ -24,12 +30,6 @@ export function RateLimitBanner({ retryAfter, onRetry, onDismiss }: RateLimitBan
 
         return () => clearInterval(timer);
     }, [countdown]);
-
-    const formatTime = (seconds: number): string => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
-    };
 
     return (
         <div
@@ -58,6 +58,7 @@ export function RateLimitBanner({ retryAfter, onRetry, onDismiss }: RateLimitBan
                     <div className="mt-3 flex items-center gap-3">
                         {canRetry ? (
                             <button
+                                type="button"
                                 onClick={onRetry}
                                 className="px-4 py-2 bg-amber-500 text-black font-medium rounded-lg
                            hover:bg-amber-400 transition-colors"
@@ -73,6 +74,7 @@ export function RateLimitBanner({ retryAfter, onRetry, onDismiss }: RateLimitBan
                         )}
 
                         <button
+                            type="button"
                             onClick={onDismiss}
                             className="text-amber-400/60 hover:text-amber-400 text-sm"
                         >

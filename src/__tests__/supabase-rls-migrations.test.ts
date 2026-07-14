@@ -138,12 +138,24 @@ describe('Supabase RLS migration hardening', () => {
   });
 
   it('keeps future referral credit rows bound to the auth UUID', () => {
+    const appliedRepairSql = readMigrationSql('20260713000000_ensure_referral_schema.sql');
     const migrationSql = readMigrationSql('20260714000000_repair_referral_user_id_trigger.sql');
 
+    expect(appliedRepairSql).not.toContain('create or replace function public.initialize_user_credits()');
     expect(migrationSql).toContain('create or replace function public.initialize_user_credits()');
     expect(migrationSql).toContain('insert into public.user_credits (user_id, email, credits_remaining, credits_total)');
-    expect(migrationSql).toContain('values (new.id, new.email, 15, 15)');
+    expect(migrationSql).toContain('values (new.id, new.email, 20, 20)');
     expect(migrationSql).toContain('on conflict (email) do update');
     expect(migrationSql).toContain('user_id = excluded.user_id');
+  });
+
+  it('ships RLS policy changes as a forward migration', () => {
+    const migrationSql = readMigrationSql('20260714000001_tighten_rls_policies.sql');
+
+    expect(migrationSql).toContain('drop policy if exists credit_transactions_insert_service');
+    expect(migrationSql).toContain('drop policy if exists feedback_service_role');
+    expect(migrationSql).toContain('drop policy if exists user_credits_service_role');
+    expect(migrationSql).toContain('drop policy if exists waitlist_insert_policy');
+    expect(migrationSql).toContain('grant insert (email, plan_type, language, metadata)');
   });
 });

@@ -169,7 +169,7 @@ const resumeJsonSchema = {
   required: ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages', 'meta'],
 };
 
-const looseResumeOutput = z.object({
+const looseResumeOutput = z.looseObject({
   basics: z.record(z.string(), z.unknown()).optional().default({}),
   work: z.array(z.record(z.string(), z.unknown())).optional().default([]),
   education: z.array(z.record(z.string(), z.unknown())).optional().default([]),
@@ -178,7 +178,7 @@ const looseResumeOutput = z.object({
   certificates: z.array(z.record(z.string(), z.unknown())).optional().default([]),
   languages: z.array(z.record(z.string(), z.unknown())).optional().default([]),
   meta: z.record(z.string(), z.unknown()).optional().default({}),
-}).passthrough();
+});
 
 const optimizeJsonSchema = {
   type: 'object',
@@ -368,10 +368,11 @@ const matchOutput = z.object({
 function normalizeSummaryBullets(summaryBullets) {
   if (!Array.isArray(summaryBullets)) return [];
   return summaryBullets
-    .filter(item => typeof item === 'string')
-    .map(item => item.trim())
-    .filter(Boolean)
-    .map(item => item.slice(0, 120))
+    .flatMap(item => {
+      if (typeof item !== 'string') return [];
+      const trimmed = item.trim();
+      return trimmed ? [trimmed.slice(0, 120)] : [];
+    })
     .slice(0, 5);
 }
 
@@ -785,7 +786,7 @@ const vision2030JsonSchema = {
   required: ['overallScore', 'matchedSkills', 'missingSuggestions', 'sectorBreakdown', 'topSectors', 'allSectorsWithMatches', 'detectedCareer'],
 };
 
-const vision2030Output = z.object({
+const vision2030Output = z.looseObject({
   overallScore: z.number(),
   matchedSkills: z.array(z.record(z.string(), z.unknown())).default([]),
   missingSuggestions: z.array(z.record(z.string(), z.unknown())).default([]),
@@ -793,7 +794,7 @@ const vision2030Output = z.object({
   topSectors: z.array(z.string()).default([]),
   allSectorsWithMatches: z.array(z.string()).default([]),
   detectedCareer: z.record(z.string(), z.unknown()),
-}).passthrough();
+});
 
 function truncateText(text, maxChars) {
   if (typeof text !== 'string') return '';
@@ -912,7 +913,7 @@ function buildOptimizeMessages(input, context) {
     : '';
   const clarificationsBlock = optionalTaggedBlock('user_clarifications', input.userClarifications);
   const hardStops = Array.isArray(input.userHardStops)
-    ? input.userHardStops.filter(item => typeof item === 'string' && item.trim()).map(item => `- ${item.trim()}`).join('\n')
+    ? input.userHardStops.flatMap(item => (typeof item === 'string' && item.trim()) ? [`- ${item.trim()}`] : []).join('\n')
     : '';
   const hardStopsBlock = optionalTaggedBlock('user_hard_stops', hardStops);
   const hardStopInstruction = hardStops

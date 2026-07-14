@@ -123,17 +123,16 @@ export function verifyEvidenceSnippet(snippet, source, resumeText, jobText) {
 
 function sanitizeEvidence(evidence, resumeText, jobText) {
   return clampArray(evidence, ARRAY_LIMITS.evidence)
-    .map(item => {
+    .flatMap(item => {
       const source = ['resume', 'job_description', 'both'].includes(item?.source)
         ? item.source
         : 'both';
       const snippet = sanitizeText(item?.snippet, MAX_TEXT.evidence);
       if (!snippet || !verifyEvidenceSnippet(snippet, source, resumeText, jobText)) {
-        return null;
+        return [];
       }
-      return { source, snippet };
-    })
-    .filter(Boolean);
+      return [{ source, snippet }];
+    });
 }
 
 function sanitizeRiskType(value) {
@@ -174,26 +173,28 @@ function sanitizeConfirmedRisks(risks, resumeText, jobText) {
 }
 
 function sanitizeUnclearRisks(risks) {
-  return clampArray(risks, ARRAY_LIMITS.unclearRisks).map(risk => ({
-    type: sanitizeRiskType(risk?.type),
-    topic: sanitizeText(risk?.topic || risk?.title, MAX_TEXT.title),
-    reason: sanitizeText(risk?.reason || risk?.whyUnclear, MAX_TEXT.reason),
-    evidenceNeeded: sanitizeText(risk?.evidenceNeeded || risk?.suggestedQuestion, MAX_TEXT.mitigation),
-  })).filter(risk => risk.topic || risk.reason || risk.evidenceNeeded);
+  return clampArray(risks, ARRAY_LIMITS.unclearRisks).flatMap(risk => {
+    const sanitized = {
+      type: sanitizeRiskType(risk?.type),
+      topic: sanitizeText(risk?.topic || risk?.title, MAX_TEXT.title),
+      reason: sanitizeText(risk?.reason || risk?.whyUnclear, MAX_TEXT.reason),
+      evidenceNeeded: sanitizeText(risk?.evidenceNeeded || risk?.suggestedQuestion, MAX_TEXT.mitigation),
+    };
+    return (sanitized.topic || sanitized.reason || sanitized.evidenceNeeded) ? [sanitized] : [];
+  });
 }
 
 function sanitizeStrengths(strengths, resumeText, jobText) {
   return clampArray(strengths, ARRAY_LIMITS.strengths)
-    .map(strength => {
+    .flatMap(strength => {
       const evidence = sanitizeEvidence(strength?.evidence, resumeText, jobText);
-      if (evidence.length === 0) return null;
-      return {
+      if (evidence.length === 0) return [];
+      return [{
         title: sanitizeText(strength?.title, MAX_TEXT.title),
         whyItMatters: sanitizeText(strength?.whyItMatters, MAX_TEXT.explanation),
         evidence,
-      };
-    })
-    .filter(Boolean);
+      }];
+    });
 }
 
 export function buildFallbackStrategicRealityCheck(reason = 'Reality Check could not be confirmed from visible evidence.') {
@@ -229,9 +230,11 @@ export function postProcessStrategicRealityCheck(raw, { resumeText = '', jobText
       ...sanitizeUnclearRisks(raw.unclearRisks),
       ...downgraded,
     ].slice(0, ARRAY_LIMITS.unclearRisks);
-    const riskTypes = clampArray(raw.riskTypes, ARRAY_LIMITS.riskTypes)
-      .map(sanitizeRiskType)
-      .filter((value, index, array) => array.indexOf(value) === index);
+    const riskTypes = clampArray(raw.riskTypes, ARRAY_LIMITS.riskTypes).reduce((acc, item) => {
+      const mapped = sanitizeRiskType(item);
+      if (!acc.includes(mapped)) acc.push(mapped);
+      return acc;
+    }, []);
 
     return {
       riskTier: clampEnum(raw.riskTier, RISK_TIERS, 'medium'),
@@ -244,11 +247,15 @@ export function postProcessStrategicRealityCheck(raw, { resumeText = '', jobText
       unclearRisks,
       limits: {
         cannotDetermine: clampArray(raw.limits?.cannotDetermine, ARRAY_LIMITS.limits)
-          .map(item => sanitizeText(item, MAX_TEXT.reason))
-          .filter(Boolean),
+          .flatMap(item => {
+            const text = sanitizeText(item, MAX_TEXT.reason);
+            return text ? [text] : [];
+          }),
         assumptions: clampArray(raw.limits?.assumptions, ARRAY_LIMITS.limits)
-          .map(item => sanitizeText(item, MAX_TEXT.reason))
-          .filter(Boolean),
+          .flatMap(item => {
+            const text = sanitizeText(item, MAX_TEXT.reason);
+            return text ? [text] : [];
+          }),
       },
     };
   } catch {

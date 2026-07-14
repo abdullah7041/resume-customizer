@@ -173,6 +173,28 @@ describe('Template Data Completeness', () => {
         const html = container.innerHTML;
         expect(html).toContain('Riyadh Province');
       });
+
+      it('uses collision-safe keys for repeated resume entries', () => {
+        const duplicateResume = structuredClone(fullResume);
+        duplicateResume.work.push({ ...duplicateResume.work[0], name: 'Other TechCorp' });
+        duplicateResume.projects.push({ ...duplicateResume.projects[0], description: 'Second project' });
+        duplicateResume.education.push({ ...duplicateResume.education[0], area: 'Software Engineering' });
+        duplicateResume.certificates.push({ ...duplicateResume.certificates[0], issuer: 'Second Issuer' });
+        duplicateResume.languages.push({ ...duplicateResume.languages[0], fluency: 'Professional' });
+
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+        let duplicateKeyWarnings;
+        try {
+          render(<Component resume={duplicateResume} />);
+          duplicateKeyWarnings = consoleError.mock.calls.filter((call) =>
+            call.some((value) => String(value).includes('same key'))
+          );
+        } finally {
+          consoleError.mockRestore();
+        }
+
+        expect(duplicateKeyWarnings).toEqual([]);
+      });
     });
   });
 });

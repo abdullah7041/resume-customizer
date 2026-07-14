@@ -193,8 +193,8 @@ export function ModernProfessional({
             {getSectionLabel('experience')}
           </h2>
           <div className="space-y-5">
-            {work.map((job, i) => (
-              <div key={i} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
+          {work.map((job, jobIndex) => (
+            <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   <div className="flex justify-between items-baseline mb-1">
                     <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0, overflow: 'hidden' }}>
@@ -239,8 +239,8 @@ export function ModernProfessional({
             {getSectionLabel('projects')}
           </h2>
           <div className="space-y-4">
-            {projects.map((project, i) => (
-              <div key={i} style={{ breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
+          {projects.map((project, projectIndex) => (
+            <div key={`${project.name}-${projectIndex}`} style={{ breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ breakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   <h3 className="text-gray-900 mb-1" style={{ fontSize: fs(11.5), fontWeight: '700' }}>
                     {safeString(project.name)}
@@ -274,8 +274,8 @@ export function ModernProfessional({
             {getSectionLabel('education')}
           </h2>
           <div className="space-y-3">
-            {education.map((edu, i) => (
-              <div key={i} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
+          {education.map((edu, educationIndex) => (
+            <div key={`${edu.institution}-${edu.studyType}-${educationIndex}`} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ breakAfter: (edu.highlights && edu.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   <div className="flex justify-between items-baseline">
                     <div style={{ minWidth: 0, overflow: 'hidden' }}>
@@ -327,19 +327,19 @@ export function ModernProfessional({
             {getSectionLabel('skills')}
           </h2>
           <div className="flex flex-wrap gap-2">
-            {skills.map((skillItem, i) => {
+            {skills.map((skillItem, skillIndex) => {
               // Handle both string and object formats
               if (typeof skillItem === 'string') {
                 return (
-                  <span key={i} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: fs(10) }}>
+                  <span key={`${skillItem}-${skillIndex}`} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: fs(10) }}>
                     {skillItem}
                   </span>
                 );
               }
               // Object format
               const keywords = skillItem.keywords || [skillItem.name];
-              return keywords.map((skill: string, j: number) => (
-                <span key={`${i}-${j}`} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: fs(10) }}>
+              return keywords.map((skill: string, keywordIndex: number) => (
+                  <span key={`${skillItem.name}-${skill}-${skillIndex}-${keywordIndex}`} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: fs(10) }}>
                   {skill}
                 </span>
               ));
@@ -358,8 +358,8 @@ export function ModernProfessional({
             {getSectionLabel('certifications')}
           </h2>
           <div className="space-y-2">
-            {certificates.map((cert, i) => (
-              <div key={i} className="flex justify-between items-baseline">
+            {certificates.map((cert, certificateIndex) => (
+              <div key={`${cert.name}-${cert.date}-${certificateIndex}`} className="flex justify-between items-baseline">
                 <div>
                   <h3 className="text-gray-900" style={{ fontSize: fs(10.5), fontWeight: '600' }}>
                     {safeString(cert.name)}
@@ -391,10 +391,10 @@ export function ModernProfessional({
             {getSectionLabel('languages')}
           </h2>
           <div className="flex flex-wrap gap-4">
-            {languages.map((lang, i) => {
+            {languages.map((lang, languageIndex) => {
               const { language, fluency } = safeLang(lang);
               return (
-                <span key={i} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
+                <span key={`${language}-${languageIndex}`} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
                   <strong className="text-gray-900">{language}</strong>{fluency ? `: ${fluency}` : ''}
                 </span>
               );

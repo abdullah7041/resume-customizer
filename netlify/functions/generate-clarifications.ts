@@ -14,7 +14,7 @@
  */
 
 import { Handler } from '@netlify/functions';
-import { executeAiContract } from '../lib/ai-contracts/index.js';
+import { executeAiContract } from '../lib/ai-contracts/executor.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { ClarificationRequestSchema, formatZodError } from '../lib/resume-schemas.js';
 import { initSentry, captureError, redactForLog, summarizeErrorForLog } from '../lib/sentry.js';

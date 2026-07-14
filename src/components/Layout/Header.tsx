@@ -282,6 +282,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
             {/* Badge - signed-out trust signal only */}
             {isSignedOutHeader && (
               <button
+                type="button"
                 onClick={() => setBadgeFlipped(!badgeFlipped)}
                 className="hidden lg:inline-flex items-center gap-2 rounded-full border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-4 py-1.5 text-xs font-semibold tracking-wide text-emerald-700 backdrop-blur-xl shadow-sm ml-4 cursor-pointer transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:scale-105 hover:border-emerald-300 group dark:border-white/10 dark:bg-white/[0.06] dark:text-emerald-200"
                 aria-label={badgeFlipped ? t("header.badgeAlt") : t("header.badge")}
@@ -423,6 +424,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
               ) : (
                 <>
                   <button
+                    type="button"
                     onClick={toggleTheme}
                     className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out shadow-sm bg-[color:var(--surface-control)] border-[color:var(--glass-border)] text-slate-700 hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
                     aria-label={t('common.toggleTheme', 'Toggle theme')}
@@ -467,6 +469,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 </div>
               )}
               <button
+                type="button"
                 onClick={() => setMobileNavOpen(true)}
                 className={cn(
                   "relative inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out active:scale-[0.96]",
@@ -495,6 +498,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
           onClick={handleMobileNavOutsideClick}
           aria-modal="true"
           role="dialog"
+          aria-label={t('common.openNavigation', 'Open navigation menu')}
         >
           {/* Backdrop */}
           <motion.div
@@ -525,6 +529,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
 
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={toggleTheme}
                   className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-slate-700 dark:text-white transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-[0.96]"
                   aria-label={t('common.toggleTheme', 'Toggle theme')}
@@ -532,6 +537,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                   {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setMobileNavOpen(false)}
                   className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-[0.96]"
                   aria-label={t('common.closeNavigation', 'Close navigation menu')}
@@ -576,6 +582,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
 
                   {/* Invite Friends Button (Mobile) */}
                   <button
+                    type="button"
                     onClick={() => {
                       setCreditModalMode('invite-only');
                       setShowCreditModal(true);
@@ -597,6 +604,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 {user ? (
                   <>
                     <button
+                      type="button"
                       onClick={() => {
                         signOut();
                         setMobileNavOpen(false);
@@ -607,6 +615,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                       <span>{t("common.signOut")}</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         setShowSettingsModal(true);
                         setMobileNavOpen(false);
@@ -618,6 +627,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                     </button>
                     {feedbackEnabled && (
                     <button
+                      type="button"
                       onClick={() => {
                         setShowFeedbackModal(true);
                         setMobileNavOpen(false);
@@ -631,6 +641,7 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                   </>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => {
                       void signInWithGoogle({ intent: "signin", source: "header_mobile" });
                       setMobileNavOpen(false);

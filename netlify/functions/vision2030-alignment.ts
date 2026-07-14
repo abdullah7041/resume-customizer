@@ -1,6 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import { executeAiContract } from '../lib/ai-contracts/index.js';
+import { executeAiContract } from '../lib/ai-contracts/executor.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { Vision2030RequestSchema, formatZodError } from '../lib/resume-schemas.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';

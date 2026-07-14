@@ -51,8 +51,10 @@ export function Vision2030CalculationModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 rounded-full text-gray-500 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            aria-label={t('common.close', 'Close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -152,8 +154,8 @@ export function Vision2030CalculationModal({
                   title: t('vision2030.calculation.privacyTitle', 'Total Privacy'),
                   desc: t('vision2030.calculation.privacyDesc', 'Analysis happens locally on your device.')
                 }
-              ].map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 rounded-lg bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5">
+              ].map((item) => (
+                <div key={item.title} className="flex gap-3 p-3 rounded-lg bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5">
                   <item.icon className="w-4 h-4 text-emerald-500/60 shrink-0" />
                   <div>
                     <div className="font-medium text-gray-900 dark:text-white text-xs">{item.title}</div>
@@ -187,6 +189,7 @@ export function Vision2030CalculationModal({
         {/* Footer */}
         <div className="p-4 border-t border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-control)] dark:bg-white/[0.04] flex justify-end">
           <button
+            type="button"
             onClick={onClose}
             className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:-translate-y-0.5 transition-[background-color,box-shadow,translate] text-xs"
           >

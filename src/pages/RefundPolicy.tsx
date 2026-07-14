@@ -1,14 +1,15 @@
 import { useTranslation } from 'react-i18next';
 
 const REFUND_POLICY_EFFECTIVE_DATE = new Date('2026-07-12T00:00:00.000Z');
+const REFUND_POLICY_DATE_FORMATTERS = {
+  ar: new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long', timeZone: 'UTC' }),
+  en: new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }),
+};
 
 export function RefundPolicy() {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
-  const effectiveDate = new Intl.DateTimeFormat(isArabic ? 'ar-SA' : 'en-US', {
-    dateStyle: 'long',
-    timeZone: 'UTC',
-  }).format(REFUND_POLICY_EFFECTIVE_DATE);
+  const effectiveDate = REFUND_POLICY_DATE_FORMATTERS[isArabic ? 'ar' : 'en'].format(REFUND_POLICY_EFFECTIVE_DATE);
 
   return (
     <div className="min-h-screen bg-[color:var(--surface)] py-12 px-4">

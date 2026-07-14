@@ -8,6 +8,7 @@ export function LanguageSwitcher() {
 
   return (
     <button
+      type="button"
       onClick={toggleLanguage}
       className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[color:var(--surface-control)] dark:bg-black/40 backdrop-blur-xl border border-[color:var(--glass-border)] dark:border-white/10 hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/15 hover:border-[color:var(--glass-border-strong)] dark:hover:border-white/20 transition-[color,background-color,border-color,scale] duration-200 ease-out active:scale-[0.96] text-sm font-medium shadow-sm text-gray-800 dark:text-white"
       aria-label={t('common.language', 'Language')}

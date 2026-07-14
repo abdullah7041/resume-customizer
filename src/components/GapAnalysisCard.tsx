@@ -42,7 +42,7 @@ const severityConfig = {
 export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) {
     const { t } = useTranslation();
     // Change to Set for multiple expanded items
-    const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set([0]));
+    const [expandedIndices, setExpandedIndices] = useState<Set<number>>(() => new Set([0]));
 
     if (!gaps || gaps.length === 0) return null;
 
@@ -103,6 +103,7 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
                         {/* Expand/Collapse All Controls */}
                         <div className="flex items-center bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/5 p-0.5">
                             <button
+                                type="button"
                                 onClick={allExpanded ? collapseAll : expandAll}
                                 className="px-2 py-1 text-[10px] font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
                             >
@@ -135,6 +136,7 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
                             >
                                 {/* Clickable Header */}
                                 <button
+                                    type="button"
                                     onClick={() => toggleGap(index)}
                                     className="w-full px-4 py-3.5 flex items-start text-left gap-3"
                                 >

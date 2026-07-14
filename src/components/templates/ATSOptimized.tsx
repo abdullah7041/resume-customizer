@@ -17,6 +17,9 @@ const DEFAULT_OPTIONS = {
     marginSide: 0.6,
 };
 
+// Separator element for contact line
+const Sep = () => <span> | </span>;
+
 /**
  * ATS Optimized Template
  * Single-column layout optimized for Applicant Tracking Systems
@@ -82,9 +85,6 @@ export function ATSOptimized({
         marginBottom: `${opts.paragraphSpacing}px`,
         breakAfter: 'avoid' as const,
     };
-
-    // Separator element for contact line
-    const Sep = () => <span> | </span>;
 
     return (
         <div
@@ -186,8 +186,8 @@ export function ATSOptimized({
                     <h2 className="text-black" style={headingStyle}>
                         {getSectionLabel('workExperience')}
                     </h2>
-                    {work.map((job, index) => (
-                        <div key={index} className="mb-4" style={{ breakInside: 'avoid' }}>
+                    {work.map((job, jobIndex) => (
+                        <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} className="mb-4" style={{ breakInside: 'avoid' }}>
                             <div className="flex justify-between items-baseline">
                                 <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                     <span className="font-semibold" style={{ fontSize: fs(12) }}>{safeString(job.position)}</span>
@@ -220,8 +220,8 @@ export function ATSOptimized({
                     <h2 className="text-black" style={headingStyle}>
                         {getSectionLabel('keyProjects')}
                     </h2>
-                    {projects.map((project, index) => (
-                        <div key={index} className="mb-3" style={{ breakInside: 'avoid' }}>
+                    {projects.map((project, projectIndex) => (
+                        <div key={`${project.name}-${projectIndex}`} className="mb-3" style={{ breakInside: 'avoid' }}>
                             <p className="font-semibold" style={{ fontSize: fs(11) }}>{safeString(project.name)}</p>
                             {project.description && (
                                 <p className="text-black" style={{ fontSize: fs(10.5) }}>{project.description}</p>
@@ -246,9 +246,9 @@ export function ATSOptimized({
                     <h2 className="text-black" style={headingStyle}>
                         {getSectionLabel('education')}
                     </h2>
-                    {education.map((edu, index) => (
+                    {education.map((edu, educationIndex) => (
                         <div
-                            key={index}
+                            key={`${edu.institution}-${edu.studyType}-${educationIndex}`}
                             className="mb-3"
                             style={{ breakInside: filterEducationHighlights(edu.highlights).length > 4 ? 'auto' : 'avoid' }}
                         >
@@ -287,8 +287,8 @@ export function ATSOptimized({
                         {getSectionLabel('certificationsTraining')}
                     </h2>
                     <div className="space-y-2">
-                        {certificates.map((cert, index) => (
-                            <div key={index} className="flex justify-between items-baseline">
+                    {certificates.map((cert, certificateIndex) => (
+                        <div key={`${typeof cert === 'string' ? cert : `${cert.name}-${cert.date}`}-${certificateIndex}`} className="flex justify-between items-baseline">
                                 <div>
                                     <span className="font-semibold" style={{ fontSize: fs(10.5) }}>
                                         {typeof cert === 'string' ? cert : safeString(cert.name)}

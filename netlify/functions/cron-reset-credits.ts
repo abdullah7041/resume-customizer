@@ -13,8 +13,15 @@ import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { FREE_TIER_CREDITS } from '../lib/credit-manager.js';
 import { requireScheduledFunctionGate } from '../lib/admin-gates.js';
+import { batchWithConcurrency, RateLimiter } from '../lib/rate-limiter.js';
 import { sendCreditsRefreshedEmail } from '../lib/email-service.js';
 import { redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
+
+const emailRateLimiter = new RateLimiter({
+  maxConcurrent: 1,
+  minDelayBetweenRequestsMs: 500,
+  maxRequestsPerMinute: 120,
+});
 
 const handler: Handler = async (event) => {
   console.log('[cron-reset-credits] Starting scheduled credit reset...');
@@ -87,8 +94,10 @@ const handler: Handler = async (event) => {
     let emailFailCount = 0;
     const errors: Array<{ userId: string; error: string }> = [];
 
-    // Process each user
-    for (const userCredit of usersNeedingReset) {
+    // Process users a few at a time — each user's update → log → email chain
+    // must stay in order, but users are independent of each other. Concurrency
+    // stays low because the email step is Resend-rate-limited (~2 req/s).
+    await batchWithConcurrency(usersNeedingReset, async (userCredit) => {
       try {
         const email = userCredit.email;
         const authUserInfo = authUserMap.get(email);
@@ -96,7 +105,7 @@ const handler: Handler = async (event) => {
         if (!email) {
           console.warn(`[cron-reset-credits] User record missing email, skipping`);
           errors.push({ userId: 'unknown', error: 'Missing email' });
-          continue;
+          return;
         }
 
         // Reset to the free-tier allowance — must always match the signup grant
@@ -114,7 +123,7 @@ const handler: Handler = async (event) => {
         if (updateError) {
           console.error(`[cron-reset-credits] Failed to reset credits for user ${redactForLog(email)}:`, summarizeErrorForLog(updateError));
           errors.push({ userId: email, error: `Failed to update credits: ${updateError.message}` });
-          continue;
+          return;
         }
 
         // Log transaction
@@ -152,7 +161,7 @@ const handler: Handler = async (event) => {
         console.error(`[cron-reset-credits] Error processing user:`, errorMsg);
         errors.push({ userId: userCredit.email, error: errorMsg });
       }
-    }
+    }, { concurrency: 2, rateLimiter: emailRateLimiter });
 
     console.log(`[cron-reset-credits] Completed: ${successCount} users processed, ${emailFailCount} email failures, ${errors.length} errors`);
 

@@ -640,7 +640,10 @@ export const useResumeStore = create<ResumeState>()(
                 }
                 suggestedSkills = cleanedValue.split(',').map(s => s.trim()).filter(Boolean);
               } else if (Array.isArray(optimizedValue)) {
-                suggestedSkills = optimizedValue.map(s => typeof s === 'string' ? s.trim() : String(s)).filter(Boolean);
+                suggestedSkills = optimizedValue.flatMap(s => {
+                  const skill = typeof s === 'string' ? s.trim() : String(s);
+                  return skill ? [skill] : [];
+                });
               }
 
               // Log the suggestions but DO NOT add to resume

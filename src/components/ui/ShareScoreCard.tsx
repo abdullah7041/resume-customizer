@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect, type RefObject } from 'react';
+import { useRef, useState, useCallback, useEffect, type RefObject, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Share2, Download, Copy, Check, X } from 'lucide-react';
@@ -13,6 +13,39 @@ interface ShareScoreCardProps {
 }
 
 const WATHEQ_URL = 'https://watheqai.app';
+
+const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-emerald-600 dark:text-emerald-400';
+    if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-orange-600 dark:text-orange-400';
+};
+
+// Static base for the 1200x630 capture card; `direction` is applied at the call site
+// since it depends on `isArabic`.
+const canvasCardBaseStyle: CSSProperties = {
+    width: 1200,
+    height: 630,
+    padding: 60,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    background: 'linear-gradient(135deg, #064e3b 0%, #065f46 30%, #047857 60%, #059669 100%)',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    color: 'white',
+    position: 'relative',
+    overflow: 'hidden',
+};
+
+const canvasLogoIconStyle: CSSProperties = {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    background: 'rgba(255,255,255,0.15)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 24,
+};
 
 /**
  * Hidden off-screen 1200x630 card rendered for html2canvas capture only.
@@ -47,17 +80,7 @@ function HiddenCanvasCard({
             <div
                 ref={cardRef}
                 style={{
-                    width: 1200,
-                    height: 630,
-                    padding: 60,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    background: 'linear-gradient(135deg, #064e3b 0%, #065f46 30%, #047857 60%, #059669 100%)',
-                    fontFamily: 'system-ui, -apple-system, sans-serif',
-                    color: 'white',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    ...canvasCardBaseStyle,
                     direction: isArabic ? 'rtl' : 'ltr',
                 }}
             >
@@ -87,18 +110,7 @@ function HiddenCanvasCard({
 
                 {/* Top: Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, position: 'relative', zIndex: 1 }}>
-                    <div
-                        style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 12,
-                            background: 'rgba(255,255,255,0.15)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 24,
-                        }}
-                    >
+                    <div style={canvasLogoIconStyle}>
                         {isArabic ? 'و' : 'W'}
                     </div>
                     <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: 1 }}>
@@ -262,12 +274,6 @@ export function ShareScoreCard({ beforeScore, afterScore, jobTitle, onClose }: S
         }
     }, [isArabic, getShareText, beforeScore, afterScore, improvement]);
 
-    const getScoreColor = (score: number) => {
-        if (score >= 80) return 'text-emerald-600 dark:text-emerald-400';
-        if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
-        return 'text-orange-600 dark:text-orange-400';
-    };
-
     const modal = (
         <>
             {/* Hidden off-screen card for PNG capture */}
@@ -283,10 +289,12 @@ export function ShareScoreCard({ beforeScore, afterScore, jobTitle, onClose }: S
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-black/80 backdrop-blur-sm"
                 onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+                onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
             >
                 <div className="relative w-[min(90vw,420px)] bg-white dark:bg-[#0a0a0a]/95 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden">
                     {/* Close button */}
                     <button
+                        type="button"
                         onClick={onClose}
                         className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white transition-colors"
                         aria-label="Close"

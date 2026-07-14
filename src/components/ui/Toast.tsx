@@ -106,7 +106,9 @@ export default function Toast({ title, description, type = "info", onDismiss }) 
 
         {onDismiss && (
           <button
+            type="button"
             onClick={onDismiss}
+            aria-label="Dismiss"
             className="group/close -mr-1 -mt-1 flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-[color,background-color,scale] duration-150 ease-out active:scale-[0.96] hover:bg-gray-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-300"
           >
             <X className="h-3.5 w-3.5" />

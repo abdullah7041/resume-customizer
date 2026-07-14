@@ -180,6 +180,7 @@ export function PricingWaitlistModal({
               </p>
             </div>
             <button
+              type="button"
               onClick={handleDismiss}
               className="shrink-0 rounded-full p-2 text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
               aria-label={t('common.closeDialog', 'Close dialog')}

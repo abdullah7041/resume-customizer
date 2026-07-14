@@ -98,7 +98,7 @@ export function splitTextWithKeywords(
 
   // Sort keywords by length (longest first) to handle overlapping matches correctly
   // e.g., "machine learning" should match before "machine"
-  const sortedKeywords = [...topKeywords].sort((a, b) => b.length - a.length);
+  const sortedKeywords = topKeywords.toSorted((a, b) => b.length - a.length);
 
   // Escape special regex characters and build pattern
   const escapedKeywords = sortedKeywords.map(k => escapeRegex(k));
@@ -107,20 +107,20 @@ export function splitTextWithKeywords(
   // Split text using regex while preserving delimiters (the keywords themselves)
   const parts = text.split(pattern);
 
-  // Map each part to a TextSegment
-  const segments: TextSegment[] = parts
-    .filter(part => part.length > 0) // Remove empty strings
-    .map(part => {
-      // Check if this part is a keyword (case-insensitive)
-      const isKeyword = sortedKeywords.some(
-        keyword => normalizeText(part) === normalizeText(keyword)
-      );
+  // Map each non-empty part to a TextSegment
+  const segments: TextSegment[] = parts.flatMap(part => {
+    if (part.length === 0) return []; // Remove empty strings
 
-      return {
-        text: part,
-        bold: isKeyword,
-      };
-    });
+    // Check if this part is a keyword (case-insensitive)
+    const isKeyword = sortedKeywords.some(
+      keyword => normalizeText(part) === normalizeText(keyword)
+    );
+
+    return [{
+      text: part,
+      bold: isKeyword,
+    }];
+  });
 
   return segments;
 }

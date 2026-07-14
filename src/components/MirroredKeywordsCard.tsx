@@ -51,6 +51,7 @@ export function MirroredKeywordsCard({
                         <div className="flex flex-wrap gap-2">
                             {mirroredPhrases.map((phrase, index) => (
                                 <button
+                                    type="button"
                                     key={index}
                                     onClick={() => handleCopy(phrase, index)}
                                     className={`

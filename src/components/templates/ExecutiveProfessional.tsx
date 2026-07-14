@@ -187,8 +187,8 @@ export function ExecutiveProfessional({
             {getSectionLabel('experience')}
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: `${opts.paragraphSpacing + 4}px` }}>
-            {work.map((job, i) => (
-              <div key={i} style={{ pageBreakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
+            {work.map((job, jobIndex) => (
+              <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} style={{ pageBreakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ pageBreakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto', breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   {/* Position + Date on same row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
@@ -228,8 +228,8 @@ export function ExecutiveProfessional({
             {getSectionLabel('projects')}
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: `${opts.paragraphSpacing + 2}px` }}>
-            {projects.map((project, i) => (
-              <div key={i} style={{ pageBreakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
+            {projects.map((project, projectIndex) => (
+              <div key={`${project.name}-${projectIndex}`} style={{ pageBreakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ pageBreakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto', breakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   <h3 style={{ fontSize: fs(10.5), fontWeight: '700', color: '#1a5276', marginBottom: '2px' }}>
                     {safeString(project.name)}
@@ -260,15 +260,15 @@ export function ExecutiveProfessional({
             {getSectionLabel('skills')}
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            {skills.map((skillItem, i) => {
+            {skills.map((skillItem, skillIndex) => {
               if (typeof skillItem === 'string') {
                 return (
-                  <p key={i} style={{ fontSize: fs(10), color: '#333' }}>{skillItem}</p>
+                  <p key={`${skillItem}-${skillIndex}`} style={{ fontSize: fs(10), color: '#333' }}>{skillItem}</p>
                 );
               }
               const keywords = skillItem.keywords || [skillItem.name];
               return (
-                <p key={i} style={{ fontSize: fs(10), color: '#333', lineHeight: String(opts.lineHeight) }}>
+                <p key={`${skillItem.name}-${skillIndex}`} style={{ fontSize: fs(10), color: '#333', lineHeight: String(opts.lineHeight) }}>
                   <strong style={{ color: ACCENT_COLOR }}>{skillItem.name}:</strong>{' '}
                   {keywords.join(', ')}
                 </p>
@@ -285,9 +285,9 @@ export function ExecutiveProfessional({
             {getSectionLabel('education')}
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            {education.map((edu, i) => (
+            {education.map((edu, educationIndex) => (
               <div
-                key={i}
+                key={`${edu.institution}-${edu.studyType}-${educationIndex}`}
                 style={{
                   fontSize: fs(10),
                   color: '#333',
@@ -327,8 +327,8 @@ export function ExecutiveProfessional({
             {getSectionLabel('certifications')}
           </h2>
           <ul style={{ paddingLeft: '16px', margin: 0, listStyleType: 'disc' }}>
-            {certificates.map((cert, i) => (
-              <li key={i} style={{ fontSize: fs(10), color: '#333', marginBottom: '3px' }}>
+            {certificates.map((cert, certificateIndex) => (
+              <li key={`${cert.name}-${cert.date}-${certificateIndex}`} style={{ fontSize: fs(10), color: '#333', marginBottom: '3px' }}>
                 <strong>{safeString(cert.name)}</strong>
                 {cert.date && <span style={{ color: '#555' }}> ({cert.date})</span>}
                 {cert.issuer && (
@@ -352,7 +352,7 @@ export function ExecutiveProfessional({
             {languages.map((lang, i) => {
               const { language, fluency } = safeLang(lang);
               return (
-                <span key={i}>
+                <span key={`${language}-${i}`}>
                   {i > 0 && <span style={{ color: '#999', margin: '0 8px' }}>&bull;</span>}
                   <strong style={{ color: '#1a1a1a' }}>{language}</strong>
                   {fluency && `: ${fluency}`}
