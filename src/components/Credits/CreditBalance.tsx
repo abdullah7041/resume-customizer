@@ -128,7 +128,7 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
         </div>
 
         <div className="flex flex-col items-start gap-0.5">
-          <span className={cn(isCompact ? 'text-xs font-bold' : 'text-sm font-extrabold tracking-wide', colorClasses.text)}>
+          <span className={cn('whitespace-nowrap', isCompact ? 'text-xs font-bold' : 'text-sm font-extrabold tracking-wide', colorClasses.text)}>
             <span dir={isArabic ? 'rtl' : 'ltr'} className="inline-block" style={{ unicodeBidi: 'isolate' }}>
               {balanceDisplay}
             </span>

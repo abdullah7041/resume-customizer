@@ -69,11 +69,13 @@ const loadPdfjs = async () => {
   if (pdfjsLibPromise !== undefined) {
     return pdfjsLibPromise;
   }
-  pdfjsLibPromise = import("pdfjs-dist/legacy/build/pdf.mjs")
-    .then((module) => {
+  pdfjsLibPromise = Promise.all([
+    import("pdfjs-dist/legacy/build/pdf.mjs"),
+    import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
+  ])
+    .then(([module, workerModule]) => {
       if (module?.GlobalWorkerOptions) {
-        module.GlobalWorkerOptions.workerSrc = "";
-        module.GlobalWorkerOptions.workerPort = null;
+        module.GlobalWorkerOptions.workerSrc = workerModule.default;
       }
       return module;
     })
@@ -540,10 +542,9 @@ const extractPdfPlainText = async (arrayBuffer) => {
     try {
       const document = await pdfjs.getDocument({
         data: arrayBuffer,
-        disableWorker: true,
-        cMapUrl: "https://unpkg.com/pdfjs-dist@5.4.394/cmaps/",
+        cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
         cMapPacked: true,
-        standardFontDataUrl: "https://unpkg.com/pdfjs-dist@5.4.394/standard_fonts/",
+        standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
       }).promise;
       const lines = [];
 

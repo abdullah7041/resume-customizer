@@ -22,6 +22,10 @@ const mockGeminiClient = {
     parseResumeOnly: vi.fn()
 };
 
+const mockOcrExtract = {
+    extractScannedPdfText: vi.fn()
+};
+
 const mockResumeText = {
     extractPlainTextFromArrayBuffer: vi.fn(),
     inferMimeType: vi.fn(),
@@ -53,6 +57,7 @@ const mockSentry = {
 };
 
 vi.mock('../../lib/gemini-client', () => mockGeminiClient);
+vi.mock('../../lib/ocr-extract.js', () => mockOcrExtract);
 vi.mock('../../lib/resumeText.js', () => mockResumeText);
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
 vi.mock('../../lib/supabase-client.js', () => mockSupabaseClientModule);
@@ -71,6 +76,7 @@ describe('extract-resume-json function', () => {
             data: { user: { id: 'user-1', email: 'user@example.com' } },
             error: null,
         });
+        mockOcrExtract.extractScannedPdfText.mockRejectedValue(new Error('OCR unavailable in unit test'));
     });
 
     it('rejects GET requests with 405', async () => {
@@ -124,7 +130,7 @@ describe('extract-resume-json function', () => {
 
         const body = JSON.parse(result.body);
         expect(body.document.basics.name).toBe("John Doe");
-        expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false);
+        expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false, expect.objectContaining({ timeoutMs: expect.any(Number) }));
     });
 
     it('handles file input with pre-extraction success', async () => {
@@ -155,7 +161,7 @@ describe('extract-resume-json function', () => {
 
         const body = JSON.parse(result.body);
         expect(body.document.plainText).toBe(mockText);
-        expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(mockText, false);
+        expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(mockText, false, expect.objectContaining({ timeoutMs: expect.any(Number) }));
     });
 
     it('rejects scanned PDFs without attempting inline PDF AI fallback', async () => {
@@ -173,7 +179,10 @@ describe('extract-resume-json function', () => {
 
         const result = await handler(event as any, mockContext) as HandlerResponse;
         expect(result.statusCode).toBe(422);
-        expect(JSON.parse(result.body).error).toContain('Could not extract readable text');
+        // Signed-in PDF: OCR fallback is attempted (and fails here), so the
+        // 422 explains the OCR attempt instead of the generic unreadable copy.
+        expect(JSON.parse(result.body).error).toContain("We couldn't finish reading this scanned file");
+        expect(JSON.parse(result.body).code).toBe('resume/unreadable-file');
         expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
     });
 
@@ -196,7 +205,9 @@ describe('extract-resume-json function', () => {
         const body = JSON.parse(result.body);
 
         expect(result.statusCode).toBe(422);
-        expect(body.details).toContain('Scanned or image-only resumes are not currently supported');
+        // OCR was attempted for this signed-in PDF, so the details call that out.
+        expect(body.details).toContain('OCR fallback was attempted');
+        expect(body.code).toBe('resume/unreadable-file');
         expect(mockGeminiClient.parseResumeOnly).not.toHaveBeenCalled();
     });
 
@@ -331,7 +342,7 @@ describe('extract-resume-json function', () => {
             const result = await handler(event as any, mockContext) as HandlerResponse;
             expect(result.statusCode).toBe(200);
             expect(mockSupabaseClient.auth.getUser).not.toHaveBeenCalled();
-            expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false);
+            expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false, expect.objectContaining({ timeoutMs: expect.any(Number) }));
         });
 
         it('applies stricter size limits to guest preview text payloads', async () => {
@@ -430,7 +441,7 @@ describe('extract-resume-json function', () => {
 
             const body = JSON.parse(result.body);
             expect(body.document.basics.name).toBe("John Doe");
-            expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false);
+            expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(text, false, expect.objectContaining({ timeoutMs: expect.any(Number) }));
             expect(mockRateLimiter.checkGuestPreviewRateLimit).not.toHaveBeenCalled();
         });
     });

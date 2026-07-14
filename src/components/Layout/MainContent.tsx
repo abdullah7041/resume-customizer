@@ -950,16 +950,23 @@ export default function MainContent() {
         const parsed = await parseResume(parseInput, {
           signal,
           guestPreview: isGuestMode,
-          // Notify the user when the browser cannot extract enough selectable text.
+          // Notify the user when the browser cannot extract enough selectable
+          // text. parseResume fires this at most once per upload (not per retry
+          // attempt), so a single calm hint replaces the old repeated toast.
           onOcrFallback: () => {
             pushToast(
               {
                 type: 'info',
-                title: t('toasts.ocrFallbackTitle', 'Checking document text'),
-                description: t(
-                  'toasts.ocrFallbackDesc',
-                  'This file has little selectable text. If it is scanned or image-based, paste the resume text or upload a text-based PDF.'
-                ),
+                title: t('toasts.ocrFallbackTitle', 'Scanned document detected'),
+                description: isGuestMode
+                  ? t(
+                    'toasts.ocrFallbackGuestDesc',
+                    'This file has little selectable text. Paste your resume text or upload a text-based PDF, or sign in to enable scanned-document reading.'
+                  )
+                  : t(
+                    'toasts.ocrFallbackDesc',
+                    'This file has little selectable text, so we\'re reading it with OCR — this can take a little longer.'
+                  ),
               },
               { id: TOAST_IDS.upload }
             );

@@ -98,8 +98,14 @@ const mockResumeText = {
 };
 vi.mock('../../lib/resumeText.js', () => mockResumeText);
 
+let rateLimitDelayMs = 0;
 const mockRateLimiter = {
-  withRateLimit: (_n: string, h: Function) => h,
+  withRateLimit: (_n: string, h: Function) => async (...args: unknown[]) => {
+    if (rateLimitDelayMs > 0) {
+      vi.setSystemTime(Date.now() + rateLimitDelayMs);
+    }
+    return h(...args);
+  },
   checkGuestPreviewRateLimit: vi.fn(() => Promise.resolve({ allowed: true })),
 };
 vi.mock('../../lib/rate-limiter', () => mockRateLimiter);
@@ -131,6 +137,7 @@ const fileEvent = (extra: Record<string, unknown> = {}, headers: Record<string, 
 describe('extract-resume-json — scanned/image-only PDF OCR fallback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    rateLimitDelayMs = 0;
     process.env.OPENROUTER_API_KEY = 'test-key';
     mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue('');
     mockResumeText.inferMimeType.mockReturnValue('application/pdf');
@@ -173,6 +180,22 @@ describe('extract-resume-json — scanned/image-only PDF OCR fallback', () => {
     // call may reserve its old standalone timeout (25s OCR + 20s parse = 45s).
     expect(mockCallOpenRouter.mock.calls[0][3].timeoutMs).toBeLessThanOrEqual(12_000);
     expect(fakeParse.mock.calls[0][2]?.timeoutMs).toBeLessThanOrEqual(12_000);
+  });
+
+  it('counts rate-limit latency against the OCR gateway budget', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-13T00:00:00.000Z'));
+    rateLimitDelayMs = 3_000;
+
+    try {
+      const result = (await handler(fileEvent() as any, mockContext)) as HandlerResponse;
+
+      expect(result.statusCode).toBe(200);
+      expect(mockCallOpenRouter.mock.calls[0][3].timeoutMs).toBeLessThanOrEqual(8_500);
+    } finally {
+      rateLimitDelayMs = 0;
+      vi.useRealTimers();
+    }
   });
 
   it('does NOT run OCR for guest previews — returns the unreadable-file rejection', async () => {

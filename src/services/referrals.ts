@@ -7,6 +7,8 @@ export interface ReferralSummary {
   completedReferrals: number;
   pendingReferrals: number;
   creditsEarned: number;
+  /** Set when the summary succeeded but the referral-link leg failed server-side. */
+  linkError?: string;
 }
 
 const REFERRAL_SUMMARY_CACHE_TTL_MS = 1000;
@@ -76,6 +78,7 @@ export async function fetchReferralSummary(): Promise<ReferralSummary> {
       completedReferrals: data.completedReferrals,
       pendingReferrals: data.pendingReferrals,
       creditsEarned: data.creditsEarned,
+      ...(typeof data.linkError === 'string' ? { linkError: data.linkError } : {}),
     };
 
     recentReferralSummaries.set(sessionKey, { fetchedAt: Date.now(), summary });

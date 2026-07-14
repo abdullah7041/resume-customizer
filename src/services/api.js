@@ -276,6 +276,17 @@ export const parseResume = async (resumeInput, options = {}) => {
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
+
+  // The retry wrapper below re-runs the whole payload build on every attempt.
+  // Notify the UI about the low-selectable-text fallback at most ONCE per
+  // upload — repeating the same toast on each retry attempt is pure noise.
+  let ocrFallbackNotified = false;
+  const notifyOcrFallback = () => {
+    if (ocrFallbackNotified || typeof options.onOcrFallback !== 'function') return;
+    ocrFallbackNotified = true;
+    try { options.onOcrFallback(); } catch { /* never block upload for a UI callback */ }
+  };
+
   return retryWithBackoff(async () => {
     try {
       let payload;
@@ -331,9 +342,7 @@ export const parseResume = async (resumeInput, options = {}) => {
             // Send the file so the server can classify the failure consistently.
             console.warn(`[API] Client extraction returned non-readable text (binary/encoded glyphs). Sending file for server-side validation.`);
 
-            if (typeof options.onOcrFallback === 'function') {
-              try { options.onOcrFallback(); } catch { /* never block upload for a UI callback */ }
-            }
+            notifyOcrFallback();
 
             const base64 = await fileToBase64(resumeInput);
             payload = {
@@ -349,9 +358,7 @@ export const parseResume = async (resumeInput, options = {}) => {
           console.log('[API] Client extraction insufficient, sending file for server-side validation');
 
           // Notify the UI that the document may need a text-based re-upload.
-          if (typeof options.onOcrFallback === 'function') {
-            try { options.onOcrFallback(); } catch { /* never block upload for a UI callback */ }
-          }
+          notifyOcrFallback();
 
           const base64 = await fileToBase64(resumeInput);
           payload = {
