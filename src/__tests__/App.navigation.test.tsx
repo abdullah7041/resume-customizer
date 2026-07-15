@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 
 const headerProps = vi.hoisted(() => ({
-  calls: [] as Array<{ showDecorativeSkyline?: boolean }>,
+  calls: [] as Array<{ showDecorativeSkyline?: boolean; showMarketingNav?: boolean }>,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -69,7 +69,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('../components/Layout/Header', () => ({
-  default: (props: { showDecorativeSkyline?: boolean }) => {
+  default: (props: { showDecorativeSkyline?: boolean; showMarketingNav?: boolean }) => {
     headerProps.calls.push(props);
     return <header>Header</header>;
   },
@@ -168,6 +168,7 @@ describe('App compliance navigation', () => {
 
     expect(screen.getByText('Workspace')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /privacy policy/i })).toHaveAttribute('href', '/privacy');
+    expect(headerProps.calls.at(-1)?.showMarketingNav).toBe(true);
   });
 
   it('renders the privacy policy at /privacy', async () => {
@@ -177,6 +178,7 @@ describe('App compliance navigation', () => {
     expect(await screen.findByRole('heading', { name: /privacy policy/i })).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
     expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
+    expect(headerProps.calls.at(-1)?.showMarketingNav).toBe(false);
   });
 
   it('renders the terms of service at /terms', async () => {
@@ -201,6 +203,8 @@ describe('App compliance navigation', () => {
     window.localStorage.removeItem('watheq:onboarded');
 
     render(<App />);
+
+    expect(headerProps.calls.at(-1)?.showMarketingNav).toBe(false);
 
     fireEvent.click(screen.getByRole('button', { name: /complete onboarding/i }));
 

@@ -30,9 +30,25 @@ const PROBES = [
   { name: "referral-api", method: "GET", path: "/.netlify/functions/referral-api?action=get-summary" },
   { name: "extract-resume-json", method: "POST", path: "/.netlify/functions/extract-resume-json", body: { kind: "text", text: "smoke" } },
   { name: "ai-match", method: "POST", path: "/.netlify/functions/ai-match", body: { resumeText: "smoke", jobText: "smoke" } },
-  { name: "user-data-api", method: "GET", path: "/.netlify/functions/user-data-api?action=export" },
+  { name: "user-data-api", method: "POST", path: "/.netlify/functions/user-data-api?action=export" },
   { name: "optimize", method: "POST", path: "/.netlify/functions/optimize", body: { resumeText: "smoke", jobText: "smoke" } },
 ];
+
+function isControlledAuthRejection(status, responseText) {
+  if (status !== 401) return false;
+
+  try {
+    const payload = JSON.parse(responseText);
+    return Boolean(
+      payload
+      && typeof payload === "object"
+      && !Array.isArray(payload)
+      && [payload.error, payload.message, payload.code].some((value) => typeof value === "string" && value.length > 0)
+    );
+  } catch {
+    return false;
+  }
+}
 
 async function probe({ name, method, path, body }) {
   const url = `${BASE_URL}${path}`;
@@ -52,9 +68,10 @@ async function probe({ name, method, path, body }) {
     });
     const elapsedMs = Date.now() - startedAt;
     const text = await res.text();
-    // Healthy = the handler ran and returned its own response (any status < 500).
-    // Crash = 5xx (502 raw crash, or 500 from an outer catch swallowing a throw).
-    const healthy = res.status < 500;
+    // Healthy = the handler reached its auth gate and returned a controlled JSON
+    // rejection. Other statuses can come from a missing route, SPA fallback, or
+    // auth bypass and must not green-light the deploy.
+    const healthy = isControlledAuthRejection(res.status, text);
     const snippet = text.replace(/\s+/g, " ").slice(0, 160);
     return { name, ok: healthy, status: res.status, elapsedMs, snippet };
   } catch (error) {
@@ -82,12 +99,13 @@ async function main() {
   console.log("");
   if (failed > 0) {
     console.error(`[smoke] ❌ ${failed}/${results.length} function(s) crashed or unreachable. Deploy is NOT healthy.`);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   console.log(`[smoke] ✅ All ${results.length} functions returned a controlled response.`);
 }
 
 main().catch((error) => {
   console.error("[smoke] Unexpected error:", error);
-  process.exit(1);
+  process.exitCode = 1;
 });

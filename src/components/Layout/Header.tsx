@@ -29,9 +29,10 @@ const ACCOUNT_MENU_MIN_HEIGHT = 240;
 
 interface HeaderProps {
   showDecorativeSkyline?: boolean;
+  showMarketingNav?: boolean;
 }
 
-export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
+export default function Header({ showDecorativeSkyline = true, showMarketingNav = true }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { user, signInWithGoogle, signOut } = useAuth();
   const skylineUrls = useMemo(() => getSkylineUrls(), []);
@@ -311,7 +312,8 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
             {/* Marketing nav — jumps to the matching landing section as an in-app
                 overlay. Shown to signed-in and guest users (signed-out users see
                 the landing's own nav). */}
-            <nav className="hidden md:flex items-center gap-6" aria-label={t("header.nav.label", "Main navigation")}>
+            {showMarketingNav && (
+              <nav className="hidden md:flex items-center gap-6" aria-label={t("header.nav.label", "Main navigation")}>
               <button
                 type="button"
                 onClick={() => goToLanding("mj2-demo")}
@@ -333,7 +335,8 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
               >
                 {t("header.nav.faq", "FAQ")}
               </button>
-            </nav>
+              </nav>
+            )}
 
             {/* Desktop: keep authenticated header quiet; secondary actions live in account menu */}
             <div className="hidden md:flex items-center gap-3">
@@ -593,7 +596,8 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
               </div>
 
               {/* Marketing nav — opens the landing page scrolled to the section */}
-              <nav className="pb-4 border-b border-gray-200 dark:border-white/10 flex flex-col" aria-label={t("header.nav.label", "Main navigation")}>
+              {showMarketingNav && (
+                <nav className="pb-4 border-b border-gray-200 dark:border-white/10 flex flex-col" aria-label={t("header.nav.label", "Main navigation")}>
                 <button
                   type="button"
                   onClick={() => goToLanding("mj2-demo")}
@@ -615,7 +619,8 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 >
                   {t("header.nav.faq", "FAQ")}
                 </button>
-              </nav>
+                </nav>
+              )}
 
               {/* Credit Balance */}
               {user && (
