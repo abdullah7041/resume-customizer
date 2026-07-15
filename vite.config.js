@@ -91,7 +91,7 @@ export default defineConfig({
             // feature graph back into an eager chunk and defeat the deferral. Letting
             // Rolldown split automatically keeps the feature-only modules in their own
             // async chunk while the core lands in a shared vendor chunk.
-            // (see docs/CONVENTIONS.md · vendor chunking)
+            // (see CLAUDE.md · Critical Gotchas · Vite chunking)
 
             // ===== DOCX EXPORT GRAPH (lazy: DOCX export + cover letter only) =====
             // docx + jszip + hash.js + readable-stream polyfills (~400KB). Previously

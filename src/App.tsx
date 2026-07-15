@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { MotionConfig, LazyMotion } from "framer-motion";
 import Header from "./components/Layout/Header";
 import MainContent from "./components/Layout/MainContent";
@@ -11,8 +11,8 @@ import { ConsentBanner } from "./components/compliance/ConsentBanner";
 import { migrateStorageKeys } from "./lib/utils/storage-migration";
 import { useUserCredits } from "./hooks/useUserCredits";
 import { useOnboardingTour } from "./hooks/useOnboardingTour";
-import { HRSuperSaudOverlay } from "./features/hr-super-saud/HRSuperSaudOverlay";
-import { HRSuperSaudProvider } from "./features/hr-super-saud/HRSuperSaudProvider";
+import { HRSuperSaudOverlay } from "@/features/hr-super-saud/HRSuperSaudOverlay";
+import { HRSuperSaudProvider } from "@/features/hr-super-saud/HRSuperSaudProvider";
 import { useResumeStore } from "./lib/stores/resumeStore";
 import OnboardingChat from "./components/onboarding/OnboardingChat";
 import { isOnboarded, markOnboarded } from "./lib/onboarding/onboardedFlag";
@@ -59,6 +59,7 @@ export default function App() {
   // Header marketing links (How it works / Pricing / FAQ) open the landing page
   // as an in-app overlay scrolled to the requested section. null = not showing.
   const [landingSection, setLandingSection] = useState<string | null>(null);
+  const workspaceScrollYRef = useRef<number | null>(null);
   const clearLanding = () => setLandingSection(null);
   const hasResume = useResumeStore((state) => Boolean(state.originalResume || state.parsedResumeText));
 
@@ -93,6 +94,7 @@ export default function App() {
     };
     const handleViewLanding = (event: Event) => {
       const section = (event as CustomEvent<{ section?: string }>).detail?.section ?? "top";
+      workspaceScrollYRef.current = window.scrollY;
       setLandingSection(section);
     };
     window.addEventListener("popstate", handleLocationChange);
@@ -107,6 +109,18 @@ export default function App() {
       window.removeEventListener("watheq:view-landing", handleViewLanding);
     };
   }, []);
+
+  useEffect(() => {
+    if (landingSection !== null || workspaceScrollYRef.current === null) return undefined;
+
+    const workspaceScrollY = workspaceScrollYRef.current;
+    workspaceScrollYRef.current = null;
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: workspaceScrollY, behavior: "auto" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [landingSection]);
 
   // Credit system integration
   const { credits, showUpgrade, setShowUpgrade, upgradeDismissedKey } = useUserCredits();

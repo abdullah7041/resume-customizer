@@ -26,6 +26,11 @@ const ACCOUNT_MENU_WIDTH = 288;
 const ACCOUNT_MENU_GAP = 12;
 const ACCOUNT_MENU_MARGIN = 16;
 const ACCOUNT_MENU_MIN_HEIGHT = 240;
+const MARKETING_NAV_ITEMS = [
+  { section: "mj2-demo", translationKey: "header.nav.howItWorks", fallback: "How it works" },
+  { section: "mj2-pricing", translationKey: "header.nav.pricing", fallback: "Pricing" },
+  { section: "mj2-faq", translationKey: "header.nav.faq", fallback: "FAQ" },
+] as const;
 
 interface HeaderProps {
   showDecorativeSkyline?: boolean;
@@ -314,27 +319,16 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                 the landing's own nav). */}
             {showMarketingNav && (
               <nav className="hidden md:flex items-center gap-6" aria-label={t("header.nav.label", "Main navigation")}>
-              <button
-                type="button"
-                onClick={() => goToLanding("mj2-demo")}
-                className="text-sm font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300"
-              >
-                {t("header.nav.howItWorks", "How it works")}
-              </button>
-              <button
-                type="button"
-                onClick={() => goToLanding("mj2-pricing")}
-                className="text-sm font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300"
-              >
-                {t("header.nav.pricing", "Pricing")}
-              </button>
-              <button
-                type="button"
-                onClick={() => goToLanding("mj2-faq")}
-                className="text-sm font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300"
-              >
-                {t("header.nav.faq", "FAQ")}
-              </button>
+                {MARKETING_NAV_ITEMS.map((item) => (
+                  <button
+                    key={item.section}
+                    type="button"
+                    onClick={() => goToLanding(item.section)}
+                    className="text-sm font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300"
+                  >
+                    {t(item.translationKey, item.fallback)}
+                  </button>
+                ))}
               </nav>
             )}
 
@@ -598,27 +592,16 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
               {/* Marketing nav — opens the landing page scrolled to the section */}
               {showMarketingNav && (
                 <nav className="pb-4 border-b border-gray-200 dark:border-white/10 flex flex-col" aria-label={t("header.nav.label", "Main navigation")}>
-                <button
-                  type="button"
-                  onClick={() => goToLanding("mj2-demo")}
-                  className="w-full text-start rounded-xl px-3 py-3 min-h-[44px] text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
-                >
-                  {t("header.nav.howItWorks", "How it works")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToLanding("mj2-pricing")}
-                  className="w-full text-start rounded-xl px-3 py-3 min-h-[44px] text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
-                >
-                  {t("header.nav.pricing", "Pricing")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToLanding("mj2-faq")}
-                  className="w-full text-start rounded-xl px-3 py-3 min-h-[44px] text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
-                >
-                  {t("header.nav.faq", "FAQ")}
-                </button>
+                  {MARKETING_NAV_ITEMS.map((item) => (
+                    <button
+                      key={item.section}
+                      type="button"
+                      onClick={() => goToLanding(item.section)}
+                      className="w-full text-start rounded-xl px-3 py-3 min-h-[44px] text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                    >
+                      {t(item.translationKey, item.fallback)}
+                    </button>
+                  ))}
                 </nav>
               )}
 

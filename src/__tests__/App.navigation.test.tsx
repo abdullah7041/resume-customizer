@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -83,6 +83,15 @@ vi.mock('../hooks/useAuth', () => ({
 
 vi.mock('../components/Layout/MainContent', () => ({
   default: () => <main>Workspace</main>,
+}));
+
+vi.mock('../pages/LandingPage', () => ({
+  default: ({ initialSection, onGetStarted }: { initialSection?: string; onGetStarted: () => void }) => (
+    <main>
+      <span>Landing section: {initialSection}</span>
+      <button type="button" onClick={onGetStarted}>Return to workspace</button>
+    </main>
+  ),
 }));
 
 vi.mock('../components/onboarding/OnboardingChat', () => ({
@@ -210,5 +219,23 @@ describe('App compliance navigation', () => {
 
     expect(await screen.findByText('Workspace')).toBeInTheDocument();
     expect(screen.getByText('Header')).toBeInTheDocument();
+  });
+
+  it('restores the workspace scroll position after closing the landing overlay', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(640);
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+
+    render(<App />);
+    fireEvent(window, new CustomEvent('watheq:view-landing', { detail: { section: 'mj2-pricing' } }));
+
+    expect(await screen.findByText('Landing section: mj2-pricing')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /return to workspace/i }));
+
+    expect(await screen.findByText('Workspace')).toBeInTheDocument();
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 640, behavior: 'auto' }));
   });
 });

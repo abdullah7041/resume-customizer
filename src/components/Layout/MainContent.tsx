@@ -57,8 +57,8 @@ import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
 import { mergeResumeData } from "../../lib/utils/resumeUtils";
-import { emitHRSuperSaudEvent } from "../../features/hr-super-saud/events";
-import { useHRSuperSaud } from "../../features/hr-super-saud/HRSuperSaudProvider";
+import { emitHRSuperSaudEvent } from "@/features/hr-super-saud/events";
+import { useHRSuperSaud } from "@/features/hr-super-saud/HRSuperSaudProvider";
 import { useUserCredits } from "../../hooks/useUserCredits";
 import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 import type { FeatureFlagName } from "@/types/featureFlags";
