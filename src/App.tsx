@@ -25,6 +25,10 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService").then((m) => (
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy").then((m) => ({ default: m.RefundPolicy })));
 const AdminFeedbackPage = lazy(() => import("./pages/AdminFeedbackPage").then((m) => ({ default: m.AdminFeedbackPage })));
 const PricingWaitlistModal = lazy(() => import("./components/Credits/PricingWaitlistModal").then((m) => ({ default: m.PricingWaitlistModal })));
+// Shown as an in-app overlay when a signed-in / guest user clicks a header
+// marketing link (How it works / Pricing / FAQ). Same chunk as MainContent's
+// landing import, so no extra bundle.
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 import { useAuth } from "./hooks/useAuth";
 import { FeedbackPromptController } from "./components/Feedback/FeedbackPromptController";
 import { useFeatureFlag } from "./hooks/useFeatureFlag";
@@ -46,12 +50,16 @@ const getCurrentPath = () => {
 };
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const [guestModeActive, setGuestModeActive] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
   });
+  // Header marketing links (How it works / Pricing / FAQ) open the landing page
+  // as an in-app overlay scrolled to the requested section. null = not showing.
+  const [landingSection, setLandingSection] = useState<string | null>(null);
+  const clearLanding = () => setLandingSection(null);
   const hasResume = useResumeStore((state) => Boolean(state.originalResume || state.parsedResumeText));
 
   // First-run onboarding gate (profile state, not device). The localStorage flag
@@ -83,14 +91,20 @@ export default function App() {
     const handleGuestModeChange = () => {
       setGuestModeActive(window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true");
     };
+    const handleViewLanding = (event: Event) => {
+      const section = (event as CustomEvent<{ section?: string }>).detail?.section ?? "top";
+      setLandingSection(section);
+    };
     window.addEventListener("popstate", handleLocationChange);
     window.addEventListener("watheq:navigate", handleLocationChange);
     window.addEventListener(GUEST_MODE_CHANGED_EVENT, handleGuestModeChange);
+    window.addEventListener("watheq:view-landing", handleViewLanding);
 
     return () => {
       window.removeEventListener("popstate", handleLocationChange);
       window.removeEventListener("watheq:navigate", handleLocationChange);
       window.removeEventListener(GUEST_MODE_CHANGED_EVENT, handleGuestModeChange);
+      window.removeEventListener("watheq:view-landing", handleViewLanding);
     };
   }, []);
 
@@ -101,6 +115,10 @@ export default function App() {
   const { run } = useOnboardingTour();
   const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/refund" || currentPath === "/admin/feedback" || currentPath === "/dev/flags";
   const isSignedOutLanding = !user && !needsOnboarding && !guestModeActive && currentPath === "/";
+  // In-app landing overlay for signed-in / guest users (header marketing links).
+  // Not applicable on static pages, during onboarding, or when the signed-out
+  // landing is already showing.
+  const showLandingOverride = landingSection !== null && !isStaticPage && !needsOnboarding && !isSignedOutLanding;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -114,7 +132,7 @@ export default function App() {
           <div id="app-root" className="relative flex min-h-screen flex-col overflow-x-hidden bg-noise bg-[color:var(--bg)] dark:bg-gradient-to-b dark:from-[rgba(10,63,38,0.93)] dark:via-[rgba(11,58,48,0.96)] dark:to-[rgba(12,46,37,0.97)]">
             <OfflineIndicator />
             <EnvironmentBadge />
-            {!isSignedOutLanding && <Header showDecorativeSkyline={!isStaticPage} />}
+            {!isSignedOutLanding && !showLandingOverride && <Header showDecorativeSkyline={!isStaticPage} />}
 
             <Suspense fallback={null}>
               {currentPath === "/privacy" ? (
@@ -142,11 +160,23 @@ export default function App() {
                     }}
                   />
                 </main>
+              ) : showLandingOverride ? (
+                <LandingPage
+                  initialSection={landingSection ?? undefined}
+                  onGetStarted={clearLanding}
+                  onSignIn={
+                    !user
+                      ? () => {
+                          void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
+                        }
+                      : undefined
+                  }
+                />
               ) : (
                 <MainContent />
               )}
             </Suspense>
-            {!needsOnboarding && !isSignedOutLanding && <Footer />}
+            {!needsOnboarding && !isSignedOutLanding && !showLandingOverride && <Footer />}
             <ConsentBanner />
             <FeedbackPromptController />
 

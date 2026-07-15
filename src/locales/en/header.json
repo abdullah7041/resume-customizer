@@ -4,6 +4,12 @@
     "badgeAlt": "Built for Saudi applications",
     "heroTitle": "Watheq - AI Resume Optimizer",
     "heroDescription": "Turn your real experience into a clearer application story. Watheq analyzes, matches, and improves your resume for Saudi-market roles.",
+    "nav": {
+      "label": "Main navigation",
+      "howItWorks": "How it works",
+      "pricing": "Pricing",
+      "faq": "FAQ"
+    },
     "workflow": {
       "title": "Workflow",
       "step1": {

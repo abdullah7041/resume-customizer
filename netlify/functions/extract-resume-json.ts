@@ -101,8 +101,22 @@ const baseHandler = async (
     }
 
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
+    // This auth check runs before the main try/catch below, so any thrown
+    // infra error (Supabase client/network failure) would escape as a raw
+    // Netlify 502 — which the client blindly retries and trips its circuit
+    // breaker. Catch it here and return a clean JSON 500 instead.
+    let user;
+    try {
+      ({ data: { user } } = await supabase.auth.getUser(token));
+    } catch (authInfraError) {
+      console.error("[extract-resume-json] Auth verification failed:", summarizeErrorForLog(authInfraError));
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Server configuration error. Please contact support." }),
+      };
+    }
+    if (!user) {
       return {
         statusCode: 401,
         headers: { "Content-Type": "application/json" },

@@ -170,6 +170,14 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
     setMobileNavOpen(false);
   }, []);
 
+  // Marketing nav: open the landing page as an in-app overlay scrolled to the
+  // matching section. App.tsx listens for this event (see showLandingOverride).
+  const goToLanding = useCallback((section: string) => {
+    window.dispatchEvent(new CustomEvent("watheq:view-landing", { detail: { section } }));
+    setMobileNavOpen(false);
+    setAccountMenuOpen(false);
+  }, []);
+
   // Preload skyline image
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -299,6 +307,33 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 </span>
               </button>
             )}
+
+            {/* Marketing nav — jumps to the matching landing section as an in-app
+                overlay. Shown to signed-in and guest users (signed-out users see
+                the landing's own nav). */}
+            <nav className="hidden md:flex items-center gap-6" aria-label={t("header.nav.label", "Main navigation")}>
+              <button
+                type="button"
+                onClick={() => goToLanding("mj2-demo")}
+                className="text-sm font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300"
+              >
+                {t("header.nav.howItWorks", "How it works")}
+              </button>
+              <button
+                type="button"
+                onClick={() => goToLanding("mj2-pricing")}
+                className="text-sm font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300"
+              >
+                {t("header.nav.pricing", "Pricing")}
+              </button>
+              <button
+                type="button"
+                onClick={() => goToLanding("mj2-faq")}
+                className="text-sm font-semibold text-gray-700 transition-colors hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300"
+              >
+                {t("header.nav.faq", "FAQ")}
+              </button>
+            </nav>
 
             {/* Desktop: keep authenticated header quiet; secondary actions live in account menu */}
             <div className="hidden md:flex items-center gap-3">
@@ -556,6 +591,31 @@ export default function Header({ showDecorativeSkyline = true }: HeaderProps) {
                 </p>
                 <LanguageSwitcher />
               </div>
+
+              {/* Marketing nav — opens the landing page scrolled to the section */}
+              <nav className="pb-4 border-b border-gray-200 dark:border-white/10 flex flex-col" aria-label={t("header.nav.label", "Main navigation")}>
+                <button
+                  type="button"
+                  onClick={() => goToLanding("mj2-demo")}
+                  className="w-full text-start rounded-xl px-3 py-3 min-h-[44px] text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                >
+                  {t("header.nav.howItWorks", "How it works")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToLanding("mj2-pricing")}
+                  className="w-full text-start rounded-xl px-3 py-3 min-h-[44px] text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                >
+                  {t("header.nav.pricing", "Pricing")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToLanding("mj2-faq")}
+                  className="w-full text-start rounded-xl px-3 py-3 min-h-[44px] text-sm font-semibold text-gray-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-gray-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                >
+                  {t("header.nav.faq", "FAQ")}
+                </button>
+              </nav>
 
               {/* Credit Balance */}
               {user && (

@@ -9,6 +9,8 @@ import { analytics } from "../services/analytics";
 interface LandingPageProps {
   onGetStarted: () => void;
   onSignIn?: () => void;
+  /** When shown as an in-app overlay (signed-in / guest), scroll to this section id on mount. */
+  initialSection?: string;
 }
 
 type ThemeMode = "light" | "dark";
@@ -484,7 +486,7 @@ function FinalCta({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStarted: (
   );
 }
 
-export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, onSignIn, initialSection }: LandingPageProps) {
   const { t, i18n } = useTranslation();
   const [theme, toggleTheme] = useTheme() as readonly [ThemeMode, () => void];
   const isArabic = i18n.language === "ar";
@@ -492,6 +494,24 @@ export default function LandingPage({ onGetStarted, onSignIn }: LandingPageProps
   useEffect(() => {
     analytics.trackLandingViewed();
   }, []);
+
+  // When opened as an in-app overlay via a header link, jump to the requested
+  // section. The page's images lay out after first paint and keep shifting the
+  // target's offset, so re-scroll a few times until it settles instead of a
+  // single early rAF that lands at the wrong position.
+  useEffect(() => {
+    if (!initialSection || typeof window === "undefined") return;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const scroll = () => {
+      const el = document.getElementById(initialSection);
+      if (el) el.scrollIntoView({ behavior: attempts === 0 ? "auto" : "smooth", block: "start" });
+      attempts += 1;
+      if (attempts < 6) timer = setTimeout(scroll, 150);
+    };
+    timer = setTimeout(scroll, 0);
+    return () => clearTimeout(timer);
+  }, [initialSection]);
 
   const handleCta = (source: "hero" | "walkthrough" | "final_cta") => {
     analytics.trackGetStartedClicked(source);
