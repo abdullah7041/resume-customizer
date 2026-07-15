@@ -52,7 +52,7 @@ Two promises hold everything together:
 
 **Parse anything readable.** PDF and DOCX upload with client-side text extraction, automatic English/Arabic detection, and structured JSON Resume output you can edit. Scanned PDFs fall back to OCR for signed-in users. If the AI parser fails on readable text, a deterministic parser still returns your data instead of an error.
 
-**Match analysis.** TF-IDF + cosine similarity scoring against the job description, gap analysis for missing qualifications, and a keyword strategy that weaves missing terms into rewritten bullets rather than dumping them in a list.
+**Match analysis.** Cosine similarity scoring against the job description, gap analysis for missing qualifications, and a keyword strategy that weaves missing terms into rewritten bullets rather than dumping them in a list.
 
 **Career red-flag defense.** The optimizer detects gaps, short tenures, pivots, and job hopping in your work history, then rewrites bullets to neutralize those interview questions before they're asked.
 
