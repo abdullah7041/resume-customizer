@@ -2,18 +2,14 @@
 
 # واثق | Watheq
 
-### AI Resume Optimizer for Saudi Arabia's Job Market
+### AI Resume Optimizer for the Saudi Job Market
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-006C35?style=for-the-badge&logo=netlify)](https://resume-optimizing.netlify.app)
-[![React 19](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-006C35?style=for-the-badge&logo=netlify&logoColor=white)](https://resume-optimizing.netlify.app)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-8B0000?style=for-the-badge)](./LICENSE)
 
-<br/>
+**Watheq means "confident" in Arabic. That's how your resume should read.**
 
-**Transform your resume into a job-winning document with AI-powered optimization**
-
-*Designed for Vision 2030 • Bilingual Arabic/English • ATS-Friendly*
+*Built for Vision 2030 • Arabic & English • ATS-safe*
 
 </div>
 
@@ -39,135 +35,53 @@ For licensing inquiries: Contact the author directly.
 
 ---
 
-## 🎯 About Watheq
+## What Watheq does
 
-**Watheq** (واثق) is an intelligent AI-powered resume optimization platform built specifically for **Saudi Arabia's job market**. It helps job seekers create powerful, ATS-friendly resumes that align with Vision 2030 sector needs and modern hiring standards.
+You upload your resume. You paste the job description. Watheq tells you exactly where you stand: a match score from 0 to 100, the keywords you're missing, and rewritten bullets that make your real experience read the way a recruiter needs to see it.
 
-### Why Watheq?
+Generic resume tools were built for the US market, in English, for US hiring norms. Watheq was built for Saudi Arabia: full Arabic and English support with proper RTL layouts, targeting tuned to Vision 2030 sectors, and templates that pass the ATS systems local employers use.
 
-| Traditional Resume Tools | Watheq |
-|-------------------------|--------|
-| Generic optimization | Saudi market-specific targeting |
-| English-only support | Full Arabic/English bilingual support |
-| Basic keyword matching | AI-powered TF-IDF similarity analysis |
-| Manual editing | Intelligent optimization suggestions |
-| Static templates | Dynamic RTL/LTR adaptive templates |
+Two promises hold everything together:
+
+1. **The AI never invents your career.** It rewrites what's true so it lands harder. Every improved bullet follows Action Verb + Task + Quantified Result, and any inferred number is tagged `(verify)` so you check it before it ships.
+2. **The score means something.** 80+ means hireable today. 60-79 means competitive with gaps. Below 60 means real work to do. The scoring rules are written to resist inflation, because a flattering score that gets you rejected helps nobody.
 
 ---
 
-## ✨ Key Features
+## Features
 
-### 📄 Smart Resume Processing
-- **PDF/DOCX Upload** — Automatic text extraction with section detection
-- **Structured JSON Parsing** — Clean, editable JSON Resume format
-- **Language Detection** — Auto-detects English vs Arabic content
+**Parse anything readable.** PDF and DOCX upload with client-side text extraction, automatic English/Arabic detection, and structured JSON Resume output you can edit. Scanned PDFs fall back to OCR for signed-in users. If the AI parser fails on readable text, a deterministic parser still returns your data instead of an error.
 
-### 📊 AI-Powered Analysis
-- **Match Score (0-100)** — TF-IDF + cosine similarity algorithms
-- **Gap Analysis** — Identifies missing qualifications
-- **Keyword Strategy** — Highlights critical missing keywords
+**Match analysis.** TF-IDF + cosine similarity scoring against the job description, gap analysis for missing qualifications, and a keyword strategy that weaves missing terms into rewritten bullets rather than dumping them in a list.
 
-### ✍️ Intelligent Optimization
-- **GPT-Powered Rewrites** — Stronger action verbs and impact statements
-- **Section-by-Section Suggestions** — Granular optimization cards
-- **Ethical AI** — Never invents facts; only enhances what exists
+**Career red-flag defense.** The optimizer detects gaps, short tenures, pivots, and job hopping in your work history, then rewrites bullets to neutralize those interview questions before they're asked.
 
-### 🎨 Professional Templates
-| Template | Best For |
-|----------|----------|
-| Modern Professional | Clean, minimal design (emerald theme) |
-| Classic Traditional | Serif-based, two-column layout |
-| Technical Engineer | Skills-first for tech roles |
-| ATS Optimized | Single-column for applicant tracking systems |
+**Live progress streaming.** Optimization streams its phases over SSE, so you watch the analysis happen instead of staring at a spinner for 15 seconds.
 
-### 📥 Export Options
-- **Styled PDF** — Beautiful, design-forward resumes
-- **ATS-Friendly PDF** — Optimized for automated screening
-- **Print-Ready** — Direct browser printing support
+**Four templates.** Modern Professional, Classic Traditional, Technical Engineer, and ATS Optimized: all RTL/LTR adaptive, all exportable as real selectable-text PDFs via server-side rendering.
 
-### 🛡️ Additional Features
-- **Interview Prep** — AI-generated questions based on your resume
-- **Cover Letter Generator** — Tailored cover letters for each job
-- **Bulk Comparison** — Compare multiple resume versions side-by-side
-- **Session Recovery** — Automatic localStorage persistence
+**The rest of the application.** AI interview questions predicted from your resume, a cover letter generator with 4 tones, bulk side-by-side comparison of resume versions, and automatic session recovery from localStorage.
 
 ---
 
-## 🇸🇦 Saudi Market Focus
+## How it works
 
-Unlike generic resume tools, Watheq is specifically optimized for:
+```
+Upload Resume → Parse to JSON → Paste Job Description → AI Match Score
+                                                              │
+                        ◄────── Export PDF ◄── Apply Cards ◄──┘
+```
 
-- 🏛️ **Vision 2030** skills and workforce requirements
-- 🌐 **Arabic & English** bilingual support with RTL layouts
-- 📋 Local hiring practices and ATS systems
-- 🎨 Cultural considerations for the MENA region
-- 🎯 Saudi-themed UI with Saudi Green (`#006C35`) branding
-
----
-
-## 🛠️ Technology Stack
-
-### Frontend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| React | 19.2 | UI Framework |
-| Vite | 7.3 | Build Tool |
-| TypeScript | 5.9 | Type Safety |
-| Tailwind CSS | 4.1 | Styling |
-| Zustand | 5.0 | State Management |
-| i18next | 25.7 | Internationalization |
-| Zod | 4.3 | Schema Validation |
-
-### Backend (Serverless)
-| Technology | Purpose |
-|------------|---------|
-| Netlify Functions | TypeScript serverless API |
-| OpenRouter API | AI processing (Google Gemini) |
-| Supabase | Auth + Database + Storage |
-| Upstash Redis | Rate limiting |
-| Puppeteer | Server-side PDF generation |
-
-### Development & Quality
-| Tool | Purpose |
-|------|---------|
-| Vitest | Unit Testing |
-| ESLint | Code Linting |
-| Husky | Git Hooks |
-| Sentry | Error Tracking |
+Suggestions arrive as cards. You apply the ones you want; nothing changes without the `applied: true` flag. Your resume stays yours at every step.
 
 ---
 
-## ⚡ Performance
-
-| Metric | Value |
-|--------|-------|
-| Resume Parse Time | 2-3 seconds |
-| Match Analysis | 1-2 seconds |
-| AI Optimization | 8-15 seconds |
-| Bundle Size | ~162KB gzipped |
-| Lighthouse Score | 90+ Performance |
-
----
-
-## 🔒 Privacy & Security
-
-| Feature | Implementation |
-|---------|----------------|
-| **API Keys** | Server-side only, never exposed |
-| **Row-Level Security** | Supabase RLS policies enforced |
-| **No Tracking** | Zero analytics or third-party cookies |
-| **User Control** | Delete your data anytime (GDPR compliant) |
-| **Anti-Hallucination** | AI never invents facts about you |
-| **Rate Limiting** | Redis-backed sliding window protection |
-
----
-
-## 🏗️ Architecture Overview
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Frontend (SPA)                       │
-│  React 19 + Vite + Zustand + Tailwind CSS v4 + i18next     │
+│  React 19 + Vite + Zustand + Tailwind CSS v4 + i18next      │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -187,50 +101,43 @@ Unlike generic resume tools, Watheq is specifically optimized for:
    └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-### User Flow
-```
-Upload Resume → Parse to JSON → Paste Job Description → AI Match Score
-                                                              │
-                        ◄────── Export PDF ◄── Apply Cards ◄──┘
-```
+**Stack in one paragraph:** React 19 + Vite + TypeScript on the front, with Zustand for state, Tailwind CSS v4 for styling, i18next for the Arabic/English switch, and Zod validating every boundary. The back end is TypeScript Netlify Functions calling Gemini 2.5 through OpenRouter (a fast `lite` tier for parsing, `flash` for analysis), Supabase for auth and data with RLS enforced, Upstash Redis for rate limiting, and Puppeteer for server-side PDF generation. Vitest, ESLint, Husky, and Sentry keep it honest.
+
+**Numbers:** resume parsing in 2-6 seconds, match analysis in 1-2, full optimization in 8-15. The bundle ships at ~162KB gzipped and holds a 90+ Lighthouse performance score.
 
 ---
 
-## 📁 Project Structure
+## Privacy
+
+API keys live server-side only. Supabase row-level security is enforced on every table. There's no analytics, no third-party cookies, and no tracking of any kind. You can delete your data whenever you want (GDPR compliant). Rate limiting runs on a Redis-backed sliding window, and the anti-hallucination rules above apply to everything the AI writes about you.
+
+---
+
+## Project structure
 
 ```
 resume-customizer/
 ├── src/
-│   ├── components/         # React components
-│   │   ├── Layout/        # MainContent, Header
-│   │   ├── sections/      # Upload, Score, Optimize, Templates
-│   │   ├── templates/     # Resume templates + PDF exports
-│   │   └── ui/            # Reusable UI components
-│   ├── hooks/             # Custom React hooks
-│   ├── lib/               # Utilities, stores, validation
-│   ├── locales/           # i18n translations (en, ar)
-│   ├── services/          # API clients
-│   └── types/             # TypeScript definitions
+│   ├── components/         # Layout, sections, templates, ui
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utilities, stores, validation
+│   ├── locales/            # i18n translations (en, ar)
+│   ├── services/           # API clients
+│   └── types/              # TypeScript definitions
 ├── netlify/
-│   ├── functions/         # Serverless API endpoints
-│   └── lib/               # Shared backend utilities
-├── public/                # Static assets
-└── scripts/               # Build & development scripts
+│   ├── functions/          # Serverless API endpoints
+│   └── lib/                # Shared backend utilities
+├── public/                 # Static assets
+└── scripts/                # Build & development scripts
 ```
 
 ---
 
-## 🙏 Credits
+## Credits
 
-**Created by Abdullah** — Full-stack developer passionate about democratizing career opportunities through AI.
+**Created by Abdullah**, a full-stack developer who thinks the distance between a good candidate and a good resume shouldn't cost anyone a job.
 
-### Technology Acknowledgments
-
-- **OpenRouter & Google** — AI processing infrastructure (Gemini)
-- **Supabase** — Backend infrastructure
-- **Netlify** — Serverless hosting
-- **Tailwind CSS** — Design system
-- **Saudi Vision 2030** — Brand inspiration
+Built on OpenRouter & Google Gemini, Supabase, Netlify, and Tailwind CSS. Brand inspired by Saudi Vision 2030, in Saudi Green `#006C35`.
 
 ---
 
@@ -248,13 +155,9 @@ See [LICENSE](./LICENSE) for complete terms.
 
 <div align="center">
 
-**[🚀 View Live Demo](https://resume-optimizing.netlify.app)**
+**[View Live Demo →](https://resume-optimizing.netlify.app)**
 
-*Built with ❤️ for the Saudi job market*
-
----
-
-**واثق | Watheq** — *Document your success*
+**واثق | Watheq** — *Walk in confident.*
 
 © 2025-2026 Abdullah. All Rights Reserved.
 
