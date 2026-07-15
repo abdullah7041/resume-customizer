@@ -36,6 +36,7 @@ import { callOpenRouter } from '../netlify/lib/openrouter-client.js';
 import { getAiContract } from '../netlify/lib/ai-contracts/contracts/index.js';
 import { parseAiJson } from '../netlify/lib/ai-contracts/json.js';
 import { taggedBlock } from '../netlify/lib/ai-contracts/prompt.js';
+import { scoreBandFlags } from './lib/optimize-score-band.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -207,6 +208,7 @@ async function runVariant(fixture, variant) {
       result: parsed, // raw parsed so source_span survives for grounding + judge
       fabricationFlags: fabricationFlags(parsed, fixture),
       groundingFlags: groundingFlags(parsed, fixture),
+      scoreBandFlags: scoreBandFlags(parsed, fixture),
     };
   } catch (error) {
     return { success: false, latencyMs: Date.now() - start, error: error.message, status: error.status ?? null };
@@ -341,7 +343,7 @@ function r2(n) { return Number(n.toFixed(2)); }
 function buildMarkdown(meta, perVariant) {
   const rows = Object.entries(perVariant).map(([name, v]) => {
     const composite = r2(mean([v.specificity, v.jd_alignment, v.truthfulness, v.readability].map(x => x || 0)));
-    return `| ${name} | ${r2(v.specificity)} | ${r2(v.jd_alignment)} | ${r2(v.truthfulness)} | ${r2(v.readability)} | **${composite}** | ${v.wins} | ${v.avgLatencyMs}ms | ${v.fabricationFlagCount} | ${v.groundingFlagCount} |`;
+    return `| ${name} | ${r2(v.specificity)} | ${r2(v.jd_alignment)} | ${r2(v.truthfulness)} | ${r2(v.readability)} | **${composite}** | ${v.wins} | ${v.avgLatencyMs}ms | ${v.fabricationFlagCount} | ${v.groundingFlagCount} | ${v.scoreBandFlagCount} |`;
   });
   return `# Optimize Rewrite-Quality Eval
 
@@ -354,10 +356,13 @@ Scores are judge averages across fixtures and across the judge panel (1-5, highe
 Composite = mean of the four dimensions. "Wins" = majority best picks. "fab" = deterministic
 fabrication-heuristic flags (lower better). "ungrounded" = evidence-variant bullets whose
 cited source_span isn't in the resume or whose numbers don't trace to it (0 is the target;
-only meaningful for evidence variants). Truthfulness is the gate.
+only meaningful for evidence variants). "band" = deterministic score-band violations:
+match_score outside the fixture's expected.matchScoreBand, after_score below match_score,
+or scores out of 0-100 (0 is the target — a rise means the optimize prompt's anti-inflation
+rubric regressed). Truthfulness is the gate.
 
-| variant | specificity | jd_align | truthful | readability | composite | wins | avg latency | fab | ungrounded |
-|---|---|---|---|---|---|---|---|---|---|
+| variant | specificity | jd_align | truthful | readability | composite | wins | avg latency | fab | ungrounded | band |
+|---|---|---|---|---|---|---|---|---|---|---|
 ${rows.join('\n')}
 
 ## How to read this
@@ -391,7 +396,7 @@ async function main() {
   console.log(`[Eval] ${fixtures.length} fixtures x ${variants.length} variants = ${fixtures.length * variants.length} generations\n`);
 
   const perVariant = {};
-  for (const v of variants) perVariant[v.name] = { specificityArr: [], jdArr: [], truthArr: [], readArr: [], wins: 0, latencyArr: [], fabricationFlagCount: 0, groundingFlagCount: 0, note: v.note };
+  for (const v of variants) perVariant[v.name] = { specificityArr: [], jdArr: [], truthArr: [], readArr: [], wins: 0, latencyArr: [], fabricationFlagCount: 0, groundingFlagCount: 0, scoreBandFlagCount: 0, note: v.note };
 
   const rawResults = [];
 
@@ -412,7 +417,9 @@ async function main() {
         agg.latencyArr.push(run.latencyMs);
         agg.fabricationFlagCount += (run.fabricationFlags?.length || 0);
         agg.groundingFlagCount += (run.groundingFlags?.length || 0);
-        console.log(`  ${variant.name.padEnd(12)} ok  ${run.latencyMs}ms  fab=${run.fabricationFlags?.length || 0}  ungrounded=${run.groundingFlags?.length || 0}`);
+        agg.scoreBandFlagCount += (run.scoreBandFlags?.length || 0);
+        const bandNote = run.scoreBandFlags?.length ? `  band=[${run.scoreBandFlags.join('; ')}]` : '';
+        console.log(`  ${variant.name.padEnd(12)} ok  ${run.latencyMs}ms  fab=${run.fabricationFlags?.length || 0}  ungrounded=${run.groundingFlags?.length || 0}${bandNote}`);
       } else {
         console.log(`  ${variant.name.padEnd(10)} FAIL ${run.error}`);
       }
@@ -436,7 +443,7 @@ async function main() {
     }
     if (judged.bestVariant && perVariant[judged.bestVariant]) perVariant[judged.bestVariant].wins += 1;
     console.log(`  judge best: ${judged.bestVariant}  (${(judged.reasoning || '').slice(0, 120)})\n`);
-    rawResults.push({ fixture: fixture.name || fixture._file, judged, variantOutputs: variantOutputs.map(v => ({ name: v.variant.name, success: v.run.success, latencyMs: v.run.latencyMs, fabricationFlags: v.run.fabricationFlags })) });
+    rawResults.push({ fixture: fixture.name || fixture._file, judged, variantOutputs: variantOutputs.map(v => ({ name: v.variant.name, success: v.run.success, latencyMs: v.run.latencyMs, fabricationFlags: v.run.fabricationFlags, scoreBandFlags: v.run.scoreBandFlags })) });
   }
 
   if (DRY_RUN) { console.log('[Eval] Dry run complete — no API calls made.'); return; }
@@ -446,7 +453,7 @@ async function main() {
   for (const [name, a] of Object.entries(perVariant)) {
     summary[name] = {
       specificity: mean(a.specificityArr), jd_alignment: mean(a.jdArr), truthfulness: mean(a.truthArr), readability: mean(a.readArr),
-      wins: a.wins, avgLatencyMs: Math.round(mean(a.latencyArr)), fabricationFlagCount: a.fabricationFlagCount, groundingFlagCount: a.groundingFlagCount, note: a.note,
+      wins: a.wins, avgLatencyMs: Math.round(mean(a.latencyArr)), fabricationFlagCount: a.fabricationFlagCount, groundingFlagCount: a.groundingFlagCount, scoreBandFlagCount: a.scoreBandFlagCount, note: a.note,
     };
   }
 

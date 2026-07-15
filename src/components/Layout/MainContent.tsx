@@ -61,6 +61,8 @@ import { emitHRSuperSaudEvent } from "@/features/hr-super-saud/events";
 import { useHRSuperSaud } from "@/features/hr-super-saud/HRSuperSaudProvider";
 import { useUserCredits } from "../../hooks/useUserCredits";
 import { useFeatureFlags } from "@/hooks/useFeatureFlag";
+import { useExitPresence } from "@/hooks/useExitPresence";
+import { cn } from "@/lib/utils/cn";
 import type { FeatureFlagName } from "@/types/featureFlags";
 
 /** Lightweight skeleton shown while lazy sections load */
@@ -812,6 +814,7 @@ export default function MainContent() {
   }, []);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const deleteConfirmPresence = useExitPresence(showDeleteConfirm);
 
   const handleClearAllData = useCallback(() => {
     // Show confirmation modal instead of deleting immediately
@@ -2273,14 +2276,31 @@ export default function MainContent() {
       )}
 
       {/* Delete All Data Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {deleteConfirmPresence.shouldRender && (
+        <div
+          className={cn(
+            "fixed inset-0 z-[100] flex items-center justify-center p-4",
+            deleteConfirmPresence.isExiting && "pointer-events-none"
+          )}
+          aria-hidden={deleteConfirmPresence.isExiting || undefined}
+          inert={deleteConfirmPresence.isExiting}
+        >
           <div
-            className="absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-md animate-fade-in"
+            className={cn(
+              "absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-md duration-200",
+              deleteConfirmPresence.isExiting ? "animate-out fade-out ease-out" : "animate-in fade-in"
+            )}
             onClick={() => setShowDeleteConfirm(false)}
             aria-hidden="true"
           />
-          <div className="relative w-full max-w-md neu-card shadow-2xl rounded-2xl animate-scale-in overflow-hidden">
+          <div
+            className={cn(
+              "relative w-full max-w-md neu-card shadow-2xl rounded-2xl duration-200 ease-out overflow-hidden",
+              deleteConfirmPresence.isExiting
+                ? "animate-out fade-out zoom-out-95"
+                : "animate-in fade-in zoom-in-95"
+            )}
+          >
             <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-white/10">
               <div className="p-2 neu-inset rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 shrink-0">
                 <AlertTriangle className="w-5 h-5" />

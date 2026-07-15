@@ -1,0 +1,210 @@
+{
+  "score": 55,
+  "categoryScores": {
+    "hard_skills": {
+      "score": 50,
+      "max": 100,
+      "reasoning": "The candidate demonstrates strong proficiency in React and TypeScript, which are core frontend requirements. However, critical backend skills like Node.js, GraphQL, PostgreSQL, Kubernetes, AWS, and CI/CD (GitHub Actions) are largely missing or not evidenced."
+    },
+    "experience": {
+      "score": 40,
+      "max": 100,
+      "reasoning": "The job requires 5+ years of experience and a senior full-stack role with end-to-end ownership and mentoring. The candidate has 3 years of experience primarily in frontend development and lacks evidence of full-stack ownership or mentoring."
+    },
+    "education": {
+      "score": 80,
+      "max": 100,
+      "reasoning": "The candidate holds a B.Sc. in Computer Science, which aligns well with the educational background typically expected for an engineering role."
+    },
+    "soft_skills": {
+      "score": 60,
+      "max": 100,
+      "reasoning": "The resume shows collaboration and leadership in specific projects (e.g., leading a redesign), but lacks explicit evidence for broader senior-level soft skills like mentoring or end-to-end ownership across a platform."
+    }
+  },
+  "strongMatches": [
+    "React",
+    "TypeScript",
+    "frontend",
+    "APIs",
+    "design"
+  ],
+  "missingKeywords": [
+    "Node.js",
+    "Express",
+    "NestJS",
+    "GraphQL",
+    "PostgreSQL",
+    "Kubernetes",
+    "EKS",
+    "AWS",
+    "CI/CD",
+    "GitHub Actions",
+    "full-stack",
+    "senior",
+    "mentor",
+    "database migrations",
+    "on-call"
+  ],
+  "summary_bullets": [
+    "Candidate has 3 years of frontend experience, falling short of the 5+ years required for a senior role.",
+    "Strong React and TypeScript skills are present, but critical backend technologies are missing.",
+    "No evidence of full-stack ownership, API design, database migrations, or mentoring experience.",
+    "Lacks experience with key infrastructure tools like Kubernetes, AWS, CI/CD, and on-call duties.",
+    "Education aligns, but overall experience and technical breadth do not match senior full-stack needs."
+  ],
+  "reasoning": "The candidate is a strong frontend developer with 3 years of experience, demonstrating proficiency in React and TypeScript. However, the role is for a Senior Full-Stack Engineer requiring 5+ years of experience and extensive backend, database, and DevOps skills (Node.js, GraphQL, PostgreSQL, Kubernetes, AWS, CI/CD). These critical full-stack and senior-level requirements are largely unmet, resulting in a significant mismatch.",
+  "strategicRealityCheck": {
+    "riskTier": "high",
+    "recommendation": "review_role_fit",
+    "confidence": "high",
+    "riskTypes": [
+      "experience_gap",
+      "seniority_mismatch",
+      "missing_required_skill",
+      "role_scope_mismatch"
+    ],
+    "summary": "The candidate is a strong frontend developer but lacks the required 5+ years of experience and the extensive full-stack, backend, and DevOps skills explicitly stated for this Senior Full-Stack Engineer role. The mismatch in experience level and technical breadth is significant.",
+    "strengths": [
+      {
+        "title": "Strong Frontend Expertise",
+        "whyItMatters": "The candidate demonstrates deep knowledge and practical application of core frontend technologies required by the job description.",
+        "evidence": [
+          {
+            "source": "resume",
+            "snippet": "Frontend developer with 3 years of experience building responsive web applications in React and TypeScript"
+          },
+          {
+            "source": "job_description",
+            "snippet": "Expert React and TypeScript on the frontend"
+          }
+        ]
+      },
+      {
+        "title": "Quantified Impact",
+        "whyItMatters": "The resume provides clear, measurable results for projects, indicating a results-oriented approach and ability to deliver business value.",
+        "evidence": [
+          {
+            "source": "resume",
+            "snippet": "onboarding completion rose 22% after a redesign I led."
+          },
+          {
+            "source": "resume",
+            "snippet": "cutting duplicate API calls by 40%."
+          },
+          {
+            "source": "resume",
+            "snippet": "raising coverage on the checkout package from 30% to 85%."
+          }
+        ]
+      },
+      {
+        "title": "Relevant Education",
+        "whyItMatters": "A Computer Science degree provides a strong theoretical foundation for a software engineering role.",
+        "evidence": [
+          {
+            "source": "resume",
+            "snippet": "B.Sc. Computer Science — King Abdulaziz University, 2022"
+          }
+        ]
+      }
+    ],
+    "confirmedRisks": [
+      {
+        "type": "experience_gap",
+        "severity": "critical",
+        "title": "Insufficient Professional Experience",
+        "explanation": "The job requires 5+ years of professional software engineering experience, but the candidate only has 3 years.",
+        "mitigation": "The candidate would need to demonstrate exceptional depth and breadth of experience within their 3 years to compensate, or target roles with a lower experience requirement.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "5+ years of professional software engineering experience"
+          },
+          {
+            "source": "resume",
+            "snippet": "Frontend Developer — Tamara (fintech), Jeddah | Aug 2023 – Present"
+          },
+          {
+            "source": "resume",
+            "snippet": "Junior Frontend Developer — Noon.com, remote | Jul 2022 – Jul 2023"
+          }
+        ]
+      },
+      {
+        "type": "seniority_mismatch",
+        "severity": "high",
+        "title": "Lack of Senior Full-Stack Experience",
+        "explanation": "The role is for a 'Senior Full-Stack Engineer' who 'owns features end to end' and 'mentor two mid-level engineers'. The candidate's experience is primarily as a 'Frontend Developer' and 'Junior Frontend Developer' with no explicit mention of full-stack ownership or mentoring.",
+        "mitigation": "The candidate would need to explicitly highlight any instances of full-stack ownership, API design, database work, or mentoring from their past roles, even if not explicitly titled 'senior' or 'full-stack'.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Senior Full-Stack Engineer"
+          },
+          {
+            "source": "job_description",
+            "snippet": "owns features end to end across our web platform."
+          },
+          {
+            "source": "job_description",
+            "snippet": "mentor two mid-level engineers."
+          },
+          {
+            "source": "resume",
+            "snippet": "Frontend Developer"
+          },
+          {
+            "source": "resume",
+            "snippet": "Junior Frontend Developer"
+          }
+        ]
+      },
+      {
+        "type": "missing_required_skill",
+        "severity": "critical",
+        "title": "Missing Core Backend and DevOps Skills",
+        "explanation": "The job explicitly requires strong backend experience with Node.js (Express or NestJS), production experience with GraphQL APIs, PostgreSQL schema design and query optimization, and deploying/operating services on Kubernetes (EKS) and AWS, along with CI/CD ownership (GitHub Actions) and on-call participation. The resume lacks evidence for all these critical backend and DevOps skills.",
+        "mitigation": "These are fundamental requirements for a full-stack role. Without these, the candidate is not a match. The candidate would need to acquire and demonstrate proficiency in these technologies.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Strong backend experience with Node.js (Express or NestJS)"
+          },
+          {
+            "source": "job_description",
+            "snippet": "Production experience designing and consuming GraphQL APIs"
+          },
+          {
+            "source": "job_description",
+            "snippet": "PostgreSQL schema design and query optimization"
+          },
+          {
+            "source": "job_description",
+            "snippet": "Deploying and operating services on Kubernetes (EKS) and AWS"
+          },
+          {
+            "source": "job_description",
+            "snippet": "CI/CD ownership (GitHub Actions) and on-call participation"
+          },
+          {
+            "source": "resume",
+            "snippet": "SKILLS\nReact, TypeScript, JavaScript (ES2023), Redux, React Query, Jest, React Testing Library, HTML/CSS, Tailwind CSS, Vite, Git, REST APIs, i18n/RTL"
+          }
+        ]
+      }
+    ],
+    "unclearRisks": [],
+    "limits": {
+      "cannotDetermine": [
+        "Specific details of 'end-to-end' ownership beyond frontend tasks.",
+        "The candidate's ability to 'design APIs' or 'own database migrations' without explicit evidence.",
+        "The candidate's willingness or ability to participate in 'on-call' duties."
+      ],
+      "assumptions": [
+        "Assumed 'REST APIs' experience implies some understanding of API consumption, but not necessarily GraphQL design or backend API development.",
+        "Assumed 'design' in the job description for APIs refers to backend API design, not just frontend consumption."
+      ]
+    }
+  }
+}

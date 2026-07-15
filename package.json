@@ -23,6 +23,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "benchmark:ai": "tsx scripts/benchmark-ai-models.mjs",
+    "eval:match": "tsx scripts/match-eval.mjs",
     "eval:optimize": "tsx scripts/optimize-quality-eval.mjs",
     "eval:parse": "tsx scripts/parse-eval.mjs",
     "flags:report": "tsx scripts/flags-test-report.mjs",

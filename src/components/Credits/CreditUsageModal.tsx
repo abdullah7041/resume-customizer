@@ -18,6 +18,7 @@ import type { CreditTransaction } from '../../types/credits';
 import { ReferralLink } from '../Referrals/ReferralLink';
 import { ReferralStats } from '../Referrals/ReferralStats';
 import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { useExitPresence } from '@/hooks/useExitPresence';
 
 interface CreditUsageModalProps {
   isOpen: boolean;
@@ -62,6 +63,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isArabic = i18n.language === 'ar';
   const referralEnabled = useFeatureFlag('referral');
+  const { shouldRender, isExiting } = useExitPresence(isOpen);
 
   // Only fetch transactions if in full mode
   useEffect(() => {
@@ -104,7 +106,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
     fetchTransactions();
   }, [isOpen, user, viewMode]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const getFeatureLabel = (feature: string) =>
     t(`credits.usage.features.${feature}`, humanizeFeature(feature));
@@ -140,10 +142,20 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
   };
 
   const modal = (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+    <div
+      className={cn(
+        'fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6',
+        isExiting && 'pointer-events-none'
+      )}
+      aria-hidden={isExiting || undefined}
+      inert={isExiting}
+    >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md"
+        className={cn(
+          'fixed inset-0 bg-black/60 backdrop-blur-md duration-200',
+          isExiting ? 'animate-out fade-out ease-out' : 'animate-in fade-in'
+        )}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -152,7 +164,8 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
       <div
         className={cn(
           glass.elevated,
-          'relative rounded-xl p-4 sm:p-6 w-full max-h-[85vh] sm:max-h-[80vh] overflow-y-auto',
+          'relative rounded-xl p-4 sm:p-6 w-full max-h-[85vh] sm:max-h-[80vh] overflow-y-auto duration-200 ease-out',
+          isExiting ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95',
           viewMode === 'full' ? 'max-w-2xl' : 'max-w-md'
         )}
         role="dialog"

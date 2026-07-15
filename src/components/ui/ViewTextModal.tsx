@@ -1,12 +1,15 @@
 import { X, Copy, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { GlassButton } from "./GlassButton";
+import { cn } from "@/lib/utils/cn";
+import { useExitPresence } from "@/hooks/useExitPresence";
 
 export default function ViewTextModal({ isOpen, onClose, text }) {
     const [copied, setCopied] = useState(false);
+    const { shouldRender, isExiting } = useExitPresence(isOpen);
 
     useEffect(() => {
-        if (isOpen) {
+        if (shouldRender) {
             document.body.style.overflow = "hidden";
         } else {
             document.body.style.overflow = "unset";
@@ -14,7 +17,7 @@ export default function ViewTextModal({ isOpen, onClose, text }) {
         return () => {
             document.body.style.overflow = "unset";
         };
-    }, [isOpen]);
+    }, [shouldRender]);
 
     const handleCopy = async () => {
         try {
@@ -26,17 +29,32 @@ export default function ViewTextModal({ isOpen, onClose, text }) {
         }
     };
 
-    if (!isOpen) return null;
+    if (!shouldRender) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div
+            className={cn(
+                "fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6",
+                isExiting && "pointer-events-none"
+            )}
+            aria-hidden={isExiting || undefined}
+            inert={isExiting}
+        >
             <div
-                className="absolute inset-0 bg-ink-900/60 backdrop-blur-sm transition-opacity"
+                className={cn(
+                    "absolute inset-0 bg-ink-900/60 backdrop-blur-sm transition-opacity duration-200",
+                    isExiting ? "animate-out fade-out ease-out" : "animate-in fade-in"
+                )}
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            <div className="relative flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface-50 dark:bg-ink-800 shadow-2xl ring-1 ring-black/5">
+            <div
+                className={cn(
+                    "relative flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface-50 dark:bg-ink-800 shadow-2xl ring-1 ring-black/5 duration-200 ease-out",
+                    isExiting ? "animate-out fade-out zoom-out-95" : "animate-in fade-in zoom-in-95"
+                )}
+            >
                 <div className="flex items-center justify-between border-b border-ink-200/50 dark:border-white/10 bg-white/50 dark:bg-ink-800/50 px-6 py-4 backdrop-blur-md">
                     <h3 className="text-lg font-semibold text-ink-900 dark:text-white">Extracted Resume Text</h3>
                     <button

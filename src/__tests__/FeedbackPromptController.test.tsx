@@ -1,5 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   FEEDBACK_PROMPTED_SESSION_KEY,
   FeedbackPromptController,
@@ -15,13 +15,21 @@ vi.mock('../hooks/useAuth', () => ({
 }));
 
 vi.mock('../components/Feedback/FeedbackModal', () => ({
-  FeedbackModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Feedback modal</div> : null),
+  FeedbackModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
+    <div data-testid="feedback-modal" data-open={isOpen}>
+      {isOpen && <button onClick={onClose}>Feedback modal</button>}
+    </div>
+  ),
 }));
 
 describe('FeedbackPromptController', () => {
   beforeEach(() => {
     authState.user = null;
     window.sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('does not load the feedback modal module during controller import', async () => {
@@ -34,7 +42,11 @@ describe('FeedbackPromptController', () => {
     vi.doMock('../components/Feedback/FeedbackModal', () => {
       feedbackModalModuleLoad();
       return {
-        FeedbackModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Feedback modal</div> : null),
+        FeedbackModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
+          <div data-testid="feedback-modal" data-open={isOpen}>
+            {isOpen && <button onClick={onClose}>Feedback modal</button>}
+          </div>
+        ),
       };
     });
 
@@ -49,8 +61,24 @@ describe('FeedbackPromptController', () => {
 
     act(() => requestValueMomentFeedbackPrompt('match_success'));
 
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Feedback modal');
+    expect(await screen.findByRole('button', { name: 'Feedback modal' })).toBeInTheDocument();
     expect(window.sessionStorage.getItem(FEEDBACK_PROMPTED_SESSION_KEY)).toBe('true');
+  });
+
+  it('keeps the modal mounted long enough to play its exit animation', async () => {
+    authState.user = { id: 'user-123' };
+    render(<FeedbackPromptController />);
+
+    act(() => requestValueMomentFeedbackPrompt('match_success'));
+    const closeButton = await screen.findByRole('button', { name: 'Feedback modal' });
+    vi.useFakeTimers();
+    fireEvent.click(closeButton);
+
+    expect(screen.getByTestId('feedback-modal')).toHaveAttribute('data-open', 'false');
+
+    act(() => vi.advanceTimersByTime(200));
+
+    expect(screen.queryByTestId('feedback-modal')).not.toBeInTheDocument();
   });
 
   it('does not prompt guests', () => {

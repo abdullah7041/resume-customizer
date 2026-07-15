@@ -1,0 +1,191 @@
+{
+  "score": 10,
+  "categoryScores": {
+    "hard_skills": {
+      "score": 0,
+      "max": 100,
+      "reasoning": "The resume lacks any of the required hard skills for a Backend Software Engineer, such as Python, Django/FastAPI, PostgreSQL, Docker, CI/CD, or REST API design. The skills listed are retail-specific."
+    },
+    "experience": {
+      "score": 0,
+      "max": 100,
+      "reasoning": "The job requires 3+ years of professional backend development experience. The applicant has 4 years of experience as a retail supervisor and sales associate, which is not relevant to software engineering."
+    },
+    "education": {
+      "score": 10,
+      "max": 100,
+      "reasoning": "The job requires a B.Sc. in computer science or equivalent practical experience. The applicant has a high school diploma, and no practical experience in the field."
+    },
+    "soft_skills": {
+      "score": 30,
+      "max": 100,
+      "reasoning": "While the resume demonstrates leadership and operational management, these soft skills are not directly aligned with the core requirements of a Backend Software Engineer role, which typically emphasizes problem-solving, collaboration within a technical team, and attention to detail in coding."
+    }
+  },
+  "strongMatches": [],
+  "missingKeywords": [
+    "Python",
+    "Django",
+    "FastAPI",
+    "PostgreSQL",
+    "Docker",
+    "CI/CD",
+    "GitLab CI",
+    "GitHub Actions",
+    "REST APIs",
+    "backend development",
+    "computer science"
+  ],
+  "summary_bullets": [
+    "Applicant's experience is entirely in retail supervision, not backend software engineering.",
+    "No evidence of required technical skills like Python, Django, PostgreSQL, or Docker.",
+    "Education is a high school diploma, not a B.Sc. in Computer Science or equivalent.",
+    "Significant gap between current role and target role requirements."
+  ],
+  "reasoning": "The resume presents a strong candidate for a retail supervisor role but shows no alignment with the requirements for a Backend Software Engineer. There is a complete absence of relevant technical skills, professional development experience, or educational background in computer science. The applicant's experience is in a completely different domain.",
+  "strategicRealityCheck": {
+    "riskTier": "critical",
+    "recommendation": "review_role_fit",
+    "confidence": "high",
+    "riskTypes": [
+      "missing_required_skill",
+      "experience_gap",
+      "seniority_mismatch",
+      "domain_gap",
+      "education_certification_gap",
+      "role_scope_mismatch"
+    ],
+    "summary": "This resume demonstrates a critical mismatch for the Backend Software Engineer role. The applicant's background is entirely in retail supervision, lacking any of the technical skills, professional experience, or educational qualifications required for a software engineering position. The core competencies and responsibilities are fundamentally different.",
+    "strengths": [
+      {
+        "title": "Leadership and Team Management",
+        "whyItMatters": "Demonstrates ability to lead and manage a team, which can be transferable in some contexts, though not directly relevant to this technical role.",
+        "evidence": [
+          {
+            "source": "resume",
+            "snippet": "Retail supervisor with 4 years of experience running daily operations for a high-traffic electronics store, leading a team of 12 sales associates."
+          },
+          {
+            "source": "resume",
+            "snippet": "Supervise a team of 12 sales associates across two shifts"
+          }
+        ]
+      },
+      {
+        "title": "Operational Management & Results",
+        "whyItMatters": "Shows ability to manage operations, achieve targets, and improve processes, indicating a results-oriented mindset.",
+        "evidence": [
+          {
+            "source": "resume",
+            "snippet": "reduced stock discrepancies by 18% year over year."
+          },
+          {
+            "source": "resume",
+            "snippet": "Consistently exceeded monthly sales targets by 10-25%"
+          }
+        ]
+      }
+    ],
+    "confirmedRisks": [
+      {
+        "type": "experience_gap",
+        "severity": "critical",
+        "title": "Lack of Backend Development Experience",
+        "explanation": "The job requires 3+ years of professional backend development experience. The applicant's experience is exclusively in retail supervision and sales, with no mention of software development.",
+        "mitigation": "The applicant would need to acquire significant professional experience in backend software development to be considered for this role.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "3+ years of professional backend development experience"
+          },
+          {
+            "source": "resume",
+            "snippet": "Store Supervisor — eXtra Electronics, Dammam | Jan 2022 – Present"
+          },
+          {
+            "source": "resume",
+            "snippet": "Sales Associate — eXtra Electronics, Dammam | Mar 2020 – Dec 2021"
+          }
+        ]
+      },
+      {
+        "type": "missing_required_skill",
+        "severity": "critical",
+        "title": "Absence of Core Technical Skills",
+        "explanation": "The job explicitly requires strong skills in Python, Django/FastAPI, PostgreSQL, Docker, CI/CD, and REST API design. None of these are present or implied in the resume.",
+        "mitigation": "The applicant would need to gain proficiency and demonstrate experience with all the core technical skills listed in the job description.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Strong Python and Django (or FastAPI) in production"
+          },
+          {
+            "source": "job_description",
+            "snippet": "PostgreSQL: schema design, indexing, query optimization"
+          },
+          {
+            "source": "job_description",
+            "snippet": "Docker and CI/CD pipelines (GitLab CI or GitHub Actions)"
+          },
+          {
+            "source": "job_description",
+            "snippet": "Designing and documenting REST APIs"
+          },
+          {
+            "source": "resume",
+            "snippet": "SKILLS\nTeam leadership, customer service, inventory management, POS systems, Microsoft Excel (basic), scheduling, Arabic (native), English (conversational)"
+          }
+        ]
+      },
+      {
+        "type": "education_certification_gap",
+        "severity": "high",
+        "title": "Mismatched Educational Background",
+        "explanation": "The job requires a B.Sc. in computer science or equivalent practical experience. The applicant has a high school diploma and no equivalent practical experience in the field.",
+        "mitigation": "The applicant would need to pursue a relevant degree or demonstrate substantial equivalent practical experience in software engineering.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "B.Sc. in computer science or equivalent practical experience"
+          },
+          {
+            "source": "resume",
+            "snippet": "High school diploma — Dammam Secondary School, 2019"
+          }
+        ]
+      },
+      {
+        "type": "domain_gap",
+        "severity": "critical",
+        "title": "Irrelevant Industry Domain",
+        "explanation": "The applicant's entire professional background is in retail, which is a completely different domain from backend software engineering in a logistics platform.",
+        "mitigation": "The applicant would need to transition into a technical role within a relevant industry or demonstrate transferable skills through projects or entry-level positions.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "You will build and operate the order-management services behind our logistics platform."
+          },
+          {
+            "source": "resume",
+            "snippet": "Store Supervisor — eXtra Electronics, Dammam"
+          },
+          {
+            "source": "resume",
+            "snippet": "Sales Associate — eXtra Electronics, Dammam"
+          }
+        ]
+      }
+    ],
+    "unclearRisks": [],
+    "limits": {
+      "cannotDetermine": [
+        "Specific project contributions to backend systems",
+        "Depth of knowledge in specific technical areas (e.g., database optimization, API security)",
+        "Problem-solving approach in a software development context"
+      ],
+      "assumptions": [
+        "Assumed that 'equivalent practical experience' for education would still need to be in a technical/software development field, which is absent."
+      ]
+    }
+  }
+}

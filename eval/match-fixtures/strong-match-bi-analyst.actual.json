@@ -1,0 +1,145 @@
+{
+  "score": 85,
+  "categoryScores": {
+    "hard_skills": {
+      "score": 85,
+      "max": 100,
+      "reasoning": "The candidate demonstrates strong proficiency in SQL (including complex functions), Power BI, ETL, and data warehousing. Python for automation is present, aligning with a 'nice to have'. The primary gap is the lack of explicit mention of Tableau."
+    },
+    "experience": {
+      "score": 90,
+      "max": 100,
+      "reasoning": "The candidate exceeds the 4+ years requirement with 6 years of experience. They have direct retail and supply-chain domain experience and a clear track record of presenting insights to senior stakeholders, including C-level executives."
+    },
+    "education": {
+      "score": 100,
+      "max": 100,
+      "reasoning": "The candidate holds a B.Sc. in Management Information Systems, which directly aligns with the 'Bachelor's degree in MIS, computer science, or related field' requirement."
+    },
+    "soft_skills": {
+      "score": 80,
+      "max": 100,
+      "reasoning": "The resume provides strong evidence of stakeholder management and presenting insights to senior, non-technical audiences, including C-level. The 'soft skills' category is primarily driven by the 'presenting insights' requirement."
+    }
+  },
+  "strongMatches": [
+    "6 years of experience",
+    "Business Intelligence analyst",
+    "retail and supply-chain data",
+    "SQL Server",
+    "PostgreSQL",
+    "Power BI",
+    "ETL pipelines",
+    "dimensional data warehouse models",
+    "presenting insights to senior, non-technical stakeholders",
+    "Bachelor's degree in MIS",
+    "Python for data automation"
+  ],
+  "missingKeywords": [
+    "Tableau"
+  ],
+  "summary_bullets": [
+    "Strong alignment with 6 years of BI experience, exceeding the 4+ year requirement.",
+    "Expertise in SQL, Power BI, ETL, and data warehousing is well-evidenced.",
+    "Direct retail domain experience and proven stakeholder presentation skills.",
+    "Primary gap is the lack of explicit mention or evidence of Tableau proficiency."
+  ],
+  "reasoning": "The candidate presents a strong profile, exceeding the experience requirement and demonstrating core technical skills like SQL, Power BI, ETL, and data warehousing. Retail domain experience and stakeholder communication are well-evidenced. The main area for improvement is the absence of Tableau, which is explicitly stated as a required platform.",
+  "strategicRealityCheck": {
+    "riskTier": "medium",
+    "recommendation": "optimize_now",
+    "confidence": "high",
+    "riskTypes": [
+      "missing_required_skill"
+    ],
+    "summary": "The candidate is a strong match for the role, demonstrating significant experience and most required technical skills. The primary risk is the lack of explicit mention of Tableau, which is a stated requirement. Addressing this directly would significantly strengthen the application.",
+    "strengths": [
+      {
+        "title": "Extensive BI Experience",
+        "whyItMatters": "The candidate significantly exceeds the minimum experience requirement, indicating a high level of capability and readiness for the role.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "4+ years in business intelligence or analytics"
+          },
+          {
+            "source": "resume",
+            "snippet": "Business Intelligence analyst with 6 years of experience"
+          }
+        ]
+      },
+      {
+        "title": "Expert SQL Proficiency",
+        "whyItMatters": "The resume explicitly details advanced SQL usage, directly matching the job's requirement for expert-level SQL skills.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Expert SQL (complex joins, window functions) on SQL Server or PostgreSQL"
+          },
+          {
+            "source": "resume",
+            "snippet": "Wrote and tuned complex T-SQL (window functions, CTEs) over a 200-table operational database."
+          }
+        ]
+      },
+      {
+        "title": "Strong Power BI & Data Warehousing",
+        "whyItMatters": "The candidate has extensive, quantified experience with Power BI and building dimensional data warehouses, which are core requirements.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Strong Power BI AND Tableau — both platforms are in active use here"
+          },
+          {
+            "source": "resume",
+            "snippet": "Designed 25+ Power BI dashboards used weekly by C-level and 120 store managers... Modeled a star-schema data warehouse in PostgreSQL"
+          }
+        ]
+      },
+      {
+        "title": "Stakeholder Communication & Retail Domain",
+        "whyItMatters": "The candidate demonstrates a proven ability to present insights to senior, non-technical stakeholders within a relevant industry.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Track record of presenting insights to senior, non-technical stakeholders"
+          },
+          {
+            "source": "resume",
+            "snippet": "Built and owned the reporting stack (SQL Server, PostgreSQL, Power BI) for a 40-store retail group. ... Led weekly stakeholder reviews with merchandising and finance"
+          }
+        ]
+      }
+    ],
+    "confirmedRisks": [
+      {
+        "type": "missing_required_skill",
+        "severity": "high",
+        "title": "Missing Tableau Experience",
+        "explanation": "The job description explicitly states that 'Strong Power BI AND Tableau — both platforms are in active use here' is a requirement. The resume mentions Power BI extensively but does not mention Tableau at all.",
+        "mitigation": "If the candidate has any experience with Tableau, it should be added to the resume. If not, they should be prepared to address this gap and potentially highlight transferable skills or a willingness to learn quickly.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Strong Power BI AND Tableau — both platforms are in active use here"
+          },
+          {
+            "source": "resume",
+            "snippet": "SKILLS: Power BI, DAX, SQL Server, PostgreSQL, T-SQL, Python (pandas), SSIS, ETL, data warehousing, star schema, stakeholder management, Arabic (native), English (professional)"
+          }
+        ]
+      }
+    ],
+    "unclearRisks": [],
+    "limits": {
+      "cannotDetermine": [
+        "Specific details of 'complex joins' beyond 'complex T-SQL' and 'window functions'.",
+        "The exact nature of 'senior, non-technical stakeholders' beyond C-level and managers."
+      ],
+      "assumptions": [
+        "Assumed 'Senior Business Intelligence Analyst' title implies a level of responsibility consistent with presenting to senior stakeholders.",
+        "Assumed 'B.Sc. Management Information Systems' is a 'related field' to computer science for the education requirement."
+      ]
+    }
+  }
+}

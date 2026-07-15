@@ -31,6 +31,12 @@
       "skillPath": "skills/better-ui/SKILL.md",
       "computedHash": "6c9fa842287018baf84cded48396ecec5c12e5ba151d47ac2a37fc008a5948db"
     },
+    "find-animation-opportunities": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-animation-opportunities/SKILL.md",
+      "computedHash": "5c3ea721da792383aac5c10927548ad0d2ab56706ff553109ecf6f743091b01b"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",

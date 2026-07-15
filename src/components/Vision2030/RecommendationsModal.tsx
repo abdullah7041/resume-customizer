@@ -13,6 +13,7 @@ import { Vision2030MissingSuggestion } from '../../types/vision2030';
 import { GlassButton } from '../ui/GlassButton';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
+import { useExitPresence } from '@/hooks/useExitPresence';
 
 interface RecommendationsModalProps {
   isOpen: boolean;
@@ -29,8 +30,9 @@ export function RecommendationsModal({
 }: RecommendationsModalProps) {
   const { t } = useTranslation();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const { shouldRender, isExiting } = useExitPresence(isOpen);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   // Group suggestions by impact level (based on relevanceScore)
   const highImpact = missingSuggestions.filter((s) => s.relevanceScore >= 80);
@@ -138,10 +140,20 @@ export function RecommendationsModal({
   };
 
   const modal = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto',
+        isExiting && 'pointer-events-none'
+      )}
+      aria-hidden={isExiting || undefined}
+      inert={isExiting}
+    >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md"
+        className={cn(
+          'fixed inset-0 bg-black/60 backdrop-blur-md duration-200',
+          isExiting ? 'animate-out fade-out ease-out' : 'animate-in fade-in'
+        )}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -150,7 +162,8 @@ export function RecommendationsModal({
       <div
         className={cn(
           glass.elevated,
-          'relative rounded-xl p-6 max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto'
+          'relative rounded-xl p-6 max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto duration-200 ease-out',
+          isExiting ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'
         )}
         role="dialog"
         aria-modal="true"

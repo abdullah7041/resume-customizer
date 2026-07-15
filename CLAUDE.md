@@ -100,6 +100,4 @@ IMPORTANT: Diagnose root cause BEFORE writing fix code. Trace full data flow: fr
 
 ## References (read on demand, not every session)
 
-- Architecture & data flow: @docs/ARCHITECTURE.md
-- Conventions and patterns: see **Code Rules** and **Critical Gotchas** above.
 - Skills: `.claude/skills/` and `.claude/commands/` — invoke with `/skill-name`

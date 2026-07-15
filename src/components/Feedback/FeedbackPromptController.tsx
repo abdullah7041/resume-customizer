@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useExitPresence } from '@/hooks/useExitPresence';
 
 const FeedbackModal = lazy(() => import('./FeedbackModal').then((module) => ({ default: module.FeedbackModal })));
 
@@ -50,6 +51,7 @@ function markSessionPrompted() {
 export function FeedbackPromptController() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const modalPresence = useExitPresence(isOpen);
   const promptedInMemoryRef = useRef(false);
 
   const handleValueMoment = useCallback(() => {
@@ -67,7 +69,7 @@ export function FeedbackPromptController() {
     return () => window.removeEventListener(FEEDBACK_VALUE_MOMENT_EVENT, handleValueMoment);
   }, [handleValueMoment]);
 
-  if (!isOpen) return null;
+  if (!modalPresence.shouldRender) return null;
 
   return (
     <Suspense fallback={null}>

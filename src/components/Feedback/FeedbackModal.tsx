@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, Loader2, MessageSquare, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils/cn';
+import { useExitPresence } from '@/hooks/useExitPresence';
 import { analytics } from '@/services/analytics';
 import { buildFeedbackContext, submitFeedbackReport } from '@/services/feedback';
 import type {
@@ -49,6 +50,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitFeedbackResponse | null>(null);
   const remainingCharacters = Math.max(0, MIN_MESSAGE_LENGTH - message.trim().length);
+  const { shouldRender, isExiting } = useExitPresence(isOpen);
 
   useEffect(() => {
     setMounted(true);
@@ -76,7 +78,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     return t('feedback.reward.notAwarded', 'Thanks. No credit reward was added for this report.');
   }, [result, t]);
 
-  if (!isOpen || !mounted) return null;
+  if (!shouldRender || !mounted) return null;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -133,13 +135,31 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   };
 
   const modal = (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-3 sm:p-4" dir={i18n.dir()}>
-      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-md dark:bg-black/75" onClick={onClose} aria-hidden="true" />
+    <div
+      className={cn(
+        'fixed inset-0 z-[130] flex items-center justify-center p-3 sm:p-4',
+        isExiting && 'pointer-events-none'
+      )}
+      dir={i18n.dir()}
+      aria-hidden={isExiting || undefined}
+      inert={isExiting}
+    >
+      <div
+        className={cn(
+          'absolute inset-0 bg-gray-900/60 backdrop-blur-md dark:bg-black/75 duration-200',
+          isExiting ? 'animate-out fade-out ease-out' : 'animate-in fade-in'
+        )}
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="feedback-modal-title"
-        className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#071f1a]"
+        className={cn(
+          'relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#071f1a] duration-200 ease-out',
+          isExiting ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'
+        )}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--glass-border)] p-5 dark:border-white/10">
           <div className="flex items-center gap-3">

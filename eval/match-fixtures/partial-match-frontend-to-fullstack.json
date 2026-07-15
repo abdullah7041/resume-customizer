@@ -1,0 +1,12 @@
+{
+  "name": "partial-match-frontend-to-fullstack",
+  "description": "Solid mid-level frontend developer vs a senior full-stack JD. Real overlap on React/TypeScript, clear gaps on backend and infrastructure. Should read as competitive-with-gaps, not hireable-today.",
+  "language": "en",
+  "resumeText": "SARA AL-QAHTANI\nFrontend Developer | Jeddah, Saudi Arabia\nsara.qahtani@email.com | github.com/saraq\n\nSUMMARY\nFrontend developer with 3 years of experience building responsive web applications in React and TypeScript for fintech and e-commerce products.\n\nEXPERIENCE\n\nFrontend Developer — Tamara (fintech), Jeddah | Aug 2023 – Present\n- Built customer onboarding flows in React 18 + TypeScript serving 300K monthly users; onboarding completion rose 22% after a redesign I led.\n- Introduced React Query for server-state caching, cutting duplicate API calls by 40%.\n- Wrote unit and integration tests with Jest and React Testing Library, raising coverage on the checkout package from 30% to 85%.\n- Collaborated with backend engineers consuming REST APIs; wrote API-contract tests against OpenAPI specs.\n\nJunior Frontend Developer — Noon.com, remote | Jul 2022 – Jul 2023\n- Implemented product-listing and search UI components in React and Redux used across 3 country storefronts.\n- Reduced bundle size 35% via code splitting and lazy loading; Lighthouse performance score improved from 61 to 89.\n- Fixed 100+ UI bugs across RTL (Arabic) and LTR layouts.\n\nEDUCATION\nB.Sc. Computer Science — King Abdulaziz University, 2022\n\nSKILLS\nReact, TypeScript, JavaScript (ES2023), Redux, React Query, Jest, React Testing Library, HTML/CSS, Tailwind CSS, Vite, Git, REST APIs, i18n/RTL",
+  "jobDescription": "Senior Full-Stack Engineer\n\nWe need a senior engineer who owns features end to end across our web platform.\n\nRequirements:\n- 5+ years of professional software engineering experience\n- Expert React and TypeScript on the frontend\n- Strong backend experience with Node.js (Express or NestJS)\n- Production experience designing and consuming GraphQL APIs\n- PostgreSQL schema design and query optimization\n- Deploying and operating services on Kubernetes (EKS) and AWS\n- CI/CD ownership (GitHub Actions) and on-call participation\n\nYou will design APIs, own database migrations, and mentor two mid-level engineers.",
+  "expected": {
+    "scoreBand": [38, 72],
+    "mustCredit": ["React", "TypeScript"],
+    "mustFlagMissing": ["Node", "GraphQL", "Kubernetes"]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "weak-match-retail-to-swe",
+  "description": "Retail supervisor with zero software experience vs a backend engineer JD. The floor test: score must clearly signal significant gaps. A regression that inflates this fixture is the most dangerous kind.",
+  "language": "en",
+  "resumeText": "MOHAMMED AL-SHEHRI\nStore Supervisor | Dammam, Saudi Arabia\nm.alshehri@email.com | 05x-xxx-xxxx\n\nSUMMARY\nRetail supervisor with 4 years of experience running daily operations for a high-traffic electronics store, leading a team of 12 sales associates.\n\nEXPERIENCE\n\nStore Supervisor — eXtra Electronics, Dammam | Jan 2022 – Present\n- Supervise a team of 12 sales associates across two shifts; store ranked top 5 of 40 branches for customer satisfaction in 2024.\n- Manage inventory counts and shrinkage control; reduced stock discrepancies by 18% year over year.\n- Prepare weekly sales summaries in Excel for the regional manager.\n- Handle escalated customer complaints and returns at the service desk.\n\nSales Associate — eXtra Electronics, Dammam | Mar 2020 – Dec 2021\n- Consistently exceeded monthly sales targets by 10-25% in the mobile and accessories section.\n- Trained 6 new associates on the POS system and store procedures.\n\nEDUCATION\nHigh school diploma — Dammam Secondary School, 2019\n\nSKILLS\nTeam leadership, customer service, inventory management, POS systems, Microsoft Excel (basic), scheduling, Arabic (native), English (conversational)",
+  "jobDescription": "Backend Software Engineer\n\nRequirements:\n- 3+ years of professional backend development experience\n- Strong Python and Django (or FastAPI) in production\n- PostgreSQL: schema design, indexing, query optimization\n- Docker and CI/CD pipelines (GitLab CI or GitHub Actions)\n- Designing and documenting REST APIs\n- B.Sc. in computer science or equivalent practical experience\n\nYou will build and operate the order-management services behind our logistics platform.",
+  "expected": {
+    "scoreBand": [0, 38],
+    "mustFlagMissing": ["Python", "PostgreSQL", "Docker"]
+  }
+}

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
+import { useExitPresence } from '@/hooks/useExitPresence';
 
 interface UserDataRightsProps {
   userId: string;
@@ -14,6 +16,7 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const deleteConfirmPresence = useExitPresence(showDeleteConfirm);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -97,9 +100,25 @@ export function UserDataRights({ onExportData, onDeleteAccount }: UserDataRights
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-surface rounded-2xl p-6 max-w-md mx-4 border border-line">
+      {deleteConfirmPresence.shouldRender && (
+        <div
+          className={cn(
+            'fixed inset-0 z-50 flex items-center justify-center bg-black/50 duration-200',
+            deleteConfirmPresence.isExiting
+              ? 'pointer-events-none animate-out fade-out ease-out'
+              : 'animate-in fade-in'
+          )}
+          aria-hidden={deleteConfirmPresence.isExiting || undefined}
+          inert={deleteConfirmPresence.isExiting}
+        >
+          <div
+            className={cn(
+              'bg-surface rounded-2xl p-6 max-w-md mx-4 border border-line duration-200 ease-out',
+              deleteConfirmPresence.isExiting
+                ? 'animate-out fade-out zoom-out-95'
+                : 'animate-in fade-in zoom-in-95'
+            )}
+          >
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="w-8 h-8 text-red-500" />
               <h3 className="text-lg font-semibold text-ink">

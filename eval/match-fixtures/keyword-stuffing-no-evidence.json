@@ -1,0 +1,11 @@
+{
+  "name": "keyword-stuffing-no-evidence",
+  "description": "Anti-inflation guard. Skills section lists every JD keyword but work history is 1 year of helpdesk with no ML evidence. The rubric says score demonstrated proficiency, not listed keywords — this must NOT score as hireable-today.",
+  "language": "en",
+  "resumeText": "FAISAL AL-DOSSARY\nMachine Learning Engineer | Riyadh, Saudi Arabia\nfaisal.dossary@email.com\n\nSUMMARY\nAspiring machine learning engineer passionate about AI, deep learning, and MLOps.\n\nEXPERIENCE\n\nIT Helpdesk Technician — Rawabi Holding, Riyadh | May 2024 – Present\n- Resolve employee hardware and software tickets (Windows, Office 365, printers).\n- Reset passwords and manage user accounts in Active Directory.\n- Image and deploy new laptops for onboarding employees.\n\nEDUCATION\nDiploma in Information Technology — Riyadh College of Technology, 2024\n\nSKILLS\nPython, TensorFlow, PyTorch, scikit-learn, AWS SageMaker, MLOps, Kubernetes, Docker, Apache Spark, SQL, pandas, NumPy, deep learning, NLP, computer vision, LLMs, RAG, model deployment, CI/CD, data engineering",
+  "jobDescription": "Machine Learning Engineer\n\nRequirements:\n- 4+ years building and deploying machine learning models in production\n- Expert Python with TensorFlow or PyTorch\n- Productionizing models on AWS SageMaker; MLOps pipelines (monitoring, retraining)\n- Distributed data processing with Apache Spark\n- M.Sc. or B.Sc. in computer science, machine learning, or related field\n\nYou will own the demand-forecasting models that drive our supply chain.",
+  "expected": {
+    "scoreBand": [5, 60],
+    "mustNotCredit": ["Python", "TensorFlow", "PyTorch", "AWS SageMaker", "MLOps", "Apache Spark"]
+  }
+}

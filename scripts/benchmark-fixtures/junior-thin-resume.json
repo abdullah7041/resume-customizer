@@ -3,5 +3,11 @@
   "language": "en",
   "resumeText": "SAM EXAMPLE\nRecent Computer Science Graduate\nsam.example@example.com\n\nSUMMARY\nNew graduate seeking an entry-level software role.\n\nEXPERIENCE\n\nSoftware Engineering Intern — Small Tech Startup\nSummer 2024 (3 months)\n- Fixed bugs in an internal React app\n- Wrote unit tests for a few components\n- Attended standups and code reviews\n\nPROJECTS\nTodo App — personal project\n- Built a todo app with React and a Node backend\n- Used localStorage to save tasks\n\nEDUCATION\nB.S. Computer Science — State University (2024)\n\nSKILLS\nJavaScript, React (basic), Node.js (basic), HTML, CSS, Git",
   "jobDescription": "Entry-Level Frontend Developer\n\nJoin our team as a junior frontend developer.\n\nRequirements:\n- Familiarity with JavaScript and React\n- Understanding of HTML/CSS\n- Eagerness to learn and take feedback\n- CS degree or equivalent\n\nNice to have:\n- Testing experience\n- Exposure to TypeScript or Node.js",
-  "expectedLanguageDirection": "ltr"
+  "expectedLanguageDirection": "ltr",
+  "expected": {
+    "matchScoreBand": [
+      40,
+      80
+    ]
+  }
 }

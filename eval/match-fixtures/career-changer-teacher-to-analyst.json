@@ -1,0 +1,12 @@
+{
+  "name": "career-changer-teacher-to-analyst",
+  "description": "Math teacher pivoting to junior data analyst. Genuine transferable evidence (Excel, basic dashboards, statistics) but core tooling gaps (SQL, Power BI). Should land mid-low with the right gaps flagged.",
+  "language": "en",
+  "resumeText": "NOURA AL-MUTAIRI\nMathematics Teacher | Riyadh, Saudi Arabia\nnoura.mutairi@email.com\n\nSUMMARY\nMathematics teacher with 5 years of experience, now transitioning into data analysis. Comfortable with Excel and basic statistics; completed a part-time data analytics bootcamp in 2025.\n\nEXPERIENCE\n\nMathematics Teacher — Al-Rowad International School, Riyadh | Sep 2020 – Present\n- Teach algebra and statistics to 150 students per year across grades 10-12.\n- Built Excel gradebooks with pivot tables and conditional formatting used by the whole math department (8 teachers).\n- Created a Google Sheets dashboard tracking student performance trends per unit, used in parent-teacher meetings.\n- Analyzed exam results per topic to redesign the term plan; pass rates improved from 78% to 91% over two years.\n\nEDUCATION\nB.Sc. Mathematics — Princess Nourah University, 2020\nData Analytics Bootcamp (part-time, 12 weeks) — Tuwaiq Academy, 2025: Excel, intro statistics, data visualization fundamentals\n\nSKILLS\nMicrosoft Excel (pivot tables, VLOOKUP, charts), Google Sheets, descriptive statistics, data visualization basics, curriculum planning, Arabic (native), English (professional)",
+  "jobDescription": "Junior Data Analyst\n\nWe are looking for a junior analyst to support the operations team.\n\nRequirements:\n- Strong Excel (pivot tables, lookups) — daily use\n- Working SQL: joins and aggregations against our PostgreSQL reporting database\n- Build and maintain Power BI dashboards for operations KPIs\n- Solid grasp of descriptive statistics\n- Communicate findings clearly to non-technical staff\n- Bachelor's degree in a quantitative field\n\nEntry level: 0-2 years of analyst experience accepted; demonstrated analytical work required.",
+  "expected": {
+    "scoreBand": [25, 68],
+    "mustCredit": ["Excel"],
+    "mustFlagMissing": ["SQL", "Power BI"]
+  }
+}

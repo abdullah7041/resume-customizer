@@ -5,6 +5,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../ui/LanguageSwitcher';
+import { cn } from '@/lib/utils/cn';
+import { useExitPresence } from '@/hooks/useExitPresence';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,12 +22,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const { shouldRender, isExiting } = useExitPresence(isOpen);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!isOpen || !user || !mounted) return null;
+  if (!shouldRender || !user || !mounted) return null;
 
   const handleExportData = async () => {
     try {
@@ -112,16 +115,32 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const sectionLabel = 'text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3';
 
   const modal = (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div
+      className={cn(
+        'fixed inset-0 z-[60] flex items-center justify-center p-4',
+        isExiting && 'pointer-events-none'
+      )}
+      aria-hidden={isExiting || undefined}
+      inert={isExiting}
+    >
       {/* Calm warm backdrop */}
       <div
-        className="absolute inset-0 bg-[color:var(--ink)]/35 backdrop-blur-sm animate-fade-in"
+        className={cn(
+          'absolute inset-0 bg-[color:var(--ink)]/35 backdrop-blur-sm duration-200',
+          isExiting ? 'animate-out fade-out ease-out' : 'animate-in fade-in'
+        )}
         onClick={() => !isDeleting && onClose()}
         aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg neu-card shadow-xl rounded-2xl animate-scale-in overflow-hidden border border-[color:var(--glass-border)]" dir={i18n.dir()}>
+      <div
+        className={cn(
+          'relative w-full max-w-lg neu-card shadow-xl rounded-2xl duration-200 ease-out overflow-hidden border border-[color:var(--glass-border)]',
+          isExiting ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'
+        )}
+        dir={i18n.dir()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[color:var(--glass-border)] dark:border-white/10">
           <div className="flex items-center gap-3 text-gray-900 dark:text-white">

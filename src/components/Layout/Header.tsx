@@ -9,6 +9,7 @@ import { GlassButton } from "../ui/GlassButton";
 import { CreditBalance } from "../Credits/CreditBalance";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { useTheme } from "../../hooks/useTheme";
+import { useExitPresence } from "@/hooks/useExitPresence";
 
 // Header modals are state-gated overlays — lazy-load them so they stay out of the entry chunk.
 const CreditUsageModal = lazy(() => import("../Credits/CreditUsageModal").then((m) => ({ default: m.CreditUsageModal })));
@@ -59,6 +60,9 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const creditModalPresence = useExitPresence(showCreditModal);
+  const settingsModalPresence = useExitPresence(showSettingsModal);
+  const feedbackModalPresence = useExitPresence(showFeedbackModal);
   const feedbackEnabled = useFeatureFlag("feedback");
   const { credits } = useUserCredits();
   const isSignedOutHeader = !user;
@@ -727,7 +731,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
 
       <Suspense fallback={null}>
         {/* Credit Usage Modal */}
-        {showCreditModal && (
+        {creditModalPresence.shouldRender && (
           <CreditUsageModal
             isOpen={showCreditModal}
             onClose={() => setShowCreditModal(false)}
@@ -747,14 +751,14 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
         )}
 
         {/* Settings Modal */}
-        {showSettingsModal && (
+        {settingsModalPresence.shouldRender && (
           <SettingsModal
             isOpen={showSettingsModal}
             onClose={() => setShowSettingsModal(false)}
           />
         )}
 
-        {feedbackEnabled && showFeedbackModal && (
+        {feedbackEnabled && feedbackModalPresence.shouldRender && (
           <FeedbackModal
             isOpen={showFeedbackModal}
             onClose={() => setShowFeedbackModal(false)}

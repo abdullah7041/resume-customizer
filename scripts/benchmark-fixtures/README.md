@@ -23,4 +23,8 @@ All files in this directory contain **entirely synthetic (fake) data**.
 1. Create a new `.json` file in this directory.
 2. Use completely fake names, emails, and companies.
 3. Include `name`, `language`, `resumeText`, `jobDescription`, and `expectedLanguageDirection`.
-4. Verify no real personal data is present before committing.
+4. Add `expected.matchScoreBand: [lo, hi]` — the range the optimize contract's
+   `match_score` must fall in for this resume/JD pair. `eval:optimize` reports
+   violations in its "band" column (anti-inflation guard for the optimize prompt).
+   Keep bands generous (~30-35 wide); they catch rubric regressions, not model noise.
+5. Verify no real personal data is present before committing.

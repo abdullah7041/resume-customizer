@@ -1,0 +1,142 @@
+{
+  "score": 35,
+  "categoryScores": {
+    "hard_skills": {
+      "score": 70,
+      "max": 100,
+      "reasoning": "The resume lists all required hard skills (Python, TensorFlow, PyTorch, AWS SageMaker, MLOps, Apache Spark) and many related technologies, indicating strong technical breadth. However, the depth of 'expert' level and 'production' application is not evidenced by the experience section."
+    },
+    "experience": {
+      "score": 10,
+      "max": 100,
+      "reasoning": "The job requires 4+ years building and deploying ML models in production. The resume shows current experience as an IT Helpdesk Technician, which does not align with this requirement. There is no evidence of ML model building or deployment experience."
+    },
+    "education": {
+      "score": 20,
+      "max": 100,
+      "reasoning": "The job requires an M.Sc. or B.Sc. in computer science, machine learning, or a related field. The applicant has a Diploma in Information Technology, which is a lower academic level than requested."
+    },
+    "soft_skills": {
+      "score": 50,
+      "max": 100,
+      "reasoning": "No specific soft skills were mentioned in the job description, making it difficult to score. A neutral score is assigned as there's no evidence for or against."
+    }
+  },
+  "strongMatches": [
+    "Python",
+    "TensorFlow",
+    "PyTorch",
+    "AWS SageMaker",
+    "MLOps",
+    "Apache Spark",
+    "machine learning models"
+  ],
+  "missingKeywords": [
+    "4+ years building and deploying machine learning models in production",
+    "Expert Python",
+    "M.Sc. or B.Sc. in computer science, machine learning, or related field",
+    "demand-forecasting models",
+    "supply chain"
+  ],
+  "summary_bullets": [
+    "Resume lists all required hard skills, but lacks evidence of practical application.",
+    "Significant experience gap; current role is IT Helpdesk, not ML engineering.",
+    "Education (Diploma) does not meet the B.Sc./M.Sc. requirement.",
+    "No evidence of 4+ years building/deploying ML models in production.",
+    "Applicant's profile suggests an aspiring ML Engineer, not an experienced one."
+  ],
+  "reasoning": "The applicant lists all required hard skills, which is a strong ATS match. However, the resume lacks any evidence of the required 4+ years of production ML experience and the specified academic degree. The current role as an IT Helpdesk Technician is a significant mismatch for an ML Engineer position, indicating a substantial experience gap and potential seniority mismatch.",
+  "strategicRealityCheck": {
+    "riskTier": "critical",
+    "recommendation": "review_role_fit",
+    "confidence": "high",
+    "riskTypes": [
+      "experience_gap",
+      "seniority_mismatch",
+      "education_certification_gap",
+      "evidence_quality"
+    ],
+    "summary": "The applicant's resume presents critical gaps in both required experience and education for the Machine Learning Engineer role. While technical skills are listed, there is no practical evidence of their application in a production ML environment, nor the required years of experience. The current role is entirely unrelated.",
+    "strengths": [
+      {
+        "title": "Comprehensive Hard Skills Listing",
+        "whyItMatters": "The resume explicitly lists all key technical skills required by the job description, which is crucial for initial ATS screening and keyword matching.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Expert Python with TensorFlow or PyTorch; Productionizing models on AWS SageMaker; MLOps pipelines; Distributed data processing with Apache Spark"
+          },
+          {
+            "source": "resume",
+            "snippet": "SKILLS: Python, TensorFlow, PyTorch, AWS SageMaker, MLOps, Apache Spark"
+          }
+        ]
+      }
+    ],
+    "confirmedRisks": [
+      {
+        "type": "experience_gap",
+        "severity": "critical",
+        "title": "Lack of Production ML Experience",
+        "explanation": "The job requires 4+ years building and deploying machine learning models in production. The resume shows no experience in this area; the only listed experience is as an IT Helpdesk Technician.",
+        "mitigation": "The applicant would need to demonstrate significant, relevant ML project experience, ideally with quantifiable impact, to bridge this gap. This is a fundamental requirement.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "4+ years building and deploying machine learning models in production"
+          },
+          {
+            "source": "resume",
+            "snippet": "IT Helpdesk Technician — Rawabi Holding, Riyadh | May 2024 – Present"
+          }
+        ]
+      },
+      {
+        "type": "education_certification_gap",
+        "severity": "high",
+        "title": "Education Level Mismatch",
+        "explanation": "The job requires an M.Sc. or B.Sc. in a relevant field. The applicant holds a Diploma in Information Technology, which does not meet the degree requirement.",
+        "mitigation": "The applicant would need to obtain a Bachelor's or Master's degree in a relevant field, or provide compelling evidence of equivalent practical knowledge and achievement.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "M.Sc. or B.Sc. in computer science, machine learning, or related field"
+          },
+          {
+            "source": "resume",
+            "snippet": "Diploma in Information Technology — Riyadh College of Technology, 2024"
+          }
+        ]
+      },
+      {
+        "type": "seniority_mismatch",
+        "severity": "critical",
+        "title": "Seniority and Role Scope Mismatch",
+        "explanation": "The job requires an experienced ML Engineer (4+ years production experience) who will 'own the demand-forecasting models'. The applicant's resume indicates an 'Aspiring machine learning engineer' with only IT Helpdesk experience, suggesting a significant mismatch in seniority and expected responsibilities.",
+        "mitigation": "The applicant would need to demonstrate a rapid and substantial career transition into ML engineering with significant project ownership, which is not currently evident.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "4+ years building and deploying machine learning models in production; You will own the demand-forecasting models"
+          },
+          {
+            "source": "resume",
+            "snippet": "SUMMARY: Aspiring machine learning engineer passionate about AI... EXPERIENCE: IT Helpdesk Technician — Rawabi Holding, Riyadh | May 2024 – Present"
+          }
+        ]
+      }
+    ],
+    "unclearRisks": [],
+    "limits": {
+      "cannotDetermine": [
+        "Actual proficiency level of listed skills (e.g., 'Expert Python')",
+        "Specific experience with demand-forecasting models or supply chain context",
+        "Ability to 'own' models without prior production experience"
+      ],
+      "assumptions": [
+        "The 'Aspiring machine learning engineer' summary accurately reflects the applicant's current career stage.",
+        "The listed skills are genuinely possessed by the applicant, even without practical evidence."
+      ]
+    }
+  }
+}

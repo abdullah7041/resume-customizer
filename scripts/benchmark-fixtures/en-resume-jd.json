@@ -3,5 +3,11 @@
   "language": "en",
   "resumeText": "ALEX SAMPLE\nSoftware Engineer\nSan Francisco, CA | alex.sample@example.com | (555) 123-4567\n\nSUMMARY\nResults-driven software engineer with 5+ years of experience building scalable web applications using React, Node.js, and cloud infrastructure. Passionate about clean code, system design, and mentoring junior developers.\n\nEXPERIENCE\n\nSenior Software Engineer — TechCorp Inc.\nJan 2021 – Present\n• Led development of customer-facing dashboard used by 10,000+ users\n• Reduced API latency by 40% through caching and query optimization\n• Mentored a team of 4 junior engineers\n\nSoftware Engineer — StartupXYZ\nJun 2018 – Dec 2020\n• Built RESTful APIs in Node.js serving 1M+ requests/day\n• Implemented CI/CD pipelines using GitHub Actions and Docker\n• Collaborated with product team to deliver features on tight deadlines\n\nEDUCATION\nB.S. Computer Science — State University (2018)\n\nSKILLS\nJavaScript, TypeScript, React, Node.js, Python, AWS, Docker, Kubernetes, SQL, Git",
   "jobDescription": "Senior Full-Stack Engineer\n\nWe are seeking an experienced full-stack engineer to join our growing team. You will be responsible for designing and building scalable web applications.\n\nRequirements:\n• 4+ years of experience with React and Node.js\n• Strong understanding of system design and architecture\n• Experience with AWS or GCP\n• Proficiency in TypeScript and modern JavaScript\n• Familiarity with Docker and container orchestration\n• Excellent communication and mentoring skills\n• Bachelor's degree in Computer Science or equivalent\n\nNice to have:\n• Experience with Kubernetes\n• Knowledge of GraphQL\n• Open-source contributions",
-  "expectedLanguageDirection": "ltr"
+  "expectedLanguageDirection": "ltr",
+  "expected": {
+    "matchScoreBand": [
+      55,
+      92
+    ]
+  }
 }
