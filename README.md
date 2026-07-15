@@ -155,7 +155,7 @@ See [LICENSE](./LICENSE) for complete terms.
 
 <div align="center">
 
-**[View Live Demo →](https://resume-optimizing.netlify.app)**
+**[View Live Demo →](https://watheqai.app/)**
 
 **واثق | Watheq** — *Walk in confident.*
 
