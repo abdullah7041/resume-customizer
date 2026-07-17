@@ -186,7 +186,7 @@ describe('recommendation-only cards (Task 6 regressions)', () => {
         expect(screen.queryByText('Apply Suggestion')).toBeNull();
     });
 
-    it.fails('R6: applied progress counts actionable cards only, recommendations listed separately', () => {
+    it('R6: applied progress counts actionable cards only, recommendations listed separately', () => {
         mockStoreState.optimizations = [
             card({ sectionId: 'experience-0', applied: true }),
             card({ sectionId: 'experience-1', original: 'Second original bullet content', optimized: 'Second optimized bullet', applied: true }),

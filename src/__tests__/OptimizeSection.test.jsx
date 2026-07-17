@@ -503,7 +503,7 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('2/3 applied')).toBeInTheDocument();
+            expect(screen.getByText('2/3 resume changes applied')).toBeInTheDocument();
         });
     });
 
@@ -1027,7 +1027,7 @@ describe('Optimization Card Types', () => {
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
-            expect(screen.getByText('Projected ~5%')).toBeInTheDocument();
+            expect(screen.getByText('Estimated ~5%')).toBeInTheDocument();
         });
 
         it('does not treat missing score fields as a real zero score', () => {
@@ -1240,7 +1240,7 @@ describe('Optimization Card Types', () => {
             warnSpy.mockRestore();
         });
 
-        it('shows projected and verified score states with a signed delta', () => {
+        it('treats a non-positive estimate as no meaningful projection (current score only)', () => {
             mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
             mockStoreState.baselineMatchScore = 78;
             mockStoreState.optimizationMetrics = {
@@ -1252,9 +1252,12 @@ describe('Optimization Card Types', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('Projected ~75%')).toBeInTheDocument();
-            expect(screen.getByText('-3%')).toBeInTheDocument();
-            expect(screen.queryByText('+-3%')).not.toBeInTheDocument();
+            // A negative estimate is not a meaningful projection — the header shows
+            // the honest current score alone, never "78% -> Estimated ~75%".
+            expect(screen.getByText('Current match')).toBeInTheDocument();
+            expect(screen.getAllByText('78%').length).toBeGreaterThan(0);
+            expect(screen.queryByText('Estimated ~75%')).not.toBeInTheDocument();
+            expect(screen.queryByText('-3%')).not.toBeInTheDocument();
         });
     });
 
@@ -1316,13 +1319,14 @@ describe('Optimization Card Types', () => {
             expect(screen.getByTestId('after-score-bar')).toHaveTextContent('70%');
         });
 
-        it('passes a missing placeholder baseline and an existing API after score unchanged', () => {
+        it('ignores the legacy persisted afterScore when the baseline is a placeholder', () => {
             window.localStorage.setItem('watheq:characterGender', 'female');
             mockStoreState.optimizations = [sampleOptimization];
             mockStoreState.baselineMatchScore = null;
             mockStoreState.optimizationMetrics = {
                 ...mockStoreState.optimizationMetrics,
                 beforeScore: null,
+                // Legacy field from an old session: frozen, never displayed as a score.
                 afterScore: 84,
                 improvement: null,
             };
@@ -1330,10 +1334,8 @@ describe('Optimization Card Types', () => {
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.getByTestId('before-score-bar')).toHaveTextContent('Unavailable');
-            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('84%');
-            const femalePicker = screen.queryByRole('button', { name: 'Female companion' });
-            if (femalePicker) fireEvent.click(femalePicker);
-            expect(screen.getByRole('img').getAttribute('src')).toContain('female-tier-3');
+            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('Unavailable');
+            expect(screen.queryByText('84%')).not.toBeInTheDocument();
         });
 
         it('projection equals the resultsSummaryData formula (before + round(improvement * appliedRatio))', () => {

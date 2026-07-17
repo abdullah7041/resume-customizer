@@ -33,7 +33,8 @@ import { useUserCredits } from '../../hooks/useUserCredits';
 import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { isActionable, partitionOptimizations } from '../../lib/optimize/actionability';
 import { mergeOptimizedResume } from '../../lib/optimize/mergeResume';
-import { classifyVerifiedOutcome, verificationSignature } from '../../lib/optimize/scoreModel';
+import { buildScorePresentation, classifyVerifiedOutcome, verificationSignature } from '../../lib/optimize/scoreModel';
+import type { VerifyAnomalyState } from '../../lib/optimize/scoreModel';
 import { ScoreHeader } from './optimize/ScoreHeader';
 import { StrategyBlock } from './optimize/StrategyBlock';
 import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
@@ -257,12 +258,7 @@ export function OptimizeSection({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
-  const [verifyAnomaly, setVerifyAnomaly] = useState<{
-    kind: 'too_short' | 'no_text_change' | 'anomalous_drop' | 'error';
-    rawScore: number | null;
-    textLength: number;
-    mergeFailedCount?: number;
-  } | null>(null);
+  const [verifyAnomaly, setVerifyAnomaly] = useState<VerifyAnomalyState | null>(null);
   const [verifyRetryUsed, setVerifyRetryUsed] = useState(false);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const [scoreHeaderExpanded, setScoreHeaderExpanded] = useState(false);
@@ -433,8 +429,6 @@ export function OptimizeSection({
 
   // Calculate results summary data using API-provided metrics
   const resultsSummaryData = useMemo(() => {
-    const appliedCount = optimizations.filter(o => o.applied).length;
-
     // Group by section
     const bySection = optimizations.reduce((acc, opt) => {
       const section = opt.sectionType || 'general';
@@ -472,43 +466,23 @@ export function OptimizeSection({
       finiteScore(cachedAnalysis?.score) === null &&
       finiteScore(optimizationMetrics.beforeScore) === null &&
       finiteScore((originalResume?.meta as Record<string, unknown> | undefined)?.match_score) === null;
-    // FIX: Use explicit null check, not truthy check, because improvement can be 0 (valid value)
-    const isPlaceholderImprovement = optimizationMetrics.improvement === null || optimizationMetrics.improvement === undefined;
 
-    // Calculate projected after score based on applied optimizations
-    // This is an ESTIMATE only - use "Verify Match Score" for genuine re-analysis
-    const appliedRatio = optimizations.length > 0
-      ? appliedCount / optimizations.length
-      : 0;
-
-    const maxImprovement = optimizationMetrics.improvement ?? 15;
-    const actualImprovement = Math.round(maxImprovement * appliedRatio);
-    const afterScore = beforeScore + actualImprovement;
-
-    // Potential score uses the estimated improvement (no artificial cap)
-    const potentialAfterScore = beforeScore + (optimizationMetrics.improvement ?? maxImprovement);
-
-    // Verified all-actionable potential, valid only while its signature matches
-    // the live actionable card set + resume + JD (stale results drop silently).
-    const { actionable: actionableCards } = partitionOptimizations(optimizations);
-    const verifiedPotential = optimizationMetrics.verifiedPotential ?? null;
-    const verifiedScore = verifiedPotential &&
-      verifiedPotential.signature === verificationSignature(actionableCards, resumeText ?? '', jobDescription)
-      ? verifiedPotential.score
-      : null;
-
-    // Use verified score if available, otherwise show projected estimate
-    const isScoreVerified = verifiedScore !== null;
-    const displayAfterScore = isScoreVerified
-      ? (verifiedScore ?? afterScore)
-      : afterScore;
+    // One explicit score model for every consumer (ScoreHeader, ScoreDiffBreakdown,
+    // companion, share card): baseline / applied-only projection / potential
+    // estimate / verified all-actionable potential, with display states A-E.
+    // The projection numerator and denominator count ACTIONABLE cards only.
+    const presentation = buildScorePresentation({
+      optimizations,
+      baselineScore: isPlaceholderScore ? null : beforeScore,
+      improvement: optimizationMetrics.improvement ?? null,
+      verifiedPotential: optimizationMetrics.verifiedPotential,
+      resumeText: resumeText ?? '',
+      jobDescription,
+    });
 
     return {
       beforeScore,
-      afterScore: displayAfterScore,
-      potentialScore: potentialAfterScore,
-      totalOptimizations: optimizations.length,
-      appliedOptimizations: appliedCount,
+      presentation,
       optimizationsBySection: Object.values(bySection),
       keywordsAdded: keywordBuckets.add,
       keywordsFromJD: optimizationMetrics.jdKeywords,
@@ -519,23 +493,16 @@ export function OptimizeSection({
       vision2030: optimizationMetrics.vision2030,
       // Bug Fix: Expose placeholder status to UI
       isPlaceholderScore,
-      isPlaceholderImprovement,
-      // Verified vs projected
-      isScoreVerified,
     };
   }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore]);
 
-  const companionBeforeScore = resultsSummaryData.isPlaceholderScore
-    ? null
-    : resultsSummaryData.beforeScore;
-  const existingAfterScore = typeof optimizationMetrics.afterScore === 'number'
-    && Number.isFinite(optimizationMetrics.afterScore)
-    ? optimizationMetrics.afterScore
-    : null;
-  const companionAfterScore = !resultsSummaryData.isPlaceholderScore
-    && !resultsSummaryData.isPlaceholderImprovement
-    ? resultsSummaryData.afterScore
-    : existingAfterScore;
+  const presentation = resultsSummaryData.presentation;
+
+  // The companion represents the ACTUAL current resume: baseline when nothing is
+  // applied, the applied-only projection as the user works through cards. The
+  // verified all-suggestions potential is never fed as the current score.
+  const companionBeforeScore = presentation.isPlaceholderScore ? null : presentation.baselineScore;
+  const companionAfterScore = presentation.currentAppliedProjection ?? companionBeforeScore;
 
   const verifyOptimizedResume = async (jobDescription: string, beforeScore: number, options?: { freePreview?: boolean }) => {
     if (!jobDescription.trim()) return;
@@ -1107,9 +1074,6 @@ export function OptimizeSection({
     });
   };
 
-  // Get applied count
-  const appliedCount = optimizations.filter(o => o.applied).length;
-
   const queueGroups = useMemo<QueueGroup[]>(() => {
     const workEntries = (originalResume?.work ?? []) as Work[];
     const groups = new Map<string, QueueGroup & { order: number }>();
@@ -1203,17 +1167,6 @@ export function OptimizeSection({
   const visibleQueueOptimizations = filteredQueueGroups.flatMap((group) => group.items);
   const hasOptimizationResults = optimizations.length > 0;
   const hasKeywordData = keywordBuckets.add.length + keywordBuckets.neutral.length + keywordBuckets.remove.length > 0;
-  const scoreDelta = resultsSummaryData.afterScore - resultsSummaryData.beforeScore;
-  const scoreDeltaLabel = scoreDelta > 0
-    ? `+${scoreDelta}%`
-    : scoreDelta < 0
-      ? `${scoreDelta}%`
-      : t('sections.optimize.noScoreChange', 'no change');
-  const scoreDeltaClass = scoreDelta > 0
-    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-    : scoreDelta < 0
-      ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-      : 'bg-gray-500/10 border-gray-500/20 text-gray-500';
   const queueFilters = [
     { id: 'all', label: t('sections.optimize.queue.filters.all', 'All') },
     { id: 'pending', label: t('sections.optimize.queue.filters.pending', 'Pending') },
@@ -1253,6 +1206,28 @@ export function OptimizeSection({
       void onExport('optimized');
     }
   };
+
+  // State D CTA: focus the user on the existing Match gaps / Strategic Reality
+  // Check. Uses the established cross-section navigation event (MainContent
+  // listens for watheq:navigate-tab); MatchSection reads the anchor on arrival.
+  const handleReviewMatchGaps = () => {
+    try {
+      sessionStorage.setItem('watheq:pendingMatchAnchor', 'gaps');
+    } catch { /* storage unavailable — navigation alone still helps */ }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'match' } }));
+    }
+  };
+
+  // Share card: only for genuinely communicable gains — the verified score when
+  // every actionable suggestion is applied (C_ALL), else the applied-only
+  // projection. Hypothetical unapplied potentials are never shared as results.
+  const shareAfterScore = presentation.displayState === 'C_ALL'
+    ? presentation.verifiedAllSuggestionsScore
+    : presentation.currentAppliedProjection;
+  const shareDelta = shareAfterScore !== null && presentation.baselineScore !== null
+    ? shareAfterScore - presentation.baselineScore
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -1372,19 +1347,10 @@ export function OptimizeSection({
 
       {optimizations.length > 0 && (
         <ScoreHeader
-          beforeScore={resultsSummaryData.beforeScore}
-          afterScore={resultsSummaryData.afterScore}
-          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
-          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
-          isScoreVerified={resultsSummaryData.isScoreVerified}
+          presentation={presentation}
           isAutoVerifying={isAutoVerifying}
-          verifyAnomaly={Boolean(verifyAnomaly)}
+          verifyAnomaly={verifyAnomaly}
           verifyRetryUsed={verifyRetryUsed}
-          appliedCount={appliedCount}
-          totalCount={optimizations.length}
-          scoreDeltaLabel={scoreDeltaLabel}
-          scoreDeltaClass={scoreDeltaClass}
-          scoreDelta={scoreDelta}
           categoryScores={categoryScores}
           expanded={scoreHeaderExpanded}
           expandedCategories={expandedScoreCategories}
@@ -1396,6 +1362,7 @@ export function OptimizeSection({
           onRetryVerify={retryVerifyOptimizedResume}
           onRerun={() => void handleGenerateActual()}
           onContinue={handleContinue}
+          onReviewMatchGaps={handleReviewMatchGaps}
         />
       )}
 
@@ -1409,46 +1376,38 @@ export function OptimizeSection({
 
       {optimizations.length > 0 && (
         <ScoreDiffBreakdown
-          beforeScore={resultsSummaryData.beforeScore}
-          afterScore={resultsSummaryData.afterScore}
-          potentialScore={resultsSummaryData.potentialScore}
-          improvement={optimizationMetrics.improvement}
-          isScoreVerified={resultsSummaryData.isScoreVerified}
-          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
-          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
+          presentation={presentation}
+          improvement={optimizationMetrics.improvement ?? null}
           optimizations={optimizations}
         />
       )}
 
-      {optimizations.length > 0 &&
-        !resultsSummaryData.isPlaceholderScore &&
-        !resultsSummaryData.isPlaceholderImprovement &&
-        resultsSummaryData.afterScore - resultsSummaryData.beforeScore > 10 && (
-          <div className="flex justify-end">
-            <GlassButton
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                analytics.track('share_card_opened', {
-                  before_score: resultsSummaryData.beforeScore,
-                  after_score: resultsSummaryData.afterScore,
-                  improvement: resultsSummaryData.afterScore - resultsSummaryData.beforeScore,
-                });
-                setShowShareCard(true);
-              }}
-              leftIcon={<Share2 className="w-3.5 h-3.5" />}
-            >
-              {t('sections.optimize.shareResult', 'Share Your Result')}
-            </GlassButton>
-          </div>
-        )}
+      {optimizations.length > 0 && shareDelta > 10 && shareAfterScore !== null && (
+        <div className="flex justify-end">
+          <GlassButton
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              analytics.track('share_card_opened', {
+                before_score: resultsSummaryData.beforeScore,
+                after_score: shareAfterScore,
+                improvement: shareDelta,
+              });
+              setShowShareCard(true);
+            }}
+            leftIcon={<Share2 className="w-3.5 h-3.5" />}
+          >
+            {t('sections.optimize.shareResult', 'Share Your Result')}
+          </GlassButton>
+        </div>
+      )}
 
       {/* Share Score Card Modal */}
-      {showShareCard && (
+      {showShareCard && shareAfterScore !== null && (
         <Suspense fallback={null}>
           <ShareScoreCard
             beforeScore={resultsSummaryData.beforeScore}
-            afterScore={resultsSummaryData.afterScore}
+            afterScore={shareAfterScore}
             onClose={() => setShowShareCard(false)}
           />
         </Suspense>

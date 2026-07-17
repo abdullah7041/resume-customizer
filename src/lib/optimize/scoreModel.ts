@@ -33,6 +33,16 @@ export type VerifiedOutcome = 'improved' | 'no_change' | 'decreased';
  */
 export type DisplayState = 'A' | 'B' | 'C' | 'C_ALL' | 'D' | 'E';
 
+/** Typed verification-anomaly state shared by OptimizeSection and ScoreHeader. */
+export type VerifyAnomalyKind = 'too_short' | 'no_text_change' | 'anomalous_drop' | 'error';
+export interface VerifyAnomalyState {
+  kind: VerifyAnomalyKind;
+  rawScore: number | null;
+  textLength: number;
+  /** Set for no_text_change: how many actionable cards failed to merge. */
+  mergeFailedCount?: number;
+}
+
 /** |verified − baseline| ≤ band ⇒ no_change. */
 export const NO_CHANGE_BAND = 3;
 /** Minimum estimated improvement (points) for an estimate to be worth showing. */

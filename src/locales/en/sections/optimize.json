@@ -7,14 +7,19 @@
         "estimateNote": "Projected gains are estimates based on the suggestions you applied — not a guarantee.",
         "verifiedBadge": "Verified",
         "verifiedNote": "Verified by AI re-analysis with all suggestions applied.",
-        "appliedOf": "{{applied}} of {{total}} suggestions applied",
+        "appliedOf": "{{applied}} of {{total}} resume changes applied",
         "perCardShare": "Each applied suggestion adds about +{{points}} pts to the estimate",
         "counted": "Counted in projection",
         "notCounted": "Not applied — not counted",
         "noneApplied": "Apply suggestions to see their effect on the projection.",
         "potentialNote": "Up to {{score}}% if all suggestions are applied (estimate)",
         "showCards": "See which changes count",
-        "hideCards": "Hide breakdown"
+        "hideCards": "Hide breakdown",
+        "recommendationsAside": "{{total}} recommendations shown separately (not counted)",
+        "recommendationsHeading": "Recommendations (not counted)",
+        "recommendationLabel": "Recommendation",
+        "mergeFailed": "Couldn't locate in resume",
+        "noGainPredicted": "No measurable Match-score increase predicted (estimate)"
       },
       "title": "Optimize",
       "subtitle": "AI-powered suggestions to improve your resume",
@@ -52,7 +57,9 @@
         "original": "Original",
         "optimized": "Optimized",
         "applied": "Applied",
-        "pending": "Pending"
+        "pending": "Pending",
+        "recommendation": "Recommendation",
+        "notInResume": "Couldn't locate this text in your resume — refine the suggestion or edit manually."
       },
       "generating": "Generating optimizations...",
       "noChanges": "No optimizations available",
@@ -82,19 +89,24 @@
       "optimizingResume": "Optimizing Resume...",
       "currentScore": "Current Score",
       "optimizedScore": "Optimized Score",
-      "noScoreChange": "no change",
       "verifyAnomalyTitle": "Couldn't verify the new score",
       "retryVerify": "Retry",
       "verifying": "Verifying...",
       "verifiedTooltip": "We re-scored your optimized resume against this job description",
       "verifiedByReanalysis": "Verified by re-analysis",
       "scoreHeader": {
-        "projectedScore": "Projected ~{{score}}%",
         "verified": "verified",
         "progress": "{{applied}}/{{total}} applied",
         "rerun": "Re-run",
         "continue": "Continue",
-        "breakdown": "Breakdown"
+        "breakdown": "Breakdown",
+        "currentMatch": "Current match",
+        "estimatedScore": "Estimated ~{{score}}%",
+        "progressActionable": "{{applied}}/{{total}} resume changes applied",
+        "recommendationsCount": "{{total}} recommendations",
+        "suggestionsReady": "{{total}} suggestions ready · none applied yet",
+        "potentialEstimate": "Up to ~{{score}}% if all suggestions are applied (estimate)",
+        "noGainPredicted": "No measurable Match-score increase predicted (estimate)"
       },
       "strategy": {
         "title": "Strategy",
@@ -111,7 +123,12 @@
           "pending": "Pending",
           "applied": "Applied"
         },
-        "emptyFiltered": "No suggestions match this filter."
+        "emptyFiltered": "No suggestions match this filter.",
+        "recommendedSkills": "Recommended skills",
+        "recommendedCertifications": "Recommended certifications",
+        "recommendationsBadge": "Recommendations — not applied to your resume",
+        "skillsHonesty": "Add only skills you genuinely have.",
+        "certificationsHonesty": "Advice to consider — your existing certificates are never changed."
       },
       "shareResult": "Share Your Result",
       "revert": "Revert",
@@ -172,7 +189,15 @@
         "improved": "Improved",
         "empty": "Empty",
         "noChanges": "No changes applied yet"
-      }
+      },
+      "verifiedPotentialLine": "Potential with all suggestions: {{score}}% · Verified",
+      "noChangeTitle": "Rewriting alone is unlikely to improve this match",
+      "noChangeBody": "We tested the optimized version against this job description, but the match score did not materially improve. The main gaps appear to require stronger evidence, experience, qualifications, or skills — not different wording.",
+      "noChangeNote": "These edits can still improve clarity and readability — they just do not address the main requirements for this role.",
+      "reviewGaps": "Review top match gaps",
+      "decreaseTitle": "The rewrite scored lower ({{score}}%)",
+      "decreaseBody": "The optimized version scored below your current resume, so it is not an improvement for this job. Review the suggestions and revert any that do not reflect your actual experience.",
+      "verifyNoTextChangeTitle": "Couldn't apply the suggestions to your resume text"
     },
     "characterResults": {
       "picker": "Choose your companion",

@@ -260,6 +260,26 @@ export function MatchSection({
     }
   }, [matchAnalysis]);
 
+  // Arriving from Optimize's "Review top match gaps" CTA: open the Gaps & evidence
+  // accordion and bring it into view. The anchor is single-shot (cleared on read).
+  useEffect(() => {
+    if (typeof window === 'undefined' || !matchAnalysis) return;
+    let anchor: string | null = null;
+    try {
+      anchor = sessionStorage.getItem('watheq:pendingMatchAnchor');
+    } catch {
+      return;
+    }
+    if (anchor !== 'gaps') return;
+    try {
+      sessionStorage.removeItem('watheq:pendingMatchAnchor');
+    } catch { /* ignore */ }
+    setOpenDetails((prev) => ({ ...prev, gaps: true }));
+    requestAnimationFrame(() => {
+      document.getElementById('match-gaps')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [matchAnalysis]);
+
   const handleAnalyzeActual = async (options?: { freePreview?: boolean }) => {
     const trimmedJob = jobText.trim();
     if (!trimmedJob) {
@@ -698,6 +718,7 @@ export function MatchSection({
                   )}
                 </DetailAccordion>
 
+                <div id="match-gaps">
                 <DetailAccordion
                   title={t('sections.match.details.gapsEvidence', 'Gaps & evidence')}
                   count={(realityCheck?.confirmedRisks.length ?? 0) + (realityCheck?.unclearRisks.length ?? 0) + (matchAnalysis?.gapAnalysis?.length ?? 0)}
@@ -755,6 +776,7 @@ export function MatchSection({
                     ) : null}
                   </div>
                 </DetailAccordion>
+                </div>
 
                 <DetailAccordion
                   title={t('sections.match.details.keywords', 'Keywords')}

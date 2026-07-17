@@ -116,7 +116,7 @@ beforeEach(() => {
 });
 
 describe('zero-improvement repro (Task 5 regression)', () => {
-    it.fails('R9: baseline 10 + zero estimate + none applied shows no misleading score lines', () => {
+    it('R9: baseline 10 + zero estimate + none applied shows no misleading score lines', () => {
         const cards = [];
         for (let i = 0; i < 12; i++) {
             cards.push({
