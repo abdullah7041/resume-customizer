@@ -165,7 +165,7 @@ beforeEach(() => {
 });
 
 describe('recommendation-only cards (Task 6 regressions)', () => {
-    it.fails('R4: skills/certification cards render no Apply controls and no Pending state', () => {
+    it('R4: skills/certification cards render no Apply controls and no Pending state', () => {
         mockStoreState.optimizations = [
             card({}),
             card({ sectionId: 'skills-0', sectionType: 'skills', original: 'Add: TypeScript and Kubernetes', optimized: 'TypeScript, Kubernetes' }),

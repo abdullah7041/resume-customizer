@@ -31,7 +31,7 @@ import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
-import { isActionable, partitionOptimizations } from '../../lib/optimize/actionability';
+import { getActionability, isActionable, partitionOptimizations } from '../../lib/optimize/actionability';
 import { mergeOptimizedResume } from '../../lib/optimize/mergeResume';
 import { buildScorePresentation, classifyVerifiedOutcome, verificationSignature } from '../../lib/optimize/scoreModel';
 import type { VerifyAnomalyState } from '../../lib/optimize/scoreModel';
@@ -1120,6 +1120,7 @@ export function OptimizeSection({
 
     optimizations.forEach((opt) => {
       const sectionType = opt.sectionType || 'general';
+      const kind: QueueGroup['kind'] = getActionability(sectionType) === 'recommendation' ? 'recommendation' : 'actionable';
       let groupId = `section-${sectionType}`;
       let title = t(`sections.optimize.tabs.${sectionType}`, sectionType);
       let subtitle: string | undefined;
@@ -1135,12 +1136,22 @@ export function OptimizeSection({
         order = orderByType.experience + (fallbackIndex / 100);
       }
 
+      if (sectionType === 'skills') {
+        title = t('sections.optimize.queue.recommendedSkills', 'Recommended skills');
+        subtitle = t('sections.optimize.queue.skillsHonesty', 'Add only skills you genuinely have.');
+      }
+      if (sectionType === 'certifications') {
+        title = t('sections.optimize.queue.recommendedCertifications', 'Recommended certifications');
+        subtitle = t('sections.optimize.queue.certificationsHonesty', 'Advice to consider — your existing certificates are never changed.');
+      }
+
       if (!groups.has(groupId)) {
         groups.set(groupId, {
           id: groupId,
           title,
           subtitle,
           type: sectionType as QueueGroup['type'],
+          kind,
           items: [],
           order,
         });
@@ -1155,6 +1166,9 @@ export function OptimizeSection({
   }, [optimizations, originalResume?.work, t]);
 
   const filteredQueueGroups = queueGroups.reduce<QueueGroup[]>((acc, group) => {
+    // Pending/Applied are implementation-progress filters — recommendation-only
+    // groups have no applied state, so they appear under "All" only.
+    if (queueFilter !== 'all' && group.kind === 'recommendation') return acc;
     const items = group.items.filter((item) => {
       if (queueFilter === 'pending') return !item.applied;
       if (queueFilter === 'applied') return item.applied;
