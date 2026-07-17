@@ -1055,18 +1055,24 @@ describe('Optimization Card Types', () => {
         });
 
         it('passes verify mode when auto-verifying the optimized resume', async () => {
-            mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
-            mockStoreState.parsedResumeText = 'Original resume text that is long enough to make verification meaningful after optimization';
-            mockStoreState.getActiveResume = vi.fn(() => ({
+            // Verification now merges the REAL store resume (pure simulation), so the
+            // fixture needs enough content for the merged text to pass the length guard.
+            mockStoreState.originalResume = {
                 basics: {
                     name: 'Test User',
-                    summary: 'Optimized summary with enough detailed text to exceed the minimum verification length threshold for the test scenario.',
+                    label: 'Backend Engineer',
+                    email: 't@example.com',
+                    phone: '',
+                    summary: 'Original summary describing production backend engineering work across payments platforms.',
+                    location: { city: 'Riyadh', countryCode: 'SA', region: '' },
+                    profiles: [],
                 },
                 work: [{
                     name: 'Company',
                     position: 'Engineer',
                     startDate: '2020',
                     endDate: '2024',
+                    summary: '',
                     highlights: [
                         'Improved backend APIs with measurable latency reductions and production reliability gains.',
                         'Built React dashboards for hiring managers with accessible workflows and analytics.',
@@ -1074,7 +1080,8 @@ describe('Optimization Card Types', () => {
                 }],
                 education: [],
                 skills: [{ name: 'Technical', keywords: ['React', 'TypeScript', 'Node.js'] }],
-            }));
+            };
+            mockStoreState.parsedResumeText = 'Original resume text that is long enough to make verification meaningful after optimization';
             mockStoreState.baselineMatchScore = 45;
             mockAnalyzeResumeWithAI.mockResolvedValue({
                 score: 52,
@@ -1115,18 +1122,24 @@ describe('Optimization Card Types', () => {
         });
 
         it('shows an anomaly instead of storing an implausibly low verified score', async () => {
-            mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
-            mockStoreState.parsedResumeText = 'Original resume text with enough detailed work history and skills evidence for verification. '.repeat(3);
-            mockStoreState.getActiveResume = vi.fn(() => ({
+            // Rich fixture: the pure-simulation verify merges the real store resume and
+            // must reach the AI call (past the length + text-change guards).
+            mockStoreState.originalResume = {
                 basics: {
                     name: 'Test User',
-                    summary: 'Optimized summary with enough detail to pass the verification text-length guard before score anomaly handling.',
+                    label: 'Backend Engineer',
+                    email: 't@example.com',
+                    phone: '',
+                    summary: 'Original summary describing production backend engineering work across payments platforms.',
+                    location: { city: 'Riyadh', countryCode: 'SA', region: '' },
+                    profiles: [],
                 },
                 work: [{
                     name: 'Company',
                     position: 'Engineer',
                     startDate: '2020',
                     endDate: '2024',
+                    summary: '',
                     highlights: [
                         'Improved backend APIs with measurable latency reductions and reliability gains.',
                         'Built React dashboards for hiring managers with accessible workflows and analytics.',
@@ -1134,7 +1147,8 @@ describe('Optimization Card Types', () => {
                 }],
                 education: [],
                 skills: [{ name: 'Technical', keywords: ['React', 'TypeScript', 'Node.js'] }],
-            }));
+            };
+            mockStoreState.parsedResumeText = 'Original resume text with enough detailed work history and skills evidence for verification. '.repeat(3);
             mockStoreState.baselineMatchScore = 45;
             mockAnalyzeResumeWithAI.mockResolvedValue({
                 score: 0,

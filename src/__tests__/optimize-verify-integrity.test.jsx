@@ -246,7 +246,7 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         });
     };
 
-    it.fails('R1: a verified no-change score must not overwrite the improvement estimate', async () => {
+    it('R1: a verified no-change score must not overwrite the improvement estimate', async () => {
         setupChangedResumeScenario();
         // Genuine re-analysis returns the same score as the baseline.
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 45, topHits: ['React'], missingKeywords: [] });
@@ -260,7 +260,7 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         expect(mockStoreState.optimizationMetrics.afterScore).toBeNull();
     });
 
-    it.fails('R2: verification must not mutate store applied state', async () => {
+    it('R2: verification must not mutate store applied state', async () => {
         setupChangedResumeScenario();
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 52, topHits: ['React'], missingKeywords: [] });
 
@@ -271,7 +271,7 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         expect(mockApplyAllOptimizations).not.toHaveBeenCalled();
     });
 
-    it.fails('R3: identical optimized text is an implementation failure, not a verified no-change', async () => {
+    it('R3: identical optimized text is an implementation failure, not a verified no-change', async () => {
         mockStoreState.originalResume = originalResumeFixture();
         mockStoreState.parsedResumeText =
             'Original resume text with enough detailed work history and skills evidence for verification to run. '.repeat(3);
