@@ -498,12 +498,6 @@ export function OptimizeSection({
 
   const presentation = resultsSummaryData.presentation;
 
-  // The companion represents the ACTUAL current resume: baseline when nothing is
-  // applied, the applied-only projection as the user works through cards. The
-  // verified all-suggestions potential is never fed as the current score.
-  const companionBeforeScore = presentation.isPlaceholderScore ? null : presentation.baselineScore;
-  const companionAfterScore = presentation.currentAppliedProjection ?? companionBeforeScore;
-
   const verifyOptimizedResume = async (jobDescription: string, beforeScore: number, options?: { freePreview?: boolean }) => {
     if (!jobDescription.trim()) return;
 
@@ -1383,8 +1377,13 @@ export function OptimizeSection({
       {optimizations.length > 0 && (
         <CharacterResultsCompanion
           variant="optimize"
-          beforeScore={companionBeforeScore}
-          afterScore={companionAfterScore}
+          baselineScore={presentation.isPlaceholderScore ? null : presentation.baselineScore}
+          projectedScore={presentation.currentAppliedProjection}
+          targetScore={presentation.verifiedAllSuggestionsScore ?? presentation.allSuggestionsPotentialEstimate}
+          targetKind={presentation.verifiedAllSuggestionsScore !== null
+            ? 'verified'
+            : presentation.allSuggestionsPotentialEstimate !== null ? 'estimate' : null}
+          suppressCelebration={presentation.verifiedOutcome === 'decreased'}
         />
       )}
 

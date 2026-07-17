@@ -1316,7 +1316,8 @@ describe('Optimization Card Types', () => {
             expect(screen.getByText('sections.optimize.scoreDiff.appliedOf')).toBeInTheDocument();
             expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-variant', 'optimize');
             expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-tier', 'confident');
-            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('70%');
+            // The single progression bar reflects the applied-only projection (70%).
+            expect(screen.getByTestId('companion-score')).toHaveTextContent('70%');
         });
 
         it('ignores the legacy persisted afterScore when the baseline is a placeholder', () => {
@@ -1333,8 +1334,7 @@ describe('Optimization Card Types', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByTestId('before-score-bar')).toHaveTextContent('Unavailable');
-            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('Unavailable');
+            expect(screen.getByTestId('companion-score')).toHaveTextContent('Unavailable');
             expect(screen.queryByText('84%')).not.toBeInTheDocument();
         });
 

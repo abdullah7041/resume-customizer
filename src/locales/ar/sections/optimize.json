@@ -208,11 +208,19 @@
         "confident": "توافق تنافسي",
         "celebrating": "نتيجة قوية"
       },
-      "before": "قبل",
-      "after": "بعد",
       "unavailableScore": "النتيجة غير متاحة",
       "changeCompanion": "تغيير الرفيق",
-      "imageAlt": "{{gender}}: {{state}}"
+      "imageAlt": "{{gender}}: {{state}}",
+      "levels": {
+        "foundation": "مرحلة التأسيس",
+        "builder": "بناء الملف المهني",
+        "candidate": "مرشح مؤهل",
+        "competitor": "منافس قوي",
+        "frontRunner": "مرشح متصدر"
+      },
+      "levelLabel": "المستوى {{level}} من 5 · {{name}}",
+      "targetVerified": "الهدف {{score}}% · موثَّق",
+      "targetEstimate": "الهدف ~{{score}}% (تقدير)"
     }
   }
 }

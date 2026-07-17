@@ -208,11 +208,19 @@
         "confident": "Competitive match",
         "celebrating": "Strong result"
       },
-      "before": "Before",
-      "after": "After",
       "unavailableScore": "Unavailable",
       "changeCompanion": "Change companion",
-      "imageAlt": "{{gender}}: {{state}}"
+      "imageAlt": "{{gender}}: {{state}}",
+      "levels": {
+        "foundation": "Foundation Stage",
+        "builder": "Profile Builder",
+        "candidate": "Qualified Candidate",
+        "competitor": "Strong Competitor",
+        "frontRunner": "Front-Runner"
+      },
+      "levelLabel": "Level {{level}} of 5 · {{name}}",
+      "targetVerified": "Target {{score}}% · Verified",
+      "targetEstimate": "Target ~{{score}}% (estimate)"
     }
   }
 }

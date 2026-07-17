@@ -68,10 +68,8 @@
   margin-block: 1rem;
 }
 
-.character-results__scores {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+.character-results__progression {
+  min-width: 0;
 }
 
 .character-results__score-copy {
@@ -109,6 +107,11 @@
   background: rgb(0 0 0 / 0.24);
 }
 
+.character-results__track--progression {
+  position: relative;
+  overflow: visible;
+}
+
 .character-results__fill {
   display: block;
   width: var(--character-score);
@@ -123,12 +126,48 @@
   transform-origin: right center;
 }
 
-.character-results__fill--before {
-  background: rgb(148 163 184);
+.character-results__fill--level {
+  background: linear-gradient(90deg, rgb(16 185 129), rgb(5 150 105));
 }
 
-.character-results__fill--after {
-  background: linear-gradient(90deg, rgb(16 185 129), rgb(5 150 105));
+/* Level-boundary ticks (interior level minimums on the 0-100 track). */
+.character-results__tick {
+  position: absolute;
+  inset-block: -0.1rem;
+  inset-inline-start: var(--marker-at);
+  width: 2px;
+  border-radius: 1px;
+  background: rgb(107 114 128 / 0.4);
+}
+
+.dark .character-results__tick {
+  background: rgb(255 255 255 / 0.28);
+}
+
+/* Ghost target marker: where the suggestions could take the resume. */
+.character-results__ghost {
+  position: absolute;
+  inset-block: -0.28rem;
+  inset-inline-start: var(--marker-at);
+  width: 0.24rem;
+  border-radius: 9999px;
+  background: rgb(245 158 11);
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.25);
+  animation: character-ghost-pulse 1.8s ease-in-out infinite;
+}
+
+.character-results__target-caption {
+  margin-block-start: 0.45rem;
+  overflow: hidden;
+  color: rgb(180 83 9);
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .character-results__target-caption {
+  color: rgb(252 211 77);
 }
 
 .character-results__character {
@@ -308,6 +347,11 @@
   from { transform: scaleX(0); }
 }
 
+@keyframes character-ghost-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgb(245 158 11 / 0.25); }
+  50% { box-shadow: 0 0 0 5px rgb(245 158 11 / 0.12); }
+}
+
 @keyframes character-enter {
   from { opacity: 0; transform: translateY(0.65rem) scale(0.94); }
 }
@@ -361,6 +405,10 @@
 
   .character-results__image--after {
     opacity: 1;
+  }
+
+  .character-results__ghost {
+    animation: none;
   }
 }
 
