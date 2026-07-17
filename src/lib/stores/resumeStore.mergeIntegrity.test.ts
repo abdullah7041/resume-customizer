@@ -67,7 +67,7 @@ describe('resumeStore merge integrity (Task 6 regressions)', () => {
 
   // R7: an actionable card whose original text matches nothing in the resume must
   // NOT be marked applied — "marked applied" has to mean "changed resume content".
-  it.fails('R7: applyOptimization refuses an unmergeable actionable card (mergeStatus failed)', () => {
+  it('R7: applyOptimization refuses an unmergeable actionable card (mergeStatus failed)', () => {
     useResumeStore.getState().setOptimizations([
       experienceCard({ original: 'A bullet that appears nowhere in this resume document' }),
     ]);
@@ -79,7 +79,7 @@ describe('resumeStore merge integrity (Task 6 regressions)', () => {
     expect(card.mergeStatus).toBe('failed');
   });
 
-  it.fails('applyOptimization marks a mergeable card applied with mergeStatus mergeable', () => {
+  it('applyOptimization marks a mergeable card applied with mergeStatus mergeable', () => {
     useResumeStore.getState().setOptimizations([experienceCard()]);
 
     useResumeStore.getState().applyOptimization('experience-0');
@@ -91,7 +91,7 @@ describe('resumeStore merge integrity (Task 6 regressions)', () => {
 
   // R8: certification cards are recommendations — an existing certificate name must
   // never be rewritten into a recommended certification.
-  it.fails('R8: applied certification cards never mutate existing certificates', () => {
+  it('R8: applied certification cards never mutate existing certificates', () => {
     useResumeStore.getState().setOptimizations([
       // Legacy persisted state where a cert card ended up applied with an original
       // that fuzzy-matches a real certificate.
@@ -104,7 +104,7 @@ describe('resumeStore merge integrity (Task 6 regressions)', () => {
   });
 
   // R5: Apply All means "apply all actionable resume changes", never recommendations.
-  it.fails('R5: applyAllOptimizations leaves recommendation-only cards un-applied', () => {
+  it('R5: applyAllOptimizations leaves recommendation-only cards un-applied', () => {
     useResumeStore.getState().setOptimizations([experienceCard(), skillsCard(), certCard()]);
 
     useResumeStore.getState().applyAllOptimizations();
@@ -115,7 +115,7 @@ describe('resumeStore merge integrity (Task 6 regressions)', () => {
     expect(cards.find((c) => c.sectionId === 'certifications-0')?.applied).toBe(false);
   });
 
-  it.fails('applyOptimization ignores recommendation-only cards entirely', () => {
+  it('applyOptimization ignores recommendation-only cards entirely', () => {
     useResumeStore.getState().setOptimizations([skillsCard(), certCard()]);
 
     useResumeStore.getState().applyOptimization('skills-0');

@@ -429,8 +429,8 @@ describe('resumeStore.getActiveResume()', () => {
     });
   });
 
-  describe('certifications', () => {
-    it('exact apply: replaces a matching certificate name', () => {
+  describe('certifications (recommendation-only — never merged)', () => {
+    it('never rewrites an existing certificate name, even on an exact content match', () => {
       useResumeStore.getState().addOptimization(
         buildOpt({
           sectionId: 'cert-1',
@@ -441,10 +441,10 @@ describe('resumeStore.getActiveResume()', () => {
       );
 
       const active = useResumeStore.getState().getActiveResume();
-      expect(active?.certificates?.[0].name).toBe('AWS Certified Solutions Architect - Professional');
+      expect(active?.certificates?.[0].name).toBe(CERT_NAME);
     });
 
-    it('fuzzy apply (prefix match): replaces a matching certificate name', () => {
+    it('never rewrites an existing certificate name on a fuzzy prefix match', () => {
       const truncated = CERT_NAME.slice(0, 40);
       useResumeStore.getState().addOptimization(
         buildOpt({
@@ -456,10 +456,10 @@ describe('resumeStore.getActiveResume()', () => {
       );
 
       const active = useResumeStore.getState().getActiveResume();
-      expect(active?.certificates?.[0].name).toBe('AWS Certified Solutions Architect - Professional (verify)');
+      expect(active?.certificates?.[0].name).toBe(CERT_NAME);
     });
 
-    it('no-match: optimization is silently dropped, resume unchanged', () => {
+    it('no-match recommendations also leave the resume unchanged', () => {
       useResumeStore.getState().addOptimization(
         buildOpt({
           sectionId: 'cert-3',

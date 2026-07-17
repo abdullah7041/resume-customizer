@@ -19,7 +19,8 @@ import {
   validateSearchIntent,
 } from '../validation/store-schemas';
 import { deduplicateByName } from '../utils/resumeUtils';
-import { mergeOptimizedResume } from '../optimize/mergeResume';
+import { canMergeOptimization, mergeOptimizedResume } from '../optimize/mergeResume';
+import { isRecommendationOnly } from '../optimize/actionability';
 
 /** Minimal valid resume skeleton — basics required fields as empty strings. */
 const emptyResume = (): ResumeSchema => ({
@@ -168,6 +169,7 @@ export const useResumeStore = create<ResumeState>()(
         beforeScore: null,
         afterScore: null,
         improvement: null,
+        verifiedPotential: null,
         jdKeywords: [],
         matchedKeywords: [],
         reasoning: null,
@@ -293,9 +295,24 @@ export const useResumeStore = create<ResumeState>()(
 
       applyOptimization: (sectionId: string) => {
         set((state) => ({
-          optimizations: state.optimizations.map((o) =>
-            o.sectionId === sectionId ? { ...o, applied: true } : o
-          ),
+          optimizations: state.optimizations.map((o) => {
+            if (o.sectionId !== sectionId) return o;
+            // Recommendation-only cards (skills/certifications) are advice, never
+            // resume mutations — applying them is a no-op by product rule.
+            if (isRecommendationOnly(o)) {
+              if (import.meta.env.DEV) console.warn(`[ResumeStore] applyOptimization ignored for recommendation-only card ${sectionId}`);
+              return o;
+            }
+            // Dry-run the content match so applied:true always means "this card
+            // genuinely changes the resume". A failed match is recorded (and
+            // recoverable via Refine) instead of silently counting as progress.
+            const mergeable = state.originalResume !== null && canMergeOptimization(o, state.originalResume);
+            if (!mergeable) {
+              if (import.meta.env.DEV) console.warn(`[ResumeStore] applyOptimization: content match failed for ${sectionId} — card not applied`);
+              return { ...o, applied: false, mergeStatus: 'failed' as const };
+            }
+            return { ...o, applied: true, mergeStatus: 'mergeable' as const };
+          }),
           hasDownloaded: false
         }));
       },
@@ -323,6 +340,9 @@ export const useResumeStore = create<ResumeState>()(
                 optimized: refinement.improved,
                 rationale: refinement.rationale,
                 issue: refinement.issue,
+                // Refined text may match differently — clear the stale verdict so
+                // the next apply re-validates.
+                mergeStatus: undefined,
               }
               : o
           );
@@ -349,11 +369,17 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       applyAllOptimizations: () => {
+        // "Apply all" means all ACTIONABLE resume changes — recommendation-only
+        // cards (skills/certifications) are never applied, and each actionable card
+        // is dry-run validated so failed matches don't count as progress.
         set((state) => ({
-          optimizations: state.optimizations.map((o) => ({
-            ...o,
-            applied: true,
-          })),
+          optimizations: state.optimizations.map((o) => {
+            if (isRecommendationOnly(o)) return o;
+            const mergeable = state.originalResume !== null && canMergeOptimization(o, state.originalResume);
+            return mergeable
+              ? { ...o, applied: true, mergeStatus: 'mergeable' as const }
+              : { ...o, applied: false, mergeStatus: 'failed' as const };
+          }),
           showOptimized: true,
           hasDownloaded: false
         }));
@@ -497,6 +523,7 @@ export const useResumeStore = create<ResumeState>()(
           beforeScore: null,
           afterScore: null,
           improvement: null,
+          verifiedPotential: null,
           jdKeywords: [],
           matchedKeywords: [],
           reasoning: null,
@@ -673,6 +700,7 @@ export const useResumeStore = create<ResumeState>()(
             beforeScore: null,
             afterScore: null,
             improvement: null,
+            verifiedPotential: null,
             jdKeywords: [],
             matchedKeywords: [],
             reasoning: null,
@@ -710,6 +738,7 @@ export const useResumeStore = create<ResumeState>()(
             beforeScore: null,
             afterScore: null,
             improvement: null,
+            verifiedPotential: null,
             jdKeywords: [],
             matchedKeywords: [],
             reasoning: null,
@@ -735,13 +764,23 @@ export const useResumeStore = create<ResumeState>()(
       name: 'resume-storage',
       storage: createJSONStorage(() => localStorage),
       // v1: added jobVariants/activeVariantId slice (job-specific resume builder).
-      version: 1,
+      // v2: recommendation-only cards (skills/certifications) can no longer be
+      //     applied — un-apply any that the old blanket apply-all had flipped.
+      version: 2,
       migrate: (persistedState, fromVersion) => {
-        const state = (persistedState ?? {}) as Partial<ResumeState>;
+        let state = (persistedState ?? {}) as Partial<ResumeState>;
         if (fromVersion < 1) {
           // Older persisted state predates variants — seed empty defaults so
           // hydration never reads undefined.
-          return { ...state, jobVariants: [], activeVariantId: null };
+          state = { ...state, jobVariants: [], activeVariantId: null };
+        }
+        if (fromVersion < 2 && Array.isArray(state.optimizations)) {
+          state = {
+            ...state,
+            optimizations: state.optimizations.map((o) =>
+              isRecommendationOnly(o) && o.applied ? { ...o, applied: false } : o
+            ),
+          };
         }
         return state;
       },

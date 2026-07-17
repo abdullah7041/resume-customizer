@@ -9,6 +9,7 @@
 import type { ResumeSchema } from '@/types/resume';
 import type { MergeDiagnostics, OptimizationResult } from '@/types/templates';
 import { fuzzyTextMatch } from '@/lib/utils/textMatcher';
+import { isRecommendationOnly } from './actionability';
 
 /** Coerce card values (string | string[]) into the merge/replace string. */
 export const optimizationTextValue = (val: unknown): string => {
@@ -27,16 +28,19 @@ export type MergeTarget =
   | { kind: 'education.highlight'; eduIdx: number; hlIdx: number }
   | { kind: 'project.name'; projIdx: number }
   | { kind: 'project.description'; projIdx: number }
-  | { kind: 'project.highlight'; projIdx: number; hlIdx: number }
-  | { kind: 'certificate.name'; certIdx: number };
+  | { kind: 'project.highlight'; projIdx: number; hlIdx: number };
 
 /**
  * Locate the merge target for one card without mutating anything — the same
  * fuzzyTextMatch walk the merge performs, expressed as a lookup. Returns null when
- * the card cannot land anywhere (no match / empty optimized text / skills, which are
- * never content-merged).
+ * the card cannot land anywhere: no match, empty optimized text, or a
+ * recommendation-only card (skills/certifications), which is never content-merged —
+ * in particular an existing certificate name is never rewritten into a
+ * recommendation.
  */
 export function findMergeTarget(opt: OptimizationResult, resume: ResumeSchema): MergeTarget | null {
+  if (isRecommendationOnly(opt)) return null;
+
   const optimizedValue = optimizationTextValue(opt.optimized);
   const originalValue = optimizationTextValue(opt.original);
   if (!optimizedValue) return null;
@@ -101,19 +105,6 @@ export function findMergeTarget(opt: OptimizationResult, resume: ResumeSchema): 
       return null;
     }
 
-    case 'certifications': {
-      const certificates = resume.certificates ?? [];
-      for (let certIdx = 0; certIdx < certificates.length; certIdx++) {
-        const cert = certificates[certIdx];
-        if (cert.name && fuzzyTextMatch(originalValue, cert.name).matched) {
-          return { kind: 'certificate.name', certIdx };
-        }
-      }
-      return null;
-    }
-
-    // Skills are never content-merged into the resume (recommendation-only).
-    case 'skills':
     default:
       return null;
   }
@@ -154,9 +145,6 @@ function writeMergeTarget(resume: ResumeSchema, target: MergeTarget, optimizedVa
     case 'project.highlight':
       resume.projects![target.projIdx].highlights![target.hlIdx] = optimizedValue;
       break;
-    case 'certificate.name':
-      resume.certificates![target.certIdx].name = optimizedValue;
-      break;
   }
 }
 
@@ -171,13 +159,14 @@ export interface MergeResult {
 }
 
 /**
- * Clone `original` and apply every `applied` card via content-based matching.
- * Matching runs against the progressively-merged clone (first-match-wins across
- * sequential cards), preserving the store's historical behavior exactly.
+ * Clone `original` and apply every applied ACTIONABLE card via content-based
+ * matching. Matching runs against the progressively-merged clone (first-match-wins
+ * across sequential cards), preserving the store's historical behavior exactly.
  *
- * Current-quirk note (kept 1:1 for the extraction): applied `skills` cards are a
- * no-op that still increments diagnostics.appliedCount, and applied
- * `certifications` cards attempt to rewrite an existing certificate name.
+ * Recommendation-only cards (skills/certifications) never participate: skills are
+ * never auto-injected (that would be misleading to employers) and existing
+ * certificates are never rewritten into recommendations. They contribute nothing to
+ * the merged resume, its diagnostics, or any applied count.
  */
 export function mergeOptimizedResume(
   original: ResumeSchema,
@@ -208,23 +197,11 @@ export function mergeOptimizedResume(
   };
 
   for (const opt of optimizations) {
-    if (!opt.applied) continue;
+    if (!opt.applied || isRecommendationOnly(opt)) continue;
 
     const optimizedValue = optimizationTextValue(opt.optimized);
     const originalValue = optimizationTextValue(opt.original);
     if (!optimizedValue) continue;
-
-    if (opt.sectionType === 'skills') {
-      // IMPORTANT: skills are never auto-injected — that would be misleading to
-      // employers. Preserved quirk: the card still counts as "applied" here.
-      const raw = opt.optimized;
-      if (typeof raw === 'string' && raw.toLowerCase().startsWith('current:')) {
-        // This is the "before" value, skip entirely (no count) — historical behavior.
-        continue;
-      }
-      diagnostics.appliedCount++;
-      continue;
-    }
 
     const target = findMergeTarget(opt, merged);
     if (target) {
