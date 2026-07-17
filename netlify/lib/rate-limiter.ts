@@ -315,6 +315,11 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // Unauthenticated waitlist confirmation email — strict to prevent mail-bombing
   "waitlist-confirm": { maxRequests: 5 },
 
+  // Job-URL import: an SSRF-guarded outbound fetch, so keep both tiers tight.
+  // Guests are keyed by IP with a daily window (mirrors the free-preview tiers).
+  "import-job-url": { maxRequests: 20 },
+  "import-job-url-guest": { maxRequests: 10, windowMs: 24 * 60 * 60 * 1000 },
+
   // Feedback system - INCREASED from 5 to 10
 
   // Batch processing - INCREASED from 5 to 8
@@ -532,7 +537,7 @@ export async function checkGuestPreviewRateLimit(
 
 export async function checkFreePreviewRateLimit(
   event: HandlerEvent,
-  endpoint: "ai-match-free-preview" | "optimize-free-preview",
+  endpoint: "ai-match-free-preview" | "optimize-free-preview" | "import-job-url-guest",
   userKey?: string | null
 ): Promise<{ allowed: boolean; response?: HandlerResponse }> {
   if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {

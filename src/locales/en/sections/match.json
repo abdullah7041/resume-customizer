@@ -116,6 +116,24 @@
             "message": "This role needs a closer match. Let's make the gaps clearer."
           }
         }
+      },
+      "urlImport": {
+        "label": "Or paste a job link (LinkedIn, career pages)",
+        "placeholder": "https://www.linkedin.com/jobs/view/...",
+        "import": "Import",
+        "importing": "Importing...",
+        "success": "Job description imported — review it before analyzing.",
+        "errors": {
+          "invalidUrl": "That does not look like a valid job link. Check the URL and try again.",
+          "unsupportedUrl": "This link type is not supported yet. Open the job posting itself and copy its link.",
+          "loginRequired": "Watheq couldn't reliably import the full description from this link. Open the company's job page or paste the description manually.",
+          "blocked": "This site blocked the import. Paste the job description manually.",
+          "timeout": "The site took too long to respond. Try again or paste the description manually.",
+          "notAJobPage": "That link does not point to a readable job page. Paste the description manually.",
+          "jdNotFound": "Couldn't find a full job description on that page. Paste the description manually.",
+          "rateLimited": "Import limit reached for now. Paste the job description manually.",
+          "unreachable": "Couldn't reach that page. Check the link or paste the description manually."
+        }
       }
     }
   }

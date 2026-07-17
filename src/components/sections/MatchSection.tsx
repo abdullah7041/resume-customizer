@@ -8,6 +8,7 @@ import {
   Code2,
   GraduationCap,
   Info,
+  Link2,
   ShieldAlert,
   Sparkles,
   Target,
@@ -25,6 +26,7 @@ import { GapAnalysisCard, type GapItem } from '../GapAnalysisCard';
 import { HiddenMatchesCard, type HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
+import { importJobFromUrl } from '../../services/api';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { cn } from '../../lib/utils/cn';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
@@ -227,12 +229,15 @@ export function MatchSection({
   extractedMetadata,
   onJobSaved,
 }: MatchSectionProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
     if (typeof window === 'undefined') return '';
     return getCompatibleStorageItem(LAST_JOB_KEY) ?? '';
   });
   const [error, setError] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
   const [scoreBreakdownOpen, setScoreBreakdownOpen] = useState(false);
   const [saveJobOpen, setSaveJobOpen] = useState(false);
   const [jobEditorOpen, setJobEditorOpen] = useState(false);
@@ -279,6 +284,60 @@ export function MatchSection({
       document.getElementById('match-gaps')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [matchAnalysis]);
+
+  // Paste a job URL (LinkedIn, career pages, ATS boards) instead of the text —
+  // the importer resolves it server-side (SSRF-guarded) and fills the SAME
+  // editable JD textarea, so review + analysis flow exactly as with manual paste.
+  const handleImportFromUrl = async () => {
+    const url = jobUrl.trim();
+    if (!url || isImporting) return;
+
+    setIsImporting(true);
+    setImportError(null);
+    try {
+      const result = await importJobFromUrl(url, i18n.language === 'ar' ? 'ar' : 'en');
+      if (result?.status === 'ok' && result.jobText) {
+        setJobText(result.jobText);
+        setJobUrl('');
+        analytics.track('job_url_import_succeeded', { source: result.source, confidence: result.confidence });
+        onToast?.({
+          type: 'success',
+          title: t('sections.match.urlImport.import', 'Import'),
+          description: t('sections.match.urlImport.success', 'Job description imported — review it before analyzing.'),
+        });
+      } else {
+        const reason = typeof result?.failureReason === 'string' ? result.failureReason : 'unreachable';
+        analytics.track('job_url_import_failed', { reason });
+        setImportError(importFailureMessage(reason));
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const importFailureMessage = (reason: string): string => {
+    switch (reason) {
+      case 'invalid_url':
+        return t('sections.match.urlImport.errors.invalidUrl', 'That does not look like a valid job link. Check the URL and try again.');
+      case 'unsupported_url':
+        return t('sections.match.urlImport.errors.unsupportedUrl', 'This link type is not supported yet. Open the job posting itself and copy its link.');
+      case 'login_required':
+        return t('sections.match.urlImport.errors.loginRequired', "Watheq couldn't reliably import the full description from this link. Open the company's job page or paste the description manually.");
+      case 'blocked':
+        return t('sections.match.urlImport.errors.blocked', 'This site blocked the import. Paste the job description manually.');
+      case 'timeout':
+        return t('sections.match.urlImport.errors.timeout', 'The site took too long to respond. Try again or paste the description manually.');
+      case 'too_large':
+      case 'not_html':
+        return t('sections.match.urlImport.errors.notAJobPage', 'That link does not point to a readable job page. Paste the description manually.');
+      case 'jd_not_found':
+        return t('sections.match.urlImport.errors.jdNotFound', "Couldn't find a full job description on that page. Paste the description manually.");
+      case 'rate_limited':
+        return t('sections.match.urlImport.errors.rateLimited', 'Import limit reached for now. Paste the job description manually.');
+      default:
+        return t('sections.match.urlImport.errors.unreachable', "Couldn't reach that page. Check the link or paste the description manually.");
+    }
+  };
 
   const handleAnalyzeActual = async (options?: { freePreview?: boolean }) => {
     const trimmedJob = jobText.trim();
@@ -512,6 +571,59 @@ export function MatchSection({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {(!hasResults || jobEditorOpen) && (
+            <div className="mb-3 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-3 dark:border-white/10 dark:bg-white/[0.04]">
+              <label htmlFor="jobUrl" className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                <Link2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                {t('sections.match.urlImport.label', 'Or paste a job link (LinkedIn, career pages)')}
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="jobUrl"
+                  name="jobUrl"
+                  type="url"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  dir="ltr"
+                  value={jobUrl}
+                  onChange={(event) => {
+                    setJobUrl(event.target.value);
+                    if (importError) setImportError(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      void handleImportFromUrl();
+                    }
+                  }}
+                  disabled={isImporting}
+                  placeholder={t('sections.match.urlImport.placeholder', 'https://www.linkedin.com/jobs/view/...')}
+                  className="min-h-11 flex-1 rounded-lg border border-[color:var(--glass-border)] bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none disabled:opacity-60 dark:border-white/10 dark:bg-black/20 dark:text-white dark:placeholder:text-gray-500"
+                />
+                <GlassButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleImportFromUrl()}
+                  disabled={!jobUrl.trim() || isImporting}
+                  isLoading={isImporting}
+                  leftIcon={<Link2 className="h-3.5 w-3.5" />}
+                  className="sm:w-auto"
+                >
+                  {isImporting
+                    ? t('sections.match.urlImport.importing', 'Importing...')
+                    : t('sections.match.urlImport.import', 'Import')}
+                </GlassButton>
+              </div>
+              {importError && (
+                <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300" role="alert">
+                  {importError}
+                </p>
+              )}
             </div>
           )}
 

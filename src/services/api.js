@@ -1079,5 +1079,45 @@ export const extractJobMetadata = async (jobText, language = 'en') => {
   }
 };
 
+/**
+ * Import a job description from a public job-posting URL (LinkedIn, career
+ * pages, ATS boards). Guests are allowed (rate-limited server-side), so auth is
+ * attached when available but not required. Returns the server's structured
+ * result; network-level failures come back as { status: 'failed',
+ * failureReason: 'unreachable' } so the UI always has a recoverable state.
+ */
+export const importJobFromUrl = async (url, language = 'en') => {
+  try {
+    const headers = await getAuthHeaders({ requireAuth: false });
+    const response = await fetch(FUNCTION_BASE_PATH + '/import-job-url', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ url, language }),
+    });
+
+    if (response.status === 429) {
+      return { status: 'failed', failureReason: 'rate_limited', sourceUrl: url };
+    }
+    if (!response.ok) {
+      console.warn('[API] importJobFromUrl returned non-OK status:', response.status);
+      return { status: 'failed', failureReason: response.status === 400 ? 'invalid_url' : 'unreachable', sourceUrl: url };
+    }
+
+    const data = await response.json();
+    if (data?.status === 'ok' && typeof data.jobText === 'string' && data.jobText.trim()) {
+      return data;
+    }
+    return {
+      status: 'failed',
+      failureReason: data?.failureReason || 'jd_not_found',
+      sourceUrl: data?.sourceUrl || url,
+      finalUrl: data?.finalUrl,
+    };
+  } catch (error) {
+    console.warn('[API] importJobFromUrl failed (non-fatal):', summarizeErrorForConsole(error));
+    return { status: 'failed', failureReason: 'unreachable', sourceUrl: url };
+  }
+};
+
 // Legacy exports to prevent breaking imports if any remain
 export const analyzeResume = analyzeResumeWithAI;
