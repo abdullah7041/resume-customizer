@@ -47,6 +47,14 @@ export interface OptimizationResult {
   // `rationale` explains what changed so the user can judge the edit.
   rationale?: string;
   issue?: string;
+  /**
+   * Merge integrity, set at apply time by the dry-run content match:
+   * 'mergeable' = the card's original text was located in the resume;
+   * 'failed'    = it was not, so the card is NOT applied and never counts toward
+   *               progress or score projection. undefined = legacy/never validated.
+   * Cleared when the card is refined (new text may match differently).
+   */
+  mergeStatus?: 'mergeable' | 'failed';
 }
 
 /**
@@ -118,8 +126,37 @@ export interface AnalysisCache {
  */
 export interface OptimizationMetrics {
   beforeScore: number | null;
+  /**
+   * LEGACY — no longer written. Historically held the verified score from
+   * auto-verification, which conflated "score with ALL suggestions applied" with
+   * the current resume's score. Superseded by `verifiedPotential`; kept so old
+   * persisted state hydrates without a migration. Never read by the display layer.
+   */
   afterScore: number | null;
+  /**
+   * Generation-time AI estimate of the improvement if ALL actionable suggestions
+   * were applied. NEVER overwritten by verification (the verified delta lives in
+   * `verifiedPotential`) — overloading this field with the verified delta was the
+   * root cause of the frozen "10% → 10%" projection.
+   */
   improvement: number | null;
+  /**
+   * Result of genuinely re-scoring the resume with all actionable suggestions
+   * temporarily applied. A potential/target — NOT the current resume's score.
+   * Valid only while `signature` matches the live actionable card set + resume +
+   * JD (checked at read time by buildScorePresentation); regeneration nulls it.
+   */
+  verifiedPotential?: {
+    score: number;
+    /** The baseline the verification ran against. */
+    baselineAtVerify: number;
+    /** verificationSignature(actionable, resumeText, jobDescription) at verify time. */
+    signature: string;
+    /** Epoch ms. */
+    verifiedAt: number;
+    /** Classified once at verify time via classifyVerifiedOutcome (±NO_CHANGE_BAND). */
+    outcome: 'improved' | 'no_change' | 'decreased';
+  } | null;
   jdKeywords: string[];
   matchedKeywords: string[];
   reasoning: string | null;
