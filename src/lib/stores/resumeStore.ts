@@ -77,11 +77,10 @@ const mergeProfilePatch = (base: ResumeSchema, patch: PartialResumeSchema): Resu
  */
 const computeCompleteness = (resume: ResumeSchema | null, intent: SearchIntent | null): number => {
   let score = 0;
-  if (resume?.basics?.name?.trim()) score += 20;
-  if (resume?.basics?.label?.trim()) score += 15;
-  if ((resume?.work?.length ?? 0) > 0 || (resume?.projects?.length ?? 0) > 0) score += 25;
-  if ((intent?.targetRoles?.length ?? 0) > 0) score += 20;
-  if (intent?.location) score += 20;
+  if (resume?.basics?.name?.trim()) score += 25;
+  if (resume?.basics?.label?.trim()) score += 20;
+  if ((resume?.work?.length ?? 0) > 0 || (resume?.projects?.length ?? 0) > 0) score += 30;
+  if ((intent?.targetRoles?.length ?? 0) > 0) score += 25;
   return Math.min(100, score);
 };
 
@@ -185,7 +184,7 @@ export const useResumeStore = create<ResumeState>()(
       },
       baselineMatchScore: null, // Original resume's match score (before any optimizations)
       isSaudiNational: false, // Saudi nationality flag for Saudization ATS
-      searchIntent: null, // Onboarding job-search intent (target role / comp / location)
+      searchIntent: null, // Onboarding job-search intent (target role / seniority)
       jobVariants: [], // Job-specific resume variants (Phase 1, local-only)
       activeVariantId: null,
       variantRestoreNonce: 0, // Ephemeral open-variant signal (not persisted)
@@ -979,8 +978,8 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       resetForNewUpload: () => {
-        // NOTE: searchIntent is intentionally NOT reset here — target role / comp /
-        // location are profile-level intent that should survive a new resume upload.
+        // NOTE: searchIntent is intentionally NOT reset here — the target role is
+        // profile-level intent that should survive a new resume upload.
         cacheKeyMemo.clear();
         set({
           originalResume: null,

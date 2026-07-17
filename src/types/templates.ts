@@ -264,7 +264,7 @@ export interface ResumeState {
   // Saudi nationality flag for Saudization ATS
   isSaudiNational: boolean;
 
-  // Onboarding: job-search intent (target role / comp / location). The one new
+  // Onboarding: job-search intent (target role / seniority). The one new
   // canonical-profile slice — everything else onboarding produces lives on the resume.
   searchIntent: SearchIntent | null;
 

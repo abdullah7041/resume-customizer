@@ -127,11 +127,6 @@ export const ResumeZodSchema = z.looseObject({
 export const SearchIntentSchema = z.object({
     targetRoles: z.array(z.string()).default([]),
     seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
-    location: z.object({
-        city: z.string().optional(),
-        country: z.string().optional(),
-        workMode: z.enum(['remote', 'hybrid', 'onsite']),
-    }).optional(),
     meta: z.object({
         confidence: z.enum(['low', 'medium', 'high']),
         completeness: z.number().min(0).max(100),
