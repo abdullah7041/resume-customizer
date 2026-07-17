@@ -229,6 +229,39 @@ describe('JobMatch', () => {
     expect(screen.queryByTestId('character-results-companion')).not.toBeInTheDocument();
   });
 
+  it('shows a single spinner in the Analyze button while analyzing', () => {
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={null}
+        isAnalyzing
+        hasResume
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /analyzing/i });
+    expect(button).toBeDisabled();
+    // GlassButton swaps the Sparkles leftIcon for its own Loader2 — exactly one
+    // animated icon and no leftover Sparkles inside the button.
+    expect(button.querySelectorAll('.animate-spin')).toHaveLength(1);
+    expect(button.querySelectorAll('svg')).toHaveLength(1);
+  });
+
+  it('shows the Sparkles icon without a spinner when idle', () => {
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={null}
+        isAnalyzing={false}
+        hasResume
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /analyze match with ai/i });
+    expect(button.querySelectorAll('.animate-spin')).toHaveLength(0);
+    expect(button.querySelectorAll('svg')).toHaveLength(1);
+  });
+
   it('allows guest match analysis to run one free preview without credit confirmation', async () => {
     const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 82 });
     const onRequireSignIn = vi.fn();

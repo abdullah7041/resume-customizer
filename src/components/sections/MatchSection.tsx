@@ -519,10 +519,10 @@ export function MatchSection({
               onClick={handleAnalyze}
               disabled={buttonDisabled}
               isLoading={isAnalyzing}
+              leftIcon={<Sparkles className="h-4 w-4" />}
               className="group relative w-full font-bold"
               variant="prominent"
             >
-              <Sparkles className={cn('me-2 h-4 w-4', isAnalyzing && 'animate-spin')} />
               {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
                 <>
                   {t('sections.match.analyze', 'Analyze Match with AI')}
