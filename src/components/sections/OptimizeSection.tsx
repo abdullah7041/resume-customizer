@@ -31,6 +31,10 @@ import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { getActionability, isActionable, partitionOptimizations } from '@/lib/optimize/actionability';
+import { mergeOptimizedResume } from '@/lib/optimize/mergeResume';
+import { buildScorePresentation, classifyVerifiedOutcome, verificationSignature } from '@/lib/optimize/scoreModel';
+import type { VerifyAnomalyState } from '@/lib/optimize/scoreModel';
 import { ScoreHeader } from './optimize/ScoreHeader';
 import { StrategyBlock } from './optimize/StrategyBlock';
 import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
@@ -254,8 +258,7 @@ export function OptimizeSection({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
-  const [verifiedScore, setVerifiedScore] = useState<number | null>(null);
-  const [verifyAnomaly, setVerifyAnomaly] = useState<{ rawScore: number | null; textLength: number } | null>(null);
+  const [verifyAnomaly, setVerifyAnomaly] = useState<VerifyAnomalyState | null>(null);
   const [verifyRetryUsed, setVerifyRetryUsed] = useState(false);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const [scoreHeaderExpanded, setScoreHeaderExpanded] = useState(false);
@@ -327,10 +330,11 @@ export function OptimizeSection({
 
   // When a saved job variant is REOPENED (store bumps variantRestoreNonce), drop
   // per-run ephemeral UI state so the reopened variant shows its own snapshot —
-  // not the previous run's verified score / feedback session. Saving the current
-  // run as a new variant does NOT bump the nonce, so it never wipes a fresh score.
+  // not the previous run's feedback session or anomaly banner. The verified
+  // potential itself lives in optimizationMetrics.verifiedPotential, which the
+  // variant snapshot carries, so nothing score-related needs resetting here.
   useEffect(() => {
-    setVerifiedScore(null);
+    setVerifyAnomaly(null);
     setSessionId(null);
     setError(null);
   }, [variantRestoreNonce]);
@@ -425,8 +429,6 @@ export function OptimizeSection({
 
   // Calculate results summary data using API-provided metrics
   const resultsSummaryData = useMemo(() => {
-    const appliedCount = optimizations.filter(o => o.applied).length;
-
     // Group by section
     const bySection = optimizations.reduce((acc, opt) => {
       const section = opt.sectionType || 'general';
@@ -464,34 +466,23 @@ export function OptimizeSection({
       finiteScore(cachedAnalysis?.score) === null &&
       finiteScore(optimizationMetrics.beforeScore) === null &&
       finiteScore((originalResume?.meta as Record<string, unknown> | undefined)?.match_score) === null;
-    // FIX: Use explicit null check, not truthy check, because improvement can be 0 (valid value)
-    const isPlaceholderImprovement = optimizationMetrics.improvement === null || optimizationMetrics.improvement === undefined;
 
-    // Calculate projected after score based on applied optimizations
-    // This is an ESTIMATE only - use "Verify Match Score" for genuine re-analysis
-    const appliedRatio = optimizations.length > 0
-      ? appliedCount / optimizations.length
-      : 0;
-
-    const maxImprovement = optimizationMetrics.improvement ?? 15;
-    const actualImprovement = Math.round(maxImprovement * appliedRatio);
-    const afterScore = beforeScore + actualImprovement;
-
-    // Potential score uses the estimated improvement (no artificial cap)
-    const potentialAfterScore = beforeScore + (optimizationMetrics.improvement ?? maxImprovement);
-
-    // Use verified score if available, otherwise show projected estimate
-    const isScoreVerified = verifiedScore !== null;
-    const displayAfterScore = isScoreVerified
-      ? (verifiedScore ?? afterScore)
-      : afterScore;
+    // One explicit score model for every consumer (ScoreHeader, ScoreDiffBreakdown,
+    // companion, share card): baseline / applied-only projection / potential
+    // estimate / verified all-actionable potential, with display states A-E.
+    // The projection numerator and denominator count ACTIONABLE cards only.
+    const presentation = buildScorePresentation({
+      optimizations,
+      baselineScore: isPlaceholderScore ? null : beforeScore,
+      improvement: optimizationMetrics.improvement ?? null,
+      verifiedPotential: optimizationMetrics.verifiedPotential,
+      resumeText: resumeText ?? '',
+      jobDescription,
+    });
 
     return {
       beforeScore,
-      afterScore: displayAfterScore,
-      potentialScore: potentialAfterScore,
-      totalOptimizations: optimizations.length,
-      appliedOptimizations: appliedCount,
+      presentation,
       optimizationsBySection: Object.values(bySection),
       keywordsAdded: keywordBuckets.add,
       keywordsFromJD: optimizationMetrics.jdKeywords,
@@ -502,23 +493,10 @@ export function OptimizeSection({
       vision2030: optimizationMetrics.vision2030,
       // Bug Fix: Expose placeholder status to UI
       isPlaceholderScore,
-      isPlaceholderImprovement,
-      // Verified vs projected
-      isScoreVerified,
     };
-  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore, verifiedScore]);
+  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore]);
 
-  const companionBeforeScore = resultsSummaryData.isPlaceholderScore
-    ? null
-    : resultsSummaryData.beforeScore;
-  const existingAfterScore = typeof optimizationMetrics.afterScore === 'number'
-    && Number.isFinite(optimizationMetrics.afterScore)
-    ? optimizationMetrics.afterScore
-    : null;
-  const companionAfterScore = !resultsSummaryData.isPlaceholderScore
-    && !resultsSummaryData.isPlaceholderImprovement
-    ? resultsSummaryData.afterScore
-    : existingAfterScore;
+  const presentation = resultsSummaryData.presentation;
 
   const verifyOptimizedResume = async (jobDescription: string, beforeScore: number, options?: { freePreview?: boolean }) => {
     if (!jobDescription.trim()) return;
@@ -527,33 +505,54 @@ export function OptimizeSection({
       setIsAutoVerifying(true);
       setVerifyAnomaly(null);
 
-      // Fix B3: Save each optimization's applied state before blanket apply/revert
+      // Pure simulation: build the hypothetical "all ACTIONABLE suggestions
+      // applied" resume without touching store state — recommendation-only cards
+      // (skills/certifications) never participate, and because nothing is mutated
+      // there is no applied-state or showOptimized restore dance afterwards.
       const storeState = useResumeStore.getState();
-      const savedAppliedStates = storeState.optimizations.map(o => ({ sectionId: o.sectionId, applied: o.applied }));
-      storeState.applyAllOptimizations();
-      const optimizedResume = storeState.getActiveResume();
-      // Restore original applied states instead of blanket revert
-      savedAppliedStates.forEach(({ sectionId, applied }) => {
-        if (applied) {
-          storeState.applyOptimization(sectionId);
-        } else {
-          storeState.revertOptimization(sectionId);
-        }
-      });
+      const { actionable } = partitionOptimizations(storeState.optimizations);
+      if (!storeState.originalResume || actionable.length === 0) return;
 
-      if (!optimizedResume) return;
+      const hypothetical = storeState.optimizations.map((o) => ({ ...o, applied: isActionable(o) }));
+      const { resume: optimizedResume, diagnostics } = mergeOptimizedResume(
+        storeState.originalResume,
+        hypothetical,
+        { isSaudiNational: storeState.isSaudiNational },
+      );
+      const { resume: baselineResume } = mergeOptimizedResume(
+        storeState.originalResume,
+        [],
+        { isSaudiNational: storeState.isSaudiNational },
+      );
 
       const { analyzeResumeWithAI } = await import('../../services/api');
       const { formatResumeToText } = await import('../../lib/utils/resumeUtils');
       // Give AI a realistic plain text string (what ATS sees) instead of structured JSON
       // to prevent artificially inflated scores.
       const optimizedText = formatResumeToText(optimizedResume);
+      const baselineText = formatResumeToText(baselineResume);
       const sourceTextLength = (resumeText || JSON.stringify(originalResume ?? '')).length;
       const minimumLength = Math.max(200, sourceTextLength * 0.5);
 
       if (optimizedText.length < minimumLength) {
         console.warn(`[OptimizeSection] verify skipped: optimized text too short (${optimizedText.length} chars)`);
-        setVerifyAnomaly({ rawScore: null, textLength: optimizedText.length });
+        setVerifyAnomaly({ kind: 'too_short', rawScore: null, textLength: optimizedText.length });
+        return;
+      }
+
+      // Material-difference guard: if applying every actionable suggestion does not
+      // change the formatted text, the suggestions failed to merge — scoring the
+      // identical text would fabricate a "verified no-change". That is an
+      // implementation failure to surface, never a role-fit conclusion.
+      const normalizeWs = (text: string) => text.replace(/\s+/g, ' ').trim();
+      if (normalizeWs(optimizedText) === normalizeWs(baselineText)) {
+        console.warn(`[OptimizeSection] verify skipped: optimized text identical to baseline (${diagnostics.failedCount} merge failures)`);
+        setVerifyAnomaly({
+          kind: 'no_text_change',
+          rawScore: null,
+          textLength: optimizedText.length,
+          mergeFailedCount: diagnostics.failedCount,
+        });
         return;
       }
 
@@ -566,15 +565,22 @@ export function OptimizeSection({
       if (verifiedResultScore !== null) {
         if (verifiedResultScore < beforeScore - 25) {
           console.warn(`[OptimizeSection] verify anomaly: raw score ${result?.score}, optimized text length ${optimizedText.length}`);
-          setVerifyAnomaly({ rawScore: verifiedResultScore, textLength: optimizedText.length });
+          setVerifyAnomaly({ kind: 'anomalous_drop', rawScore: verifiedResultScore, textLength: optimizedText.length });
           return;
         }
 
-        setVerifiedScore(verifiedResultScore);
-        // Update metrics with genuine verified scores
+        // The verified score is the ALL-ACTIONABLE-SUGGESTIONS potential — a
+        // target, never the current resume's score. It lives in its own field so
+        // it can never overwrite the generation-time improvement estimate, and its
+        // signature drops it automatically if the card set / resume / JD change.
         setOptimizationMetrics({
-          afterScore: verifiedResultScore,
-          improvement: verifiedResultScore - beforeScore,
+          verifiedPotential: {
+            score: verifiedResultScore,
+            baselineAtVerify: beforeScore,
+            signature: verificationSignature(actionable, resumeText ?? '', jobDescription),
+            verifiedAt: Date.now(),
+            outcome: classifyVerifiedOutcome(verifiedResultScore, beforeScore),
+          },
         });
         // Cache the verified score under the optimized key (forceIsOptimized: true)
         setCachedAnalysis(optimizedText, jobDescription, {
@@ -586,7 +592,7 @@ export function OptimizeSection({
     } catch (verifyErr) {
       // Auto-verify is non-fatal - optimization still succeeds
       console.warn('[OptimizeSection] Auto-verify failed (non-fatal):', verifyErr);
-      setVerifyAnomaly({ rawScore: null, textLength: 0 });
+      setVerifyAnomaly({ kind: 'error', rawScore: null, textLength: 0 });
     } finally {
       setIsAutoVerifying(false);
     }
@@ -641,7 +647,6 @@ export function OptimizeSection({
 
     setIsGenerating(true);
     setError(null);
-    setVerifiedScore(null);
     setVerifyAnomaly(null);
     setVerifyRetryUsed(false);
 
@@ -796,8 +801,10 @@ export function OptimizeSection({
         useResumeStore.getState().setKeywordSuggestions(suggestions);
       }
 
-      // Initialize accumulator for consolidated update
-      const metricsToUpdate: Partial<OptimizationMetrics> = {};
+      // Initialize accumulator for consolidated update. A new generation run
+      // invalidates any previous verified potential explicitly (the signature
+      // check would drop it anyway once the card set changes).
+      const metricsToUpdate: Partial<OptimizationMetrics> = { verifiedPotential: null };
 
       // Check if match analysis already provided an authoritative baseline score.
       // The optimize API independently re-calculates match_score which can differ
@@ -987,9 +994,10 @@ export function OptimizeSection({
       setOptimizations([]);
     }
     setPositionBannerDismissed(false);
-    // Also reset all optimization metrics to clear stale data
+    // Also reset all optimization metrics to clear stale data (this includes the
+    // verified potential, which lives in optimizationMetrics.verifiedPotential).
     resetOptimizationMetrics();
-    setVerifiedScore(null);
+    setVerifyAnomaly(null);
     setSessionId(null);
   };
 
@@ -1060,9 +1068,6 @@ export function OptimizeSection({
     });
   };
 
-  // Get applied count
-  const appliedCount = optimizations.filter(o => o.applied).length;
-
   const queueGroups = useMemo<QueueGroup[]>(() => {
     const workEntries = (originalResume?.work ?? []) as Work[];
     const groups = new Map<string, QueueGroup & { order: number }>();
@@ -1109,6 +1114,7 @@ export function OptimizeSection({
 
     optimizations.forEach((opt) => {
       const sectionType = opt.sectionType || 'general';
+      const kind: QueueGroup['kind'] = getActionability(sectionType) === 'recommendation' ? 'recommendation' : 'actionable';
       let groupId = `section-${sectionType}`;
       let title = t(`sections.optimize.tabs.${sectionType}`, sectionType);
       let subtitle: string | undefined;
@@ -1124,12 +1130,22 @@ export function OptimizeSection({
         order = orderByType.experience + (fallbackIndex / 100);
       }
 
+      if (sectionType === 'skills') {
+        title = t('sections.optimize.queue.recommendedSkills', 'Recommended skills');
+        subtitle = t('sections.optimize.queue.skillsHonesty', 'Add only skills you genuinely have.');
+      }
+      if (sectionType === 'certifications') {
+        title = t('sections.optimize.queue.recommendedCertifications', 'Recommended certifications');
+        subtitle = t('sections.optimize.queue.certificationsHonesty', 'Advice to consider — your existing certificates are never changed.');
+      }
+
       if (!groups.has(groupId)) {
         groups.set(groupId, {
           id: groupId,
           title,
           subtitle,
           type: sectionType as QueueGroup['type'],
+          kind,
           items: [],
           order,
         });
@@ -1144,6 +1160,9 @@ export function OptimizeSection({
   }, [optimizations, originalResume?.work, t]);
 
   const filteredQueueGroups = queueGroups.reduce<QueueGroup[]>((acc, group) => {
+    // Pending/Applied are implementation-progress filters — recommendation-only
+    // groups have no applied state, so they appear under "All" only.
+    if (queueFilter !== 'all' && group.kind === 'recommendation') return acc;
     const items = group.items.filter((item) => {
       if (queueFilter === 'pending') return !item.applied;
       if (queueFilter === 'applied') return item.applied;
@@ -1156,17 +1175,6 @@ export function OptimizeSection({
   const visibleQueueOptimizations = filteredQueueGroups.flatMap((group) => group.items);
   const hasOptimizationResults = optimizations.length > 0;
   const hasKeywordData = keywordBuckets.add.length + keywordBuckets.neutral.length + keywordBuckets.remove.length > 0;
-  const scoreDelta = resultsSummaryData.afterScore - resultsSummaryData.beforeScore;
-  const scoreDeltaLabel = scoreDelta > 0
-    ? `+${scoreDelta}%`
-    : scoreDelta < 0
-      ? `${scoreDelta}%`
-      : t('sections.optimize.noScoreChange', 'no change');
-  const scoreDeltaClass = scoreDelta > 0
-    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-    : scoreDelta < 0
-      ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-      : 'bg-gray-500/10 border-gray-500/20 text-gray-500';
   const queueFilters = [
     { id: 'all', label: t('sections.optimize.queue.filters.all', 'All') },
     { id: 'pending', label: t('sections.optimize.queue.filters.pending', 'Pending') },
@@ -1206,6 +1214,25 @@ export function OptimizeSection({
       void onExport('optimized');
     }
   };
+
+  // State D CTA: focus the user on the existing Match gaps / Strategic Reality
+  // Check. Uses the established cross-section navigation event (MainContent
+  // listens for watheq:navigate-tab); MatchSection reads the anchor on arrival.
+  const handleReviewMatchGaps = () => {
+    try {
+      sessionStorage.setItem('watheq:pendingMatchAnchor', 'gaps');
+    } catch { /* storage unavailable — navigation alone still helps */ }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'match' } }));
+    }
+  };
+
+  // Only the applied projection or fully applied verified score is shareable.
+  // Hypothetical unapplied potentials are never shared.
+  const shareAfterScore = presentation.arrowTarget;
+  const shareDelta = shareAfterScore !== null && presentation.baselineScore !== null
+    ? shareAfterScore - presentation.baselineScore
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -1325,19 +1352,10 @@ export function OptimizeSection({
 
       {optimizations.length > 0 && (
         <ScoreHeader
-          beforeScore={resultsSummaryData.beforeScore}
-          afterScore={resultsSummaryData.afterScore}
-          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
-          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
-          isScoreVerified={resultsSummaryData.isScoreVerified}
+          presentation={presentation}
           isAutoVerifying={isAutoVerifying}
-          verifyAnomaly={Boolean(verifyAnomaly)}
+          verifyAnomaly={verifyAnomaly}
           verifyRetryUsed={verifyRetryUsed}
-          appliedCount={appliedCount}
-          totalCount={optimizations.length}
-          scoreDeltaLabel={scoreDeltaLabel}
-          scoreDeltaClass={scoreDeltaClass}
-          scoreDelta={scoreDelta}
           categoryScores={categoryScores}
           expanded={scoreHeaderExpanded}
           expandedCategories={expandedScoreCategories}
@@ -1349,59 +1367,57 @@ export function OptimizeSection({
           onRetryVerify={retryVerifyOptimizedResume}
           onRerun={() => void handleGenerateActual()}
           onContinue={handleContinue}
+          onReviewMatchGaps={handleReviewMatchGaps}
         />
       )}
 
       {optimizations.length > 0 && (
         <CharacterResultsCompanion
           variant="optimize"
-          beforeScore={companionBeforeScore}
-          afterScore={companionAfterScore}
+          baselineScore={presentation.isPlaceholderScore ? null : presentation.baselineScore}
+          projectedScore={presentation.currentAppliedProjection}
+          targetScore={presentation.verifiedAllSuggestionsScore ?? presentation.allSuggestionsPotentialEstimate}
+          targetKind={presentation.verifiedAllSuggestionsScore !== null
+            ? 'verified'
+            : presentation.allSuggestionsPotentialEstimate !== null ? 'estimate' : null}
+          suppressCelebration={presentation.verifiedOutcome === 'decreased'}
         />
       )}
 
       {optimizations.length > 0 && (
         <ScoreDiffBreakdown
-          beforeScore={resultsSummaryData.beforeScore}
-          afterScore={resultsSummaryData.afterScore}
-          potentialScore={resultsSummaryData.potentialScore}
-          improvement={optimizationMetrics.improvement}
-          isScoreVerified={resultsSummaryData.isScoreVerified}
-          isPlaceholderScore={resultsSummaryData.isPlaceholderScore}
-          isPlaceholderImprovement={resultsSummaryData.isPlaceholderImprovement}
+          presentation={presentation}
+          improvement={optimizationMetrics.improvement ?? null}
           optimizations={optimizations}
         />
       )}
 
-      {optimizations.length > 0 &&
-        !resultsSummaryData.isPlaceholderScore &&
-        !resultsSummaryData.isPlaceholderImprovement &&
-        resultsSummaryData.afterScore - resultsSummaryData.beforeScore > 10 && (
-          <div className="flex justify-end">
-            <GlassButton
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                analytics.track('share_card_opened', {
-                  before_score: resultsSummaryData.beforeScore,
-                  after_score: resultsSummaryData.afterScore,
-                  improvement: resultsSummaryData.afterScore - resultsSummaryData.beforeScore,
-                });
-                setShowShareCard(true);
-              }}
-              leftIcon={<Share2 className="w-3.5 h-3.5" />}
-            >
-              {t('sections.optimize.shareResult', 'Share Your Result')}
-            </GlassButton>
-          </div>
-        )}
+      {optimizations.length > 0 && shareDelta > 10 && shareAfterScore !== null && (
+        <div className="flex justify-end">
+          <GlassButton
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              analytics.track('share_card_opened', {
+                before_score: resultsSummaryData.beforeScore,
+                after_score: shareAfterScore,
+                improvement: shareDelta,
+              });
+              setShowShareCard(true);
+            }}
+            leftIcon={<Share2 className="w-3.5 h-3.5" />}
+          >
+            {t('sections.optimize.shareResult', 'Share Your Result')}
+          </GlassButton>
+        </div>
+      )}
 
       {/* Share Score Card Modal */}
-      {showShareCard && (
+      {showShareCard && shareAfterScore !== null && (
         <Suspense fallback={null}>
           <ShareScoreCard
             beforeScore={resultsSummaryData.beforeScore}
-            afterScore={resultsSummaryData.afterScore}
+            afterScore={shareAfterScore}
             onClose={() => setShowShareCard(false)}
           />
         </Suspense>

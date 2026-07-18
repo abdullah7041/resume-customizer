@@ -2,6 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi, beforeEach, describe, it, expect } from 'vitest';
 import { MatchSection as JobMatch } from '../components/sections/MatchSection';
 
+const mockImportJobFromUrl = vi.hoisted(() => vi.fn());
+
+// MatchSection pulls importJobFromUrl from the api service; mock the module so
+// tests never touch the network (and no live-site dependency exists).
+vi.mock('../services/api', () => ({
+  importJobFromUrl: mockImportJobFromUrl,
+}));
+
 // Mock supabase
 vi.mock('../services/supabase', () => ({
   supabase: {
@@ -79,6 +87,7 @@ vi.mock('react-i18next', () => ({
 describe('JobMatch', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    mockImportJobFromUrl.mockReset();
   });
 
   it('renders analysis results with Saudi styling', () => {
@@ -227,6 +236,109 @@ describe('JobMatch', () => {
     ).toHaveValue('Saved JD');
     expect(screen.getByText(/matches the requirements/i)).toBeInTheDocument();
     expect(screen.queryByTestId('character-results-companion')).not.toBeInTheDocument();
+  });
+
+  it('shows a single spinner in the Analyze button while analyzing', () => {
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={null}
+        isAnalyzing
+        hasResume
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /analyzing/i });
+    expect(button).toBeDisabled();
+    // GlassButton swaps the Sparkles leftIcon for its own Loader2 — exactly one
+    // animated icon and no leftover Sparkles inside the button.
+    expect(button.querySelectorAll('.animate-spin')).toHaveLength(1);
+    expect(button.querySelectorAll('svg')).toHaveLength(1);
+  });
+
+  it('shows the Sparkles icon without a spinner when idle', () => {
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={null}
+        isAnalyzing={false}
+        hasResume
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /analyze match with ai/i });
+    expect(button.querySelectorAll('.animate-spin')).toHaveLength(0);
+    expect(button.querySelectorAll('svg')).toHaveLength(1);
+  });
+
+  it('imports a job description from a URL into the editable JD textarea', async () => {
+    mockImportJobFromUrl.mockResolvedValue({
+      status: 'ok',
+      jobText: 'Imported job description with responsibilities and requirements.',
+      jobTitle: 'Backend Engineer',
+      companyName: 'Acme',
+      sourceUrl: 'https://www.linkedin.com/jobs/view/123/',
+      finalUrl: 'https://www.linkedin.com/jobs/view/123/',
+      source: 'json-ld',
+      confidence: 'high',
+    });
+    const onToast = vi.fn();
+
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={null}
+        isAnalyzing={false}
+        hasResume
+        onToast={onToast}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/linkedin\.com\/jobs\/view/i), {
+      target: { value: 'https://www.linkedin.com/jobs/view/123/' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^import$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/paste the job description/i))
+        .toHaveValue('Imported job description with responsibilities and requirements.');
+    });
+    expect(mockImportJobFromUrl).toHaveBeenCalledWith('https://www.linkedin.com/jobs/view/123/', 'en');
+    expect(onToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+    // The URL field clears after a successful import; the JD stays editable.
+    expect(screen.getByPlaceholderText(/linkedin\.com\/jobs\/view/i)).toHaveValue('');
+  });
+
+  it('shows a recoverable message when a LinkedIn link cannot be imported', async () => {
+    mockImportJobFromUrl.mockResolvedValue({
+      status: 'failed',
+      failureReason: 'login_required',
+      sourceUrl: 'https://www.linkedin.com/jobs/view/123/',
+    });
+
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={null}
+        isAnalyzing={false}
+        hasResume
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/linkedin\.com\/jobs\/view/i), {
+      target: { value: 'https://www.linkedin.com/jobs/view/123/' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^import$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/couldn't reliably import the full description/i);
+    });
+    // Manual paste stays fully available as the recovery path.
+    expect(screen.getByPlaceholderText(/paste the job description/i)).toHaveValue('');
+    fireEvent.change(screen.getByPlaceholderText(/paste the job description/i), {
+      target: { value: 'Manually pasted JD' },
+    });
+    expect(screen.getByPlaceholderText(/paste the job description/i)).toHaveValue('Manually pasted JD');
   });
 
   it('allows guest match analysis to run one free preview without credit confirmation', async () => {

@@ -895,7 +895,7 @@ describe("MainContent resume parsing", () => {
     expect(screen.getAllByText(/Pipeline/i).length).toBeGreaterThan(0);
   });
 
-  it("keeps the Path-A intent panel mounted across role -> location, then unmounts on complete", async () => {
+  it("keeps the Path-A intent panel mounted through the role answer, then unmounts on complete", async () => {
     // Signed-in user, freshly parsed resume in the store, no intent yet, prompt unseen.
     localStorage.setItem("watheq:lastActiveTab", "resume");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", basics: { name: "Sara Al-Otaibi" }, sections: [] }));
@@ -915,24 +915,20 @@ describe("MainContent resume parsing", () => {
     // role slot is shown (cv_basics skipped inline)
     expect(await screen.findByText("What role are you targeting?")).toBeInTheDocument();
 
-    // Answer role — this writes searchIntent. The panel must NOT unmount (the bug).
+    // Answer role — this writes searchIntent. The intent write must not unmount the
+    // panel mid-flow (the original bug); role is the terminal slot, so the panel
+    // completes and unmounts, and no location question is ever asked.
     fireEvent.change(screen.getByPlaceholderText(/senior frontend engineer/i), {
       target: { value: "Frontend Engineer" },
     });
     fireEvent.click(screen.getByRole("button", { name: /^next$/i }));
 
-    // location slot appears -> panel stayed mounted even though intent is now non-empty.
-    expect(await screen.findByText("Where do you want to work?")).toBeInTheDocument();
-    expect(useResumeStore.getState().searchIntent?.targetRoles).toEqual(["Frontend Engineer"]);
-
-    // location via chip -> final slot resolved -> onComplete -> panel unmounts
-    fireEvent.click(screen.getByRole("button", { name: /^remote$/i }));
-
     await waitFor(() => {
-      expect(screen.queryByText("Where do you want to work?")).not.toBeInTheDocument();
+      expect(screen.queryByText("What role are you targeting?")).not.toBeInTheDocument();
     });
+    expect(screen.queryByText("Where do you want to work?")).not.toBeInTheDocument();
     expect(localStorage.getItem("watheq:intentPrompted")).toBe("true");
     const intent = useResumeStore.getState().searchIntent;
-    expect(intent?.location?.workMode).toBe("remote");
+    expect(intent?.targetRoles).toEqual(["Frontend Engineer"]);
   });
 });

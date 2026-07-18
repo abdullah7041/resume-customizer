@@ -7,14 +7,19 @@
         "estimateNote": "المكاسب المتوقعة هي تقديرات بناءً على الاقتراحات التي طبّقتها — وليست ضمانًا.",
         "verifiedBadge": "مُتحقق منه",
         "verifiedNote": "تم التحقق منه عبر إعادة تحليل بالذكاء الاصطناعي مع تطبيق جميع الاقتراحات.",
-        "appliedOf": "تم تطبيق {{applied}} من {{total}} اقتراحًا",
+        "appliedOf": "{{applied}} من {{total}} من تعديلات السيرة مطبّقة",
         "perCardShare": "كل اقتراح مُطبَّق يضيف نحو +{{points}} نقطة إلى التقدير",
         "counted": "محتسب في التوقع",
         "notCounted": "غير مُطبَّق — غير محتسب",
         "noneApplied": "طبّق الاقتراحات لرؤية تأثيرها على التوقع.",
         "potentialNote": "حتى {{score}}٪ إذا طُبّقت جميع الاقتراحات (تقدير)",
         "showCards": "اطّلع على التغييرات المحتسبة",
-        "hideCards": "إخفاء التفصيل"
+        "hideCards": "إخفاء التفصيل",
+        "recommendationsAside": "{{total}} توصيات معروضة على حدة (غير محسوبة)",
+        "recommendationsHeading": "التوصيات (غير محسوبة)",
+        "recommendationLabel": "توصية",
+        "mergeFailed": "تعذَّر العثور عليه في السيرة",
+        "noGainPredicted": "لا يُتوقَّع ارتفاع ملموس في درجة التطابق (تقدير)"
       },
       "title": "صقل كل قسم",
       "subtitle": "اقتراحات مدعومة بالذكاء الاصطناعي لتحسين سيرتك الذاتية",
@@ -52,7 +57,9 @@
         "original": "الأصلي",
         "optimized": "المحسّن",
         "applied": "مُطبّق",
-        "pending": "معلق"
+        "pending": "معلق",
+        "recommendation": "توصية",
+        "notInResume": "تعذَّر العثور على هذا النص في سيرتك — حسِّن الاقتراح أو عدِّل يدويًا."
       },
       "generating": "ينشئ التحسينات...",
       "noChanges": "لا توجد تحسينات متاحة",
@@ -82,19 +89,24 @@
       "optimizingResume": "جاري التحسين...",
       "currentScore": "الحالي",
       "optimizedScore": "المُحسَّن",
-      "noScoreChange": "لا تغيير",
       "verifyAnomalyTitle": "تعذّر التحقق من الدرجة الجديدة",
       "retryVerify": "إعادة المحاولة",
       "verifying": "جارٍ التحقق...",
       "verifiedTooltip": "أعدنا تقييم سيرتك الذاتية المحسّنة مقابل هذا الوصف الوظيفي",
       "verifiedByReanalysis": "تم التحقق بإعادة التحليل",
       "scoreHeader": {
-        "projectedScore": "متوقعة ~{{score}}%",
         "verified": "تم التحقق",
         "progress": "{{applied}}/{{total}} مطبّق",
         "rerun": "إعادة التشغيل",
         "continue": "متابعة",
-        "breakdown": "تفصيل الدرجة"
+        "breakdown": "تفصيل الدرجة",
+        "currentMatch": "التطابق الحالي",
+        "estimatedScore": "تقديري ~{{score}}%",
+        "progressActionable": "{{applied}}/{{total}} من تعديلات السيرة مطبّقة",
+        "recommendationsCount": "{{total}} توصيات",
+        "suggestionsReady": "{{total}} اقتراحات جاهزة · لم يُطبَّق أي منها بعد",
+        "potentialEstimate": "حتى ~{{score}}% إذا طُبِّقت جميع الاقتراحات (تقدير)",
+        "noGainPredicted": "لا يُتوقَّع ارتفاع ملموس في درجة التطابق (تقدير)"
       },
       "strategy": {
         "title": "الاستراتيجية",
@@ -111,7 +123,12 @@
           "pending": "معلّق",
           "applied": "مطبّق"
         },
-        "emptyFiltered": "لا توجد اقتراحات تطابق هذا الفلتر."
+        "emptyFiltered": "لا توجد اقتراحات تطابق هذا الفلتر.",
+        "recommendedSkills": "مهارات موصى بها",
+        "recommendedCertifications": "شهادات موصى بها",
+        "recommendationsBadge": "توصيات — لا تُضاف إلى سيرتك الذاتية",
+        "skillsHonesty": "أضف فقط المهارات التي تمتلكها فعلًا.",
+        "certificationsHonesty": "نصيحة للاطلاع — لا تُعدَّل شهاداتك الحالية أبدًا."
       },
       "shareResult": "شارك نتيجتك",
       "revert": "تراجع",
@@ -172,7 +189,15 @@
         "improved": "محسّن",
         "empty": "فارغ",
         "noChanges": "لا توجد تغييرات مطبّقة بعد"
-      }
+      },
+      "verifiedPotentialLine": "الدرجة المحتملة مع كل الاقتراحات: {{score}}% · موثَّقة",
+      "noChangeTitle": "إعادة الصياغة وحدها لن تُحسِّن هذا التطابق غالبًا",
+      "noChangeBody": "اختبرنا النسخة المحسَّنة مقابل هذا الوصف الوظيفي، لكن درجة التطابق لم تتحسن بشكل ملموس. يبدو أن الفجوات الأساسية تتطلب أدلة أو خبرة أو مؤهلات أو مهارات أقوى — وليس صياغة مختلفة.",
+      "noChangeNote": "قد تُحسِّن هذه التعديلات وضوح سيرتك وسهولة قراءتها — لكنها لا تعالج المتطلبات الأساسية لهذه الوظيفة.",
+      "reviewGaps": "راجع أهم فجوات التطابق",
+      "decreaseTitle": "النسخة المعدَّلة سجّلت درجة أقل ({{score}}%)",
+      "decreaseBody": "سجّلت النسخة المحسَّنة درجة أقل من سيرتك الحالية، لذا فهي ليست تحسينًا لهذه الوظيفة. راجع الاقتراحات وتراجع عن أي اقتراح لا يعكس خبرتك الفعلية.",
+      "verifyNoTextChangeTitle": "تعذَّر تطبيق الاقتراحات على نص سيرتك الذاتية"
     },
     "characterResults": {
       "picker": "اختر رفيقك",
@@ -183,11 +208,19 @@
         "confident": "توافق تنافسي",
         "celebrating": "نتيجة قوية"
       },
-      "before": "قبل",
-      "after": "بعد",
       "unavailableScore": "النتيجة غير متاحة",
       "changeCompanion": "تغيير الرفيق",
-      "imageAlt": "{{gender}}: {{state}}"
+      "imageAlt": "{{gender}}: {{state}}",
+      "levels": {
+        "foundation": "مرحلة التأسيس",
+        "builder": "بناء الملف المهني",
+        "candidate": "مرشح مؤهل",
+        "competitor": "منافس قوي",
+        "frontRunner": "مرشح متصدر"
+      },
+      "levelLabel": "المستوى {{level}} من 5 · {{name}}",
+      "targetVerified": "الهدف {{score}}% · موثَّق",
+      "targetEstimate": "الهدف ~{{score}}% (تقدير)"
     }
   }
 }

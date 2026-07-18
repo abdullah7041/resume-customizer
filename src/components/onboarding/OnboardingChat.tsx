@@ -1,8 +1,8 @@
 // src/components/onboarding/OnboardingChat.tsx
-// Mobile conversational onboarding. One slot at a time, large tap targets, chips for
-// common answers, a Skip on every slot, progress dots, plain text input (the OS
-// keyboard mic supplies voice). Each answer calls onboard-extract, patches the store
-// through the single writer, and advances the pure state machine.
+// Mobile conversational onboarding. One slot at a time, large tap targets, a Skip on
+// every slot, progress dots, plain text input (the OS keyboard mic supplies voice).
+// Each answer calls onboard-extract, patches the store through the single writer, and
+// advances the pure state machine.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OnboardingPath, OnboardingSlot, SearchIntent, SlotConfidence } from '@/types/onboarding';
 import type { Basics } from '@/types/resume';
@@ -35,16 +35,12 @@ const SLOT_COPY: Record<OnboardingPath, Record<OnboardingSlot, SlotCopy>> = {
   has_cv: {
     cv_basics: { title: 'Is this you?', hint: 'Confirm or fix your name and title.', placeholder: 'Name — Job title' },
     role: { title: 'What role are you targeting?', hint: 'One target is enough.', placeholder: 'e.g. Senior Frontend Engineer' },
-    location: { title: 'Where do you want to work?', hint: 'City and how you want to work.', placeholder: 'e.g. Riyadh, hybrid' },
   },
   no_cv: {
     cv_basics: { title: "Let's start with you", hint: 'Your name and one or two things you have done.', placeholder: 'e.g. Sara Al-Otaibi — built a payments dashboard, led a 3-person team' },
     role: { title: 'What role are you targeting?', hint: 'One target is enough.', placeholder: 'e.g. Product Designer' },
-    location: { title: 'Where do you want to work?', hint: 'City and how you want to work.', placeholder: 'e.g. Jeddah, onsite' },
   },
 };
-
-const WORK_MODES: Array<'remote' | 'hybrid' | 'onsite'> = ['remote', 'hybrid', 'onsite'];
 
 function emptyIntent(confidence: SlotConfidence): SearchIntent {
   return { targetRoles: [], meta: { confidence, completeness: 0, updatedAt: new Date().toISOString() } };
@@ -143,10 +139,6 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         const roles = Array.isArray(value.targetRoles) ? (value.targetRoles as string[]) : [];
         const seniority = value.seniority as SearchIntent['seniority'] | undefined;
         commitIntent({ targetRoles: roles, ...(seniority ? { seniority } : {}) });
-        return;
-      }
-      if (slot === 'location' && value.location) {
-        commitIntent({ location: value.location as SearchIntent['location'] });
       }
     },
     [commitIntent, patchProfile],
@@ -170,16 +162,6 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
       setBusy(false);
     }
   }, [applySlotValue, current, goNext, prefill, text]);
-
-  // Chips set structured values directly — no AI round-trip needed.
-  const pickWorkMode = useCallback(
-    (workMode: 'remote' | 'hybrid' | 'onsite') => {
-      if (current !== 'location') return;
-      commitIntent({ location: { ...(intentRef.current.location ?? {}), workMode } });
-      goNext('location');
-    },
-    [commitIntent, current, goNext],
-  );
 
   const skip = useCallback(() => {
     if (current === 'done') return;
@@ -263,22 +245,6 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         <p className={inline ? 'mt-1 text-sm text-gray-600 dark:text-slate-400' : 'mt-1 text-sm font-medium text-emerald-800/80 dark:text-emerald-100/80'}>{copy?.hint}</p>
       </div>
 
-      {/* Chips */}
-      {current === 'location' && (
-        <div className="flex flex-wrap justify-center gap-2">
-          {WORK_MODES.map((m) => (
-            <button
-              key={m}
-              type="button"
-              disabled={busy}
-              onClick={() => pickWorkMode(m)}
-              className="rounded-full border border-emerald-500/40 px-4 py-2 text-sm capitalize text-emerald-800 transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-50 dark:text-emerald-300"
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      )}
       {/* Plain text input — keyboard mic supplies voice */}
       <textarea
         value={text}

@@ -35,14 +35,14 @@ describe('onboarding flow state machine', () => {
     it('returns done when every slot is answered', () => {
       const s: OnboardingState = {
         path: 'has_cv',
-        current: 'location',
-        answered: { cv_basics: true, role: true, location: true },
+        current: 'role',
+        answered: { cv_basics: true, role: true },
       };
       expect(nextSlot(s)).toBe('done');
     });
 
     it('ignores answer order and returns the earliest gap', () => {
-      const s: OnboardingState = { path: 'no_cv', current: 'cv_basics', answered: { location: true } };
+      const s: OnboardingState = { path: 'no_cv', current: 'cv_basics', answered: { role: true } };
       expect(nextSlot(s)).toBe('cv_basics');
     });
   });
@@ -75,15 +75,16 @@ describe('onboarding flow state machine', () => {
       // the user hit Skip — both just mark the slot answered.
       let s = initialState('has_cv');
       s = advance(s, 'cv_basics'); // answered with a value
+      expect(s.current).toBe('role');
       s = advance(s, 'role'); // skipped
-      expect(s.current).toBe('location');
+      expect(s.current).toBe('done');
     });
   });
 
   describe('progress', () => {
     it('counts answered vs total slots', () => {
       const s = advance(initialState('has_cv'), 'cv_basics');
-      expect(progress(s)).toEqual({ answered: 1, total: 3 });
+      expect(progress(s)).toEqual({ answered: 1, total: 2 });
     });
   });
 

@@ -10,6 +10,12 @@ export interface QueueGroup {
   title: string;
   subtitle?: string;
   type: OptimizationResult['sectionType'] | 'general';
+  /**
+   * 'actionable' groups carry real resume edits (Apply controls, applied
+   * progress); 'recommendation' groups (skills/certifications) are advice only —
+   * no Apply, no Pending/Applied state, never counted as progress.
+   */
+  kind: 'actionable' | 'recommendation';
   items: OptimizationResult[];
 }
 
@@ -66,9 +72,10 @@ export function JobGroupCard({
   onSubmitRefine,
 }: JobGroupCardProps) {
   const { t } = useTranslation();
+  const isRecommendationGroup = group.kind === 'recommendation';
   const appliedCount = group.items.filter((item) => item.applied).length;
   const pendingIds = group.items.flatMap((item) => item.applied ? [] : [item.sectionId]);
-  const allApplied = pendingIds.length === 0;
+  const allApplied = !isRecommendationGroup && pendingIds.length === 0;
 
   return (
     <div className={cn(
@@ -80,19 +87,30 @@ export function JobGroupCard({
           <h3 className="truncate text-base font-bold text-gray-900 dark:text-white">{group.title}</h3>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             {group.subtitle ?? t('sections.optimize.queue.suggestionsCount', { defaultValue: '{{count}} suggestions', count: group.items.length })}
-            <span className="mx-2 text-gray-300 dark:text-gray-600">/</span>
-            {t('sections.optimize.scoreHeader.progress', { defaultValue: '{{applied}}/{{total}} applied', applied: appliedCount, total: group.items.length })}
+            {!isRecommendationGroup && (
+              <>
+                <span className="mx-2 text-gray-300 dark:text-gray-600">/</span>
+                {t('sections.optimize.scoreHeader.progress', { defaultValue: '{{applied}}/{{total}} applied', applied: appliedCount, total: group.items.length })}
+              </>
+            )}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => onApplyGroup(pendingIds)}
-          disabled={allApplied}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
-        >
-          <Check className="h-4 w-4" />
-          {t('sections.optimize.queue.applyGroup', 'Apply all in this job')}
-        </button>
+        {isRecommendationGroup ? (
+          <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            <Lightbulb className="h-4 w-4" />
+            {t('sections.optimize.queue.recommendationsBadge', 'Recommendations — not applied to your resume')}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onApplyGroup(pendingIds)}
+            disabled={allApplied}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+          >
+            <Check className="h-4 w-4" />
+            {t('sections.optimize.queue.applyGroup', 'Apply all in this job')}
+          </button>
+        )}
       </div>
 
       <div className="divide-y divide-[color:var(--glass-border)] dark:divide-white/10">
@@ -117,14 +135,20 @@ export function JobGroupCard({
                   <span className="min-w-0">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">{contentPreview}</span>
-                      <span className={cn(
-                        'rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                        opt.applied
-                          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                          : 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-500 dark:border-white/10 dark:bg-white/5'
-                      )}>
-                        {opt.applied ? t('sections.optimize.status.applied', 'Applied') : t('sections.optimize.status.pending', 'Pending')}
-                      </span>
+                      {isRecommendationGroup ? (
+                        <span className="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                          {t('sections.optimize.status.recommendation', 'Recommendation')}
+                        </span>
+                      ) : (
+                        <span className={cn(
+                          'rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                          opt.applied
+                            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            : 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-500 dark:border-white/10 dark:bg-white/5'
+                        )}>
+                          {opt.applied ? t('sections.optimize.status.applied', 'Applied') : t('sections.optimize.status.pending', 'Pending')}
+                        </span>
+                      )}
                       {opt.sectionType === 'skills' && (
                         <Info className="h-3.5 w-3.5 text-amber-500" aria-label={t('sections.optimize.skillsRecommendationTooltip', 'These are recommendations only and will not be added to your resume')} />
                       )}
@@ -166,7 +190,24 @@ export function JobGroupCard({
 
               {expanded && (
                 <div className="p-4 pt-0">
-                  {compareMode === opt.sectionId ? (
+                  {isRecommendationGroup ? (
+                    // Recommendation-only presentation: no before/after diff (the
+                    // "original" of a certification card is a literal label, not
+                    // resume text) — just the advice plus the honesty note.
+                    <div className="mt-3 space-y-3">
+                      <DiffPanel tone="emerald" title={t('sections.optimize.status.recommendation', 'Recommendation')} content={textValue(opt.optimized)} />
+                      {group.type === 'skills' && textValue(opt.original).trim() && (
+                        <div className="rounded-lg bg-[color:var(--surface-control)] p-3 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                          {textValue(opt.original)}
+                        </div>
+                      )}
+                      <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                        {group.type === 'skills'
+                          ? t('sections.optimize.queue.skillsHonesty', 'Add only skills you genuinely have.')
+                          : t('sections.optimize.queue.certificationsHonesty', 'Advice to consider — your existing certificates are never changed.')}
+                      </p>
+                    </div>
+                  ) : compareMode === opt.sectionId ? (
                     <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
                       <DiffPanel tone="red" title={t('sections.optimize.originalContent', 'Original Content')} content={textValue(opt.original)} />
                       <DiffPanel tone="emerald" title={t('sections.optimize.optimizedVersion', 'Optimized Version')} content={textValue(opt.optimized)} />
@@ -188,8 +229,19 @@ export function JobGroupCard({
                     </div>
                   )}
 
+                  {!isRecommendationGroup && opt.mergeStatus === 'failed' && !opt.applied && (
+                    <div className="mt-4">
+                      <ReasonBlock
+                        tone="amber"
+                        icon={<AlertCircle className="h-4 w-4 text-amber-500 dark:text-amber-400" />}
+                        label={t('sections.optimize.scoreDiff.mergeFailed', "Couldn't locate in resume")}
+                        text={t('sections.optimize.status.notInResume', "Couldn't locate this text in your resume — refine the suggestion or edit manually.")}
+                      />
+                    </div>
+                  )}
+
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                    {opt.applied ? (
+                    {isRecommendationGroup ? null : opt.applied ? (
                       <GlassButton variant="ghost" size="sm" onClick={() => onRevert(opt.sectionId)} leftIcon={<RotateCcw className="h-3.5 w-3.5" />} className="flex-1 hover:bg-red-500/10 hover:text-red-400">
                         {t('sections.optimize.revertChanges', 'Revert Changes')}
                       </GlassButton>

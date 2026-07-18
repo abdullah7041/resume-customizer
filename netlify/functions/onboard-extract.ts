@@ -55,22 +55,6 @@ const SLOT_SCHEMAS: Record<string, object> = {
     },
     required: ['value', 'confidence'],
   },
-  location: {
-    type: 'object',
-    properties: {
-      value: {
-        type: 'object',
-        properties: {
-          city: { type: 'string' },
-          country: { type: 'string' },
-          workMode: { type: 'string', enum: ['', 'remote', 'hybrid', 'onsite'] },
-        },
-        required: ['city', 'country', 'workMode'],
-      },
-      confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
-    },
-    required: ['value', 'confidence'],
-  },
 };
 
 const SLOT_INSTRUCTIONS: Record<string, string> = {
@@ -78,8 +62,6 @@ const SLOT_INSTRUCTIONS: Record<string, string> = {
     'Extract the person\'s full name into "name", their current/target job title into "label", and up to two concrete things they have done into "achievements" (each a short phrase). Leave a field as an empty string / empty array if the answer does not contain it. Do not invent details.',
   role:
     'Extract the target job role(s) the person wants into "targetRoles" (usually one, at most a few). Infer "seniority" only if the role text clearly states it (e.g. "senior", "lead", "manager"); otherwise return an empty string. Do not invent a seniority.',
-  location:
-    'Extract the preferred work "city" and "country" (use the country code like "SA" when obvious). Set "workMode" to remote, hybrid, or onsite if stated, else empty string. Leave city/country empty if not stated.',
 };
 
 function normalizeConfidence(value: unknown): SlotConfidence {
@@ -115,16 +97,6 @@ function normalizeSlotValue(slot: string, raw: unknown): Record<string, unknown>
     return out;
   }
 
-  if (slot === 'location') {
-    const workMode = v.workMode === 'remote' || v.workMode === 'hybrid' || v.workMode === 'onsite'
-      ? v.workMode
-      : 'onsite';
-    const location: Record<string, unknown> = { workMode };
-    if (typeof v.city === 'string' && v.city.trim()) location.city = v.city.trim();
-    if (typeof v.country === 'string' && v.country.trim()) location.country = v.country.trim();
-    return { location };
-  }
-
   return {};
 }
 
@@ -150,7 +122,6 @@ const baseHandler: Handler = async (event) => {
       ? `\nKnown so far (do not contradict it): ${JSON.stringify({
           targetRoles: currentIntent.targetRoles,
           seniority: currentIntent.seniority,
-          location: currentIntent.location,
         })}`
       : '';
 

@@ -503,7 +503,7 @@ describe('OptimizeSection', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('2/3 applied')).toBeInTheDocument();
+            expect(screen.getByText('2/3 resume changes applied')).toBeInTheDocument();
         });
     });
 
@@ -1027,7 +1027,7 @@ describe('Optimization Card Types', () => {
             renderWithProviders(<OptimizeSection />);
 
             expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
-            expect(screen.getByText('Projected ~5%')).toBeInTheDocument();
+            expect(screen.getByText('Estimated ~5%')).toBeInTheDocument();
         });
 
         it('does not treat missing score fields as a real zero score', () => {
@@ -1055,18 +1055,24 @@ describe('Optimization Card Types', () => {
         });
 
         it('passes verify mode when auto-verifying the optimized resume', async () => {
-            mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
-            mockStoreState.parsedResumeText = 'Original resume text that is long enough to make verification meaningful after optimization';
-            mockStoreState.getActiveResume = vi.fn(() => ({
+            // Verification now merges the REAL store resume (pure simulation), so the
+            // fixture needs enough content for the merged text to pass the length guard.
+            mockStoreState.originalResume = {
                 basics: {
                     name: 'Test User',
-                    summary: 'Optimized summary with enough detailed text to exceed the minimum verification length threshold for the test scenario.',
+                    label: 'Backend Engineer',
+                    email: 't@example.com',
+                    phone: '',
+                    summary: 'Original summary describing production backend engineering work across payments platforms.',
+                    location: { city: 'Riyadh', countryCode: 'SA', region: '' },
+                    profiles: [],
                 },
                 work: [{
                     name: 'Company',
                     position: 'Engineer',
                     startDate: '2020',
                     endDate: '2024',
+                    summary: '',
                     highlights: [
                         'Improved backend APIs with measurable latency reductions and production reliability gains.',
                         'Built React dashboards for hiring managers with accessible workflows and analytics.',
@@ -1074,7 +1080,8 @@ describe('Optimization Card Types', () => {
                 }],
                 education: [],
                 skills: [{ name: 'Technical', keywords: ['React', 'TypeScript', 'Node.js'] }],
-            }));
+            };
+            mockStoreState.parsedResumeText = 'Original resume text that is long enough to make verification meaningful after optimization';
             mockStoreState.baselineMatchScore = 45;
             mockAnalyzeResumeWithAI.mockResolvedValue({
                 score: 52,
@@ -1115,18 +1122,24 @@ describe('Optimization Card Types', () => {
         });
 
         it('shows an anomaly instead of storing an implausibly low verified score', async () => {
-            mockStoreState.originalResume = { basics: { name: 'Test User', summary: 'Original summary' }, work: [], education: [], skills: [] };
-            mockStoreState.parsedResumeText = 'Original resume text with enough detailed work history and skills evidence for verification. '.repeat(3);
-            mockStoreState.getActiveResume = vi.fn(() => ({
+            // Rich fixture: the pure-simulation verify merges the real store resume and
+            // must reach the AI call (past the length + text-change guards).
+            mockStoreState.originalResume = {
                 basics: {
                     name: 'Test User',
-                    summary: 'Optimized summary with enough detail to pass the verification text-length guard before score anomaly handling.',
+                    label: 'Backend Engineer',
+                    email: 't@example.com',
+                    phone: '',
+                    summary: 'Original summary describing production backend engineering work across payments platforms.',
+                    location: { city: 'Riyadh', countryCode: 'SA', region: '' },
+                    profiles: [],
                 },
                 work: [{
                     name: 'Company',
                     position: 'Engineer',
                     startDate: '2020',
                     endDate: '2024',
+                    summary: '',
                     highlights: [
                         'Improved backend APIs with measurable latency reductions and reliability gains.',
                         'Built React dashboards for hiring managers with accessible workflows and analytics.',
@@ -1134,7 +1147,8 @@ describe('Optimization Card Types', () => {
                 }],
                 education: [],
                 skills: [{ name: 'Technical', keywords: ['React', 'TypeScript', 'Node.js'] }],
-            }));
+            };
+            mockStoreState.parsedResumeText = 'Original resume text with enough detailed work history and skills evidence for verification. '.repeat(3);
             mockStoreState.baselineMatchScore = 45;
             mockAnalyzeResumeWithAI.mockResolvedValue({
                 score: 0,
@@ -1226,7 +1240,7 @@ describe('Optimization Card Types', () => {
             warnSpy.mockRestore();
         });
 
-        it('shows projected and verified score states with a signed delta', () => {
+        it('treats a non-positive estimate as no meaningful projection (current score only)', () => {
             mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
             mockStoreState.baselineMatchScore = 78;
             mockStoreState.optimizationMetrics = {
@@ -1238,9 +1252,12 @@ describe('Optimization Card Types', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('Projected ~75%')).toBeInTheDocument();
-            expect(screen.getByText('-3%')).toBeInTheDocument();
-            expect(screen.queryByText('+-3%')).not.toBeInTheDocument();
+            // A negative estimate is not a meaningful projection — the header shows
+            // the honest current score alone, never "78% -> Estimated ~75%".
+            expect(screen.getByText('Current match')).toBeInTheDocument();
+            expect(screen.getAllByText('78%').length).toBeGreaterThan(0);
+            expect(screen.queryByText('Estimated ~75%')).not.toBeInTheDocument();
+            expect(screen.queryByText('-3%')).not.toBeInTheDocument();
         });
     });
 
@@ -1299,27 +1316,26 @@ describe('Optimization Card Types', () => {
             expect(screen.getByText('sections.optimize.scoreDiff.appliedOf')).toBeInTheDocument();
             expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-variant', 'optimize');
             expect(screen.getByTestId('character-results-companion')).toHaveAttribute('data-tier', 'confident');
-            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('70%');
+            // The single progression bar reflects the applied-only projection (70%).
+            expect(screen.getByTestId('companion-score')).toHaveTextContent('70%');
         });
 
-        it('passes a missing placeholder baseline and an existing API after score unchanged', () => {
+        it('ignores the legacy persisted afterScore when the baseline is a placeholder', () => {
             window.localStorage.setItem('watheq:characterGender', 'female');
             mockStoreState.optimizations = [sampleOptimization];
             mockStoreState.baselineMatchScore = null;
             mockStoreState.optimizationMetrics = {
                 ...mockStoreState.optimizationMetrics,
                 beforeScore: null,
+                // Legacy field from an old session: frozen, never displayed as a score.
                 afterScore: 84,
                 improvement: null,
             };
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByTestId('before-score-bar')).toHaveTextContent('Unavailable');
-            expect(screen.getByTestId('after-score-bar')).toHaveTextContent('84%');
-            const femalePicker = screen.queryByRole('button', { name: 'Female companion' });
-            if (femalePicker) fireEvent.click(femalePicker);
-            expect(screen.getByRole('img').getAttribute('src')).toContain('female-tier-3');
+            expect(screen.getByTestId('companion-score')).toHaveTextContent('Unavailable');
+            expect(screen.queryByText('84%')).not.toBeInTheDocument();
         });
 
         it('projection equals the resultsSummaryData formula (before + round(improvement * appliedRatio))', () => {

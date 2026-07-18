@@ -9,16 +9,11 @@ import maleTier2 from '@/assets/character/male-tier-2.webp';
 import maleTier3 from '@/assets/character/male-tier-3.webp';
 import { useHRSuperSaud } from '@/features/hr-super-saud';
 import { cn } from '@/lib/utils/cn';
+import { CAREER_LEVELS, getCareerLevel, getLevelUp } from '@/lib/progression/careerLevels';
 import { getCompatibleStorageItem, setCompatibleStorageItem } from '@/lib/utils/storage-migration';
 import type { CharacterGender, CharacterResultsCompanionProps, CharacterScoreTier } from '@/types/characterResults';
 
 const CHARACTER_GENDER_KEY = 'watheq:characterGender';
-
-const tierRanks: Record<CharacterScoreTier, number> = {
-  struggling: 1,
-  confident: 2,
-  celebrating: 3,
-};
 
 const characterAssets: Record<CharacterGender, Record<CharacterScoreTier, string>> = {
   male: {
@@ -33,13 +28,11 @@ const characterAssets: Record<CharacterGender, Record<CharacterScoreTier, string
   },
 };
 
-type ScoreBarStyle = CSSProperties & { '--character-score': string };
+type ProgressionStyle = CSSProperties & { '--character-score': string };
+type MarkerStyle = CSSProperties & { '--marker-at': string };
 
-function getTier(score: number): CharacterScoreTier {
-  if (score < 60) return 'struggling';
-  if (score < 80) return 'confident';
-  return 'celebrating';
-}
+// Interior level boundaries (level minimums above 0) — the bar's tick marks.
+const LEVEL_TICKS = CAREER_LEVELS.slice(1).map((level) => level.min);
 
 function readGenderPreference(): CharacterGender | null {
   if (typeof window === 'undefined') return null;
@@ -56,19 +49,45 @@ export function CharacterResultsCompanion(props: CharacterResultsCompanionProps)
 
   useLayoutEffect(() => registerCompanion(), [registerCompanion]);
 
-  const beforeScore = props.variant === 'optimize' ? props.beforeScore : null;
-  const afterScore = props.variant === 'optimize' ? props.afterScore : props.score;
-  const finalScore = afterScore ?? beforeScore;
-  const finalTier = finalScore === null ? null : getTier(finalScore);
-  const beforeTier = beforeScore === null ? null : getTier(beforeScore);
-  const isTierUp = props.variant === 'optimize'
-    && beforeTier !== null
-    && afterScore !== null
-    && finalTier !== null
-    && tierRanks[finalTier] > tierRanks[beforeTier];
-  const stateLabel = finalTier === null
+  // The character represents the ACTUAL current resume: the Match score, or in
+  // Optimize the applied-only projection (falling back to the baseline when
+  // nothing is applied). The all-suggestions potential is only ever the ghost
+  // target marker below — it never levels the character up.
+  const baselineScore = props.variant === 'optimize' ? props.baselineScore : null;
+  const displayedScore = props.variant === 'optimize'
+    ? (props.projectedScore ?? props.baselineScore)
+    : props.score;
+  const targetScore = props.variant === 'optimize' ? props.targetScore : null;
+  const targetKind = props.variant === 'optimize' ? props.targetKind : null;
+  const suppressCelebration = props.variant === 'optimize' && Boolean(props.suppressCelebration);
+
+  const level = displayedScore === null ? null : getCareerLevel(displayedScore);
+  const baselineLevel = baselineScore === null ? null : getCareerLevel(baselineScore);
+  const finalTier = level?.artTier ?? null;
+  const baselineTier = baselineLevel?.artTier ?? null;
+
+  const isLevelUp = props.variant === 'optimize'
+    && !suppressCelebration
+    && getLevelUp(baselineScore, displayedScore);
+  // Art only changes at the 60/80 tier boundaries; a level-up within the same art
+  // tier keeps a single layer (no crossfade) but still celebrates.
+  const showTierCrossfade = isLevelUp && baselineTier !== null && finalTier !== null && baselineTier !== finalTier;
+
+  const levelName = level === null ? null : t(`sections.characterResults.levels.${level.key}`);
+  const levelLabel = level === null
     ? t('sections.characterResults.unavailableScore', 'Unavailable')
-    : t(`sections.characterResults.states.${finalTier}`);
+    : t('sections.characterResults.levelLabel', {
+      defaultValue: 'Level {{level}} of 5 · {{name}}',
+      level: String(level.index),
+      name: levelName ?? '',
+    });
+
+  const showTarget = targetScore !== null && displayedScore !== null && targetScore > displayedScore;
+  const targetCaption = showTarget
+    ? (targetKind === 'verified'
+      ? t('sections.characterResults.targetVerified', { defaultValue: 'Target {{score}}% · Verified', score: String(targetScore) })
+      : t('sections.characterResults.targetEstimate', { defaultValue: 'Target ~{{score}}% (estimate)', score: String(targetScore) }))
+    : null;
 
   const handleGenderChange = (nextGender: CharacterGender) => {
     setCompatibleStorageItem(CHARACTER_GENDER_KEY, nextGender);
@@ -109,17 +128,36 @@ export function CharacterResultsCompanion(props: CharacterResultsCompanionProps)
     );
   };
 
-  const scoreBar = (label: string, score: number | null, testId: string, tone: 'before' | 'after') => {
-    const style: ScoreBarStyle = { '--character-score': score === null ? '0%' : `${score}%` };
+  // The ONE progression metaphor: a single bar at the displayed (actual) score
+  // with the five level boundaries ticked and an optional ghost target marker.
+  const progressionBar = () => {
+    const fillStyle: ProgressionStyle = { '--character-score': displayedScore === null ? '0%' : `${displayedScore}%` };
     return (
-      <div className="character-results__score" data-testid={testId}>
+      <div className="character-results__progression" data-testid="companion-progression">
         <div className="character-results__score-copy">
-          <span>{label}</span>
-          <strong>{score === null ? t('sections.characterResults.unavailableScore', 'Unavailable') : `${score}%`}</strong>
+          <span>{levelLabel}</span>
+          <strong data-testid="companion-score">
+            {displayedScore === null ? t('sections.characterResults.unavailableScore', 'Unavailable') : `${displayedScore}%`}
+          </strong>
         </div>
-        <div className="character-results__track" aria-hidden="true">
-          <span className={cn('character-results__fill', `character-results__fill--${tone}`)} style={style} />
+        <div className="character-results__track character-results__track--progression" aria-hidden="true">
+          <span className="character-results__fill character-results__fill--level" style={fillStyle} />
+          {LEVEL_TICKS.map((tick) => (
+            <i key={tick} className="character-results__tick" style={{ '--marker-at': `${tick}%` } as MarkerStyle} />
+          ))}
+          {showTarget && (
+            <i
+              className="character-results__ghost"
+              style={{ '--marker-at': `${targetScore}%` } as MarkerStyle}
+              data-testid="companion-target-marker"
+            />
+          )}
         </div>
+        {targetCaption && (
+          <p className="character-results__target-caption" data-testid="companion-target-caption">
+            {targetCaption}
+          </p>
+        )}
       </div>
     );
   };
@@ -131,14 +169,10 @@ export function CharacterResultsCompanion(props: CharacterResultsCompanionProps)
         data-testid="character-results-companion"
         data-variant={props.variant}
         data-tier={finalTier ?? 'unavailable'}
+        data-level={level?.index ?? 'unavailable'}
         data-tier-up="false"
       >
-        {props.variant === 'optimize' && (
-          <div className="character-results__scores">
-            {scoreBar(t('sections.characterResults.before', 'Before'), beforeScore, 'before-score-bar', 'before')}
-            {scoreBar(t('sections.characterResults.after', 'After'), afterScore, 'after-score-bar', 'after')}
-          </div>
-        )}
+        {props.variant === 'optimize' && progressionBar()}
         <div className="character-results__picker" role="group" aria-label={t('sections.characterResults.picker', 'Choose your companion')}>
           <p>{t('sections.characterResults.picker', 'Choose your companion')}</p>
           <div className="character-results__picker-options">
@@ -156,31 +190,27 @@ export function CharacterResultsCompanion(props: CharacterResultsCompanionProps)
 
   return (
     <section
-      className={cn('character-results', `character-results--${props.variant}`, isTierUp && 'character-results--tier-up')}
+      className={cn('character-results', `character-results--${props.variant}`, isLevelUp && 'character-results--tier-up')}
       data-testid="character-results-companion"
       data-variant={props.variant}
       data-tier={finalTier ?? 'unavailable'}
-      data-tier-up={String(isTierUp)}
+      data-level={level?.index ?? 'unavailable'}
+      data-tier-up={String(isLevelUp)}
     >
-      {props.variant === 'optimize' && (
-        <div className="character-results__scores">
-          {scoreBar(t('sections.characterResults.before', 'Before'), beforeScore, 'before-score-bar', 'before')}
-          {scoreBar(t('sections.characterResults.after', 'After'), afterScore, 'after-score-bar', 'after')}
-        </div>
-      )}
+      {progressionBar()}
 
       <div className="character-results__character">
         <div className="character-results__art" aria-live="polite">
-          {isTierUp && beforeTier !== null && renderImage(gender, beforeTier, 'character-results__image character-results__image--before')}
-          {finalTier !== null && renderImage(gender, finalTier, cn('character-results__image', isTierUp && 'character-results__image--after'))}
-          {isTierUp && (
+          {showTierCrossfade && baselineTier !== null && renderImage(gender, baselineTier, 'character-results__image character-results__image--before')}
+          {finalTier !== null && renderImage(gender, finalTier, cn('character-results__image', showTierCrossfade && 'character-results__image--after'))}
+          {isLevelUp && (
             <span className="character-results__confetti" data-testid="tier-up-confetti" aria-hidden="true">
               {Array.from({ length: 8 }, (_, index) => <i key={index} />)}
             </span>
           )}
         </div>
         <div className="character-results__meta">
-          <strong>{stateLabel}</strong>
+          <strong>{levelName ?? t('sections.characterResults.unavailableScore', 'Unavailable')}</strong>
           <div className="character-results__toggle" role="group" aria-label={t('sections.characterResults.changeCompanion', 'Change companion')}>
             {(['male', 'female'] as const).map((option) => (
               <button

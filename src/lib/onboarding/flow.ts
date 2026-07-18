@@ -4,10 +4,10 @@
 import type { OnboardingPath, OnboardingSlot, OnboardingState } from '@/types/onboarding';
 
 /**
- * Canonical slot order. Both paths walk the same three slots; the path difference is
+ * Canonical slot order. Both paths walk the same two slots; the path difference is
  * what `cv_basics` means in the UI (confirm vs input) and the terminal action.
  */
-export const SLOT_SEQUENCE: readonly OnboardingSlot[] = ['cv_basics', 'role', 'location'];
+export const SLOT_SEQUENCE: readonly OnboardingSlot[] = ['cv_basics', 'role'];
 
 /** Fresh machine for a path, starting at the first slot with nothing answered. */
 export function initialState(path: OnboardingPath): OnboardingState {
@@ -16,7 +16,7 @@ export function initialState(path: OnboardingPath): OnboardingState {
 
 /**
  * The next slot to ask: the earliest slot in canonical order not yet answered, or
- * 'done' when all three are handled. Order-independent so the machine stays correct
+ * 'done' when all slots are handled. Order-independent so the machine stays correct
  * even if slots are answered out of sequence.
  */
 export function nextSlot(state: OnboardingState): OnboardingSlot | 'done' {

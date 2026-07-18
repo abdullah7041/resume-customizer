@@ -9,7 +9,6 @@ import type {
   KeywordSuggestion,
   TemplateId,
   CachedAnalysis,
-  MergeDiagnostics,
   JobVariant,
   JobVariantSnapshot,
 } from '../../types/templates';
@@ -20,7 +19,8 @@ import {
   validateSearchIntent,
 } from '../validation/store-schemas';
 import { deduplicateByName } from '../utils/resumeUtils';
-import { fuzzyTextMatch } from '../utils/textMatcher';
+import { canMergeOptimization, mergeOptimizedResume } from '@/lib/optimize/mergeResume';
+import { isRecommendationOnly } from '@/lib/optimize/actionability';
 
 /** Minimal valid resume skeleton — basics required fields as empty strings. */
 const emptyResume = (): ResumeSchema => ({
@@ -77,11 +77,10 @@ const mergeProfilePatch = (base: ResumeSchema, patch: PartialResumeSchema): Resu
  */
 const computeCompleteness = (resume: ResumeSchema | null, intent: SearchIntent | null): number => {
   let score = 0;
-  if (resume?.basics?.name?.trim()) score += 20;
-  if (resume?.basics?.label?.trim()) score += 15;
-  if ((resume?.work?.length ?? 0) > 0 || (resume?.projects?.length ?? 0) > 0) score += 25;
-  if ((intent?.targetRoles?.length ?? 0) > 0) score += 20;
-  if (intent?.location) score += 20;
+  if (resume?.basics?.name?.trim()) score += 25;
+  if (resume?.basics?.label?.trim()) score += 20;
+  if ((resume?.work?.length ?? 0) > 0 || (resume?.projects?.length ?? 0) > 0) score += 30;
+  if ((intent?.targetRoles?.length ?? 0) > 0) score += 25;
   return Math.min(100, score);
 };
 
@@ -170,6 +169,7 @@ export const useResumeStore = create<ResumeState>()(
         beforeScore: null,
         afterScore: null,
         improvement: null,
+        verifiedPotential: null,
         jdKeywords: [],
         matchedKeywords: [],
         reasoning: null,
@@ -185,7 +185,7 @@ export const useResumeStore = create<ResumeState>()(
       },
       baselineMatchScore: null, // Original resume's match score (before any optimizations)
       isSaudiNational: false, // Saudi nationality flag for Saudization ATS
-      searchIntent: null, // Onboarding job-search intent (target role / comp / location)
+      searchIntent: null, // Onboarding job-search intent (target role / seniority)
       jobVariants: [], // Job-specific resume variants (Phase 1, local-only)
       activeVariantId: null,
       variantRestoreNonce: 0, // Ephemeral open-variant signal (not persisted)
@@ -295,9 +295,24 @@ export const useResumeStore = create<ResumeState>()(
 
       applyOptimization: (sectionId: string) => {
         set((state) => ({
-          optimizations: state.optimizations.map((o) =>
-            o.sectionId === sectionId ? { ...o, applied: true } : o
-          ),
+          optimizations: state.optimizations.map((o) => {
+            if (o.sectionId !== sectionId) return o;
+            // Recommendation-only cards (skills/certifications) are advice, never
+            // resume mutations — applying them is a no-op by product rule.
+            if (isRecommendationOnly(o)) {
+              if (import.meta.env.DEV) console.warn(`[ResumeStore] applyOptimization ignored for recommendation-only card ${sectionId}`);
+              return o;
+            }
+            // Dry-run the content match so applied:true always means "this card
+            // genuinely changes the resume". A failed match is recorded (and
+            // recoverable via Refine) instead of silently counting as progress.
+            const mergeable = state.originalResume !== null && canMergeOptimization(o, state.originalResume);
+            if (!mergeable) {
+              if (import.meta.env.DEV) console.warn(`[ResumeStore] applyOptimization: content match failed for ${sectionId} — card not applied`);
+              return { ...o, applied: false, mergeStatus: 'failed' as const };
+            }
+            return { ...o, applied: true, mergeStatus: 'mergeable' as const };
+          }),
           hasDownloaded: false
         }));
       },
@@ -325,6 +340,9 @@ export const useResumeStore = create<ResumeState>()(
                 optimized: refinement.improved,
                 rationale: refinement.rationale,
                 issue: refinement.issue,
+                // Refined text may match differently — clear the stale verdict so
+                // the next apply re-validates.
+                mergeStatus: undefined,
               }
               : o
           );
@@ -351,11 +369,17 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       applyAllOptimizations: () => {
+        // "Apply all" means all ACTIONABLE resume changes — recommendation-only
+        // cards (skills/certifications) are never applied, and each actionable card
+        // is dry-run validated so failed matches don't count as progress.
         set((state) => ({
-          optimizations: state.optimizations.map((o) => ({
-            ...o,
-            applied: true,
-          })),
+          optimizations: state.optimizations.map((o) => {
+            if (isRecommendationOnly(o)) return o;
+            const mergeable = state.originalResume !== null && canMergeOptimization(o, state.originalResume);
+            return mergeable
+              ? { ...o, applied: true, mergeStatus: 'mergeable' as const }
+              : { ...o, applied: false, mergeStatus: 'failed' as const };
+          }),
           showOptimized: true,
           hasDownloaded: false
         }));
@@ -420,294 +444,13 @@ export const useResumeStore = create<ResumeState>()(
           return state.originalResume;
         }
 
-        // Deep clone to avoid mutating original - use structuredClone (2-3x faster than JSON)
-        const merged = structuredClone(state.originalResume) as ResumeSchema;
-
-        // Type-safe value extraction helpers
-        const getStringValue = (val: unknown): string => {
-          if (typeof val === 'string') return val;
-          if (Array.isArray(val)) return val.join(' ');
-          return String(val || '');
-        };
-
-        // Track merge diagnostics for debugging
-        const diagnostics: MergeDiagnostics = {
-          appliedCount: 0,
-          failedCount: 0,
-          failedMatches: [],
-        };
-
-        // Apply each optimization using CONTENT-BASED MATCHING
-        for (const opt of state.optimizations) {
-          if (!opt.applied) continue;
-
-          const optimizedValue = getStringValue(opt.optimized);
-          const originalValue = getStringValue(opt.original);
-
-          if (!optimizedValue) continue;
-
-          switch (opt.sectionType) {
-            case 'summary':
-              if (merged.basics) {
-                merged.basics.summary = optimizedValue;
-                diagnostics.appliedCount++;
-              }
-              break;
-
-            case 'headline':
-              if (merged.basics) {
-                merged.basics.label = optimizedValue;
-                diagnostics.appliedCount++;
-              }
-              break;
-
-            case 'experience': {
-              // CONTENT-BASED MATCHING: Search ALL work entries for the original text
-              let found = false;
-
-              if (merged.work) {
-                for (let workIdx = 0; workIdx < merged.work.length; workIdx++) {
-                  const workEntry = merged.work[workIdx];
-                  const highlights = workEntry.highlights || [];
-
-                  // Search each highlight for the original text
-                  for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
-                    const matchResult = fuzzyTextMatch(originalValue, highlights[hlIdx]);
-                    if (matchResult.matched) {
-                      // Found a match - replace this highlight
-                      merged.work[workIdx].highlights![hlIdx] = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                      break; // Move to next optimization
-                    }
-                  }
-
-                  // Also check summary field
-                  if (!found && workEntry.summary) {
-                    const matchResult = fuzzyTextMatch(originalValue, workEntry.summary);
-                    if (matchResult.matched) {
-                      merged.work[workIdx].summary = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                    }
-                  }
-
-                  if (found) break;
-                }
-              }
-
-              if (!found) {
-                diagnostics.failedCount++;
-                diagnostics.failedMatches.push({
-                  sectionType: opt.sectionType,
-                  sectionId: opt.sectionId,
-                  originalPreview: originalValue.substring(0, 60),
-                });
-                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
-                  originalPreview: originalValue.substring(0, 60),
-                  sectionId: opt.sectionId,
-                });
-              }
-              break;
-            }
-
-            case 'education': {
-              // CONTENT-BASED MATCHING for education
-              let found = false;
-
-              if (merged.education) {
-                for (let eduIdx = 0; eduIdx < merged.education.length; eduIdx++) {
-                  const eduEntry = merged.education[eduIdx];
-
-                  // Check area, studyType, and highlights
-                  if (eduEntry.area) {
-                    const matchResult = fuzzyTextMatch(originalValue, eduEntry.area);
-                    if (matchResult.matched) {
-                      merged.education[eduIdx].area = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                      break;
-                    }
-                  }
-
-                  // Check highlights array if present
-                  const highlights = eduEntry.highlights || [];
-                  for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
-                    const matchResult = fuzzyTextMatch(originalValue, highlights[hlIdx]);
-                    if (matchResult.matched) {
-                      merged.education[eduIdx].highlights![hlIdx] = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                      break;
-                    }
-                  }
-
-                  if (found) break;
-                }
-              }
-
-              if (!found) {
-                diagnostics.failedCount++;
-                diagnostics.failedMatches.push({
-                  sectionType: opt.sectionType,
-                  sectionId: opt.sectionId,
-                  originalPreview: originalValue.substring(0, 60),
-                });
-                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
-                  originalPreview: originalValue.substring(0, 60),
-                  sectionId: opt.sectionId,
-                });
-              }
-              break;
-            }
-
-            case 'projects': {
-              // CONTENT-BASED MATCHING for projects
-              let found = false;
-
-              if (merged.projects) {
-                for (let projIdx = 0; projIdx < merged.projects.length; projIdx++) {
-                  const projEntry = merged.projects[projIdx];
-
-                  // Check name and description
-                  if (projEntry.name) {
-                    const matchResult = fuzzyTextMatch(originalValue, projEntry.name);
-                    if (matchResult.matched) {
-                      merged.projects[projIdx].name = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                      break;
-                    }
-                  }
-
-                  if (projEntry.description) {
-                    const matchResult = fuzzyTextMatch(originalValue, projEntry.description);
-                    if (matchResult.matched) {
-                      merged.projects[projIdx].description = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                      break;
-                    }
-                  }
-
-                  // Check highlights
-                  const highlights = projEntry.highlights || [];
-                  for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
-                    const matchResult = fuzzyTextMatch(originalValue, highlights[hlIdx]);
-                    if (matchResult.matched) {
-                      merged.projects[projIdx].highlights![hlIdx] = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                      break;
-                    }
-                  }
-
-                  if (found) break;
-                }
-              }
-
-              if (!found) {
-                diagnostics.failedCount++;
-                diagnostics.failedMatches.push({
-                  sectionType: opt.sectionType,
-                  sectionId: opt.sectionId,
-                  originalPreview: originalValue.substring(0, 60),
-                });
-                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
-                  originalPreview: originalValue.substring(0, 60),
-                  sectionId: opt.sectionId,
-                });
-              }
-              break;
-            }
-
-            case 'skills': {
-              // IMPORTANT: We do NOT auto-inject skills the user doesn't have
-              // This would be misleading to employers
-              // Instead, we just log that these are recommended skills to consider
-
-              const optimizedValue = opt.optimized;
-              let suggestedSkills: string[] = [];
-
-              if (typeof optimizedValue === 'string') {
-                let cleanedValue = optimizedValue;
-                if (cleanedValue.toLowerCase().startsWith('add:')) {
-                  cleanedValue = cleanedValue.substring(4).trim();
-                }
-                if (cleanedValue.toLowerCase().startsWith('current:')) {
-                  // This is the "before" value, skip
-                  break;
-                }
-                suggestedSkills = cleanedValue.split(',').map(s => s.trim()).filter(Boolean);
-              } else if (Array.isArray(optimizedValue)) {
-                suggestedSkills = optimizedValue.flatMap(s => {
-                  const skill = typeof s === 'string' ? s.trim() : String(s);
-                  return skill ? [skill] : [];
-                });
-              }
-
-              // Log the suggestions but DO NOT add to resume
-              // The user should manually add skills they actually have
-              // (suggestedSkills contains the recommended skills)
-              void suggestedSkills; // Acknowledge variable is intentionally unused
-
-              // Mark as "applied" for tracking but don't modify resume
-              diagnostics.appliedCount++;
-              break;
-            }
-
-            case 'certifications': {
-              // Handle certification optimizations similarly
-              let found = false;
-
-              if (merged.certificates) {
-                for (let certIdx = 0; certIdx < merged.certificates.length; certIdx++) {
-                  const cert = merged.certificates[certIdx];
-                  if (cert.name) {
-                    const matchResult = fuzzyTextMatch(originalValue, cert.name);
-                    if (matchResult.matched) {
-                      merged.certificates[certIdx].name = optimizedValue;
-                      found = true;
-                      diagnostics.appliedCount++;
-                      break;
-                    }
-                  }
-                }
-              }
-
-              if (!found) {
-                diagnostics.failedCount++;
-                diagnostics.failedMatches.push({
-                  sectionType: opt.sectionType,
-                  sectionId: opt.sectionId,
-                  originalPreview: originalValue.substring(0, 60),
-                });
-                if (import.meta.env.DEV) console.warn(`[ResumeStore] ⚠️ Match failed for ${opt.sectionType}`, {
-                  originalPreview: originalValue.substring(0, 60),
-                  optimizedPreview: optimizedValue.substring(0, 60),
-                  sectionId: opt.sectionId,
-                  availableCerts: merged.certificates?.map(c => c.name) || []
-                });
-              }
-              break;
-            }
-
-            default:
-              if (import.meta.env.DEV) console.warn(`[ResumeStore] Unknown sectionType: ${opt.sectionType}`);
-          }
-        }
-
-        // Log merge diagnostics for debugging
-        if (diagnostics.failedCount > 0) {
-          if (import.meta.env.DEV) console.warn('[ResumeStore] Merge diagnostics:', diagnostics);
-        }
-
-        // Saudi nationality: prepend "Saudi" to summary for Saudization ATS
-        if (state.isSaudiNational && merged.basics?.summary) {
-          if (!merged.basics.summary.toLowerCase().startsWith('saudi')) {
-            merged.basics.summary = `Saudi ${merged.basics.summary}`;
-          }
-        }
+        // Content-based merge extracted to the pure module so getActiveResume,
+        // apply-time dry-run validation, and verification share one definition.
+        const { resume: merged } = mergeOptimizedResume(
+          state.originalResume,
+          state.optimizations,
+          { isSaudiNational: state.isSaudiNational },
+        );
 
         return merged;
       },
@@ -780,6 +523,7 @@ export const useResumeStore = create<ResumeState>()(
           beforeScore: null,
           afterScore: null,
           improvement: null,
+          verifiedPotential: null,
           jdKeywords: [],
           matchedKeywords: [],
           reasoning: null,
@@ -956,6 +700,7 @@ export const useResumeStore = create<ResumeState>()(
             beforeScore: null,
             afterScore: null,
             improvement: null,
+            verifiedPotential: null,
             jdKeywords: [],
             matchedKeywords: [],
             reasoning: null,
@@ -979,8 +724,8 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       resetForNewUpload: () => {
-        // NOTE: searchIntent is intentionally NOT reset here — target role / comp /
-        // location are profile-level intent that should survive a new resume upload.
+        // NOTE: searchIntent is intentionally NOT reset here — the target role is
+        // profile-level intent that should survive a new resume upload.
         cacheKeyMemo.clear();
         set({
           originalResume: null,
@@ -993,6 +738,7 @@ export const useResumeStore = create<ResumeState>()(
             beforeScore: null,
             afterScore: null,
             improvement: null,
+            verifiedPotential: null,
             jdKeywords: [],
             matchedKeywords: [],
             reasoning: null,
@@ -1018,13 +764,23 @@ export const useResumeStore = create<ResumeState>()(
       name: 'resume-storage',
       storage: createJSONStorage(() => localStorage),
       // v1: added jobVariants/activeVariantId slice (job-specific resume builder).
-      version: 1,
+      // v2: recommendation-only cards (skills/certifications) can no longer be
+      //     applied — un-apply any that the old blanket apply-all had flipped.
+      version: 2,
       migrate: (persistedState, fromVersion) => {
-        const state = (persistedState ?? {}) as Partial<ResumeState>;
+        let state = (persistedState ?? {}) as Partial<ResumeState>;
         if (fromVersion < 1) {
           // Older persisted state predates variants — seed empty defaults so
           // hydration never reads undefined.
-          return { ...state, jobVariants: [], activeVariantId: null };
+          state = { ...state, jobVariants: [], activeVariantId: null };
+        }
+        if (fromVersion < 2 && Array.isArray(state.optimizations)) {
+          state = {
+            ...state,
+            optimizations: state.optimizations.map((o) =>
+              isRecommendationOnly(o) && o.applied ? { ...o, applied: false } : o
+            ),
+          };
         }
         return state;
       },

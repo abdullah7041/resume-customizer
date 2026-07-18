@@ -179,11 +179,6 @@ export const ResumeSchema = z.object({
 export const SearchIntentSchema = z.object({
     targetRoles: z.array(z.string().trim().min(1).max(200)).max(10).default([]),
     seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
-    location: z.object({
-        city: z.string().trim().max(120).optional(),
-        country: z.string().trim().max(120).optional(),
-        workMode: z.enum(['remote', 'hybrid', 'onsite']),
-    }).optional(),
     meta: z.object({
         confidence: z.enum(['low', 'medium', 'high']),
         completeness: z.number().min(0).max(100),
@@ -274,7 +269,7 @@ export const CoverLetterRequestSchema = z.object({
 
 // Onboarding slot extraction: one freeform reply → one structured slot value.
 export const OnboardExtractRequestSchema = z.object({
-    slot: z.enum(['cv_basics', 'role', 'location']),
+    slot: z.enum(['cv_basics', 'role']),
     userText: z.string().min(1, "Answer text is required").max(2000, "Answer too long"),
     currentIntent: SearchIntentSchema.optional(),
 });
