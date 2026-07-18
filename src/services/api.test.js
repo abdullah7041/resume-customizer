@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AUTH_REQUIRED, analyzeResume, analyzeResumeTruthCheck, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
+import { AUTH_REQUIRED, analyzeResume, analyzeResumeTruthCheck, importJobFromUrl, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
 import { supabase } from './supabase';
 
 const mockResumeText = vi.hoisted(() => ({
@@ -47,6 +47,40 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   delete global.localStorage;
+});
+
+describe('importJobFromUrl', () => {
+  it('preserves the server failure contract', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: 'failed',
+        code: 'job_url/login_required',
+        message: 'The job page requires a login.',
+        failureReason: 'login_required',
+        sourceUrl: 'https://example.com/job',
+      }),
+    });
+
+    await expect(importJobFromUrl('https://example.com/job')).resolves.toMatchObject({
+      status: 'failed',
+      code: 'job_url/login_required',
+      message: 'The job page requires a login.',
+      failureReason: 'login_required',
+    });
+  });
+
+  it('returns a complete failure contract for network errors', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('offline'));
+
+    await expect(importJobFromUrl('https://example.com/job')).resolves.toMatchObject({
+      status: 'failed',
+      code: 'job_url/unreachable',
+      message: expect.any(String),
+      failureReason: 'unreachable',
+    });
+  });
 });
 
 describe('parseResume', () => {

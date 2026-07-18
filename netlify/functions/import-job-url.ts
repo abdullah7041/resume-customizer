@@ -44,7 +44,8 @@ export type ImportFailureReason =
   | 'timeout'
   | 'too_large'
   | 'not_html'
-  | 'jd_not_found';
+  | 'jd_not_found'
+  | 'rate_limited';
 
 const SAFE_FETCH_FAILURE_MAP: Record<SafeFetchFailure, ImportFailureReason> = {
   invalid_url: 'invalid_url',
@@ -62,19 +63,51 @@ const json = (statusCode: number, body: unknown) => ({
   body: JSON.stringify(body),
 });
 
-const failed = (sourceUrl: string, failureReason: ImportFailureReason, finalUrl?: string) =>
-  json(200, { status: 'failed', failureReason, sourceUrl, ...(finalUrl ? { finalUrl } : {}) });
+const FAILURE_MESSAGES: Record<ImportFailureReason, string> = {
+  invalid_url: 'Enter a valid public job URL.',
+  unsupported_url: 'This job URL format is not supported.',
+  unreachable: 'The job page could not be reached.',
+  login_required: 'The job page requires a login.',
+  blocked: 'This URL cannot be fetched.',
+  timeout: 'The job page took too long to respond.',
+  too_large: 'The job page is too large to import.',
+  not_html: 'The URL did not return a text page.',
+  jd_not_found: 'No complete job description was found on the page.',
+  rate_limited: 'Too many job URL import requests.',
+};
+
+const failureBody = (sourceUrl: string, failureReason: ImportFailureReason, finalUrl?: string) => ({
+  status: 'failed' as const,
+  code: `job_url/${failureReason}`,
+  message: FAILURE_MESSAGES[failureReason],
+  failureReason,
+  sourceUrl,
+  ...(finalUrl ? { finalUrl } : {}),
+});
+
+const failed = (
+  sourceUrl: string,
+  failureReason: ImportFailureReason,
+  finalUrl?: string,
+  statusCode = 200,
+) => json(statusCode, failureBody(sourceUrl, failureReason, finalUrl));
 
 const baseHandler: Handler = async (event) => {
   let sourceUrl = '';
   try {
     if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' };
+      return json(405, { status: 405, code: 'method_not_allowed', message: 'Method not allowed' });
     }
 
-    const parseResult = RequestSchema.safeParse(JSON.parse(event.body || '{}'));
+    let requestBody: unknown;
+    try {
+      requestBody = JSON.parse(event.body || '{}');
+    } catch {
+      return failed('', 'invalid_url', undefined, 400);
+    }
+    const parseResult = RequestSchema.safeParse(requestBody);
     if (!parseResult.success) {
-      return json(400, { error: 'Invalid request: url is required (max 2048 chars)' });
+      return failed('', 'invalid_url', undefined, 400);
     }
     sourceUrl = parseResult.data.url;
     const { language } = parseResult.data;
@@ -93,7 +126,11 @@ const baseHandler: Handler = async (event) => {
     if (!isAuthenticated) {
       const guestLimit = await checkFreePreviewRateLimit(event, 'import-job-url-guest');
       if (!guestLimit.allowed) {
-        return guestLimit.response ?? json(429, { error: 'Too many requests' });
+        const response = failed(sourceUrl, 'rate_limited', undefined, 429);
+        return {
+          ...response,
+          headers: { ...guestLimit.response?.headers, ...response.headers },
+        };
       }
     }
 
@@ -118,18 +155,18 @@ const baseHandler: Handler = async (event) => {
       });
     } catch (error) {
       if (error instanceof SafeFetchError) {
-        console.warn(`[import-job-url] fetch failed (${error.reason})`);
+        console.warn(`[ImportJobUrl] fetch failed (${error.reason})`);
         return failed(sourceUrl, SAFE_FETCH_FAILURE_MAP[error.reason]);
       }
       throw error;
     }
 
     if (detectLoginWall(page.finalUrl, page.status, page.body)) {
-      console.warn(`[import-job-url] login wall detected (status ${page.status})`);
+      console.warn(`[ImportJobUrl] login wall detected (status ${page.status})`);
       return failed(sourceUrl, 'login_required', page.finalUrl);
     }
     if (page.status >= 400) {
-      console.warn(`[import-job-url] upstream status ${page.status}`);
+      console.warn(`[ImportJobUrl] upstream status ${page.status}`);
       return failed(sourceUrl, page.status === 401 ? 'login_required' : 'unreachable', page.finalUrl);
     }
 
@@ -138,7 +175,7 @@ const baseHandler: Handler = async (event) => {
       return failed(sourceUrl, 'jd_not_found', page.finalUrl);
     }
 
-    console.log(`[import-job-url] ok source=${extracted.source} confidence=${extracted.confidence} textLen=${extracted.jobText.length} auth=${isAuthenticated}`);
+    console.log(`[ImportJobUrl] ok source=${extracted.source} confidence=${extracted.confidence} textLen=${extracted.jobText.length} auth=${isAuthenticated}`);
 
     return json(200, {
       status: 'ok',
@@ -152,9 +189,9 @@ const baseHandler: Handler = async (event) => {
     });
   } catch (error) {
     // Never leak internal fetch/parse errors to the client.
-    console.error('[import-job-url] Error:', summarizeErrorForLog(error));
+    console.error('[ImportJobUrl] Error:', summarizeErrorForLog(error));
     captureError(error, { function: 'import-job-url' });
-    return json(200, { status: 'failed', failureReason: 'unreachable' as ImportFailureReason, sourceUrl });
+    return failed(sourceUrl, 'unreachable');
   }
 };
 

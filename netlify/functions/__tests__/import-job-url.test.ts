@@ -81,6 +81,12 @@ describe('import-job-url handler', () => {
   it('rejects invalid request bodies with 400', async () => {
     const response = await invoke({ url: '' });
     expect(response.statusCode).toBe(400);
+    expect(parseBody(response)).toMatchObject({
+      status: 'failed',
+      code: 'job_url/invalid_url',
+      message: expect.any(String),
+      failureReason: 'invalid_url',
+    });
   });
 
   it('returns the guest rate-limit response when exhausted', async () => {
@@ -90,6 +96,12 @@ describe('import-job-url handler', () => {
     });
     const response = await invoke({ url: 'https://example.com/jobs/1' });
     expect(response.statusCode).toBe(429);
+    expect(parseBody(response)).toMatchObject({
+      status: 'failed',
+      code: 'job_url/rate_limited',
+      message: expect.any(String),
+      failureReason: 'rate_limited',
+    });
     expect(safeFetchMock).not.toHaveBeenCalled();
   });
 
@@ -114,7 +126,12 @@ describe('import-job-url handler', () => {
 
   it('returns unsupported_url for LinkedIn links without a job id', async () => {
     const response = await invoke({ url: 'https://www.linkedin.com/feed/' });
-    expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'unsupported_url' });
+    expect(parseBody(response)).toMatchObject({
+      status: 'failed',
+      code: 'job_url/unsupported_url',
+      message: expect.any(String),
+      failureReason: 'unsupported_url',
+    });
     expect(safeFetchMock).not.toHaveBeenCalled();
   });
 
@@ -155,7 +172,12 @@ describe('import-job-url handler', () => {
     const response = await invoke({ url: 'https://example.com/jobs/1' });
     expect(response.statusCode).toBe(200);
     const body = parseBody(response);
-    expect(body).toMatchObject({ status: 'failed', failureReason: 'unreachable' });
+    expect(body).toMatchObject({
+      status: 'failed',
+      code: 'job_url/unreachable',
+      message: expect.any(String),
+      failureReason: 'unreachable',
+    });
     expect(response.body).not.toContain('internal-gateway');
   });
 });

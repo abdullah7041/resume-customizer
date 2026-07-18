@@ -1086,6 +1086,15 @@ export const extractJobMetadata = async (jobText, language = 'en') => {
  * result; network-level failures come back as { status: 'failed',
  * failureReason: 'unreachable' } so the UI always has a recoverable state.
  */
+const jobUrlFailure = (failureReason, sourceUrl, details = {}) => ({
+  status: 'failed',
+  code: details.code || `job_url/${failureReason}`,
+  message: details.message || 'The job URL could not be imported.',
+  failureReason,
+  sourceUrl,
+  ...(details.finalUrl ? { finalUrl: details.finalUrl } : {}),
+});
+
 export const importJobFromUrl = async (url, language = 'en') => {
   try {
     const headers = await getAuthHeaders({ requireAuth: false });
@@ -1096,26 +1105,25 @@ export const importJobFromUrl = async (url, language = 'en') => {
     });
 
     if (response.status === 429) {
-      return { status: 'failed', failureReason: 'rate_limited', sourceUrl: url };
+      return jobUrlFailure('rate_limited', url);
     }
     if (!response.ok) {
       console.warn('[API] importJobFromUrl returned non-OK status:', response.status);
-      return { status: 'failed', failureReason: response.status === 400 ? 'invalid_url' : 'unreachable', sourceUrl: url };
+      return jobUrlFailure(response.status === 400 ? 'invalid_url' : 'unreachable', url);
     }
 
     const data = await response.json();
     if (data?.status === 'ok' && typeof data.jobText === 'string' && data.jobText.trim()) {
       return data;
     }
-    return {
-      status: 'failed',
-      failureReason: data?.failureReason || 'jd_not_found',
-      sourceUrl: data?.sourceUrl || url,
+    return jobUrlFailure(data?.failureReason || 'jd_not_found', data?.sourceUrl || url, {
+      code: data?.code,
+      message: data?.message,
       finalUrl: data?.finalUrl,
-    };
+    });
   } catch (error) {
     console.warn('[API] importJobFromUrl failed (non-fatal):', summarizeErrorForConsole(error));
-    return { status: 'failed', failureReason: 'unreachable', sourceUrl: url };
+    return jobUrlFailure('unreachable', url);
   }
 };
 

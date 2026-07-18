@@ -96,21 +96,23 @@ describe('counts (actionable vs recommendation)', () => {
     );
     const p = present(queue, { improvement: 10 });
     expect(p.counts.actionableApplied).toBe(0);
-    expect(p.displayState).toBe('A');
+    expect(p.displayState).toBe('current');
   });
 });
 
 describe('display states', () => {
   it('State A: nothing applied — no projection, potential shown separately', () => {
     const p = present(mixedQueue(0), { improvement: 12 });
-    expect(p.displayState).toBe('A');
+    expect(p.displayState).toBe('current');
     expect(p.currentAppliedProjection).toBeNull();
     expect(p.allSuggestionsPotentialEstimate).toBe(22);
+    expect(p.arrowTarget).toBeNull();
+    expect(p.arrowIsVerified).toBe(false);
   });
 
   it('State A with a zero estimate: estimateIsZero is a real zero, not a placeholder', () => {
     const p = present(mixedQueue(0), { improvement: 0 });
-    expect(p.displayState).toBe('A');
+    expect(p.displayState).toBe('current');
     expect(p.estimateIsZero).toBe(true);
     expect(p.allSuggestionsPotentialEstimate).toBeNull();
     expect(p.currentAppliedProjection).toBeNull();
@@ -118,50 +120,56 @@ describe('display states', () => {
 
   it('State B: partial applied with meaningful estimate uses the ACTIONABLE ratio', () => {
     const p = present(mixedQueue(2), { improvement: 12 });
-    expect(p.displayState).toBe('B');
+    expect(p.displayState).toBe('estimated_applied');
     // 10 + round(12 × 2/3) = 18 — recommendations must not dilute the ratio (2/5 would give 15).
     expect(p.currentAppliedProjection).toBe(18);
+    expect(p.arrowTarget).toBe(18);
+    expect(p.arrowIsVerified).toBe(false);
   });
 
   it('State B never triggers without a meaningful estimate', () => {
-    expect(present(mixedQueue(2), { improvement: 0 }).displayState).toBe('A');
-    expect(present(mixedQueue(2), { improvement: null }).displayState).toBe('A');
-    expect(present(mixedQueue(2), { improvement: MIN_MEANINGFUL_ESTIMATE }).displayState).toBe('B');
+    expect(present(mixedQueue(2), { improvement: 0 }).displayState).toBe('current');
+    expect(present(mixedQueue(2), { improvement: null }).displayState).toBe('current');
+    expect(present(mixedQueue(2), { improvement: MIN_MEANINGFUL_ESTIMATE }).displayState).toBe('estimated_applied');
   });
 
   it('State C: verified improved potential stays separate from the current score', () => {
     const queue = mixedQueue(0);
     const p = present(queue, { improvement: 12, verifiedPotential: verifiedFor(queue, 25, 10) });
-    expect(p.displayState).toBe('C');
+    expect(p.displayState).toBe('verified_potential');
     expect(p.baselineScore).toBe(10);
     expect(p.verifiedAllSuggestionsScore).toBe(25);
     expect(p.currentAppliedProjection).toBeNull(); // current resume unchanged
+    expect(p.arrowTarget).toBeNull();
+    expect(p.arrowIsVerified).toBe(false);
   });
 
   it('State C_ALL: verified improved and every actionable card applied', () => {
     const queue = mixedQueue(3);
     const p = present(queue, { improvement: 12, verifiedPotential: verifiedFor(queue, 25, 10) });
-    expect(p.displayState).toBe('C_ALL');
+    expect(p.displayState).toBe('verified_applied');
     expect(p.verifiedAllSuggestionsScore).toBe(25);
+    expect(p.arrowTarget).toBe(25);
+    expect(p.arrowIsVerified).toBe(true);
   });
 
   it('State D: verified no-change beats any estimate', () => {
     const queue = mixedQueue(1);
     const p = present(queue, { improvement: 12, verifiedPotential: verifiedFor(queue, 10, 10) });
-    expect(p.displayState).toBe('D');
+    expect(p.displayState).toBe('verified_no_change');
     expect(p.verifiedOutcome).toBe('no_change');
   });
 
   it('State E: verified decrease', () => {
     const queue = mixedQueue(3);
     const p = present(queue, { improvement: 12, verifiedPotential: verifiedFor(queue, 4, 10) });
-    expect(p.displayState).toBe('E');
+    expect(p.displayState).toBe('verified_decreased');
     expect(p.verifiedOutcome).toBe('decreased');
   });
 
   it('placeholder baseline forces State A and null projections', () => {
     const p = present(mixedQueue(2), { baseline: null, improvement: 12 });
-    expect(p.displayState).toBe('A');
+    expect(p.displayState).toBe('current');
     expect(p.isPlaceholderScore).toBe(true);
     expect(p.currentAppliedProjection).toBeNull();
     expect(p.allSuggestionsPotentialEstimate).toBeNull();
@@ -178,7 +186,7 @@ describe('verification signature invalidation', () => {
     );
     const p = present(refined, { improvement: 12, verifiedPotential: vp });
     expect(p.verifiedAllSuggestionsScore).toBeNull();
-    expect(p.displayState).toBe('A');
+    expect(p.displayState).toBe('current');
   });
 
   it('survives apply/revert (applied flags are not part of the signature)', () => {
@@ -186,7 +194,7 @@ describe('verification signature invalidation', () => {
     const vp = verifiedFor(queue, 25, 10);
     const p = present(mixedQueue(2), { improvement: 12, verifiedPotential: vp });
     expect(p.verifiedAllSuggestionsScore).toBe(25);
-    expect(p.displayState).toBe('C');
+    expect(p.displayState).toBe('verified_potential');
   });
 
   it('is invalidated by a resume or JD change', () => {
@@ -217,6 +225,6 @@ describe('projection math', () => {
     // The estimate is still intact and visible in the model even though the
     // verified outcome takes display precedence.
     expect(p.allSuggestionsPotentialEstimate).toBe(22);
-    expect(p.displayState).toBe('D');
+    expect(p.displayState).toBe('verified_no_change');
   });
 });

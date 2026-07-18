@@ -37,7 +37,8 @@ describe('isPrivateAddress', () => {
 
   it.each([
     '::', '::1', 'fc00::1', 'fd12:3456::1', 'fe80::1', 'febf::1', 'ff02::1',
-    '2001:db8::1', '::ffff:10.0.0.1', '::ffff:192.168.1.1', '64:ff9b::a00:1',
+    '2001:db8::1', '::ffff:10.0.0.1', '::ffff:192.168.1.1', '::ffff:7f00:1',
+    '::7f00:1', '64:ff9b::a00:1',
   ])('blocks IPv6 %s', (ip) => {
     expect(isPrivateAddress(ip)).toBe(true);
   });
@@ -86,6 +87,9 @@ describe('assertPublicHttpUrl', () => {
     'http://169.254.169.254/latest/meta-data/',
     'http://[::1]/x',
     'http://[fd00::1]/x',
+    'http://[::ffff:127.0.0.1]/x',
+    'http://[::ffff:7f00:1]/x',
+    'http://[::127.0.0.1]/x',
   ])('rejects private literal address %s', (url) => {
     expectReason(() => assertPublicHttpUrl(url), 'blocked_private');
   });
@@ -199,9 +203,26 @@ describe('safeFetch', () => {
   });
 
   it('times out against a hanging server', async () => {
-    const requestOnce = vi.fn(() => new Promise<SingleResponse>(() => { /* never settles */ }));
+    let requestSignal: AbortSignal | undefined;
+    const requestOnce = vi.fn((_url: URL, _headers: Record<string, string>, signal: AbortSignal) => {
+      requestSignal = signal;
+      return new Promise<SingleResponse>(() => { /* never settles */ });
+    });
     await expect(safeFetch('https://example.com/slow', { _requestOnce: requestOnce, timeoutMs: 60 }))
       .rejects.toMatchObject({ reason: 'timeout' });
+    expect(requestSignal?.aborted).toBe(true);
+  });
+
+  it('aborts an active response when the body read exceeds the deadline', async () => {
+    const abort = vi.fn();
+    const requestOnce = vi.fn(async () => response({
+      abort,
+      readBody: () => new Promise<string>(() => { /* never settles */ }),
+    }));
+
+    await expect(safeFetch('https://example.com/slow-body', { _requestOnce: requestOnce, timeoutMs: 60 }))
+      .rejects.toMatchObject({ reason: 'timeout' });
+    expect(abort).toHaveBeenCalledTimes(1);
   });
 
   it('validates the initial URL before any request is made', async () => {

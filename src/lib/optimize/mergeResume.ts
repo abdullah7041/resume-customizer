@@ -9,7 +9,7 @@
 import type { ResumeSchema } from '@/types/resume';
 import type { MergeDiagnostics, OptimizationResult } from '@/types/templates';
 import { fuzzyTextMatch } from '@/lib/utils/textMatcher';
-import { isRecommendationOnly } from './actionability';
+import { isRecommendationOnly } from '@/lib/optimize/actionability';
 
 /** Coerce card values (string | string[]) into the merge/replace string. */
 export const optimizationTextValue = (val: unknown): string => {

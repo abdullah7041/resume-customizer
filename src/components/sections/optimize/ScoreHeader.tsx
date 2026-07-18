@@ -61,10 +61,11 @@ export function ScoreHeader({
   const { t } = useTranslation();
   const {
     baselineScore,
-    currentAppliedProjection,
     allSuggestionsPotentialEstimate,
     verifiedAllSuggestionsScore,
     displayState,
+    arrowTarget,
+    arrowIsVerified,
     isPlaceholderScore,
     estimateIsZero,
     counts,
@@ -74,15 +75,8 @@ export function ScoreHeader({
     ? Math.round((counts.actionableApplied / counts.actionableTotal) * 100)
     : 0;
 
-  // The arrow only appears when there is a genuinely different second number to
-  // show: the applied-only projection (states B/C) or the verified score once
-  // every actionable suggestion is applied (C_ALL). State A never renders
-  // "current -> current" — that was the misleading "10% -> Projected ~10%".
-  const arrowTarget = displayState === 'C_ALL'
-    ? verifiedAllSuggestionsScore
-    : (displayState === 'B' || displayState === 'C')
-      ? currentAppliedProjection
-      : null;
+  // The model exposes an arrow only for a distinct applied projection or a
+  // verified score, so the header never renders "current -> current".
   const showArrow = !isPlaceholderScore && arrowTarget !== null && baselineScore !== null;
   const delta = showArrow ? (arrowTarget as number) - (baselineScore as number) : 0;
   const DeltaIcon = delta < 0 ? TrendingDown : TrendingUp;
@@ -109,15 +103,15 @@ export function ScoreHeader({
                 <span className={cn('text-gray-400', isArabic && 'rotate-180')}>-&gt;</span>
                 <span className={cn(
                   'text-2xl font-bold tabular-nums',
-                  displayState === 'C_ALL'
+                  arrowIsVerified
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent'
                     : 'text-gray-600 dark:text-gray-300'
                 )}>
-                  {displayState === 'C_ALL'
+                  {arrowIsVerified
                     ? `${arrowTarget}%`
                     : t('sections.optimize.scoreHeader.estimatedScore', { defaultValue: 'Estimated ~{{score}}%', score: arrowTarget })}
                 </span>
-                {displayState === 'C_ALL' && (
+                {arrowIsVerified && (
                   <span
                     className="inline-flex min-h-7 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
                     title={t('sections.optimize.verifiedTooltip', 'We re-scored your optimized resume against this job description')}
@@ -167,7 +161,7 @@ export function ScoreHeader({
               </div>
             )}
 
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'D' && (
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'verified_no_change' && (
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-start">
                 <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
                   {t('sections.optimize.noChangeTitle', 'Rewriting alone is unlikely to improve this match')}
@@ -189,7 +183,7 @@ export function ScoreHeader({
               </div>
             )}
 
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'E' && (
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'verified_decreased' && (
               <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3 text-start">
                 <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
                   {t('sections.optimize.decreaseTitle', { defaultValue: 'The rewrite scored lower ({{score}}%)', score: verifiedAllSuggestionsScore })}
@@ -200,23 +194,23 @@ export function ScoreHeader({
               </div>
             )}
 
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'C' && (
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'verified_potential' && (
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                 {t('sections.optimize.verifiedPotentialLine', { defaultValue: 'Potential with all suggestions: {{score}}% · Verified', score: verifiedAllSuggestionsScore })}
               </p>
             )}
 
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'A' && counts.actionableTotal > 0 && (
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && counts.actionableTotal > 0 && (
               <p>
                 {t('sections.optimize.scoreHeader.suggestionsReady', { defaultValue: '{{total}} suggestions ready · none applied yet', total: counts.actionableTotal + counts.recommendationTotal })}
               </p>
             )}
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'A' && !isPlaceholderScore && allSuggestionsPotentialEstimate !== null && (
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && !isPlaceholderScore && allSuggestionsPotentialEstimate !== null && (
               <p>
                 {t('sections.optimize.scoreHeader.potentialEstimate', { defaultValue: 'Up to ~{{score}}% if all suggestions are applied (estimate)', score: allSuggestionsPotentialEstimate })}
               </p>
             )}
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'A' && estimateIsZero && (
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && estimateIsZero && (
               <p>{t('sections.optimize.scoreHeader.noGainPredicted', 'No measurable Match-score increase predicted (estimate)')}</p>
             )}
           </div>

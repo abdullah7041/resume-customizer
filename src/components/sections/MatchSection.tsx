@@ -26,7 +26,7 @@ import { GapAnalysisCard, type GapItem } from '../GapAnalysisCard';
 import { HiddenMatchesCard, type HiddenMatch } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
-import { importJobFromUrl } from '../../services/api';
+import { importJobFromUrl } from '@/services/api';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { cn } from '../../lib/utils/cn';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';

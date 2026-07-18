@@ -31,10 +31,10 @@ import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
-import { getActionability, isActionable, partitionOptimizations } from '../../lib/optimize/actionability';
-import { mergeOptimizedResume } from '../../lib/optimize/mergeResume';
-import { buildScorePresentation, classifyVerifiedOutcome, verificationSignature } from '../../lib/optimize/scoreModel';
-import type { VerifyAnomalyState } from '../../lib/optimize/scoreModel';
+import { getActionability, isActionable, partitionOptimizations } from '@/lib/optimize/actionability';
+import { mergeOptimizedResume } from '@/lib/optimize/mergeResume';
+import { buildScorePresentation, classifyVerifiedOutcome, verificationSignature } from '@/lib/optimize/scoreModel';
+import type { VerifyAnomalyState } from '@/lib/optimize/scoreModel';
 import { ScoreHeader } from './optimize/ScoreHeader';
 import { StrategyBlock } from './optimize/StrategyBlock';
 import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
@@ -1227,12 +1227,9 @@ export function OptimizeSection({
     }
   };
 
-  // Share card: only for genuinely communicable gains — the verified score when
-  // every actionable suggestion is applied (C_ALL), else the applied-only
-  // projection. Hypothetical unapplied potentials are never shared as results.
-  const shareAfterScore = presentation.displayState === 'C_ALL'
-    ? presentation.verifiedAllSuggestionsScore
-    : presentation.currentAppliedProjection;
+  // Only the applied projection or fully applied verified score is shareable.
+  // Hypothetical unapplied potentials are never shared.
+  const shareAfterScore = presentation.arrowTarget;
   const shareDelta = shareAfterScore !== null && presentation.baselineScore !== null
     ? shareAfterScore - presentation.baselineScore
     : 0;

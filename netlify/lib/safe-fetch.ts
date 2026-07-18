@@ -30,11 +30,26 @@ export type SafeFetchFailure =
   | 'not_html'
   | 'too_many_redirects';
 
+const SAFE_FETCH_STATUS: Record<SafeFetchFailure, number> = {
+  invalid_url: 400,
+  blocked_private: 403,
+  unreachable: 502,
+  timeout: 504,
+  too_large: 413,
+  not_html: 415,
+  too_many_redirects: 508,
+};
+
 export class SafeFetchError extends Error {
-  reason: SafeFetchFailure;
+  readonly status: number;
+  readonly code: SafeFetchFailure;
+  readonly reason: SafeFetchFailure;
+
   constructor(reason: SafeFetchFailure, message?: string) {
     super(message ?? reason);
     this.name = 'SafeFetchError';
+    this.status = SAFE_FETCH_STATUS[reason];
+    this.code = reason;
     this.reason = reason;
   }
 }
@@ -62,10 +77,28 @@ export function isPrivateAddress(ip: string): boolean {
     return false;
   }
 
-  const lower = ip.toLowerCase();
-  // IPv4-mapped / IPv4-translated / NAT64 — validate the embedded IPv4.
-  const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) return isPrivateAddress(mapped[1]);
+  let lower = ip.toLowerCase();
+  try {
+    // URL applies the same IPv6 canonicalization used for literal URL hosts.
+    lower = new URL(`http://[${lower}]/`).hostname.slice(1, -1);
+  } catch {
+    return true;
+  }
+
+  // IPv4-compatible and IPv4-mapped forms are canonicalized to two hex
+  // hextets (for example ::ffff:127.0.0.1 -> ::ffff:7f00:1). Validate the
+  // embedded address through the IPv4 rules before allowing the connection.
+  const embeddedV4 = lower.match(/^::(?:ffff:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (embeddedV4) {
+    const high = Number.parseInt(embeddedV4[1], 16);
+    const low = Number.parseInt(embeddedV4[2], 16);
+    return isPrivateAddress([
+      high >>> 8,
+      high & 0xff,
+      low >>> 8,
+      low & 0xff,
+    ].join('.'));
+  }
   if (lower.startsWith('64:ff9b')) return true;                   // NAT64 well-known prefix
   if (lower === '::' || lower === '::1') return true;             // unspecified, loopback
   if (/^f[cd]/.test(lower)) return true;                          // unique-local fc00::/7
@@ -155,7 +188,11 @@ export interface SafeFetchOptions {
   /** Test hook: DNS base lookup used by the connection-time validator. */
   lookup?: BaseLookup;
   /** Test hook: replaces the single-request transport entirely. */
-  _requestOnce?: (url: URL, headers: Record<string, string>) => Promise<SingleResponse>;
+  _requestOnce?: (
+    url: URL,
+    headers: Record<string, string>,
+    signal: AbortSignal,
+  ) => Promise<SingleResponse>;
 }
 
 export interface SingleResponse {
@@ -178,7 +215,7 @@ const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
 const TEXT_CONTENT_TYPES = ['text/html', 'application/xhtml+xml', 'text/plain'];
 
 function defaultRequestOnce(lookup: BaseLookup | undefined) {
-  return (url: URL, headers: Record<string, string>): Promise<SingleResponse> =>
+  return (url: URL, headers: Record<string, string>, signal: AbortSignal): Promise<SingleResponse> =>
     new Promise((resolve, reject) => {
       const requestFn = url.protocol === 'https:' ? httpsRequest : httpRequest;
       const req = requestFn(
@@ -188,6 +225,7 @@ function defaultRequestOnce(lookup: BaseLookup | undefined) {
           headers,
           // Connection-time IP validation — the rebinding-safe core of the guard.
           lookup: createSafeLookup(lookup) as never,
+          signal,
         },
         (res: IncomingMessage) => {
           resolve({
@@ -236,10 +274,22 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
   } = options;
 
   const requestOnce = _requestOnce ?? defaultRequestOnce(lookup);
+  const abortController = new AbortController();
+  let activeResponse: SingleResponse | undefined;
+
+  const abortActiveRequest = () => {
+    abortController.abort();
+    const response = activeResponse;
+    activeResponse = undefined;
+    response?.abort();
+  };
 
   let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
-    deadlineTimer = setTimeout(() => reject(new SafeFetchError('timeout')), timeoutMs);
+    deadlineTimer = setTimeout(() => {
+      abortActiveRequest();
+      reject(new SafeFetchError('timeout'));
+    }, timeoutMs);
   });
 
   const run = async (): Promise<SafeFetchResult> => {
@@ -250,10 +300,17 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
       const response = await requestOnce(currentUrl, {
         Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5',
         ...headers,
-      });
+      }, abortController.signal);
+      activeResponse = response;
+
+      if (abortController.signal.aborted) {
+        abortActiveRequest();
+        throw new SafeFetchError('timeout');
+      }
 
       if (REDIRECT_CODES.has(response.statusCode)) {
         response.abort();
+        activeResponse = undefined;
         const location = response.headers.location;
         const target = Array.isArray(location) ? location[0] : location;
         if (!target) throw new SafeFetchError('unreachable', 'redirect without location');
@@ -269,10 +326,12 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
       const contentType = (Array.isArray(rawContentType) ? rawContentType[0] : rawContentType ?? '').toLowerCase();
       if (contentType && !TEXT_CONTENT_TYPES.some((allowed) => contentType.startsWith(allowed))) {
         response.abort();
+        activeResponse = undefined;
         throw new SafeFetchError('not_html', `content-type ${contentType.split(';')[0]}`);
       }
 
       const body = await response.readBody(maxBytes);
+      activeResponse = undefined;
       return {
         status: response.statusCode,
         headers: response.headers,
@@ -286,6 +345,7 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
   try {
     return await Promise.race([run(), deadline]);
   } catch (error) {
+    abortActiveRequest();
     if (error instanceof SafeFetchError) throw error;
     const code = (error as ErrnoLike | undefined)?.code;
     if (code === 'EBLOCKED') throw new SafeFetchError('blocked_private');

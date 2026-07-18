@@ -15,23 +15,21 @@
 //                                     the current score; valid only while its
 //                                     signature matches the live card set.
 import type { OptimizationMetrics, OptimizationResult } from '@/types/templates';
-import { partitionOptimizations } from './actionability';
+import { partitionOptimizations } from '@/lib/optimize/actionability';
 
 export type VerifiedOutcome = 'improved' | 'no_change' | 'decreased';
 
 /**
- * Display states (Task 5):
- *  A      — nothing applied / no meaningful data: show the current score alone.
- *  B      — some actionable cards applied with a meaningful estimate: current →
- *           estimated projection.
- *  C      — verified improved potential exists, not everything applied: current
- *           score primary + separate "potential (verified)" line.
- *  C_ALL  — verified improved potential and every actionable card applied: the
- *           verified score IS the current resume's score.
- *  D      — verified no-change: "rewriting alone is unlikely to improve this match".
- *  E      — verified decrease: restrained warning, no celebration.
+ * Display states describe the score source and whether the verified potential
+ * has become the current score by applying every actionable suggestion.
  */
-export type DisplayState = 'A' | 'B' | 'C' | 'C_ALL' | 'D' | 'E';
+export type DisplayState =
+  | 'current'
+  | 'estimated_applied'
+  | 'verified_potential'
+  | 'verified_applied'
+  | 'verified_no_change'
+  | 'verified_decreased';
 
 /** Typed verification-anomaly state shared by OptimizeSection and ScoreHeader. */
 export type VerifyAnomalyKind = 'too_short' | 'no_text_change' | 'anomalous_drop' | 'error';
@@ -66,6 +64,10 @@ export interface ScorePresentation {
   verifiedAllSuggestionsScore: number | null;
   verifiedOutcome: VerifiedOutcome | null;
   displayState: DisplayState;
+  /** Optional second score rendered beside the baseline score. */
+  arrowTarget: number | null;
+  /** True only when arrowTarget came from a genuine verification run. */
+  arrowIsVerified: boolean;
   isPlaceholderScore: boolean;
   /** True when the estimate is a real zero (0 points predicted), not merely absent. */
   estimateIsZero: boolean;
@@ -160,17 +162,24 @@ export function buildScorePresentation(input: ScorePresentationInput): ScorePres
 
   let displayState: DisplayState;
   if (verifiedOutcome === 'decreased') {
-    displayState = 'E';
+    displayState = 'verified_decreased';
   } else if (verifiedOutcome === 'no_change') {
-    displayState = 'D';
+    displayState = 'verified_no_change';
   } else if (verifiedOutcome === 'improved') {
     const allActionableApplied = actionableTotal > 0 && actionableApplied === actionableTotal;
-    displayState = allActionableApplied ? 'C_ALL' : 'C';
+    displayState = allActionableApplied ? 'verified_applied' : 'verified_potential';
   } else if (actionableApplied > 0 && estimateMeaningful && baseline !== null) {
-    displayState = 'B';
+    displayState = 'estimated_applied';
   } else {
-    displayState = 'A';
+    displayState = 'current';
   }
+
+  const arrowTarget = displayState === 'verified_applied'
+    ? verifiedAllSuggestionsScore
+    : (displayState === 'estimated_applied' || displayState === 'verified_potential')
+      ? currentAppliedProjection
+      : null;
+  const arrowIsVerified = displayState === 'verified_applied';
 
   return {
     baselineScore: baseline,
@@ -179,6 +188,8 @@ export function buildScorePresentation(input: ScorePresentationInput): ScorePres
     verifiedAllSuggestionsScore,
     verifiedOutcome,
     displayState,
+    arrowTarget,
+    arrowIsVerified,
     isPlaceholderScore,
     estimateIsZero,
     counts: {

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, ChevronDown, Check, Minus, AlertTriangle, Lightbulb } from 'lucide-react';
-import { cn } from '../lib/utils/cn';
-import { analytics } from '../services/analytics';
-import { partitionOptimizations } from '../lib/optimize/actionability';
-import type { ScorePresentation } from '../lib/optimize/scoreModel';
-import type { OptimizationResult } from '../types/templates';
+import { cn } from '@/lib/utils/cn';
+import { analytics } from '@/services/analytics';
+import { partitionOptimizations } from '@/lib/optimize/actionability';
+import type { ScorePresentation } from '@/lib/optimize/scoreModel';
+import type { OptimizationResult } from '@/types/templates';
 
 interface ScoreDiffBreakdownProps {
   presentation: ScorePresentation;
@@ -36,22 +36,14 @@ export function ScoreDiffBreakdown({
   const { actionable, recommendations } = partitionOptimizations(optimizations);
   const {
     baselineScore,
-    currentAppliedProjection,
     verifiedAllSuggestionsScore,
     displayState,
+    arrowTarget,
+    arrowIsVerified,
     isPlaceholderScore,
     estimateIsZero,
     counts,
   } = presentation;
-
-  // The arrow's second number: the verified score once everything actionable is
-  // applied (C_ALL), else the applied-only projection (B/C), else nothing.
-  const arrowTarget = displayState === 'C_ALL'
-    ? verifiedAllSuggestionsScore
-    : (displayState === 'B' || displayState === 'C')
-      ? currentAppliedProjection
-      : null;
-  const arrowIsVerified = displayState === 'C_ALL';
 
   const estimateMeaningful = improvement !== null && improvement >= 1;
 
@@ -138,14 +130,14 @@ export function ScoreDiffBreakdown({
         </p>
       )}
 
-      {estimateIsZero && displayState === 'A' && (
+      {estimateIsZero && displayState === 'current' && (
         <p className="text-xs text-gray-500 mt-1">
           {t('sections.optimize.scoreDiff.noGainPredicted')}
         </p>
       )}
 
       {/* Verified potential row (target, not current) when not everything is applied. */}
-      {displayState === 'C' && verifiedAllSuggestionsScore !== null && (
+      {displayState === 'verified_potential' && verifiedAllSuggestionsScore !== null && (
         <p className="text-xs font-semibold text-emerald-300 mt-1">
           {t('sections.optimize.verifiedPotentialLine', { score: verifiedAllSuggestionsScore })}
         </p>

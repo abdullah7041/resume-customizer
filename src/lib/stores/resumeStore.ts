@@ -19,8 +19,8 @@ import {
   validateSearchIntent,
 } from '../validation/store-schemas';
 import { deduplicateByName } from '../utils/resumeUtils';
-import { canMergeOptimization, mergeOptimizedResume } from '../optimize/mergeResume';
-import { isRecommendationOnly } from '../optimize/actionability';
+import { canMergeOptimization, mergeOptimizedResume } from '@/lib/optimize/mergeResume';
+import { isRecommendationOnly } from '@/lib/optimize/actionability';
 
 /** Minimal valid resume skeleton — basics required fields as empty strings. */
 const emptyResume = (): ResumeSchema => ({
