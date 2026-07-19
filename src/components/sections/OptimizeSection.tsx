@@ -11,6 +11,7 @@ import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
   Sparkles,
   CheckCircle2,
+  CheckCheck,
   Briefcase,
   RotateCcw,
   AlertCircle,
@@ -21,9 +22,8 @@ const ShareScoreCard = lazy(() => import('../ui/ShareScoreCard'));
 import { cn } from '../../lib/utils/cn';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
 import type { OptimizationMetrics } from '../../types/templates';
-import type { GapItem } from '../GapAnalysisCard';
 import type { CategoryScoresData } from '../ScoreBreakdown';
-import type { HiddenMatch } from '../HiddenMatchesCard';
+import type { GapAnalysisItem as GapItem, HiddenMatch } from '@/types/analysis';
 import { ScoreDiffBreakdown } from '../ScoreDiffBreakdown';
 import { AtsExplainabilityPanel } from '../AtsExplainabilityPanel';
 import type { AtsExplainabilitySource } from '../../types/explainability';
@@ -233,6 +233,7 @@ export function OptimizeSection({
     optimizations: storeOptimizations,
     setOptimizations,
     applyOptimization,
+    applyAllOptimizations,
     revertOptimization,
     refineOptimization,
     keywordSuggestions,
@@ -1194,6 +1195,11 @@ export function OptimizeSection({
     ids.forEach((sectionId) => applyOptimization(sectionId));
   };
 
+  const handleApplyAll = () => {
+    analytics.trackOptimization('applied_all');
+    applyAllOptimizations();
+  };
+
   const handleToggleCompare = (sectionId: string) => {
     setCompareMode(compareMode === sectionId ? null : sectionId);
   };
@@ -1262,7 +1268,7 @@ export function OptimizeSection({
                 variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                className="text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                className="text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10"
                 leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
               >
                 {t('common.clear', 'Clear')}
@@ -1276,9 +1282,9 @@ export function OptimizeSection({
           error && (
             <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 backdrop-blur-sm">
               <div className="p-2 bg-red-500/10 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-400" />
+                <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
               </div>
-              <p className="text-sm font-medium text-red-400">{error}</p>
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
             </div>
           )
         }
@@ -1288,9 +1294,9 @@ export function OptimizeSection({
           !hasResume && (
             <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6 backdrop-blur-sm">
               <div className="p-2 bg-amber-500/10 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-amber-400" />
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <p className="text-sm font-medium text-amber-400">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
                 {t('sections.optimize.uploadFirst', 'Please upload a resume first')}
               </p>
             </div>
@@ -1544,6 +1550,19 @@ export function OptimizeSection({
                   {t('sections.optimize.inlineDiff', 'Diff')}
                 </button>
               </div>
+              {presentation.counts.actionableTotal > presentation.counts.actionableApplied && (
+                <GlassButton
+                  variant="primary"
+                  size="sm"
+                  onClick={handleApplyAll}
+                  leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
+                >
+                  {t('sections.optimize.queue.applyAllRemaining', {
+                    defaultValue: 'Apply All ({{count}} remaining)',
+                    count: presentation.counts.actionableTotal - presentation.counts.actionableApplied,
+                  })}
+                </GlassButton>
+              )}
               <button
                 type="button"
                 onClick={() => {

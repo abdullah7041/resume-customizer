@@ -92,7 +92,7 @@
       "verifyAnomalyTitle": "Couldn't verify the new score",
       "retryVerify": "Retry",
       "verifying": "Verifying...",
-      "verifiedTooltip": "We re-scored your optimized resume against this job description",
+      "verifiedTooltip": "We re-scored your optimized resume against this job description using the same strict scoring as Match and Bulk analysis",
       "verifiedByReanalysis": "Verified by re-analysis",
       "scoreHeader": {
         "verified": "verified",
@@ -106,7 +106,10 @@
         "recommendationsCount": "{{total}} recommendations",
         "suggestionsReady": "{{total}} suggestions ready · none applied yet",
         "potentialEstimate": "Up to ~{{score}}% if all suggestions are applied (estimate)",
-        "noGainPredicted": "No measurable Match-score increase predicted (estimate)"
+        "noGainPredicted": "No measurable Match-score increase predicted (estimate)",
+        "continueToTemplates": "Continue to Templates",
+        "continueDisabled": "Upload a resume first to continue",
+        "estimateDisclaimer": "Important: review changes before applying — AI can make mistakes, and projections are estimates until verified."
       },
       "strategy": {
         "title": "Strategy",

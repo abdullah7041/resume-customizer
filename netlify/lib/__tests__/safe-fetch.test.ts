@@ -121,11 +121,38 @@ describe('createSafeLookup (connection-time DNS validation)', () => {
 
   it('passes through fully public resolutions', async () => {
     const safeLookup = createSafeLookup(lookupWith([{ address: '104.16.1.1', family: 4 }]));
-    const result = await new Promise<{ err: unknown; address: string }>((resolve) => {
+    const result = await new Promise<{ err: unknown; address: unknown }>((resolve) => {
       safeLookup('example.com', {}, (err, address) => resolve({ err, address }));
     });
     expect(result.err).toBeNull();
     expect(result.address).toBe('104.16.1.1');
+  });
+
+  it('returns the full validated address list when the socket asks for all (Node happy-eyeballs)', async () => {
+    const records = [
+      { address: '104.16.1.1', family: 4 },
+      { address: '2606:4700::6810:101', family: 6 },
+    ];
+    const safeLookup = createSafeLookup(lookupWith(records));
+    const result = await new Promise<{ err: unknown; address: unknown }>((resolve) => {
+      safeLookup('example.com', { all: true }, (err, address) => resolve({ err, address }));
+    });
+    expect(result.err).toBeNull();
+    // net.connect with autoSelectFamily requires an array here; a single
+    // address string makes it throw ERR_INVALID_IP_ADDRESS.
+    expect(result.address).toEqual(records);
+  });
+
+  it('rejects private records even when the socket asks for all', async () => {
+    const safeLookup = createSafeLookup(lookupWith([
+      { address: '104.16.1.1', family: 4 },
+      { address: '10.0.0.5', family: 4 },
+    ]));
+    const result = await new Promise<{ err: Error | null }>((resolve) => {
+      safeLookup('evil.example.com', { all: true }, (err) => resolve({ err }));
+    });
+    expect(result.err).toBeInstanceOf(SafeFetchError);
+    expect((result.err as SafeFetchError).reason).toBe('blocked_private');
   });
 });
 

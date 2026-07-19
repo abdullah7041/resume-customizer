@@ -1398,3 +1398,56 @@ describe('Optimization Card Types', () => {
         });
     });
 });
+
+describe('Optimize UX round: Continue, Apply All, disclaimer', () => {
+    beforeEach(() => {
+        mockStoreState.optimizations = [{ ...sampleOptimization }];
+        mockStoreState.baselineMatchScore = 40;
+        mockStoreState.optimizationMetrics = {
+            ...mockStoreState.optimizationMetrics,
+            improvement: 7,
+            hasJobDescription: true,
+        };
+    });
+
+    it('Continue button calls onContinueToExport when export is possible', () => {
+        const onContinueToExport = vi.fn();
+        renderWithProviders(
+            <OptimizeSection canExport onContinueToExport={onContinueToExport} />
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /Continue to Templates/ }));
+        expect(onContinueToExport).toHaveBeenCalledTimes(1);
+    });
+
+    it('Continue button is disabled with an explanatory title when export is impossible', () => {
+        renderWithProviders(<OptimizeSection canExport={false} onContinueToExport={vi.fn()} />);
+
+        const button = screen.getByRole('button', { name: /Continue to Templates/ });
+        expect(button).toBeDisabled();
+        expect(button).toHaveAttribute('title', 'Upload a resume first to continue');
+    });
+
+    it('Apply All button applies every remaining actionable optimization via the store', () => {
+        renderWithProviders(<OptimizeSection />);
+
+        fireEvent.click(screen.getByRole('button', { name: /Apply All \(1 remaining\)/ }));
+        expect(mockApplyAllOptimizations).toHaveBeenCalledTimes(1);
+        expect(mockTrackOptimization).toHaveBeenCalledWith('applied_all');
+    });
+
+    it('hides the Apply All button once every actionable card is applied', () => {
+        mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+        renderWithProviders(<OptimizeSection />);
+
+        expect(screen.queryByRole('button', { name: /Apply All/ })).not.toBeInTheDocument();
+    });
+
+    it('shows the AI-mistakes disclaimer alongside real scores', () => {
+        renderWithProviders(<OptimizeSection />);
+
+        expect(
+            screen.getByText(/review changes before applying — AI can make mistakes/)
+        ).toBeInTheDocument();
+    });
+});

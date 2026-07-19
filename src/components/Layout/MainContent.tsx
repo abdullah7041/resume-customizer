@@ -48,10 +48,13 @@ import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
 import { GlassCard } from "../ui/GlassCard";
 import { ParallaxContainer } from "../ui/ParallaxSection";
-import { attachExportToJobApplication, updateJobApplication } from "../../services/pipeline";
+import { attachExportToJobApplication, createJobApplication, updateJobApplication } from "@/services/pipeline";
+import { shouldAutoSaveJob } from "@/lib/utils/pipelineAutoSave";
 import { analytics } from "../../services/analytics";
-import type { ExtractedJobMetadata } from "../../types/pipeline";
+import type { ExtractedJobMetadata, JobApplication } from "@/types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
+import type { MatchResult } from "@/types/analysis";
+import { clearStoredMatchAnalysis, loadCachedMatchAnalysis, saveMatchAnalysis } from "@/lib/utils/matchAnalysisCache";
 import ViewTextModal from "../ui/ViewTextModal";
 import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
@@ -428,22 +431,26 @@ export default function MainContent() {
   }, [hasResume, isFlagEnabled, mobileWorkflowGateReason, t]);
   const mobileSecondarySteps = useMemo<MobileWorkflowItem[]>(
     () =>
-      hasResume
-        ? getTabsConfig(t).reduce<MobileWorkflowItem[]>((acc, tab) => {
-            if (isFlagEnabled(tab) && MOBILE_SECONDARY_TAB_VALUES.includes(tab.value)) {
-              acc.push({ ...tab });
-            }
-            return acc;
-          }, [])
-        : [],
-    [hasResume, isFlagEnabled, t]
+      // Secondary tools (Pipeline, Interview, Bulk, ...) are reachable without a
+      // resume — sections gate themselves, and Pipeline was otherwise invisible.
+      getTabsConfig(t).reduce<MobileWorkflowItem[]>((acc, tab) => {
+        if (isFlagEnabled(tab) && MOBILE_SECONDARY_TAB_VALUES.includes(tab.value)) {
+          acc.push({ ...tab });
+        }
+        return acc;
+      }, []),
+    [isFlagEnabled, t]
   );
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState(() => {
     if (typeof window === "undefined") return "";
     return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
   });
-  const [matchAnalysis, setMatchAnalysis] = useState(null);
+  const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(() =>
+    loadCachedMatchAnalysis(
+      typeof window === "undefined" ? "" : window.localStorage.getItem(JOB_STORAGE_KEY) || ""
+    )
+  );
   const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
     loadCachedTruthCheck(
       typeof resumeData?.plainText === "string" ? resumeData.plainText : "",
@@ -460,6 +467,7 @@ export default function MainContent() {
   const [toasts, setToasts] = useState([]);
   const [aiDebug, setAiDebug] = useState<AiDebugSnapshot | null>(null);
   const [activeJobApplicationId, setActiveJobApplicationId] = useState<string | null>(null);
+  const [activeJobApplication, setActiveJobApplication] = useState<JobApplication | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<{ filePath: string; fileName: string } | null>(null);
   const [exportedJobApplicationId, setExportedJobApplicationId] = useState<string | null>(null);
   const [extractedMetadata, setExtractedMetadata] = useState<ExtractedJobMetadata | null>(null);
@@ -505,16 +513,51 @@ export default function MainContent() {
 
   const resetPipelineContext = useCallback(() => {
     setActiveJobApplicationId(null);
+    setActiveJobApplication(null);
     setPendingAttachment(null);
     setExportedJobApplicationId(null);
     setExtractedMetadata(null);
   }, []);
 
-  const handleJobSavedToPipeline = useCallback((id: string) => {
-    setActiveJobApplicationId(id);
+  const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
+    setActiveJobApplicationId(application.id);
+    setActiveJobApplication(application);
     setPendingAttachment(null);
     setExportedJobApplicationId(null);
   }, []);
+
+  // Silent pipeline automation: every successfully analyzed job for a signed-in
+  // user lands in the pipeline as 'saved' (createJobApplication dedupes
+  // company+title within 7 days server-side, so re-analyses update one row).
+  const autoSaveJobToPipeline = useCallback(
+    async (metadata: ExtractedJobMetadata | null, matchScore: number | null, jobText: string) => {
+      if (!shouldAutoSaveJob({ isSignedIn: Boolean(user), isGuestMode, metadata }) || !metadata) return;
+      try {
+        const { data, error, isDuplicate } = await createJobApplication({
+          company_name: metadata.companyName ?? null,
+          job_title: metadata.jobTitle ?? null,
+          job_description: jobText,
+          location: metadata.location ?? null,
+          employment_type: metadata.employmentType ?? null,
+          seniority: metadata.seniority ?? null,
+          sector: metadata.sector ?? null,
+          match_score: matchScore,
+          status: "saved",
+          metadata: { autoSaved: true, extractionConfidence: metadata.confidence ?? null },
+        }, { duplicateStrategy: 'preserve_user_fields' });
+        if (error || !data) {
+          console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
+          return;
+        }
+        setActiveJobApplicationId(data.id);
+        setActiveJobApplication(data);
+        analytics.trackPipelineJobSaved({ is_duplicate: Boolean(isDuplicate), auto: true });
+      } catch (error) {
+        console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
+      }
+    },
+    [user, isGuestMode]
+  );
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -828,6 +871,7 @@ export default function MainContent() {
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(JOB_STORAGE_KEY);
     window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    clearStoredMatchAnalysis();
 
     // Reset local state
     setResumeData("");
@@ -856,6 +900,7 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    clearStoredMatchAnalysis();
     setResumeData("");
     // Also clear dependent data
     setMatchAnalysis(null);
@@ -869,6 +914,7 @@ export default function MainContent() {
   }, [pushToast, resetPipelineContext, t]);
 
   const handleClearMatch = useCallback(() => {
+    clearStoredMatchAnalysis();
     setMatchAnalysis(null);
     setJobDescription("");
     resetPipelineContext();
@@ -996,6 +1042,7 @@ export default function MainContent() {
         setResumeData(enriched);
         setMatchAnalysis(null);
         setTruthCheckResult(null);
+        clearStoredMatchAnalysis();
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
         }
@@ -1078,8 +1125,9 @@ export default function MainContent() {
         const trimmedJob = jobDescriptionInput.trim();
         resetPipelineContext();
 
-        // Non-blocking metadata extraction from pasted job description
-        extractJobMetadata(trimmedJob, i18n.language)
+        // Non-blocking metadata extraction from pasted job description. The
+        // resolved value also feeds pipeline auto-save once the analysis lands.
+        const metadataPromise: Promise<ExtractedJobMetadata | null> = extractJobMetadata(trimmedJob, i18n.language)
           .then((metadata) => {
             setExtractedMetadata(metadata ?? null);
             if (metadata?.companyName || metadata?.jobTitle || metadata?.location) {
@@ -1087,10 +1135,12 @@ export default function MainContent() {
             } else {
               analytics.trackJobMetadataExtractionFailed('no_metadata_extracted');
             }
+            return metadata ?? null;
           })
           .catch(() => {
             setExtractedMetadata(null);
             analytics.trackJobMetadataExtractionFailed('request_failed');
+            return null;
           });
 
         // Fix B1: Always analyze the ORIGINAL resume text for match scoring
@@ -1103,6 +1153,12 @@ export default function MainContent() {
         setAiDebug(buildAiDebugSnapshot(result, "success"));
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
+        // Persist the displayed result so it survives a page refresh (restored
+        // by the matchAnalysis lazy initializer while the JD still matches).
+        saveMatchAnalysis(result, trimmedJob);
+        void metadataPromise.then((metadata) =>
+          autoSaveJobToPipeline(metadata, typeof result?.score === "number" ? result.score : null, trimmedJob)
+        );
 
         // Cache the match analysis score so OptimizeSection can read it
         // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
@@ -1171,7 +1227,7 @@ export default function MainContent() {
         setIsAnalyzing(false);
       }
     },
-    [i18n.language, pushToast, resetPipelineContext, resumeData, t]
+    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, t]
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
@@ -2015,8 +2071,6 @@ export default function MainContent() {
                     variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
                     size="sm"
                     onClick={() => handleTabChange("more-tools")}
-                    disabled={!hasResume}
-                    title={!hasResume ? resumeGateReason : undefined}
                     className="whitespace-nowrap"
                   >
                     <MoreHorizontal className="h-4 w-4 me-1.5" />
@@ -2071,6 +2125,8 @@ export default function MainContent() {
                   jobDescription={jobDescription}
                   extractedMetadata={extractedMetadata}
                   onJobSaved={handleJobSavedToPipeline}
+                  savedApplicationId={activeJobApplicationId}
+                  savedApplication={activeJobApplication}
                   isGuestMode={isGuestMode}
                   onRequireSignIn={requireSignInForGuestAction}
                   protectedActionMessage={guestProtectedActionDescription}
@@ -2122,7 +2178,7 @@ export default function MainContent() {
                   previewUsed={previewUsed}
                   onUpgrade={handleUpgrade}
                   onExport={handleExportPdf}
-                  onContinueToExport={() => setActiveTab("templates")}
+                  onContinueToExport={() => handleTabChange("templates")}
                   canExport={Boolean(resumeData?.plainText)}
                   hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
                   onClear={handleClearOptimizations}

@@ -60,9 +60,9 @@ interface BulkAnalysisSectionProps {
 
 // === Sub-components ===
 const getScoreColor = (s: number) => {
-  if (s >= 75) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-  if (s >= 50) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-  return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+  if (s >= 75) return 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  if (s >= 50) return 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20';
+  return 'text-rose-700 dark:text-rose-400 bg-rose-500/10 border-rose-500/20';
 };
 
 const ScoreBadge = ({ score }: { score: number }) => {
@@ -83,8 +83,8 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
           <div className="flex items-center gap-3 overflow-hidden">
             <div className={cn(
               "p-2 rounded-lg transition-colors",
-              status === 'completed' ? "bg-emerald-500/10 text-emerald-400" :
-                status === 'error' ? "bg-rose-500/10 text-rose-400" :
+              status === 'completed' ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" :
+                status === 'error' ? "bg-rose-500/10 text-rose-700 dark:text-rose-400" :
                   "bg-blue-500/10 text-blue-400"
             )}>
               <FileText className="w-5 h-5" />
@@ -98,12 +98,12 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
                     Processing...
                   </>
                 ) : status === 'completed' ? (
-                  <span className="text-emerald-400 flex items-center gap-1">
+                  <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     Ready
                   </span>
                 ) : status === 'error' ? (
-                  <span className="text-rose-400 flex items-center gap-1">
+                  <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Failed
                   </span>
@@ -117,7 +117,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
             type="button"
             onClick={onRemove}
             aria-label="Remove resume"
-            className="text-gray-500 hover:text-rose-400 transition-colors md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-rose-500/10 rounded"
+            className="text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-rose-500/10 rounded"
           >
             <X className="w-4 h-4" />
           </button>
@@ -135,7 +135,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
         )}
 
         {status === 'error' && (
-          <div className="mt-3 p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-xs text-rose-300 flex items-start gap-2">
+          <div className="mt-3 p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span className="line-clamp-2">{error || 'Failed to analyze'}</span>
           </div>
@@ -450,7 +450,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
         {resumes.length > 0 && (
           <div className="flex items-center gap-3">
-            <GlassButton variant="ghost" onClick={clearSavedData} className="text-rose-400 hover:bg-rose-500/10 hover:text-rose-300">
+            <GlassButton variant="ghost" onClick={clearSavedData} className="text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 hover:text-rose-700 dark:hover:text-rose-300">
               <Trash2 className="w-4 h-4 me-2" />
               {t('sections.bulk.clearAll', 'Clear All')}
             </GlassButton>
@@ -484,7 +484,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
             )}>
               <Upload className={cn(
                 "w-10 h-10 transition-colors duration-300",
-                isDragging ? "text-emerald-400" : "text-gray-400 group-hover:text-emerald-400"
+                isDragging ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
               )} />
             </div>
 
@@ -494,7 +494,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 max-w-sm mx-auto">
               {t('sections.bulk.uploadDesc', 'Drag & drop or click to browse. Supports PDF & DOCX up to 5MB.')}
             </p>
-            <p className="text-xs text-emerald-400/80 mb-6">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400/80 mb-6">
               {t('sections.bulk.creditCost', '2 credits per resume analysis')}
             </p>
 
@@ -527,9 +527,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       {!jobDescription && resumes.length > 0 && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3 animate-fade-in">
           <div className="p-2 bg-amber-500/20 rounded-lg">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
-          <p className="text-sm text-amber-200 font-medium">
+          <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
             {t('sections.bulk.noJobWarning', 'Add a job description in the Match tab to analyze scores.')}
           </p>
         </div>
@@ -572,7 +572,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                 {sortedResumes.map((resume, index) => {
                   const rank = index + 1;
                   const RankIcon = rank === 1 ? Trophy : rank === 2 ? Medal : rank === 3 ? Award : null;
-                  const rankColor = rank === 1 ? 'text-yellow-400' : rank === 2 ? 'text-gray-300' : rank === 3 ? 'text-amber-600' : '';
+                  const rankColor = rank === 1 ? 'text-yellow-600 dark:text-yellow-400' : rank === 2 ? 'text-gray-400 dark:text-gray-300' : rank === 3 ? 'text-amber-600' : '';
                   const score = resume.analysis?.score || 0;
 
                   return (
@@ -581,7 +581,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
-                            rank === 1 ? "bg-yellow-500/20 text-yellow-400" :
+                            rank === 1 ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400" :
                               rank === 2 ? "bg-gray-500/20 text-gray-500 dark:text-gray-300" :
                                 rank === 3 ? "bg-amber-500/20 text-amber-500" :
                                   "bg-gray-100 dark:bg-white/5 text-gray-500"
@@ -609,7 +609,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                       </td>
                       <td className="py-4 px-6 text-right">
                         {rank === 1 ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                             Best Match
                           </span>
                         ) : score >= 70 ? (
@@ -617,11 +617,11 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                             Strong
                           </span>
                         ) : score >= 50 ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                             Moderate
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
                             Review
                           </span>
                         )}

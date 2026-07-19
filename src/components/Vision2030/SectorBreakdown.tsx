@@ -8,21 +8,16 @@
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { Vision2030SectorBreakdown, Vision2030MatchedSkill } from '../../types/vision2030';
-import { SectorIcon } from '../../lib/utils/vision2030Icons';
-import { GlassCard } from '../ui/GlassCard';
+import type { Vision2030SectorBreakdown, Vision2030MatchedSkill } from '@/types/vision2030';
+import { SectorIcon } from '@/lib/utils/vision2030Icons';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { getVision2030ScoreTextColor } from '@/lib/utils/vision2030Score';
 
 interface SectorBreakdownProps {
   sectorBreakdown: Vision2030SectorBreakdown[];
   matchedSkills: Vision2030MatchedSkill[];
   isArabic: boolean;
 }
-
-const getScoreColor = (score: number) => {
-  if (score >= 70) return 'text-emerald-400';
-  if (score >= 40) return 'text-amber-400';
-  return 'text-red-400';
-};
 
 const getScoreBg = (score: number) => {
   if (score >= 70) return 'from-emerald-600 to-emerald-400';
@@ -52,7 +47,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
   return (
     <GlassCard className="p-6">
       <div className="flex items-center gap-2 mb-6">
-        <TrendingUp className="w-5 h-5 text-emerald-400" />
+        <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
           {t('vision2030.breakdown.title', 'Detailed Sector Analysis')}
         </h3>
@@ -78,7 +73,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                   <div className={`p-2 rounded-lg ${sector.score > 0 ? 'bg-emerald-500/10' : 'bg-gray-100 dark:bg-white/5'}`}>
                     <SectorIcon
                       sectorId={sector.sectorId}
-                      className={`w-5 h-5 ${sector.score > 0 ? 'text-emerald-400' : 'text-gray-300 dark:text-white/20'}`}
+                      className={`w-5 h-5 ${sector.score > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300 dark:text-white/20'}`}
                     />
                   </div>
                   <div className="text-left">
@@ -100,7 +95,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                         style={{ transform: `scaleX(${Math.min(Math.max(sector.score, 0), 100) / 100})` }}
                       />
                     </div>
-                    <span className={`text-lg font-bold min-w-[3rem] text-right ${getScoreColor(sector.score)}`}>
+                    <span className={`text-lg font-bold min-w-[3rem] text-right ${getVision2030ScoreTextColor(sector.score)}`}>
                       {sector.score}%
                     </span>
                   </div>
@@ -121,7 +116,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                   {sectorSkills.length > 0 && (
                     <div>
                       <h5 className="text-sm font-semibold text-gray-700 dark:text-white/80 mb-2 flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-400" />
+                        <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         {t('vision2030.breakdown.matchedSkills', 'Matched Skills')}
                       </h5>
                       <div className="space-y-2">

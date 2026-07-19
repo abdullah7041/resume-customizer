@@ -2,16 +2,10 @@ import { AlertTriangle, AlertCircle, Info, ChevronDown, Sparkles } from 'lucide-
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from './ui/GlassCard';
-
-export interface GapItem {
-    requirement: string;
-    currentState: string;
-    severity: 'critical' | 'moderate' | 'minor';
-    recommendation: string;
-}
+import type { GapAnalysisItem } from '@/types/analysis';
 
 interface GapAnalysisCardProps {
-    gaps: GapItem[];
+    gaps: GapAnalysisItem[];
     className?: string;
 }
 

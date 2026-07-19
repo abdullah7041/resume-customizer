@@ -15,28 +15,28 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { GlassButton } from '../ui/GlassButton';
-import { GlassCard } from '../ui/GlassCard';
-import { GlassCircle } from '../ui/GlassCircle';
-import { GlassTextarea } from '../ui/GlassTextarea';
-import Tooltip from '../ui/Tooltip';
-import { AnimatedCounter } from '../ui/AnimatedCounter';
-import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
-import { GapAnalysisCard, type GapItem } from '../GapAnalysisCard';
-import { HiddenMatchesCard, type HiddenMatch } from '../HiddenMatchesCard';
-import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
-import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { GlassCircle } from '@/components/ui/GlassCircle';
+import { GlassTextarea } from '@/components/ui/GlassTextarea';
+import Tooltip from '@/components/ui/Tooltip';
+import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
+import { ConfirmActionModal } from '@/components/Credits/ConfirmActionModal';
+import { GapAnalysisCard } from '@/components/GapAnalysisCard';
+import { HiddenMatchesCard } from '@/components/HiddenMatchesCard';
+import { MirroredKeywordsCard } from '@/components/MirroredKeywordsCard';
+import { requestValueMomentFeedbackPrompt } from '@/components/Feedback/FeedbackPromptController';
 import { importJobFromUrl } from '@/services/api';
-import { useUserCredits } from '../../hooks/useUserCredits';
-import { cn } from '../../lib/utils/cn';
-import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { useUserCredits } from '@/hooks/useUserCredits';
+import { cn } from '@/lib/utils/cn';
+import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '@/lib/utils/storage-migration';
 import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
-import { FEATURE_COSTS } from '../../types/credits';
-import { analytics } from '../../services/analytics';
-import type { ExtractedJobMetadata } from '../../types/pipeline';
-import type { StrategicRealityCheck } from '../../types/analysis';
-import type { AtsExplainabilitySource } from '../../types/explainability';
-import { AtsExplainabilityPanel } from '../AtsExplainabilityPanel';
+import { FEATURE_COSTS } from '@/types/credits';
+import { analytics } from '@/services/analytics';
+import type { ExtractedJobMetadata, JobApplication } from '@/types/pipeline';
+import type { MatchResult, StrategicRealityCheck } from '@/types/analysis';
+import type { AtsExplainabilitySource } from '@/types/explainability';
+import { AtsExplainabilityPanel } from '@/components/AtsExplainabilityPanel';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -96,29 +96,6 @@ const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => 
   };
 };
 
-interface MatchResult {
-  score: number;
-  matchedKeywords?: string[];
-  missingKeywords?: string[];
-  topHits?: string[];
-  suggestions?: string[];
-  summary_bullets?: string[];
-  reasoning?: string;
-  categoryScores?: {
-    hard_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-    experience: { score: number; max: number; matched?: string[]; gaps?: string[]; reasoning?: string };
-    education: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-    soft_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-  } | null;
-  gapAnalysis?: GapItem[];
-  keywordStrategy?: {
-    mirroredPhrases?: string[];
-    structuralChanges?: string[];
-    hiddenMatches?: HiddenMatch[];
-  } | null;
-  strategicRealityCheck?: StrategicRealityCheck | null;
-}
-
 interface Toast {
   type: 'success' | 'warning' | 'danger' | 'info';
   title: string;
@@ -135,7 +112,9 @@ interface MatchSectionProps {
   onClear?: () => void;
   jobDescription?: string;
   extractedMetadata?: ExtractedJobMetadata | null;
-  onJobSaved?: (id: string) => void;
+  onJobSaved?: (application: JobApplication) => void;
+  savedApplicationId?: string | null;
+  savedApplication?: JobApplication | null;
   isGuestMode?: boolean;
   onRequireSignIn?: () => void;
   protectedActionMessage?: string;
@@ -228,6 +207,8 @@ export function MatchSection({
   jobDescription = '',
   extractedMetadata,
   onJobSaved,
+  savedApplicationId,
+  savedApplication,
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
@@ -323,6 +304,8 @@ export function MatchSection({
         return t('sections.match.urlImport.errors.unsupportedUrl', 'This link type is not supported yet. Open the job posting itself and copy its link.');
       case 'login_required':
         return t('sections.match.urlImport.errors.loginRequired', "Watheq couldn't reliably import the full description from this link. Open the company's job page or paste the description manually.");
+      case 'linkedin_blocked':
+        return t('sections.match.urlImport.errors.linkedinBlocked', 'LinkedIn blocked automated access to this job page. Open the job on LinkedIn and paste the description manually.');
       case 'blocked':
         return t('sections.match.urlImport.errors.blocked', 'This site blocked the import. Paste the job description manually.');
       case 'timeout':
@@ -802,6 +785,8 @@ export function MatchSection({
                 extractedMetadata={extractedMetadata}
                 onSaved={onJobSaved}
                 onToast={onToast}
+                savedApplicationId={savedApplicationId}
+                savedApplication={savedApplication}
               />
             )}
 

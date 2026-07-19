@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import type {
   JobApplication,
   CreateJobApplicationInput,
+  CreateJobApplicationOptions,
   UpdateJobApplicationInput,
   JobApplicationStatus,
 } from '@/types/pipeline';
@@ -66,7 +67,8 @@ async function findRecentDuplicate(
  * Create a new job application. Deduplicates against recent company+title matches.
  */
 export async function createJobApplication(
-  input: CreateJobApplicationInput
+  input: CreateJobApplicationInput,
+  options: CreateJobApplicationOptions = {},
 ): Promise<{ data: JobApplication | null; error: string | null; isDuplicate?: boolean }> {
   try {
     const {
@@ -87,15 +89,22 @@ export async function createJobApplication(
         ...(duplicate.metadata || {}),
         ...(input.metadata || {}),
       };
+      const duplicateUpdate = options.duplicateStrategy === 'preserve_user_fields'
+        ? {
+            job_description: input.job_description,
+            ...(input.match_score !== undefined ? { match_score: input.match_score } : {}),
+            metadata: mergedMetadata,
+          }
+        : {
+            ...input,
+            status,
+            metadata: mergedMetadata,
+            ...timestampUpdates,
+          };
 
       const { data, error } = await supabase
         .from(TABLE)
-        .update({
-          ...input,
-          status,
-          metadata: mergedMetadata,
-          ...timestampUpdates,
-        })
+        .update(duplicateUpdate)
         .eq('id', duplicate.id)
         .eq('user_id', user.id)
         .select()

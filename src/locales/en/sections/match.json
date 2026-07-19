@@ -127,6 +127,7 @@
           "invalidUrl": "That does not look like a valid job link. Check the URL and try again.",
           "unsupportedUrl": "This link type is not supported yet. Open the job posting itself and copy its link.",
           "loginRequired": "Watheq couldn't reliably import the full description from this link. Open the company's job page or paste the description manually.",
+          "linkedinBlocked": "LinkedIn blocked automated access to this job page. Open the job on LinkedIn and paste the description manually.",
           "blocked": "This site blocked the import. Paste the job description manually.",
           "timeout": "The site took too long to respond. Try again or paste the description manually.",
           "notAJobPage": "That link does not point to a readable job page. Paste the description manually.",

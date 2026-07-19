@@ -62,6 +62,10 @@ export interface CreateJobApplicationInput {
   metadata?: Record<string, unknown>;
 }
 
+export interface CreateJobApplicationOptions {
+  duplicateStrategy?: 'overwrite' | 'preserve_user_fields';
+}
+
 export interface UpdateJobApplicationInput {
   company_name?: string | null;
   job_title?: string | null;
