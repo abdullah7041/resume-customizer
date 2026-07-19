@@ -66,10 +66,13 @@ vi.mock('../components/Feedback/FeedbackModal', () => ({
   FeedbackModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Feedback modal</div> : null),
 }));
 
-const themeState = vi.hoisted(() => ({ theme: 'light' as 'light' | 'dark' }));
+const themeState = vi.hoisted(() => ({
+  theme: 'light' as 'light' | 'dark',
+  toggleTheme: vi.fn(),
+}));
 
 vi.mock('../hooks/useTheme', () => ({
-  useTheme: () => [themeState.theme, vi.fn()],
+  useTheme: () => [themeState.theme, themeState.toggleTheme],
 }));
 
 vi.mock('../hooks/useUserCredits', () => ({
@@ -82,6 +85,7 @@ describe('Header feedback action', () => {
   beforeEach(() => {
     authState.user = null;
     themeState.theme = 'light';
+    themeState.toggleTheme.mockClear();
     vi.stubGlobal('matchMedia', vi.fn(() => ({
       matches: false,
       addEventListener: vi.fn(),
@@ -108,6 +112,21 @@ describe('Header feedback action', () => {
     fireEvent.click(screen.getByRole('button', { name: /account menu/i }));
 
     expect(await screen.findByRole('menuitem', { name: /feedback/i })).toBeInTheDocument();
+  });
+
+  it('lets signed-in desktop users toggle the theme without opening the account menu', () => {
+    authState.user = {
+      id: 'user-1',
+      email: 'user@example.com',
+      app_metadata: {},
+      user_metadata: {},
+    };
+
+    render(<Header />);
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
+    expect(themeState.toggleTheme).toHaveBeenCalledOnce();
   });
 
   it('renders the authenticated account menu outside the clipped header when opened', async () => {

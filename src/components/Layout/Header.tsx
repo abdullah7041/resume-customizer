@@ -340,6 +340,14 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
             <div className="hidden md:flex items-center gap-3">
               {user ? (
                 <>
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="btn-spring relative inline-flex items-center justify-center w-10 h-10 rounded-xl backdrop-blur-md border transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out shadow-sm bg-[color:var(--surface-control)] border-[color:var(--glass-border)] text-slate-700 hover:bg-[color:var(--surface-control-hover)] hover:text-emerald-700 dark:bg-white/[0.06] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                    aria-label={t('common.toggleTheme', 'Toggle theme')}
+                  >
+                  {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
+                  </button>
                   <div data-tour="credits" className="inline-block">
                     <CreditBalance
                       variant="compact"
