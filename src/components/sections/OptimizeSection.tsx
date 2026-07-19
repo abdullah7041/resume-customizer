@@ -1262,7 +1262,7 @@ export function OptimizeSection({
                 variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                className="text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                className="text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10"
                 leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
               >
                 {t('common.clear', 'Clear')}
@@ -1276,9 +1276,9 @@ export function OptimizeSection({
           error && (
             <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 backdrop-blur-sm">
               <div className="p-2 bg-red-500/10 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-400" />
+                <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
               </div>
-              <p className="text-sm font-medium text-red-400">{error}</p>
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
             </div>
           )
         }
@@ -1288,9 +1288,9 @@ export function OptimizeSection({
           !hasResume && (
             <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6 backdrop-blur-sm">
               <div className="p-2 bg-amber-500/10 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-amber-400" />
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <p className="text-sm font-medium text-amber-400">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
                 {t('sections.optimize.uploadFirst', 'Please upload a resume first')}
               </p>
             </div>

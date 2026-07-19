@@ -124,8 +124,8 @@ export function ScoreHeader({
                   <span className={cn(
                     'inline-flex min-h-7 items-center gap-1 rounded-full border px-2 text-xs font-bold',
                     delta > 0
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                      : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-400'
                   )}>
                     <DeltaIcon className="h-3.5 w-3.5" />
                     {delta > 0 ? `+${delta}%` : `${delta}%`}
