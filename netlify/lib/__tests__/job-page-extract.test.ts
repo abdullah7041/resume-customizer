@@ -203,6 +203,90 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     expect(result?.jobText).toContain('Short role summary.');
     expect(result?.jobText).toContain('This final requirement is only available in the broader main region.');
   });
+
+  it('removes an entire noise block with nested elements of the same tag', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <div class="similar-jobs">
+          <div>First unrelated recommendation.</div>
+          <div>Second unrelated recommendation.</div>
+        </div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).not.toContain('First unrelated recommendation.');
+    expect(result?.jobText).not.toContain('Second unrelated recommendation.');
+  });
+
+  it('keeps every nested same-tag child in a qualified description container', () => {
+    const page = `
+      <main>
+        <div class="description">
+          <div>${LONG_DESCRIPTION_HTML}</div>
+          <div>Critical requirement: lead production incident reviews and mentor platform engineers.</div>
+        </div>
+        <p>Page promotion outside the job description.</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('Critical requirement: lead production incident reviews');
+    expect(result?.jobText).not.toContain('Page promotion outside the job description.');
+  });
+
+  it('does not treat data-testid as an id attribute', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <div data-testid="related-content">
+          <p>Required role context carried by a prefixed attribute.</p>
+        </div>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .toContain('Required role context carried by a prefixed attribute.');
+  });
+
+  it('does not treat data-class as a class attribute', () => {
+    const page = `
+      <main>
+        <div data-class="job-description">${LONG_DESCRIPTION_HTML}</div>
+        <p>Required role context from the broader main region.</p>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .toContain('Required role context from the broader main region.');
+  });
+
+  it('recognizes an unquoted class attribute on a noise block', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <div class=similar-jobs><p>Unquoted-class recommendation noise.</p></div>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .not.toContain('Unquoted-class recommendation noise.');
+  });
+
+  it('recognizes an unquoted id attribute on a description container', () => {
+    const page = `
+      <main>
+        <div id=job-description>${LONG_DESCRIPTION_HTML}</div>
+        <p>Page promotion outside the unquoted description container.</p>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .not.toContain('Page promotion outside the unquoted description container.');
+  });
 });
 
 describe('normalizeLinkedInUrl', () => {

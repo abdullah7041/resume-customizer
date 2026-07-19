@@ -28,21 +28,15 @@ const MIN_JSONLD_DESCRIPTION_CHARS = 200;
 const MIN_HEURISTIC_CHARS = 350;
 export const MAX_JOB_TEXT_CHARS = 30000;
 
-const NOISE_ELEMENT_PATTERN = /<(nav|header|footer|aside|form|button|dialog|select|svg|iframe)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+const PAIRED_NOISE_TAGS = new Set([
+  'nav', 'header', 'footer', 'aside', 'form', 'button', 'dialog', 'select', 'svg', 'iframe',
+]);
 const NOISE_CLASS_OR_ID_PATTERN = /\b(similar|related|recommend|also[-_]?viewed|footer|sign[-_]?in|login|join[-_]?now|nav|breadcrumb|cookie|banner|share|apply[-_]?button|top[-_]?card[-_]?actions)/i;
 const DESCRIPTION_CLASS_OR_ID_PATTERN = /job[-_]?desc|description|show-more-less-html|posting/i;
 const STANDALONE_CTA_PATTERN = /^(sign in|join now|apply|easy apply|save|share|report this job|show more|see more jobs|get notified|set alert)$/i;
 const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommended for you|explore more)$/i;
-
-const NOISE_CLASS_OR_ID_ELEMENT_PATTERN = new RegExp(
-  `<([a-z][\\w:-]*)\\b(?=[^>]*(?:class|id)\\s*=\\s*["'][^"']*(?:${NOISE_CLASS_OR_ID_PATTERN.source})[^"']*["'])[^>]*>[\\s\\S]*?<\\/\\1\\s*>`,
-  'gi',
-);
-
-const DESCRIPTION_CONTAINER_PATTERN = new RegExp(
-  `<(div|section)\\b(?=[^>]*(?:class|id)\\s*=\\s*["'][^"']*(?:${DESCRIPTION_CLASS_OR_ID_PATTERN.source})[^"']*["'])[^>]*>[\\s\\S]*?<\\/\\1\\s*>`,
-  'gi',
-);
+const HTML_TAG_PATTERN = /<\/?([a-z][\w:-]*)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi;
+const HTML_ATTRIBUTE_PATTERN = /(?:^|\s)([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
 const NAMED_ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
@@ -81,12 +75,100 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
+function parseOpeningTagAttributes(openingTag: string): Map<string, string> {
+  const tagName = openingTag.match(/^<([a-z][\w:-]*)\b/i)?.[0];
+  if (!tagName) return new Map();
+
+  const closingLength = /\/\s*>$/.test(openingTag) ? 2 : 1;
+  const attributeSource = openingTag.slice(tagName.length, -closingLength);
+  const attributes = new Map<string, string>();
+  HTML_ATTRIBUTE_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = HTML_ATTRIBUTE_PATTERN.exec(attributeSource)) !== null) {
+    attributes.set(match[1].toLowerCase(), match[2] ?? match[3] ?? match[4] ?? '');
+  }
+  return attributes;
+}
+
+function tagHasMatchingClassOrId(openingTag: string, pattern: RegExp): boolean {
+  const attributes = parseOpeningTagAttributes(openingTag);
+  const className = attributes.get('class');
+  const id = attributes.get('id');
+  return (className !== undefined && pattern.test(className))
+    || (id !== undefined && pattern.test(id));
+}
+
+function createTagScanner(): RegExp {
+  return new RegExp(HTML_TAG_PATTERN.source, HTML_TAG_PATTERN.flags);
+}
+
+function isClosingTag(tag: string): boolean {
+  return /^<\//.test(tag);
+}
+
+function isSelfClosingTag(tag: string): boolean {
+  return /\/\s*>$/.test(tag);
+}
+
+function findBalancedElementEnd(
+  html: string,
+  openingMatch: RegExpExecArray,
+): number | null {
+  const openingTag = openingMatch[0];
+  if (isSelfClosingTag(openingTag)) return openingMatch.index + openingTag.length;
+
+  const tagName = openingMatch[1].toLowerCase();
+  const scanner = createTagScanner();
+  scanner.lastIndex = openingMatch.index + openingTag.length;
+  let depth = 1;
+  let match: RegExpExecArray | null;
+  while ((match = scanner.exec(html)) !== null) {
+    if (match[1].toLowerCase() !== tagName) continue;
+    if (isClosingTag(match[0])) {
+      depth -= 1;
+      if (depth === 0) return scanner.lastIndex;
+    } else if (!isSelfClosingTag(match[0])) {
+      depth += 1;
+    }
+  }
+  return null;
+}
+
+function removeMatchingElementBlocks(
+  html: string,
+  matchesOpeningTag: (tagName: string, openingTag: string) => boolean,
+): string {
+  const scanner = createTagScanner();
+  let cursor = 0;
+  let output = '';
+  let changed = false;
+  let match: RegExpExecArray | null;
+
+  while ((match = scanner.exec(html)) !== null) {
+    if (isClosingTag(match[0]) || !matchesOpeningTag(match[1].toLowerCase(), match[0])) continue;
+    const end = findBalancedElementEnd(html, match);
+    if (end === null) continue;
+
+    output += `${html.slice(cursor, match.index)} `;
+    cursor = end;
+    scanner.lastIndex = end;
+    changed = true;
+  }
+
+  return changed ? output + html.slice(cursor) : html;
+}
+
 function stripNoiseElements(html: string): string {
   let cleaned = html;
   for (let pass = 0; pass < 5; pass += 1) {
-    const next = cleaned
-      .replace(NOISE_ELEMENT_PATTERN, ' ')
-      .replace(NOISE_CLASS_OR_ID_ELEMENT_PATTERN, ' ');
+    const withoutNoiseTags = removeMatchingElementBlocks(
+      cleaned,
+      (tagName) => PAIRED_NOISE_TAGS.has(tagName),
+    );
+    const next = removeMatchingElementBlocks(
+      withoutNoiseTags,
+      (_tagName, openingTag) => tagHasMatchingClassOrId(openingTag, NOISE_CLASS_OR_ID_PATTERN),
+    );
     if (next === cleaned) break;
     cleaned = next;
   }
@@ -94,10 +176,22 @@ function stripNoiseElements(html: string): string {
 }
 
 function preferDescriptionContainer(region: string): string {
-  DESCRIPTION_CONTAINER_PATTERN.lastIndex = 0;
+  const scanner = createTagScanner();
   let match: RegExpExecArray | null;
-  while ((match = DESCRIPTION_CONTAINER_PATTERN.exec(region)) !== null) {
-    if (htmlToText(match[0]).length >= MIN_HEURISTIC_CHARS) return match[0];
+  while ((match = scanner.exec(region)) !== null) {
+    const tagName = match[1].toLowerCase();
+    if (
+      isClosingTag(match[0])
+      || (tagName !== 'div' && tagName !== 'section')
+      || !tagHasMatchingClassOrId(match[0], DESCRIPTION_CLASS_OR_ID_PATTERN)
+    ) {
+      continue;
+    }
+
+    const end = findBalancedElementEnd(region, match);
+    if (end === null) continue;
+    const candidate = region.slice(match.index, end);
+    if (htmlToText(candidate).length >= MIN_HEURISTIC_CHARS) return candidate;
   }
   return region;
 }
