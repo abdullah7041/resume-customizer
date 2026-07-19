@@ -51,7 +51,7 @@ import { ParallaxContainer } from "../ui/ParallaxSection";
 import { attachExportToJobApplication, createJobApplication, updateJobApplication } from "@/services/pipeline";
 import { shouldAutoSaveJob } from "@/lib/utils/pipelineAutoSave";
 import { analytics } from "../../services/analytics";
-import type { ExtractedJobMetadata } from "../../types/pipeline";
+import type { ExtractedJobMetadata, JobApplication } from "@/types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
 import type { MatchResult } from "@/types/analysis";
 import { clearStoredMatchAnalysis, loadCachedMatchAnalysis, saveMatchAnalysis } from "@/lib/utils/matchAnalysisCache";
@@ -467,6 +467,7 @@ export default function MainContent() {
   const [toasts, setToasts] = useState([]);
   const [aiDebug, setAiDebug] = useState<AiDebugSnapshot | null>(null);
   const [activeJobApplicationId, setActiveJobApplicationId] = useState<string | null>(null);
+  const [activeJobApplication, setActiveJobApplication] = useState<JobApplication | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<{ filePath: string; fileName: string } | null>(null);
   const [exportedJobApplicationId, setExportedJobApplicationId] = useState<string | null>(null);
   const [extractedMetadata, setExtractedMetadata] = useState<ExtractedJobMetadata | null>(null);
@@ -512,13 +513,15 @@ export default function MainContent() {
 
   const resetPipelineContext = useCallback(() => {
     setActiveJobApplicationId(null);
+    setActiveJobApplication(null);
     setPendingAttachment(null);
     setExportedJobApplicationId(null);
     setExtractedMetadata(null);
   }, []);
 
-  const handleJobSavedToPipeline = useCallback((id: string) => {
-    setActiveJobApplicationId(id);
+  const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
+    setActiveJobApplicationId(application.id);
+    setActiveJobApplication(application);
     setPendingAttachment(null);
     setExportedJobApplicationId(null);
   }, []);
@@ -547,6 +550,7 @@ export default function MainContent() {
           return;
         }
         setActiveJobApplicationId(data.id);
+        setActiveJobApplication(data);
         analytics.trackPipelineJobSaved({ is_duplicate: Boolean(isDuplicate), auto: true });
       } catch (error) {
         console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
@@ -2122,6 +2126,7 @@ export default function MainContent() {
                   extractedMetadata={extractedMetadata}
                   onJobSaved={handleJobSavedToPipeline}
                   savedApplicationId={activeJobApplicationId}
+                  savedApplication={activeJobApplication}
                   isGuestMode={isGuestMode}
                   onRequireSignIn={requireSignInForGuestAction}
                   protectedActionMessage={guestProtectedActionDescription}

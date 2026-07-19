@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Save, Loader2 } from 'lucide-react';
-import { GlassCard } from '../ui/GlassCard';
-import { GlassButton } from '../ui/GlassButton';
-import { useAuth } from '../../hooks/useAuth';
-import { analytics } from '../../services/analytics';
-import { createJobApplication, updateJobApplication } from '../../services/pipeline';
-import type { ExtractedJobMetadata, JobApplicationStatus } from '../../types/pipeline';
-import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
-import { sanitizeCompanyName, sanitizeJobMetadataField } from '../../lib/utils/jobMetadata';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { useAuth } from '@/hooks/useAuth';
+import { analytics } from '@/services/analytics';
+import { createJobApplication, updateJobApplication } from '@/services/pipeline';
+import type { ExtractedJobMetadata, JobApplication, JobApplicationStatus } from '@/types/pipeline';
+import { requestValueMomentFeedbackPrompt } from '@/components/Feedback/FeedbackPromptController';
+import { sanitizeCompanyName, sanitizeJobMetadataField } from '@/lib/utils/jobMetadata';
 
 interface SaveJobToPipelineCardProps {
   jobDescription: string;
   matchScore?: number | null;
   extractedMetadata?: ExtractedJobMetadata | null;
-  onSaved?: (id: string) => void;
+  onSaved?: (application: JobApplication) => void;
   onToast?: (toast: { type: 'success' | 'warning' | 'danger' | 'info'; title: string; description?: string }) => void;
   /** Set when the job was already auto-saved — the card becomes an update form. */
   savedApplicationId?: string | null;
+  savedApplication?: JobApplication | null;
 }
 
 export function SaveJobToPipelineCard({
@@ -27,24 +28,40 @@ export function SaveJobToPipelineCard({
   onSaved,
   onToast,
   savedApplicationId,
+  savedApplication,
 }: SaveJobToPipelineCardProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  const [companyName, setCompanyName] = useState(() => sanitizeCompanyName(extractedMetadata?.companyName));
-  const [jobTitle, setJobTitle] = useState(() => sanitizeJobMetadataField(extractedMetadata?.jobTitle));
-  const [jobUrl, setJobUrl] = useState('');
-  const [location, setLocation] = useState(() => sanitizeJobMetadataField(extractedMetadata?.location));
-  const [employmentType, setEmploymentType] = useState(() => sanitizeJobMetadataField(extractedMetadata?.employmentType));
-  const [seniority, setSeniority] = useState(() => sanitizeJobMetadataField(extractedMetadata?.seniority));
-  const [sector, setSector] = useState(() => sanitizeJobMetadataField(extractedMetadata?.sector));
-  const [status, setStatus] = useState<JobApplicationStatus>('saved');
-  const [notes, setNotes] = useState('');
+  const [companyName, setCompanyName] = useState(() => sanitizeCompanyName(savedApplication?.company_name ?? extractedMetadata?.companyName));
+  const [jobTitle, setJobTitle] = useState(() => sanitizeJobMetadataField(savedApplication?.job_title ?? extractedMetadata?.jobTitle));
+  const [jobUrl, setJobUrl] = useState(() => sanitizeJobMetadataField(savedApplication?.job_url));
+  const [location, setLocation] = useState(() => sanitizeJobMetadataField(savedApplication?.location ?? extractedMetadata?.location));
+  const [employmentType, setEmploymentType] = useState(() => sanitizeJobMetadataField(savedApplication?.employment_type ?? extractedMetadata?.employmentType));
+  const [seniority, setSeniority] = useState(() => sanitizeJobMetadataField(savedApplication?.seniority ?? extractedMetadata?.seniority));
+  const [sector, setSector] = useState(() => sanitizeJobMetadataField(savedApplication?.sector ?? extractedMetadata?.sector));
+  const [status, setStatus] = useState<JobApplicationStatus>(() => savedApplication?.status ?? 'saved');
+  const [notes, setNotes] = useState(() => sanitizeJobMetadataField(savedApplication?.notes));
   const [isSaving, setIsSaving] = useState(false);
 
   const needsConfirmation = extractedMetadata?.needsUserConfirmation ?? true;
 
   const seededMetadataRef = useRef<ExtractedJobMetadata | null>(null);
+  const seededApplicationRef = useRef<JobApplication | null>(null);
+
+  useEffect(() => {
+    if (!savedApplication || seededApplicationRef.current === savedApplication) return;
+    seededApplicationRef.current = savedApplication;
+    setCompanyName(sanitizeCompanyName(savedApplication.company_name));
+    setJobTitle(sanitizeJobMetadataField(savedApplication.job_title));
+    setJobUrl(sanitizeJobMetadataField(savedApplication.job_url));
+    setLocation(sanitizeJobMetadataField(savedApplication.location));
+    setEmploymentType(sanitizeJobMetadataField(savedApplication.employment_type));
+    setSeniority(sanitizeJobMetadataField(savedApplication.seniority));
+    setSector(sanitizeJobMetadataField(savedApplication.sector));
+    setStatus(savedApplication.status);
+    setNotes(sanitizeJobMetadataField(savedApplication.notes));
+  }, [savedApplication]);
 
   // Seed editable fields once per distinct metadata object, filling only blanks so
   // user edits are never clobbered. Keyed on metadata identity (not the field values)
@@ -134,7 +151,7 @@ export function SaveJobToPipelineCard({
         });
       }
 
-      onSaved?.(data.id);
+      onSaved?.(data);
     } finally {
       setIsSaving(false);
     }

@@ -8,10 +8,10 @@
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { Vision2030SectorBreakdown, Vision2030MatchedSkill } from '../../types/vision2030';
-import { SectorIcon } from '../../lib/utils/vision2030Icons';
-import { GlassCard } from '../ui/GlassCard';
-import { getVision2030ScoreTextColor } from '../../lib/utils/vision2030Score';
+import type { Vision2030SectorBreakdown, Vision2030MatchedSkill } from '@/types/vision2030';
+import { SectorIcon } from '@/lib/utils/vision2030Icons';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { getVision2030ScoreTextColor } from '@/lib/utils/vision2030Score';
 
 interface SectorBreakdownProps {
   sectorBreakdown: Vision2030SectorBreakdown[];

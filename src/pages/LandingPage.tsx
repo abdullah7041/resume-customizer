@@ -2,10 +2,10 @@ import { useEffect, useId, useState, type ReactNode, type SyntheticEvent } from 
 import { ArrowRight, Check, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { useTheme } from "../hooks/useTheme";
-import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "../lib/assets";
-import { analytics } from "../services/analytics";
-import type { GetStartedSource } from "../types/analytics";
+import { useTheme } from "@/hooks/useTheme";
+import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "@/lib/assets";
+import { analytics } from "@/services/analytics";
+import type { GetStartedSource } from "@/types/analytics";
 
 interface LandingPageProps {
   onGetStarted: () => void;

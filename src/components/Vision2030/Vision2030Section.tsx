@@ -9,21 +9,21 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
-import { analyzeVision2030 } from '../../services/api';
-import { useAuth } from '../../hooks/useAuth';
-import { useUserCredits } from '../../hooks/useUserCredits';
-import { Vision2030AnalysisResponse } from '../../types/vision2030';
-import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { analyzeVision2030 } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserCredits } from '@/hooks/useUserCredits';
+import type { Vision2030AnalysisResponse } from '@/types/vision2030';
+import { ConfirmActionModal } from '@/components/Credits/ConfirmActionModal';
 import { SectorBreakdown } from './SectorBreakdown';
 import { RecommendationsModal } from './RecommendationsModal';
-import { GlassButton } from '../ui/GlassButton';
-import { GlassCard } from '../ui/GlassCard';
-import EmptyState from '../ui/EmptyState';
-import { Vision2030CalculationModal } from '../ui/Vision2030CalculationModal';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { GlassCard } from '@/components/ui/GlassCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { Vision2030CalculationModal } from '@/components/ui/Vision2030CalculationModal';
 import {
   getVision2030ScoreTextColor,
   normalizeVision2030Analysis,
-} from '../../lib/utils/vision2030Score';
+} from '@/lib/utils/vision2030Score';
 
 const VISION2030_STORAGE_KEY = 'watheq:vision2030Analysis';
 const VISION2030_ANALYZING_KEY = 'watheq:vision2030Analyzing';

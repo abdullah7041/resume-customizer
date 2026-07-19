@@ -15,28 +15,28 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { GlassButton } from '../ui/GlassButton';
-import { GlassCard } from '../ui/GlassCard';
-import { GlassCircle } from '../ui/GlassCircle';
-import { GlassTextarea } from '../ui/GlassTextarea';
-import Tooltip from '../ui/Tooltip';
-import { AnimatedCounter } from '../ui/AnimatedCounter';
-import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
-import { GapAnalysisCard } from '../GapAnalysisCard';
-import { HiddenMatchesCard } from '../HiddenMatchesCard';
-import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
-import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { GlassCircle } from '@/components/ui/GlassCircle';
+import { GlassTextarea } from '@/components/ui/GlassTextarea';
+import Tooltip from '@/components/ui/Tooltip';
+import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
+import { ConfirmActionModal } from '@/components/Credits/ConfirmActionModal';
+import { GapAnalysisCard } from '@/components/GapAnalysisCard';
+import { HiddenMatchesCard } from '@/components/HiddenMatchesCard';
+import { MirroredKeywordsCard } from '@/components/MirroredKeywordsCard';
+import { requestValueMomentFeedbackPrompt } from '@/components/Feedback/FeedbackPromptController';
 import { importJobFromUrl } from '@/services/api';
-import { useUserCredits } from '../../hooks/useUserCredits';
-import { cn } from '../../lib/utils/cn';
-import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { useUserCredits } from '@/hooks/useUserCredits';
+import { cn } from '@/lib/utils/cn';
+import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '@/lib/utils/storage-migration';
 import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
-import { FEATURE_COSTS } from '../../types/credits';
-import { analytics } from '../../services/analytics';
-import type { ExtractedJobMetadata } from '../../types/pipeline';
-import type { MatchResult, StrategicRealityCheck } from '../../types/analysis';
-import type { AtsExplainabilitySource } from '../../types/explainability';
-import { AtsExplainabilityPanel } from '../AtsExplainabilityPanel';
+import { FEATURE_COSTS } from '@/types/credits';
+import { analytics } from '@/services/analytics';
+import type { ExtractedJobMetadata, JobApplication } from '@/types/pipeline';
+import type { MatchResult, StrategicRealityCheck } from '@/types/analysis';
+import type { AtsExplainabilitySource } from '@/types/explainability';
+import { AtsExplainabilityPanel } from '@/components/AtsExplainabilityPanel';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -112,8 +112,9 @@ interface MatchSectionProps {
   onClear?: () => void;
   jobDescription?: string;
   extractedMetadata?: ExtractedJobMetadata | null;
-  onJobSaved?: (id: string) => void;
+  onJobSaved?: (application: JobApplication) => void;
   savedApplicationId?: string | null;
+  savedApplication?: JobApplication | null;
   isGuestMode?: boolean;
   onRequireSignIn?: () => void;
   protectedActionMessage?: string;
@@ -207,6 +208,7 @@ export function MatchSection({
   extractedMetadata,
   onJobSaved,
   savedApplicationId,
+  savedApplication,
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
@@ -784,6 +786,7 @@ export function MatchSection({
                 onSaved={onJobSaved}
                 onToast={onToast}
                 savedApplicationId={savedApplicationId}
+                savedApplication={savedApplication}
               />
             )}
 
