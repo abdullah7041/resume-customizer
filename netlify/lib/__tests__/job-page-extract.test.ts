@@ -113,6 +113,96 @@ describe('extractJobFromHtml — main-content heuristic', () => {
   it('returns null for empty input', () => {
     expect(extractJobFromHtml('')).toBeNull();
   });
+
+  it('cleans a LinkedIn guest-shaped main region while keeping the job description', () => {
+    const page = `
+      <html><head><title>Senior Backend Engineer | Acme</title></head><body>
+        <main>
+          <div class="top-card-actions"><button>Apply</button><button>Save</button></div>
+          <section class="show-more-less-html__markup">${LONG_DESCRIPTION_HTML}</section>
+          <aside class="recruiter-card">
+            <h2>Meet the recruiter</h2><p>Message Taylor about this role.</p>
+          </aside>
+          <section class="similar-jobs">
+            <h2>Similar jobs</h2><p>Staff Engineer at Another Company</p>
+          </section>
+          <form class="sign-in"><p>Sign in to apply</p></form>
+        </main>
+      </body></html>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.source).toBe('heuristic');
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/apply|save|meet the recruiter|taylor|similar jobs|sign in/i);
+  });
+
+  it('prefers a qualified description container over the broader cleaned region', () => {
+    const page = `
+      <main>
+        <p>Page-level promotional copy that is not part of the role.</p>
+        <div class="posting-description">${LONG_DESCRIPTION_HTML}</div>
+        <section><h2>Company updates</h2><p>Follow Acme for weekly product news.</p></section>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('Senior Backend Engineer');
+    expect(result?.jobText).not.toContain('Page-level promotional copy');
+    expect(result?.jobText).not.toContain('Company updates');
+  });
+
+  it('deduplicates exact normalized lines and keeps the first occurrence', () => {
+    const repeated = 'Own platform reliability and partner with product teams across the full delivery lifecycle.';
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>${repeated}</p>
+        <p>  OWN   PLATFORM RELIABILITY and partner with product teams across the full delivery lifecycle.  </p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+    const normalizedMatches = result?.jobText.match(/own\s+platform reliability and partner with product teams across the full delivery lifecycle\./gi);
+
+    expect(normalizedMatches).toHaveLength(1);
+    expect(result?.jobText).toContain(repeated);
+  });
+
+  it('truncates trailing similar-jobs content when its heading starts in the second half', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>You will mentor engineers and improve delivery practices across the organization.</p>
+        <h2>Similar jobs</h2>
+        <p>Staff Engineer at Another Company</p>
+        <p>Engineering Manager at Example Limited</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('mentor engineers');
+    expect(result?.jobText).not.toContain('Similar jobs');
+    expect(result?.jobText).not.toContain('Another Company');
+  });
+
+  it('uses the whole cleaned region when no description container is qualified', () => {
+    const page = `
+      <main>
+        <section class="description"><p>Short role summary.</p></section>
+        <div>${LONG_DESCRIPTION_HTML}</div>
+        <p>This final requirement is only available in the broader main region.</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('Short role summary.');
+    expect(result?.jobText).toContain('This final requirement is only available in the broader main region.');
+  });
 });
 
 describe('normalizeLinkedInUrl', () => {

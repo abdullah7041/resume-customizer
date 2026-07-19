@@ -309,6 +309,45 @@ describe('JobMatch', () => {
     expect(screen.getByPlaceholderText(/linkedin\.com\/jobs\/view/i)).toHaveValue('');
   });
 
+  it('warns users to review low-confidence URL imports while keeping the text editable', async () => {
+    mockImportJobFromUrl.mockResolvedValue({
+      status: 'ok',
+      jobText: 'Heuristically imported job description that remains editable.',
+      jobTitle: 'Backend Engineer',
+      companyName: null,
+      sourceUrl: 'https://careers.example.com/jobs/123',
+      finalUrl: 'https://careers.example.com/jobs/123',
+      source: 'heuristic',
+      confidence: 'low',
+    });
+    const onToast = vi.fn();
+
+    render(
+      <JobMatch
+        onAnalyzeMatchAI={async () => { }}
+        matchAnalysis={null}
+        isAnalyzing={false}
+        hasResume
+        onToast={onToast}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/linkedin\.com\/jobs\/view/i), {
+      target: { value: 'https://careers.example.com/jobs/123' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^import$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/paste the job description/i))
+        .toHaveValue('Heuristically imported job description that remains editable.');
+    });
+    expect(onToast).toHaveBeenCalledWith({
+      type: 'warning',
+      title: 'Import',
+      description: "Imported from the page layout — review the text below and remove anything that isn't the job description before analyzing",
+    });
+  });
+
   it('shows a recoverable message when a LinkedIn link cannot be imported', async () => {
     mockImportJobFromUrl.mockResolvedValue({
       status: 'failed',

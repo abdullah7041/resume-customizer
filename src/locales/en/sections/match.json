@@ -123,6 +123,7 @@
         "import": "Import",
         "importing": "Importing...",
         "success": "Job description imported — review it before analyzing.",
+        "reviewWarning": "Imported from the page layout — review the text below and remove anything that isn't the job description before analyzing",
         "errors": {
           "invalidUrl": "That does not look like a valid job link. Check the URL and try again.",
           "unsupportedUrl": "This link type is not supported yet. Open the job posting itself and copy its link.",

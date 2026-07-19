@@ -281,10 +281,13 @@ export function MatchSection({
         setJobText(result.jobText);
         setJobUrl('');
         analytics.track('job_url_import_succeeded', { source: result.source, confidence: result.confidence });
+        const isLowConfidence = result.confidence === 'low';
         onToast?.({
-          type: 'success',
+          type: isLowConfidence ? 'warning' : 'success',
           title: t('sections.match.urlImport.import', 'Import'),
-          description: t('sections.match.urlImport.success', 'Job description imported — review it before analyzing.'),
+          description: isLowConfidence
+            ? t('sections.match.urlImport.reviewWarning', "Imported from the page layout — review the text below and remove anything that isn't the job description before analyzing")
+            : t('sections.match.urlImport.success', 'Job description imported — review it before analyzing.'),
         });
       } else {
         const reason = typeof result?.failureReason === 'string' ? result.failureReason : 'unreachable';
