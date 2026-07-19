@@ -96,7 +96,7 @@ const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => 
   };
 };
 
-interface MatchResult {
+export interface MatchResult {
   score: number;
   matchedKeywords?: string[];
   missingKeywords?: string[];
@@ -117,6 +117,20 @@ interface MatchResult {
     hiddenMatches?: HiddenMatch[];
   } | null;
   strategicRealityCheck?: StrategicRealityCheck | null;
+  /** Bundled interview-prep payload consumed by InterviewSection when present. */
+  interviewPrep?: {
+    predicted_questions?: Array<{
+      question: string;
+      type: string;
+      difficulty: string;
+      category: string;
+      answerFramework?: string;
+      skills_tested?: string[];
+      coachingTip?: string;
+    }>;
+    role_level?: string;
+    focus_areas?: string[];
+  };
 }
 
 interface Toast {

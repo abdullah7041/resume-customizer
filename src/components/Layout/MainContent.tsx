@@ -52,6 +52,8 @@ import { attachExportToJobApplication, updateJobApplication } from "../../servic
 import { analytics } from "../../services/analytics";
 import type { ExtractedJobMetadata } from "../../types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
+import type { MatchResult } from "@/components/sections/MatchSection";
+import { clearStoredMatchAnalysis, loadCachedMatchAnalysis, saveMatchAnalysis } from "@/lib/utils/matchAnalysisCache";
 import ViewTextModal from "../ui/ViewTextModal";
 import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
@@ -443,7 +445,11 @@ export default function MainContent() {
     if (typeof window === "undefined") return "";
     return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
   });
-  const [matchAnalysis, setMatchAnalysis] = useState(null);
+  const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(() =>
+    loadCachedMatchAnalysis(
+      typeof window === "undefined" ? "" : window.localStorage.getItem(JOB_STORAGE_KEY) || ""
+    )
+  );
   const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
     loadCachedTruthCheck(
       typeof resumeData?.plainText === "string" ? resumeData.plainText : "",
@@ -828,6 +834,7 @@ export default function MainContent() {
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(JOB_STORAGE_KEY);
     window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    clearStoredMatchAnalysis();
 
     // Reset local state
     setResumeData("");
@@ -856,6 +863,7 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    clearStoredMatchAnalysis();
     setResumeData("");
     // Also clear dependent data
     setMatchAnalysis(null);
@@ -869,6 +877,7 @@ export default function MainContent() {
   }, [pushToast, resetPipelineContext, t]);
 
   const handleClearMatch = useCallback(() => {
+    clearStoredMatchAnalysis();
     setMatchAnalysis(null);
     setJobDescription("");
     resetPipelineContext();
@@ -996,6 +1005,7 @@ export default function MainContent() {
         setResumeData(enriched);
         setMatchAnalysis(null);
         setTruthCheckResult(null);
+        clearStoredMatchAnalysis();
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
         }
@@ -1103,6 +1113,9 @@ export default function MainContent() {
         setAiDebug(buildAiDebugSnapshot(result, "success"));
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
+        // Persist the displayed result so it survives a page refresh (restored
+        // by the matchAnalysis lazy initializer while the JD still matches).
+        saveMatchAnalysis(result, trimmedJob);
 
         // Cache the match analysis score so OptimizeSection can read it
         // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
