@@ -45,7 +45,7 @@ export function ParsingWarningsBanner() {
                                     'text-xs p-2 rounded-lg border',
                                     warning.level === 'warning'
                                         ? 'bg-amber-500/10 border-amber-500/20 text-amber-900 dark:text-amber-100'
-                                        : 'bg-blue-500/10 border-blue-500/20 text-blue-900 dark:text-blue-100'
+                                        : 'bg-teal-50 border-teal-200 text-teal-900 dark:bg-teal-500/10 dark:border-teal-500/20 dark:text-teal-100'
                                 )}
                             >
                                 <span className="font-semibold mr-1">

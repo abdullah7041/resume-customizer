@@ -48,8 +48,8 @@ const bucketStyles = {
   },
   neutral: {
     icon: Info,
-    titleClass: 'text-blue-700 dark:text-blue-300',
-    chipClass: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300',
+    titleClass: 'text-teal-700 dark:text-teal-300',
+    chipClass: 'bg-teal-50 dark:bg-teal-500/10 border-teal-200 dark:border-teal-500/20 text-teal-800 dark:text-teal-300',
   },
   remove: {
     icon: AlertCircle,

@@ -328,21 +328,21 @@ export default function UploadCard({
 
       {/* File Selected Indicator (Not Saved Yet) */}
       {fileName && !isSaved && (
-        <div className="mt-6 flex items-center justify-between rounded-xl border border-blue-600/25 bg-blue-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(59,130,246,0.35)] animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out dark:border-blue-300/22 dark:bg-blue-400/12 dark:text-blue-50">
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-600/25 bg-emerald-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(16,185,129,0.35)] animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out dark:border-emerald-300/22 dark:bg-emerald-400/12 dark:text-emerald-50">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 border border-blue-500/30">
-              <FileText className="h-5 w-5 text-blue-400" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
+              <FileText className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-blue-700 dark:text-blue-100">{t('upload.card.readyTitle', 'Ready to prepare')}</span>
-              <span className="text-xs text-blue-600 dark:text-blue-200/80 font-mono break-all line-clamp-2">{fileName}</span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-100">{t('upload.card.readyTitle', 'Ready to prepare')}</span>
+              <span className="text-xs text-emerald-700 dark:text-emerald-200/80 font-mono break-all line-clamp-2">{fileName}</span>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onFileClear}
-            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-blue-200/70 transition-colors hover:bg-blue-500/20 hover:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50/80 text-emerald-700 transition-colors hover:bg-emerald-500/20 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200/80 dark:hover:text-emerald-300"
             aria-label={removeFileLabel}
             title={removeFileLabel}
           >

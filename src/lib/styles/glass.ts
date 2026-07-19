@@ -40,7 +40,7 @@ export const glass = {
     success: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30',
     warning: 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30',
     error: 'bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30',
-    info: 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/30',
+    info: 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30',
     neutral: 'bg-gray-200/50 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300/50 dark:border-white/10',
   },
 };

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { m, AnimatePresence } from 'framer-motion';
 import { GlassCard } from './ui/GlassCard';
+import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
 
 // New categorical scores structure
 export interface CategoryScore {
@@ -41,35 +42,11 @@ interface ScoreBreakdownProps {
     className?: string;
 }
 
-const CATEGORY_CONFIG = {
-    hard_skills: {
-        icon: Code2,
-        colorClass: 'text-blue-400',
-        bgClass: 'bg-blue-500/20',
-        barClass: 'bg-blue-500',
-        variant: 'blue' as const
-    },
-    experience: {
-        icon: Briefcase,
-        colorClass: 'text-purple-400',
-        bgClass: 'bg-purple-500/20',
-        barClass: 'bg-purple-500',
-        variant: 'purple' as const
-    },
-    education: {
-        icon: GraduationCap,
-        colorClass: 'text-amber-400',
-        bgClass: 'bg-amber-500/20',
-        barClass: 'bg-amber-500',
-        variant: 'warning' as const
-    },
-    soft_skills: {
-        icon: Users,
-        colorClass: 'text-emerald-400',
-        bgClass: 'bg-emerald-500/20',
-        barClass: 'bg-emerald-500',
-        variant: 'success' as const
-    }
+const CATEGORY_ICONS = {
+    hard_skills: Code2,
+    experience: Briefcase,
+    education: GraduationCap,
+    soft_skills: Users,
 } as const;
 
 export function ScoreBreakdown({
@@ -157,8 +134,8 @@ export function ScoreBreakdown({
                                         const catData = categoryScores[cat.key];
                                         if (!catData) return null;
 
-                                        const config = CATEGORY_CONFIG[cat.key];
-                                        const Icon = config.icon;
+                                        const colors = CATEGORY_COLORS[cat.key];
+                                        const Icon = CATEGORY_ICONS[cat.key];
                                         // Ensure percentage doesn't exceed 100 visually
                                         const percentage = Math.min((catData.score / catData.max) * 100, 100);
 
@@ -172,8 +149,8 @@ export function ScoreBreakdown({
                                             >
                                                 <div className="flex items-center justify-between mb-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`p-2 rounded-lg ${config.bgClass}`}>
-                                                            <Icon className={`w-4 h-4 ${config.colorClass}`} />
+                                                        <div className={`p-2 rounded-lg ${colors.backgroundClass}`}>
+                                                            <Icon className={`w-4 h-4 ${colors.textClass}`} />
                                                         </div>
                                                         <div>
                                                             <span className="text-sm font-medium text-gray-900 dark:text-white block">
@@ -182,7 +159,7 @@ export function ScoreBreakdown({
                                                         </div>
                                                     </div>
                                                     <div className="flex items-baseline gap-1">
-                                                        <span className={`text-base font-bold tabular-nums ${config.colorClass}`}>
+                                                        <span className={`text-base font-bold tabular-nums ${colors.textClass}`}>
                                                             {catData.score}
                                                         </span>
                                                         <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">/{catData.max}</span>
@@ -199,7 +176,7 @@ export function ScoreBreakdown({
                                                             damping: 15,
                                                             delay: 0.2 + (idx * 0.1)
                                                         }}
-                                                        className={`h-full w-full origin-left rtl:origin-right rounded-full relative overflow-hidden ${config.barClass}`}
+                                                        className={`h-full w-full origin-left rtl:origin-right rounded-full relative overflow-hidden ${colors.barClass}`}
                                                     >
                                                         {/* Sheen sweep — CSS keyframe (off the main thread) */}
                                                         <div
@@ -228,7 +205,7 @@ export function ScoreBreakdown({
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 block mb-1">
+                                            <span className={`text-xs font-bold block mb-1 ${CATEGORY_COLORS.hard_skills.textClass}`}>
                                                 {t('optimize.scoreBreakdown.categories.hardSkills', 'Hard Skills')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -236,7 +213,7 @@ export function ScoreBreakdown({
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                            <span className="text-xs font-bold text-purple-600 dark:text-purple-400 block mb-1">
+                                            <span className={`text-xs font-bold block mb-1 ${CATEGORY_COLORS.experience.textClass}`}>
                                                 {t('optimize.scoreBreakdown.categories.experience', 'Experience')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -244,7 +221,7 @@ export function ScoreBreakdown({
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 block mb-1">
+                                            <span className={`text-xs font-bold block mb-1 ${CATEGORY_COLORS.education.textClass}`}>
                                                 {t('optimize.scoreBreakdown.categories.education', 'Education')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -252,7 +229,7 @@ export function ScoreBreakdown({
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block mb-1">
+                                            <span className={`text-xs font-bold block mb-1 ${CATEGORY_COLORS.soft_skills.textClass}`}>
                                                 {t('optimize.scoreBreakdown.categories.softSkills', 'Soft Skills')}
                                             </span>
                                             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">

@@ -1452,8 +1452,8 @@ export function OptimizeSection({
       {activeJobApplicationId && pendingAttachment && (
         <GlassCard padding="md" className="mb-2">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <Briefcase className="w-5 h-5 text-blue-500" />
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <Briefcase className="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-900 dark:text-white">

@@ -1,6 +1,7 @@
 import { ArrowRight, Check, ChevronDown, Code2, GraduationCap, Lightbulb, Loader2, RotateCcw, Users, Briefcase, TrendingDown, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassButton } from '@/components/ui/GlassButton';
+import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
 import { cn } from '@/lib/utils/cn';
 import type { CategoryScoresData } from '@/components/ScoreBreakdown';
 import type { ScorePresentation, VerifyAnomalyState } from '@/lib/optimize/scoreModel';
@@ -26,11 +27,11 @@ interface ScoreHeaderProps {
   onReviewMatchGaps: () => void;
 }
 
-const categoryConfig = {
-  hard_skills: { icon: Code2, color: 'text-blue-500', bar: 'bg-blue-500' },
-  experience: { icon: Briefcase, color: 'text-purple-500', bar: 'bg-purple-500' },
-  education: { icon: GraduationCap, color: 'text-amber-500', bar: 'bg-amber-500' },
-  soft_skills: { icon: Users, color: 'text-emerald-500', bar: 'bg-emerald-500' },
+const categoryIcons = {
+  hard_skills: Code2,
+  experience: Briefcase,
+  education: GraduationCap,
+  soft_skills: Users,
 } as const;
 
 const categoryLabels: Record<CategoryKey, string> = {
@@ -269,7 +270,8 @@ export function ScoreHeader({
           {categories.map((key) => {
             const item = categoryScores?.[key];
             if (!item) return null;
-            const Icon = categoryConfig[key].icon;
+            const Icon = categoryIcons[key];
+            const colors = CATEGORY_COLORS[key];
             const percent = item.max > 0 ? Math.min(100, Math.round((item.score / item.max) * 100)) : 0;
             const isOpen = expandedCategories.has(key);
 
@@ -277,7 +279,7 @@ export function ScoreHeader({
               <div key={key} className="rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-3 dark:border-white/10 dark:bg-white/5">
                 <button type="button" onClick={() => onToggleCategory(key)} className="flex min-h-11 w-full items-center justify-between gap-3 text-start">
                   <span className="flex min-w-0 items-center gap-2">
-                    <Icon className={cn('h-4 w-4 shrink-0', categoryConfig[key].color)} />
+                    <Icon className={cn('h-4 w-4 shrink-0', colors.textClass)} />
                     <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                       {t(`optimize.scoreBreakdown.categories.${categoryLabels[key]}`, key)}
                     </span>
@@ -285,7 +287,7 @@ export function ScoreHeader({
                   <span className="shrink-0 text-sm font-bold tabular-nums text-gray-700 dark:text-gray-200">{item.score}/{item.max}</span>
                 </button>
                 <div className={cn('mt-2 flex h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-black/30', isArabic && 'justify-end')}>
-                  <div className={cn('h-full rounded-full', categoryConfig[key].bar)} style={{ width: `${percent}%` }} />
+                  <div className={cn('h-full rounded-full', colors.barClass)} style={{ width: `${percent}%` }} />
                 </div>
                 {isOpen && item.reasoning && (
                   <p className="mt-3 text-xs leading-relaxed text-gray-600 dark:text-gray-400">{item.reasoning}</p>

@@ -331,13 +331,13 @@ export function OptimizationResultsSummary({
                 className="relative overflow-hidden"
             >
                 {/* Background decoration */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-500/10 to-transparent rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-teal-500/10 to-transparent rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
                 <div className="relative">
                     {/* Header */}
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-gradient-to-br from-emerald-500/20 to-purple-500/20 rounded-xl">
+                        <div className="p-2.5 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-xl">
                             <Target className="w-6 h-6 text-emerald-400" />
                         </div>
                         <div>
