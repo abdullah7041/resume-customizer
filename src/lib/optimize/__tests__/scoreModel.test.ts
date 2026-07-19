@@ -213,6 +213,73 @@ describe('verification signature invalidation', () => {
 });
 
 describe('projection math', () => {
+  it('projects a valid verified all-actionable delta across the applied cards', () => {
+    const queue = [
+      card({ sectionId: 'experience-0', applied: true }),
+      card({ sectionId: 'summary-0', sectionType: 'summary' }),
+    ];
+    const verifiedPotential = {
+      score: 78,
+      baselineAtVerify: 60,
+      outcome: 'improved' as const,
+      signature: verificationSignature(partitionOptimizations(queue).actionable, 'resume text', 'jd text'),
+      verifiedAt: Date.now(),
+    };
+
+    const p = present(queue, { baseline: 60, improvement: null, verifiedPotential });
+
+    // 60 + round((78 - 60) * 1/2) = 69
+    expect(p.currentAppliedProjection).toBe(69);
+  });
+
+  it('keeps a zero generation estimate current when there is no valid verification', () => {
+    const queue = mixedQueue(1);
+    const p = present(queue, { improvement: 0 });
+
+    expect(p.displayState).toBe('current');
+    expect(p.currentAppliedProjection).toBeNull();
+    expect(p.allSuggestionsPotentialEstimate).toBeNull();
+    expect(p.estimateIsZero).toBe(true);
+  });
+
+  it('climbs monotonically to the verified target without counting recommendations', () => {
+    const originalQueue = [
+      card({ sectionId: 'experience-0' }),
+      card({ sectionId: 'summary-0', sectionType: 'summary' }),
+      card({ sectionId: 'skills-0', sectionType: 'skills', applied: true }),
+    ];
+    const verifiedPotential = verifiedFor(originalQueue, 78, 60);
+    const oneApplied = originalQueue.map((entry, index) => index === 0 ? { ...entry, applied: true } : entry);
+    const allApplied = oneApplied.map((entry) => entry.sectionType === 'summary' ? { ...entry, applied: true } : entry);
+
+    expect(present(originalQueue, { baseline: 60, verifiedPotential }).currentAppliedProjection).toBeNull();
+    expect(present(oneApplied, { baseline: 60, verifiedPotential }).currentAppliedProjection).toBe(69);
+    expect(present(allApplied, { baseline: 60, verifiedPotential }).currentAppliedProjection).toBe(78);
+    expect(present(allApplied, { baseline: 60, verifiedPotential }).counts.actionableApplied).toBe(2);
+  });
+
+  it('does not project merge-failed cards from a verified target', () => {
+    const queue = [
+      card({ sectionId: 'experience-0', applied: true, mergeStatus: 'failed' }),
+      card({ sectionId: 'summary-0', sectionType: 'summary' }),
+    ];
+    const p = present(queue, { baseline: 60, verifiedPotential: verifiedFor(queue, 78, 60) });
+
+    expect(p.counts.actionableApplied).toBe(0);
+    expect(p.currentAppliedProjection).toBeNull();
+  });
+
+  it('keeps verified no-change frozen even when a card is applied', () => {
+    const queue = [
+      card({ sectionId: 'experience-0', applied: true }),
+      card({ sectionId: 'summary-0', sectionType: 'summary' }),
+    ];
+    const p = present(queue, { baseline: 60, improvement: null, verifiedPotential: verifiedFor(queue, 60, 60) });
+
+    expect(p.displayState).toBe('verified_no_change');
+    expect(p.currentAppliedProjection).toBeNull();
+  });
+
   it('clamps to 0-100', () => {
     const p = present(mixedQueue(3), { baseline: 95, improvement: 30 });
     expect(p.currentAppliedProjection).toBe(100);

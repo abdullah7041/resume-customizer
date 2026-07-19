@@ -13,7 +13,9 @@
 //   verifiedAllSuggestionsScore     — genuine re-score of the resume with all
 //                                     actionable suggestions applied. A target, not
 //                                     the current score; valid only while its
-//                                     signature matches the live card set.
+//                                     signature matches the live card set. Verified
+//                                     no-change and decrease outcomes never fabricate
+//                                     an upward projection.
 import type { OptimizationMetrics, OptimizationResult } from '@/types/templates';
 import { partitionOptimizations } from '@/lib/optimize/actionability';
 
@@ -137,8 +139,6 @@ export function buildScorePresentation(input: ScorePresentationInput): ScorePres
   const isPlaceholderScore = baseline === null;
 
   const improvement = input.improvement;
-  const estimateMeaningful = improvement !== null && improvement >= MIN_MEANINGFUL_ESTIMATE;
-  const estimateIsZero = improvement === 0;
 
   // A verified potential only counts while its signature matches the live card set.
   let verifiedAllSuggestionsScore: number | null = null;
@@ -152,13 +152,23 @@ export function buildScorePresentation(input: ScorePresentationInput): ScorePres
     }
   }
 
+  const verifiedDelta = verifiedAllSuggestionsScore !== null && baseline !== null
+    ? verifiedAllSuggestionsScore - baseline
+    : null;
+  const effectiveImprovement = verifiedDelta ?? improvement;
+  const estimateMeaningful = effectiveImprovement !== null
+    && effectiveImprovement >= MIN_MEANINGFUL_ESTIMATE;
+  const generationEstimateMeaningful = improvement !== null
+    && improvement >= MIN_MEANINGFUL_ESTIMATE;
+  const estimateIsZero = improvement === 0 && verifiedDelta === null;
+
   const currentAppliedProjection =
     baseline !== null && actionableTotal > 0 && actionableApplied > 0 && estimateMeaningful
-      ? clampScore(baseline + Math.round((improvement as number) * (actionableApplied / actionableTotal)))
+      ? clampScore(baseline + Math.round((effectiveImprovement as number) * (actionableApplied / actionableTotal)))
       : null;
 
   const allSuggestionsPotentialEstimate =
-    baseline !== null && estimateMeaningful ? clampScore(baseline + (improvement as number)) : null;
+    baseline !== null && generationEstimateMeaningful ? clampScore(baseline + (improvement as number)) : null;
 
   let displayState: DisplayState;
   if (verifiedOutcome === 'decreased') {

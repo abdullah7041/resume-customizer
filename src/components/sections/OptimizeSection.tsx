@@ -834,9 +834,9 @@ export function OptimizeSection({
           metricsToUpdate.beforeScore = cachedScore;
           metricsToUpdate.hasJobDescription = true;
         }
-        // Fix A: Set improvement to 0 so ScoreBreakdown doesn't show "—"
-        // Auto-verify will replace this with the genuine value shortly
-        metricsToUpdate.improvement = 0;
+        // Automatic verification writes verifiedPotential; scoreModel consumes its
+        // signature-valid delta without fabricating a generation-time estimate.
+        metricsToUpdate.improvement = null;
       }
 
       // Capture gap analysis from API response

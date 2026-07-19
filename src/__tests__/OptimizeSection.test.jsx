@@ -6,6 +6,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 import OptimizeSection from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
+import { verificationSignature } from '../lib/optimize/scoreModel';
 
 const mockRefineBullet = vi.hoisted(() => vi.fn());
 const mockAnalyzeResumeWithAI = vi.hoisted(() => vi.fn());
@@ -186,6 +187,15 @@ const sampleOptimization = {
     optimized: 'Built React applications aligned to product requirements.',
     applied: false,
 };
+
+const projectionResumeText = 'Resume text used to validate the verified projection.';
+const verifiedProjection = (optimizations) => ({
+    score: 78,
+    baselineAtVerify: 60,
+    signature: verificationSignature(optimizations, projectionResumeText, 'Backend engineer role'),
+    verifiedAt: Date.now(),
+    outcome: 'improved',
+});
 
 beforeAll(() => {
     Object.defineProperty(window, 'matchMedia', {
@@ -1359,6 +1369,98 @@ describe('Optimization Card Types', () => {
             expect(screen.getAllByText('70%').length).toBeGreaterThanOrEqual(1);
             // No fabricated verified badge — estimate path only.
             expect(screen.getByText('sections.optimize.scoreDiff.estimateBadge')).toBeInTheDocument();
+        });
+
+        it('raises the displayed verified projection after an individual apply', () => {
+            const optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'Original summary', optimized: 'Optimized summary', applied: false },
+                { sectionId: 'experience-0', sectionType: 'experience', original: 'Original experience', optimized: 'Optimized experience', applied: false },
+            ];
+            mockStoreState.optimizations = optimizations;
+            mockStoreState.parsedResumeText = projectionResumeText;
+            mockStoreState.baselineMatchScore = 60;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: 60,
+                improvement: null,
+                verifiedPotential: verifiedProjection(optimizations),
+                hasJobDescription: true,
+            };
+            mockApplyOptimization.mockImplementation((sectionId) => {
+                mockStoreState.optimizations = mockStoreState.optimizations.map((optimization) =>
+                    optimization.sectionId === sectionId ? { ...optimization, applied: true } : optimization,
+                );
+            });
+
+            const { container, rerender } = renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /Original summary/i }));
+            fireEvent.click(Array.from(container.querySelectorAll('button')).find((button) =>
+                button.textContent?.trim() === 'Apply Suggestion',
+            ));
+            rerender(<DirectionProvider><OptimizeSection /></DirectionProvider>);
+
+            expect(mockApplyOptimization).toHaveBeenCalledWith('summary-0');
+            expect(screen.getByTestId('companion-score')).toHaveTextContent('69%');
+        });
+
+        it('raises the displayed verified projection after applying a queue group', () => {
+            const optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'First summary', optimized: 'First optimized summary', applied: false },
+                { sectionId: 'summary-1', sectionType: 'summary', original: 'Second summary', optimized: 'Second optimized summary', applied: false },
+            ];
+            mockStoreState.optimizations = optimizations;
+            mockStoreState.parsedResumeText = projectionResumeText;
+            mockStoreState.baselineMatchScore = 60;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: 60,
+                improvement: null,
+                verifiedPotential: verifiedProjection(optimizations),
+                hasJobDescription: true,
+            };
+            mockApplyOptimization.mockImplementation((sectionId) => {
+                mockStoreState.optimizations = mockStoreState.optimizations.map((optimization) =>
+                    optimization.sectionId === sectionId ? { ...optimization, applied: true } : optimization,
+                );
+            });
+
+            const { rerender } = renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /apply all in this job/i }));
+            rerender(<DirectionProvider><OptimizeSection /></DirectionProvider>);
+
+            expect(mockApplyOptimization).toHaveBeenCalledWith('summary-0');
+            expect(mockApplyOptimization).toHaveBeenCalledWith('summary-1');
+            expect(screen.getByTestId('companion-score')).toHaveTextContent('78%');
+        });
+
+        it('raises the displayed verified projection after global Apply All', () => {
+            const optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'Original summary', optimized: 'Optimized summary', applied: false },
+                { sectionId: 'experience-0', sectionType: 'experience', original: 'Original experience', optimized: 'Optimized experience', applied: false },
+            ];
+            mockStoreState.optimizations = optimizations;
+            mockStoreState.parsedResumeText = projectionResumeText;
+            mockStoreState.baselineMatchScore = 60;
+            mockStoreState.optimizationMetrics = {
+                ...mockStoreState.optimizationMetrics,
+                beforeScore: 60,
+                improvement: null,
+                verifiedPotential: verifiedProjection(optimizations),
+                hasJobDescription: true,
+            };
+            mockApplyAllOptimizations.mockImplementation(() => {
+                mockStoreState.optimizations = mockStoreState.optimizations.map((optimization) => ({
+                    ...optimization,
+                    applied: true,
+                }));
+            });
+
+            const { rerender } = renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /Apply All \(2 remaining\)/i }));
+            rerender(<DirectionProvider><OptimizeSection /></DirectionProvider>);
+
+            expect(mockApplyAllOptimizations).toHaveBeenCalledTimes(1);
+            expect(screen.getByTestId('companion-score')).toHaveTextContent('78%');
         });
 
         it('feeds the explainability panel from the cached original analysis', () => {
