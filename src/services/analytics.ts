@@ -400,7 +400,7 @@ class Analytics {
         this.track('pipeline_save_clicked');
     }
 
-    trackPipelineJobSaved(data?: { is_duplicate?: boolean }) {
+    trackPipelineJobSaved(data?: { is_duplicate?: boolean; auto?: boolean }) {
         this.track('pipeline_job_saved', data);
     }
 

@@ -150,6 +150,7 @@ interface MatchSectionProps {
   jobDescription?: string;
   extractedMetadata?: ExtractedJobMetadata | null;
   onJobSaved?: (id: string) => void;
+  savedApplicationId?: string | null;
   isGuestMode?: boolean;
   onRequireSignIn?: () => void;
   protectedActionMessage?: string;
@@ -242,6 +243,7 @@ export function MatchSection({
   jobDescription = '',
   extractedMetadata,
   onJobSaved,
+  savedApplicationId,
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
@@ -818,6 +820,7 @@ export function MatchSection({
                 extractedMetadata={extractedMetadata}
                 onSaved={onJobSaved}
                 onToast={onToast}
+                savedApplicationId={savedApplicationId}
               />
             )}
 

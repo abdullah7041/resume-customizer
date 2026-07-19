@@ -51,4 +51,27 @@ describe('SaveJobToPipelineCard', () => {
     expect(screen.getByLabelText('Sector')).toHaveValue('');
     expect(document.body).not.toHaveTextContent('null');
   });
+
+  it('switches to update mode when the job was already auto-saved', () => {
+    render(
+      <SaveJobToPipelineCard
+        jobDescription="Data analyst job description"
+        savedApplicationId="app-123"
+        extractedMetadata={null}
+      />,
+    );
+
+    expect(screen.getByText('Saved to your pipeline')).toBeInTheDocument();
+    expect(screen.getByText('Details were saved automatically — edit and save to update.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Update saved job/ })).toBeInTheDocument();
+  });
+
+  it('keeps manual save mode when nothing was auto-saved', () => {
+    render(
+      <SaveJobToPipelineCard jobDescription="Data analyst job description" extractedMetadata={null} />,
+    );
+
+    expect(screen.getByText('Save this job to pipeline')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Update saved job/ })).not.toBeInTheDocument();
+  });
 });
