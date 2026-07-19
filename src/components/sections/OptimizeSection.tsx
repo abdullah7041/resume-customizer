@@ -1162,8 +1162,8 @@ export function OptimizeSection({
 
   const filteredQueueGroups = queueGroups.reduce<QueueGroup[]>((acc, group) => {
     // Pending/Applied are implementation-progress filters — recommendation-only
-    // groups have no applied state, so they appear under "All" only.
-    if (queueFilter !== 'all' && group.kind === 'recommendation') return acc;
+    // groups have no applied state, so they remain visible until the Applied filter.
+    if (queueFilter === 'applied' && group.kind === 'recommendation') return acc;
     const items = group.items.filter((item) => {
       if (queueFilter === 'pending') return !item.applied;
       if (queueFilter === 'applied') return item.applied;
@@ -1501,7 +1501,7 @@ export function OptimizeSection({
       )}
       {/* Optimization Cards Section */}
       <div className="relative space-y-4">
-        {visibleQueueOptimizations.length > 0 && (
+        {hasOptimizationResults && (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-1 dark:border-white/10 dark:bg-black/20">
               {queueFilters.map((filter) => (
@@ -1618,6 +1618,17 @@ export function OptimizeSection({
               />
             ))}
           </div>
+        ) : hasOptimizationResults ? (
+          <GlassCard padding="sm" className="border-dashed border-[color:var(--glass-border-strong)] dark:border-white/10">
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('sections.optimize.queue.emptyFiltered')}
+              </p>
+              <GlassButton variant="secondary" size="sm" onClick={() => setQueueFilter('all')}>
+                {t('sections.optimize.queue.filters.all', 'All')}
+              </GlassButton>
+            </div>
+          </GlassCard>
         ) : (
           <GlassCard padding="lg" className="border-dashed border-[color:var(--glass-border-strong)] dark:border-white/10">
             <div className="text-center text-gray-500 py-8">

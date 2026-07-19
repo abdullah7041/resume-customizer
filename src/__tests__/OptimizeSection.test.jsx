@@ -547,6 +547,52 @@ describe('OptimizeSection', () => {
             expect(screen.getByText('Experience 1')).toBeInTheDocument();
         });
 
+        it('keeps recommendation groups visible under Pending and hides them under Applied', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'Pending summary', optimized: 'Optimized summary', applied: false },
+                { sectionId: 'skills-0', sectionType: 'skills', original: 'Recommended skill', optimized: 'Kubernetes', applied: false },
+            ];
+            const optimizationsBeforeFiltering = mockStoreState.optimizations;
+
+            renderWithProviders(<OptimizeSection />);
+
+            fireEvent.click(screen.getByRole('button', { name: 'Pending' }));
+            expect(screen.getByText('Recommended skills')).toBeInTheDocument();
+            expect(screen.getByText('Recommended skill')).toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('button', { name: 'Applied' }));
+            expect(screen.queryByText('Recommended skills')).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0]);
+            expect(screen.getByText('Recommended skills')).toBeInTheDocument();
+            expect(mockStoreState.optimizations).toBe(optimizationsBeforeFiltering);
+        });
+
+        it('keeps the filter toolbar available for an empty Pending result after Apply All', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 'summary-0', sectionType: 'summary', original: 'Only pending summary', optimized: 'Optimized summary', applied: false },
+            ];
+            mockApplyAllOptimizations.mockImplementation(() => {
+                mockStoreState.optimizations = mockStoreState.optimizations.map((optimization) => ({
+                    ...optimization,
+                    applied: true,
+                }));
+            });
+
+            const { rerender } = renderWithProviders(<OptimizeSection />);
+            fireEvent.click(screen.getByRole('button', { name: /Apply All \(1 remaining\)/ }));
+            rerender(<DirectionProvider><OptimizeSection /></DirectionProvider>);
+
+            fireEvent.click(screen.getByRole('button', { name: 'Pending' }));
+            expect(screen.getByRole('button', { name: 'Pending' })).toBeInTheDocument();
+            expect(screen.getByText('sections.optimize.queue.emptyFiltered')).toBeInTheDocument();
+
+            const allButtons = screen.getAllByRole('button', { name: 'All' });
+            expect(allButtons).toHaveLength(2);
+            fireEvent.click(allButtons[1]);
+            expect(screen.getByText('Only pending summary')).toBeInTheDocument();
+        });
+
         it('shows all optimizations when "All" is selected', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'summary-0', sectionType: 'summary', original: 'Summary Content Here', optimized: 'Opt Summary', applied: false },
