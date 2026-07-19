@@ -248,6 +248,7 @@ export const ClarificationRequestSchema = z.object({
     resumeText: z.string().min(1, "Resume text is required").max(MAX_RESUME_LENGTH, "Resume text too large"),
     jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
+    regenerate: z.boolean().optional(),
 });
 
 export const PredictQuestionsRequestSchema = z.object({

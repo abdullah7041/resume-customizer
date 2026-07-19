@@ -231,14 +231,14 @@ export function ClarificationModal({
                 type="button"
                 onClick={onRegenerate}
                 disabled={isRegenerating}
-                title="Re-generate questions"
+                title={t('clarificationModal.regenerate', 'Generate different questions')}
                 className={cn(
                   'p-1.5 rounded-lg transition-colors',
                   'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200',
                   'hover:bg-white/10',
                   isRegenerating && 'opacity-50 cursor-not-allowed'
                 )}
-                aria-label="Re-generate clarification questions"
+                aria-label={t('clarificationModal.regenerate', 'Generate different questions')}
               >
                 <RefreshCw className={cn('w-4 h-4', isRegenerating && 'animate-spin')} />
               </button>

@@ -82,7 +82,7 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  const { resumeText, jobText, language } = parseResult.data;
+  const { resumeText, jobText, language, regenerate } = parseResult.data;
 
   // --- Redis cache check (30-min TTL) ---
   const cacheKey = buildCacheKey('clarify', {
@@ -91,14 +91,18 @@ const baseHandler: Handler = async (event) => {
     language: language || 'en',
   });
 
-  const cached = await getCached<{ clarifications: unknown[] }>(cacheKey);
-  if (cached) {
-    console.log('[generate-clarifications] Cache HIT');
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
-      body: JSON.stringify(cached),
-    };
+  if (regenerate) {
+    console.log('[generate-clarifications] Cache BYPASS (regenerate)');
+  } else {
+    const cached = await getCached<{ clarifications: unknown[] }>(cacheKey);
+    if (cached) {
+      console.log('[generate-clarifications] Cache HIT');
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+        body: JSON.stringify(cached),
+      };
+    }
   }
 
   // --- AI call ---

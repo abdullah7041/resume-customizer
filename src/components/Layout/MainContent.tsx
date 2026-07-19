@@ -1706,23 +1706,38 @@ export default function MainContent() {
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {
     if (!resumeData?.plainText || !jobDescription) return;
+    const notifyRegenerateFailure = () => pushToast({
+      type: 'danger',
+      title: t(
+        'clarificationModal.regenerateFailed',
+        'Could not generate new questions. Your current questions are still available.',
+      ),
+    });
+
     setIsRegenerating(true);
     try {
       const result = await generateClarifications({
         resumeText: resumeData.plainText,
         jobDesc: jobDescription,
         language: i18n.language,
+        regenerate: true,
       });
-      if (result.clarifications?.length > 0) {
-        setClarificationQuestions(result.clarifications);
+      const refreshedQuestions = filterClarificationQuestionsByHardStops(
+        result.clarifications ?? [],
+        loadPersistentHardStops(),
+      );
+      if (refreshedQuestions.length > 0) {
+        setClarificationQuestions(refreshedQuestions);
       } else {
-        // No questions generated — skip straight to optimize
-        handleClarificationSkip();
+        notifyRegenerateFailure();
       }
+    } catch (error) {
+      console.warn('[MainContent] Clarification regeneration failed:', error);
+      notifyRegenerateFailure();
     } finally {
       setIsRegenerating(false);
     }
-  }, [i18n.language, jobDescription, handleClarificationSkip, resumeData]);
+  }, [i18n.language, jobDescription, pushToast, resumeData, t]);
 
   const handleMarkApplied = useCallback(async () => {
     if (isGuestMode) {
