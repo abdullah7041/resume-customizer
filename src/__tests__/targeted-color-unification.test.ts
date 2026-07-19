@@ -52,7 +52,7 @@ describe('targeted green and teal color unification', () => {
     expect(uploadCardSource).toContain('text-emerald-700 dark:text-emerald-100');
     expect(uploadCardSource).not.toContain('border-blue-600/25 bg-blue-50/92');
 
-    expect(glassSource).toContain("info: 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30'");
+    expect(glassSource).toContain("info: 'bg-teal-500/20 text-teal-800 dark:text-teal-300 border border-teal-500/30'");
     expect(parsingBannerSource).toContain('bg-teal-50 border-teal-200 text-teal-900 dark:bg-teal-500/10 dark:border-teal-500/20 dark:text-teal-100');
 
     expect(matchSectionSource).toContain('bg-emerald-500/20 opacity-60 blur-3xl');
