@@ -8,15 +8,9 @@
  * on mount only while the JD still matches, and clear whenever the resume or
  * match state is reset. No TTL — a result stays valid until its inputs change.
  */
-import type { MatchResult } from '@/components/sections/MatchSection';
+import type { MatchResult, StoredMatchAnalysis } from '@/types/analysis';
 
 export const MATCH_STORAGE_KEY = 'watheq:lastMatchAnalysis';
-
-interface StoredMatchAnalysis {
-  analysis?: MatchResult;
-  jobText?: string;
-  savedAt?: number;
-}
 
 export function loadCachedMatchAnalysis(jobText: string): MatchResult | null {
   if (typeof window === 'undefined' || !jobText) return null;

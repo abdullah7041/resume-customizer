@@ -48,12 +48,12 @@ import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
 import { GlassCard } from "../ui/GlassCard";
 import { ParallaxContainer } from "../ui/ParallaxSection";
-import { attachExportToJobApplication, createJobApplication, updateJobApplication } from "../../services/pipeline";
+import { attachExportToJobApplication, createJobApplication, updateJobApplication } from "@/services/pipeline";
 import { shouldAutoSaveJob } from "@/lib/utils/pipelineAutoSave";
 import { analytics } from "../../services/analytics";
 import type { ExtractedJobMetadata } from "../../types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
-import type { MatchResult } from "@/components/sections/MatchSection";
+import type { MatchResult } from "@/types/analysis";
 import { clearStoredMatchAnalysis, loadCachedMatchAnalysis, saveMatchAnalysis } from "@/lib/utils/matchAnalysisCache";
 import ViewTextModal from "../ui/ViewTextModal";
 import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
@@ -541,7 +541,7 @@ export default function MainContent() {
           match_score: matchScore,
           status: "saved",
           metadata: { autoSaved: true, extractionConfidence: metadata.confidence ?? null },
-        });
+        }, { duplicateStrategy: 'preserve_user_fields' });
         if (error || !data) {
           console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
           return;

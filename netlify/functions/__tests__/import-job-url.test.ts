@@ -144,10 +144,18 @@ describe('import-job-url handler', () => {
     expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'linkedin_blocked' });
   });
 
-  it('maps a LinkedIn transport-level rejection to linkedin_blocked', async () => {
+  it('keeps a LinkedIn transport failure classified as unreachable', async () => {
     safeFetchMock.mockRejectedValue(new SafeFetchError('unreachable', 'socket reset'));
     const response = await invoke({ url: 'https://www.linkedin.com/jobs/view/123/' });
-    expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'linkedin_blocked' });
+    expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'unreachable' });
+  });
+
+  it.each([404, 500])('keeps a LinkedIn HTTP %s classified as unreachable', async (status) => {
+    safeFetchMock.mockResolvedValue({
+      status, headers: {}, body: 'failed', finalUrl: 'https://www.linkedin.com/jobs/view/123/', redirects: [],
+    });
+    const response = await invoke({ url: 'https://www.linkedin.com/jobs/view/123/' });
+    expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'unreachable' });
   });
 
   it('maps a LinkedIn 999 bot-block status to linkedin_blocked', async () => {

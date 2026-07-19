@@ -20,16 +20,13 @@ import { GlassButton } from '../ui/GlassButton';
 import { GlassCard } from '../ui/GlassCard';
 import EmptyState from '../ui/EmptyState';
 import { Vision2030CalculationModal } from '../ui/Vision2030CalculationModal';
+import {
+  getVision2030ScoreTextColor,
+  normalizeVision2030Analysis,
+} from '../../lib/utils/vision2030Score';
 
 const VISION2030_STORAGE_KEY = 'watheq:vision2030Analysis';
 const VISION2030_ANALYZING_KEY = 'watheq:vision2030Analyzing';
-
-// Get score color based on value
-const getScoreColor = (score: number) => {
-  if (score >= 70) return 'text-emerald-700 dark:text-emerald-400';
-  if (score >= 40) return 'text-amber-700 dark:text-amber-400';
-  return 'text-red-700 dark:text-red-400';
-};
 
 const getScoreBg = (score: number) => {
   if (score >= 70) return 'bg-emerald-500/10 border-emerald-500/20';
@@ -60,10 +57,10 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           // Simple hash comparison - use first 100 chars as quick identifier
           const currentHash = resumeText.slice(0, 100);
           if (parsed.resumeHash === currentHash) {
-            return parsed.analysis;
+            return normalizeVision2030Analysis(parsed.analysis);
           }
         }
-        return parsed.analysis || null;
+        return parsed.analysis ? normalizeVision2030Analysis(parsed.analysis) : null;
       }
     } catch (err) {
       console.warn('[Vision2030Section] Failed to load cached analysis:', err);
@@ -159,7 +156,9 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         description: t('vision2030.section.analyzingDesc', 'Analyzing your resume against Vision 2030 sectors...'),
       });
 
-      const result = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', null);
+      const result = normalizeVision2030Analysis(
+        await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', null),
+      );
       setAnalysis(result);
 
       // Save to storage immediately to persist result even if component unmounts (tab switch)
@@ -260,7 +259,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                 <span className="text-xs text-gray-400 dark:text-white/50 uppercase tracking-wider mb-1">
                   {t('vision2030.section.overallScore', 'Overall Score')}
                 </span>
-                <span className={`text-3xl font-bold ${getScoreColor(analysis.overallScore)}`}>
+                <span className={`text-3xl font-bold ${getVision2030ScoreTextColor(analysis.overallScore)}`}>
                   {Math.round(analysis.overallScore)}%
                 </span>
               </div>
@@ -287,7 +286,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                       <span className="text-sm font-medium text-gray-800 dark:text-white/90">
                         {isArabic ? sector.sectorNameAr : sector.sectorNameEn}
                       </span>
-                      <span className={`text-lg font-bold ${getScoreColor(sector.score)}`}>
+                      <span className={`text-lg font-bold ${getVision2030ScoreTextColor(sector.score)}`}>
                         {sector.score}%
                       </span>
                     </div>

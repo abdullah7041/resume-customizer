@@ -1,9 +1,9 @@
 import { AlertCircle, Check, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { HiddenMatchesCard, type HiddenMatch } from '@/components/HiddenMatchesCard';
+import { HiddenMatchesCard } from '@/components/HiddenMatchesCard';
 import { MirroredKeywordsCard } from '@/components/MirroredKeywordsCard';
 import { PositionSuggestionBanner } from '@/components/PositionSuggestionBanner';
-import type { GapItem } from '@/components/GapAnalysisCard';
+import type { GapAnalysisItem as GapItem, HiddenMatch } from '@/types/analysis';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { cn } from '@/lib/utils/cn';
 

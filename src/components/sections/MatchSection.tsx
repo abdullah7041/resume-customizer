@@ -22,8 +22,8 @@ import { GlassTextarea } from '../ui/GlassTextarea';
 import Tooltip from '../ui/Tooltip';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
-import { GapAnalysisCard, type GapItem } from '../GapAnalysisCard';
-import { HiddenMatchesCard, type HiddenMatch } from '../HiddenMatchesCard';
+import { GapAnalysisCard } from '../GapAnalysisCard';
+import { HiddenMatchesCard } from '../HiddenMatchesCard';
 import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
 import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
 import { importJobFromUrl } from '@/services/api';
@@ -34,7 +34,7 @@ import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsC
 import { FEATURE_COSTS } from '../../types/credits';
 import { analytics } from '../../services/analytics';
 import type { ExtractedJobMetadata } from '../../types/pipeline';
-import type { StrategicRealityCheck } from '../../types/analysis';
+import type { MatchResult, StrategicRealityCheck } from '../../types/analysis';
 import type { AtsExplainabilitySource } from '../../types/explainability';
 import { AtsExplainabilityPanel } from '../AtsExplainabilityPanel';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
@@ -95,43 +95,6 @@ const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => 
     role: 'alert' as const,
   };
 };
-
-export interface MatchResult {
-  score: number;
-  matchedKeywords?: string[];
-  missingKeywords?: string[];
-  topHits?: string[];
-  suggestions?: string[];
-  summary_bullets?: string[];
-  reasoning?: string;
-  categoryScores?: {
-    hard_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-    experience: { score: number; max: number; matched?: string[]; gaps?: string[]; reasoning?: string };
-    education: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-    soft_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-  } | null;
-  gapAnalysis?: GapItem[];
-  keywordStrategy?: {
-    mirroredPhrases?: string[];
-    structuralChanges?: string[];
-    hiddenMatches?: HiddenMatch[];
-  } | null;
-  strategicRealityCheck?: StrategicRealityCheck | null;
-  /** Bundled interview-prep payload consumed by InterviewSection when present. */
-  interviewPrep?: {
-    predicted_questions?: Array<{
-      question: string;
-      type: string;
-      difficulty: string;
-      category: string;
-      answerFramework?: string;
-      skills_tested?: string[];
-      coachingTip?: string;
-    }>;
-    role_level?: string;
-    focus_areas?: string[];
-  };
-}
 
 interface Toast {
   type: 'success' | 'warning' | 'danger' | 'info';

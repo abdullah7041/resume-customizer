@@ -1,12 +1,7 @@
 import { Lightbulb, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from './ui/GlassCard';
-
-export interface HiddenMatch {
-    resumeTerm: string;
-    jdRequirement: string;
-    insight: string;
-}
+import type { HiddenMatch } from '@/types/analysis';
 
 interface HiddenMatchesCardProps {
     matches: HiddenMatch[];

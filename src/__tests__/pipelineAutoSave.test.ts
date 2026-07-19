@@ -29,5 +29,7 @@ describe('shouldAutoSaveJob', () => {
     expect(shouldAutoSaveJob({ isSignedIn: true, isGuestMode: false, metadata: metadata({ companyName: null }) })).toBe(false);
     expect(shouldAutoSaveJob({ isSignedIn: true, isGuestMode: false, metadata: metadata({ jobTitle: '   ' }) })).toBe(false);
     expect(shouldAutoSaveJob({ isSignedIn: true, isGuestMode: false, metadata: metadata({ companyName: 'Unknown Company' }) })).toBe(false);
+    expect(shouldAutoSaveJob({ isSignedIn: true, isGuestMode: false, metadata: metadata({ companyName: 'null' }) })).toBe(false);
+    expect(shouldAutoSaveJob({ isSignedIn: true, isGuestMode: false, metadata: metadata({ jobTitle: 'null' }) })).toBe(false);
   });
 });

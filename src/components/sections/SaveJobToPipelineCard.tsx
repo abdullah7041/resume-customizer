@@ -5,9 +5,10 @@ import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useAuth } from '../../hooks/useAuth';
 import { analytics } from '../../services/analytics';
-import { createJobApplication } from '../../services/pipeline';
+import { createJobApplication, updateJobApplication } from '../../services/pipeline';
 import type { ExtractedJobMetadata, JobApplicationStatus } from '../../types/pipeline';
 import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
+import { sanitizeCompanyName, sanitizeJobMetadataField } from '../../lib/utils/jobMetadata';
 
 interface SaveJobToPipelineCardProps {
   jobDescription: string;
@@ -18,20 +19,6 @@ interface SaveJobToPipelineCardProps {
   /** Set when the job was already auto-saved — the card becomes an update form. */
   savedApplicationId?: string | null;
 }
-
-const UNKNOWN_COMPANY_VALUE = 'unknown company';
-
-const sanitizeMetadataField = (value?: string | null) => {
-  if (typeof value !== 'string') return '';
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.toLowerCase() === 'null') return '';
-  return trimmed;
-};
-
-const sanitizeCompanyName = (value?: string | null) => {
-  const sanitized = sanitizeMetadataField(value);
-  return sanitized.toLowerCase() === UNKNOWN_COMPANY_VALUE ? '' : sanitized;
-};
 
 export function SaveJobToPipelineCard({
   jobDescription,
@@ -45,12 +32,12 @@ export function SaveJobToPipelineCard({
   const { user } = useAuth();
 
   const [companyName, setCompanyName] = useState(() => sanitizeCompanyName(extractedMetadata?.companyName));
-  const [jobTitle, setJobTitle] = useState(() => sanitizeMetadataField(extractedMetadata?.jobTitle));
+  const [jobTitle, setJobTitle] = useState(() => sanitizeJobMetadataField(extractedMetadata?.jobTitle));
   const [jobUrl, setJobUrl] = useState('');
-  const [location, setLocation] = useState(() => sanitizeMetadataField(extractedMetadata?.location));
-  const [employmentType, setEmploymentType] = useState(() => sanitizeMetadataField(extractedMetadata?.employmentType));
-  const [seniority, setSeniority] = useState(() => sanitizeMetadataField(extractedMetadata?.seniority));
-  const [sector, setSector] = useState(() => sanitizeMetadataField(extractedMetadata?.sector));
+  const [location, setLocation] = useState(() => sanitizeJobMetadataField(extractedMetadata?.location));
+  const [employmentType, setEmploymentType] = useState(() => sanitizeJobMetadataField(extractedMetadata?.employmentType));
+  const [seniority, setSeniority] = useState(() => sanitizeJobMetadataField(extractedMetadata?.seniority));
+  const [sector, setSector] = useState(() => sanitizeJobMetadataField(extractedMetadata?.sector));
   const [status, setStatus] = useState<JobApplicationStatus>('saved');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -69,11 +56,11 @@ export function SaveJobToPipelineCard({
     seededMetadataRef.current = extractedMetadata;
 
     const nextCompanyName = sanitizeCompanyName(extractedMetadata.companyName);
-    const nextJobTitle = sanitizeMetadataField(extractedMetadata.jobTitle);
-    const nextLocation = sanitizeMetadataField(extractedMetadata.location);
-    const nextEmploymentType = sanitizeMetadataField(extractedMetadata.employmentType);
-    const nextSeniority = sanitizeMetadataField(extractedMetadata.seniority);
-    const nextSector = sanitizeMetadataField(extractedMetadata.sector);
+    const nextJobTitle = sanitizeJobMetadataField(extractedMetadata.jobTitle);
+    const nextLocation = sanitizeJobMetadataField(extractedMetadata.location);
+    const nextEmploymentType = sanitizeJobMetadataField(extractedMetadata.employmentType);
+    const nextSeniority = sanitizeJobMetadataField(extractedMetadata.seniority);
+    const nextSector = sanitizeJobMetadataField(extractedMetadata.sector);
 
     if (nextCompanyName && !companyName) setCompanyName(nextCompanyName);
     if (nextJobTitle && !jobTitle) setJobTitle(nextJobTitle);
@@ -98,10 +85,9 @@ export function SaveJobToPipelineCard({
     setIsSaving(true);
 
     try {
-      const { data, error, isDuplicate } = await createJobApplication({
+      const editableFields = {
         company_name: companyName.trim() || null,
         job_title: jobTitle.trim() || null,
-        job_description: jobDescription,
         job_url: jobUrl.trim() || null,
         location: location.trim() || null,
         employment_type: employmentType.trim() || null,
@@ -114,7 +100,12 @@ export function SaveJobToPipelineCard({
           extractionConfidence: extractedMetadata?.confidence ?? null,
           needsUserConfirmation: needsConfirmation,
         },
-      });
+      };
+      const saveResult = savedApplicationId
+        ? await updateJobApplication(savedApplicationId, editableFields)
+        : await createJobApplication({ ...editableFields, job_description: jobDescription });
+      const { data, error } = saveResult;
+      const isDuplicate = 'isDuplicate' in saveResult && saveResult.isDuplicate === true;
 
       if (error || !data) {
         analytics.trackPipelineSaveFailed(error || 'unknown');

@@ -52,6 +52,36 @@ export interface MatchAnalysisResponse {
   keywordStrategy: KeywordStrategy | null;
 }
 
+/** Complete match result shared by the API flow, cache, and presentation layer. */
+export interface MatchResult {
+  score: number;
+  matchedKeywords?: string[];
+  missingKeywords?: string[];
+  topHits?: string[];
+  suggestions?: string[];
+  summary_bullets?: string[];
+  reasoning?: string;
+  categoryScores?: CategoryScoresData | null;
+  gapAnalysis?: GapAnalysisItem[];
+  keywordStrategy?: {
+    mirroredPhrases?: string[];
+    structuralChanges?: string[];
+    hiddenMatches?: HiddenMatch[];
+  } | null;
+  strategicRealityCheck?: StrategicRealityCheck | null;
+  interviewPrep?: {
+    predicted_questions?: InterviewQuestion[];
+    role_level?: string;
+    focus_areas?: string[];
+  };
+}
+
+export interface StoredMatchAnalysis {
+  analysis?: MatchResult;
+  jobText?: string;
+  savedAt?: number;
+}
+
 /**
  * A short, source-attributed evidence snippet. Snippets are verified
  * server-side (netlify/lib/strategic-reality-check.js) — those without

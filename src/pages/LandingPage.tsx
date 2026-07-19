@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../hooks/useTheme";
 import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "../lib/assets";
 import { analytics } from "../services/analytics";
+import type { GetStartedSource } from "../types/analytics";
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -513,7 +514,7 @@ export default function LandingPage({ onGetStarted, onSignIn, initialSection }: 
     return () => clearTimeout(timer);
   }, [initialSection]);
 
-  const handleCta = (source: "hero" | "walkthrough" | "final_cta" | "footer") => {
+  const handleCta = (source: GetStartedSource) => {
     analytics.trackGetStartedClicked(source);
     onGetStarted();
   };

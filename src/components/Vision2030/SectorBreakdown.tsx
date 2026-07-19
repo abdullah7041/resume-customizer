@@ -11,18 +11,13 @@ import { useState } from 'react';
 import { Vision2030SectorBreakdown, Vision2030MatchedSkill } from '../../types/vision2030';
 import { SectorIcon } from '../../lib/utils/vision2030Icons';
 import { GlassCard } from '../ui/GlassCard';
+import { getVision2030ScoreTextColor } from '../../lib/utils/vision2030Score';
 
 interface SectorBreakdownProps {
   sectorBreakdown: Vision2030SectorBreakdown[];
   matchedSkills: Vision2030MatchedSkill[];
   isArabic: boolean;
 }
-
-const getScoreColor = (score: number) => {
-  if (score >= 70) return 'text-emerald-700 dark:text-emerald-400';
-  if (score >= 40) return 'text-amber-700 dark:text-amber-400';
-  return 'text-red-700 dark:text-red-400';
-};
 
 const getScoreBg = (score: number) => {
   if (score >= 70) return 'from-emerald-600 to-emerald-400';
@@ -100,7 +95,7 @@ export function SectorBreakdown({ sectorBreakdown, matchedSkills, isArabic }: Se
                         style={{ transform: `scaleX(${Math.min(Math.max(sector.score, 0), 100) / 100})` }}
                       />
                     </div>
-                    <span className={`text-lg font-bold min-w-[3rem] text-right ${getScoreColor(sector.score)}`}>
+                    <span className={`text-lg font-bold min-w-[3rem] text-right ${getVision2030ScoreTextColor(sector.score)}`}>
                       {sector.score}%
                     </span>
                   </div>

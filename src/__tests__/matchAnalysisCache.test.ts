@@ -5,7 +5,7 @@ import {
   loadCachedMatchAnalysis,
   saveMatchAnalysis,
 } from '@/lib/utils/matchAnalysisCache';
-import type { MatchResult } from '@/components/sections/MatchSection';
+import type { MatchResult } from '@/types/analysis';
 
 const sampleResult: MatchResult = {
   score: 62,

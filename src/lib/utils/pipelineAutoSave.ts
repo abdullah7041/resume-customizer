@@ -7,6 +7,7 @@
  * manual SaveJobToPipelineCard still covers the low-confidence case.
  */
 import type { ExtractedJobMetadata } from '@/types/pipeline';
+import { sanitizeCompanyName, sanitizeJobMetadataField } from '@/lib/utils/jobMetadata';
 
 export function shouldAutoSaveJob(params: {
   isSignedIn: boolean;
@@ -15,8 +16,7 @@ export function shouldAutoSaveJob(params: {
 }): boolean {
   const { isSignedIn, isGuestMode, metadata } = params;
   if (!isSignedIn || isGuestMode) return false;
-  const companyName = typeof metadata?.companyName === 'string' ? metadata.companyName.trim() : '';
-  const jobTitle = typeof metadata?.jobTitle === 'string' ? metadata.jobTitle.trim() : '';
-  if (!companyName || !jobTitle) return false;
-  return companyName.toLowerCase() !== 'unknown company';
+  const companyName = sanitizeCompanyName(metadata?.companyName);
+  const jobTitle = sanitizeJobMetadataField(metadata?.jobTitle);
+  return Boolean(companyName && jobTitle);
 }

@@ -58,6 +58,8 @@ const SAFE_FETCH_FAILURE_MAP: Record<SafeFetchFailure, ImportFailureReason> = {
   too_many_redirects: 'unreachable',
 };
 
+const LINKEDIN_BLOCK_STATUSES = new Set([401, 403, 429, 999]);
+
 const json = (statusCode: number, body: unknown) => ({
   statusCode,
   headers: { 'Content-Type': 'application/json' },
@@ -159,10 +161,7 @@ const baseHandler: Handler = async (event) => {
       if (error instanceof SafeFetchError) {
         console.warn(`[ImportJobUrl] fetch failed (${error.reason})`);
         const mapped = SAFE_FETCH_FAILURE_MAP[error.reason];
-        // LinkedIn intermittently rejects datacenter egress at the transport
-        // level — tell the user candidly instead of a generic "unreachable".
-        const isTransportBlock = mapped === 'unreachable' || mapped === 'timeout' || mapped === 'blocked';
-        return failed(sourceUrl, linkedIn.isLinkedIn && isTransportBlock ? 'linkedin_blocked' : mapped);
+        return failed(sourceUrl, mapped);
       }
       throw error;
     }
@@ -173,7 +172,7 @@ const baseHandler: Handler = async (event) => {
     }
     if (page.status >= 400) {
       console.warn(`[ImportJobUrl] upstream status ${page.status}`);
-      if (linkedIn.isLinkedIn) {
+      if (linkedIn.isLinkedIn && LINKEDIN_BLOCK_STATUSES.has(page.status)) {
         return failed(sourceUrl, 'linkedin_blocked', page.finalUrl);
       }
       return failed(sourceUrl, page.status === 401 ? 'login_required' : 'unreachable', page.finalUrl);

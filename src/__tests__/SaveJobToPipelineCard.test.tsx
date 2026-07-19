@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { SaveJobToPipelineCard } from '../components/sections/SaveJobToPipelineCard';
+import { createJobApplication, updateJobApplication } from '../services/pipeline';
 
 vi.mock('../hooks/useAuth', () => ({
-  useAuth: () => ({ user: null }),
+  useAuth: () => ({ user: { id: 'user-123' } }),
 }));
 
 vi.mock('../services/analytics', () => ({
@@ -16,6 +18,7 @@ vi.mock('../services/analytics', () => ({
 
 vi.mock('../services/pipeline', () => ({
   createJobApplication: vi.fn(),
+  updateJobApplication: vi.fn(),
 }));
 
 vi.mock('../components/Feedback/FeedbackPromptController', () => ({
@@ -64,6 +67,37 @@ describe('SaveJobToPipelineCard', () => {
     expect(screen.getByText('Saved to your pipeline')).toBeInTheDocument();
     expect(screen.getByText('Details were saved automatically — edit and save to update.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Update saved job/ })).toBeInTheDocument();
+  });
+
+  it('updates the auto-saved record by id instead of creating another job', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createJobApplication).mockResolvedValue({
+      data: { id: 'duplicate-row' } as never,
+      error: null,
+    });
+    vi.mocked(updateJobApplication).mockResolvedValue({
+      data: { id: 'app-123' } as never,
+      error: null,
+    });
+
+    render(
+      <SaveJobToPipelineCard
+        jobDescription="Data analyst job description"
+        savedApplicationId="app-123"
+        extractedMetadata={null}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Company'), 'Watheq AI');
+    await user.type(screen.getByLabelText('Job Title'), 'Data Analyst');
+    await user.click(screen.getByRole('button', { name: /Update saved job/ }));
+
+    expect(updateJobApplication).toHaveBeenCalledWith('app-123', expect.objectContaining({
+      company_name: 'Watheq AI',
+      job_title: 'Data Analyst',
+      status: 'saved',
+    }));
+    expect(createJobApplication).not.toHaveBeenCalled();
   });
 
   it('keeps manual save mode when nothing was auto-saved', () => {

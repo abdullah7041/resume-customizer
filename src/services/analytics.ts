@@ -5,6 +5,7 @@ import type {
     FeedbackType,
     FeedbackWillingnessToPay,
 } from '@/types/feedback';
+import type { GetStartedSource } from '@/types/analytics';
 
 const MIXPANEL_TOKEN = import.meta.env.VITE_MIXPANEL_TOKEN;
 
@@ -249,7 +250,7 @@ class Analytics {
         this.track('landing_viewed');
     }
 
-    trackGetStartedClicked(source: 'hero' | 'walkthrough' | 'final_cta' | 'footer') {
+    trackGetStartedClicked(source: GetStartedSource) {
         this.track('get_started_clicked', { source });
     }
 

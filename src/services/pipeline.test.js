@@ -147,4 +147,61 @@ describe('pipeline service', () => {
     }));
     expect(JSON.stringify(updateBuilder.update.mock.calls[0][0])).not.toContain('interview_at');
   });
+
+  it('preserves user-managed fields when auto-save refreshes a recent duplicate', async () => {
+    const duplicate = {
+      id: 'job-123',
+      user_id: 'user-123',
+      company_name: 'Watheq AI',
+      job_title: 'Data Analyst',
+      job_description: 'Older role description',
+      location: 'Jeddah',
+      employment_type: 'Contract',
+      seniority: 'Lead',
+      sector: 'Finance',
+      status: 'applied',
+      notes: 'Interview scheduled',
+      metadata: { source: 'manual-save' },
+      applied_at: '2026-07-18T12:00:00.000Z',
+      outcome_at: null,
+    };
+    const duplicateBuilder = buildBuilder({ data: [duplicate] });
+    const refreshedApplication = {
+      ...duplicate,
+      job_description: 'Fresh role description',
+      match_score: 77,
+      metadata: {
+        source: 'manual-save',
+        autoSaved: true,
+      },
+    };
+    const updateBuilder = buildBuilder({ data: refreshedApplication });
+
+    supabase.from
+      .mockReturnValueOnce(duplicateBuilder)
+      .mockReturnValueOnce(updateBuilder);
+
+    const result = await createJobApplication({
+      company_name: 'Watheq AI',
+      job_title: 'Data Analyst',
+      job_description: 'Fresh role description',
+      location: 'Riyadh',
+      employment_type: null,
+      seniority: null,
+      sector: null,
+      match_score: 77,
+      status: 'saved',
+      metadata: { autoSaved: true },
+    }, { duplicateStrategy: 'preserve_user_fields' });
+
+    expect(result).toEqual({ data: refreshedApplication, error: null, isDuplicate: true });
+    expect(updateBuilder.update).toHaveBeenCalledWith({
+      job_description: 'Fresh role description',
+      match_score: 77,
+      metadata: {
+        source: 'manual-save',
+        autoSaved: true,
+      },
+    });
+  });
 });
