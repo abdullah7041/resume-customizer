@@ -158,10 +158,10 @@ vi.mock("../components/ui/Toast.tsx", () => {
   return {
     __esModule: true,
     ToastContainer: ({ children }) => React.createElement("div", null, children),
-    default: ({ title, description }) =>
+    default: ({ title, description, type }) =>
       React.createElement(
         "div",
-        { "data-testid": "toast-mock" },
+        { "data-testid": "toast-mock", "data-toast-type": type },
         `${title ?? ""} ${description ?? ""}`.trim()
       ),
   };
@@ -748,6 +748,169 @@ describe("MainContent resume parsing", () => {
         expect.any(Function),
       );
     });
+  });
+
+  it("regenerates fresh questions, filters persistent hard stops, and clears the loading state", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Excel and SQL are required");
+    localStorage.setItem("watheq:hardStops", JSON.stringify(["Excel"]));
+
+    let resolveRegeneration;
+    const regeneration = new Promise((resolve) => {
+      resolveRegeneration = resolve;
+    });
+    generateClarificationsMock
+      .mockResolvedValueOnce({
+        clarifications: [{
+          id: "leadershipExperience",
+          theme: "Leadership",
+          rationale: "The role requires leadership evidence.",
+          question: "Which leadership work can you verify?",
+          type: "single",
+          options: [{ value: "teams", label: "Led cross-functional teams" }],
+          allowOther: false,
+        }],
+      })
+      .mockReturnValueOnce(regeneration);
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    expect(await screen.findByRole(
+      "button",
+      { name: "Led cross-functional teams" },
+      { timeout: 5000 },
+    )).toBeInTheDocument();
+
+    const regenerateButton = screen.getByRole("button", { name: "Generate different questions" });
+    fireEvent.click(regenerateButton);
+
+    await waitFor(() => {
+      expect(generateClarificationsMock).toHaveBeenLastCalledWith(expect.objectContaining({
+        resumeText: "Parsed resume",
+        jobDesc: "Excel and SQL are required",
+        regenerate: true,
+      }));
+    });
+    expect(regenerateButton).toBeDisabled();
+
+    await act(async () => {
+      resolveRegeneration({
+        clarifications: [
+          {
+            id: "excelExperience",
+            theme: "Excel",
+            rationale: "Excel is required.",
+            question: "Which Excel work can you verify?",
+            type: "single",
+            options: [{ value: "excel", label: "Built Excel dashboards" }],
+            allowOther: false,
+          },
+          {
+            id: "sqlExperience",
+            theme: "SQL",
+            rationale: "SQL is required.",
+            question: "Which SQL work can you verify?",
+            type: "single",
+            options: [{ value: "sql", label: "Built SQL dashboards" }],
+            allowOther: false,
+          },
+        ],
+      });
+    });
+
+    expect(await screen.findByRole("button", { name: "Built SQL dashboards" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Built Excel dashboards" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Generate different questions" })).not.toBeDisabled();
+    });
+  });
+
+  it("keeps the current modal open and shows a localized danger toast when filtering removes every regenerated question", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Excel is required");
+    localStorage.setItem("watheq:hardStops", JSON.stringify(["Excel"]));
+    generateClarificationsMock
+      .mockResolvedValueOnce({
+        clarifications: [{
+          id: "leadershipExperience",
+          theme: "Leadership",
+          rationale: "The role requires leadership evidence.",
+          question: "Which leadership work can you verify?",
+          type: "single",
+          options: [{ value: "teams", label: "Led cross-functional teams" }],
+          allowOther: false,
+        }],
+      })
+      .mockResolvedValueOnce({
+        clarifications: [{
+          id: "excelExperience",
+          theme: "Excel",
+          rationale: "Excel is required.",
+          question: "Which Excel work can you verify?",
+          type: "single",
+          options: [{ value: "excel", label: "Built Excel dashboards" }],
+          allowOther: false,
+        }],
+      });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    expect(await screen.findByRole(
+      "button",
+      { name: "Led cross-functional teams" },
+      { timeout: 5000 },
+    )).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Generate different questions" }));
+
+    expect(await screen.findByText(
+      "Could not generate new questions. Your current questions are still available.",
+    )).toBeInTheDocument();
+    expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "danger");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Led cross-functional teams" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate different questions" })).not.toBeDisabled();
+    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the current modal open and clears regeneration state when the API rejects", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Leadership is required");
+    generateClarificationsMock
+      .mockResolvedValueOnce({
+        clarifications: [{
+          id: "leadershipExperience",
+          theme: "Leadership",
+          rationale: "The role requires leadership evidence.",
+          question: "Which leadership work can you verify?",
+          type: "single",
+          options: [{ value: "teams", label: "Led cross-functional teams" }],
+          allowOther: false,
+        }],
+      })
+      .mockRejectedValueOnce(new Error("network unavailable"));
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    expect(await screen.findByRole(
+      "button",
+      { name: "Led cross-functional teams" },
+      { timeout: 5000 },
+    )).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Generate different questions" }));
+
+    expect(await screen.findByText(
+      "Could not generate new questions. Your current questions are still available.",
+    )).toBeInTheDocument();
+    expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "danger");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Led cross-functional teams" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate different questions" })).not.toBeDisabled();
+    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
+    warning.mockRestore();
   });
 
   it("skips clarification generation for a strong match with no deterministic vulnerabilities", async () => {

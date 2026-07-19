@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AUTH_REQUIRED, analyzeResume, analyzeResumeTruthCheck, importJobFromUrl, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
+import { AUTH_REQUIRED, analyzeResume, analyzeResumeTruthCheck, generateClarifications, importJobFromUrl, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
 import { supabase } from './supabase';
 
 const mockResumeText = vi.hoisted(() => ({
@@ -499,6 +499,35 @@ describe('analyzeResumeTruthCheck', () => {
           resumeText: 'resume',
           language: 'en',
           userHardStops: ['Excel'],
+        }),
+      }),
+    );
+  });
+});
+
+describe('generateClarifications', () => {
+  it('serializes the regenerate flag in the request body', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ clarifications: [] }),
+    });
+
+    await generateClarifications({
+      resumeText: 'resume',
+      jobDesc: 'job',
+      language: 'ar',
+      regenerate: true,
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/.netlify/functions/generate-clarifications',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          resumeText: 'resume',
+          jobText: 'job',
+          language: 'ar',
+          regenerate: true,
         }),
       }),
     );

@@ -103,4 +103,24 @@ describe('generate-clarifications handler', () => {
     expect(executeAiContractMock).not.toHaveBeenCalled();
     expect(setCachedMock).not.toHaveBeenCalled();
   });
+
+  it('uses the cached result when regeneration is explicitly false', async () => {
+    const response = await invoke({ ...requestBody, regenerate: false });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toMatchObject({ 'X-Cache': 'HIT' });
+    expect(JSON.parse(response.body ?? '{}')).toEqual(cachedResult);
+    expect(getCachedMock).toHaveBeenCalledWith('clarification-cache-key');
+    expect(executeAiContractMock).not.toHaveBeenCalled();
+    expect(setCachedMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-boolean regenerate value', async () => {
+    const response = await invoke({ ...requestBody, regenerate: 'true' });
+
+    expect(response.statusCode).toBe(400);
+    expect(getCachedMock).not.toHaveBeenCalled();
+    expect(executeAiContractMock).not.toHaveBeenCalled();
+    expect(setCachedMock).not.toHaveBeenCalled();
+  });
 });
