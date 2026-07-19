@@ -45,6 +45,8 @@ const mockSetOptimizationMetrics = vi.fn();
 const mockResetOptimizationMetrics = vi.fn();
 const mockGetCachedAnalysis = vi.fn(() => null);
 const mockSetCachedAnalysis = vi.fn();
+const LAST_JOB_KEY = 'watheq:lastJobDescription';
+const localStorageValues = new Map();
 
 // Create a mock store state that can be modified per test
 let mockStoreState = {
@@ -189,10 +191,14 @@ const sampleOptimization = {
 };
 
 const projectionResumeText = 'Resume text used to validate the verified projection.';
-const verifiedProjection = (optimizations) => ({
+const seedProjectionJobDescription = (jobDescription) => {
+    window.localStorage.setItem(LAST_JOB_KEY, jobDescription);
+    return jobDescription;
+};
+const verifiedProjection = (optimizations, jobDescription) => ({
     score: 78,
     baselineAtVerify: 60,
-    signature: verificationSignature(optimizations, projectionResumeText, 'Backend engineer role'),
+    signature: verificationSignature(optimizations, projectionResumeText, jobDescription),
     verifiedAt: Date.now(),
     outcome: 'improved',
 });
@@ -265,15 +271,17 @@ beforeEach(() => {
         mockStoreState.keywordSuggestions = keywordSuggestions;
     });
 
+    localStorageValues.clear();
     Object.defineProperty(window, 'localStorage', {
         configurable: true,
         value: {
-            getItem: vi.fn((key) => (key === 'watheq:lastJobDescription' ? 'Backend engineer role' : null)),
-            setItem: vi.fn(),
-            removeItem: vi.fn(),
-            clear: vi.fn(),
+            getItem: vi.fn((key) => localStorageValues.get(key) ?? null),
+            setItem: vi.fn((key, value) => localStorageValues.set(key, String(value))),
+            removeItem: vi.fn((key) => localStorageValues.delete(key)),
+            clear: vi.fn(() => localStorageValues.clear()),
         },
     });
+    window.localStorage.setItem(LAST_JOB_KEY, 'Backend engineer role');
 });
 
 afterEach(() => {
@@ -1379,11 +1387,12 @@ describe('Optimization Card Types', () => {
             mockStoreState.optimizations = optimizations;
             mockStoreState.parsedResumeText = projectionResumeText;
             mockStoreState.baselineMatchScore = 60;
+            const jobDescription = seedProjectionJobDescription('Individual apply role');
             mockStoreState.optimizationMetrics = {
                 ...mockStoreState.optimizationMetrics,
                 beforeScore: 60,
                 improvement: null,
-                verifiedPotential: verifiedProjection(optimizations),
+                verifiedPotential: verifiedProjection(optimizations, jobDescription),
                 hasJobDescription: true,
             };
             mockApplyOptimization.mockImplementation((sectionId) => {
@@ -1411,11 +1420,12 @@ describe('Optimization Card Types', () => {
             mockStoreState.optimizations = optimizations;
             mockStoreState.parsedResumeText = projectionResumeText;
             mockStoreState.baselineMatchScore = 60;
+            const jobDescription = seedProjectionJobDescription('Queue group role');
             mockStoreState.optimizationMetrics = {
                 ...mockStoreState.optimizationMetrics,
                 beforeScore: 60,
                 improvement: null,
-                verifiedPotential: verifiedProjection(optimizations),
+                verifiedPotential: verifiedProjection(optimizations, jobDescription),
                 hasJobDescription: true,
             };
             mockApplyOptimization.mockImplementation((sectionId) => {
@@ -1441,11 +1451,12 @@ describe('Optimization Card Types', () => {
             mockStoreState.optimizations = optimizations;
             mockStoreState.parsedResumeText = projectionResumeText;
             mockStoreState.baselineMatchScore = 60;
+            const jobDescription = seedProjectionJobDescription('Global apply role');
             mockStoreState.optimizationMetrics = {
                 ...mockStoreState.optimizationMetrics,
                 beforeScore: 60,
                 improvement: null,
-                verifiedPotential: verifiedProjection(optimizations),
+                verifiedPotential: verifiedProjection(optimizations, jobDescription),
                 hasJobDescription: true,
             };
             mockApplyAllOptimizations.mockImplementation(() => {

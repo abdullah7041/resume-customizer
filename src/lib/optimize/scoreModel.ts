@@ -130,10 +130,11 @@ export interface ScorePresentationInput {
 
 export function buildScorePresentation(input: ScorePresentationInput): ScorePresentation {
   const { actionable, recommendations } = partitionOptimizations(input.optimizations);
+  const actionableForProjection = actionable.filter((o) => o.mergeStatus !== 'failed');
 
-  const actionableTotal = actionable.length;
+  const actionableTotal = actionableForProjection.length;
   const mergeFailed = actionable.filter((o) => o.mergeStatus === 'failed').length;
-  const actionableApplied = actionable.filter((o) => o.applied && o.mergeStatus !== 'failed').length;
+  const actionableApplied = actionableForProjection.filter((o) => o.applied).length;
 
   const baseline = input.baselineScore;
   const isPlaceholderScore = baseline === null;

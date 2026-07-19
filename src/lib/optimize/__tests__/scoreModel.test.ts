@@ -269,6 +269,19 @@ describe('projection math', () => {
     expect(p.currentAppliedProjection).toBeNull();
   });
 
+  it('excludes merge-failed cards from the verified projection denominator', () => {
+    const queue = [
+      card({ sectionId: 'experience-0', applied: true }),
+      card({ sectionId: 'summary-0', sectionType: 'summary', mergeStatus: 'failed' }),
+    ];
+    const p = present(queue, { baseline: 60, verifiedPotential: verifiedFor(queue, 78, 60) });
+
+    expect(p.counts.actionableTotal).toBe(1);
+    expect(p.counts.actionableApplied).toBe(1);
+    expect(p.currentAppliedProjection).toBe(78);
+    expect(p.displayState).toBe('verified_applied');
+  });
+
   it('keeps verified no-change frozen even when a card is applied', () => {
     const queue = [
       card({ sectionId: 'experience-0', applied: true }),
