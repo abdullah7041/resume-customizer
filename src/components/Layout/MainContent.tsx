@@ -2122,7 +2122,7 @@ export default function MainContent() {
                   previewUsed={previewUsed}
                   onUpgrade={handleUpgrade}
                   onExport={handleExportPdf}
-                  onContinueToExport={() => setActiveTab("templates")}
+                  onContinueToExport={() => handleTabChange("templates")}
                   canExport={Boolean(resumeData?.plainText)}
                   hasMatchAnalysis={Boolean(matchAnalysis && jobDescription)}
                   onClear={handleClearOptimizations}

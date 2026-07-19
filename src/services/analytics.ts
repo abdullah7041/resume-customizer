@@ -131,7 +131,7 @@ class Analytics {
     /**
      * Track optimization events.
      */
-    trackOptimization(action: 'started' | 'completed' | 'applied', data?: Record<string, unknown>) {
+    trackOptimization(action: 'started' | 'completed' | 'applied' | 'applied_all', data?: Record<string, unknown>) {
         this.track(`optimization_${action}`, data);
     }
 

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Code2, GraduationCap, Lightbulb, Loader2, RotateCcw, Users, Briefcase, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Code2, GraduationCap, Lightbulb, Loader2, RotateCcw, Users, Briefcase, TrendingDown, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { cn } from '@/lib/utils/cn';
@@ -213,6 +213,11 @@ export function ScoreHeader({
             {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && estimateIsZero && (
               <p>{t('sections.optimize.scoreHeader.noGainPredicted', 'No measurable Match-score increase predicted (estimate)')}</p>
             )}
+            {!isPlaceholderScore && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t('sections.optimize.scoreHeader.estimateDisclaimer', 'Important: review changes before applying — AI can make mistakes, and projections are estimates until verified.')}
+              </p>
+            )}
           </div>
         </div>
 
@@ -235,8 +240,16 @@ export function ScoreHeader({
           <GlassButton variant="ghost" size="sm" onClick={onRerun} disabled={isOptimizing} leftIcon={<RotateCcw className="h-3.5 w-3.5" />} className="w-full sm:w-auto">
             {t('sections.optimize.scoreHeader.rerun', 'Re-run')}
           </GlassButton>
-          <GlassButton variant="primary" size="sm" onClick={onContinue} disabled={!canExport} className="w-full sm:w-auto">
-            {t('sections.optimize.scoreHeader.continue', 'Continue')}
+          <GlassButton
+            variant="primary"
+            size="sm"
+            onClick={onContinue}
+            disabled={!canExport}
+            title={!canExport ? t('sections.optimize.scoreHeader.continueDisabled', 'Upload a resume first to continue') : undefined}
+            className="w-full sm:w-auto"
+          >
+            {t('sections.optimize.scoreHeader.continueToTemplates', 'Continue to Templates')}
+            <ArrowRight className={cn('ms-1.5 h-3.5 w-3.5', isArabic && 'rotate-180')} />
           </GlassButton>
           {categories.length > 0 && (
             <button

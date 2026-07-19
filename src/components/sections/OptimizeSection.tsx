@@ -11,6 +11,7 @@ import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
   Sparkles,
   CheckCircle2,
+  CheckCheck,
   Briefcase,
   RotateCcw,
   AlertCircle,
@@ -233,6 +234,7 @@ export function OptimizeSection({
     optimizations: storeOptimizations,
     setOptimizations,
     applyOptimization,
+    applyAllOptimizations,
     revertOptimization,
     refineOptimization,
     keywordSuggestions,
@@ -1194,6 +1196,11 @@ export function OptimizeSection({
     ids.forEach((sectionId) => applyOptimization(sectionId));
   };
 
+  const handleApplyAll = () => {
+    analytics.trackOptimization('applied_all');
+    applyAllOptimizations();
+  };
+
   const handleToggleCompare = (sectionId: string) => {
     setCompareMode(compareMode === sectionId ? null : sectionId);
   };
@@ -1544,6 +1551,19 @@ export function OptimizeSection({
                   {t('sections.optimize.inlineDiff', 'Diff')}
                 </button>
               </div>
+              {presentation.counts.actionableTotal > presentation.counts.actionableApplied && (
+                <GlassButton
+                  variant="primary"
+                  size="sm"
+                  onClick={handleApplyAll}
+                  leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
+                >
+                  {t('sections.optimize.queue.applyAllRemaining', {
+                    defaultValue: 'Apply All ({{count}} remaining)',
+                    count: presentation.counts.actionableTotal - presentation.counts.actionableApplied,
+                  })}
+                </GlassButton>
+              )}
               <button
                 type="button"
                 onClick={() => {
