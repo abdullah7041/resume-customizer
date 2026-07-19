@@ -249,7 +249,7 @@ class Analytics {
         this.track('landing_viewed');
     }
 
-    trackGetStartedClicked(source: 'hero' | 'walkthrough' | 'final_cta') {
+    trackGetStartedClicked(source: 'hero' | 'walkthrough' | 'final_cta' | 'footer') {
         this.track('get_started_clicked', { source });
     }
 

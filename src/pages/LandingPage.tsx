@@ -513,7 +513,7 @@ export default function LandingPage({ onGetStarted, onSignIn, initialSection }: 
     return () => clearTimeout(timer);
   }, [initialSection]);
 
-  const handleCta = (source: "hero" | "walkthrough" | "final_cta") => {
+  const handleCta = (source: "hero" | "walkthrough" | "final_cta" | "footer") => {
     analytics.trackGetStartedClicked(source);
     onGetStarted();
   };
@@ -588,15 +588,43 @@ export default function LandingPage({ onGetStarted, onSignIn, initialSection }: 
       <FinalCta t={t} onGetStarted={() => handleCta("final_cta")} />
 
       <footer className="majlis-footer">
-        <div className="majlis-container">
-          <p>
-            <strong>واثق</strong>
-            <span>{localizedText(t, "landing.majlis.footerTag", "Watheq · Built for Saudi careers")}</span>
-          </p>
-          <nav aria-label="Footer">
-            <a href="/privacy">{localizedText(t, "landing.majlis.privacy", "Privacy")}</a>
-            <a href="/terms">{localizedText(t, "landing.majlis.terms", "Terms")}</a>
+        <div className="majlis-container majlis-footer-grid">
+          <div className="majlis-footer-brand">
+            <p>
+              <strong>واثق</strong>
+              <span>{localizedText(t, "landing.majlis.footerTag", "Watheq · Built for Saudi careers")}</span>
+            </p>
+            <span className="majlis-footer-tagline">
+              {localizedText(t, "footer.tagline", "AI-Powered Resume Optimization for Saudi Arabia")}
+            </span>
+          </div>
+          <nav className="majlis-footer-col" aria-label={localizedText(t, "footer.columns.product", "Product")}>
+            <h3>{localizedText(t, "footer.columns.product", "Product")}</h3>
+            <a href="#mj2-demo">{localizedText(t, "header.nav.howItWorks", "How it works")}</a>
+            <a href="#mj2-pricing">{localizedText(t, "header.nav.pricing", "Pricing")}</a>
+            <a href="#mj2-faq">{localizedText(t, "header.nav.faq", "FAQ")}</a>
+            <button type="button" onClick={() => handleCta("footer")}>
+              {localizedText(t, "footer.landingCta", "Get started for free")}
+            </button>
           </nav>
+          <nav className="majlis-footer-col" aria-label={localizedText(t, "footer.columns.legal", "Legal")}>
+            <h3>{localizedText(t, "footer.columns.legal", "Legal")}</h3>
+            <a href="/privacy">{localizedText(t, "footer.links.privacy", "Privacy Policy")}</a>
+            <a href="/terms">{localizedText(t, "footer.links.terms", "Terms of Service")}</a>
+            <a href="/refund">{localizedText(t, "footer.links.refund", "Refund Policy")}</a>
+          </nav>
+          <nav className="majlis-footer-col" aria-label={localizedText(t, "footer.columns.connect", "Connect")}>
+            <h3>{localizedText(t, "footer.columns.connect", "Connect")}</h3>
+            <a href="mailto:support@watheqai.app">{localizedText(t, "footer.links.contact", "Contact Us")}</a>
+            <a href="https://www.linkedin.com/in/3binahmed/" target="_blank" rel="noopener noreferrer">
+              LinkedIn
+            </a>
+          </nav>
+        </div>
+        <div className="majlis-container majlis-footer-bottom">
+          <span>
+            © {new Date().getFullYear()} واثق · {localizedText(t, "footer.workspace.byLine", "Built by Abdullah Bin Ahmed")}
+          </span>
         </div>
       </footer>
     </main>
