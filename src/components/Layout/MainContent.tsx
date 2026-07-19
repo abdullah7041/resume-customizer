@@ -334,6 +334,7 @@ export default function MainContent() {
   // Seed intentPrompted true when an intent already exists so returning users with a
   // saved intent are not re-prompted — read once at mount, never reactively.
   const hasParsedResume = useResumeStore((state) => Boolean(state.originalResume));
+  const variantRestoreNonce = useResumeStore((s) => s.variantRestoreNonce);
   const [intentPrompted, setIntentPrompted] = useState(
     () => isIntentPrompted() || Boolean(useResumeStore.getState().searchIntent),
   );
@@ -684,6 +685,11 @@ export default function MainContent() {
       window.localStorage.setItem(JOB_STORAGE_KEY, jobDescription);
     }
   }, [jobDescription]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setJobDescription(window.localStorage.getItem(JOB_STORAGE_KEY) || "");
+  }, [variantRestoreNonce]);
 
   // Warn user before closing tab with unsaved changes
   useEffect(() => {

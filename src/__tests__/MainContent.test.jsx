@@ -963,6 +963,35 @@ describe("MainContent resume parsing", () => {
     expect(screen.queryByText(/Sign in required Sign in to run AI analysis and save your progress/i)).not.toBeInTheDocument();
   });
 
+  it("uses the restored job description after a variant restore nonce bump", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Initial job description");
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
+
+    render(<MainContent />);
+
+    localStorage.setItem("watheq:lastJobDescription", "Restored job description");
+    await act(async () => {
+      useResumeStore.setState((state) => ({
+        variantRestoreNonce: state.variantRestoreNonce + 1,
+      }));
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    await waitFor(() => {
+      expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
+        expect.objectContaining({ jobDesc: "Restored job description" }),
+        expect.any(Function),
+      );
+    });
+  });
+
   it("does not render landing pricing or comparison blocks in the authenticated workspace", () => {
     render(<MainContent />);
 
