@@ -134,11 +134,6 @@ export default defineConfig({
               return "vendor-sentry";
             }
 
-            // ===== JOYRIDE (lazy loaded for onboarding tour) =====
-            if (id.includes("react-joyride") || id.includes("react-floater")) {
-              return "vendor-joyride";
-            }
-
             // ===== JSPDF (lazy loaded for PDF export in bulk analysis) =====
             if (id.includes("jspdf")) {
               return "vendor-jspdf";

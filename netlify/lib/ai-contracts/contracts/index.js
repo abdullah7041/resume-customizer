@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { taggedBlock, optionalTaggedBlock, buildMessages } from '../prompt.js';
 import { formatRagContext } from '../rag-context.js';
+import { AiContractError } from '../errors.js';
 import {
   REALITY_CHECK_CONFIDENCE,
   REALITY_CHECK_RECOMMENDATIONS,
@@ -381,6 +382,38 @@ function normalizeMatchOutput(output) {
     ...output,
     summary_bullets: normalizeSummaryBullets(output.summary_bullets),
   };
+}
+
+// The model occasionally emits scores as 0-1 fractions despite the prompt's
+// integer rule; nothing downstream rescales, so 0.85 rendered literally as
+// "0.85%". Rescale fractions, round, clamp to 0-100.
+function normalizeVision2030Score(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const scaled = value > 0 && value < 1 ? value * 100 : value;
+  return Math.min(100, Math.max(0, Math.round(scaled)));
+}
+
+function normalizeVision2030Output(output) {
+  const overallScore = normalizeVision2030Score(output.overallScore);
+  const sectorBreakdown = (Array.isArray(output.sectorBreakdown) ? output.sectorBreakdown : [])
+    .map((sector) => {
+      const score = normalizeVision2030Score(sector?.score);
+      return score === null ? sector : { ...sector, score };
+    });
+
+  // A shape-valid response with no sectors (sectorBreakdown defaults to [])
+  // used to render an empty results screen AND consume credits. Throwing here
+  // keeps the failure inside executeAiContract, before any credit consumption.
+  if (overallScore === null || sectorBreakdown.length === 0) {
+    throw new AiContractError('Vision 2030 analysis returned no usable sector data.', {
+      contractId: 'vision2030_alignment',
+      code: 'AI_CONTRACT_EMPTY_RESULT',
+      status: 502,
+      retryable: true,
+    });
+  }
+
+  return { ...output, overallScore, sectorBreakdown };
 }
 
 const realityCheckEvidenceJsonSchema = {
@@ -1063,7 +1096,7 @@ ${taggedBlock('resume_text', truncateText(input.resumeText, 50000))}`;
 
 function buildVision2030Messages(input, context) {
   const isArabic = input.language === 'ar';
-  const system = `You analyze Saudi Vision 2030 alignment from resume evidence. Do not recommend or match skills unless they are supported by resume text or clearly relevant as missing suggestions.`;
+  const system = `You analyze Saudi Vision 2030 alignment from resume evidence. Do not recommend or match skills unless they are supported by resume text or clearly relevant as missing suggestions. overallScore and every sectorBreakdown score must be integers from 0 to 100, never decimals or fractions (0.85 is invalid; write 85). Always return at least one sectorBreakdown entry.`;
   const sectorData = `Vision 2030 sectors: technology and digital transformation, tourism and entertainment, renewable energy, healthcare and life sciences, finance and fintech, industry and manufacturing. Include English and Arabic labels when the schema asks for them.`;
   const jobDescriptionContext = input.jobDescription ? optionalTaggedBlock('job_description', input.jobDescription) : '';
   const user = `${isArabic ? 'Analyze the resume' : 'Analyze the resume'} against Saudi Vision 2030 strategic sectors. Return JSON matching the schema with overallScore, matchedSkills, missingSuggestions, sectorBreakdown, topSectors, allSectorsWithMatches, and detectedCareer.${withRagBlock(context.retrievedContext)}
@@ -1267,6 +1300,7 @@ export const aiContracts = {
     temperature: 0.3,
     reasoningBudget: null,
     buildMessages: buildVision2030Messages,
+    transform: normalizeVision2030Output,
   },
 };
 

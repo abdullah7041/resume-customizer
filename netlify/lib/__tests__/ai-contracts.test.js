@@ -558,3 +558,81 @@ describe('AI contract layer', () => {
     });
   });
 });
+
+describe('vision2030_alignment contract normalization', () => {
+  const baseResponse = {
+    matchedSkills: [],
+    missingSuggestions: [],
+    topSectors: [],
+    allSectorsWithMatches: [],
+    detectedCareer: { archetypeNameEn: 'Software Engineer', archetypeNameAr: 'مهندس برمجيات' },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rescales fractional scores to 0-100 integers (the literal "0.85%" bug)', async () => {
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      ...baseResponse,
+      overallScore: 0.85,
+      sectorBreakdown: [
+        { sectorId: 'tech', score: 0.72 },
+        { sectorId: 'energy', score: 41 },
+      ],
+    }));
+
+    const result = await executeAiContract('vision2030_alignment', {
+      resumeText: 'Software engineer resume',
+      language: 'en',
+    });
+
+    expect(result.overallScore).toBe(85);
+    expect(result.sectorBreakdown[0].score).toBe(72);
+    expect(result.sectorBreakdown[1].score).toBe(41);
+  });
+
+  it('clamps and rounds out-of-range overall scores', async () => {
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      ...baseResponse,
+      overallScore: 108.4,
+      sectorBreakdown: [{ sectorId: 'tech', score: 55.6 }],
+    }));
+
+    const result = await executeAiContract('vision2030_alignment', {
+      resumeText: 'Software engineer resume',
+      language: 'en',
+    });
+
+    expect(result.overallScore).toBe(100);
+    expect(result.sectorBreakdown[0].score).toBe(56);
+  });
+
+  it('throws AiContractError before credits are consumed when sectorBreakdown is empty', async () => {
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      ...baseResponse,
+      overallScore: 62,
+      sectorBreakdown: [],
+    }));
+
+    await expect(executeAiContract('vision2030_alignment', {
+      resumeText: 'Software engineer resume',
+      language: 'en',
+    })).rejects.toMatchObject({
+      name: 'AiContractError',
+      code: 'AI_CONTRACT_EMPTY_RESULT',
+    });
+  });
+
+  it('prompt demands integer 0-100 scores and at least one sector', () => {
+    const contract = getAiContract('vision2030_alignment');
+    const messages = contract.buildMessages({
+      resumeText: 'Software engineer resume',
+      language: 'en',
+    }, { retrievedContext: { documents: [] } });
+
+    expect(messages[0].content).toContain('integers from 0 to 100');
+    expect(messages[0].content).toContain('0.85 is invalid; write 85');
+    expect(messages[0].content).toContain('at least one sectorBreakdown entry');
+  });
+});

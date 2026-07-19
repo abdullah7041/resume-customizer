@@ -6,14 +6,12 @@
  * Results are persisted in localStorage to survive tab navigation.
  */
 
-import { lazy, Suspense, useState, useCallback, useEffect } from 'react';
-const Joyride = lazy(() => import('react-joyride').then((m) => ({ default: m.Joyride })));
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
 import { analyzeVision2030 } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { useVision2030Tour } from '../../hooks/useVision2030Tour';
 import { Vision2030AnalysisResponse } from '../../types/vision2030';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { SectorBreakdown } from './SectorBreakdown';
@@ -22,16 +20,15 @@ import { GlassButton } from '../ui/GlassButton';
 import { GlassCard } from '../ui/GlassCard';
 import EmptyState from '../ui/EmptyState';
 import { Vision2030CalculationModal } from '../ui/Vision2030CalculationModal';
-import { TourTooltip } from '../Tour/TourTooltip';
 
 const VISION2030_STORAGE_KEY = 'watheq:vision2030Analysis';
 const VISION2030_ANALYZING_KEY = 'watheq:vision2030Analyzing';
 
 // Get score color based on value
 const getScoreColor = (score: number) => {
-  if (score >= 70) return 'text-emerald-400';
-  if (score >= 40) return 'text-amber-400';
-  return 'text-red-400';
+  if (score >= 70) return 'text-emerald-700 dark:text-emerald-400';
+  if (score >= 40) return 'text-amber-700 dark:text-amber-400';
+  return 'text-red-700 dark:text-red-400';
 };
 
 const getScoreBg = (score: number) => {
@@ -86,16 +83,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
   const [showCalculationModal, setShowCalculationModal] = useState(false);
-
-  // Vision 2030 tour
-  const { run, steps, stepIndex, handleEvent, startTour } = useVision2030Tour();
-
-  // Start tour when component mounts (first time only)
-  useEffect(() => {
-    if (resumeText) {
-      startTour();
-    }
-  }, [resumeText, startTour]);
 
   // Persist analysis to localStorage when it changes
   useEffect(() => {
@@ -232,7 +219,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           <div className="relative">
 
             <div className="relative p-4 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
-              <Sparkles className="w-8 h-8 text-emerald-400 animate-spin" />
+              <Sparkles className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
             </div>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -255,7 +242,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
-                <Target className="w-6 h-6 text-emerald-400" />
+                <Target className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -274,7 +261,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                   {t('vision2030.section.overallScore', 'Overall Score')}
                 </span>
                 <span className={`text-3xl font-bold ${getScoreColor(analysis.overallScore)}`}>
-                  {analysis.overallScore}%
+                  {Math.round(analysis.overallScore)}%
                 </span>
               </div>
             </div>
@@ -283,7 +270,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           {/* Top Sectors */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               {t('vision2030.section.topSectors', 'Top Aligned Sectors')}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -304,7 +291,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                         {sector.score}%
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-900/50 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-900/50 rounded-full overflow-hidden">
                       <div
                         className="h-full w-full origin-left rtl:origin-right bg-gradient-to-r from-emerald-600 to-emerald-400 transition-transform duration-1000"
                         style={{ transform: `scaleX(${Math.min(Math.max(sector.score, 0), 100) / 100})` }}
@@ -392,11 +379,11 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         <div className="relative">
 
           <div className="relative p-6 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30">
-            <Target className="w-12 h-12 text-emerald-400" />
+            <Target className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
           </div>
         </div>
 
-        <div data-tour="vision2030-intro" className="text-center space-y-2 max-w-lg">
+        <div className="text-center space-y-2 max-w-lg">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             {t('vision2030.section.title', 'Vision 2030 Alignment Analysis')}
           </h2>
@@ -407,7 +394,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
 
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
           <GlassButton
-            data-tour="vision2030-calculate"
             variant="primary"
             onClick={handleAnalyze}
             disabled={creditsLoading || !user}
@@ -417,7 +403,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
             {t('vision2030.section.analyze', 'Analyze Resume (2 credits)')}
           </GlassButton>
           <GlassButton
-            data-tour="vision2030-methodology"
             variant="secondary"
             onClick={() => setShowCalculationModal(true)}
             className="flex-shrink-0"
@@ -434,19 +419,19 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           </h4>
           <ul className="space-y-2 text-sm text-gray-500 dark:text-white/60">
             <li className="flex items-start gap-2">
-              <span className="text-emerald-400">✓</span>
+              <span className="text-emerald-600 dark:text-emerald-400">✓</span>
               <span>{t('vision2030.section.feature1', 'Overall alignment score across all Vision 2030 sectors')}</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-emerald-400">✓</span>
+              <span className="text-emerald-600 dark:text-emerald-400">✓</span>
               <span>{t('vision2030.section.feature2', 'Sector-by-sector breakdown with matched skills')}</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-emerald-400">✓</span>
+              <span className="text-emerald-600 dark:text-emerald-400">✓</span>
               <span>{t('vision2030.section.feature3', 'Personalized recommendations to improve alignment')}</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-emerald-400">✓</span>
+              <span className="text-emerald-600 dark:text-emerald-400">✓</span>
               <span>{t('vision2030.section.feature4', 'Keywords and skills to add (Arabic + English)')}</span>
             </li>
           </ul>
@@ -467,31 +452,6 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         isOpen={showCalculationModal}
         onClose={() => setShowCalculationModal(false)}
       />
-
-      {/* Vision 2030 Tour */}
-      <Suspense fallback={null}>
-        <Joyride
-          steps={steps}
-          run={run}
-          stepIndex={stepIndex}
-          continuous
-          scrollToFirstStep
-          onEvent={handleEvent}
-          tooltipComponent={(props) => <TourTooltip {...props} size={steps.length} />}
-          locale={{
-            back: isArabic ? 'السابق' : 'Back',
-            close: isArabic ? 'إغلاق' : 'Close',
-            last: isArabic ? 'إنهاء' : 'Finish',
-            next: isArabic ? 'التالي' : 'Next',
-            skip: isArabic ? 'تخطي الجولة' : 'Skip Tour',
-          }}
-          options={{
-            showProgress: true,
-            buttons: ['back', 'close', 'primary', 'skip'],
-            zIndex: 10000,
-          }}
-        />
-      </Suspense>
     </GlassCard>
   );
 }

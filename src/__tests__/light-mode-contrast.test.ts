@@ -27,6 +27,8 @@ const optimizeFlowFiles = [
   ['OptimizeSection.tsx', readFileSync(resolve(__dirname, '../components/sections/OptimizeSection.tsx'), 'utf-8')],
   ['BulkAnalysisSection.tsx', readFileSync(resolve(__dirname, '../components/sections/BulkAnalysisSection.tsx'), 'utf-8')],
   ['ScoreHeader.tsx', readFileSync(resolve(__dirname, '../components/sections/optimize/ScoreHeader.tsx'), 'utf-8')],
+  ['Vision2030Section.tsx', readFileSync(resolve(__dirname, '../components/Vision2030/Vision2030Section.tsx'), 'utf-8')],
+  ['SectorBreakdown.tsx', readFileSync(resolve(__dirname, '../components/Vision2030/SectorBreakdown.tsx'), 'utf-8')],
 ];
 
 describe('Light mode contrast', () => {
