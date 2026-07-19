@@ -92,7 +92,7 @@
       "verifyAnomalyTitle": "Couldn't verify the new score",
       "retryVerify": "Retry",
       "verifying": "Verifying...",
-      "verifiedTooltip": "We re-scored your optimized resume against this job description",
+      "verifiedTooltip": "We re-scored your optimized resume against this job description using the same strict scoring as Match and Bulk analysis",
       "verifiedByReanalysis": "Verified by re-analysis",
       "scoreHeader": {
         "verified": "verified",

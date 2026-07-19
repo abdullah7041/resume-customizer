@@ -927,7 +927,7 @@ function buildOptimizeMessages(input, context) {
 - source_span: "Reduced API latency by 40% through caching and query optimization"
 - issue: "Vague verb, no scope, no metric."
 - rationale: "Keeps the real 40% from the cited span; names the concrete technique."`;
-  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Each bullet_improvement MUST include a verbatim source_span. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with the strict ATS rubric. Score fields must be integers from 0 to 100, never decimals or fractions.
+  const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Each bullet_improvement MUST include a verbatim source_span. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores with this strict evidence-based ATS rubric: hard skills 40, experience 30, education 15, soft skills 15. Score fields must be integers from 0 to 100, never decimals or fractions. 80+ means hireable today, 60-79 means competitive with gaps, below 60 means significant gaps. Never score above 90 unless every job requirement is met with quantified evidence. after_score must reflect only the effect of the suggested wording changes under the same rubric — do not assume skills, credentials, or experience the resume does not contain.
 
 ${example}${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${clarificationsBlock}
 ${hardStopsBlock}
