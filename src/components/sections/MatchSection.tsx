@@ -323,6 +323,8 @@ export function MatchSection({
         return t('sections.match.urlImport.errors.unsupportedUrl', 'This link type is not supported yet. Open the job posting itself and copy its link.');
       case 'login_required':
         return t('sections.match.urlImport.errors.loginRequired', "Watheq couldn't reliably import the full description from this link. Open the company's job page or paste the description manually.");
+      case 'linkedin_blocked':
+        return t('sections.match.urlImport.errors.linkedinBlocked', 'LinkedIn blocked automated access to this job page. Open the job on LinkedIn and paste the description manually.');
       case 'blocked':
         return t('sections.match.urlImport.errors.blocked', 'This site blocked the import. Paste the job description manually.');
       case 'timeout':

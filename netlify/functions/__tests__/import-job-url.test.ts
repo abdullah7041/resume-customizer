@@ -135,12 +135,35 @@ describe('import-job-url handler', () => {
     expect(safeFetchMock).not.toHaveBeenCalled();
   });
 
-  it('maps a LinkedIn auth wall to a recoverable login_required state', async () => {
+  it('maps a LinkedIn auth wall to the candid linkedin_blocked state', async () => {
     safeFetchMock.mockResolvedValue({
       status: 200, headers: {}, body: '<html>authwall</html>',
       finalUrl: 'https://www.linkedin.com/authwall?trk=x', redirects: [],
     });
     const response = await invoke({ url: 'https://www.linkedin.com/jobs/view/123/' });
+    expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'linkedin_blocked' });
+  });
+
+  it('maps a LinkedIn transport-level rejection to linkedin_blocked', async () => {
+    safeFetchMock.mockRejectedValue(new SafeFetchError('unreachable', 'socket reset'));
+    const response = await invoke({ url: 'https://www.linkedin.com/jobs/view/123/' });
+    expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'linkedin_blocked' });
+  });
+
+  it('maps a LinkedIn 999 bot-block status to linkedin_blocked', async () => {
+    safeFetchMock.mockResolvedValue({
+      status: 999, headers: {}, body: 'denied', finalUrl: 'https://www.linkedin.com/jobs/view/123/', redirects: [],
+    });
+    const response = await invoke({ url: 'https://www.linkedin.com/jobs/view/123/' });
+    expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'linkedin_blocked' });
+  });
+
+  it('keeps login_required for non-LinkedIn login walls', async () => {
+    safeFetchMock.mockResolvedValue({
+      status: 200, headers: {}, body: '<html>sign in to view this job</html>',
+      finalUrl: 'https://careers.example.com/login', redirects: [],
+    });
+    const response = await invoke({ url: 'https://careers.example.com/jobs/1' });
     expect(parseBody(response)).toMatchObject({ status: 'failed', failureReason: 'login_required' });
   });
 
