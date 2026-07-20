@@ -87,6 +87,30 @@ const renderDiff = (
 const baseCards = [opt('a', true), opt('b', false), opt('c', true)];
 
 describe('ScoreDiffBreakdown', () => {
+  it('uses readable light-mode colors while retaining dark-mode overrides', () => {
+    const { container } = renderDiff(baseCards);
+
+    const card = container.querySelector('[data-score-diff]');
+    expect(card).toHaveClass(
+      'border-slate-200/80',
+      'bg-white/80',
+      'dark:border-white/10',
+      'dark:bg-white/[0.03]',
+    );
+
+    const title = screen.getByRole('heading', { name: 'sections.optimize.scoreDiff.title' });
+    expect(title).toHaveClass('text-slate-900', 'dark:text-white');
+
+    const appliedSummary = screen.getByText((content) => content.includes('appliedOf'));
+    expect(appliedSummary).toHaveClass('text-slate-600', 'dark:text-gray-400');
+
+    fireEvent.click(screen.getByRole('button', { name: /showCards|hideCards/i }));
+    expect(screen.getAllByText('sections.optimize.tabs.experience')[0]).toHaveClass(
+      'text-slate-800',
+      'dark:text-gray-200',
+    );
+  });
+
   it('reports only applied:true cards as counted in the projection', () => {
     renderDiff(baseCards);
     fireEvent.click(screen.getByRole('button', { name: /showCards|hideCards/i }));
