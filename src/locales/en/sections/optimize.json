@@ -128,6 +128,7 @@
         "workSubtitle": "Work experience",
         "suggestionsCount": "{{count}} suggestions",
         "applyGroup": "Apply all in this job",
+        "revertGroup": "Revert all in this job",
         "filters": {
           "all": "All",
           "pending": "Pending",
@@ -168,6 +169,7 @@
         "more": "more",
         "improvementsApplied": "Improvements Applied",
         "applyAllRemaining": "Apply All ({{count}} remaining)",
+        "unapplyAll": "Unapply All ({{count}} applied)",
         "exportPdf": "Export PDF",
         "sectionLabels": {
           "headline": "Headline optimized for ATS",

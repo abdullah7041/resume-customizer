@@ -128,6 +128,7 @@
         "workSubtitle": "الخبرة العملية",
         "suggestionsCount": "{{count}} اقتراحات",
         "applyGroup": "تطبيق كل اقتراحات هذه الوظيفة",
+        "revertGroup": "التراجع عن كل اقتراحات هذه الوظيفة",
         "filters": {
           "all": "الكل",
           "pending": "معلّق",
@@ -168,6 +169,7 @@
         "more": "المزيد",
         "improvementsApplied": "التحسينات المطبقة",
         "applyAllRemaining": "تطبيق الكل ({{count}} متبقي)",
+        "unapplyAll": "التراجع عن الكل ({{count}} مطبق)",
         "exportPdf": "تصدير PDF",
         "sectionLabels": {
           "headline": "العنوان محسّن لأنظمة ATS",

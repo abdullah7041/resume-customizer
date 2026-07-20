@@ -679,6 +679,56 @@ describe('OptimizeSection', () => {
             expect(mockApplyOptimization).toHaveBeenCalledWith('b');
         });
 
+        it('reverts all applied suggestions in a group when Revert all is clicked', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: true },
+                { sectionId: 'b', sectionType: 'summary', original: 'c', optimized: 'd', applied: true },
+                { sectionId: 'c', sectionType: 'summary', original: 'e', optimized: 'f', applied: false },
+            ];
+
+            renderWithProviders(<OptimizeSection />);
+
+            fireEvent.click(screen.getByRole('button', { name: /revert all in this job/i }));
+
+            expect(mockRevertOptimization).toHaveBeenCalledWith('a');
+            expect(mockRevertOptimization).toHaveBeenCalledWith('b');
+            expect(mockRevertOptimization).not.toHaveBeenCalledWith('c');
+        });
+
+        it('hides the group Revert all button when nothing in the group is applied', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: false },
+            ];
+
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.queryByRole('button', { name: /revert all in this job/i })).not.toBeInTheDocument();
+        });
+
+        it('shows Unapply All when at least one card is applied and calls revertAllOptimizations', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: true },
+                { sectionId: 'b', sectionType: 'headline', original: 'c', optimized: 'd', applied: true },
+            ];
+
+            renderWithProviders(<OptimizeSection />);
+
+            fireEvent.click(screen.getByRole('button', { name: /Unapply All \(2 applied\)/ }));
+
+            expect(mockRevertAllOptimizations).toHaveBeenCalledTimes(1);
+            expect(mockTrackOptimization).toHaveBeenCalledWith('reverted_all');
+        });
+
+        it('hides Unapply All when nothing is applied', () => {
+            mockStoreState.optimizations = [
+                { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: false },
+            ];
+
+            renderWithProviders(<OptimizeSection />);
+
+            expect(screen.queryByRole('button', { name: /Unapply All/ })).not.toBeInTheDocument();
+        });
+
         it('does not show the old header-level Revert button', () => {
             mockStoreState.optimizations = [
                 { sectionId: 'a', sectionType: 'summary', original: 'a', optimized: 'b', applied: true },

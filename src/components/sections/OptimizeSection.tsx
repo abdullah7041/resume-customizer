@@ -235,6 +235,7 @@ export function OptimizeSection({
     applyOptimization,
     applyAllOptimizations,
     revertOptimization,
+    revertAllOptimizations,
     refineOptimization,
     keywordSuggestions,
     optimizationMetrics,
@@ -1195,9 +1196,18 @@ export function OptimizeSection({
     ids.forEach((sectionId) => applyOptimization(sectionId));
   };
 
+  const handleRevertQueueGroup = (ids: string[]) => {
+    ids.forEach((sectionId) => revertOptimization(sectionId));
+  };
+
   const handleApplyAll = () => {
     analytics.trackOptimization('applied_all');
     applyAllOptimizations();
+  };
+
+  const handleUnapplyAll = () => {
+    analytics.trackOptimization('reverted_all');
+    revertAllOptimizations();
   };
 
   const handleToggleCompare = (sectionId: string) => {
@@ -1563,6 +1573,20 @@ export function OptimizeSection({
                   })}
                 </GlassButton>
               )}
+              {presentation.counts.actionableApplied > 0 && (
+                <GlassButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleUnapplyAll}
+                  leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                  className="hover:bg-red-500/10 hover:text-red-400"
+                >
+                  {t('sections.optimize.queue.unapplyAll', {
+                    defaultValue: 'Unapply All ({{count}} applied)',
+                    count: presentation.counts.actionableApplied,
+                  })}
+                </GlassButton>
+              )}
               {visibleQueueOptimizations.length > 0 && (
                 <button
                   type="button"
@@ -1613,6 +1637,7 @@ export function OptimizeSection({
                 onApply={handleApplyOptimization}
                 onRevert={revertOptimization}
                 onApplyGroup={handleApplyQueueGroup}
+                onRevertGroup={handleRevertQueueGroup}
                 onCopy={onCopy}
                 onStartRefine={handleStartRefine}
                 onRefineInstructionChange={setRefineInstruction}
