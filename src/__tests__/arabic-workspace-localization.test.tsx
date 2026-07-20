@@ -145,7 +145,11 @@ vi.mock('../lib/assets', () => ({
 }));
 
 vi.mock('../components/ui/LanguageSwitcher', () => ({
-  LanguageSwitcher: () => <button type="button">English</button>,
+  LanguageSwitcher: ({ compact = false }: { compact?: boolean }) => (
+    <button type="button" aria-label="اللغة" data-compact={String(compact)}>
+      English
+    </button>
+  ),
 }));
 
 vi.mock('../components/Credits/CreditUsageModal', () => ({
@@ -187,7 +191,8 @@ describe('Arabic workspace localization', () => {
     fireEvent.click(screen.getByRole('button', { name: 'فتح قائمة التنقل' }));
 
     const menu = screen.getByRole('dialog');
-    expect(within(menu).getByText('اللغة')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'اللغة' })).toHaveLength(2);
+    expect(within(menu).queryByRole('button', { name: 'اللغة' })).not.toBeInTheDocument();
     expect(within(menu).getByText('تحتاج رصيدًا أكثر؟ عرض الباقات')).toBeInTheDocument();
     expect(within(menu).getByText('دعوة الأصدقاء')).toBeInTheDocument();
     expect(within(menu).getByText('الإعدادات')).toBeInTheDocument();
@@ -205,7 +210,8 @@ describe('Arabic workspace localization', () => {
     fireEvent.click(screen.getByRole('button', { name: 'قائمة الحساب' }));
 
     const menu = screen.getByRole('menu');
-    expect(within(menu).getByText('اللغة')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'اللغة' })).toHaveLength(2);
+    expect(within(menu).queryByRole('button', { name: 'اللغة' })).not.toBeInTheDocument();
     expect(within(menu).getByText('تحتاج رصيدًا أكثر؟ عرض الباقات')).toBeInTheDocument();
     expect(within(menu).getByText('دعوة الأصدقاء')).toBeInTheDocument();
     expect(within(menu).getByText('الإعدادات')).toBeInTheDocument();

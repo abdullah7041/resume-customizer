@@ -268,9 +268,9 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
       <div className="relative z-10 flex flex-1 flex-col">
         {/* Top navigation bar */}
         <nav className="border-b border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] shadow-sm shadow-black/5 [backdrop-filter:blur(24px)] [-webkit-backdrop-filter:blur(24px)] dark:border-white/[0.12] dark:bg-[#041c17]/[0.94]">
-          <div className={`${containerClass} flex items-center justify-between gap-4 py-3.5 sm:py-4`}>
+          <div className={`${containerClass} flex items-center justify-between gap-2 py-3.5 sm:gap-4 sm:py-4`}>
             {/* Logo section */}
-            <div className="flex items-center gap-4 group">
+            <div className="group flex min-w-0 items-center gap-2 sm:gap-4">
               {/* Animated logo icon */}
               <div className="relative group-hover:scale-105 transition-transform duration-300">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 blur-md opacity-25 group-hover:opacity-35 transition-opacity duration-500" />
@@ -285,13 +285,13 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
               </div>
 
               {/* Brand text — bilingual, bidi-safe, shown in both states */}
-              <div className="flex flex-col">
-                <p className="text-base sm:text-lg font-extrabold tracking-[0.2em] uppercase text-[#1a3a2a] dark:text-white dark:drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)]">
+              <div className={cn('min-w-0 flex-col', user ? 'hidden sm:flex' : 'flex')}>
+                <p className="truncate text-base font-extrabold uppercase tracking-[0.2em] text-[#1a3a2a] dark:text-white dark:drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)] sm:text-lg">
                   <span dir="ltr">{t("common.appNameEnglish", "WATHEQ")}</span>
                   <span aria-hidden="true"> | </span>
                   <span dir="rtl">{t("common.appNameArabic", "واثق")}</span>
                 </p>
-                <p className="mt-0.5 text-xs font-medium text-emerald-800/80 dark:text-emerald-200/70">
+                <p className="mt-0.5 truncate text-xs font-medium text-emerald-800/80 dark:text-emerald-200/70">
                   {t("common.appSubtitle", "Resume tools for the Saudi job market")}
                 </p>
               </div>
@@ -348,6 +348,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                   >
                   {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
                   </button>
+                  <LanguageSwitcher />
                   <div data-tour="credits" className="inline-block">
                     <CreditBalance
                       variant="compact"
@@ -378,14 +379,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                         style={accountMenuStyle}
                         className="origin-top-right rtl:origin-top-left animate-in fade-in zoom-in-95 duration-150 ease-out overflow-y-auto rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] p-3 text-gray-800 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#071f1a]/95 dark:text-gray-100"
                       >
-                        <div className="border-b border-[color:var(--glass-border)] pb-3 dark:border-white/10">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50">
-                            {t("common.language", "Language")}
-                          </p>
-                          <LanguageSwitcher />
-                        </div>
-
-                        <div className="mt-3 space-y-2">
+                        <div className="space-y-2">
                           <button
                             type="button"
                             onClick={handleOpenPlans}
@@ -440,15 +434,6 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                           )}
                           <button
                             type="button"
-                            onClick={toggleTheme}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
-                            role="menuitem"
-                          >
-                            {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
-                            <span>{t('common.toggleTheme', 'Toggle theme')}</span>
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => {
                               signOut();
                               setAccountMenuOpen(false);
@@ -491,17 +476,12 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
               )}
             </div>
 
-            {/* Mobile: compact credits plus menu button */}
-            <div className="md:hidden flex min-w-0 items-center gap-2">
+            {/* Mobile: compact direct controls plus menu button */}
+            <div className="flex min-w-0 shrink-0 items-center gap-1.5 md:hidden">
               {user && (
-                // Fixed positioning: the credits pill stays visible while the
-                // page scrolls (the nav bar itself is not sticky on mobile).
-                // Offsets place it beside the hamburger button at rest; z-40
-                // keeps it under the mobile nav overlay (z-[100]) and the
-                // credit modal (z-[60]).
                 <div
                   data-tour="credits"
-                  className="fixed z-40 top-[max(18px,env(safe-area-inset-top))] sm:top-[max(22px,env(safe-area-inset-top))] end-[calc(var(--app-shell-gutter)+52px)]"
+                  className="shrink-0"
                 >
                   <CreditBalance
                     variant="compact"
@@ -512,6 +492,15 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                   />
                 </div>
               )}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-slate-700 transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] active:scale-[0.96] dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                aria-label={t('common.toggleTheme', 'Toggle theme')}
+              >
+                {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
+              </button>
+              <LanguageSwitcher compact />
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
@@ -574,14 +563,6 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={toggleTheme}
-                  className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-slate-700 dark:text-white transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-[0.96]"
-                  aria-label={t('common.toggleTheme', 'Toggle theme')}
-                >
-                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
-                </button>
-                <button
-                  type="button"
                   onClick={() => setMobileNavOpen(false)}
                   className="inline-flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-[color:var(--surface-control)] dark:bg-white/5 border border-[color:var(--glass-border)] dark:border-white/10 text-gray-900 dark:text-white transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] dark:hover:bg-white/10 active:scale-[0.96]"
                   aria-label={t('common.closeNavigation', 'Close navigation menu')}
@@ -593,14 +574,6 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
 
             {/* Nav content */}
             <div className="flex flex-col p-5 space-y-4">
-              {/* Language Switcher */}
-              <div className="pb-4 border-b border-gray-200 dark:border-white/10">
-                <p className="text-xs font-semibold tracking-wider text-gray-500 dark:text-white/50 mb-3">
-                  {t("common.language", "Language")}
-                </p>
-                <LanguageSwitcher />
-              </div>
-
               {/* Marketing nav — opens the landing page scrolled to the section */}
               {showMarketingNav && (
                 <nav className="pb-4 border-b border-gray-200 dark:border-white/10 flex flex-col" aria-label={t("header.nav.label", "Main navigation")}>

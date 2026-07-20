@@ -28,7 +28,11 @@ vi.mock('../lib/assets', () => ({
 }));
 
 vi.mock('../components/ui/LanguageSwitcher', () => ({
-  LanguageSwitcher: () => <div>Language</div>,
+  LanguageSwitcher: ({ compact = false }: { compact?: boolean }) => (
+    <button type="button" aria-label="Language" data-compact={String(compact)}>
+      Language
+    </button>
+  ),
 }));
 
 vi.mock('../components/ui/GlassButton', () => ({
@@ -114,7 +118,7 @@ describe('Header feedback action', () => {
     expect(await screen.findByRole('menuitem', { name: /feedback/i })).toBeInTheDocument();
   });
 
-  it('lets signed-in desktop users toggle the theme without opening the account menu', () => {
+  it('keeps theme and language controls directly available in both responsive headers', () => {
     authState.user = {
       id: 'user-1',
       email: 'user@example.com',
@@ -125,7 +129,16 @@ describe('Header feedback action', () => {
     render(<Header />);
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
+
+    const themeButtons = screen.getAllByRole('button', { name: 'Toggle theme' });
+    expect(themeButtons).toHaveLength(2);
+
+    const languageButtons = screen.getAllByRole('button', { name: 'Language' });
+    expect(languageButtons).toHaveLength(2);
+    expect(languageButtons.filter((button) => button.dataset.compact === 'true')).toHaveLength(1);
+    expect(languageButtons.filter((button) => button.dataset.compact === 'false')).toHaveLength(1);
+
+    fireEvent.click(themeButtons[0]);
     expect(themeState.toggleTheme).toHaveBeenCalledOnce();
   });
 
@@ -141,8 +154,10 @@ describe('Header feedback action', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /account menu/i }));
 
-    expect(await screen.findByRole('menu')).toBeInTheDocument();
-    expect(screen.getAllByText('Language').length).toBeGreaterThan(0);
+    const menu = await screen.findByRole('menu');
+    expect(menu).toBeInTheDocument();
+    expect(within(menu).queryByRole('button', { name: 'Language' })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
   });
 
   it('mobile nav (dark mode): Feedback sits with Settings, secondary tools stay reachable', async () => {
@@ -163,6 +178,9 @@ describe('Header feedback action', () => {
     // Feedback is no longer in the prominent Credits block, but is reachable
     // alongside Settings in the Auth section.
     const navQueries = within(nav);
+    expect(navQueries.queryByRole('button', { name: 'Language' })).not.toBeInTheDocument();
+    expect(navQueries.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
+
     const feedbackButton = await navQueries.findByRole('button', { name: /feedback/i });
     const settingsButton = navQueries.getByRole('button', { name: /settings/i });
     expect(feedbackButton).toBeInTheDocument();
