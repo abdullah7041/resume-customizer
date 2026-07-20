@@ -4,7 +4,7 @@ import { GlassButton } from '@/components/ui/GlassButton';
 import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
 import { cn } from '@/lib/utils/cn';
 import type { CategoryScoresData } from '@/components/ScoreBreakdown';
-import type { ScorePresentation, VerifyAnomalyState } from '@/lib/optimize/scoreModel';
+import type { AppliedVerifyStatus, ScorePresentation, VerifyAnomalyState } from '@/lib/optimize/scoreModel';
 
 type CategoryKey = keyof CategoryScoresData;
 
@@ -13,6 +13,7 @@ interface ScoreHeaderProps {
   isAutoVerifying: boolean;
   verifyAnomaly: VerifyAnomalyState | null;
   verifyRetryUsed: boolean;
+  appliedVerifyStatus: AppliedVerifyStatus;
   categoryScores?: CategoryScoresData | null;
   expanded: boolean;
   expandedCategories: Set<CategoryKey>;
@@ -46,6 +47,7 @@ export function ScoreHeader({
   isAutoVerifying,
   verifyAnomaly,
   verifyRetryUsed,
+  appliedVerifyStatus,
   categoryScores,
   expanded,
   expandedCategories,
@@ -64,6 +66,7 @@ export function ScoreHeader({
     baselineScore,
     allSuggestionsPotentialEstimate,
     verifiedAllSuggestionsScore,
+    appliedVerificationPending,
     displayState,
     arrowTarget,
     arrowIsVerified,
@@ -201,6 +204,26 @@ export function ScoreHeader({
               </p>
             )}
 
+            {!isAutoVerifying && !verifyAnomaly && appliedVerificationPending
+              && displayState !== 'verified_no_change' && displayState !== 'verified_decreased' && (
+              appliedVerifyStatus === 'failed' ? (
+                <p className="font-semibold text-amber-600 dark:text-amber-300">
+                  {t('sections.optimize.scoreHeader.appliedVerifyFailed', "Couldn't verify the new score — showing an estimate.")}
+                </p>
+              ) : appliedVerifyStatus === 'guest' ? (
+                <p>{t('sections.optimize.scoreHeader.appliedVerifySignIn', 'Sign in to verify your updated score — showing an estimate.')}</p>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t('sections.optimize.scoreHeader.appliedVerifyPending', 'Recalculating your score for the applied changes...')}
+                </span>
+              )
+            )}
+
+            {!isAutoVerifying && !verifyAnomaly && arrowIsVerified && delta === 0 && (
+              <p>{t('sections.optimize.scoreHeader.verifiedNoGainYet', "Verified — the applied changes haven't moved the score yet.")}</p>
+            )}
+
             {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && counts.actionableTotal > 0 && (
               <p>
                 {t('sections.optimize.scoreHeader.suggestionsReady', { defaultValue: '{{total}} suggestions ready · none applied yet', total: counts.actionableTotal + counts.recommendationTotal })}
@@ -211,7 +234,11 @@ export function ScoreHeader({
                 {t('sections.optimize.scoreHeader.potentialEstimate', { defaultValue: 'Up to ~{{score}}% if all suggestions are applied (estimate)', score: allSuggestionsPotentialEstimate })}
               </p>
             )}
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && estimateIsZero && (
+            {/* A zero ESTIMATE may only be presented while nothing is applied —
+                once cards are applied the genuine re-score (or its pending
+                state) speaks instead. estimateIsZero already enforces this;
+                the count gate is belt-and-braces. */}
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && estimateIsZero && counts.actionableApplied === 0 && (
               <p>{t('sections.optimize.scoreHeader.noGainPredicted', 'No measurable Match-score increase predicted (estimate)')}</p>
             )}
             {!isPlaceholderScore && (

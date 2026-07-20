@@ -157,6 +157,23 @@ export interface OptimizationMetrics {
     /** Classified once at verify time via classifyVerifiedOutcome (±NO_CHANGE_BAND). */
     outcome: 'improved' | 'no_change' | 'decreased';
   } | null;
+  /**
+   * Genuine re-score of the resume with ONLY the currently applied actionable
+   * cards merged — the real current score after applying, never a projection.
+   * Valid only while `appliedSignature` matches the live applied set + card
+   * texts + resume + JD (checked at read time by buildScorePresentation).
+   */
+  verifiedApplied?: {
+    score: number;
+    /** The baseline the verification ran against. */
+    baselineAtVerify: number;
+    /** appliedVerificationSignature(actionable, resumeText, jobDescription) at verify time. */
+    appliedSignature: string;
+    /** Epoch ms. */
+    verifiedAt: number;
+    /** How many applied actionable cards the verified merge contained. */
+    appliedCount: number;
+  } | null;
   jdKeywords: string[];
   matchedKeywords: string[];
   reasoning: string | null;

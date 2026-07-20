@@ -114,6 +114,10 @@
         "suggestionsReady": "{{total}} suggestions ready · none applied yet",
         "potentialEstimate": "Up to ~{{score}}% if all suggestions are applied (estimate)",
         "noGainPredicted": "No measurable Match-score increase predicted (estimate)",
+        "appliedVerifyPending": "Recalculating your score for the applied changes...",
+        "appliedVerifyFailed": "Couldn't verify the new score — showing an estimate.",
+        "appliedVerifySignIn": "Sign in to verify your updated score — showing an estimate.",
+        "verifiedNoGainYet": "Verified — the applied changes haven't moved the score yet.",
         "continueToTemplates": "Continue to Templates",
         "continueDisabled": "Upload a resume first to continue",
         "estimateDisclaimer": "Important: review changes before applying — AI can make mistakes, and projections are estimates until verified."

@@ -4,9 +4,12 @@
 // R3 — identical optimized text + actionable edits = implementation failure, never
 //      a genuine verification.
 // Written as it.fails BEFORE the verify rewrite; each flips to it() when fixed.
+// R4-R8 — applied-subset re-verification: the displayed post-apply score must be
+// a genuine re-score of the actually-applied cards (debounced, deduped, cache-first,
+// skipped for guests) and must never mutate store applied state.
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import OptimizeSection from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
@@ -299,5 +302,117 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         // the guard must refuse to call the AI at all.
         expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
         expect(mockStoreState.optimizationMetrics.verifiedPotential ?? null).toBeNull();
+    });
+});
+
+describe('applied-subset re-verification (genuine post-apply score)', () => {
+    const appliedSummaryCard = () => ({
+        sectionId: 'summary-0',
+        sectionType: 'summary',
+        original: 'Backend engineer with five years of production API experience across payments and logistics platforms.',
+        optimized: 'Backend engineer delivering high-throughput payment APIs with quantified latency and reliability improvements.',
+        applied: true,
+    });
+
+    const setupAppliedScenario = () => {
+        mockStoreState.originalResume = originalResumeFixture();
+        mockStoreState.parsedResumeText =
+            'Original resume text with enough detailed work history and skills evidence for verification to run. '.repeat(3);
+        mockStoreState.baselineMatchScore = 45;
+        mockStoreState.optimizations = [appliedSummaryCard()];
+    };
+
+    const advancePastDebounce = async () => {
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(2000);
+        });
+        // Flush the dynamic imports + async verify chain.
+        await act(async () => {
+            await vi.runOnlyPendingTimersAsync();
+        });
+    };
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('R4: an applied card triggers one debounced genuine re-score of the merged subset', async () => {
+        setupAppliedScenario();
+        mockAnalyzeResumeWithAI.mockResolvedValue({ score: 58, topHits: ['React'], missingKeywords: [] });
+
+        renderWithProviders(<OptimizeSection />);
+        expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
+
+        await advancePastDebounce();
+
+        expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1);
+        const [mergedText, jobDescription, , options] = mockAnalyzeResumeWithAI.mock.calls[0];
+        expect(options).toMatchObject({ mode: 'verify' });
+        expect(jobDescription).toBe('Backend engineer role');
+        // The scored text is the APPLIED merge, not the baseline resume.
+        expect(mergedText).toContain('delivering high-throughput payment APIs');
+        expect(mergedText).not.toContain('five years of production API experience');
+        expect(mockStoreState.optimizationMetrics.verifiedApplied).toMatchObject({ score: 58, appliedCount: 1 });
+        // Never mutates applied state.
+        expect(mockApplyOptimization).not.toHaveBeenCalled();
+        expect(mockApplyAllOptimizations).not.toHaveBeenCalled();
+    });
+
+    it('R5: one stable applied set triggers at most one verify call', async () => {
+        setupAppliedScenario();
+        mockAnalyzeResumeWithAI.mockResolvedValue({ score: 58, topHits: [], missingKeywords: [] });
+
+        renderWithProviders(<OptimizeSection />);
+        await advancePastDebounce();
+        await advancePastDebounce();
+
+        expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1);
+    });
+
+    it('R6: a client-cache hit for the merged text writes the metric without an API call', async () => {
+        setupAppliedScenario();
+        mockStoreState.getCachedAnalysis = vi.fn(() => ({
+            score: 61,
+            matchedKeywords: [],
+            missingKeywords: [],
+            timestamp: Date.now(),
+        }));
+
+        renderWithProviders(<OptimizeSection />);
+        await advancePastDebounce();
+
+        expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
+        expect(mockStoreState.optimizationMetrics.verifiedApplied).toMatchObject({ score: 61 });
+    });
+
+    it('R7: guests never trigger the applied-subset verify', async () => {
+        setupAppliedScenario();
+
+        renderWithProviders(<OptimizeSection isGuestMode />);
+        await advancePastDebounce();
+
+        expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
+    });
+
+    it('R8: nothing applied — no verify call, and a stale metric is cleared', async () => {
+        setupAppliedScenario();
+        mockStoreState.optimizations = [{ ...appliedSummaryCard(), applied: false }];
+        mockStoreState.optimizationMetrics.verifiedApplied = {
+            score: 58,
+            baselineAtVerify: 45,
+            appliedSignature: 'stale',
+            verifiedAt: Date.now(),
+            appliedCount: 1,
+        };
+
+        renderWithProviders(<OptimizeSection />);
+        await advancePastDebounce();
+
+        expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
+        expect(mockStoreState.optimizationMetrics.verifiedApplied).toBeNull();
     });
 });
