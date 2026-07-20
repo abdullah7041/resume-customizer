@@ -384,7 +384,7 @@ function normalizeMatchOutput(output) {
   };
 }
 
-const MATCH_SCORING_RUBRIC = 'Use this strict evidence-based ATS rubric: hard skills 40, experience 30, education 15, soft skills 15. Score fields must be integers from 0 to 100, never decimals or fractions. 80+ means hireable today, 60-79 means competitive with gaps, below 60 means significant gaps. Never score above 90 unless every job requirement is met with quantified evidence.';
+const MATCH_SCORING_RUBRIC = 'Use this strict evidence-based ATS rubric: hard skills 40, experience 30, education 15, soft skills 15. Score fields must be integers from 0 to 100, never decimals or fractions. 80+ means hireable today, 60-79 means competitive with gaps, below 60 means significant gaps. Never score above 90 unless every job requirement is met with quantified evidence. Before scoring, first extract the actual job requirements from the job description text: the role, responsibilities, qualifications, and required skills. Score ONLY against that extracted requirement set. Ignore navigation text, advertisements, cookie or consent notices, company boilerplate, unrelated links, similar-job listings, and any other page noise in the job description — none of it is a requirement. The same resume evaluated against the same requirements must land in the same score band whether or not such noise surrounds them.';
 
 // The model occasionally emits scores as 0-1 fractions despite the prompt's
 // integer rule; nothing downstream rescales, so 0.85 rendered literally as

@@ -1,0 +1,21 @@
+{
+  "name": "boilerplate-invariance-noisy",
+  "description": "Boilerplate-invariance pair (noisy half): identical resume and JD requirements as boilerplate-invariance-clean, but the JD is wrapped in job-board page noise (nav, cookie banner, ads, similar-job listings, footer). Expected band is identical to the clean half — the noise is not a requirement and must not move the score.",
+  "language": "en",
+  "resumeText": "KHALID AL-HARBI\nSenior Business Intelligence Analyst | Riyadh, Saudi Arabia\nkhalid.alharbi@email.com | linkedin.com/in/khalidalharbi\n\nSUMMARY\nBusiness Intelligence analyst with 6 years of experience turning retail and supply-chain data into executive decisions. Built and owned the reporting stack (SQL Server, PostgreSQL, Power BI) for a 40-store retail group.\n\nEXPERIENCE\n\nSenior BI Analyst — Alfanar Retail Group, Riyadh | Mar 2021 – Present\n- Designed 25+ Power BI dashboards used weekly by C-level and 120 store managers, replacing manual Excel packs and cutting monthly reporting time from 5 days to 4 hours.\n- Built ETL pipelines in SQL Server Integration Services and Python consolidating POS, inventory, and e-commerce data from 40 stores into a central warehouse (~90M rows/year).\n- Modeled a star-schema data warehouse in PostgreSQL; query times for the merchandising team dropped 70%.\n- Led weekly stakeholder reviews with merchandising and finance; prioritized a reporting backlog of 60+ requests.\n\nBI Analyst — Nahdi Logistics, Jeddah | Jun 2018 – Feb 2021\n- Developed SQL reports and Power BI dashboards for fleet utilization, raising truck utilization from 68% to 81% in one year.\n- Automated daily KPI emails with Python and SQL, saving the operations team 15 hours/week.\n- Wrote and tuned complex T-SQL (window functions, CTEs) over a 200-table operational database.\n\nEDUCATION\nB.Sc. Management Information Systems — King Saud University, 2018\n\nCERTIFICATIONS\n- Microsoft Certified: Power BI Data Analyst Associate (PL-300)\n- Google Data Analytics Professional Certificate\n\nSKILLS\nPower BI, DAX, SQL Server, PostgreSQL, T-SQL, Python (pandas), SSIS, ETL, data warehousing, star schema, stakeholder management, Arabic (native), English (professional)",
+  "jobDescription": "Home | Jobs | Companies | Career Advice | Sign in | Join now\nWe use cookies to improve your experience. Accept all cookies | Cookie settings\nRiyadh Jobs > Analytics > Business Intelligence Analyst\nFeatured: Boost your profile with a Premium subscription — 50% off this week!\n\nBusiness Intelligence Analyst — Riyadh (Retail)\n\nWe are hiring a BI Analyst to own reporting for our retail operations.\n\nRequirements:\n- 4+ years in business intelligence or analytics\n- Expert SQL (complex joins, window functions) on SQL Server or PostgreSQL\n- Strong Power BI AND Tableau — both platforms are in active use here\n- Experience building ETL pipelines and dimensional data warehouse models\n- Track record of presenting insights to senior, non-technical stakeholders\n- Bachelor's degree in MIS, computer science, or related field\n\nNice to have: Python for data automation, retail or supply-chain domain experience.\n\nApply now | Save job | Email this job | Share on social media\nCreate a job alert for Business Intelligence jobs in Riyadh\n\nSimilar jobs\n- Marketing Manager — Jeddah — full time\n- Warehouse Supervisor — Dammam — rotating shifts\n- HR Generalist — Riyadh — 2 years experience\n- Sales Executive (Automotive) — Khobar\n\nPeople also viewed: Graphic Designer, Executive Assistant, Barista\nAbout us | Terms of service | Privacy policy | Contact | Download our app\n© 2026 ExampleJobsBoard. All rights reserved.",
+  "expected": {
+    "scoreBand": [
+      65,
+      92
+    ],
+    "mustCredit": [
+      "Power BI",
+      "SQL",
+      "ETL"
+    ],
+    "mustFlagMissing": [
+      "Tableau"
+    ]
+  }
+}
