@@ -61,7 +61,6 @@ i18n-translation-prompt-ar.md
 
 # Agent tooling directories (auto-generated, not source)
 .codegraph/
-.worktrees/
 .agents/*
 !.agents/skills/
 !.agents/skills/**

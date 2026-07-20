@@ -126,7 +126,7 @@ describe('Header feedback action', () => {
       user_metadata: {},
     };
 
-    render(<Header />);
+    const { container } = render(<Header />);
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 
@@ -137,6 +137,19 @@ describe('Header feedback action', () => {
     expect(languageButtons).toHaveLength(2);
     expect(languageButtons.filter((button) => button.dataset.compact === 'true')).toHaveLength(1);
     expect(languageButtons.filter((button) => button.dataset.compact === 'false')).toHaveLength(1);
+
+    const mobilePreferences = container.querySelector('[data-mobile-header-preferences]');
+    expect(mobilePreferences).toHaveClass(
+      'absolute',
+      'end-[calc(var(--app-shell-gutter)+166px)]',
+    );
+
+    const mobileCredits = Array.from(container.querySelectorAll('[data-tour="credits"]'))
+      .find((element) => element.classList.contains('fixed'));
+    expect(mobileCredits).toHaveClass(
+      'fixed',
+      'end-[calc(var(--app-shell-gutter)+52px)]',
+    );
 
     fireEvent.click(themeButtons[0]);
     expect(themeState.toggleTheme).toHaveBeenCalledOnce();

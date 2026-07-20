@@ -268,7 +268,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
       <div className="relative z-10 flex flex-1 flex-col">
         {/* Top navigation bar */}
         <nav className="border-b border-[color:var(--glass-border)] bg-[color:var(--surface-glass-strong)] shadow-sm shadow-black/5 [backdrop-filter:blur(24px)] [-webkit-backdrop-filter:blur(24px)] dark:border-white/[0.12] dark:bg-[#041c17]/[0.94]">
-          <div className={`${containerClass} flex items-center justify-between gap-2 py-3.5 sm:gap-4 sm:py-4`}>
+          <div className={`${containerClass} relative flex items-center justify-between gap-2 py-3.5 sm:gap-4 sm:py-4`}>
             {/* Logo section */}
             <div className="group flex min-w-0 items-center gap-2 sm:gap-4">
               {/* Animated logo icon */}
@@ -481,7 +481,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
               {user && (
                 <div
                   data-tour="credits"
-                  className="shrink-0"
+                  className="fixed end-[calc(var(--app-shell-gutter)+52px)] top-[max(18px,env(safe-area-inset-top))] z-40 sm:top-[max(22px,env(safe-area-inset-top))]"
                 >
                   <CreditBalance
                     variant="compact"
@@ -492,15 +492,23 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                   />
                 </div>
               )}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-slate-700 transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] active:scale-[0.96] dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-                aria-label={t('common.toggleTheme', 'Toggle theme')}
+              <div
+                data-mobile-header-preferences
+                className={cn(
+                  'flex items-center gap-1.5',
+                  user && 'absolute end-[calc(var(--app-shell-gutter)+166px)] top-[max(18px,env(safe-area-inset-top))] z-30 sm:top-[max(22px,env(safe-area-inset-top))]'
+                )}
               >
-                {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
-              </button>
-              <LanguageSwitcher compact />
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-slate-700 transition-[color,background-color,border-color,box-shadow,scale,opacity] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] active:scale-[0.96] dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  aria-label={t('common.toggleTheme', 'Toggle theme')}
+                >
+                  {theme === "dark" ? <Sun className="h-5 w-5 text-emerald-400" /> : <Moon className="h-5 w-5 text-[#2b8994]" />}
+                </button>
+                <LanguageSwitcher compact />
+              </div>
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
