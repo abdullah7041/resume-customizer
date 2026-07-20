@@ -9,7 +9,11 @@ import { useResumeStore } from '@/lib/stores/resumeStore';
 import { getParsingWarnings } from '@/lib/validation/parsingWarnings';
 import { cn } from '@/lib/utils/cn';
 
-export function ParsingWarningsBanner() {
+interface ParsingWarningsBannerProps {
+    className?: string;
+}
+
+export function ParsingWarningsBanner({ className }: ParsingWarningsBannerProps) {
     const { t } = useTranslation();
     const originalResume = useResumeStore((s) => s.originalResume);
     const [expanded, setExpanded] = useState(false);
@@ -20,7 +24,7 @@ export function ParsingWarningsBanner() {
     if (warnings.length === 0) return null;
 
     return (
-        <div className="w-full max-w-5xl mx-auto animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className={cn('w-full animate-in fade-in duration-300', className)}>
             <div className="flex justify-start">
                 <button
                     type="button"

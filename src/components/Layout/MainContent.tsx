@@ -2106,7 +2106,7 @@ export default function MainContent() {
 
         <div className="workspace-panel relative min-h-[420px] p-4 transition-shadow duration-300 sm:min-h-[480px] sm:p-5 lg:p-6">
           {/* Parse-quality warning — shown on all tabs so the user always sees it */}
-          {activeTab !== "resume" && <ParsingWarningsBanner />}
+          {activeTab !== "resume" && <ParsingWarningsBanner className="mb-4" />}
           {activeTab === "resume" && (
             <>
               <UploadSection
