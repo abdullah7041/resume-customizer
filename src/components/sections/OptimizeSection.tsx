@@ -1563,30 +1563,32 @@ export function OptimizeSection({
                   })}
                 </GlassButton>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  const visibleIds = visibleQueueOptimizations.map(o => o.sectionId);
-                  const allExpanded = visibleIds.every(id => expandedCards.has(id));
-                  setExpandedCards(prev => {
-                    const next = new Set(prev);
-                    visibleIds.forEach(id => {
-                      if (allExpanded) {
-                        next.delete(id);
-                      } else {
-                        next.add(id);
-                      }
+              {visibleQueueOptimizations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const visibleIds = visibleQueueOptimizations.map(o => o.sectionId);
+                    const allExpanded = visibleIds.every(id => expandedCards.has(id));
+                    setExpandedCards(prev => {
+                      const next = new Set(prev);
+                      visibleIds.forEach(id => {
+                        if (allExpanded) {
+                          next.delete(id);
+                        } else {
+                          next.add(id);
+                        }
+                      });
+                      return next;
                     });
-                    return next;
-                  });
-                }}
-                className="min-h-11 rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-xs font-medium text-gray-500 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                {visibleQueueOptimizations.every(o => expandedCards.has(o.sectionId))
-                  ? t('sections.optimize.collapseAll', 'Collapse All')
-                  : t('sections.optimize.expandAll', 'Expand All')
-                }
-              </button>
+                  }}
+                  className="min-h-11 rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-xs font-medium text-gray-500 transition-colors hover:bg-[color:var(--surface-control-hover)] hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  {visibleQueueOptimizations.every(o => expandedCards.has(o.sectionId))
+                    ? t('sections.optimize.collapseAll', 'Collapse All')
+                    : t('sections.optimize.expandAll', 'Expand All')
+                  }
+                </button>
+              )}
             </div>
           </div>
         )}

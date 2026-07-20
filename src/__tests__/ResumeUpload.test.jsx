@@ -77,12 +77,14 @@ vi.mock("../services/supabase.js", () => ({
 }));
 
 import ResumeUpload from "../components/sections/UploadSection";
+import { useResumeStore } from "@/lib/stores/resumeStore";
 import { uploadResumeFile } from "../services/supabase.js";
 
 describe("ResumeUpload", () => {
   beforeEach(() => {
     uploadResumeFile.mockReset();
     i18nMock.language = "en";
+    useResumeStore.setState({ originalResume: null });
   });
 
   const setViewportWidth = (width) => {
@@ -115,6 +117,23 @@ describe("ResumeUpload", () => {
     expect(
       screen.getByText(/use either a file or pasted text\. the latest input will be used\./i)
     ).toBeInTheDocument();
+  });
+
+  it("renders parsing warnings before the upload card", () => {
+    useResumeStore.setState({
+      originalResume: {
+        meta: { parseQuality: { confidence: "low" } },
+      },
+    });
+
+    render(<ResumeUpload onParseResume={vi.fn()} onToast={vi.fn()} />);
+
+    const warningTrigger = screen.getByRole("button", { name: /upload\.warnings\.title/i });
+    const uploadHeading = screen.getByRole("heading", { name: /upload your resume/i });
+
+    expect(
+      warningTrigger.compareDocumentPosition(uploadHeading) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("uploads PDFs and shows a success toast", async () => {

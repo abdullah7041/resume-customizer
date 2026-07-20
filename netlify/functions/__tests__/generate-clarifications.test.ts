@@ -119,6 +119,12 @@ describe('generate-clarifications handler', () => {
     const response = await invoke({ ...requestBody, regenerate: 'true' });
 
     expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body ?? '{}')).toEqual({
+      status: 400,
+      code: 'invalid_request',
+      message: expect.stringContaining('regenerate'),
+      error: expect.stringContaining('regenerate'),
+    });
     expect(getCachedMock).not.toHaveBeenCalled();
     expect(executeAiContractMock).not.toHaveBeenCalled();
     expect(setCachedMock).not.toHaveBeenCalled();

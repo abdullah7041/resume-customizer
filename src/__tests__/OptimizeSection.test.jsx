@@ -586,6 +586,7 @@ describe('OptimizeSection', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Pending' }));
             expect(screen.getByRole('button', { name: 'Pending' })).toBeInTheDocument();
             expect(screen.getByText('sections.optimize.queue.emptyFiltered')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Collapse All' })).not.toBeInTheDocument();
 
             const allButtons = screen.getAllByRole('button', { name: 'All' });
             expect(allButtons).toHaveLength(2);

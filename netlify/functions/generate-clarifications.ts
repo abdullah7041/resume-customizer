@@ -75,10 +75,16 @@ const baseHandler: Handler = async (event) => {
 
   const parseResult = ClarificationRequestSchema.safeParse(rawBody);
   if (!parseResult.success) {
+    const message = formatZodError(parseResult.error);
     return {
       statusCode: 400,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: formatZodError(parseResult.error) }),
+      body: JSON.stringify({
+        status: 400,
+        code: 'invalid_request',
+        message,
+        error: message,
+      }),
     };
   }
 
