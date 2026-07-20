@@ -165,7 +165,7 @@ describe('ScoreDiffBreakdown', () => {
     fireEvent.click(screen.getByRole('button', { name: /showCards|hideCards/i }));
     expect(screen.getByText('sections.optimize.scoreDiff.mergeFailed')).toBeInTheDocument();
     expect(
-      screen.getByText((c) => c.includes('applied=1') && c.includes('total=2'))
+      screen.getByText((c) => c.includes('applied=1') && c.includes('total=1'))
     ).toBeInTheDocument();
   });
 

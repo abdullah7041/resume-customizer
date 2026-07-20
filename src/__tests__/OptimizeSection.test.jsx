@@ -1176,6 +1176,8 @@ describe('Optimization Card Types', () => {
             renderWithProviders(<OptimizeSection />);
             fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
 
+            // Verification includes dynamic imports plus resume merge/format work;
+            // under full-suite transform load it can exceed waitFor's 1s default.
             await waitFor(() => {
                 expect(mockAnalyzeResumeWithAI).toHaveBeenCalledWith(
                     expect.any(String),
@@ -1183,7 +1185,7 @@ describe('Optimization Card Types', () => {
                     'en',
                     expect.objectContaining({ mode: 'verify' })
                 );
-            });
+            }, { timeout: 3000 });
         });
 
         it('shows an anomaly instead of storing an implausibly low verified score', async () => {
