@@ -6,7 +6,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 import OptimizeSection from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
-import { verificationSignature } from '../lib/optimize/scoreModel';
+import { verificationSignature } from '@/lib/optimize/scoreModel';
 
 const mockRefineBullet = vi.hoisted(() => vi.fn());
 const mockAnalyzeResumeWithAI = vi.hoisted(() => vi.fn());
