@@ -31,10 +31,12 @@ export const MAX_JOB_TEXT_CHARS = 30000;
 const PAIRED_NOISE_TAGS = new Set([
   'nav', 'header', 'footer', 'aside', 'form', 'button', 'dialog', 'select', 'svg', 'iframe',
 ]);
-const NOISE_CLASS_OR_ID_PATTERN = /\b(similar|related|recommend|also[-_]?viewed|footer|sign[-_]?in|login|join[-_]?now|nav|breadcrumb|cookie|banner|share|apply[-_]?button|top[-_]?card[-_]?actions)/i;
+// Bare "ad" is deliberately NOT matched — job boards class the posting itself
+// "job-ad"/"jobad"; only explicit ad compounds are treated as noise.
+const NOISE_CLASS_OR_ID_PATTERN = /\b(similar|related|recommend|also[-_]?viewed|footer|sign[-_]?in|login|join[-_]?now|nav|breadcrumb|cookie|consent|gdpr|banner|share|apply[-_]?button|top[-_]?card[-_]?actions|sidebar|widget|promo|advert|adsense|ad[-_]?slot|ad[-_]?banner|sponsor|subscribe|newsletter|social|follow[-_]?us|job[-_]?alert|modal|popup|overlay|pagination|comments|toolbar|menu)/i;
 const DESCRIPTION_CLASS_OR_ID_PATTERN = /job[-_]?desc|description|show-more-less-html|posting/i;
-const STANDALONE_CTA_PATTERN = /^(sign in|join now|apply|easy apply|save|share|report this job|show more|see more jobs|get notified|set alert)$/i;
-const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommended for you|explore more)$/i;
+const STANDALONE_CTA_PATTERN = /^(sign in|sign up|join now|apply|apply now|easy apply|save|save job|share|share this job|email this job|print|report this job|show more|see more jobs|view all jobs|get notified|set alert|create (job )?alert|back to (results|search)|accept (all )?cookies|cookie settings|subscribe|قدم الآن|تقديم|حفظ الوظيفة|مشاركة|سجل الدخول|انضم الآن|اشترك)$/i;
+const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommended for you|explore more|more jobs( like this)?|related jobs|jobs you may like|share this job|get job alerts|وظائف مشابهة|وظائف ذات صلة|وظائف قد تعجبك|شارك هذه الوظيفة|تنبيهات الوظائف)$/i;
 const HTML_TAG_PATTERN = /<\/?([a-z][\w:-]*)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi;
 const HTML_ATTRIBUTE_PATTERN = /(?:^|\s)([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
@@ -196,6 +198,64 @@ function preferDescriptionContainer(region: string): string {
   return region;
 }
 
+/**
+ * Readability-lite content score for an HTML block. Link-heavy blocks (nav,
+ * "similar jobs" rails, footers) score low even when their class names match
+ * no noise pattern. The squared content ratio makes a region that wraps both
+ * the JD and a link-heavy sibling score BELOW the clean JD child alone, so
+ * `selectBestContentBlock` can descend past unlabelled chrome.
+ */
+function scoreBlock(html: string): number {
+  const text = htmlToText(html);
+  if (text.length < MIN_HEURISTIC_CHARS) return 0;
+  let linkChars = 0;
+  for (const anchor of html.match(/<a\b[\s\S]*?<\/a>/gi) ?? []) {
+    linkChars += htmlToText(anchor).length;
+  }
+  const contentChars = Math.max(0, text.length - linkChars);
+  const bulletBonus = Math.min(500, (html.match(/<li\b/gi)?.length ?? 0) * 20);
+  return (contentChars * contentChars) / text.length + bulletBonus;
+}
+
+/** Direct child elements of a region whose first tag is the region's root. */
+function directChildElements(region: string): string[] {
+  const scanner = createTagScanner();
+  const rootMatch = scanner.exec(region);
+  if (!rootMatch || isClosingTag(rootMatch[0]) || isSelfClosingTag(rootMatch[0])) return [];
+
+  const children: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = scanner.exec(region)) !== null) {
+    if (isClosingTag(match[0]) || isSelfClosingTag(match[0])) continue;
+    const end = findBalancedElementEnd(region, match);
+    if (end === null) break;
+    children.push(region.slice(match.index, end));
+    scanner.lastIndex = end;
+  }
+  return children;
+}
+
+/**
+ * Fallback for pages with no description-classed container: pick the densest
+ * text block instead of admitting the whole region. Descends at most two
+ * levels, and only when a child genuinely outscores its parent — a region
+ * whose loose text matters always wins over any single child.
+ */
+function selectBestContentBlock(region: string, depth = 0): string {
+  if (depth >= 2) return region;
+  const regionScore = scoreBlock(region);
+  let best: string | null = null;
+  let bestScore = regionScore;
+  for (const child of directChildElements(region)) {
+    const childScore = scoreBlock(child);
+    if (childScore > bestScore) {
+      best = child;
+      bestScore = childScore;
+    }
+  }
+  return best === null ? region : selectBestContentBlock(best, depth + 1);
+}
+
 function cleanExtractedJobText(text: string): string {
   const seen = new Set<string>();
   const lines: string[] = [];
@@ -318,7 +378,12 @@ function extractFromMainContent(html: string): ExtractedJob | null {
   if (!region) return null;
 
   const cleanedRegion = stripNoiseElements(region);
-  const preferredRegion = preferDescriptionContainer(cleanedRegion);
+  let preferredRegion = preferDescriptionContainer(cleanedRegion);
+  if (preferredRegion === cleanedRegion) {
+    // No description-classed container qualified — score blocks instead of
+    // admitting the whole region (nav/ads/related rails would leak through).
+    preferredRegion = selectBestContentBlock(cleanedRegion);
+  }
   const jobText = cleanExtractedJobText(htmlToText(preferredRegion));
   if (jobText.length < MIN_HEURISTIC_CHARS || jobText.length > MAX_JOB_TEXT_CHARS * 2) return null;
 

@@ -204,6 +204,76 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     expect(result?.jobText).toContain('This final requirement is only available in the broader main region.');
   });
 
+  it('strips cookie-consent, newsletter and sidebar blocks by class name', () => {
+    const page = `
+      <main>
+        <div class="cookie-consent"><p>We use cookies to improve your experience. Accept all cookies.</p></div>
+        <div class="job-content">${LONG_DESCRIPTION_HTML}</div>
+        <div class="newsletter-signup"><p>Subscribe to weekly job alerts in your inbox.</p></div>
+        <div class="sidebar-widget"><a href="/j/1">Marketing Manager</a><a href="/j/2">HR Generalist</a></div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/cookies|subscribe|marketing manager|hr generalist/i);
+  });
+
+  it('drops a link-heavy rail with neutral class names via block scoring', () => {
+    // No class/id matches any noise pattern — only text/link density can
+    // separate the JD body from the related-jobs rail.
+    const page = `
+      <main>
+        <div class="col-left">${LONG_DESCRIPTION_HTML}</div>
+        <div class="col-right">
+          <a href="/jobs/1">Senior Accountant — Riyadh, full time, competitive salary package</a>
+          <a href="/jobs/2">Warehouse Supervisor — Dammam, rotating shifts, transport provided</a>
+          <a href="/jobs/3">Sales Executive — Khobar, automotive sector, commission scheme</a>
+          <a href="/jobs/4">Executive Assistant — Jeddah, immediate start, bilingual preferred</a>
+          <a href="/jobs/5">Graphic Designer — Riyadh, agency environment, portfolio required</a>
+          <a href="/jobs/6">HR Generalist — Riyadh, 2 years experience, CIPD a plus</a>
+        </div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/senior accountant|warehouse supervisor|graphic designer/i);
+  });
+
+  it('truncates trailing Arabic similar-jobs boilerplate in the second half', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>You will mentor engineers and improve delivery practices across the organization.</p>
+        <h2>وظائف مشابهة</h2>
+        <p>مهندس برمجيات أول في شركة أخرى</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('mentor engineers');
+    expect(result?.jobText).not.toContain('وظائف مشابهة');
+    expect(result?.jobText).not.toContain('مهندس برمجيات أول');
+  });
+
+  it('keeps a description container classed job-ad__description (bare "ad" is not noise)', () => {
+    const page = `
+      <main>
+        <p>Page-level promotional copy that is not part of the role.</p>
+        <div class="job-ad__description">${LONG_DESCRIPTION_HTML}</div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toContain('Page-level promotional copy');
+  });
+
   it('removes an entire noise block with nested elements of the same tag', () => {
     const page = `
       <main>
