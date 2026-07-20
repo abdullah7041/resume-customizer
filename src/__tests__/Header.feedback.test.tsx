@@ -141,7 +141,7 @@ describe('Header feedback action', () => {
     const mobilePreferences = container.querySelector('[data-mobile-header-preferences]');
     expect(mobilePreferences).toHaveClass(
       'absolute',
-      'end-[calc(var(--app-shell-gutter)+166px)]',
+      'end-[calc(var(--app-shell-gutter)+152px)]',
     );
 
     const mobileCredits = Array.from(container.querySelectorAll('[data-tour="credits"]'))

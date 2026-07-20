@@ -496,7 +496,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                 data-mobile-header-preferences
                 className={cn(
                   'flex items-center gap-1.5',
-                  user && 'absolute end-[calc(var(--app-shell-gutter)+166px)] top-[max(18px,env(safe-area-inset-top))] z-30 sm:top-[max(22px,env(safe-area-inset-top))]'
+                  user && 'absolute end-[calc(var(--app-shell-gutter)+152px)] top-[max(18px,env(safe-area-inset-top))] z-30 sm:top-[max(22px,env(safe-area-inset-top))]'
                 )}
               >
                 <button

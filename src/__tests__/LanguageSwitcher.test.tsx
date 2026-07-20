@@ -7,7 +7,7 @@ const directionState = vi.hoisted(() => ({
   toggleLanguage: vi.fn(),
 }));
 
-vi.mock('../components/providers/DirectionProvider', () => ({
+vi.mock('@/components/providers/DirectionProvider', () => ({
   useDirection: () => directionState,
 }));
 
