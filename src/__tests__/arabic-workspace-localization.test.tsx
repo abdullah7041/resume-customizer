@@ -185,6 +185,14 @@ describe('Arabic workspace localization', () => {
     expect(screen.getByText('14 / 20 credits')).toBeInTheDocument();
   });
 
+  it('renders a fixed-width icon-only credit control for the mobile header', () => {
+    render(<CreditBalance onClick={vi.fn()} variant="compact" iconOnly />);
+
+    expect(screen.queryByText('14 من 20 رصيد')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'الرصيد' })).toHaveClass('h-11', 'w-11');
+    expect(screen.getByRole('button', { name: 'الرصيد' })).toHaveAttribute('title', '14 من 20 رصيد');
+  });
+
   it('localizes authenticated mobile menu labels in Arabic', () => {
     render(<Header />);
 

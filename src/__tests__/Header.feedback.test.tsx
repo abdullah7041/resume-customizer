@@ -44,8 +44,8 @@ vi.mock('../components/ui/GlassButton', () => ({
 }));
 
 vi.mock('../components/Credits/CreditBalance', () => ({
-  CreditBalance: ({ onClick }: { onClick?: () => void }) => (
-    <button type="button" onClick={onClick}>
+  CreditBalance: ({ onClick, iconOnly = false }: { onClick?: () => void; iconOnly?: boolean }) => (
+    <button type="button" onClick={onClick} data-icon-only={String(iconOnly)}>
       Credits
     </button>
   ),
@@ -150,6 +150,7 @@ describe('Header feedback action', () => {
       'fixed',
       'end-[calc(var(--app-shell-gutter)+52px)]',
     );
+    expect(mobileCredits?.querySelector('[data-icon-only="true"]')).toBeInTheDocument();
 
     fireEvent.click(themeButtons[0]);
     expect(themeState.toggleTheme).toHaveBeenCalledOnce();

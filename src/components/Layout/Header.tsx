@@ -485,6 +485,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                 >
                   <CreditBalance
                     variant="compact"
+                    iconOnly
                     onClick={() => {
                       setCreditModalMode('full');
                       setShowCreditModal(true);
