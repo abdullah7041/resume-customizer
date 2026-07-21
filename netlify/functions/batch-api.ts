@@ -1,5 +1,5 @@
 import type { Handler } from "@netlify/functions";
-import { RateLimiter, batchWithConcurrency } from "../lib/rate-limiter.js";
+import { RateLimiter, batchWithConcurrency, withRateLimit } from "../lib/rate-limiter.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 
 initSentry();
@@ -159,7 +159,7 @@ function validateBatchRequest(body: any): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-const handler: Handler = async (event) => {
+const baseHandler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: HEADERS, body: "" };
   }
@@ -270,4 +270,4 @@ const handler: Handler = async (event) => {
   }
 };
 
-export { handler };
+export const handler = withRateLimit("batch-api", baseHandler);

@@ -298,6 +298,8 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // AI endpoints using "Flash" model - INCREASED from 5 to 10
   "optimize": { maxRequests: 10 },         // Flash model - better UX while preventing abuse
   "optimize-stream": { maxRequests: 10 },  // Flash model via Netlify v2 streaming endpoint
+  // Fan-out endpoint: 1 request → up to 10 downstream AI calls, so keep tight.
+  "batch-api": { maxRequests: 5 },
   "vision2030-alignment": { maxRequests: 10 },  // Flash model - deep contextual analysis
 
   // Generation endpoints using "Lite" model (already fast, keep at 10)
@@ -321,9 +323,6 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   "import-job-url-guest": { maxRequests: 10, windowMs: 24 * 60 * 60 * 1000 },
 
   // Feedback system - INCREASED from 5 to 10
-
-  // Batch processing - INCREASED from 5 to 8
-  "batch-api": { maxRequests: 8 },
 
   // Default for unlisted endpoints
   default: { maxRequests: 30 },
