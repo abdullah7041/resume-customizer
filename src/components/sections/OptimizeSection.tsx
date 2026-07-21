@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
@@ -33,8 +33,11 @@ import { useUserCredits } from '../../hooks/useUserCredits';
 import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { getActionability, isActionable, partitionOptimizations } from '@/lib/optimize/actionability';
 import { mergeOptimizedResume } from '@/lib/optimize/mergeResume';
-import { buildScorePresentation, classifyVerifiedOutcome, verificationSignature } from '@/lib/optimize/scoreModel';
-import type { VerifyAnomalyState } from '@/lib/optimize/scoreModel';
+import { resolveAppliedSubsetVerification } from '@/lib/optimize/appliedSubsetVerification';
+import { appliedVerificationSignature, buildScorePresentation, classifyVerifiedOutcome, verificationSignature } from '@/lib/optimize/scoreModel';
+import type { AppliedVerifyStatus, VerifyAnomalyState } from '@/lib/optimize/scoreModel';
+import { analyzeResumeWithAI } from '@/services/api';
+import { formatResumeToText } from '@/lib/utils/resumeUtils';
 import { ScoreHeader } from './optimize/ScoreHeader';
 import { StrategyBlock } from './optimize/StrategyBlock';
 import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
@@ -221,6 +224,7 @@ export function OptimizeSection({
   onMarkApplied,
   onAttachExport,
   hasExportedForActiveJob = false,
+  isGuestMode = false,
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
@@ -235,6 +239,7 @@ export function OptimizeSection({
     applyOptimization,
     applyAllOptimizations,
     revertOptimization,
+    revertAllOptimizations,
     refineOptimization,
     keywordSuggestions,
     optimizationMetrics,
@@ -257,10 +262,15 @@ export function OptimizeSection({
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showAppliedVerifyConfirm, setShowAppliedVerifyConfirm] = useState(false);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [verifyAnomaly, setVerifyAnomaly] = useState<VerifyAnomalyState | null>(null);
   const [verifyRetryUsed, setVerifyRetryUsed] = useState(false);
+  // Applied-subset re-verification lifecycle + the signature currently in flight
+  // (dedupe: one stable applied set triggers at most one verify call).
+  const [appliedVerifyState, setAppliedVerifyState] = useState<Exclude<AppliedVerifyStatus, 'guest'>>('idle');
+  const appliedVerifyInFlightRef = useRef<string | null>(null);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const [scoreHeaderExpanded, setScoreHeaderExpanded] = useState(false);
   const [expandedScoreCategories, setExpandedScoreCategories] = useState<Set<keyof CategoryScoresData>>(new Set());
@@ -477,6 +487,7 @@ export function OptimizeSection({
       baselineScore: isPlaceholderScore ? null : beforeScore,
       improvement: optimizationMetrics.improvement ?? null,
       verifiedPotential: optimizationMetrics.verifiedPotential,
+      verifiedApplied: optimizationMetrics.verifiedApplied,
       resumeText: resumeText ?? '',
       jobDescription,
     });
@@ -526,8 +537,6 @@ export function OptimizeSection({
         { isSaudiNational: storeState.isSaudiNational },
       );
 
-      const { analyzeResumeWithAI } = await import('../../services/api');
-      const { formatResumeToText } = await import('../../lib/utils/resumeUtils');
       // Give AI a realistic plain text string (what ATS sees) instead of structured JSON
       // to prevent artificially inflated scores.
       const optimizedText = formatResumeToText(optimizedResume);
@@ -608,6 +617,116 @@ export function OptimizeSection({
     await verifyOptimizedResume(jobDescription, resultsSummaryData.beforeScore);
   };
 
+  // Cache checks are safe to run automatically. A cache miss only reaches the
+  // billed verify endpoint after the user confirms the re-score action.
+  const resolveAppliedSubsetScore = async (signature: string, allowNetwork: boolean) => {
+    const jobDescription = typeof window !== 'undefined'
+      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
+      : '';
+    const storeState = useResumeStore.getState();
+    if (storeState.optimizationMetrics.verifiedApplied?.appliedSignature === signature) return;
+    if (appliedVerifyInFlightRef.current === signature) return;
+
+    appliedVerifyInFlightRef.current = signature;
+    try {
+      const outcome = await resolveAppliedSubsetVerification({
+        originalResume: storeState.originalResume,
+        optimizations: storeState.optimizations,
+        isSaudiNational: storeState.isSaudiNational,
+        sourceResumeText: resumeText ?? '',
+        jobDescription,
+        language: i18n.language,
+        getCachedAnalysis: storeState.getCachedAnalysis,
+        setCachedAnalysis: storeState.setCachedAnalysis,
+        allowNetwork,
+      });
+
+      if (outcome.status === 'verified') {
+        setOptimizationMetrics({
+          verifiedApplied: {
+            score: outcome.score,
+            baselineAtVerify: resultsSummaryData.beforeScore,
+            appliedSignature: signature,
+            verifiedAt: Date.now(),
+            appliedCount: outcome.appliedCount,
+          },
+        });
+        setAppliedVerifyState('idle');
+      } else {
+        setAppliedVerifyState(outcome.status);
+      }
+    } catch (verifyErr) {
+      console.warn('[OptimizeSection] Applied-subset verify failed (non-fatal):', verifyErr);
+      setAppliedVerifyState('failed');
+    } finally {
+      if (appliedVerifyInFlightRef.current === signature) {
+        appliedVerifyInFlightRef.current = null;
+      }
+    }
+  };
+
+  const jobDescriptionForVerify = typeof window !== 'undefined'
+    ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
+    : '';
+  const liveAppliedSignature = useMemo(() => {
+    const { actionable } = partitionOptimizations(optimizations);
+    return appliedVerificationSignature(actionable, resumeText ?? '', jobDescriptionForVerify);
+  }, [optimizations, resumeText, jobDescriptionForVerify]);
+
+  const appliedCountForVerify = presentation.counts.actionableApplied;
+  const appliedScoreResolved = presentation.verifiedAppliedScore !== null;
+  const fullSetOutcomeSettled = presentation.verifiedOutcome === 'no_change'
+    || presentation.verifiedOutcome === 'decreased';
+  const staleVerifiedApplied = optimizationMetrics.verifiedApplied ?? null;
+
+  useEffect(() => {
+    // Guests keep the estimate display — the verify endpoint requires auth.
+    if (isGuestMode) return;
+    if (isGenerating || isAutoVerifying) return;
+    if (appliedCountForVerify === 0) {
+      // Nothing applied: current score IS the baseline again — drop the metric.
+      if (staleVerifiedApplied) setOptimizationMetrics({ verifiedApplied: null });
+      setAppliedVerifyState('idle');
+      return;
+    }
+    if (!jobDescriptionForVerify.trim() || !originalResume) {
+      setAppliedVerifyState('unavailable');
+      return;
+    }
+    // Already covered by a signature-valid re-score (applied-subset or, when
+    // all cards are applied, the full-set verification via the score model).
+    if (appliedScoreResolved) {
+      setAppliedVerifyState('idle');
+      return;
+    }
+    // A verified full-set no-change/decrease verdict governs the header —
+    // re-scoring a subset of edits that verifiably do not move the score
+    // would spend credits to confirm the same banner.
+    if (fullSetOutcomeSettled) return;
+
+    // Do not make a network request here: a verify request consumes a credit.
+    // The resolver will still settle a cache hit, or expose a ready CTA.
+    setAppliedVerifyState('pending');
+    const timeoutId = window.setTimeout(() => {
+      void resolveAppliedSubsetScore(liveAppliedSignature, false);
+    }, 1800);
+    return () => window.clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- signature + gates fully describe when a re-score is owed
+  }, [liveAppliedSignature, appliedCountForVerify, appliedScoreResolved, fullSetOutcomeSettled, isGuestMode, isGenerating, isAutoVerifying, jobDescriptionForVerify, originalResume]);
+
+  const appliedVerifyStatus: AppliedVerifyStatus = isGuestMode && appliedCountForVerify > 0
+    ? 'guest'
+    : appliedVerifyState;
+
+  const requestAppliedVerification = () => setShowAppliedVerifyConfirm(true);
+
+  const confirmAppliedVerification = async () => {
+    setShowAppliedVerifyConfirm(false);
+    setAppliedVerifyState('pending');
+    await resolveAppliedSubsetScore(liveAppliedSignature, true);
+    void refetchCredits();
+  };
+
   // Explainability source for the Optimize tab — rebuilt from the ORIGINAL
   // cached match analysis (survives refresh) plus optimize-side gaps. No fetch,
   // no scoring; everything here already exists in the store.
@@ -657,7 +776,7 @@ export function OptimizeSection({
 
     try {
       // Get authenticated headers (includes Authorization Bearer token)
-      const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
+      const { getAuthHeaders } = await import('@/lib/auth/authHeaders');
       const headers = await getAuthHeaders();
 
       const response = await fetch('/.netlify/functions/optimize', {
@@ -805,7 +924,7 @@ export function OptimizeSection({
       // Initialize accumulator for consolidated update. A new generation run
       // invalidates any previous verified potential explicitly (the signature
       // check would drop it anyway once the card set changes).
-      const metricsToUpdate: Partial<OptimizationMetrics> = { verifiedPotential: null };
+      const metricsToUpdate: Partial<OptimizationMetrics> = { verifiedPotential: null, verifiedApplied: null };
 
       // Check if match analysis already provided an authoritative baseline score.
       // The optimize API independently re-calculates match_score which can differ
@@ -1019,7 +1138,7 @@ export function OptimizeSection({
     setRefineLoadingId(opt.sectionId);
     setRefineError(null);
     try {
-      const { refineBullet } = await import('../../services/api');
+      const { refineBullet } = await import('@/services/api');
       const jobContext = typeof window !== 'undefined'
         ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
         : '';
@@ -1195,9 +1314,18 @@ export function OptimizeSection({
     ids.forEach((sectionId) => applyOptimization(sectionId));
   };
 
+  const handleRevertQueueGroup = (ids: string[]) => {
+    ids.forEach((sectionId) => revertOptimization(sectionId));
+  };
+
   const handleApplyAll = () => {
     analytics.trackOptimization('applied_all');
     applyAllOptimizations();
+  };
+
+  const handleUnapplyAll = () => {
+    analytics.trackOptimization('reverted_all');
+    revertAllOptimizations();
   };
 
   const handleToggleCompare = (sectionId: string) => {
@@ -1362,6 +1490,8 @@ export function OptimizeSection({
           isAutoVerifying={isAutoVerifying}
           verifyAnomaly={verifyAnomaly}
           verifyRetryUsed={verifyRetryUsed}
+          appliedVerifyStatus={appliedVerifyStatus}
+          onRequestAppliedVerify={requestAppliedVerification}
           categoryScores={categoryScores}
           expanded={scoreHeaderExpanded}
           expandedCategories={expandedScoreCategories}
@@ -1563,6 +1693,20 @@ export function OptimizeSection({
                   })}
                 </GlassButton>
               )}
+              {presentation.counts.actionableApplied > 0 && (
+                <GlassButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleUnapplyAll}
+                  leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                  className="hover:bg-red-500/10 hover:text-red-400"
+                >
+                  {t('sections.optimize.results.unapplyAll', {
+                    defaultValue: 'Unapply All ({{count}} applied)',
+                    count: presentation.counts.actionableApplied,
+                  })}
+                </GlassButton>
+              )}
               {visibleQueueOptimizations.length > 0 && (
                 <button
                   type="button"
@@ -1613,6 +1757,7 @@ export function OptimizeSection({
                 onApply={handleApplyOptimization}
                 onRevert={revertOptimization}
                 onApplyGroup={handleApplyQueueGroup}
+                onRevertGroup={handleRevertQueueGroup}
                 onCopy={onCopy}
                 onStartRefine={handleStartRefine}
                 onRefineInstructionChange={setRefineInstruction}
@@ -1679,6 +1824,13 @@ export function OptimizeSection({
         onConfirm={handleConfirmOptimize}
         feature="optimize"
         isLoading={isOptimizing}
+      />
+      <ConfirmActionModal
+        isOpen={showAppliedVerifyConfirm}
+        onClose={() => setShowAppliedVerifyConfirm(false)}
+        onConfirm={confirmAppliedVerification}
+        feature="ai_match"
+        isLoading={appliedVerifyState === 'pending'}
       />
     </div >
   );

@@ -114,6 +114,12 @@
         "suggestionsReady": "{{total}} suggestions ready · none applied yet",
         "potentialEstimate": "Up to ~{{score}}% if all suggestions are applied (estimate)",
         "noGainPredicted": "No measurable Match-score increase predicted (estimate)",
+        "appliedVerifyPending": "Recalculating your score for the applied changes...",
+        "appliedVerifyReady": "Recalculate updated score",
+        "appliedVerifyUnavailable": "Add a job description to recalculate your updated score.",
+        "appliedVerifyFailed": "Couldn't verify the new score — showing an estimate.",
+        "appliedVerifySignIn": "Sign in to verify your updated score — showing an estimate.",
+        "verifiedNoGainYet": "Verified — the applied changes haven't moved the score yet.",
         "continueToTemplates": "Continue to Templates",
         "continueDisabled": "Upload a resume first to continue",
         "estimateDisclaimer": "Important: review changes before applying — AI can make mistakes, and projections are estimates until verified."
@@ -128,6 +134,7 @@
         "workSubtitle": "Work experience",
         "suggestionsCount": "{{count}} suggestions",
         "applyGroup": "Apply all in this job",
+        "revertGroup": "Revert all in this job",
         "filters": {
           "all": "All",
           "pending": "Pending",
@@ -168,6 +175,7 @@
         "more": "more",
         "improvementsApplied": "Improvements Applied",
         "applyAllRemaining": "Apply All ({{count}} remaining)",
+        "unapplyAll": "Unapply All ({{count}} applied)",
         "exportPdf": "Export PDF",
         "sectionLabels": {
           "headline": "Headline optimized for ATS",

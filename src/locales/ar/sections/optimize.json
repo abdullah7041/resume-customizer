@@ -102,6 +102,8 @@
       "verifiedTooltip": "أعدنا تقييم سيرتك الذاتية المحسّنة مقابل هذا الوصف الوظيفي بنفس منهجية التقييم الصارمة المستخدمة في تحليل التوافق والتحليل الجماعي",
       "verifiedByReanalysis": "تم التحقق بإعادة التحليل",
       "scoreHeader": {
+        "appliedVerifyReady": "أعد احتساب الدرجة المحدّثة",
+        "appliedVerifyUnavailable": "أضف الوصف الوظيفي لإعادة احتساب درجتك المحدّثة.",
         "verified": "تم التحقق",
         "progress": "{{applied}}/{{total}} مطبّق",
         "rerun": "إعادة التشغيل",
@@ -114,6 +116,10 @@
         "suggestionsReady": "{{total}} اقتراحات جاهزة · لم يُطبَّق أي منها بعد",
         "potentialEstimate": "حتى ~{{score}}% إذا طُبِّقت جميع الاقتراحات (تقدير)",
         "noGainPredicted": "لا يُتوقَّع ارتفاع ملموس في درجة التطابق (تقدير)",
+        "appliedVerifyPending": "جارٍ إعادة احتساب درجتك بعد التغييرات المطبّقة...",
+        "appliedVerifyFailed": "تعذّر التحقق من الدرجة الجديدة — يُعرض تقدير حاليًا.",
+        "appliedVerifySignIn": "سجّل الدخول للتحقق من درجتك المحدّثة — يُعرض تقدير حاليًا.",
+        "verifiedNoGainYet": "تم التحقق — التغييرات المطبّقة لم تُحرِّك الدرجة بعد.",
         "continueToTemplates": "المتابعة إلى القوالب",
         "continueDisabled": "ارفع سيرتك الذاتية أولًا للمتابعة",
         "estimateDisclaimer": "مهم: راجع التغييرات قبل تطبيقها — قد يخطئ الذكاء الاصطناعي، والتوقعات تبقى تقديرات حتى يتم التحقق منها."
@@ -128,6 +134,7 @@
         "workSubtitle": "الخبرة العملية",
         "suggestionsCount": "{{count}} اقتراحات",
         "applyGroup": "تطبيق كل اقتراحات هذه الوظيفة",
+        "revertGroup": "التراجع عن كل اقتراحات هذه الوظيفة",
         "filters": {
           "all": "الكل",
           "pending": "معلّق",
@@ -168,6 +175,7 @@
         "more": "المزيد",
         "improvementsApplied": "التحسينات المطبقة",
         "applyAllRemaining": "تطبيق الكل ({{count}} متبقي)",
+        "unapplyAll": "التراجع عن الكل ({{count}} مطبق)",
         "exportPdf": "تصدير PDF",
         "sectionLabels": {
           "headline": "العنوان محسّن لأنظمة ATS",

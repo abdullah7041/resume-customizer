@@ -28,7 +28,7 @@ const CONTRACT_ID = "ai_match_reality_check";
 const importPath = (...segments) => import(pathToFileURL(join(...segments)).href);
 
 const { scoreMatch } = await importPath(ROOT, "eval", "match-score.mjs");
-const { getMissingFixtureCaches } = await importPath(ROOT, "eval", "match-eval-guards.mjs");
+const { getMissingFixtureCaches, getInvariantGroupFailures } = await importPath(ROOT, "eval", "match-eval-guards.mjs");
 
 // Minimal .env loader (no dependency) so the key can live in .env like the app.
 const loadDotEnv = () => {
@@ -164,12 +164,21 @@ const main = async () => {
     }
     const result = scoreMatch(fixture.expected, actual);
     printCard(fixture.name, result, actual?.score);
-    results.push({ name: fixture.name, overall: result.overall, passed: result.passed });
+    results.push({ name: fixture.name, overall: result.overall, passed: result.passed, expected: fixture.expected, actual });
   }
 
   if (results.length === 0) {
     console.log(`\n${C.yellow}Nothing scored. Set OPENROUTER_API_KEY or add *.actual.json caches.${C.reset}`);
     process.exit(0);
+  }
+
+  const invariantFailures = getInvariantGroupFailures(results);
+  for (const failure of invariantFailures) {
+    console.log(`  ${C.red}invariance failure:${C.reset} ${failure.group} crossed bands (${failure.bands.join(', ')})`);
+    for (const name of failure.names) {
+      const result = results.find((entry) => entry.name === name);
+      if (result) result.passed = false;
+    }
   }
 
   const avg = results.reduce((a, r) => a + r.overall, 0) / results.length;

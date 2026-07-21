@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MIN_MEANINGFUL_ESTIMATE,
   NO_CHANGE_BAND,
+  appliedVerificationSignature,
   buildScorePresentation,
   classifyVerifiedOutcome,
   verificationSignature,
@@ -40,16 +41,30 @@ const verifiedFor = (
   ...over,
 });
 
+const verifiedAppliedFor = (
+  optimizations: OptimizationResult[],
+  score: number,
+  baseline: number,
+) => ({
+  score,
+  baselineAtVerify: baseline,
+  appliedSignature: appliedVerificationSignature(partitionOptimizations(optimizations).actionable, 'resume text', 'jd text'),
+  verifiedAt: Date.now(),
+  appliedCount: partitionOptimizations(optimizations).actionable.filter((o) => o.applied).length,
+});
+
 const present = (
   optimizations: OptimizationResult[],
   {
     baseline = 10,
     improvement = null,
     verifiedPotential = null,
+    verifiedApplied = null,
   }: {
     baseline?: number | null;
     improvement?: number | null;
     verifiedPotential?: Parameters<typeof buildScorePresentation>[0]['verifiedPotential'];
+    verifiedApplied?: Parameters<typeof buildScorePresentation>[0]['verifiedApplied'];
   } = {},
 ) =>
   buildScorePresentation({
@@ -57,6 +72,7 @@ const present = (
     baselineScore: baseline,
     improvement,
     verifiedPotential,
+    verifiedApplied,
     resumeText: 'resume text',
     jobDescription: 'jd text',
   });
@@ -232,14 +248,27 @@ describe('projection math', () => {
     expect(p.currentAppliedProjection).toBe(69);
   });
 
-  it('keeps a zero generation estimate current when there is no valid verification', () => {
-    const queue = mixedQueue(1);
+  it('keeps a zero generation estimate current only while nothing is applied', () => {
+    const queue = mixedQueue(0);
     const p = present(queue, { improvement: 0 });
 
     expect(p.displayState).toBe('current');
     expect(p.currentAppliedProjection).toBeNull();
     expect(p.allSuggestionsPotentialEstimate).toBeNull();
     expect(p.estimateIsZero).toBe(true);
+    expect(p.appliedVerificationPending).toBe(false);
+  });
+
+  it('never settles on a zero estimate once cards are applied — a genuine re-score is owed', () => {
+    // The frozen-header bug: improvement 0, cards applied, no verification.
+    // The truth is "recalculation pending", never "no gain predicted".
+    const queue = mixedQueue(1);
+    const p = present(queue, { improvement: 0 });
+
+    expect(p.displayState).toBe('current');
+    expect(p.currentAppliedProjection).toBeNull();
+    expect(p.estimateIsZero).toBe(false);
+    expect(p.appliedVerificationPending).toBe(true);
   });
 
   it('climbs monotonically to the verified target without counting recommendations', () => {
@@ -306,5 +335,77 @@ describe('projection math', () => {
     // verified outcome takes display precedence.
     expect(p.allSuggestionsPotentialEstimate).toBe(22);
     expect(p.displayState).toBe('verified_no_change');
+  });
+});
+
+describe('applied-subset verification (genuine post-apply score)', () => {
+  it('signature shifts when a card is applied or reverted, and when texts change', () => {
+    const queue = mixedQueue(1);
+    const { actionable } = partitionOptimizations(queue);
+    const base = appliedVerificationSignature(actionable, 'resume text', 'jd text');
+
+    const flipped = partitionOptimizations(mixedQueue(2)).actionable;
+    expect(appliedVerificationSignature(flipped, 'resume text', 'jd text')).not.toBe(base);
+    expect(appliedVerificationSignature(actionable, 'other resume', 'jd text')).not.toBe(base);
+    expect(appliedVerificationSignature(actionable, 'resume text', 'other jd')).not.toBe(base);
+
+    const editedCard = actionable.map((o, i) => (i === 0 ? { ...o, optimized: 'rewritten' } : o));
+    expect(appliedVerificationSignature(editedCard, 'resume text', 'jd text')).not.toBe(base);
+
+    const changedOriginal = actionable.map((o, i) => (i === 0 ? { ...o, original: 'different merge source' } : o));
+    expect(appliedVerificationSignature(changedOriginal, 'resume text', 'jd text')).not.toBe(base);
+
+    // A merge-failed card counts as not applied.
+    const failed = actionable.map((o) => (o.applied ? { ...o, mergeStatus: 'failed' as const } : o));
+    expect(appliedVerificationSignature(failed, 'resume text', 'jd text'))
+      .toBe(appliedVerificationSignature(actionable.map((o) => ({ ...o, applied: false, mergeStatus: o.applied ? 'failed' as const : o.mergeStatus })), 'resume text', 'jd text'));
+  });
+
+  it('a signature-valid applied verification becomes the displayed verified score', () => {
+    const queue = mixedQueue(2);
+    const p = present(queue, { baseline: 25, improvement: 0, verifiedApplied: verifiedAppliedFor(queue, 33, 25) });
+
+    expect(p.verifiedAppliedScore).toBe(33);
+    expect(p.appliedVerificationPending).toBe(false);
+    expect(p.displayState).toBe('verified_applied_partial');
+    expect(p.arrowTarget).toBe(33);
+    expect(p.arrowIsVerified).toBe(true);
+    expect(p.estimateIsZero).toBe(false);
+  });
+
+  it('a stale applied verification (card reverted after verify) is dropped and pending returns', () => {
+    const verifiedAtTwoApplied = verifiedAppliedFor(mixedQueue(2), 33, 25);
+    const p = present(mixedQueue(1), { baseline: 25, improvement: 0, verifiedApplied: verifiedAtTwoApplied });
+
+    expect(p.verifiedAppliedScore).toBeNull();
+    expect(p.appliedVerificationPending).toBe(true);
+    expect(p.displayState).toBe('current');
+  });
+
+  it('all actionable cards applied reuses the valid full-set verification as the current score', () => {
+    // The reported 12/12 stuck case: no applied-subset metric yet, but the
+    // full-set verification covers the identical merged resume — its score is
+    // the genuine current score, at zero extra cost.
+    const queue = mixedQueue(3);
+    const p = present(queue, { baseline: 25, improvement: 0, verifiedPotential: verifiedFor(queue, 41, 25) });
+
+    expect(p.verifiedAppliedScore).toBe(41);
+    expect(p.appliedVerificationPending).toBe(false);
+    expect(p.displayState).toBe('verified_applied');
+    expect(p.arrowTarget).toBe(41);
+    expect(p.arrowIsVerified).toBe(true);
+  });
+
+  it('verified full-set no-change keeps banner precedence over an applied verification', () => {
+    const queue = mixedQueue(3);
+    const p = present(queue, {
+      baseline: 25,
+      improvement: 0,
+      verifiedPotential: verifiedFor(queue, 26, 25),
+      verifiedApplied: verifiedAppliedFor(queue, 26, 25),
+    });
+
+    expect(p.displayState).toBe('verified_no_change');
+    expect(p.appliedVerificationPending).toBe(false);
   });
 });
