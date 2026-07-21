@@ -164,18 +164,18 @@ describe('ReferralManager tracking idempotency', () => {
 
     await expect(completeReferral('new-user@example.com')).resolves.toEqual({
       completed: true,
-      referrerReward: 3,
-      refereeReward: 2,
+      referrerReward: 5,
+      refereeReward: 5,
     });
     expect(supabaseMock.rpc).toHaveBeenNthCalledWith(1, 'add_credits', {
       p_email: 'referrer@example.com',
-      p_amount: 3,
+      p_amount: 5,
       p_description: 'Referral bonus: friend completed first action',
       p_transaction_type: 'referral_reward',
     });
     expect(supabaseMock.rpc).toHaveBeenNthCalledWith(2, 'add_credits', {
       p_email: 'new-user@example.com',
-      p_amount: 2,
+      p_amount: 5,
       p_description: 'Referral bonus: welcome reward',
       p_transaction_type: 'referral_reward',
     });
@@ -300,18 +300,18 @@ describe('ReferralManager tracking idempotency', () => {
 
     await expect(completeReferral('new-user@example.com')).resolves.toEqual({
       completed: true,
-      referrerReward: 3,
-      refereeReward: 2,
+      referrerReward: 5,
+      refereeReward: 5,
     });
     expect(supabaseMock.rpc).toHaveBeenNthCalledWith(1, 'add_credits', {
       p_email: 'referrer@example.com',
-      p_amount: 3,
+      p_amount: 5,
       p_description: 'Referral bonus: friend completed first action',
       p_transaction_type: 'referral_reward',
     });
     expect(supabaseMock.rpc).toHaveBeenNthCalledWith(2, 'add_credits', {
       p_email: 'new-user@example.com',
-      p_amount: 2,
+      p_amount: 5,
       p_description: 'Referral bonus: welcome reward',
       p_transaction_type: 'referral_reward',
     });
