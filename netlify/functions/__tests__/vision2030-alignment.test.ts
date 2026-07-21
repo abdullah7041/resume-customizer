@@ -1,4 +1,5 @@
 import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
+import type { Vision2030AnalysisResponse } from '../../lib/vision2030-types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -57,13 +58,45 @@ const validBody = {
 
 const analysis = {
   overallScore: 78,
-  matchedSkills: [{ skill: 'Program leadership', evidence: 'Led a digital-skills program.' }],
-  missingSuggestions: [{ skill: 'Saudi labor-market policy', reason: 'Not evidenced in the resume.' }],
-  sectorBreakdown: [{ sector: 'Technology and digital transformation', score: 78 }],
-  topSectors: ['Technology and digital transformation'],
-  allSectorsWithMatches: ['Technology and digital transformation'],
-  detectedCareer: { role: 'Program Leader', seniority: 'senior' },
-};
+  matchedSkills: [{
+    skillNameEn: 'Program leadership',
+    skillNameAr: 'قيادة البرامج',
+    sectorId: 'technology_digital_transformation',
+    sectorNameEn: 'Technology and Digital Transformation',
+    sectorNameAr: 'التقنية والتحول الرقمي',
+    matchedKeyword: 'digital-skills program',
+    weight: 0.9,
+    context: 'Led a digital-skills program serving regional employers.',
+  }],
+  missingSuggestions: [{
+    skillNameEn: 'Saudi labor-market policy',
+    skillNameAr: 'سياسات سوق العمل السعودي',
+    sectorId: 'human_capability_development',
+    sectorNameEn: 'Human Capability Development',
+    sectorNameAr: 'تنمية القدرات البشرية',
+    relevanceScore: 0.75,
+    reason: 'Not evidenced in the resume.',
+    reasonAr: 'غير مثبت في السيرة الذاتية.',
+  }],
+  sectorBreakdown: [{
+    sectorId: 'technology_digital_transformation',
+    sectorNameEn: 'Technology and Digital Transformation',
+    sectorNameAr: 'التقنية والتحول الرقمي',
+    icon: 'Laptop',
+    score: 78,
+    matchedCount: 1,
+    totalSkills: 5,
+    suggestedKeywords: ['digital transformation'],
+  }],
+  topSectors: ['Technology and Digital Transformation'],
+  allSectorsWithMatches: ['Technology and Digital Transformation'],
+  detectedCareer: {
+    archetypeId: 'program_leader',
+    archetypeNameEn: 'Program Leader',
+    archetypeNameAr: 'قائد برامج',
+    confidence: 'high',
+  },
+} satisfies Vision2030AnalysisResponse;
 
 const invoke = async (
   body: unknown,
