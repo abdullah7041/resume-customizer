@@ -174,6 +174,52 @@ export async function getUserCredits(email, options = {}) {
     throw new Error('Failed to retrieve user credits');
   }
 
+  if (data?.signup_metadata?.pending_initial_grant === true) {
+    if (!emailVerified) {
+      return data;
+    }
+
+    const isIPSuspicious = await checkIPAbuse(ipAddress);
+    const creditsToGive = isIPSuspicious ? SUSPICIOUS_IP_CREDITS : FREE_TIER_CREDITS;
+    const { data: grantData, error: grantError } = await supabase.rpc('grant_initial_credits', {
+      p_email: email,
+      p_amount: creditsToGive,
+    });
+
+    if (grantError?.code === '42883') {
+      console.warn('[CreditManager] Initial grant RPC unavailable:', summarizeErrorForLog(grantError));
+      return data;
+    }
+
+    if (grantError) {
+      console.error('[CreditManager] Failed to apply initial grant:', summarizeErrorForLog(grantError));
+      throw new Error('Failed to apply initial credit grant');
+    }
+
+    const grant = Array.isArray(grantData) ? grantData[0] : grantData;
+    if (grant?.granted) {
+      console.log(`[CreditManager] Initial grant applied for ${redactForLog(email)}`);
+      return {
+        ...data,
+        credits_remaining: grant.credits_remaining,
+        credits_total: creditsToGive,
+      };
+    }
+
+    const { data: winnerData, error: refetchError } = await supabase
+      .from('user_credits')
+      .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
+      .eq('email', email)
+      .single();
+
+    if (refetchError) {
+      console.error('[CreditManager] Failed to re-fetch initial grant:', summarizeErrorForLog(refetchError));
+      throw new Error('Failed to retrieve user credits');
+    }
+
+    return winnerData;
+  }
+
   return data;
 }
 
@@ -321,6 +367,27 @@ export async function consumeCredits(email, feature, amount = null) {
  */
 export async function addCredits(email, amount, type, metadata = {}) {
   const supabase = getSupabaseClient();
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc('add_credits', {
+    p_email: email,
+    p_amount: amount,
+    p_description: metadata.description || type,
+    p_transaction_type: type,
+  });
+
+  if (!rpcError) {
+    const result = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    const creditsRemaining = result?.remaining;
+    console.log(`[CreditManager] Added ${amount} credits (${type}) atomically. Balance: ${creditsRemaining}`);
+    return { success: true, creditsRemaining };
+  }
+
+  if (rpcError.code !== '42883') {
+    console.error('[CreditManager] Failed to add credits:', summarizeErrorForLog(rpcError));
+    throw new Error('Failed to add credits');
+  }
+
+  console.warn('[CreditManager] Add credits RPC unavailable, using direct update');
 
   // Get current balance
   const credits = await getUserCredits(email);

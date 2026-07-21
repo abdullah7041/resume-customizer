@@ -16,7 +16,7 @@ Selection note (round 2): the owner selected all four offered clusters plus the 
 | 004 | Atomic referral completion (claim-then-award) | P2 | S | — | DONE |
 | 005 | Harden abuse-facing surfaces (cron gate, beta gate, dead fn, email escaping) | P2 | M | — | DONE |
 | 006 | Toolchain & repo hygiene (dead dep, tracked artifacts, honest gate, env docs) | P2 | S | — | DONE |
-| 007 | Restore signup anti-abuse checks; atomic addCredits | P1 | M | — | TODO |
+| 007 | Restore signup anti-abuse checks; atomic addCredits | P1 | M | — | DONE |
 | 008 | Pay referral rewards on first paid action | P1 | M | 007 | TODO |
 | 009 | CI pipeline gating main (lint/typecheck/test) | P1 | S | — | DONE |
 | 010 | Handler tests for six untested AI functions | P2 | M | 009 (soft) | TODO |
