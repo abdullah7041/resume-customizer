@@ -18,7 +18,7 @@ Selection note (round 2): the owner selected all four offered clusters plus the 
 | 006 | Toolchain & repo hygiene (dead dep, tracked artifacts, honest gate, env docs) | P2 | S | — | DONE |
 | 007 | Restore signup anti-abuse checks; atomic addCredits | P1 | M | — | TODO |
 | 008 | Pay referral rewards on first paid action | P1 | M | 007 | TODO |
-| 009 | CI pipeline gating main (lint/typecheck/test) | P1 | S | — | TODO |
+| 009 | CI pipeline gating main (lint/typecheck/test) | P1 | S | — | DONE |
 | 010 | Handler tests for six untested AI functions | P2 | M | 009 (soft) | TODO |
 | 011 | Extract shared optimize card/score lib | P2 | M | — | TODO |
 | 012 | OptimizeSection render hygiene (selectors/useCallback/memo) | P2 | M | — | TODO |
