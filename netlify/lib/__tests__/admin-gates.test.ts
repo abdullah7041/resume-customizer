@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HandlerEvent } from '@netlify/functions';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   requireAdminMutationGate,
   requireScheduledFunctionGate,
 } from '../admin-gates.js';
 
 const originalEnv = { ...process.env };
+const here = dirname(fileURLToPath(import.meta.url));
 
 function buildEvent(
   headers: Record<string, string> = {},
@@ -159,5 +163,12 @@ describe('admin and scheduled function gates', () => {
       statusCode: 401,
       error: 'Unauthorized',
     });
+  });
+
+  it('uses the constant-time helper for supplied admin secrets', () => {
+    const source = readFileSync(resolve(here, '../admin-gates.ts'), 'utf8');
+
+    expect(source).not.toContain('getRequestAdminSecret(event) !== configuredSecret');
+    expect(source).toContain('!provided || !timingSafeEqualStrings(provided, configuredSecret)');
   });
 });

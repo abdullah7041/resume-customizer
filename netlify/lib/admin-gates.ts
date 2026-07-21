@@ -98,7 +98,8 @@ export function requireAdminMutationGate(
     };
   }
 
-  if (getRequestAdminSecret(event) !== configuredSecret) {
+  const provided = getRequestAdminSecret(event);
+  if (!provided || !timingSafeEqualStrings(provided, configuredSecret)) {
     return {
       ok: false,
       statusCode: 401,
