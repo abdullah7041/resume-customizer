@@ -300,14 +300,15 @@ describe('referral-api auth binding', () => {
   });
 
   it('returns a concurrently saved code when the guarded save loses the race', async () => {
+    const guardedUpdateIsMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    });
     const guardedUpdate = {
       update: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          is: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-            }),
-          }),
+          is: guardedUpdateIsMock,
         }),
       }),
     };
@@ -342,5 +343,6 @@ describe('referral-api auth binding', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('CONCURRENTCODE');
+    expect(guardedUpdateIsMock).toHaveBeenCalledWith('referral_code', null);
   });
 });

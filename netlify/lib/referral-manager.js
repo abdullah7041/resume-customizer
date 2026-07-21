@@ -2,15 +2,15 @@
  * Referral Management System
  *
  * Handles referral tracking, completion, and reward distribution.
- * Rewards: 5 credits to referrer + 5 credits to referee on first paid action.
+ * Rewards: 3 credits to referrer + 2 credits to referee on first paid action.
  * Uses user_credits table columns: referred_by_user_id, referral_completed, referral_completed_at
  */
 
 import { createClient } from '@supabase/supabase-js';
 import { redactForLog } from './sentry.js';
 
-const REFERRER_REWARD = 5;
-const REFEREE_REWARD = 5;
+const REFERRER_REWARD = 3;
+const REFEREE_REWARD = 2;
 const MISSING_CONFIG_ERROR = '[ReferralManager] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY';
 const REFERRAL_EMAIL_RECIPIENT_NAME = 'Watheq user';
 const REFERRAL_COUNTERPART_NAME = 'a Watheq user';
