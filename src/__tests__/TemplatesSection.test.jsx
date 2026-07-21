@@ -23,16 +23,17 @@ vi.mock('../lib/stores/resumeStore', () => {
         originalResume: null,
         parsedResumeText: null,
         optimizations: [],
+        optimizationMetrics: { jdKeywords: [] },
         showOptimized: false,
         getActiveResume: vi.fn(() => null),
         setSelectedTemplate: vi.fn(),
-        displayOptions: { fontSize: 1, showPageBreaks: false },
+        displayOptions: { fontSize: 1, showPageBreaks: false, boldKeywords: false },
         setDisplayOptions: vi.fn(),
         setHasDownloaded: vi.fn(),
         contentLanguage: null,
         setContentLanguage: vi.fn(),
     };
-    const useResumeStore = () => storeState;
+    const useResumeStore = (selector) => selector ? selector(storeState) : storeState;
     useResumeStore.getState = () => storeState;
     return { useResumeStore };
 });

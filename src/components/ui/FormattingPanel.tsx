@@ -103,7 +103,8 @@ export function FormattingPanel() {
     const [isExpanded, setIsExpanded] = useState(true);
     const fontStyleId = useId();
 
-    const { displayOptions, setDisplayOptions } = useResumeStore();
+    const displayOptions = useResumeStore((state) => state.displayOptions);
+    const setDisplayOptions = useResumeStore((state) => state.setDisplayOptions);
 
     const handleReset = () => {
         setDisplayOptions(DEFAULTS);

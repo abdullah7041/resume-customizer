@@ -1,5 +1,5 @@
 import { AlertCircle, ArrowLeftRight, Check, ChevronDown, Copy, Info, Lightbulb, RotateCcw, Send, Sparkles, Wand2 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { cn } from '@/lib/utils/cn';
@@ -38,7 +38,7 @@ interface JobGroupCardProps {
   onCopy?: (value: string) => Promise<void>;
   onStartRefine: (sectionId: string) => void;
   onRefineInstructionChange: (value: string) => void;
-  onSubmitRefine: (opt: OptimizationResult) => void;
+  onSubmitRefine: (opt: OptimizationResult, instruction: string) => void;
 }
 
 const textValue = (value: string | string[] | undefined) => Array.isArray(value) ? value.join('\n') : value ?? '';
@@ -50,7 +50,8 @@ const firstWords = (value: string | string[] | undefined) => {
   return text.split(' ').length > 10 ? `${words}...` : words;
 };
 
-export function JobGroupCard({
+// Keep every object/function prop referentially stable so memoization remains effective.
+export const JobGroupCard = memo(function JobGroupCard({
   group,
   viewMode,
   expandedCards,
@@ -298,7 +299,7 @@ export function JobGroupCard({
                           onKeyDown={(event) => {
                             if (event.key === 'Enter' && !event.shiftKey && refineLoadingId !== opt.sectionId) {
                               event.preventDefault();
-                              onSubmitRefine(opt);
+                              onSubmitRefine(opt, refineInstruction);
                             }
                           }}
                           disabled={refineLoadingId === opt.sectionId}
@@ -309,7 +310,7 @@ export function JobGroupCard({
                         <GlassButton
                           variant="primary"
                           size="sm"
-                          onClick={() => onSubmitRefine(opt)}
+                          onClick={() => onSubmitRefine(opt, refineInstruction)}
                           disabled={refineLoadingId === opt.sectionId || !refineInstruction.trim()}
                           leftIcon={refineLoadingId === opt.sectionId ? <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Send className="h-3.5 w-3.5" />}
                         >
@@ -338,7 +339,7 @@ export function JobGroupCard({
       </div>
     </div>
   );
-}
+});
 
 function DiffPanel({ tone, title, content }: { tone: 'red' | 'emerald'; title: string; content: string }) {
   return (

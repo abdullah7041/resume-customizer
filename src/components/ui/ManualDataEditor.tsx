@@ -48,12 +48,10 @@ const TABS: TabConfig[] = [
 export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
     const { i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
-    const {
-        originalResume,
-        setOriginalResume,
-        displayOptions,
-        setDisplayOptions
-    } = useResumeStore();
+    const originalResume = useResumeStore((state) => state.originalResume);
+    const setOriginalResume = useResumeStore((state) => state.setOriginalResume);
+    const displayOptions = useResumeStore((state) => state.displayOptions);
+    const setDisplayOptions = useResumeStore((state) => state.setDisplayOptions);
 
     const [activeTab, setActiveTab] = useState<TabId>('basics');
     const [localResume, setLocalResume] = useState<ResumeSchema | null>(null);

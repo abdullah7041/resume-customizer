@@ -169,15 +169,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const dragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
 
   // Get resume data from store - subscribe to all relevant state for reactivity
-  const {
-    originalResume: storeOriginalResume,
-    optimizations,  // Subscribe to optimizations - triggers re-render when optimizations change
-    showOptimized,
-    // isSaudiNational is used by getActiveResume internally
-    getActiveResume,
-    setSelectedTemplate: setStoreTemplate,
-    displayOptions,
-  } = useResumeStore();
+  const storeOriginalResume = useResumeStore((state) => state.originalResume);
+  const optimizations = useResumeStore((state) => state.optimizations);
+  const showOptimized = useResumeStore((state) => state.showOptimized);
+  // isSaudiNational is used by getActiveResume internally
+  const getActiveResume = useResumeStore((state) => state.getActiveResume);
+  const setStoreTemplate = useResumeStore((state) => state.setSelectedTemplate);
+  const displayOptions = useResumeStore((state) => state.displayOptions);
 
   // Detect resume content language
   const contentLanguage = useResumeLanguage();
