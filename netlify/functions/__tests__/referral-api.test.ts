@@ -271,8 +271,10 @@ describe('referral-api auth binding', () => {
       // …and the update matches no user_credits row (row not initialized yet).
       update: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          is: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
           }),
         }),
       }),
@@ -295,5 +297,50 @@ describe('referral-api auth binding', () => {
       code: 'referral/profile-not-found',
       message: expect.stringContaining('Referral profile not found'),
     });
+  });
+
+  it('returns a concurrently saved code when the guarded save loses the race', async () => {
+    const guardedUpdate = {
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          is: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          }),
+        }),
+      }),
+    };
+    supabaseFromMock
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce(guardedUpdate)
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { referral_code: 'CONCURRENTCODE' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-link' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('CONCURRENTCODE');
   });
 });

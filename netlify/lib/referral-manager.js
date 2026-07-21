@@ -7,7 +7,6 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { addCredits } from './credit-manager.js';
 import { redactForLog } from './sentry.js';
 
 const REFERRER_REWARD = 5;
@@ -52,7 +51,7 @@ function getSupabaseClient() {
 
 /**
  * Track a referral relationship when a new user signs up with a referral code.
- * Awards credits immediately to both referrer and referee.
+ * Claims the relationship; completeReferral pays rewards on the first paid action.
  *
  * @param {string} referrerCode - The referral code (format: USR-XXXXX)
  * @param {string} refereeEmail - Email of the new user being referred
@@ -92,9 +91,7 @@ export async function trackReferral(referrerCode, refereeEmail, refereeUserId) {
     const { data: trackedReferral, error: updateError } = await supabase
       .from('user_credits')
       .update({
-        referred_by_user_id: referrerUserId,
-        referral_completed: true,
-        referral_completed_at: new Date().toISOString()
+        referred_by_user_id: referrerUserId
       })
       .eq('user_id', refereeUserId)
       .is('referred_by_user_id', null)
@@ -129,45 +126,6 @@ export async function trackReferral(referrerCode, refereeEmail, refereeUserId) {
     }
 
     console.log(`[ReferralManager] Tracked referral: ${redactForLog(referrerEmail)} -> ${redactForLog(refereeEmail)}`);
-
-    // Award credits to referrer using credit-manager (avoids RPC migration dependency)
-    try {
-      await addCredits(referrerEmail, REFERRER_REWARD, 'referral_reward', {
-        description: 'Referral bonus: new user signed up',
-        referee_user_id: refereeUserId,
-      });
-      console.log(`[ReferralManager] Awarded ${REFERRER_REWARD} credits to referrer ${redactForLog(referrerEmail)}`);
-    } catch (referrerRewardError) {
-      console.error('[ReferralManager] Failed to reward referrer:', summarizeErrorForLog(referrerRewardError));
-    }
-
-    // Award credits to referee using credit-manager (avoids RPC migration dependency)
-    try {
-      await addCredits(refereeEmail, REFEREE_REWARD, 'referral_reward', {
-        description: 'Referral bonus: welcome reward',
-        referrer_user_id: referrerUserId,
-      });
-      console.log(`[ReferralManager] Awarded ${REFEREE_REWARD} credits to referee ${redactForLog(refereeEmail)}`);
-    } catch (refereeRewardError) {
-      console.error('[ReferralManager] Failed to reward referee:', summarizeErrorForLog(refereeRewardError));
-    }
-
-    // Send email notifications (non-blocking)
-    try {
-      const { sendReferralRewardReferrer, sendReferralRewardReferee } = await import('./email-service.js');
-
-      // Send email to referrer
-      sendReferralRewardReferrer(referrerEmail, REFERRAL_EMAIL_RECIPIENT_NAME, REFERRAL_COUNTERPART_NAME, 'en').catch(err => {
-        console.warn('[ReferralManager] Failed to send referrer email:', summarizeErrorForLog(err));
-      });
-
-      // Send email to referee
-      sendReferralRewardReferee(refereeEmail, REFERRAL_EMAIL_RECIPIENT_NAME, REFERRAL_COUNTERPART_NAME, 'en').catch(err => {
-        console.warn('[ReferralManager] Failed to send referee email:', summarizeErrorForLog(err));
-      });
-    } catch (emailError) {
-      console.warn('[ReferralManager] Email service unavailable:', summarizeErrorForLog(emailError));
-    }
 
     return { success: true };
   } catch (error) {

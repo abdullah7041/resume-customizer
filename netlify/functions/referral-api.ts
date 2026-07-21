@@ -142,6 +142,7 @@ async function handleGetLink(email: string) {
             .from('user_credits')
             .update({ referral_code: referralCode })
             .eq('email', email)
+            .is('referral_code', null)
             .select('referral_code')
             .maybeSingle();
 
@@ -151,12 +152,29 @@ async function handleGetLink(email: string) {
         }
 
         if (!savedRow) {
+            const { data: concurrentRow, error: concurrentFetchError } = await supabase
+                .from('user_credits')
+                .select('referral_code')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (concurrentFetchError) {
+                console.error('[referral-api] Concurrent code fetch error:', summarizeErrorForLog(concurrentFetchError));
+                throw describeDbError('Failed to fetch concurrent referral code', concurrentFetchError);
+            }
+
+            if (concurrentRow?.referral_code) {
+                referralCode = concurrentRow.referral_code;
+                // A concurrent request persisted the code after our initial read.
+                // Return that durable winner instead of treating it as a missing profile.
+            } else {
             console.error(`[referral-api] No user_credits row for ${redactForLog(email)} — cannot persist referral code.`);
             throw httpError(
                 500,
                 'referral/profile-not-found',
                 'Referral profile not found. Your credits account may still be initializing — try again shortly.'
             );
+            }
         }
 
         console.log(`[referral-api] Generated new code for user ${redactForLog(email)}: ${referralCode}`);
