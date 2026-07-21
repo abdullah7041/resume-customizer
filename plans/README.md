@@ -20,7 +20,7 @@ Selection note (round 2): the owner selected all four offered clusters plus the 
 | 008 | Pay referral rewards on first paid action | P1 | M | 007 | DONE |
 | 009 | CI pipeline gating main (lint/typecheck/test) | P1 | S | — | DONE |
 | 010 | Handler tests for six untested AI functions | P2 | M | 009 (soft) | DONE |
-| 011 | Extract shared optimize card/score lib | P2 | M | — | TODO |
+| 011 | Extract shared optimize card/score lib | P2 | M | — | DONE |
 | 012 | OptimizeSection render hygiene (selectors/useCallback/memo) | P2 | M | — | TODO |
 | 013 | Mixpanel deferral + client error-envelope hygiene + vision2030 credit guard | P2 | S–M | 010 (part C only) | TODO |
 | 014 | Gate parked mascot CSS; right-size character images | P3 | S | — | TODO |
