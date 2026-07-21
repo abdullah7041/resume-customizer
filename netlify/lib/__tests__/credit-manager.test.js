@@ -213,6 +213,7 @@ describe('CreditManager', () => {
     });
 
     it('applies the reduced initial grant for a suspicious IP', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const pendingCredits = {
         credits_remaining: 0,
         credits_total: 0,
@@ -248,6 +249,7 @@ describe('CreditManager', () => {
         p_amount: SUSPICIOUS_IP_CREDITS,
         p_ip_address: '203.0.113.10',
       });
+      expect(warnSpy).toHaveBeenCalledWith('[CreditManager] Suspicious IP has 10 accounts (suspicious)');
     });
 
     it('leaves an unverified pending row at zero without a grant RPC', async () => {
@@ -813,15 +815,17 @@ describe('CreditManager', () => {
       });
     });
 
-    it('throws when the add credits RPC fails for a reason other than being unavailable', async () => {
+    it('throws a structured error when the add credits RPC fails for a reason other than being unavailable', async () => {
       supabaseMock.rpc.mockResolvedValueOnce({
         data: null,
         error: { code: '23514', message: 'Credit amount must be positive' },
       });
 
-      await expect(addCredits('user-123', 5, 'referral_reward')).rejects.toThrow(
-        'Failed to add credits'
-      );
+      await expect(addCredits('user-123', 5, 'referral_reward')).rejects.toMatchObject({
+        status: 500,
+        code: 'ADD_CREDITS_RPC_FAILED',
+        message: 'Failed to add credits',
+      });
     });
   });
 });

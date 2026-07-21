@@ -74,7 +74,7 @@ async function checkIPAbuse(ipAddress) {
   // Threshold 10 (was 3): carrier CGNAT means many legit users share an IP —
   // 3 penalized real signups on launch day. 10 still caps farm abuse at ~200 credits/IP/day (~$0.50 AI cost).
   if (accountsFromIP >= 10) {
-    console.warn(`[CreditManager] IP ${ipAddress} has ${accountsFromIP} accounts (suspicious)`);
+    console.warn(`[CreditManager] Suspicious IP has ${accountsFromIP} accounts (suspicious)`);
     return true;
   }
 
@@ -392,7 +392,7 @@ export async function addCredits(email, amount, type, metadata = {}) {
 
   if (rpcError.code !== '42883') {
     console.error('[CreditManager] Failed to add credits:', summarizeErrorForLog(rpcError));
-    throw new Error('Failed to add credits');
+    throw createCreditManagerError(500, 'ADD_CREDITS_RPC_FAILED', 'Failed to add credits');
   }
 
   console.warn('[CreditManager] Add credits RPC unavailable, using direct update');
