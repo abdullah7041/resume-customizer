@@ -106,9 +106,28 @@ describe('onboard-extract handler', () => {
       'lite',
       expect.arrayContaining([
         expect.objectContaining({ role: 'system' }),
-        expect.objectContaining({ role: 'user', content: expect.stringContaining('senior platform engineering roles') }),
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringMatching(
+            /Known so far \(do not contradict it\): \{"targetRoles":\["Backend Engineer"\],"seniority":"mid"\}[\s\S]*senior platform engineering roles/,
+          ),
+        }),
       ]),
-      expect.objectContaining({ type: 'object' }),
+      {
+        type: 'object',
+        properties: {
+          value: {
+            type: 'object',
+            properties: {
+              targetRoles: { type: 'array', items: { type: 'string' } },
+              seniority: { type: 'string', enum: ['', 'junior', 'mid', 'senior', 'lead', 'manager'] },
+            },
+            required: ['targetRoles', 'seniority'],
+          },
+          confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+        },
+        required: ['value', 'confidence'],
+      },
       {
         reasoningBudget: 0,
         maxTokens: 1024,

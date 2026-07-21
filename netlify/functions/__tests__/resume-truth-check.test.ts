@@ -87,12 +87,22 @@ describe('resume-truth-check handler', () => {
   });
 
   it('returns the truth-check result with handler debug metadata', async () => {
-    analyzeResumeTruthCheckMock.mockResolvedValue({
+    const truthCheckResult = {
       overallRisk: 'medium',
       summary: 'One claim needs more evidence.',
-      claims: [{ claimText: 'Led a national transformation program.' }],
-      debug: { requestId: 'ai-request-1' },
-    });
+      claims: [{
+        claimText: 'Led a national transformation program.',
+        section: 'summary',
+        severity: 'medium',
+        riskTypes: ['unsupported'],
+        evidenceStatus: 'needs_evidence',
+        visibleEvidence: ['Led a national transformation program.'],
+        whyItMatters: 'The scale and outcome are not evidenced in the resume.',
+        userAction: 'Verify the program scope and outcome before keeping this claim.',
+      }],
+      limits: { cannotVerify: ['External employer records'] },
+    };
+    analyzeResumeTruthCheckMock.mockResolvedValue(truthCheckResult);
 
     const response = await invoke(validBody);
     const body = parseBody(response);
@@ -102,11 +112,12 @@ describe('resume-truth-check handler', () => {
       overallRisk: 'medium',
       summary: 'One claim needs more evidence.',
       debug: {
-        requestId: 'ai-request-1',
         model: 'test-flash-model',
         latencyMs: expect.any(Number),
       },
     });
+    expect(body.claims).toEqual(truthCheckResult.claims);
+    expect(body.limits).toEqual(truthCheckResult.limits);
     expect(analyzeResumeTruthCheckMock).toHaveBeenCalledWith(
       validBody.resumeText,
       'en',

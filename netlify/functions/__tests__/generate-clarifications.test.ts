@@ -106,10 +106,58 @@ describe('generate-clarifications handler', () => {
 
   it('returns at most three AI clarifications and caches the response', async () => {
     const clarifications = [
-      { id: 'one', question: 'What was the migration scope?' },
-      { id: 'two', question: 'How many users were affected?' },
-      { id: 'three', question: 'What changed after launch?' },
-      { id: 'four', question: 'How large was the team?' },
+      {
+        id: 'scope',
+        theme: 'Migration scope',
+        rationale: 'The resume does not quantify the platform migration.',
+        question: 'What was the migration scope?',
+        type: 'single',
+        options: [
+          { value: 'one_product', label: 'One product' },
+          { value: 'several_products', label: 'Several products' },
+          { value: 'none', label: "I don't have this experience", isHardStop: true },
+        ],
+        allowOther: true,
+      },
+      {
+        id: 'users',
+        theme: 'User impact',
+        rationale: 'The scale of the migration is not visible.',
+        question: 'How many users were affected?',
+        type: 'single',
+        options: [
+          { value: '1_3', label: '1–3' },
+          { value: '4_10', label: '4–10' },
+          { value: 'none', label: "I don't have this experience", isHardStop: true },
+        ],
+        allowOther: true,
+      },
+      {
+        id: 'outcome',
+        theme: 'Launch outcome',
+        rationale: 'The resume does not state what changed after launch.',
+        question: 'What changed after launch?',
+        type: 'multi',
+        options: [
+          { value: 'faster', label: 'Faster delivery' },
+          { value: 'adoption', label: 'Higher adoption' },
+          { value: 'none', label: "I don't have this experience", isHardStop: true },
+        ],
+        allowOther: true,
+      },
+      {
+        id: 'team',
+        theme: 'Team size',
+        rationale: 'The leadership scope is not quantified.',
+        question: 'How large was the team?',
+        type: 'single',
+        options: [
+          { value: '1_3', label: '1–3' },
+          { value: '4_10', label: '4–10' },
+          { value: 'none', label: "I don't have this experience", isHardStop: true },
+        ],
+        allowOther: true,
+      },
     ];
     executeAiContractMock.mockResolvedValue({ clarifications });
 

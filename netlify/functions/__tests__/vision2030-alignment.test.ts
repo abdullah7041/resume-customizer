@@ -57,9 +57,12 @@ const validBody = {
 
 const analysis = {
   overallScore: 78,
-  summary: 'Strong alignment with human-capability development.',
-  pillars: [],
-  recommendations: [],
+  matchedSkills: [{ skill: 'Program leadership', evidence: 'Led a digital-skills program.' }],
+  missingSuggestions: [{ skill: 'Saudi labor-market policy', reason: 'Not evidenced in the resume.' }],
+  sectorBreakdown: [{ sector: 'Technology and digital transformation', score: 78 }],
+  topSectors: ['Technology and digital transformation'],
+  allSectorsWithMatches: ['Technology and digital transformation'],
+  detectedCareer: { role: 'Program Leader', seniority: 'senior' },
 };
 
 const invoke = async (
@@ -177,5 +180,11 @@ describe('vision2030-alignment handler', () => {
 
     expect(response.statusCode).toBe(200);
     expect(parseBody(response)).toEqual({ ...analysis, creditsRemaining: 0 });
+    expect(parseBody(response)).toMatchObject({
+      matchedSkills: analysis.matchedSkills,
+      sectorBreakdown: analysis.sectorBreakdown,
+      detectedCareer: analysis.detectedCareer,
+      creditsRemaining: 0,
+    });
   });
 });
