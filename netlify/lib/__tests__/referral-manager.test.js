@@ -159,6 +159,7 @@ describe('ReferralManager tracking idempotency', () => {
     expect(relationshipClaimMock.spies.eq).toHaveBeenCalledWith('user_id', 'new-user-id');
     expect(relationshipClaimMock.spies.is).toHaveBeenCalledWith('referred_by_user_id', null);
     expect(addCreditsMock).not.toHaveBeenCalled();
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
     expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
     expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
 
@@ -167,6 +168,7 @@ describe('ReferralManager tracking idempotency', () => {
       referrerReward: 5,
       refereeReward: 5,
     });
+    expect(supabaseMock.rpc).toHaveBeenCalledTimes(2);
     expect(supabaseMock.rpc).toHaveBeenNthCalledWith(1, 'add_credits', {
       p_email: 'referrer@example.com',
       p_amount: 5,
@@ -339,6 +341,38 @@ describe('ReferralManager tracking idempotency', () => {
     expect(supabaseMock.rpc).not.toHaveBeenCalled();
     expect(sendReferralRewardReferrerMock).not.toHaveBeenCalled();
     expect(sendReferralRewardRefereeMock).not.toHaveBeenCalled();
+  });
+
+  it('reopens completion when referrer lookup fails before any reward payment', async () => {
+    setServerEnv();
+    const reopenMock = mockConditionalReferralUpdate({
+      data: { email: 'new-user@example.com' },
+      error: null,
+    });
+    const claimMock = mockReferralCompletionClaim({
+      data: { referred_by_user_id: 'referrer-user-id' },
+      error: null,
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(claimMock.table)
+      .mockReturnValueOnce(mockSelectSingle({
+        data: null,
+        error: { message: 'temporary lookup failure' },
+      }))
+      .mockReturnValueOnce(reopenMock.table);
+
+    const { completeReferral } = await importFreshReferralManager();
+
+    await expect(completeReferral('new-user@example.com')).resolves.toEqual({
+      completed: false,
+      error: 'Failed to resolve referrer',
+    });
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
+    expect(reopenMock.spies.update).toHaveBeenCalledWith(expect.objectContaining({
+      referral_completed: false,
+      referral_completed_at: null,
+    }));
+    expect(reopenMock.spies.eq).toHaveBeenCalledWith('email', 'new-user@example.com');
   });
 
   it('reopens completion when reward payment fails after claim so the referral can be retried', async () => {

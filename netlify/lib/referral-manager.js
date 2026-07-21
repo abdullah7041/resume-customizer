@@ -196,6 +196,7 @@ export async function completeReferral(refereeEmail) {
 
     if (referrerFetchError || !referrerData?.email) {
       console.error('[ReferralManager] Failed to resolve referrer:', summarizeErrorForLog(referrerFetchError));
+      await reopenClaimForRetry();
       return { completed: false, error: 'Failed to resolve referrer' };
     }
 
