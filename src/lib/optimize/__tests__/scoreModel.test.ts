@@ -351,6 +351,10 @@ describe('applied-subset verification (genuine post-apply score)', () => {
 
     const editedCard = actionable.map((o, i) => (i === 0 ? { ...o, optimized: 'rewritten' } : o));
     expect(appliedVerificationSignature(editedCard, 'resume text', 'jd text')).not.toBe(base);
+
+    const changedOriginal = actionable.map((o, i) => (i === 0 ? { ...o, original: 'different merge source' } : o));
+    expect(appliedVerificationSignature(changedOriginal, 'resume text', 'jd text')).not.toBe(base);
+
     // A merge-failed card counts as not applied.
     const failed = actionable.map((o) => (o.applied ? { ...o, mergeStatus: 'failed' as const } : o));
     expect(appliedVerificationSignature(failed, 'resume text', 'jd text'))

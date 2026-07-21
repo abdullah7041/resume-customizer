@@ -115,6 +115,8 @@
         "potentialEstimate": "Up to ~{{score}}% if all suggestions are applied (estimate)",
         "noGainPredicted": "No measurable Match-score increase predicted (estimate)",
         "appliedVerifyPending": "Recalculating your score for the applied changes...",
+        "appliedVerifyReady": "Recalculate updated score",
+        "appliedVerifyUnavailable": "Add a job description to recalculate your updated score.",
         "appliedVerifyFailed": "Couldn't verify the new score — showing an estimate.",
         "appliedVerifySignIn": "Sign in to verify your updated score — showing an estimate.",
         "verifiedNoGainYet": "Verified — the applied changes haven't moved the score yet.",

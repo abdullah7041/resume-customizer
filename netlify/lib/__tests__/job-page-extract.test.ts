@@ -243,6 +243,27 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     expect(result?.jobText).not.toMatch(/senior accountant|warehouse supervisor|graphic designer/i);
   });
 
+  it('descends through a neutral layout wrapper before scoring the JD body against a link rail', () => {
+    const page = `
+      <main>
+        <div class="layout">
+          <div class="body">${LONG_DESCRIPTION_HTML}</div>
+          <div class="rail">
+            <a href="/jobs/1">Senior Accountant — Riyadh, full time, competitive salary package</a>
+            <a href="/jobs/2">Warehouse Supervisor — Dammam, rotating shifts, transport provided</a>
+            <a href="/jobs/3">Sales Executive — Khobar, automotive sector, commission scheme</a>
+            <a href="/jobs/4">Executive Assistant — Jeddah, immediate start, bilingual preferred</a>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/senior accountant|warehouse supervisor|sales executive/i);
+  });
+
   it('truncates trailing Arabic similar-jobs boilerplate in the second half', () => {
     const page = `
       <main>

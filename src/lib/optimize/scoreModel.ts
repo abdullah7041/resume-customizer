@@ -36,9 +36,10 @@ export type DisplayState =
 
 /**
  * Lifecycle of the applied-subset re-verification, shared by OptimizeSection
- * and ScoreHeader. 'guest' = signed-out user, auto-verify intentionally skipped.
+ * and ScoreHeader. 'ready' requires an explicit credit-confirmed user action;
+ * 'guest' and 'unavailable' never show a false loading state.
  */
-export type AppliedVerifyStatus = 'idle' | 'pending' | 'failed' | 'guest';
+export type AppliedVerifyStatus = 'idle' | 'ready' | 'pending' | 'failed' | 'guest' | 'unavailable';
 
 /** Typed verification-anomaly state shared by OptimizeSection and ScoreHeader. */
 export type VerifyAnomalyKind = 'too_short' | 'no_text_change' | 'anomalous_drop' | 'error';
@@ -149,7 +150,7 @@ export function appliedVerificationSignature(
   jobDescription: string,
 ): string {
   const cards = actionable
-    .map((o) => `${o.sectionId}::${o.applied && o.mergeStatus !== 'failed' ? '1' : '0'}::${cardText(o.optimized)}`)
+    .map((o) => `${o.sectionId}::${o.applied && o.mergeStatus !== 'failed' ? '1' : '0'}::${cardText(o.original)}::${cardText(o.optimized)}`)
     .sort()
     .join('|');
   return `${fnv1a(cards)}-${fnv1a(resumeText)}-${fnv1a(jobDescription)}`;
@@ -213,11 +214,11 @@ export function buildScorePresentation(input: ScorePresentationInput): ScorePres
   //      verification — the merged resume is identical, so its score is the
   //      current score, not merely a target.
   let verifiedAppliedScore: number | null = null;
-  const va = input.verifiedApplied;
-  if (va && baseline !== null && actionableApplied > 0) {
+  const verifiedAppliedMetric = input.verifiedApplied;
+  if (verifiedAppliedMetric && baseline !== null && actionableApplied > 0) {
     const liveAppliedSignature = appliedVerificationSignature(actionable, input.resumeText, input.jobDescription);
-    if (va.appliedSignature === liveAppliedSignature) {
-      verifiedAppliedScore = clampScore(va.score);
+    if (verifiedAppliedMetric.appliedSignature === liveAppliedSignature) {
+      verifiedAppliedScore = clampScore(verifiedAppliedMetric.score);
     }
   }
   if (verifiedAppliedScore === null && allActionableApplied && verifiedAllSuggestionsScore !== null) {

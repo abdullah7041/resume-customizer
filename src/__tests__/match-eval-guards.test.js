@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { scoreMatch } from '../../eval/match-score.mjs';
-import { getMissingFixtureCaches } from '../../eval/match-eval-guards.mjs';
+import * as evalGuards from '../../eval/match-eval-guards.mjs';
+
+const { getMissingFixtureCaches } = evalGuards;
 
 const validActual = {
   score: 70,
@@ -81,5 +83,29 @@ describe('match eval cache coverage', () => {
 
   it('does not require caches when live evaluation is available', () => {
     expect(getMissingFixtureCaches(['missing.json'], true, () => false)).toEqual([]);
+  });
+});
+
+describe('match eval invariance groups', () => {
+  it('fails a clean/noisy pair when surrounding boilerplate moves it across a rubric band', () => {
+    expect(evalGuards).toHaveProperty('getInvariantGroupFailures');
+
+    const failures = evalGuards.getInvariantGroupFailures([
+      { name: 'clean', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 65 } },
+      { name: 'noisy', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 92 } },
+    ]);
+
+    expect(failures).toEqual([
+      expect.objectContaining({ group: 'bi-noise', names: ['clean', 'noisy'] }),
+    ]);
+  });
+
+  it('accepts an invariance group whose scores stay in the same rubric band', () => {
+    expect(evalGuards).toHaveProperty('getInvariantGroupFailures');
+
+    expect(evalGuards.getInvariantGroupFailures([
+      { name: 'clean', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 68 } },
+      { name: 'noisy', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 76 } },
+    ])).toEqual([]);
   });
 });

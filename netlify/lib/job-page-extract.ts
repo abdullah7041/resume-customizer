@@ -244,14 +244,22 @@ function directChildElements(region: string): string[] {
 function selectBestContentBlock(region: string, depth = 0): string {
   if (depth >= 2) return region;
   const regionScore = scoreBlock(region);
+  const children = directChildElements(region);
   let best: string | null = null;
   let bestScore = regionScore;
-  for (const child of directChildElements(region)) {
+  for (const child of children) {
     const childScore = scoreBlock(child);
     if (childScore > bestScore) {
       best = child;
       bestScore = childScore;
     }
+  }
+  // Layout-only wrappers and their parent contain the same text/link mix, so
+  // their scores tie. Descend through that single neutral wrapper before
+  // comparing its real body/rail children; otherwise a common two-column page
+  // leaks the rail despite block scoring.
+  if (best === null && children.length === 1 && scoreBlock(children[0]) === regionScore) {
+    return selectBestContentBlock(children[0], depth + 1);
   }
   return best === null ? region : selectBestContentBlock(best, depth + 1);
 }

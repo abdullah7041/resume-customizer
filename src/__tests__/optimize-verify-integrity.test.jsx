@@ -340,7 +340,7 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         vi.useRealTimers();
     });
 
-    it('R4: an applied card triggers one debounced genuine re-score of the merged subset', async () => {
+    it('R4: an applied card waits for an explicit user action before spending a match credit', async () => {
         setupAppliedScenario();
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 58, topHits: ['React'], missingKeywords: [] });
 
@@ -349,6 +349,13 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
 
         await advancePastDebounce();
 
+        expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue/i }));
+            await Promise.resolve();
+            await Promise.resolve();
+        });
         expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1);
         const [mergedText, jobDescription, , options] = mockAnalyzeResumeWithAI.mock.calls[0];
         expect(options).toMatchObject({ mode: 'verify' });
@@ -362,12 +369,18 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         expect(mockApplyAllOptimizations).not.toHaveBeenCalled();
     });
 
-    it('R5: one stable applied set triggers at most one verify call', async () => {
+    it('R5: a confirmation request only runs one verify call for a stable applied set', async () => {
         setupAppliedScenario();
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 58, topHits: [], missingKeywords: [] });
 
         renderWithProviders(<OptimizeSection />);
         await advancePastDebounce();
+        fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue/i }));
+            await Promise.resolve();
+            await Promise.resolve();
+        });
         await advancePastDebounce();
 
         expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1);
@@ -398,7 +411,26 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
     });
 
-    it('R8: nothing applied — no verify call, and a stale metric is cleared', async () => {
+    it('R8: a missing job description reports that re-scoring is unavailable instead of spinning forever', async () => {
+        setupAppliedScenario();
+        Object.defineProperty(window, 'localStorage', {
+            configurable: true,
+            value: {
+                getItem: vi.fn(() => null),
+                setItem: vi.fn(),
+                removeItem: vi.fn(),
+                clear: vi.fn(),
+            },
+        });
+
+        renderWithProviders(<OptimizeSection />);
+
+        expect(screen.getByText(/add a job description to recalculate/i)).toBeInTheDocument();
+        expect(screen.queryByText(/recalculating your score/i)).not.toBeInTheDocument();
+        expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
+    });
+
+    it('R9: nothing applied — no verify call, and a stale metric is cleared', async () => {
         setupAppliedScenario();
         mockStoreState.optimizations = [{ ...appliedSummaryCard(), applied: false }];
         mockStoreState.optimizationMetrics.verifiedApplied = {

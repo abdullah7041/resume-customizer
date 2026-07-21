@@ -23,6 +23,7 @@ interface ScoreHeaderProps {
   onToggleExpanded: () => void;
   onToggleCategory: (category: CategoryKey) => void;
   onRetryVerify: () => void;
+  onRequestAppliedVerify: () => void;
   onRerun: () => void;
   onContinue: () => void;
   onReviewMatchGaps: () => void;
@@ -57,6 +58,7 @@ export function ScoreHeader({
   onToggleExpanded,
   onToggleCategory,
   onRetryVerify,
+  onRequestAppliedVerify,
   onRerun,
   onContinue,
   onReviewMatchGaps,
@@ -212,11 +214,21 @@ export function ScoreHeader({
                 </p>
               ) : appliedVerifyStatus === 'guest' ? (
                 <p>{t('sections.optimize.scoreHeader.appliedVerifySignIn', 'Sign in to verify your updated score — showing an estimate.')}</p>
-              ) : (
+              ) : appliedVerifyStatus === 'unavailable' ? (
+                <p>{t('sections.optimize.scoreHeader.appliedVerifyUnavailable', 'Add a job description to recalculate your updated score.')}</p>
+              ) : appliedVerifyStatus === 'pending' ? (
                 <span className="inline-flex items-center gap-1">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   {t('sections.optimize.scoreHeader.appliedVerifyPending', 'Recalculating your score for the applied changes...')}
                 </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onRequestAppliedVerify}
+                  className="min-h-8 rounded-lg border border-emerald-500/30 px-3 font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/10 dark:text-emerald-300"
+                >
+                  {t('sections.optimize.scoreHeader.appliedVerifyReady', 'Recalculate updated score')}
+                </button>
               )
             )}
 
