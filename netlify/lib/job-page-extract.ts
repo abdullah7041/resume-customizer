@@ -27,6 +27,9 @@ export interface ExtractedJob {
 const MIN_JSONLD_DESCRIPTION_CHARS = 200;
 const MIN_HEURISTIC_CHARS = 350;
 export const MAX_JOB_TEXT_CHARS = 30000;
+// Bound regex work on attacker-influenced HTML: the role=main heuristic has
+// sequential greedy quantifiers, while safeFetch allows bodies up to 2 MB.
+const MAX_HTML_SCAN_CHARS = 400_000;
 
 const PAIRED_NOISE_TAGS = new Set([
   'nav', 'header', 'footer', 'aside', 'form', 'button', 'dialog', 'select', 'svg', 'iframe',
@@ -379,9 +382,10 @@ function pageTitle(html: string): string | null {
 }
 
 function extractFromMainContent(html: string): ExtractedJob | null {
-  const region = html.match(/<main\b[\s\S]*?<\/main>/i)?.[0]
-    ?? html.match(/<article\b[\s\S]*?<\/article>/i)?.[0]
-    ?? html.match(/<[a-z]+\b[^>]*role\s*=\s*["']main["'][\s\S]*?>[\s\S]*<\/[a-z]+>/i)?.[0]
+  const heuristicHtml = html.slice(0, MAX_HTML_SCAN_CHARS);
+  const region = heuristicHtml.match(/<main\b[\s\S]*?<\/main>/i)?.[0]
+    ?? heuristicHtml.match(/<article\b[\s\S]*?<\/article>/i)?.[0]
+    ?? heuristicHtml.match(/<[a-z]+\b[^>]*role\s*=\s*["']main["'][\s\S]*?>[\s\S]*<\/[a-z]+>/i)?.[0]
     ?? null;
   if (!region) return null;
 

@@ -229,6 +229,27 @@ describe('safeFetch', () => {
     expect(readBody).not.toHaveBeenCalled();
   });
 
+  it('rejects responses without a content type before reading the body', async () => {
+    const readBody = vi.fn();
+    const requestOnce = vi.fn(async () => response({ headers: {}, readBody }));
+
+    const error = await safeFetch('https://example.com/job', { _requestOnce: requestOnce })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(SafeFetchError);
+    expect(error).toMatchObject({ code: 'not_html', status: 415 });
+    expect(readBody).not.toHaveBeenCalled();
+  });
+
+  it('continues to accept text/html responses', async () => {
+    const requestOnce = vi.fn(async () =>
+      response({ headers: { 'content-type': 'text/html; charset=utf-8' }, body: '<html>job page</html>' }),
+    );
+
+    await expect(safeFetch('https://example.com/job', { _requestOnce: requestOnce }))
+      .resolves.toMatchObject({ body: '<html>job page</html>' });
+  });
+
   it('times out against a hanging server', async () => {
     let requestSignal: AbortSignal | undefined;
     const requestOnce = vi.fn((_url: URL, _headers: Record<string, string>, signal: AbortSignal) => {

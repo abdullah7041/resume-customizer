@@ -335,10 +335,11 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
 
       const rawContentType = response.headers['content-type'];
       const contentType = (Array.isArray(rawContentType) ? rawContentType[0] : rawContentType ?? '').toLowerCase();
-      if (contentType && !TEXT_CONTENT_TYPES.some((allowed) => contentType.startsWith(allowed))) {
+      const isTextType = TEXT_CONTENT_TYPES.some((allowed) => contentType.startsWith(allowed));
+      if (!isTextType) {
         response.abort();
         activeResponse = undefined;
-        throw new SafeFetchError('not_html', `content-type ${contentType.split(';')[0]}`);
+        throw new SafeFetchError('not_html', `content-type ${contentType.split(';')[0] || '(none)'}`);
       }
 
       const body = await response.readBody(maxBytes);

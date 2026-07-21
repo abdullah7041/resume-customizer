@@ -102,6 +102,16 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     expect(result!.jobText).not.toContain('menu menu');
   });
 
+  it('limits role=main heuristic matching to the first 400 KB of HTML', () => {
+    const page = `<html><head><title>Careers — Acme</title></head><body>${'x'.repeat(600_000)}
+      <section role="main">${LONG_DESCRIPTION_HTML}</section></body></html>`;
+    const startedAt = performance.now();
+    const result = extractJobFromHtml(page);
+
+    expect(performance.now() - startedAt).toBeLessThan(1000);
+    expect(result).toEqual(extractJobFromHtml(page.slice(0, 400_000)));
+  });
+
   it('returns null when only a truncated og:description exists (never imports partial JDs)', () => {
     const page = `
       <html><head><meta property="og:description" content="We are hiring an engineer..." /></head>
