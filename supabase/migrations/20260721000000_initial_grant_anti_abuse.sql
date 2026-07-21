@@ -24,7 +24,8 @@ $$;
 
 create or replace function public.grant_initial_credits(
   p_email text,
-  p_amount integer
+  p_amount integer,
+  p_ip_address text default null
 ) returns table (granted boolean, credits_remaining integer)
 language plpgsql
 security definer
@@ -59,10 +60,15 @@ begin
   set
     credits_remaining = p_amount,
     credits_total = p_amount,
-    signup_metadata = coalesce(v_signup_metadata, '{}'::jsonb) || jsonb_build_object(
-      'pending_initial_grant', false,
-      'initial_grant_at', now()
-    ),
+    signup_metadata = coalesce(v_signup_metadata, '{}'::jsonb)
+      || jsonb_build_object(
+        'pending_initial_grant', false,
+        'initial_grant_at', now()
+      )
+      || case
+        when p_ip_address is null then '{}'::jsonb
+        else jsonb_build_object('ip_address', p_ip_address)
+      end,
     updated_at = now()
   where email = p_email;
 
@@ -88,7 +94,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.grant_initial_credits(text, integer) from public, anon, authenticated;
-grant execute on function public.grant_initial_credits(text, integer) to service_role;
+revoke execute on function public.grant_initial_credits(text, integer, text) from public, anon, authenticated;
+grant execute on function public.grant_initial_credits(text, integer, text) to service_role;
 
 commit;

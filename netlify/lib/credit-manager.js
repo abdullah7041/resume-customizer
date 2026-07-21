@@ -81,6 +81,13 @@ async function checkIPAbuse(ipAddress) {
   return false;
 }
 
+function createCreditManagerError(status, code, message) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
+}
+
 /**
  * Get user's current credit balance
  * @param {string} userId - User ID
@@ -90,7 +97,7 @@ async function checkIPAbuse(ipAddress) {
  * @returns {Promise<{credits_remaining: number, credits_total: number, last_reset_date: string} | null>}
  */
 export async function getUserCredits(email, options = {}) {
-  const { ipAddress, emailVerified = true } = options;
+  const { ipAddress, emailVerified } = options;
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
@@ -184,6 +191,7 @@ export async function getUserCredits(email, options = {}) {
     const { data: grantData, error: grantError } = await supabase.rpc('grant_initial_credits', {
       p_email: email,
       p_amount: creditsToGive,
+      p_ip_address: ipAddress ?? null,
     });
 
     if (grantError?.code === '42883') {
@@ -193,7 +201,7 @@ export async function getUserCredits(email, options = {}) {
 
     if (grantError) {
       console.error('[CreditManager] Failed to apply initial grant:', summarizeErrorForLog(grantError));
-      throw new Error('Failed to apply initial credit grant');
+      throw createCreditManagerError(500, 'INITIAL_GRANT_FAILED', 'Failed to apply initial credit grant');
     }
 
     const grant = Array.isArray(grantData) ? grantData[0] : grantData;
@@ -214,7 +222,7 @@ export async function getUserCredits(email, options = {}) {
 
     if (refetchError) {
       console.error('[CreditManager] Failed to re-fetch initial grant:', summarizeErrorForLog(refetchError));
-      throw new Error('Failed to retrieve user credits');
+      throw createCreditManagerError(500, 'INITIAL_GRANT_REFETCH_FAILED', 'Failed to retrieve user credits');
     }
 
     return winnerData;

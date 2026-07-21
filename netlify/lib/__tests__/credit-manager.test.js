@@ -196,11 +196,15 @@ describe('CreditManager', () => {
         error: null,
       });
 
-      const result = await getUserCredits('verified@example.com', { emailVerified: true });
+      const result = await getUserCredits('verified@example.com', {
+        emailVerified: true,
+        ipAddress: '198.51.100.8',
+      });
 
       expect(supabaseMock.rpc).toHaveBeenCalledWith('grant_initial_credits', {
         p_email: 'verified@example.com',
         p_amount: FREE_TIER_CREDITS,
+        p_ip_address: '198.51.100.8',
       });
       expect(result).toMatchObject({
         credits_remaining: FREE_TIER_CREDITS,
@@ -242,6 +246,7 @@ describe('CreditManager', () => {
       expect(supabaseMock.rpc).toHaveBeenCalledWith('grant_initial_credits', {
         p_email: 'suspicious@example.com',
         p_amount: SUSPICIOUS_IP_CREDITS,
+        p_ip_address: '203.0.113.10',
       });
     });
 
@@ -260,6 +265,26 @@ describe('CreditManager', () => {
       });
 
       const result = await getUserCredits('unverified@example.com', { emailVerified: false });
+
+      expect(result).toEqual(pendingCredits);
+      expect(supabaseMock.rpc).not.toHaveBeenCalled();
+    });
+
+    it('leaves a pending row at zero when verified-email evidence is omitted', async () => {
+      const pendingCredits = {
+        credits_remaining: 0,
+        credits_total: 0,
+        signup_metadata: { pending_initial_grant: true },
+      };
+      supabaseMock.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: pendingCredits, error: null }),
+          }),
+        }),
+      });
+
+      const result = await getUserCredits('missing-evidence@example.com');
 
       expect(result).toEqual(pendingCredits);
       expect(supabaseMock.rpc).not.toHaveBeenCalled();
@@ -309,6 +334,79 @@ describe('CreditManager', () => {
       const result = await getUserCredits('compat@example.com', { emailVerified: true });
 
       expect(result).toEqual(pendingCredits);
+    });
+
+    it('re-fetches and returns the winning row when an initial grant was already applied', async () => {
+      const pendingCredits = {
+        credits_remaining: 0,
+        credits_total: 0,
+        signup_metadata: { pending_initial_grant: true },
+      };
+      const winnerCredits = {
+        credits_remaining: 20,
+        credits_total: 20,
+        signup_metadata: { pending_initial_grant: false },
+      };
+      let creditReadCount = 0;
+      supabaseMock.from.mockReturnValue({
+        select: vi.fn((_, selectOptions) => {
+          if (selectOptions?.head) {
+            return {
+              contains: vi.fn().mockReturnValue({
+                gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+              }),
+            };
+          }
+
+          creditReadCount += 1;
+          return {
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: creditReadCount === 1 ? pendingCredits : winnerCredits,
+                error: null,
+              }),
+            }),
+          };
+        }),
+      });
+      supabaseMock.rpc.mockResolvedValueOnce({
+        data: [{ granted: false, credits_remaining: 20 }],
+        error: null,
+      });
+
+      await expect(getUserCredits('raced@example.com', { emailVerified: true })).resolves.toEqual(winnerCredits);
+    });
+
+    it('uses structured errors when the initial grant RPC fails', async () => {
+      const pendingCredits = {
+        credits_remaining: 0,
+        credits_total: 0,
+        signup_metadata: { pending_initial_grant: true },
+      };
+      supabaseMock.from.mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: pendingCredits, error: null }),
+          }),
+        }),
+      });
+      supabaseMock.from.mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          contains: vi.fn().mockReturnValue({
+            gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+          }),
+        }),
+      });
+      supabaseMock.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { code: '42501', message: 'Permission denied' },
+      });
+
+      await expect(getUserCredits('failed-grant@example.com', { emailVerified: true })).rejects.toMatchObject({
+        status: 500,
+        code: 'INITIAL_GRANT_FAILED',
+        message: 'Failed to apply initial credit grant',
+      });
     });
   });
 
@@ -659,6 +757,7 @@ describe('CreditManager', () => {
         p_description: 'referral_reward',
         p_transaction_type: 'referral_reward',
       });
+      expect(supabaseMock.from).not.toHaveBeenCalledWith('credit_transactions');
     });
 
     it('uses metadata description when adding credits through the RPC', async () => {
