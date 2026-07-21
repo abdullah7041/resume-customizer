@@ -106,15 +106,44 @@ const VALID_TEMPLATE_IDS = [
   'executive-professional'
 ] as const;
 
-const ALLOWED_RENDER_REQUEST_PROTOCOLS = new Set(["about:", "data:", "blob:"]);
+export const ALLOWED_RENDER_REQUEST_PROTOCOLS = new Set(["about:", "data:", "blob:"]);
 
-function isAllowedRenderRequest(requestUrl: string): boolean {
+export function isAllowedRenderRequest(requestUrl: string): boolean {
   try {
     const parsed = new URL(requestUrl);
     return ALLOWED_RENDER_REQUEST_PROTOCOLS.has(parsed.protocol);
   } catch {
     return false;
   }
+}
+
+export interface InterceptableRequest {
+  url(): string;
+  continue(): unknown;
+  abort(reason: string): unknown;
+}
+
+/** Allow only about:/data:/blob: subresource requests; abort all network. */
+export function handleRenderRequest(request: InterceptableRequest): void {
+  if (isAllowedRenderRequest(request.url())) {
+    void request.continue();
+    return;
+  }
+
+  void request.abort("blockedbyclient");
+}
+
+export interface SandboxablePage {
+  setRequestInterception(enabled: boolean): Promise<void>;
+  on(event: "request", handler: (request: InterceptableRequest) => void): unknown;
+  setJavaScriptEnabled(enabled: boolean): Promise<void>;
+}
+
+/** Apply the render sandbox: intercept+abort network, disable JS. */
+export async function hardenPageForRender(page: SandboxablePage): Promise<void> {
+  await page.setRequestInterception(true);
+  page.on("request", handleRenderRequest);
+  await page.setJavaScriptEnabled(false);
 }
 
 function sanitizeFilename(value: unknown): string {
@@ -189,18 +218,7 @@ const baseHandler: Handler = async (event) => {
     // Set fixed viewport matching A4 (210mm x 297mm @ 96dpi)
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-    await page.setRequestInterception(true);
-    page.on("request", (request) => {
-      if (isAllowedRenderRequest(request.url())) {
-        void request.continue();
-        return;
-      }
-
-      void request.abort("blockedbyclient");
-    });
-
-    // Disable JavaScript to prevent script execution from client-provided HTML
-    await page.setJavaScriptEnabled(false);
+    await hardenPageForRender(page);
 
     // Render the final HTML string with embedded styles. setContent and the
     // explicit network-idle wait share one deadline so this migration from
