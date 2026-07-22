@@ -1,3 +1,5 @@
+> **Status: completed work order (archived 2026-07-21).** This described a one-shot redesign task, since shipped; line numbers within are stale. It is not a living spec of the page.
+
 # Match page redesign spec: verdict-first funnel
 
 Files involved: `src/components/sections/MatchSection.tsx` (918 lines), `src/components/sections/SaveJobToPipelineCard.tsx`, `netlify/functions/ai-match.ts`, `netlify/lib/gemini-client.js` (processMatchOnly), `src/locales/{en,ar}/sections/match.json`, `src/types/analysis.ts`.

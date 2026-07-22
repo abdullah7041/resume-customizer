@@ -3,7 +3,7 @@
 **Status:** Proposed
 **Date:** 2026-07-05
 **Deciders:** Product owner + engineering (Watheq)
-**Related:** `docs/WATHEQ_ENGINEERING_PLAN.md` §5.1 (persistence/retention), `CLAUDE.md` (truth-preservation rules), memory `future-plan.md` (job tracker roadmap)
+**Related:** engineering plan §5.1 (deleted in `dee2ee3`; its persistence/retention constraints are restated in §5 of this ADR), `CLAUDE.md` (truth-preservation rules), memory `future-plan.md` (job tracker roadmap)
 
 > **Schema/contract-change legend:** every place this design would force a change to a persisted shape, DB schema, or function contract is marked **⚑ SCHEMA/CONTRACT**. Search this document for `⚑` to find them all.
 
@@ -18,7 +18,7 @@ The **Job-Specific Resume Builder** is a guided flow that captures a single job'
 Forces at play:
 
 - The store is *already* an overlay engine (`originalResume` + `applied`-gated optimization cards). A variant is a natural fit for this model, not a new document type.
-- Watheq's trust posture (§5.1, CLAUDE.md) is strict: no fabricated content, `applied: true` gating, skills never auto-injected, resume PII minimized in every storage tier. A variant feature must inherit all of it, not weaken it.
+- Watheq's trust posture (§5 of this ADR, `CLAUDE.md`) is strict: no fabricated content, `applied: true` gating, skills never auto-injected, resume PII minimized in every storage tier. A variant feature must inherit all of it, not weaken it.
 - We have no evidence yet that users *want* multi-job re-targeting. The design must let us ship a small, local-only Phase 1 to measure demand before paying for server persistence.
 
 ---
@@ -69,7 +69,7 @@ Each variant stores a full independent `ResumeSchema`.
 | Reuse | Poor — bypasses the overlay engine |
 
 **Pros:** conceptually trivial; each variant is self-contained.
-**Cons:** Base-resume corrections (fix a typo, update a date) do **not** propagate to existing variants — they silently drift. Full resume PII is duplicated into every storage tier, multiplying the export/delete and redaction surface (contradicts §5.1 minimization). Discards the `original`/`applied`/`rationale` provenance the card model gives us for free.
+**Cons:** Base-resume corrections (fix a typo, update a date) do **not** propagate to existing variants — they silently drift. Full resume PII is duplicated into every storage tier, multiplying the export/delete and redaction surface (contradicts the minimization constraints restated in §5 of this ADR). Discards the `original`/`applied`/`rationale` provenance the card model gives us for free.
 
 ### Option B — Overlay via JSON patch (diff per variant)
 
@@ -111,18 +111,18 @@ Applied-cards-replay also wins on cost-to-ship: it is additive over machinery th
 
 ## 5. Storage, Retention & Privacy
 
-Grounded in `docs/WATHEQ_ENGINEERING_PLAN.md` §5.1. Per-tier plan:
+Grounded in engineering plan §5.1 (deleted in `dee2ee3`; its persistence/retention constraints are restated in §5 of this ADR). Per-tier plan:
 
 ### localStorage (Phase 1 home)
 
 - Variants persist inside the existing Zustand `resume-storage` key via `partialize`, as a `jobVariants: JobVariant[]` slice plus an `activeVariantId`.
   **⚑ SCHEMA/CONTRACT (persisted state):** this changes the shape of `resume-storage`. Requires bumping the persist `version` and adding a `migrate` step in `resumeStore.ts` so existing users' persisted state (which has no `jobVariants`) hydrates cleanly to `jobVariants: [], activeVariantId: null`. The existing custom `merge` in `resumeStore.ts` must also pass the new slice through.
 - **Alternative considered:** a separate `watheq:jobVariants` localStorage key (matching the `watheq:` prefix convention). Rejected for Phase 1 because it splits one logical state across two keys and complicates atomic clear on `clearAll()`/`resetForNewUpload()`. Keep it in `resume-storage`.
-- **JD minimization:** store the job description truncated (mirror the truncation posture §5.1 applies to match records) plus the `generateCacheKey` fingerprint. Do not persist the raw full JD if a truncated form + hash suffices for re-run and display.
+- **JD minimization:** store the job description truncated (mirroring the truncation posture restated in §5 of this ADR) plus the `generateCacheKey` fingerprint. Do not persist the raw full JD if a truncated form + hash suffices for re-run and display.
 
 ### Redis / Upstash (unchanged)
 
-- **No change.** The optimize v1/v2 caches already key on a SHA-256 of (resume, JD, language, mode) via `buildCacheKey` (`netlify/lib/redis-cache.ts`) at a **10-minute TTL** (§5.1, because values carry resume-derived AI snippets). Because each variant carries a distinct JD, per-variant optimize calls hit distinct cache keys automatically. No new namespace, no TTL change. **⚑** none.
+- **No change.** The optimize v1/v2 caches already key on a SHA-256 of (resume, JD, language, mode) via `buildCacheKey` (`netlify/lib/redis-cache.ts`) at a **10-minute TTL** (§5 of this ADR, because values carry resume-derived AI snippets). Because each variant carries a distinct JD, per-variant optimize calls hit distinct cache keys automatically. No new namespace, no TTL change. **⚑** none.
 
 ### Supabase (Phase 2 only — deferred)
 
@@ -133,7 +133,7 @@ Grounded in `docs/WATHEQ_ENGINEERING_PLAN.md` §5.1. Per-tier plan:
 
 ### Sentry / logs (unchanged)
 
-- Variant operations log counts/lengths/ids only, through `sanitizeSentryContext()` — never raw JD or resume text (§5.1). **⚑** none, but the rule applies to any new log lines.
+- Variant operations log counts/lengths/ids only, through `sanitizeSentryContext()` — never raw JD or resume text (§5 of this ADR). **⚑** none, but the rule applies to any new log lines.
 
 ### Retention policy
 

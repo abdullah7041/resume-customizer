@@ -1,3 +1,5 @@
+> **Status: completed work order (archived 2026-07-21).** This described a one-shot redesign task, since shipped; line numbers within are stale. It is not a living spec of the page.
+
 # Optimize page spec: score hardening + review-queue redesign
 
 Copy into repo root as `OPTIMIZE_PAGE_SPEC.md`. Two passes, shipped separately. Run Pass 1 first, confirm with a real optimize run, then start Pass 2.

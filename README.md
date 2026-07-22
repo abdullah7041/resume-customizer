@@ -107,6 +107,25 @@ Suggestions arrive as cards. You apply the ones you want; nothing changes withou
 
 ---
 
+## Development
+
+Watheq requires Node.js 20, matching the version pinned in `netlify.toml`.
+
+```bash
+npm install
+cp .env.example .env
+```
+
+Fill in the Supabase and OpenRouter keys in `.env`; never commit that file. Use `npm run dev` for UI-only work. Use `npm run dev:netlify` when Netlify Functions are required, but note that its esbuild bundling can OOM on low-RAM (~8GB) machines; use the repository's `tsx` handler harnesses for function testing on those machines.
+
+```bash
+npm run test
+npm run lint
+npm run type:check
+```
+
+---
+
 ## Privacy
 
 API keys live server-side only. Supabase row-level security is enforced on every table. There's no analytics, no third-party cookies, and no tracking of any kind. You can delete your data whenever you want (GDPR compliant). Rate limiting runs on a Redis-backed sliding window, and the anti-hallucination rules above apply to everything the AI writes about you.
