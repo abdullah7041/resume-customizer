@@ -7,7 +7,7 @@ import femaleTier3 from '@/assets/character/female-tier-3.webp';
 import maleTier1 from '@/assets/character/male-tier-1.webp';
 import maleTier2 from '@/assets/character/male-tier-2.webp';
 import maleTier3 from '@/assets/character/male-tier-3.webp';
-import { useHRSuperSaud } from '@/features/hr-super-saud';
+import { useHRSuperSaud } from '@/features/hr-super-saud/HRSuperSaudProvider';
 import { cn } from '@/lib/utils/cn';
 import { CAREER_LEVELS, getCareerLevel, getLevelUp } from '@/lib/progression/careerLevels';
 import { getCompatibleStorageItem, setCompatibleStorageItem } from '@/lib/utils/storage-migration';
