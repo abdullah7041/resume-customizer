@@ -11,7 +11,6 @@ import { ConsentBanner } from "./components/compliance/ConsentBanner";
 import { migrateStorageKeys } from "./lib/utils/storage-migration";
 import { useUserCredits } from "./hooks/useUserCredits";
 import { useOnboardingTour } from "./hooks/useOnboardingTour";
-import { HRSuperSaudOverlay } from "@/features/hr-super-saud/HRSuperSaudOverlay";
 import { HRSuperSaudProvider } from "@/features/hr-super-saud/HRSuperSaudProvider";
 import { useResumeStore } from "./lib/stores/resumeStore";
 import OnboardingChat from "./components/onboarding/OnboardingChat";
@@ -29,6 +28,7 @@ const PricingWaitlistModal = lazy(() => import("./components/Credits/PricingWait
 // marketing link (How it works / Pricing / FAQ). Same chunk as MainContent's
 // landing import, so no extra bundle.
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const HRSuperSaudOverlay = lazy(() => import("@/features/hr-super-saud/HRSuperSaudOverlay").then((m) => ({ default: m.HRSuperSaudOverlay })));
 import { useAuth } from "./hooks/useAuth";
 import { FeedbackPromptController } from "./components/Feedback/FeedbackPromptController";
 import { useFeatureFlag } from "./hooks/useFeatureFlag";
@@ -213,7 +213,9 @@ export default function App() {
             )}
 
             {ENABLE_HR_MASCOT && !isStaticPage && hrOverlayEnabled && (
-              <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
+              <Suspense fallback={null}>
+                <HRSuperSaudOverlay isOnboardingActive={run} forceMinimized={!hasResume} />
+              </Suspense>
             )}
           </div>
         </HRSuperSaudProvider>

@@ -120,6 +120,8 @@ export function CharacterResultsCompanion(props: CharacterResultsCompanionProps)
         src={source}
         alt={alt}
         className={className}
+        width={1254}
+        height={1254}
         loading="lazy"
         decoding="async"
         draggable={false}

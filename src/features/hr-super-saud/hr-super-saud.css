@@ -1,0 +1,321 @@
+@layer base {
+  @keyframes hr-super-saud-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.96);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes hr-super-saud-avatar-idle {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg) scale(1);
+    }
+
+    45% {
+      transform: translateY(-2px) rotate(-1deg) scale(1.015);
+    }
+  }
+
+  @keyframes hr-super-saud-avatar-wave {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg) scale(1);
+    }
+
+    35% {
+      transform: translateY(-2px) rotate(-4deg) scale(1.035);
+    }
+
+    70% {
+      transform: translateY(1px) rotate(2deg) scale(1.015);
+    }
+  }
+
+  @keyframes hr-super-saud-avatar-fly {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(-4deg);
+    }
+
+    50% {
+      transform: translate3d(0.15rem, -0.25rem, 0) rotate(-7deg);
+    }
+  }
+
+  .hr-super-saud-shell {
+    position: fixed;
+    inset-block-end: 1rem;
+    inset-inline-end: 1.25rem;
+    z-index: 80;
+    width: auto;
+    pointer-events: none;
+    transform: translate3d(var(--hr-super-saud-offset-x, 0), var(--hr-super-saud-offset-y, 0), 0);
+    transition: transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .hr-super-saud-shell[data-phase="returning"] {
+    transition-duration: 560ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hr-super-saud-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    pointer-events: none;
+  }
+
+  .hr-super-saud-avatar-frame {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+  }
+
+  .hr-super-saud-avatar {
+    width: 4.75rem;
+    height: 4.75rem;
+    flex: 0 0 auto;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 10px oklch(0.378 0.073 168.94 / 0.11));
+    transform-origin: 50% 70%;
+    transition: transform 220ms ease, filter 220ms ease;
+  }
+
+  .hr-super-saud-avatar-frame[data-pose="idle"] .hr-super-saud-avatar {
+    animation: hr-super-saud-avatar-idle 4.8s ease-in-out infinite;
+  }
+
+  .hr-super-saud-shell[data-phase="reacting"] .hr-super-saud-avatar-frame[data-pose="wave"] .hr-super-saud-avatar {
+    animation: hr-super-saud-avatar-wave 1.4s ease-in-out infinite;
+  }
+
+  .hr-super-saud-avatar-frame[data-pose="fly"] .hr-super-saud-avatar {
+    animation: hr-super-saud-avatar-fly 1.05s ease-in-out infinite;
+  }
+
+  .hr-super-saud-shell[data-phase="moving"] .hr-super-saud-avatar {
+    filter: drop-shadow(0 12px 18px oklch(0.378 0.073 168.94 / 0.18));
+    transform: translateY(-2px) rotate(-4deg);
+  }
+
+  .hr-super-saud-shell[data-phase="returning"] .hr-super-saud-avatar {
+    transform: translateY(1px) rotate(2deg);
+  }
+
+  .hr-super-saud-avatar--disabled {
+    opacity: 0.72;
+    filter: grayscale(0.45) drop-shadow(0 6px 10px oklch(0.378 0.073 168.94 / 0.1));
+  }
+
+  .hr-super-saud-avatar-btn {
+    pointer-events: auto;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    transition: transform 180ms ease;
+  }
+
+  .hr-super-saud-avatar-btn:hover,
+  .hr-super-saud-avatar-btn:focus-visible {
+    transform: scale(1.06);
+    outline: none;
+  }
+
+  .hr-super-saud-avatar-btn:active {
+    transform: scale(0.96);
+  }
+
+  .hr-super-saud-controls {
+    position: absolute;
+    inset-block-end: calc(100% + 0.35rem);
+    inset-inline-end: 0.25rem;
+    display: flex;
+    gap: 0.15rem;
+    padding: 0.2rem;
+    background: oklch(1 0 0 / 0.7);
+    border: 1px solid oklch(0.696 0.149 162.48 / 0.16);
+    border-radius: 9999px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px oklch(0.378 0.073 168.94 / 0.08);
+  }
+
+  .dark .hr-super-saud-controls {
+    background: oklch(0.205 0.032 177.337 / 0.75);
+    border-color: oklch(0.696 0.149 162.48 / 0.2);
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.25);
+  }
+
+  .hr-super-saud-control {
+    pointer-events: auto;
+    display: grid;
+    width: 1.1rem;
+    height: 1.1rem;
+    place-items: center;
+    border-radius: 9999px;
+    color: oklch(0.554 0.041 257.417);
+    opacity: 0.5;
+    transition: background-color 140ms ease, color 140ms ease, opacity 140ms ease;
+  }
+
+  .hr-super-saud-control:hover,
+  .hr-super-saud-control:focus-visible {
+    background: oklch(0.979 0.021 166.113);
+    color: oklch(0.432 0.086 166.913);
+    opacity: 1;
+    outline: none;
+  }
+
+  .dark .hr-super-saud-control {
+    color: oklch(0.711 0.035 256.788);
+  }
+
+  .dark .hr-super-saud-control:hover,
+  .dark .hr-super-saud-control:focus-visible {
+    background: oklch(0.696 0.149 162.48 / 0.15);
+    color: oklch(0.905 0.089 164.15);
+  }
+
+  .hr-super-saud-bubble {
+    position: absolute;
+    inset-block-end: calc(100% + 0.625rem);
+    inset-inline-end: 0;
+    width: min(21rem, calc(100vw - 7rem));
+    padding: 0.72rem 0.9rem;
+    border: 1px solid oklch(0.696 0.149 162.48 / 0.18);
+    border-radius: 0.75rem;
+    background: oklch(1 0 0 / 0.9);
+    color: oklch(0.432 0.086 166.913);
+    box-shadow: 0 10px 24px oklch(0.378 0.073 168.94 / 0.1);
+    font-size: 0.78125rem;
+    font-weight: 650;
+    line-height: 1.45;
+    text-align: start;
+    backdrop-filter: blur(18px);
+    animation: hr-super-saud-enter 180ms ease-out both;
+  }
+
+  .dark .hr-super-saud-bubble {
+    background: oklch(0.205 0.032 177.337 / 0.88);
+    color: oklch(0.905 0.089 164.15);
+    border-color: oklch(0.696 0.149 162.48 / 0.22);
+    box-shadow: 0 18px 38px oklch(0 0 0 / 0.3);
+  }
+
+  .hr-super-saud-bubble::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-end: 1.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: inherit;
+    border-inline-end: inherit;
+    border-block-end: inherit;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .hr-super-saud-restore {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    max-width: 100%;
+    border: 1px solid oklch(0.696 0.149 162.48 / 0.24);
+    border-radius: 9999px;
+    background: oklch(1 0 0 / 0.9);
+    padding: 0.55rem 0.75rem;
+    color: oklch(0.508 0.105 165.612);
+    font-size: 0.75rem;
+    font-weight: 800;
+    box-shadow: 0 10px 24px oklch(0.378 0.073 168.94 / 0.1);
+    backdrop-filter: blur(18px);
+    transition: background-color 140ms ease, color 140ms ease;
+  }
+
+  .hr-super-saud-restore:hover,
+  .hr-super-saud-restore:focus-visible {
+    background: oklch(0.979 0.021 166.113);
+    color: oklch(0.432 0.086 166.913);
+    outline: none;
+  }
+
+  .dark .hr-super-saud-restore {
+    background: oklch(0.205 0.032 177.337 / 0.88);
+    color: oklch(0.905 0.089 164.15);
+    border-color: oklch(0.696 0.149 162.48 / 0.22);
+  }
+
+  .hr-super-saud-restore--minimal {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1023px) {
+    .hr-super-saud-shell {
+      inset-block-end: max(0.75rem, env(safe-area-inset-bottom));
+      inset-inline: 0.75rem;
+      width: auto;
+      display: flex;
+      justify-content: center;
+      transform: none;
+      transition: none;
+    }
+
+    .hr-super-saud-avatar {
+      width: 3.75rem;
+      height: 3.75rem;
+    }
+
+    .hr-super-saud-bubble {
+      width: min(18rem, calc(100vw - 2rem));
+    }
+
+    .hr-super-saud-restore {
+      max-width: min(26rem, calc(100vw - 1.5rem));
+      padding: 0.45rem 0.65rem;
+      font-size: 0.6875rem;
+      font-weight: 750;
+      line-height: 1.35;
+      white-space: normal;
+      text-align: start;
+    }
+
+    .hr-super-saud-shell--minimal {
+      inset-block-end: max(0.5rem, env(safe-area-inset-bottom));
+      z-index: 40;
+    }
+
+    .hr-super-saud-shell--onboarding {
+      opacity: 0.78;
+    }
+  }
+}
+
+@layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    .hr-super-saud-panel,
+    .hr-super-saud-shell,
+    .hr-super-saud-card,
+    .hr-super-saud-bubble,
+    .hr-super-saud-avatar-frame,
+    .hr-super-saud-avatar,
+    .hr-super-saud-avatar-btn {
+      animation: none;
+      transform: none;
+      transition: none;
+    }
+  }
+}

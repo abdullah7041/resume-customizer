@@ -23,7 +23,7 @@ Selection note (round 2): the owner selected all four offered clusters plus the 
 | 011 | Extract shared optimize card/score lib | P2 | M | — | DONE |
 | 012 | OptimizeSection render hygiene (selectors/useCallback/memo) | P2 | M | — | DONE |
 | 013 | Mixpanel deferral + client error-envelope hygiene + vision2030 credit guard | P2 | S–M | 010 (part C only) | DONE |
-| 014 | Gate parked mascot CSS; right-size character images | P3 | S | — | TODO |
+| 014 | Gate parked mascot CSS; right-size character images | P3 | S | — | DONE (B2 skipped: no approved local image encoder) |
 | 015 | Docs & DX hygiene (README setup, env docs, CLAUDE.md de-drift, spec archive) | P3 | S | — | TODO |
 | 016 | SPIKE: user attribution on ai_usage_events (unblocks job-variant ADR) | P2 | S–M | — | TODO |
 
