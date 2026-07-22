@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HandlerContext, HandlerEvent, HandlerResponse } from '@netlify/functions';
 
 const {
@@ -39,6 +39,7 @@ vi.mock('nanoid', () => ({
 const { handler } = await import('../referral-api.js');
 
 const context = {} as HandlerContext;
+const sensitiveManagerError = 'connection to referral-db.internal failed with sk_1234567890abcdef';
 
 function makeEvent(event: Partial<HandlerEvent>): HandlerEvent {
   return {
@@ -61,6 +62,10 @@ describe('referral-api auth binding', () => {
       data: { user: { id: 'real-user-id', email: 'real-user@example.com' } },
       error: null,
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('requires authentication for referral stats', async () => {
@@ -119,6 +124,35 @@ describe('referral-api auth binding', () => {
 
     expect(response.statusCode).toBe(200);
     expect(trackReferralMock).toHaveBeenCalledWith('REF12345', 'real-user@example.com', 'real-user-id');
+  });
+
+  it('returns a generic coded track failure while retaining sanitized diagnostics in server logs', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    trackReferralMock.mockResolvedValue({ success: false, error: sensitiveManagerError });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'POST',
+        headers: { Authorization: 'Bearer token' },
+        body: JSON.stringify({ action: 'track', referral_code: 'REF12345' }),
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body!)).toEqual({
+      status: 400,
+      code: 'referral/track-failed',
+      message: 'Failed to track referral',
+      error: 'Failed to track referral',
+    });
+    expect(response.body).not.toContain(sensitiveManagerError);
+    expect(response.body).not.toContain('referral-db.internal');
+
+    const logOutput = JSON.stringify(consoleError.mock.calls);
+    expect(logOutput).toContain('referral-db.internal');
+    expect(logOutput).toContain('[REDACTED]');
+    expect(logOutput).not.toContain('sk_1234567890abcdef');
   });
 
   it('returns a stable generic envelope for unexpected failures', async () => {
@@ -280,7 +314,8 @@ describe('referral-api auth binding', () => {
   });
 
   it('keeps failed stats distinguishable from a genuine zero-referral summary', async () => {
-    getReferralStatsMock.mockRejectedValue(new Error('stats query unavailable'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    getReferralStatsMock.mockRejectedValue(new Error(sensitiveManagerError));
     supabaseFromMock.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -305,11 +340,18 @@ describe('referral-api auth binding', () => {
     expect(JSON.parse(response.body!)).toMatchObject({
       success: true,
       referralCode: 'REALCODE',
-      statsError: 'stats query unavailable',
+      statsError: 'Failed to load referral statistics',
       statsErrorCode: 'referral/stats-failed',
       statsErrorStatus: 500,
     });
+    expect(response.body).not.toContain(sensitiveManagerError);
+    expect(response.body).not.toContain('referral-db.internal');
     expect(response.body).not.toContain('"totalReferrals":0');
+
+    const logOutput = JSON.stringify(consoleError.mock.calls);
+    expect(logOutput).toContain('referral-db.internal');
+    expect(logOutput).toContain('[REDACTED]');
+    expect(logOutput).not.toContain('sk_1234567890abcdef');
   });
 
   it('does not hand out a referral code that could not be persisted', async () => {

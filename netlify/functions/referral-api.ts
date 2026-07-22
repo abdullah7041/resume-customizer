@@ -39,7 +39,6 @@ function isHttpError(error: unknown): error is ReferralError {
 
 function normalizeReferralError(error: unknown, fallbackCode: string, fallbackMessage: string): ReferralError {
     if (isHttpError(error)) return error;
-    if (error instanceof Error) return httpError(500, fallbackCode, error.message);
     return httpError(500, fallbackCode, fallbackMessage);
 }
 
@@ -267,7 +266,8 @@ async function handleTrack(body: { referral_code: string }, refereeEmail: string
     const result = await trackReferral(referral_code, refereeEmail, refereeUserId);
 
     if (!result.success) {
-        throw httpError(400, 'referral/track-failed', result.error || 'Failed to track referral');
+        console.error('[referral-api] Track failed:', summarizeErrorForLog(result.error || 'Failed to track referral'));
+        throw httpError(400, 'referral/track-failed', 'Failed to track referral');
     }
 
     return { success: true, message: 'Referral tracked successfully' };
