@@ -251,6 +251,46 @@ Do **not** advance to Phase 2 (server persistence, with its migration + export/d
 ## 11. Action Items
 
 1. [ ] Confirm the Phase-1 kill-criteria metric is queryable from current `ai_usage_events` + JD-fingerprint data before committing to build.
+
+   Instrumentation shipped 2026-07-22 (plan 016); the metric is computable approximately 14 days after the maintainer applies migration `20260722000000_ai_usage_user_attribution.sql` and sets `AI_USAGE_USER_ATTRIBUTION=true`.
+
+   ```sql
+   -- Repeat re-targeting rate (ADR section 9): of users with at least one
+   -- successful optimize event, the share with at least two distinct
+   -- jd_fingerprints in the 14 days after their first optimize event.
+   with optimizers as (
+     select user_ref, jd_fingerprint, created_at
+     from public.ai_usage_events
+     where feature_name in ('optimize_resume', 'optimize_stream')
+       and success
+       and user_ref is not null
+       and jd_fingerprint is not null
+   ),
+   firsts as (
+     select user_ref, min(created_at) as first_at
+     from optimizers
+     group by user_ref
+   )
+   select
+     count(*) filter (where retargeted) as retargeting_users,
+     count(*) as measured_users,
+     round(
+       100.0 * count(*) filter (where retargeted) / greatest(count(*), 1),
+       1
+     ) as pct
+   from (
+     select
+       f.user_ref,
+       (
+         select count(distinct o.jd_fingerprint)
+         from optimizers o
+         where o.user_ref = f.user_ref
+           and o.created_at <= f.first_at + interval '14 days'
+       ) >= 2 as retargeted
+     from firsts f
+     where f.first_at <= now() - interval '14 days'
+   ) t;
+   ```
 2. [ ] (On approval) Design the `resume-storage` `version`/`migrate` bump for the `jobVariants` slice (⚑).
 3. [ ] (On approval) Parameterize `getActiveResume` by active variant with fallback to today's global card array.
 4. [ ] Defer all Supabase/`user-data-api` work to a Phase-2 ADR follow-up, gated on Phase-1 signal.

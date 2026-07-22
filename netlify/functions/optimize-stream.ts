@@ -13,6 +13,7 @@
  *   6. event: error   → { error, retryable } (on failure)
  */
 
+import { createHash } from 'crypto';
 import { optimizeResume } from "../lib/gemini-client.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
@@ -294,6 +295,8 @@ export default async function handler(request: Request): Promise<Response> {
 
         const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, userHardStops, {
           featureName: "optimize_stream",
+          userRef: user?.id || null,
+          jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
         });
 
         const aiDuration = Date.now() - startTime;

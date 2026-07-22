@@ -23,6 +23,9 @@ function buildCallOptions(contract, options) {
     featureName: options.featureName || contract.featureName,
     responseFormat: options.responseFormat ?? contract.responseFormat,
     modelId: options.modelId,
+    userRef: options.userRef,
+    // Telemetry options map to user_ref / jd_fingerprint at the logger boundary.
+    jdFingerprint: options.jdFingerprint,
   };
 }
 

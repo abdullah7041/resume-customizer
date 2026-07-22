@@ -1,4 +1,5 @@
 import { Handler } from '@netlify/functions';
+import { createHash } from 'crypto';
 import { optimizeResume } from "../lib/gemini-client.js";
 import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
@@ -188,6 +189,10 @@ const baseHandler: Handler = async (event) => {
       vulnerabilities,
       userClarifications,
       userHardStops,
+      {
+        userRef: user?.id || null,
+        jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
+      },
     );
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);

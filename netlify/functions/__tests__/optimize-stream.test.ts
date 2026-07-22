@@ -74,7 +74,7 @@ describe('optimize-stream function', () => {
     mockSupabase.auth.getUser.mockResolvedValue({
       data: {
         user: {
-          id: 'user-123',
+          id: '11111111-1111-4111-8111-111111111111',
           email: 'user@example.com',
           email_confirmed_at: '2026-01-01T00:00:00.000Z',
         },
@@ -193,7 +193,7 @@ describe('optimize-stream function', () => {
 
     expect(mockRedisCache.buildOptimizeCacheKey).toHaveBeenCalledWith(
       expect.objectContaining({
-        userScope: 'user-123',
+        userScope: '11111111-1111-4111-8111-111111111111',
       })
     );
   });
@@ -271,7 +271,7 @@ describe('optimize-stream function', () => {
     expect(streamText).toContain('"billingStateUnknown":false');
   });
 
-  it('labels AI usage events for the streaming endpoint without passing content in options', async () => {
+  it('threads pseudonymous attribution without passing content in options', async () => {
     mockRedisCache.getCached.mockResolvedValue(null);
     mockGeminiClient.optimizeResume.mockResolvedValue({
       match_score: 60,
@@ -294,7 +294,11 @@ describe('optimize-stream function', () => {
       [],
       undefined,
       undefined,
-      { featureName: 'optimize_stream' }
+      {
+        featureName: 'optimize_stream',
+        userRef: '11111111-1111-4111-8111-111111111111',
+        jdFingerprint: '4199a1957ebd4e07',
+      }
     );
     const options = mockGeminiClient.optimizeResume.mock.calls[0][6];
     expect(options).not.toHaveProperty('resumeText');
@@ -328,7 +332,7 @@ describe('optimize-stream function', () => {
       [],
       undefined,
       ['Excel'],
-      { featureName: 'optimize_stream' },
+      expect.objectContaining({ featureName: 'optimize_stream' }),
     );
   });
 
