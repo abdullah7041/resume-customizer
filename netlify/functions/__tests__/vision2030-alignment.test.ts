@@ -205,19 +205,18 @@ describe('vision2030-alignment handler', () => {
     expect(captureErrorMock).not.toHaveBeenCalled();
   });
 
-  it('pins the current 200 response when credit consumption reports failure', async () => {
+  it('returns the truthful insufficient-credit envelope when consumption loses a balance race', async () => {
     executeAiContractMock.mockResolvedValue(analysis);
     consumeCreditsMock.mockResolvedValue({ success: false, creditsRemaining: 0 });
 
     const response = await invoke(validBody);
 
-    expect(response.statusCode).toBe(200);
-    expect(parseBody(response)).toEqual({ ...analysis, creditsRemaining: 0 });
-    expect(parseBody(response)).toMatchObject({
-      matchedSkills: analysis.matchedSkills,
-      sectorBreakdown: analysis.sectorBreakdown,
-      detectedCareer: analysis.detectedCareer,
-      creditsRemaining: 0,
+    expect(response.statusCode).toBe(403);
+    expect(parseBody(response)).toEqual({
+      error: 'Insufficient credits',
+      creditsRequired: 2,
+      creditsAvailable: 0,
+      creditsNeeded: 2,
     });
   });
 });

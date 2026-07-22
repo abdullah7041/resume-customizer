@@ -1,4 +1,3 @@
-import mixpanel from 'mixpanel-browser';
 import { useConsentStore } from '../lib/stores/consentStore';
 import type {
     FeedbackTrustToApply,
@@ -7,6 +6,7 @@ import type {
 } from '@/types/feedback';
 
 const MIXPANEL_TOKEN = import.meta.env.VITE_MIXPANEL_TOKEN;
+let mixpanel: typeof import('mixpanel-browser').default | null = null;
 
 /**
  * Safe score bucket for analytics — never send raw resume/JD content.
@@ -36,7 +36,7 @@ class Analytics {
      * Initialize Mixpanel with privacy-respecting defaults.
      * Only initializes if the user has consented to analytics.
      */
-    init() {
+    async init() {
         if (this.initialized || !MIXPANEL_TOKEN) {
             return;
         }
@@ -49,6 +49,7 @@ class Analytics {
         }
 
         try {
+            mixpanel = (await import('mixpanel-browser')).default;
             mixpanel.init(MIXPANEL_TOKEN, {
                 debug: false, // Disable debug mode to prevent mutex lock spam
                 track_pageview: true,
@@ -68,7 +69,7 @@ class Analytics {
      * Automatically adds timestamp and language.
      */
     track(event: string, properties?: Record<string, unknown>) {
-        if (!this.initialized) {
+        if (!this.initialized || !mixpanel) {
             return;
         }
 
@@ -89,7 +90,7 @@ class Analytics {
      * Identify a user by their ID.
      */
     identify(userId: string) {
-        if (!this.initialized) return;
+        if (!this.initialized || !mixpanel) return;
         try {
             mixpanel.identify(userId);
         } catch (error) {
@@ -101,7 +102,7 @@ class Analytics {
      * Set user properties for segmentation and analysis.
      */
     setUserProperties(properties: Record<string, unknown>) {
-        if (!this.initialized) return;
+        if (!this.initialized || !mixpanel) return;
         try {
             mixpanel.people.set(properties);
         } catch (error) {

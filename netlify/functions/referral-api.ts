@@ -92,19 +92,23 @@ async function getAuthenticatedUser(event: Parameters<Handler>[0]): Promise<Auth
 }
 
 // Postgres "undefined column" — the referral migrations were not applied to
-// this database. Surface a precise message instead of a generic failure so the
-// Netlify function log (and the error details) say exactly what to run.
+// this database. Keep the actionable diagnosis in server logs only.
 const PG_UNDEFINED_COLUMN = '42703';
 
 function describeDbError(prefix: string, dbError: { code?: string; message?: string }): ReferralError {
     if (dbError.code === PG_UNDEFINED_COLUMN) {
+        console.error('[referral-api] Referral schema unavailable:', {
+            operation: prefix,
+            code: PG_UNDEFINED_COLUMN,
+            migration: 'supabase/migrations/20260713000000_ensure_referral_schema.sql'
+        });
         return httpError(
             500,
             'referral/db-undefined-column',
-            `${prefix} (db code: ${PG_UNDEFINED_COLUMN}): the user_credits referral columns are missing. Apply the referral migrations in supabase/migrations (see 20260713000000_ensure_referral_schema.sql).`
+            'Referral data unavailable'
         );
     }
-    return httpError(500, 'referral/db-error', `${prefix} (db code: ${dbError.code || 'unknown'})`);
+    return httpError(500, 'referral/db-error', 'Referral data unavailable');
 }
 
 /**
@@ -373,7 +377,7 @@ const handler: Handler = async (event) => {
             statusCode: 500,
             body: JSON.stringify({
                 error: 'Referral operation failed',
-                details: error instanceof Error ? error.message : 'Unknown error',
+                code: 'referral/unexpected',
             }),
         };
     }

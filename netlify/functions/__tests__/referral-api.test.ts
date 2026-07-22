@@ -121,6 +121,23 @@ describe('referral-api auth binding', () => {
     expect(trackReferralMock).toHaveBeenCalledWith('REF12345', 'real-user@example.com', 'real-user-id');
   });
 
+  it('returns a stable generic envelope for unexpected failures', async () => {
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'POST',
+        body: '{"action":',
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body!)).toEqual({
+      error: 'Referral operation failed',
+      code: 'referral/unexpected',
+    });
+    expect(response.body).not.toContain('Unexpected end of JSON input');
+  });
+
   it('uses authenticated email for referral link generation', async () => {
     supabaseFromMock.mockReturnValue({
       select: vi.fn().mockReturnValue({
@@ -188,7 +205,7 @@ describe('referral-api auth binding', () => {
     expect(response.body).toContain('"creditsEarned":10');
   });
 
-  it('returns stats with a linkError instead of failing the whole summary when the link leg breaks', async () => {
+  it('returns stats with a generic coded linkError instead of database details', async () => {
     getReferralStatsMock.mockResolvedValue({
       total: 3,
       completed: 2,
@@ -221,10 +238,45 @@ describe('referral-api auth binding', () => {
     expect(body.success).toBe(true);
     expect(body.creditsEarned).toBe(10);
     expect(body.referralUrl).toBeUndefined();
-    expect(body.linkError).toContain('referral columns are missing');
-    expect(body.linkError).toContain('42703');
+    expect(body.linkError).toBe('Referral data unavailable');
     expect(body.linkErrorCode).toBe('referral/db-undefined-column');
     expect(body.linkErrorStatus).toBe(500);
+    expect(response.body).not.toContain('42703');
+    expect(response.body).not.toContain('20260713000000_ensure_referral_schema.sql');
+    expect(response.body).not.toContain('column user_credits.referral_code does not exist');
+  });
+
+  it('returns a generic coded envelope when referral columns are unavailable', async () => {
+    supabaseFromMock.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: '42703', message: 'column user_credits.referral_code does not exist' },
+          }),
+        }),
+      }),
+    });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-link' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body!)).toEqual({
+      error: 'Failed to generate referral link',
+      status: 500,
+      code: 'referral/db-undefined-column',
+      message: 'Referral data unavailable',
+      details: 'Referral data unavailable',
+    });
+    expect(response.body).not.toContain('42703');
+    expect(response.body).not.toContain('20260713000000_ensure_referral_schema.sql');
   });
 
   it('keeps failed stats distinguishable from a genuine zero-referral summary', async () => {
